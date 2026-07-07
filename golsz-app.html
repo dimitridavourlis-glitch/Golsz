@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GOLSZ — Every Goal Has a Path</title>
+<style>
+  html,body{margin:0;background:#0D1210;}
+  #root{min-height:100vh;}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>(function(){var f=console.warn,g=console.error;function m(fn){return function(){var a=arguments[0];if(typeof a==="string"&&a.indexOf("in-browser Babel transformer")!==-1)return;return fn.apply(console,arguments);};}console.warn=m(f);console.error=m(g);})();</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useRef, useEffect } = React;
+
+function svg(inner){
+  return function Icon(props){
+    var p = props || {};
+    return React.createElement('svg', {
+      width: p.size || 24, height: p.size || 24, viewBox: '0 0 24 24',
+      fill: p.fill || 'none', stroke: p.color || 'currentColor',
+      strokeWidth: p.strokeWidth || 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+      style: p.style, dangerouslySetInnerHTML: { __html: inner }
+    });
+  };
+}
+const Home = svg('<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>');
+const Compass = svg('<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>');
+const Radar = svg('<path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/>');
+const CalendarDays = svg('<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/>');
+const User = svg('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>');
+const MessageSquare = svg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>');
+const BadgeCheck = svg('<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/>');
+const MapPin = svg('<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>');
+const ChevronLeft = svg('<path d="m15 18-6-6 6-6"/>');
+const Send = svg('<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>');
+const Heart = svg('<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>');
+const SlidersHorizontal = svg('<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>');
+const Flame = svg('<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5"/>');
+const Trophy = svg('<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>');
+const Users = svg('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>');
+const ArrowUpRight = svg('<path d="M7 7h10v10"/><path d="M7 17 17 7"/>');
+const X = svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
+
+
+
+
+/* ============ GOLSZ — brand tokens ============
+   Pitch #0D1210 · Turf #16241C · Goal Lime #C8F135 · Chalk #F2F5F0 · Slate #8DA396 */
+const C = {
+  pitch: "#0D1210", turf: "#16241C", card: "#121D17", lime: "#C8F135",
+  chalk: "#F2F5F0", slate: "#8DA396", line: "#1F2E25", line2: "#2C4033",
+  amber: "#C89B3C",
+};
+
+/* ============ mock data ============ */
+const PASSPORT = {
+  name: "Dimitri K.", handle: "@dimitri.k", id: "GLS·CA·2027·04418",
+  sport: "Soccer", position: "Left Back", nat: "🇨🇦 Canada", foot: "Right",
+  height: "5'11\"", grad: "2027", club: "Toronto FC Academy", level: "NCAA-track",
+  gpa: "3.8", pace: "34.1 km/h", initials: "DK",
+  badges: [
+    { label: "Identity", on: true }, { label: "Club", on: true },
+    { label: "Academic", on: true }, { label: "Performance", on: true },
+    { label: "Coach", on: false },
+  ],
+  bio: "Left back with a high defensive line motor. Two-footed distribution, overlaps into the final third. Building a path to NCAA Division I.",
+  timeline: [
+    { yr: "2026", txt: "Named academy captain, Toronto FC U19" },
+    { yr: "2025", txt: "Provincial team call-up · Ontario Soccer" },
+    { yr: "2024", txt: "Joined Toronto FC Academy" },
+  ],
+  media: [
+    { t: "Full match — vs Montreal (90')", src: "Veo" },
+    { t: "Defensive highlights 2026", src: "YouTube" },
+    { t: "Combine testing data", src: "GOLSZ Verified" },
+  ],
+};
+
+const FEED = [
+  { who: "Amara Osei", init: "AO", nat: "🇬🇭", sport: "Basketball · Guard", v: ["Club", "Perf"],
+    kind: "commit", head: "Committed to Baylor University 🐻",
+    body: "Signed my NLI today. Grateful to everyone who believed in the path. WNBA next.", likes: 214, ago: "2h" },
+  { who: "Dimitri K.", init: "DK", nat: "🇨🇦", sport: "Soccer · Left Back", v: ["ID", "Perf"],
+    kind: "clip", head: "New defensive highlight reel is live",
+    body: "90 minutes vs Montreal broken down. Overlaps, recovery runs, set-piece marking.", likes: 88, ago: "5h" },
+  { who: "Keisha Bennett", init: "KB", nat: "🇯🇲", sport: "Track · 100m", v: ["Perf"],
+    kind: "perf", head: "Performance Verified: 11.24s (100m)",
+    body: "Wind-legal, electronically timed at the National Juniors. On file with GOLSZ.", likes: 331, ago: "8h" },
+  { who: "Coach Reyes", init: "CR", nat: "🇺🇸", sport: "Scout · NCAA D1", v: ["ID", "Coach"],
+    kind: "call", head: "Scouting left backs, class of 2027",
+    body: "Prioritizing two-footed defenders with pace over 33 km/h. Verified footage only.", likes: 47, ago: "1d" },
+  { who: "Lucas Meyer", init: "LM", nat: "🇩🇪", sport: "Hockey · Center", v: ["Club"],
+    kind: "commit", head: "Trial invite: Djurgårdens IF U20",
+    body: "Flying to Stockholm next month. The agent found the opening and drafted the outreach.", likes: 122, ago: "1d" },
+];
+
+const PLAYERS = [
+  { n: "Amara Osei", i: "AO", sport: "Basketball", pos: "Guard", country: "Ghana", flag: "🇬🇭", g: "F", grad: 2026, v: 3 },
+  { n: "Dimitri K.", i: "DK", sport: "Soccer", pos: "Left Back", country: "Canada", flag: "🇨🇦", g: "M", grad: 2027, v: 4 },
+  { n: "Keisha Bennett", i: "KB", sport: "Track", pos: "Sprinter", country: "Jamaica", flag: "🇯🇲", g: "F", grad: 2027, v: 2 },
+  { n: "Lucas Meyer", i: "LM", sport: "Hockey", pos: "Center", country: "Germany", flag: "🇩🇪", g: "M", grad: 2026, v: 3 },
+  { n: "Sofia Marín", i: "SM", sport: "Soccer", pos: "Striker", country: "Spain", flag: "🇪🇸", g: "F", grad: 2028, v: 3 },
+  { n: "Noah Clarke", i: "NC", sport: "Soccer", pos: "Left Back", country: "England", flag: "🏴", g: "M", grad: 2027, v: 2 },
+  { n: "Aiko Tanaka", i: "AT", sport: "Tennis", pos: "Singles", country: "Japan", flag: "🇯🇵", g: "F", grad: 2026, v: 4 },
+  { n: "Diego Santos", i: "DS", sport: "Basketball", pos: "Forward", country: "Brazil", flag: "🇧🇷", g: "M", grad: 2028, v: 2 },
+  { n: "Mia Larsen", i: "ML", sport: "Hockey", pos: "Goalie", country: "Sweden", flag: "🇸🇪", g: "F", grad: 2027, v: 3 },
+  { n: "Omar Haddad", i: "OH", sport: "Track", pos: "Distance", country: "Morocco", flag: "🇲🇦", g: "M", grad: 2026, v: 2 },
+  { n: "Chloe Dubois", i: "CD", sport: "Soccer", pos: "Midfielder", country: "Canada", flag: "🇨🇦", g: "F", grad: 2027, v: 3 },
+  { n: "Ryan Walsh", i: "RW", sport: "Tennis", pos: "Singles", country: "USA", flag: "🇺🇸", g: "M", grad: 2028, v: 2 },
+];
+
+const EVENTS = [
+  { m: "AUG", d: "16", t: "NCAA Men's Soccer ID Camp", sport: "Soccer", loc: "Syracuse, NY", lvl: "D1", spots: 12 },
+  { m: "AUG", d: "24", t: "Elite Guard Combine", sport: "Basketball", loc: "Chicago, IL", lvl: "Open", spots: 30 },
+  { m: "SEP", d: "03", t: "Ontario Open Trials", sport: "Soccer", loc: "Toronto, ON", lvl: "Provincial", spots: 8 },
+  { m: "SEP", d: "10", t: "National Sprint Combine", sport: "Track", loc: "Kingston, JM", lvl: "Elite", spots: 20 },
+  { m: "SEP", d: "21", t: "U20 Hockey Showcase", sport: "Hockey", loc: "Stockholm, SE", lvl: "Pro-track", spots: 6 },
+];
+
+const THREADS = [
+  { who: "Coach Daniela Reyes", role: "Head Coach · Syracuse", init: "DR", v: true, last: "Send me the full match link and we'll talk.", ago: "1h", unread: true,
+    msgs: [
+      { me: false, t: "Saw your left-back reel — the recovery pace stood out." },
+      { me: true, t: "Thank you Coach. I'm class of 2027, two-footed, currently at Toronto FC Academy." },
+      { me: false, t: "Send me the full match link and we'll talk." },
+    ] },
+  { who: "Marcus Lindqvist", role: "Scout · Djurgårdens IF", init: "ML", v: true, last: "Trial dates attached. Can you travel?", ago: "3h", unread: false,
+    msgs: [
+      { me: false, t: "Trial dates attached. Can you travel?" },
+    ] },
+  { who: "Baylor Recruiting", role: "University · NCAA D1", init: "BU", v: true, last: "We'd love your academic transcript.", ago: "2d", unread: false,
+    msgs: [
+      { me: false, t: "We'd love your academic transcript." },
+    ] },
+];
+
+/* ============ shared bits ============ */
+function Avatar({ init, size = 42, ring }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: 12, flexShrink: 0,
+      background: `linear-gradient(135deg, ${C.turf}, ${C.line2})`,
+      border: `1px solid ${ring || C.line2}`, display: "flex", alignItems: "center",
+      justifyContent: "center", fontWeight: 800, fontSize: size * 0.36, color: C.lime,
+      fontFamily: "'Space Mono', monospace",
+    }}>{init}</div>
+  );
+}
+function Badge({ label }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 3, fontSize: 9.5, fontWeight: 700,
+      color: C.lime, background: "#C8F1351a", border: `1px solid #C8F13544`,
+      padding: "2px 6px", borderRadius: 5, letterSpacing: "0.04em",
+    }}><BadgeCheck size={10} /> {label}</span>
+  );
+}
+
+/* ============ FEED ============ */
+function Feed() {
+  const [liked, setLiked] = useState({});
+  return (
+    <div style={{ padding: "8px 12px 16px" }}>
+      <SectionTitle>Your feed</SectionTitle>
+      {FEED.map((p, i) => (
+        <article key={i} style={card}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
+            <Avatar init={p.init} ring={C.lime} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ fontWeight: 700, fontSize: 14 }}>{p.who}</span>
+                <span>{p.nat}</span>
+              </div>
+              <div style={{ fontSize: 11, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{p.sport} · {p.ago}</div>
+            </div>
+            {p.kind === "commit" && <Trophy size={16} color={C.lime} />}
+            {p.kind === "perf" && <Flame size={16} color={C.amber} />}
+            {p.kind === "call" && <Radar size={16} color={C.lime} />}
+          </div>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{p.head}</div>
+          <div style={{ fontSize: 13.5, color: "#C9D6CD", lineHeight: 1.5 }}>{p.body}</div>
+          <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+            {p.v.map((b) => <Badge key={b} label={b} />)}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
+            <button onClick={() => setLiked((l) => ({ ...l, [i]: !l[i] }))}
+              style={iconBtn(liked[i] ? C.lime : C.slate)}>
+              <Heart size={15} fill={liked[i] ? C.lime : "none"} /> {p.likes + (liked[i] ? 1 : 0)}
+            </button>
+            <button style={iconBtn(C.slate)}><Users size={15} /> Follow</button>
+            <button style={{ ...iconBtn(C.slate), marginLeft: "auto" }}><ArrowUpRight size={15} /> Share</button>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+/* ============ DISCOVER (player database) ============ */
+const SPORTS = ["All", "Soccer", "Basketball", "Track", "Hockey", "Tennis"];
+const GENDERS = [["All", "All"], ["M", "Male"], ["F", "Female"]];
+const COUNTRIES = ["All", "Canada", "USA", "England", "Spain", "Germany", "Jamaica", "Japan", "Brazil", "Sweden", "Morocco"];
+const POSITIONS = ["All", "Left Back", "Striker", "Midfielder", "Guard", "Forward", "Center", "Goalie", "Sprinter", "Distance", "Singles"];
+
+function Discover() {
+  const [sport, setSport] = useState("All");
+  const [gender, setGender] = useState("All");
+  const [country, setCountry] = useState("All");
+  const [pos, setPos] = useState("All");
+
+  const results = PLAYERS.filter((p) =>
+    (sport === "All" || p.sport === sport) &&
+    (gender === "All" || p.g === gender) &&
+    (country === "All" || p.country === country) &&
+    (pos === "All" || p.pos === pos)
+  );
+
+  return (
+    <div style={{ padding: "8px 12px 16px" }}>
+      <SectionTitle>Discover players</SectionTitle>
+      <div style={{ ...card, padding: 12 }}>
+        <FilterRow label="Sport" opts={SPORTS} val={sport} set={setSport} />
+        <FilterRow label="Gender" opts={GENDERS.map((g) => g[0])} labels={GENDERS} val={gender} set={setGender} />
+        <FilterRow label="Country" opts={COUNTRIES} val={country} set={setCountry} />
+        <FilterRow label="Position" opts={POSITIONS} val={pos} set={setPos} last />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "14px 2px 8px" }}>
+        <span style={{ fontSize: 11, color: C.slate, fontFamily: "'Space Mono', monospace" }}>
+          {results.length} {results.length === 1 ? "ATHLETE" : "ATHLETES"} ON FILE
+        </span>
+        <span style={{ fontSize: 11, color: C.lime, display: "flex", alignItems: "center", gap: 4 }}>
+          <SlidersHorizontal size={12} /> Verified first
+        </span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        {results.sort((a, b) => b.v - a.v).map((p) => (
+          <div key={p.n} style={{ ...card, margin: 0, padding: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <Avatar init={p.i} size={38} />
+              <span style={{ display: "flex", gap: 2 }}>
+                {Array.from({ length: p.v }).map((_, k) => <BadgeCheck key={k} size={11} color={C.lime} />)}
+              </span>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 13.5, marginTop: 8 }}>{p.n} {p.flag}</div>
+            <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace", marginTop: 2 }}>
+              {p.pos.toUpperCase()} · {p.g} · '{String(p.grad).slice(2)}
+            </div>
+            <div style={{ fontSize: 11, color: C.lime, marginTop: 6 }}>{p.sport}</div>
+          </div>
+        ))}
+        {results.length === 0 && (
+          <div style={{ gridColumn: "1 / -1", textAlign: "center", color: C.slate, padding: "30px 0", fontSize: 13 }}>
+            No athletes match these filters yet. Widen the search.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+function FilterRow({ label, opts, labels, val, set, last }) {
+  return (
+    <div style={{ marginBottom: last ? 0 : 10 }}>
+      <div style={{ fontSize: 9.5, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 6 }}>{label.toUpperCase()}</div>
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }} className="noscroll">
+        {opts.map((o, idx) => {
+          const on = val === o;
+          const text = labels ? labels[idx][1] : o;
+          return (
+            <button key={o} onClick={() => set(o)} style={{
+              flex: "0 0 auto", padding: "6px 11px", borderRadius: 999, fontSize: 12, fontWeight: 600,
+              cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+              background: on ? C.lime : "transparent", color: on ? C.pitch : C.chalk,
+              border: `1px solid ${on ? C.lime : C.line2}`,
+            }}>{text}</button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ============ EVENTS ============ */
+function Events() {
+  return (
+    <div style={{ padding: "8px 12px 16px" }}>
+      <SectionTitle>Upcoming events</SectionTitle>
+      {EVENTS.map((e, i) => (
+        <div key={i} style={{ ...card, display: "flex", gap: 12, alignItems: "center" }}>
+          <div style={{
+            textAlign: "center", flexShrink: 0, width: 52, padding: "8px 0", borderRadius: 10,
+            background: C.turf, border: `1px solid ${C.line2}`,
+          }}>
+            <div style={{ fontSize: 9, letterSpacing: "0.1em", color: C.lime, fontWeight: 800 }}>{e.m}</div>
+            <div style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Space Mono', monospace" }}>{e.d}</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>{e.t}</div>
+            <div style={{ fontSize: 11.5, color: C.slate, display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
+              <MapPin size={11} /> {e.loc}
+            </div>
+            <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
+              <Tag>{e.sport}</Tag><Tag>{e.lvl}</Tag>
+              <Tag warn>{e.spots} spots</Tag>
+            </div>
+          </div>
+          <button style={{
+            background: C.lime, color: C.pitch, border: "none", borderRadius: 9,
+            padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
+          }}>Register</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+function Tag({ children, warn }) {
+  return <span style={{
+    fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 5,
+    color: warn ? C.amber : C.slate, background: warn ? "#C89B3C1a" : C.turf,
+    border: `1px solid ${warn ? "#C89B3C44" : C.line2}`,
+  }}>{children}</span>;
+}
+
+/* ============ MESSAGES ============ */
+function Messages({ thread, setThread }) {
+  if (thread !== null) {
+    const t = THREADS[thread];
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: `1px solid ${C.line}` }}>
+          <button onClick={() => setThread(null)} style={iconBtn(C.chalk)}><ChevronLeft size={20} /></button>
+          <Avatar init={t.init} size={36} />
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: 700, fontSize: 14 }}>
+              {t.who} {t.v && <BadgeCheck size={13} color={C.lime} />}
+            </div>
+            <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{t.role}</div>
+          </div>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: 14 }}>
+          {t.msgs.map((m, i) => (
+            <div key={i} style={{
+              maxWidth: "78%", marginLeft: m.me ? "auto" : 0, marginBottom: 10,
+              background: m.me ? C.lime : C.turf, color: m.me ? C.pitch : C.chalk,
+              padding: "9px 12px", fontSize: 13.5, lineHeight: 1.45,
+              borderRadius: m.me ? "12px 2px 12px 12px" : "2px 12px 12px 12px",
+              border: m.me ? "none" : `1px solid ${C.line2}`, fontWeight: m.me ? 500 : 400,
+            }}>{m.t}</div>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${C.line}` }}>
+          <input placeholder="Message…" style={{
+            flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10,
+            color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none",
+          }} />
+          <button style={{ background: C.lime, border: "none", borderRadius: 10, width: 44, color: C.pitch, cursor: "pointer" }}><Send size={16} /></button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ padding: "8px 12px 16px" }}>
+      <SectionTitle>Messages</SectionTitle>
+      {THREADS.map((t, i) => (
+        <button key={i} onClick={() => setThread(i)} style={{
+          ...card, display: "flex", gap: 11, alignItems: "center", width: "100%",
+          textAlign: "left", cursor: "pointer", border: `1px solid ${t.unread ? C.line2 : C.line}`,
+        }}>
+          <Avatar init={t.init} ring={t.v ? C.lime : C.line2} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>{t.who}</span>
+              {t.v && <BadgeCheck size={13} color={C.lime} />}
+              <span style={{ marginLeft: "auto", fontSize: 10.5, color: C.slate }}>{t.ago}</span>
+            </div>
+            <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 3 }}>{t.role}</div>
+            <div style={{ fontSize: 12.5, color: t.unread ? C.chalk : C.slate, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: t.unread ? 600 : 400 }}>
+              {t.last}
+            </div>
+          </div>
+          {t.unread && <span style={{ width: 8, height: 8, borderRadius: 99, background: C.lime, flexShrink: 0 }} />}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ============ PROFILE — Digital Sports Passport (signature) ============ */
+function Passport({ onSignOut }) {
+  const p = PASSPORT;
+  const mrz = `GLS<CAN<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<LEFTBACK<<<<<${p.id.replace(/[·]/g, "")}<2027CA`;
+  return (
+    <div style={{ padding: "8px 12px 20px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "4px 2px 10px" }}>
+        <SectionTitle noMargin>Sports Passport</SectionTitle>
+        <span style={{ fontSize: 9.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>GOLSZ · GLOBAL</span>
+      </div>
+
+      {/* passport document */}
+      <div style={{
+        background: `linear-gradient(160deg, ${C.card}, ${C.turf})`,
+        border: `1px solid ${C.line2}`, borderRadius: 16, overflow: "hidden",
+        boxShadow: `0 0 0 1px ${C.pitch}, 0 20px 40px -20px #000`,
+      }}>
+        {/* header strip */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: `1px dashed ${C.line2}` }}>
+          <span style={{ fontSize: 10, letterSpacing: "0.22em", fontWeight: 800, color: C.lime }}>DIGITAL SPORTS PASSPORT</span>
+          <span style={{ fontSize: 9.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{p.nat}</span>
+        </div>
+
+        <div style={{ display: "flex", gap: 14, padding: 16 }}>
+          <div>
+            <div style={{
+              width: 84, height: 100, borderRadius: 10, background: `linear-gradient(135deg, ${C.turf}, ${C.line2})`,
+              border: `1px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center",
+              fontFamily: "'Space Mono', monospace", fontWeight: 800, fontSize: 34, color: C.lime,
+            }}>{p.initials}</div>
+            <div style={{ textAlign: "center", fontSize: 8.5, color: C.slate, marginTop: 5, fontFamily: "'Space Mono', monospace" }}>VERIFIED PHOTO</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05, fontStretch: "expanded" }}>{p.name}</div>
+            <div style={{ fontSize: 11, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 10 }}>{p.handle}</div>
+            <PassRow k="SPORT" v={p.sport} />
+            <PassRow k="POSITION" v={p.position} />
+            <PassRow k="CLUB" v={p.club} />
+            <PassRow k="PASSPORT NO." v={p.id} mono />
+          </div>
+        </div>
+
+        {/* data grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, background: C.line, borderTop: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}` }}>
+          {[["FOOT", p.foot], ["HEIGHT", p.height], ["GRAD", p.grad], ["GPA", p.gpa], ["TOP SPEED", p.pace], ["STATUS", p.level]].map(([k, v]) => (
+            <div key={k} style={{ background: C.card, padding: "9px 12px" }}>
+              <div style={{ fontSize: 8.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700 }}>{k}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Space Mono', monospace", marginTop: 2 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* trust stamps */}
+        <div style={{ padding: "12px 14px" }}>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>TRUST STAMPS</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {p.badges.map((b) => (
+              <span key={b.label} style={{
+                display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700,
+                padding: "5px 9px", borderRadius: 6, transform: "rotate(-1.5deg)",
+                color: b.on ? C.lime : C.slate,
+                background: b.on ? "#C8F1351a" : "transparent",
+                border: `1.5px solid ${b.on ? C.lime : C.line2}`,
+                opacity: b.on ? 1 : 0.55,
+              }}>
+                <BadgeCheck size={12} /> {b.label} {b.on ? "✓" : "—"}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* MRZ machine-readable strip */}
+        <div style={{
+          background: C.pitch, borderTop: `1px solid ${C.line2}`, padding: "10px 12px",
+          fontFamily: "'Space Mono', monospace", fontSize: 10.5, letterSpacing: "0.08em",
+          color: C.slate, wordBreak: "break-all", lineHeight: 1.7,
+        }}>{mrz}</div>
+      </div>
+
+      {/* bio */}
+      <div style={{ ...card, marginTop: 14 }}>
+        <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 6 }}>SCOUTING BIO</div>
+        <div style={{ fontSize: 13.5, lineHeight: 1.55, color: "#C9D6CD" }}>{p.bio}</div>
+      </div>
+
+      {/* media */}
+      <div style={{ ...card }}>
+        <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>VERIFIED MEDIA</div>
+        {p.media.map((m, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: i < p.media.length - 1 ? `1px solid ${C.line}` : "none" }}>
+            <div style={{ width: 6, height: 6, borderRadius: 99, background: C.lime }} />
+            <span style={{ fontSize: 13, flex: 1 }}>{m.t}</span>
+            <span style={{ fontSize: 10, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{m.src}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* timeline */}
+      <div style={{ ...card, marginBottom: 8 }}>
+        <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>CAREER TIMELINE</div>
+        {p.timeline.map((e, i) => (
+          <div key={i} style={{ display: "flex", gap: 12, marginBottom: i < p.timeline.length - 1 ? 12 : 0 }}>
+            <div style={{ fontFamily: "'Space Mono', monospace", fontWeight: 800, color: C.lime, fontSize: 13, width: 40 }}>{e.yr}</div>
+            <div style={{ fontSize: 13, color: "#C9D6CD", flex: 1, borderLeft: `2px solid ${C.line2}`, paddingLeft: 12 }}>{e.txt}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
+        <a href="terms.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>Terms & Conditions</a>
+        <span style={{ color: C.line2 }}>·</span>
+        <a href="index.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>golsz.com</a>
+        <span style={{ color: C.line2 }}>·</span>
+        <button onClick={onSignOut} style={{ background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Sign out</button>
+      </div>
+    </div>
+  );
+}
+function PassRow({ k, v, mono }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "2.5px 0" }}>
+      <span style={{ fontSize: 9.5, color: C.slate, fontWeight: 700, letterSpacing: "0.08em", alignSelf: "center" }}>{k}</span>
+      <span style={{ fontSize: 12.5, fontWeight: 700, fontFamily: mono ? "'Space Mono', monospace" : "inherit", textAlign: "right" }}>{v}</span>
+    </div>
+  );
+}
+
+/* ============ AI SCOUT (live agent) ============ */
+const SYS = `You are GOLSZ Scout, an AI sports agent. Tagline: "Every Goal Has a Path."
+You are the personal agent for ONE athlete: learn who they are (age, sport, position, location, club/level, grad year, academics, budget, citizenship, goal), build a career roadmap, suggest realistic target programs (reach/match/safety, honest), and draft coach outreach emails on request (draft-only; the athlete sends them).
+Be warm, direct, honest — never overpromise. If a target looks unrealistic, say so kindly and show the realistic path. If the athlete seems to be a minor, remind them once to involve a parent/guardian. Use web search for real current programs, coaches, showcases, and eligibility rules. Ask at most ONE question per reply. Keep replies tight for a phone screen.
+OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null}}
+Allowed keys: name, age, sport, position, location, club, level, grad_year, gpa, budget, citizenship, goal. Do not repeat known fields.`;
+
+const CHIPS = ["Build my target school list", "Create my career roadmap", "Draft an email to a coach", "What should I do this month?"];
+
+function Scout() {
+  const [msgs, setMsgs] = useState([{ role: "assistant", text: "I'm your GOLSZ Scout.\n\nTell me about yourself like you'd tell a scout — age, sport, position, where you play, and where you want to end up. I'll build your path from there." }]);
+  const [profile, setProfile] = useState({});
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const endRef = useRef(null);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
+
+  async function send(text) {
+    const content = text.trim(); if (!content || busy) return;
+    setInput("");
+    const next = [...msgs, { role: "user", text: content }];
+    setMsgs(next); setBusy(true);
+    try {
+      const api = next.map((m) => ({ role: m.role, content: m.text }));
+      api[api.length - 1] = { role: "user", content: `PROFILE SO FAR: ${JSON.stringify(profile)}\n\nATHLETE: ${content}` };
+      let _hdr = { "Content-Type": "application/json" };
+      try { if (typeof sb !== "undefined" && sb) { const _s = await sb.auth.getSession(); if (_s && _s.data && _s.data.session) _hdr["Authorization"] = "Bearer " + _s.data.session.access_token; } } catch (e) {}
+      const _endpoint = (typeof SCOUT_ENDPOINT !== "undefined" && SCOUT_ENDPOINT) ? SCOUT_ENDPOINT : "https://api.anthropic.com/v1/messages";
+      const res = await fetch(_endpoint, {
+        method: "POST", headers: _hdr,
+        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, system: SYS, messages: api, tools: [{ type: "web_search_20250305", name: "web_search" }] }),
+      });
+      const data = await res.json();
+      const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+      let reply = raw, updates = null;
+      try {
+        const clean = raw.replace(/```json|```/g, "").trim();
+        const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+        reply = parsed.reply || raw; updates = parsed.profile_updates || null;
+      } catch { /* raw */ }
+      if (updates && typeof updates === "object") setProfile((p) => ({ ...p, ...updates }));
+      setMsgs((m) => [...m, { role: "assistant", text: reply }]);
+    } catch {
+      setMsgs((m) => [...m, { role: "assistant", text: "Connection dropped mid-play. Send that again and I'm on it." }]);
+    } finally { setBusy(false); }
+  }
+
+  const known = Object.keys(profile).filter((k) => profile[k]);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 8 }}>
+        <Radar size={18} color={C.lime} />
+        <span style={{ fontWeight: 800, letterSpacing: "0.04em" }}>AI SCOUT</span>
+        <span style={{ marginLeft: "auto", fontSize: 10, color: C.slate, fontFamily: "'Space Mono', monospace" }}>
+          {known.length ? `${known.length} FIELDS ON FILE` : "LIVE AGENT"}
+        </span>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "14px 12px 6px" }}>
+        {msgs.map((m, i) => (
+          <div key={i} className="msg" style={m.role === "user" ? bubbleUser : bubbleAgent}>
+            {m.role === "assistant" && <div style={{ fontSize: 9, letterSpacing: "0.22em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>SCOUT</div>}
+            <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
+          </div>
+        ))}
+        {busy && <div style={bubbleAgent}><div className="running"><span /><span /><span /></div></div>}
+        <div ref={endRef} />
+      </div>
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "6px 12px", scrollbarWidth: "none" }} className="noscroll">
+        {CHIPS.map((q) => <button key={q} onClick={() => send(q)} disabled={busy} style={{ flex: "0 0 auto", background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 999, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>{q}</button>)}
+      </div>
+      <div style={{ display: "flex", gap: 8, padding: "10px 12px 14px", borderTop: `1px solid ${C.line}` }}>
+        <textarea rows={1} value={input} placeholder="Talk to your scout…" onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
+          style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, color: C.chalk, padding: "11px 13px", fontSize: 14, fontFamily: "inherit", resize: "none", outline: "none" }} />
+        <button onClick={() => send(input)} disabled={busy || !input.trim()} style={{ background: C.lime, color: C.pitch, border: "none", borderRadius: 12, width: 46, cursor: "pointer", opacity: busy || !input.trim() ? 0.4 : 1 }}><Send size={17} /></button>
+      </div>
+    </div>
+  );
+}
+
+/* ============ shell ============ */
+function SectionTitle({ children, noMargin }) {
+  return <h2 style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", color: C.slate, textTransform: "uppercase", margin: noMargin ? 0 : "6px 2px 10px" }}>{children}</h2>;
+}
+const card = { background: C.card, border: `1px solid ${C.line}`, borderRadius: 14, padding: 14, marginBottom: 12 };
+const iconBtn = (color) => ({ display: "inline-flex", alignItems: "center", gap: 5, background: "none", border: "none", color, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 0 });
+const bubbleAgent = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: "2px 14px 14px 14px", padding: "10px 13px", margin: "0 30px 12px 0", fontSize: 14, lineHeight: 1.55 };
+const bubbleUser = { background: C.lime, color: C.pitch, borderRadius: "14px 2px 14px 14px", padding: "10px 13px", margin: "0 0 12px 30px", fontSize: 14, lineHeight: 1.55, fontWeight: 500 };
+
+function GolszApp({ onSignOut }) {
+  const [page, setPage] = useState(() => {
+    try {
+      const p = new URLSearchParams(window.location.search).get("page");
+      const valid = ["feed", "discover", "scout", "events", "profile", "messages"];
+      return valid.includes(p) ? p : "feed";
+    } catch (e) { return "feed"; }
+  });
+  const [thread, setThread] = useState(null);
+
+  const NAV = [
+    { id: "feed", icon: Home, label: "Feed" },
+    { id: "discover", icon: Compass, label: "Discover" },
+    { id: "scout", icon: Radar, label: "Scout", center: true },
+    { id: "events", icon: CalendarDays, label: "Events" },
+    { id: "profile", icon: User, label: "Passport" },
+  ];
+
+  const go = (id) => { setPage(id); if (id !== "messages") setThread(null); };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: C.pitch, color: C.chalk, fontFamily: "'Archivo', system-ui, sans-serif", maxWidth: 480, margin: "0 auto", position: "relative" }}>
+      <style>{CSS}</style>
+
+      {/* top bar */}
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px 10px", borderBottom: `1px solid ${C.line}`, flexShrink: 0 }}>
+        <a href="index.html" style={{ fontWeight: 900, fontSize: 24, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none" }}>GOLSZ<span style={{ color: C.lime }}>.</span></a>
+        <button onClick={() => { setPage("messages"); setThread(null); }} style={{ position: "relative", background: "none", border: "none", color: page === "messages" ? C.lime : C.chalk, cursor: "pointer", padding: 4 }}>
+          <MessageSquare size={22} />
+          <span style={{ position: "absolute", top: 2, right: 2, width: 8, height: 8, borderRadius: 99, background: C.lime, border: `2px solid ${C.pitch}` }} />
+        </button>
+      </header>
+
+      {/* body */}
+      <main style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="noscroll">
+        {page === "feed" && <Feed />}
+        {page === "discover" && <Discover />}
+        {page === "scout" && <Scout />}
+        {page === "events" && <Events />}
+        {page === "profile" && <Passport onSignOut={onSignOut} />}
+        {page === "messages" && <Messages thread={thread} setThread={setThread} />}
+      </main>
+
+      {/* bottom nav */}
+      <nav style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-around", padding: "8px 8px 12px", borderTop: `1px solid ${C.line}`, background: C.pitch, flexShrink: 0 }}>
+        {NAV.map((n) => {
+          const active = page === n.id;
+          if (n.center) {
+            return (
+              <button key={n.id} onClick={() => go(n.id)} style={{
+                background: C.lime, color: C.pitch, border: `3px solid ${C.pitch}`, borderRadius: "50%",
+                width: 58, height: 58, marginTop: -22, boxShadow: `0 8px 20px -6px #C8F13566`,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", fontFamily: "inherit",
+              }}>
+                <n.icon size={22} strokeWidth={2.4} />
+                <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: "0.06em", marginTop: 1 }}>{n.label}</span>
+              </button>
+            );
+          }
+          return (
+            <button key={n.id} onClick={() => go(n.id)} style={{
+              background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+              color: active ? C.lime : C.slate, flex: 1, padding: "4px 0",
+            }}>
+              <n.icon size={21} strokeWidth={active ? 2.4 : 2} />
+              <span style={{ fontSize: 9.5, fontWeight: active ? 800 : 600 }}>{n.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
+
+const CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100,400..900;125,400..900&family=Space+Mono:wght@400;700&display=swap');
+  * { box-sizing: border-box; }
+  body { margin: 0; background: ${C.pitch}; }
+  .noscroll::-webkit-scrollbar { display: none; }
+  .noscroll { -ms-overflow-style: none; scrollbar-width: none; }
+  .msg { animation: rise .22s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .running { display: flex; gap: 5px; padding: 4px 0; }
+  .running span { width: 6px; height: 6px; border-radius: 99px; background: ${C.lime}; animation: run 1s infinite; }
+  .running span:nth-child(2){ animation-delay:.15s } .running span:nth-child(3){ animation-delay:.3s }
+  @keyframes run { 0%,100%{opacity:.25;transform:translateY(0)} 50%{opacity:1;transform:translateY(-3px)} }
+  @media (prefers-reduced-motion: reduce){ .msg,.running span{ animation:none } }
+  textarea::placeholder, input::placeholder { color: #5C6E63; }
+  button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid ${C.lime}; outline-offset: 2px; }
+`;
+
+
+/* ===== BACKEND CONFIG — fill these in to go live (leave blank to preview) ===== */
+const SUPABASE_URL = "https://wachjqfhlbchcuovyewg.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_Po2PXFdCkqZ26mtkJEJ4fA_HHBy5i_s";
+const SCOUT_ENDPOINT = "";     // e.g. "https://your-app.vercel.app/api/scout"
+const STRIPE_LINKS = { pro: "", elite: "" };  // Stripe Payment Link URLs
+
+const PLANS = [
+  { id: "free",  name: "Starter", price: 0,  tag: "Free forever",    feats: ["Digital Sports Passport (basic)", "AI Scout: 5 school suggestions", "Browse players & events"] },
+  { id: "pro",   name: "Pro",     price: 29, tag: "Most popular",     feats: ["Unlimited AI Scout agent", "Full verified passport", "Full target-school lists & roadmap", "Unlimited coach outreach drafts", "Priority combines & trials"] },
+  { id: "elite", name: "Elite",   price: 79, tag: "Serious recruits", feats: ["Everything in Pro", "Priority scout visibility", "Human-reviewed highlight feedback", "Early access to showcases"] },
+];
+
+// Supabase client (null when not configured -> app runs in preview mode)
+const sb = (SUPABASE_URL && SUPABASE_ANON_KEY && typeof window !== "undefined" && window.supabase)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+function Auth({ onDone }) {
+  const [mode, setMode] = useState("signup");
+  const [plan, setPlan] = useState("pro");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [dobDay, setDobDay] = useState("");
+  const [dobMonth, setDobMonth] = useState("");
+  const [dobYear, setDobYear] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [notice, setNotice] = useState("");
+  const isSignup = mode === "signup";
+
+  const dobNum = { d: parseInt(dobDay, 10), m: parseInt(dobMonth, 10), y: parseInt(dobYear, 10) };
+  const dobOk = dobDay && dobMonth && dobYear
+    && dobNum.d >= 1 && dobNum.d <= 31
+    && dobNum.m >= 1 && dobNum.m <= 12
+    && String(dobYear).length === 4 && dobNum.y >= 1900 && dobNum.y <= new Date().getFullYear();
+  const dobIso = dobOk ? `${dobYear}-${String(dobNum.m).padStart(2, "0")}-${String(dobNum.d).padStart(2, "0")}` : "";
+  const age = dobOk ? (() => {
+    const today = new Date(); const b = new Date(dobIso);
+    let a = today.getFullYear() - b.getFullYear();
+    const notYet = (today.getMonth() < b.getMonth()) || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate());
+    if (notYet) a--;
+    return a;
+  })() : null;
+  const isMinor = age !== null && age < 18;
+
+  const ok = email.trim() && pw.trim() && (!isSignup || (name.trim() && dobOk));
+  const selected = PLANS.find((p) => p.id === plan) || PLANS[1];
+  const field = { width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 12, color: C.chalk, padding: "13px 14px", fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 12, boxSizing: "border-box" };
+  const dobField = { ...field, marginBottom: 0, textAlign: "center" };
+
+  async function submit() {
+    if (!ok || busy) return;
+    setErr("");
+    setNotice("");
+    // preview mode: no backend configured -> behave like the demo
+    if (!sb) {
+      if (isSignup && selected.price > 0 && STRIPE_LINKS[plan]) { window.location.href = STRIPE_LINKS[plan]; return; }
+      onDone(); return;
+    }
+    setBusy(true);
+    try {
+      if (isSignup) {
+        const { data, error } = await sb.auth.signUp({ email: email.trim(), password: pw, options: { data: { full_name: name.trim(), plan: selected.id, date_of_birth: dobIso } } });
+        if (error) throw error;
+        if (selected.price > 0 && STRIPE_LINKS[plan]) { window.location.href = STRIPE_LINKS[plan]; return; } // account exists -> pay
+        if (data.session) { onDone(); } else { setNotice("Account created — check " + email.trim() + " for a confirmation link, then come back and log in."); }
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password: pw });
+        if (error) throw error;
+        onDone();
+      }
+    } catch (e) {
+      console.error("GOLSZ auth error:", e);
+      let msg = "Something went wrong. Try again.";
+      if (e && typeof e.message === "string" && e.message.trim()) {
+        msg = e.message;
+      } else if (e instanceof TypeError) {
+        msg = "Couldn't reach Supabase — check your internet connection, that the project isn't paused, and that this page is served over http(s), not opened as a local file.";
+      } else if (e) {
+        try { msg = "Unexpected error: " + JSON.stringify(e); } catch { msg = "Unexpected error (see browser console for details)."; }
+      }
+      setErr(msg);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const cta = busy ? "Working\u2026"
+    : !isSignup ? "Log in"
+    : selected.price === 0 ? "Create free account"
+    : "Continue to payment \u2014 $" + selected.price + "/month";
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 18px", background: "radial-gradient(1100px 560px at 50% -12%, #16241C, " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
+      <div style={{ width: "100%", maxWidth: 430 }}>
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <div style={{ fontWeight: 900, fontSize: 40, letterSpacing: "0.03em", fontStretch: "expanded" }}>GOLSZ<span style={{ color: C.lime }}>.</span></div>
+          <div style={{ fontSize: 10, letterSpacing: "0.3em", color: C.slate, fontWeight: 700, marginTop: 4 }}>EVERY GOAL HAS A PATH</div>
+        </div>
+
+        <div style={{ display: "flex", background: C.card, border: "1px solid " + C.line, borderRadius: 12, padding: 4, marginBottom: 16 }}>
+          {[["signup", "Sign up"], ["login", "Log in"]].map(([m, l]) => (
+            <button key={m} onClick={() => { setMode(m); setErr(""); setNotice(""); }} style={{ flex: 1, padding: "10px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14, background: mode === m ? C.lime : "transparent", color: mode === m ? C.pitch : C.slate }}>{l}</button>
+          ))}
+        </div>
+
+        <div style={{ background: C.card, border: "1px solid " + C.line, borderRadius: 18, padding: 20 }}>
+          {isSignup && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 10, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>CHOOSE YOUR PLAN</div>
+              {PLANS.map((pl) => {
+                const on = plan === pl.id;
+                return (
+                  <button key={pl.id} onClick={() => setPlan(pl.id)} style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", marginBottom: 8, borderRadius: 12, cursor: "pointer", fontFamily: "inherit", background: on ? "#C8F1351a" : C.turf, border: "1.5px solid " + (on ? C.lime : C.line2) }}>
+                    <div style={{ width: 18, height: 18, borderRadius: 99, border: "2px solid " + (on ? C.lime : C.line2), display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{on && <div style={{ width: 8, height: 8, borderRadius: 99, background: C.lime }} />}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14.5, fontWeight: 800 }}>{pl.name}</div>
+                      <div style={{ fontSize: 11, color: C.slate, fontWeight: 600 }}>{pl.tag}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <span style={{ fontSize: 19, fontWeight: 900, fontFamily: "'Space Mono', monospace" }}>{pl.price === 0 ? "Free" : "$" + pl.price}</span>
+                      {pl.price > 0 && <span style={{ fontSize: 11, color: C.slate }}>/mo</span>}
+                    </div>
+                  </button>
+                );
+              })}
+              <div style={{ background: C.turf, border: "1px solid " + C.line2, borderRadius: 12, padding: 14, marginTop: 4 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.16em", color: C.lime, fontWeight: 800, marginBottom: 8 }}>{selected.name.toUpperCase()} INCLUDES</div>
+                {selected.feats.map((f) => (
+                  <div key={f} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 12.5, color: "#C9D6CD" }}>
+                    <BadgeCheck size={14} color={C.lime} /> {f}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {isSignup && <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" style={field} />}
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" style={field} />
+          <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Password" type="password" style={{ ...field, marginBottom: isSignup ? 12 : 14 }} />
+
+          {isSignup && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>Date of birth</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={dobDay} onChange={(e) => setDobDay(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="DD" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
+                <input value={dobMonth} onChange={(e) => setDobMonth(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="MM" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
+                <input value={dobYear} onChange={(e) => setDobYear(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} placeholder="YYYY" inputMode="numeric" maxLength={4} style={{ ...dobField, flex: 1.4 }} />
+              </div>
+              {isMinor && (
+                <div style={{ fontSize: 11.5, color: C.amber, marginTop: 8, lineHeight: 1.4 }}>
+                  Athletes under 18 need a parent or guardian to help manage their account. We'll follow up on that after signup.
+                </div>
+              )}
+            </div>
+          )}
+
+          {notice && (
+            <div style={{ background: "#C8F1351a", border: "1px solid #C8F13544", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+              <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>CHECK YOUR EMAIL</div>
+              <div style={{ color: C.chalk, fontSize: 12.5, lineHeight: 1.4 }}>{notice}</div>
+            </div>
+          )}
+
+          {err && (
+            <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+              <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignup ? "COULDN'T COMPLETE SIGNUP" : "COULDN'T LOG IN"}</div>
+              <div style={{ color: "#E7C56B", fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
+            </div>
+          )}
+
+          <button disabled={!ok || busy} onClick={submit} style={{ width: "100%", background: C.lime, color: C.pitch, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!ok || busy) ? "default" : "pointer", opacity: (!ok || busy) ? 0.45 : 1, fontFamily: "inherit" }}>{cta}</button>
+
+          {isSignup && selected.price > 0 && (
+            <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: C.slate }}>Secure checkout by Stripe \u00b7 billed monthly \u00b7 cancel anytime</div>
+          )}
+
+          <div style={{ textAlign: "center", marginTop: 14, fontSize: 13, color: C.slate }}>
+            {isSignup ? "Already have an account? " : "New to GOLSZ? "}
+            <span onClick={() => { setMode(isSignup ? "login" : "signup"); setErr(""); }} style={{ color: C.lime, fontWeight: 700, cursor: "pointer" }}>{isSignup ? "Log in" : "Sign up"}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Root() {
+  const paidReturn = typeof window !== "undefined" && /checkout=success/.test(window.location.search);
+  const [authed, setAuthed] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!sb) { setAuthed(paidReturn); setReady(true); return; }
+    let subscription;
+    sb.auth.getSession().then(({ data }) => { setAuthed(!!(data && data.session) || paidReturn); setReady(true); });
+    const r = sb.auth.onAuthStateChange((_e, session) => { setAuthed(!!session); });
+    subscription = r && r.data ? r.data.subscription : null;
+    return () => { if (subscription) subscription.unsubscribe(); };
+  }, []);
+
+  async function signOut() { if (sb) { try { await sb.auth.signOut(); } catch (e) {} } setAuthed(false); }
+
+  if (!ready) return React.createElement("div", { style: { minHeight: "100vh", background: C.pitch } });
+  return authed
+    ? React.createElement(GolszApp, { onSignOut: signOut })
+    : React.createElement(Auth, { onDone: () => setAuthed(true) });
+}
+
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(Root));
+</script>
+</body>
+</html>
