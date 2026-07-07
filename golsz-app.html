@@ -141,6 +141,52 @@ const THREADS = [
     ] },
 ];
 
+/* ============ Supabase data helpers (Feed/Discover/Events) ============
+   Each screen fetches real rows when `sb` is configured and falls back to
+   the hardcoded arrays above when the query errors or returns nothing —
+   so the app still looks alive pre-launch, before anyone has posted. */
+function initials(name) {
+  return (name || "").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
+}
+function timeAgo(iso) {
+  const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 3600) return Math.max(1, Math.floor(s / 60)) + "m";
+  if (s < 86400) return Math.floor(s / 3600) + "h";
+  return Math.floor(s / 86400) + "d";
+}
+const FLAGS = {
+  canada: "🇨🇦", "united states": "🇺🇸", usa: "🇺🇸", england: "🏴", "united kingdom": "🏴",
+  spain: "🇪🇸", germany: "🇩🇪", jamaica: "🇯🇲", japan: "🇯🇵", brazil: "🇧🇷", sweden: "🇸🇪",
+  morocco: "🇲🇦", ghana: "🇬🇭",
+};
+function flagFor(country) { return FLAGS[(country || "").trim().toLowerCase()] || "🌍"; }
+
+function mapPost(row) {
+  const name = (row.profiles && row.profiles.full_name) || "GOLSZ Athlete";
+  const verified = !!(row.profiles && row.profiles.athletes && row.profiles.athletes.verified);
+  const sport = (row.profiles && row.profiles.athletes && row.profiles.athletes.sport) || "";
+  return {
+    postId: row.id, who: name, init: initials(name), nat: "", sport,
+    v: verified ? ["Verified"] : [], kind: row.kind, head: row.headline,
+    body: row.body || "", likes: row.likes_count || 0, ago: timeAgo(row.created_at),
+  };
+}
+function mapAthlete(row) {
+  const name = (row.profiles && row.profiles.full_name) || "GOLSZ Athlete";
+  return {
+    n: name, i: initials(name), sport: row.sport || "", pos: row.position || "",
+    country: row.citizenship || "", flag: flagFor(row.citizenship), g: row.gender || "",
+    grad: row.grad_year || "", v: row.verified ? 1 : 0,
+  };
+}
+function mapEvent(row) {
+  const d = new Date(row.event_date + "T00:00:00");
+  return {
+    m: d.toLocaleString("en-US", { month: "short" }).toUpperCase(), d: String(d.getDate()).padStart(2, "0"),
+    t: row.title, sport: row.sport || "", loc: row.location || "", lvl: row.level || "", spots: row.spots_available ?? "—",
+  };
+}
+
 /* ============ shared bits ============ */
 function Avatar({ init, size = 42, ring }) {
   return (
@@ -165,12 +211,57 @@ function Badge({ label }) {
 
 /* ============ FEED ============ */
 function Feed() {
+  const [posts, setPosts] = useState(FEED);
   const [liked, setLiked] = useState({});
+  const [uid, setUid] = useState(null);
+
+  useEffect(() => {
+    if (!sb) return;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) setUid(user.id);
+
+        const { data, error } = await sb
+          .from("posts")
+          .select("id, kind, headline, body, likes_count, created_at, profiles(full_name, athletes(sport, verified))")
+          .order("created_at", { ascending: false })
+          .limit(30);
+        if (error) throw error;
+        if (data && data.length) {
+          setPosts(data.map(mapPost));
+          if (user) {
+            const ids = data.map((p) => p.id);
+            const { data: mine } = await sb.from("post_likes").select("post_id").eq("profile_id", user.id).in("post_id", ids);
+            if (mine) setLiked(Object.fromEntries(mine.map((r) => [r.post_id, true])));
+          }
+        }
+      } catch (e) { console.error("GOLSZ feed fetch error:", e); }
+    })();
+  }, []);
+
+  async function toggleLike(p, i) {
+    if (!p.postId || !sb || !uid) {
+      setLiked((l) => ({ ...l, [i]: !l[i] }));
+      return;
+    }
+    const isLiked = !!liked[p.postId];
+    setLiked((l) => ({ ...l, [p.postId]: !isLiked }));
+    setPosts((ps) => ps.map((x) => x.postId === p.postId ? { ...x, likes: x.likes + (isLiked ? -1 : 1) } : x));
+    try {
+      if (isLiked) await sb.from("post_likes").delete().eq("post_id", p.postId).eq("profile_id", uid);
+      else await sb.from("post_likes").insert({ post_id: p.postId, profile_id: uid });
+    } catch (e) { console.error("GOLSZ like error:", e); }
+  }
+
   return (
     <div style={{ padding: "8px 12px 16px" }}>
       <SectionTitle>Your feed</SectionTitle>
-      {FEED.map((p, i) => (
-        <article key={i} style={card}>
+      {posts.map((p, i) => {
+        const key = p.postId || i;
+        const isLiked = !!liked[key];
+        return (
+        <article key={key} style={card}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
             <Avatar init={p.init} ring={C.lime} />
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -190,15 +281,16 @@ function Feed() {
             {p.v.map((b) => <Badge key={b} label={b} />)}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
-            <button onClick={() => setLiked((l) => ({ ...l, [i]: !l[i] }))}
-              style={iconBtn(liked[i] ? C.lime : C.slate)}>
-              <Heart size={15} fill={liked[i] ? C.lime : "none"} /> {p.likes + (liked[i] ? 1 : 0)}
+            <button onClick={() => toggleLike(p, i)}
+              style={iconBtn(isLiked ? C.lime : C.slate)}>
+              <Heart size={15} fill={isLiked ? C.lime : "none"} /> {p.likes + (isLiked && !p.postId ? 1 : 0)}
             </button>
             <button style={iconBtn(C.slate)}><Users size={15} /> Follow</button>
             <button style={{ ...iconBtn(C.slate), marginLeft: "auto" }}><ArrowUpRight size={15} /> Share</button>
           </div>
         </article>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -214,8 +306,23 @@ function Discover() {
   const [gender, setGender] = useState("All");
   const [country, setCountry] = useState("All");
   const [pos, setPos] = useState("All");
+  const [players, setPlayers] = useState(PLAYERS);
 
-  const results = PLAYERS.filter((p) =>
+  useEffect(() => {
+    if (!sb) return;
+    (async () => {
+      try {
+        const { data, error } = await sb
+          .from("athletes")
+          .select("profile_id, sport, position, gender, grad_year, citizenship, level, verified, profiles(full_name)")
+          .limit(200);
+        if (error) throw error;
+        if (data && data.length) setPlayers(data.map(mapAthlete));
+      } catch (e) { console.error("GOLSZ discover fetch error:", e); }
+    })();
+  }, []);
+
+  const results = players.filter((p) =>
     (sport === "All" || p.sport === sport) &&
     (gender === "All" || p.g === gender) &&
     (country === "All" || p.country === country) &&
@@ -288,10 +395,28 @@ function FilterRow({ label, opts, labels, val, set, last }) {
 
 /* ============ EVENTS ============ */
 function Events() {
+  const [events, setEvents] = useState(EVENTS);
+
+  useEffect(() => {
+    if (!sb) return;
+    (async () => {
+      try {
+        const { data, error } = await sb
+          .from("events")
+          .select("id, title, sport, location, level, event_date, spots_available")
+          .gte("event_date", new Date().toISOString().slice(0, 10))
+          .order("event_date", { ascending: true })
+          .limit(30);
+        if (error) throw error;
+        if (data && data.length) setEvents(data.map(mapEvent));
+      } catch (e) { console.error("GOLSZ events fetch error:", e); }
+    })();
+  }, []);
+
   return (
     <div style={{ padding: "8px 12px 16px" }}>
       <SectionTitle>Upcoming events</SectionTitle>
-      {EVENTS.map((e, i) => (
+      {events.map((e, i) => (
         <div key={i} style={{ ...card, display: "flex", gap: 12, alignItems: "center" }}>
           <div style={{
             textAlign: "center", flexShrink: 0, width: 52, padding: "8px 0", borderRadius: 10,
@@ -703,7 +828,7 @@ const CSS = `
 /* ===== BACKEND CONFIG — fill these in to go live (leave blank to preview) ===== */
 const SUPABASE_URL = "https://wachjqfhlbchcuovyewg.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Po2PXFdCkqZ26mtkJEJ4fA_HHBy5i_s";
-const SCOUT_ENDPOINT = "";     // e.g. "https://your-app.vercel.app/api/scout"
+const SCOUT_ENDPOINT = "/api/scout";  // same-origin — works on any Vercel deploy + `vercel dev` locally
 const STRIPE_LINKS = { pro: "", elite: "" };  // Stripe Payment Link URLs
 
 const PLANS = [
