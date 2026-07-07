@@ -516,6 +516,118 @@ function Messages({ thread, setThread }) {
   );
 }
 
+/* ============ FAMILY & PARENT ACCESS ============
+   Lets a parent (their own account) request access to a child's account by
+   email, and lets the child approve/deny — the child is the only one who
+   can set parent_links.approved_at (enforced server-side by RLS, see
+   supabase-migration-003-parent-verification.sql). This is mutual in-app
+   consent, not identity-verified parental consent. */
+function FamilyAccess() {
+  const [uid, setUid] = useState(null);
+  const [email, setEmail] = useState("");
+  const [relationship, setRelationship] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState([]);
+  const [grantedToMe, setGrantedToMe] = useState([]);
+  const [myLinks, setMyLinks] = useState([]);
+
+  async function load() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+    setUid(user.id);
+    try {
+      const { data: asChild } = await sb.from("parent_links")
+        .select("id, relationship, approved_at, parent_profile_id, profiles!parent_links_parent_profile_id_fkey(full_name, email)")
+        .eq("child_profile_id", user.id);
+      if (asChild) {
+        setPending(asChild.filter((r) => !r.approved_at));
+        setGrantedToMe(asChild.filter((r) => r.approved_at));
+      }
+      const { data: asParent } = await sb.from("parent_links")
+        .select("id, relationship, approved_at, child_profile_id, profiles!parent_links_child_profile_id_fkey(full_name, email)")
+        .eq("parent_profile_id", user.id);
+      if (asParent) setMyLinks(asParent);
+    } catch (e) { console.error("GOLSZ family load error:", e); }
+  }
+  useEffect(() => { if (sb) load(); }, []);
+
+  async function requestLink() {
+    if (!email.trim() || busy) return;
+    setBusy(true); setMsg("");
+    try {
+      const { data, error } = await sb.rpc("request_parent_link", { p_child_email: email.trim(), p_relationship: relationship.trim() || null });
+      if (error) throw error;
+      setMsg(data ? "Request sent — waiting on their approval." : "No GOLSZ account found with that email.");
+      setEmail(""); setRelationship("");
+      load();
+    } catch (e) { setMsg(e.message || "Couldn't send request."); }
+    finally { setBusy(false); }
+  }
+  async function approve(id) { try { await sb.from("parent_links").update({ approved_at: new Date().toISOString() }).eq("id", id); load(); } catch (e) { console.error("GOLSZ approve error:", e); } }
+  async function remove(id) { try { await sb.from("parent_links").delete().eq("id", id); load(); } catch (e) { console.error("GOLSZ remove link error:", e); } }
+
+  if (!sb || !uid) return null;
+  const rowStyle = { display: "flex", alignItems: "center", gap: 8, padding: "6px 0" };
+  const smallBtn = (outline) => ({ background: outline ? "transparent" : C.lime, color: outline ? C.slate : C.pitch, border: outline ? `1px solid ${C.line2}` : "none", borderRadius: 7, padding: "5px 10px", fontSize: 11, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" });
+
+  return (
+    <div style={{ ...card, marginBottom: 8 }}>
+      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>FAMILY & PARENT ACCESS</div>
+
+      {pending.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: C.amber, fontWeight: 700, marginBottom: 6 }}>PENDING REQUESTS FOR YOU</div>
+          {pending.map((r) => (
+            <div key={r.id} style={rowStyle}>
+              <span style={{ flex: 1, fontSize: 13 }}>{(r.profiles && r.profiles.full_name) || "Someone"} wants parent access{r.relationship ? ` (${r.relationship})` : ""}</span>
+              <button onClick={() => approve(r.id)} style={smallBtn(false)}>Approve</button>
+              <button onClick={() => remove(r.id)} style={smallBtn(true)}>Deny</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {grantedToMe.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>PEOPLE WITH ACCESS TO YOUR ACCOUNT</div>
+          {grantedToMe.map((r) => (
+            <div key={r.id} style={rowStyle}>
+              <span style={{ flex: 1, fontSize: 13 }}>{(r.profiles && r.profiles.full_name) || "Parent"}{r.relationship ? ` · ${r.relationship}` : ""}</span>
+              <button onClick={() => remove(r.id)} style={smallBtn(true)}>Revoke</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {myLinks.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>ACCOUNTS YOU HAVE ACCESS TO</div>
+          {myLinks.map((r) => (
+            <div key={r.id} style={rowStyle}>
+              <span style={{ flex: 1, fontSize: 13 }}>{(r.profiles && r.profiles.full_name) || "Athlete"}{r.relationship ? ` · ${r.relationship}` : ""}</span>
+              <span style={{ fontSize: 10.5, color: r.approved_at ? C.lime : C.amber, fontWeight: 700 }}>{r.approved_at ? "APPROVED" : "PENDING"}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>REQUEST ACCESS TO A MINOR'S ACCOUNT</div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their GOLSZ email" style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+      </div>
+      <div style={{ display: "flex", gap: 6 }}>
+        <input value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="Relationship (optional)" style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+        <button onClick={requestLink} disabled={busy || !email.trim()} style={{ background: C.lime, color: C.pitch, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: busy || !email.trim() ? 0.5 : 1 }}>Send</button>
+      </div>
+      {msg && <div style={{ fontSize: 11.5, color: C.slate, marginTop: 8 }}>{msg}</div>}
+      <div style={{ fontSize: 10.5, color: C.slate, marginTop: 10, lineHeight: 1.4 }}>
+        The account owner must approve before a parent can see their private data. This confirms mutual consent — it isn't independent identity verification.
+      </div>
+    </div>
+  );
+}
+
 /* ============ PROFILE — Digital Sports Passport (signature) ============ */
 function Passport({ onSignOut }) {
   const p = PASSPORT;
@@ -623,6 +735,9 @@ function Passport({ onSignOut }) {
           </div>
         ))}
       </div>
+
+      <FamilyAccess />
+
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
         <a href="terms.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>Terms & Conditions</a>
         <span style={{ color: C.line2 }}>·</span>
