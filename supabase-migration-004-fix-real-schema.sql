@@ -178,3 +178,19 @@ create policy profiles_linked on profiles
 --    verified parental consent. Get legal input before relying on it for
 --    real minors at launch.
 -- ============================================================
+
+-- ------------------------------------------------------------
+-- 5) profiles has no public-read policy at all (only profiles_self and the
+--    parent_links-scoped profiles_linked added above) — correct, since
+--    profiles.dob is sensitive, especially for minors. But that means
+--    Feed/Discover embedding profiles(full_name) through athletes/posts
+--    silently returns null for anyone else's row. A blanket "select using
+--    (true)" policy would fix the embed but also expose dob/role/plan to
+--    every authenticated user, which we don't want. Instead: a narrow view
+--    exposing only (id, full_name), owned by postgres so it bypasses RLS
+--    on the base table while only ever surfacing those two columns.
+-- ------------------------------------------------------------
+create or replace view public_profile_names as
+select id, full_name from profiles;
+
+grant select on public_profile_names to anon, authenticated;

@@ -161,18 +161,17 @@ const FLAGS = {
 };
 function flagFor(country) { return FLAGS[(country || "").trim().toLowerCase()] || "🌍"; }
 
-function mapPost(row) {
-  const name = (row.profiles && row.profiles.full_name) || "GOLSZ Athlete";
-  const sport = (row.profiles && row.profiles.athletes && row.profiles.athletes.sport) || "";
+function mapPost(row, name, sport) {
+  name = name || "GOLSZ Athlete";
   return {
     // there's no "verified" concept anywhere in the real schema — badges stay empty for real posts
-    postId: row.id, who: name, init: initials(name), nat: "", sport,
+    postId: row.id, who: name, init: initials(name), nat: "", sport: sport || "",
     v: [], kind: row.kind, head: row.headline,
     body: row.body || "", likes: row.likes_count || 0, ago: timeAgo(row.created_at),
   };
 }
-function mapAthlete(row) {
-  const name = (row.profiles && row.profiles.full_name) || "GOLSZ Athlete";
+function mapAthlete(row, name) {
+  name = name || "GOLSZ Athlete";
   const country = (row.clubs && row.clubs.country) || "";
   return {
     // real athletes table has no citizenship/level/verified — country comes via club_id -> clubs
@@ -225,12 +224,21 @@ function Feed() {
 
         const { data, error } = await sb
           .from("posts")
-          .select("id, kind, headline, body, likes_count, created_at, profiles(full_name, athletes(sport))")
+          .select("id, author_id, kind, headline, body, likes_count, created_at")
           .order("created_at", { ascending: false })
           .limit(30);
         if (error) throw error;
         if (data && data.length) {
-          setPosts(data.map(mapPost));
+          // profiles has no public-read policy (dob is sensitive), so names come
+          // from the public_profile_names view instead of an embed through profiles.
+          const authorIds = [...new Set(data.map((p) => p.author_id))];
+          const [{ data: names }, { data: sports }] = await Promise.all([
+            sb.from("public_profile_names").select("id, full_name").in("id", authorIds),
+            sb.from("athletes").select("id, sport").in("id", authorIds),
+          ]);
+          const nameById = Object.fromEntries((names || []).map((r) => [r.id, r.full_name]));
+          const sportById = Object.fromEntries((sports || []).map((r) => [r.id, r.sport]));
+          setPosts(data.map((row) => mapPost(row, nameById[row.author_id], sportById[row.author_id])));
           if (user) {
             const ids = data.map((p) => p.id);
             const { data: mine } = await sb.from("post_likes").select("post_id").eq("profile_id", user.id).in("post_id", ids);
@@ -315,10 +323,15 @@ function Discover() {
       try {
         const { data, error } = await sb
           .from("athletes")
-          .select("id, sport, position, gender, grad_year, clubs(country), profiles(full_name)")
+          .select("id, sport, position, gender, grad_year, clubs(country)")
           .limit(200);
         if (error) throw error;
-        if (data && data.length) setPlayers(data.map(mapAthlete));
+        if (data && data.length) {
+          const ids = data.map((r) => r.id);
+          const { data: names } = await sb.from("public_profile_names").select("id, full_name").in("id", ids);
+          const nameById = Object.fromEntries((names || []).map((r) => [r.id, r.full_name]));
+          setPlayers(data.map((row) => mapAthlete(row, nameById[row.id])));
+        }
       } catch (e) { console.error("GOLSZ discover fetch error:", e); }
     })();
   }, []);
