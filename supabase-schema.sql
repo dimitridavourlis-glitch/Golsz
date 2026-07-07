@@ -1,11 +1,25 @@
 -- ============================================================
 -- GOLSZ — Supabase schema (Postgres)
--- Run this in Supabase → SQL Editor. Safe to run once on a fresh project,
--- and safe to re-run after the reset block below.
 --
--- Tables: profiles, athletes, coaches, clubs, agents, parent_links,
--- scout_history — plus Row Level Security so every user only ever
--- touches their own data (or their linked minor's, via parent_links).
+-- ⚠️ STALE — DOES NOT MATCH THE LIVE DATABASE (confirmed 2026-07-07).
+-- This file describes an earlier design (profiles.email/date_of_birth,
+-- athletes.profile_id/citizenship/level/verified, parent_links with
+-- id/relationship/approved_at, scout_history with athlete_id/role/content,
+-- etc). The database actually deployed uses different column names and a
+-- thinner shape for several tables — see the header comment in
+-- supabase-migration-004-fix-real-schema.sql for the confirmed real schema.
+-- Do NOT run this file against the live project; it will not match and
+-- may conflict. Kept here for historical/design-intent reference only,
+-- pending a full rewrite of this file to match reality.
+--
+-- Real migration history that DOES match the live DB, in order:
+--   1. (whatever created the live base tables — undocumented, predates
+--      this session)
+--   2. supabase-migration-002-posts-events.sql (posts/post_likes/events,
+--      athletes.gender) — applied cleanly, matches live schema exactly.
+--   3. supabase-migration-004-fix-real-schema.sql (RLS + function fixes,
+--      parent_links verification columns) — written against the real
+--      schema, this is the current source of truth for those objects.
 -- ============================================================
 
 -- ---------- reset (safe to run even on a clean project) ----------
@@ -375,65 +389,12 @@ create policy events_delete on events for delete using (created_by = auth.uid())
 -- ============================================================
 
 -- ============================================================
--- 11) ADDITIVE — parent_links verification (child approves the parent)
---     approved_at was previously never set by anything. This adds the
---     narrowest mechanism that doesn't need new email infra: a parent (with
---     their own account) requests a link to a child's account by email via
---     request_parent_link(); the child is the ONLY one who can set
---     approved_at (see parent_links_approve below — parent_profile_id is
---     deliberately excluded from that policy's USING clause). This is a
---     mutual-consent safeguard, not verified parental identity/COPPA-grade
---     consent — get legal input before relying on it for real minors.
--- ============================================================
-
--- request a link by email without exposing profiles to arbitrary lookup:
--- SECURITY DEFINER bypasses profiles RLS internally for the email match,
--- but only ever returns a boolean — never the looked-up id/row itself.
-create or replace function request_parent_link(p_child_email text, p_relationship text default null)
-returns boolean language plpgsql security definer as $$
-declare v_child uuid;
-begin
-  if auth.uid() is null then return false; end if;
-
-  select id into v_child from profiles where email = p_child_email;
-  if v_child is null or v_child = auth.uid() then return false; end if;
-
-  insert into parent_links (parent_profile_id, child_profile_id, relationship)
-  values (auth.uid(), v_child, p_relationship)
-  on conflict (parent_profile_id, child_profile_id) do nothing;
-
-  return true;
-end $$;
-
-revoke all on function request_parent_link(text, text) from public;
-grant execute on function request_parent_link(text, text) to authenticated;
-
--- only the CHILD side of a pending link can approve it
-drop policy if exists parent_links_approve on parent_links;
-create policy parent_links_approve on parent_links
-  for update using (child_profile_id = auth.uid())
-  with check (child_profile_id = auth.uid());
-
--- either side can remove a link (deny a pending request, or revoke an approved one)
-drop policy if exists parent_links_delete on parent_links;
-create policy parent_links_delete on parent_links
-  for delete using (parent_profile_id = auth.uid() or child_profile_id = auth.uid());
-
--- both sides of a parent_links row (pending or approved) need to see each
--- other's name/email to make an informed approve/deny decision — profiles_self
--- alone won't allow that (is_parent_of() requires approved_at, which is the
--- thing being decided). This is scoped strictly to pairs with an existing
--- parent_links row, not a general profiles read.
-drop policy if exists profiles_linked on profiles;
-create policy profiles_linked on profiles
-  for select using (
-    exists (select 1 from parent_links where parent_profile_id = auth.uid() and child_profile_id = profiles.id)
-    or exists (select 1 from parent_links where child_profile_id = auth.uid() and parent_profile_id = profiles.id)
-  );
-
--- ============================================================
--- Done (for real this time). Still true:
---  - This is mutual in-app consent, not identity-verified parental consent.
---    A bad actor who also controls (or fakes) the "child" side could still
---    self-approve. Don't market this as COPPA/GDPR-K compliant as-is.
+-- 11) parent_links verification — REMOVED FROM THIS FILE.
+--     What was here assumed parent_links had id/relationship/approved_at/
+--     parent_profile_id/child_profile_id columns. The live table only ever
+--     had (parent_id, athlete_id) — running this against production failed
+--     with "column child_profile_id does not exist" and rolled back
+--     entirely. The corrected version, written against the real table, is
+--     supabase-migration-004-fix-real-schema.sql. That file is the source
+--     of truth for parent_links verification, not this section.
 -- ============================================================

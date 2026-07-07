@@ -163,20 +163,21 @@ function flagFor(country) { return FLAGS[(country || "").trim().toLowerCase()] |
 
 function mapPost(row) {
   const name = (row.profiles && row.profiles.full_name) || "GOLSZ Athlete";
-  const verified = !!(row.profiles && row.profiles.athletes && row.profiles.athletes.verified);
   const sport = (row.profiles && row.profiles.athletes && row.profiles.athletes.sport) || "";
   return {
+    // there's no "verified" concept anywhere in the real schema — badges stay empty for real posts
     postId: row.id, who: name, init: initials(name), nat: "", sport,
-    v: verified ? ["Verified"] : [], kind: row.kind, head: row.headline,
+    v: [], kind: row.kind, head: row.headline,
     body: row.body || "", likes: row.likes_count || 0, ago: timeAgo(row.created_at),
   };
 }
 function mapAthlete(row) {
   const name = (row.profiles && row.profiles.full_name) || "GOLSZ Athlete";
+  const country = (row.clubs && row.clubs.country) || "";
   return {
+    // real athletes table has no citizenship/level/verified — country comes via club_id -> clubs
     n: name, i: initials(name), sport: row.sport || "", pos: row.position || "",
-    country: row.citizenship || "", flag: flagFor(row.citizenship), g: row.gender || "",
-    grad: row.grad_year || "", v: row.verified ? 1 : 0,
+    country, flag: flagFor(country), g: row.gender || "", grad: row.grad_year || "", v: 0,
   };
 }
 function mapEvent(row) {
@@ -224,7 +225,7 @@ function Feed() {
 
         const { data, error } = await sb
           .from("posts")
-          .select("id, kind, headline, body, likes_count, created_at, profiles(full_name, athletes(sport, verified))")
+          .select("id, kind, headline, body, likes_count, created_at, profiles(full_name, athletes(sport))")
           .order("created_at", { ascending: false })
           .limit(30);
         if (error) throw error;
@@ -314,7 +315,7 @@ function Discover() {
       try {
         const { data, error } = await sb
           .from("athletes")
-          .select("profile_id, sport, position, gender, grad_year, citizenship, level, verified, profiles(full_name)")
+          .select("id, sport, position, gender, grad_year, clubs(country), profiles(full_name)")
           .limit(200);
         if (error) throw error;
         if (data && data.length) setPlayers(data.map(mapAthlete));
@@ -537,17 +538,25 @@ function FamilyAccess() {
     if (!user) return;
     setUid(user.id);
     try {
-      const { data: asChild } = await sb.from("parent_links")
-        .select("id, relationship, approved_at, parent_profile_id, profiles!parent_links_parent_profile_id_fkey(full_name, email)")
-        .eq("child_profile_id", user.id);
-      if (asChild) {
-        setPending(asChild.filter((r) => !r.approved_at));
-        setGrantedToMe(asChild.filter((r) => r.approved_at));
+      // real parent_links is (id, parent_id, athlete_id, relationship, approved_at, created_at) —
+      // fetch both directions, then resolve counterpart names in a second pass instead of
+      // embedding via a guessed FK constraint name.
+      const [{ data: asChild }, { data: asParent }] = await Promise.all([
+        sb.from("parent_links").select("id, relationship, approved_at, parent_id").eq("athlete_id", user.id),
+        sb.from("parent_links").select("id, relationship, approved_at, athlete_id").eq("parent_id", user.id),
+      ]);
+      const otherIds = [...new Set([...(asChild || []).map((r) => r.parent_id), ...(asParent || []).map((r) => r.athlete_id)])];
+      let names = {};
+      if (otherIds.length) {
+        const { data: ppl } = await sb.from("profiles").select("id, full_name").in("id", otherIds);
+        if (ppl) names = Object.fromEntries(ppl.map((p) => [p.id, p.full_name]));
       }
-      const { data: asParent } = await sb.from("parent_links")
-        .select("id, relationship, approved_at, child_profile_id, profiles!parent_links_child_profile_id_fkey(full_name, email)")
-        .eq("parent_profile_id", user.id);
-      if (asParent) setMyLinks(asParent);
+      if (asChild) {
+        const withNames = asChild.map((r) => ({ ...r, name: names[r.parent_id] }));
+        setPending(withNames.filter((r) => !r.approved_at));
+        setGrantedToMe(withNames.filter((r) => r.approved_at));
+      }
+      if (asParent) setMyLinks(asParent.map((r) => ({ ...r, name: names[r.athlete_id] })));
     } catch (e) { console.error("GOLSZ family load error:", e); }
   }
   useEffect(() => { if (sb) load(); }, []);
@@ -580,7 +589,7 @@ function FamilyAccess() {
           <div style={{ fontSize: 11, color: C.amber, fontWeight: 700, marginBottom: 6 }}>PENDING REQUESTS FOR YOU</div>
           {pending.map((r) => (
             <div key={r.id} style={rowStyle}>
-              <span style={{ flex: 1, fontSize: 13 }}>{(r.profiles && r.profiles.full_name) || "Someone"} wants parent access{r.relationship ? ` (${r.relationship})` : ""}</span>
+              <span style={{ flex: 1, fontSize: 13 }}>{r.name || "Someone"} wants parent access{r.relationship ? ` (${r.relationship})` : ""}</span>
               <button onClick={() => approve(r.id)} style={smallBtn(false)}>Approve</button>
               <button onClick={() => remove(r.id)} style={smallBtn(true)}>Deny</button>
             </div>
@@ -593,7 +602,7 @@ function FamilyAccess() {
           <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>PEOPLE WITH ACCESS TO YOUR ACCOUNT</div>
           {grantedToMe.map((r) => (
             <div key={r.id} style={rowStyle}>
-              <span style={{ flex: 1, fontSize: 13 }}>{(r.profiles && r.profiles.full_name) || "Parent"}{r.relationship ? ` · ${r.relationship}` : ""}</span>
+              <span style={{ flex: 1, fontSize: 13 }}>{r.name || "Parent"}{r.relationship ? ` · ${r.relationship}` : ""}</span>
               <button onClick={() => remove(r.id)} style={smallBtn(true)}>Revoke</button>
             </div>
           ))}
@@ -605,7 +614,7 @@ function FamilyAccess() {
           <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>ACCOUNTS YOU HAVE ACCESS TO</div>
           {myLinks.map((r) => (
             <div key={r.id} style={rowStyle}>
-              <span style={{ flex: 1, fontSize: 13 }}>{(r.profiles && r.profiles.full_name) || "Athlete"}{r.relationship ? ` · ${r.relationship}` : ""}</span>
+              <span style={{ flex: 1, fontSize: 13 }}>{r.name || "Athlete"}{r.relationship ? ` · ${r.relationship}` : ""}</span>
               <span style={{ fontSize: 10.5, color: r.approved_at ? C.lime : C.amber, fontWeight: 700 }}>{r.approved_at ? "APPROVED" : "PENDING"}</span>
             </div>
           ))}
@@ -776,7 +785,11 @@ function Scout() {
   const endRef = useRef(null);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
 
-  // restore this athlete's past Scout transcript, if any (scout_history role='user'|'assistant')
+  // restore this athlete's past Scout transcript, if any. Real scout_history
+  // is (id, user_id, messages jsonb, created_at) — each transcript row's
+  // `messages` is a one-element [{role,content}] array; metering rows
+  // (written server-side by increment_scout_usage) are `[]` and flatten to
+  // nothing here, so no separate filtering is needed.
   useEffect(() => {
     if (!sb) return;
     (async () => {
@@ -786,20 +799,20 @@ function Scout() {
         uidRef.current = user.id;
         const { data, error } = await sb
           .from("scout_history")
-          .select("role, content, created_at")
-          .eq("athlete_id", user.id)
-          .in("role", ["user", "assistant"])
+          .select("messages, created_at")
+          .eq("user_id", user.id)
           .order("created_at", { ascending: true })
-          .limit(200);
+          .limit(400);
         if (error) throw error;
-        if (data && data.length) setMsgs(data.map((r) => ({ role: r.role, text: r.content })));
+        const restored = (data || []).flatMap((r) => Array.isArray(r.messages) ? r.messages : []);
+        if (restored.length) setMsgs(restored.map((m) => ({ role: m.role, text: m.content })));
       } catch (e) { console.error("GOLSZ scout history load error:", e); }
     })();
   }, []);
 
   async function logTurn(role, text) {
     if (!sb || !uidRef.current) return;
-    try { await sb.from("scout_history").insert({ athlete_id: uidRef.current, role, content: text }); }
+    try { await sb.from("scout_history").insert({ user_id: uidRef.current, messages: [{ role, content: text }] }); }
     catch (e) { console.error("GOLSZ scout history write error:", e); }
   }
 
