@@ -651,19 +651,49 @@ Allowed keys: name, age, sport, position, location, club, level, grad_year, gpa,
 
 const CHIPS = ["Build my target school list", "Create my career roadmap", "Draft an email to a coach", "What should I do this month?"];
 
+const SCOUT_GREETING = "I'm your GOLSZ Scout.\n\nTell me about yourself like you'd tell a scout — age, sport, position, where you play, and where you want to end up. I'll build your path from there.";
 function Scout() {
-  const [msgs, setMsgs] = useState([{ role: "assistant", text: "I'm your GOLSZ Scout.\n\nTell me about yourself like you'd tell a scout — age, sport, position, where you play, and where you want to end up. I'll build your path from there." }]);
+  const [msgs, setMsgs] = useState([{ role: "assistant", text: SCOUT_GREETING }]);
   const [profile, setProfile] = useState({});
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const uidRef = useRef(null);
   const endRef = useRef(null);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
+
+  // restore this athlete's past Scout transcript, if any (scout_history role='user'|'assistant')
+  useEffect(() => {
+    if (!sb) return;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        uidRef.current = user.id;
+        const { data, error } = await sb
+          .from("scout_history")
+          .select("role, content, created_at")
+          .eq("athlete_id", user.id)
+          .in("role", ["user", "assistant"])
+          .order("created_at", { ascending: true })
+          .limit(200);
+        if (error) throw error;
+        if (data && data.length) setMsgs(data.map((r) => ({ role: r.role, text: r.content })));
+      } catch (e) { console.error("GOLSZ scout history load error:", e); }
+    })();
+  }, []);
+
+  async function logTurn(role, text) {
+    if (!sb || !uidRef.current) return;
+    try { await sb.from("scout_history").insert({ athlete_id: uidRef.current, role, content: text }); }
+    catch (e) { console.error("GOLSZ scout history write error:", e); }
+  }
 
   async function send(text) {
     const content = text.trim(); if (!content || busy) return;
     setInput("");
     const next = [...msgs, { role: "user", text: content }];
     setMsgs(next); setBusy(true);
+    logTurn("user", content);
     try {
       const api = next.map((m) => ({ role: m.role, content: m.text }));
       api[api.length - 1] = { role: "user", content: `PROFILE SO FAR: ${JSON.stringify(profile)}\n\nATHLETE: ${content}` };
@@ -684,6 +714,7 @@ function Scout() {
       } catch { /* raw */ }
       if (updates && typeof updates === "object") setProfile((p) => ({ ...p, ...updates }));
       setMsgs((m) => [...m, { role: "assistant", text: reply }]);
+      logTurn("assistant", reply);
     } catch {
       setMsgs((m) => [...m, { role: "assistant", text: "Connection dropped mid-play. Send that again and I'm on it." }]);
     } finally { setBusy(false); }
