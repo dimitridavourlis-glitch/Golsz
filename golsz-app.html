@@ -165,7 +165,7 @@ function mapPost(row, name, sport) {
   name = name || "GOLSZ Athlete";
   return {
     // there's no "verified" concept anywhere in the real schema — badges stay empty for real posts
-    postId: row.id, who: name, init: initials(name), nat: "", sport: sport || "",
+    postId: row.id, authorId: row.author_id, who: name, init: initials(name), nat: "", sport: sport || "",
     v: [], kind: row.kind, head: row.headline,
     body: row.body || "", likes: row.likes_count || 0, ago: timeAgo(row.created_at),
   };
@@ -209,45 +209,91 @@ function Badge({ label }) {
   );
 }
 
-/* ============ FEED ============ */
-function Feed() {
-  const [posts, setPosts] = useState(FEED);
-  const [liked, setLiked] = useState({});
-  const [uid, setUid] = useState(null);
-
+/* ============ RESTRICTED MINOR BANNER ============
+   Shown when the current user is a minor with no approved parent link —
+   mirrors is_restricted_minor() in the database (the real enforcement is
+   server-side RLS; this is just a visible explanation of why posting is
+   blocked / why you don't show up in Discover). */
+function RestrictedBanner() {
+  const [restricted, setRestricted] = useState(false);
   useEffect(() => {
     if (!sb) return;
     (async () => {
       try {
         const { data: { user } } = await sb.auth.getUser();
-        if (user) setUid(user.id);
-
-        const { data, error } = await sb
-          .from("posts")
-          .select("id, author_id, kind, headline, body, likes_count, created_at")
-          .order("created_at", { ascending: false })
-          .limit(30);
-        if (error) throw error;
-        if (data && data.length) {
-          // profiles has no public-read policy (dob is sensitive), so names come
-          // from the public_profile_names view instead of an embed through profiles.
-          const authorIds = [...new Set(data.map((p) => p.author_id))];
-          const [{ data: names }, { data: sports }] = await Promise.all([
-            sb.from("public_profile_names").select("id, full_name").in("id", authorIds),
-            sb.from("athletes").select("id, sport").in("id", authorIds),
-          ]);
-          const nameById = Object.fromEntries((names || []).map((r) => [r.id, r.full_name]));
-          const sportById = Object.fromEntries((sports || []).map((r) => [r.id, r.sport]));
-          setPosts(data.map((row) => mapPost(row, nameById[row.author_id], sportById[row.author_id])));
-          if (user) {
-            const ids = data.map((p) => p.id);
-            const { data: mine } = await sb.from("post_likes").select("post_id").eq("profile_id", user.id).in("post_id", ids);
-            if (mine) setLiked(Object.fromEntries(mine.map((r) => [r.post_id, true])));
-          }
-        }
-      } catch (e) { console.error("GOLSZ feed fetch error:", e); }
+        if (!user) return;
+        const { data: prof } = await sb.from("profiles").select("is_minor").eq("id", user.id).single();
+        if (!prof || !prof.is_minor) return;
+        const { data: approved } = await sb.from("parent_links").select("id").eq("athlete_id", user.id).not("approved_at", "is", null).limit(1);
+        if (!approved || approved.length === 0) setRestricted(true);
+      } catch (e) { console.error("GOLSZ restricted-check error:", e); }
     })();
   }, []);
+  if (!restricted) return null;
+  return (
+    <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+      <span style={{ fontSize: 18 }}>🔒</span>
+      <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.4 }}>
+        <b style={{ color: C.amber }}>Restricted account.</b> Your posts stay private and you're hidden from Discover until a parent or guardian approves access — see Family &amp; Parent Access on your Profile.
+      </div>
+    </div>
+  );
+}
+
+/* ============ FEED ============ */
+function Feed() {
+  const [posts, setPosts] = useState(FEED);
+  const [liked, setLiked] = useState({});
+  const [uid, setUid] = useState(null);
+  const [blockedIds, setBlockedIds] = useState([]);
+  const [reportedIds, setReportedIds] = useState({});
+  const [composeHeadline, setComposeHeadline] = useState("");
+  const [composeBody, setComposeBody] = useState("");
+  const [composeBusy, setComposeBusy] = useState(false);
+  const [composeErr, setComposeErr] = useState("");
+
+  async function loadFeed() {
+    if (!sb) return;
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) setUid(user.id);
+
+      let blocked = [];
+      if (user) {
+        const { data: blocks } = await sb.from("blocks").select("blocked_id").eq("blocker_id", user.id);
+        blocked = (blocks || []).map((b) => b.blocked_id);
+        setBlockedIds(blocked);
+      }
+
+      const { data, error } = await sb
+        .from("posts")
+        .select("id, author_id, kind, headline, body, likes_count, created_at")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      const visible = (data || []).filter((row) => !blocked.includes(row.author_id));
+      if (visible.length) {
+        // profiles has no public-read policy (dob is sensitive), so names come
+        // from the public_profile_names view instead of an embed through profiles.
+        const authorIds = [...new Set(visible.map((p) => p.author_id))];
+        const [{ data: names }, { data: sports }] = await Promise.all([
+          sb.from("public_profile_names").select("id, full_name").in("id", authorIds),
+          sb.from("athletes").select("id, sport").in("id", authorIds),
+        ]);
+        const nameById = Object.fromEntries((names || []).map((r) => [r.id, r.full_name]));
+        const sportById = Object.fromEntries((sports || []).map((r) => [r.id, r.sport]));
+        setPosts(visible.map((row) => mapPost(row, nameById[row.author_id], sportById[row.author_id])));
+        if (user) {
+          const ids = visible.map((p) => p.id);
+          const { data: mine } = await sb.from("post_likes").select("post_id").eq("profile_id", user.id).in("post_id", ids);
+          if (mine) setLiked(Object.fromEntries(mine.map((r) => [r.post_id, true])));
+        }
+      } else if (data && data.length === 0) {
+        setPosts(FEED); // no real posts yet — keep demo content visible
+      }
+    } catch (e) { console.error("GOLSZ feed fetch error:", e); }
+  }
+  useEffect(() => { loadFeed(); }, []);
 
   async function toggleLike(p, i) {
     if (!p.postId || !sb || !uid) {
@@ -263,9 +309,58 @@ function Feed() {
     } catch (e) { console.error("GOLSZ like error:", e); }
   }
 
+  async function createPost() {
+    if (!sb || !uid || !composeHeadline.trim() || composeBusy) return;
+    setComposeBusy(true); setComposeErr("");
+    try {
+      const { error } = await sb.from("posts").insert({
+        author_id: uid, kind: "post",
+        headline: composeHeadline.trim().slice(0, 120),
+        body: composeBody.trim() || null,
+      });
+      if (error) throw error;
+      setComposeHeadline(""); setComposeBody("");
+      loadFeed();
+    } catch (e) {
+      console.error("GOLSZ create post error:", e);
+      setComposeErr((e && e.message) ? e.message : "Couldn't post. Try again.");
+    } finally { setComposeBusy(false); }
+  }
+
+  async function reportPost(p) {
+    if (!sb || !uid || !p.postId || reportedIds[p.postId]) return;
+    try {
+      await sb.from("post_reports").insert({ post_id: p.postId, reporter_id: uid, reason: "reported from feed" });
+      setReportedIds((r) => ({ ...r, [p.postId]: true }));
+    } catch (e) { console.error("GOLSZ report error:", e); }
+  }
+
+  async function blockAuthor(p) {
+    if (!sb || !uid || !p.authorId || p.authorId === uid) return;
+    try {
+      await sb.from("blocks").insert({ blocker_id: uid, blocked_id: p.authorId });
+      loadFeed();
+    } catch (e) { console.error("GOLSZ block error:", e); }
+  }
+
   return (
     <div style={{ padding: "8px 12px 16px" }}>
+      <RestrictedBanner />
       <SectionTitle>Your feed</SectionTitle>
+
+      {sb && uid && (
+        <div style={{ ...card }}>
+          <input value={composeHeadline} onChange={(e) => setComposeHeadline(e.target.value)} placeholder="What's happening?" maxLength={120}
+            style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
+          <textarea value={composeBody} onChange={(e) => setComposeBody(e.target.value)} placeholder="Add details (optional)" rows={2}
+            style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13, fontFamily: "inherit", outline: "none", resize: "none", marginBottom: 8, boxSizing: "border-box" }} />
+          {composeErr && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8 }}>{composeErr}</div>}
+          <button onClick={createPost} disabled={!composeHeadline.trim() || composeBusy} style={{ background: C.lime, color: C.pitch, border: "none", borderRadius: 9, padding: "9px 16px", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", opacity: !composeHeadline.trim() || composeBusy ? 0.5 : 1 }}>
+            {composeBusy ? "Posting…" : "Post"}
+          </button>
+        </div>
+      )}
+
       {posts.map((p, i) => {
         const key = p.postId || i;
         const isLiked = !!liked[key];
@@ -296,6 +391,14 @@ function Feed() {
             </button>
             <button style={iconBtn(C.slate)}><Users size={15} /> Follow</button>
             <button style={{ ...iconBtn(C.slate), marginLeft: "auto" }}><ArrowUpRight size={15} /> Share</button>
+            {p.postId && uid && p.authorId !== uid && (
+              <>
+                <button onClick={() => reportPost(p)} style={{ ...iconBtn(reportedIds[p.postId] ? C.amber : C.slate), fontSize: 11 }}>
+                  {reportedIds[p.postId] ? "Reported" : "Report"}
+                </button>
+                <button onClick={() => blockAuthor(p)} style={{ ...iconBtn(C.slate), fontSize: 11 }}>Block</button>
+              </>
+            )}
           </div>
         </article>
         );
@@ -758,6 +861,7 @@ function Passport({ onSignOut }) {
         ))}
       </div>
 
+      <RestrictedBanner />
       <FamilyAccess />
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
@@ -1023,6 +1127,7 @@ function Auth({ onDone }) {
   const [dobDay, setDobDay] = useState("");
   const [dobMonth, setDobMonth] = useState("");
   const [dobYear, setDobYear] = useState("");
+  const [parentEmail, setParentEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [notice, setNotice] = useState("");
@@ -1042,8 +1147,9 @@ function Auth({ onDone }) {
     return a;
   })() : null;
   const isMinor = age !== null && age < 18;
+  const parentEmailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail.trim());
 
-  const ok = email.trim() && pw.trim() && (!isSignup || (name.trim() && dobOk));
+  const ok = email.trim() && pw.trim() && (!isSignup || (name.trim() && dobOk && (!isMinor || parentEmailOk)));
   const selected = PLANS.find((p) => p.id === plan) || PLANS[1];
   const field = { width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 12, color: C.chalk, padding: "13px 14px", fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 12, boxSizing: "border-box" };
   const dobField = { ...field, marginBottom: 0, textAlign: "center" };
@@ -1060,9 +1166,19 @@ function Auth({ onDone }) {
     setBusy(true);
     try {
       if (isSignup) {
-        const { data, error } = await sb.auth.signUp({ email: email.trim(), password: pw, options: { data: { full_name: name.trim(), plan: selected.id, date_of_birth: dobIso } } });
+        const { data, error } = await sb.auth.signUp({ email: email.trim(), password: pw, options: { data: {
+          full_name: name.trim(), plan: selected.id, date_of_birth: dobIso,
+          parent_email: isMinor ? parentEmail.trim() : "",
+        } } });
         if (error) throw error;
-        if (selected.price > 0 && STRIPE_LINKS[plan]) { window.location.href = STRIPE_LINKS[plan]; return; } // account exists -> pay
+        if (selected.price > 0 && STRIPE_LINKS[plan] && data.user) {
+          // attribute the checkout back to this account for the Stripe webhook
+          const checkoutUrl = new URL(STRIPE_LINKS[plan]);
+          checkoutUrl.searchParams.set("client_reference_id", data.user.id);
+          checkoutUrl.searchParams.set("prefilled_email", email.trim());
+          window.location.href = checkoutUrl.toString();
+          return; // account exists -> pay
+        }
         if (data.session) { onDone(); } else { setNotice("Account created — check " + email.trim() + " for a confirmation link, then come back and log in."); }
       } else {
         const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password: pw });
@@ -1148,8 +1264,11 @@ function Auth({ onDone }) {
                 <input value={dobYear} onChange={(e) => setDobYear(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} placeholder="YYYY" inputMode="numeric" maxLength={4} style={{ ...dobField, flex: 1.4 }} />
               </div>
               {isMinor && (
-                <div style={{ fontSize: 11.5, color: C.amber, marginTop: 8, lineHeight: 1.4 }}>
-                  Athletes under 18 need a parent or guardian to help manage their account. We'll follow up on that after signup.
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8, lineHeight: 1.4 }}>
+                    Athletes under 18 need a parent or guardian's approval to unlock the full account. Enter their email — if they already have a GOLSZ account, we'll send a request; your account stays restricted (no public posts, hidden from Discover) until they approve it.
+                  </div>
+                  <input value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} placeholder="Parent or guardian's email" type="email" style={{ ...field, marginBottom: 0 }} />
                 </div>
               )}
             </div>
