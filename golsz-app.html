@@ -753,6 +753,116 @@ function FamilyAccess() {
   );
 }
 
+/* ============ VERIFIED MEDIA (highlight reels) ============
+   Link-based, not hosted video — athletes paste a link to footage already
+   hosted elsewhere (YouTube, Veo, Hudl...). Stored in the athletes.highlights
+   jsonb column (already existed in the schema, unused until now). Falls back
+   to PASSPORT.media's demo entries when there's no real data, same pattern
+   as Feed/Discover/Events. */
+function sourceFromUrl(url) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    if (host.includes("youtube.com") || host.includes("youtu.be")) return "YouTube";
+    if (host.includes("veo.co")) return "Veo";
+    if (host.includes("hudl.com")) return "Hudl";
+    if (host.includes("vimeo.com")) return "Vimeo";
+    return host;
+  } catch { return "Video link"; }
+}
+function Highlights() {
+  const [items, setItems] = useState(PASSPORT.media.map((m) => ({ title: m.t, source: m.src, url: null })));
+  const [real, setReal] = useState(false);
+  const [uid, setUid] = useState(null);
+  const [title, setTitle] = useState("");
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (!sb) return;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        setUid(user.id);
+        const { data, error } = await sb.from("athletes").select("highlights").eq("id", user.id).single();
+        if (error) throw error;
+        const list = Array.isArray(data && data.highlights) ? data.highlights : [];
+        if (list.length) { setItems(list); setReal(true); }
+        // else: leave the demo fallback in place, and `real` stays false so the
+        // first real add doesn't fold the demo placeholders in as if they were data
+      } catch (e) { console.error("GOLSZ highlights load error:", e); }
+    })();
+  }, []);
+
+  async function saveList(list) {
+    if (!sb || !uid) return;
+    try { await sb.from("athletes").update({ highlights: list }).eq("id", uid); }
+    catch (e) { console.error("GOLSZ highlights save error:", e); }
+  }
+
+  async function addHighlight() {
+    if (!sb || !uid || !title.trim() || !url.trim() || busy) return;
+    setBusy(true); setErr("");
+    try {
+      let parsed;
+      try { parsed = new URL(url.trim()); } catch { throw new Error("Enter a valid video link (starting with https://)."); }
+      const entry = {
+        id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
+        title: title.trim(), url: parsed.toString(), source: sourceFromUrl(parsed.toString()),
+        added_at: new Date().toISOString(),
+      };
+      const next = [...(real ? items : []), entry];
+      await saveList(next);
+      setItems(next); setReal(true);
+      setTitle(""); setUrl("");
+    } catch (e) {
+      setErr((e && e.message) ? e.message : "Couldn't add that link.");
+    } finally { setBusy(false); }
+  }
+
+  async function removeHighlight(id) {
+    if (!sb || !uid) return;
+    const next = items.filter((m) => m.id !== id);
+    setItems(next);
+    await saveList(next);
+  }
+
+  return (
+    <div style={{ ...card }}>
+      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>VERIFIED MEDIA</div>
+      {items.map((m, i) => (
+        <div key={m.id || i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: i < items.length - 1 ? `1px solid ${C.line}` : "none" }}>
+          <div style={{ width: 6, height: 6, borderRadius: 99, background: C.lime, flexShrink: 0 }} />
+          {m.url ? (
+            <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, flex: 1, color: C.chalk, textDecoration: "none" }}>{m.title}</a>
+          ) : (
+            <span style={{ fontSize: 13, flex: 1 }}>{m.title}</span>
+          )}
+          <span style={{ fontSize: 10, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{m.source}</span>
+          {real && sb && uid && m.id && (
+            <button onClick={() => removeHighlight(m.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, marginLeft: 4, display: "flex" }}><X size={13} /></button>
+          )}
+        </div>
+      ))}
+      {sb && uid && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Highlight title (e.g. Full match vs Montreal)"
+            style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", marginBottom: 6, boxSizing: "border-box" }} />
+          <div style={{ display: "flex", gap: 6 }}>
+            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Link (YouTube, Veo, Hudl…)"
+              style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+            <button onClick={addHighlight} disabled={!title.trim() || !url.trim() || busy} style={{ background: C.lime, color: C.pitch, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!title.trim() || !url.trim() || busy) ? 0.5 : 1 }}>
+              {busy ? "…" : "Add"}
+            </button>
+          </div>
+          {err && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 6 }}>{err}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ============ PROFILE — Digital Sports Passport (signature) ============ */
 function Passport({ onSignOut }) {
   const p = PASSPORT;
@@ -839,16 +949,7 @@ function Passport({ onSignOut }) {
       </div>
 
       {/* media */}
-      <div style={{ ...card }}>
-        <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>VERIFIED MEDIA</div>
-        {p.media.map((m, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: i < p.media.length - 1 ? `1px solid ${C.line}` : "none" }}>
-            <div style={{ width: 6, height: 6, borderRadius: 99, background: C.lime }} />
-            <span style={{ fontSize: 13, flex: 1 }}>{m.t}</span>
-            <span style={{ fontSize: 10, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{m.src}</span>
-          </div>
-        ))}
-      </div>
+      <Highlights />
 
       {/* timeline */}
       <div style={{ ...card, marginBottom: 8 }}>
