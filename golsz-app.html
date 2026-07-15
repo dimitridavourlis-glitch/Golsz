@@ -83,11 +83,6 @@ const PASSPORT = {
     { yr: "2025", txt: "Provincial team call-up · Ontario Soccer" },
     { yr: "2024", txt: "Joined Toronto FC Academy" },
   ],
-  media: [
-    { t: "Full match — vs Montreal (90')", src: "Veo" },
-    { t: "Defensive highlights 2026", src: "YouTube" },
-    { t: "Combine testing data", src: "GOLSZ Verified" },
-  ],
 };
 
 const FEED = [
@@ -992,22 +987,11 @@ function FamilyAccess() {
 /* ============ VERIFIED MEDIA (highlight reels) ============
    Link-based, not hosted video — athletes paste a link to footage already
    hosted elsewhere (YouTube, Veo, Hudl...). Stored in the athletes.highlights
-   jsonb column (already existed in the schema, unused until now). Falls back
-   to PASSPORT.media's demo entries when there's no real data, same pattern
-   as Feed/Discover/Events. */
-function sourceFromUrl(url) {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, "");
-    if (host.includes("youtube.com") || host.includes("youtu.be")) return "YouTube";
-    if (host.includes("veo.co")) return "Veo";
-    if (host.includes("hudl.com")) return "Hudl";
-    if (host.includes("vimeo.com")) return "Vimeo";
-    return host;
-  } catch { return "Video link"; }
-}
+   jsonb column. Always real data — no demo placeholders — and each entry
+   only ever shows its title and link, nothing fabricated. */
 function Highlights({ viewUserId }) {
-  const [items, setItems] = useState(PASSPORT.media.map((m) => ({ title: m.t, source: m.src, url: null })));
-  const [real, setReal] = useState(false);
+  const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [uid, setUid] = useState(null);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
@@ -1025,12 +1009,8 @@ function Highlights({ viewUserId }) {
         const targetId = viewUserId || user.id;
         const { data, error } = await sb.from("athletes").select("highlights").eq("id", targetId).single();
         if (error) throw error;
-        const list = Array.isArray(data && data.highlights) ? data.highlights : [];
-        if (list.length) { setItems(list); setReal(true); }
-        else if (viewUserId) { setItems([]); setReal(true); } // viewing someone else — show their real (empty) state, never our demo placeholders
-        // else: leave the demo fallback in place for your own empty profile, and
-        // `real` stays false so the first real add doesn't fold the demo
-        // placeholders in as if they were data
+        setItems(Array.isArray(data && data.highlights) ? data.highlights : []);
+        setLoaded(true);
       } catch (e) { console.error("GOLSZ highlights load error:", e); }
     })();
   }, [viewUserId]);
@@ -1049,12 +1029,11 @@ function Highlights({ viewUserId }) {
       try { parsed = new URL(url.trim()); } catch { throw new Error("Enter a valid video link (starting with https://)."); }
       const entry = {
         id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
-        title: title.trim(), url: parsed.toString(), source: sourceFromUrl(parsed.toString()),
-        added_at: new Date().toISOString(),
+        title: title.trim(), url: parsed.toString(),
       };
-      const next = [...(real ? items : []), entry];
+      const next = [...items, entry];
       await saveList(next);
-      setItems(next); setReal(true);
+      setItems(next);
       setTitle(""); setUrl("");
       // also share it to Feed as a clip post, same as any other post — the
       // 'clip' kind already existed in posts' schema and the original demo
@@ -1076,7 +1055,7 @@ function Highlights({ viewUserId }) {
   return (
     <div style={{ ...card }}>
       <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>VERIFIED MEDIA</div>
-      {viewUserId && real && items.length === 0 && (
+      {loaded && items.length === 0 && (
         <div style={{ fontSize: 12.5, color: C.slate }}>No highlights yet.</div>
       )}
       {items.map((m, i) => (
@@ -1087,8 +1066,7 @@ function Highlights({ viewUserId }) {
           ) : (
             <span style={{ fontSize: 13, flex: 1 }}>{m.title}</span>
           )}
-          <span style={{ fontSize: 10, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{m.source}</span>
-          {real && isOwner && m.id && (
+          {isOwner && m.id && (
             <button onClick={() => removeHighlight(m.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, marginLeft: 4, display: "flex" }}><X size={13} /></button>
           )}
         </div>
