@@ -176,7 +176,7 @@ function mapAthlete(row, name) {
   const country = (row.clubs && row.clubs.country) || "";
   return {
     // real athletes table has no citizenship/level/verified — country comes via club_id -> clubs
-    n: name, i: initials(name), sport: row.sport || "", pos: row.position || "",
+    id: row.id, n: name, i: initials(name), sport: row.sport || "", pos: row.position || "",
     country, flag: flagFor(country), g: row.gender || "", grad: row.grad_year || "", v: 0,
   };
 }
@@ -248,6 +248,7 @@ function Feed() {
   const [uid, setUid] = useState(null);
   const [blockedIds, setBlockedIds] = useState([]);
   const [reportedIds, setReportedIds] = useState({});
+  const [following, setFollowing] = useState({});
   const [composeHeadline, setComposeHeadline] = useState("");
   const [composeBody, setComposeBody] = useState("");
   const [composeBusy, setComposeBusy] = useState(false);
@@ -264,6 +265,8 @@ function Feed() {
         const { data: blocks } = await sb.from("blocks").select("blocked_id").eq("blocker_id", user.id);
         blocked = (blocks || []).map((b) => b.blocked_id);
         setBlockedIds(blocked);
+        const { data: myFollows } = await sb.from("follows").select("followed_id").eq("follower_id", user.id);
+        setFollowing(Object.fromEntries((myFollows || []).map((r) => [r.followed_id, true])));
       }
 
       const { data, error } = await sb
@@ -344,6 +347,21 @@ function Feed() {
     } catch (e) { console.error("GOLSZ block error:", e); }
   }
 
+  async function toggleFollow(authorId) {
+    if (!sb || !uid || !authorId || authorId === uid) return;
+    const isFollowing = !!following[authorId];
+    setFollowing((f) => ({ ...f, [authorId]: !isFollowing }));
+    try {
+      const { error } = isFollowing
+        ? await sb.from("follows").delete().eq("follower_id", uid).eq("followed_id", authorId)
+        : await sb.from("follows").insert({ follower_id: uid, followed_id: authorId });
+      if (error) throw error;
+    } catch (e) {
+      console.error("GOLSZ follow error:", e);
+      setFollowing((f) => ({ ...f, [authorId]: isFollowing })); // revert on failure
+    }
+  }
+
   return (
     <div style={{ padding: "8px 12px 16px" }}>
       <RestrictedBanner />
@@ -397,7 +415,14 @@ function Feed() {
               style={iconBtn(isLiked ? C.lime : C.slate)}>
               <Heart size={15} fill={isLiked ? C.lime : "none"} /> {p.likes + (isLiked && !p.postId ? 1 : 0)}
             </button>
-            <button style={iconBtn(C.slate)}><Users size={15} /> Follow</button>
+            {p.postId && uid && p.authorId && p.authorId !== uid && (
+              <button
+                onClick={() => toggleFollow(p.authorId)}
+                style={iconBtn(following[p.authorId] ? C.lime : C.slate)}
+              >
+                <Users size={15} fill={following[p.authorId] ? C.lime : "none"} /> {following[p.authorId] ? "Following" : "Follow"}
+              </button>
+            )}
             <button style={{ ...iconBtn(C.slate), marginLeft: "auto" }}><ArrowUpRight size={15} /> Share</button>
             {p.postId && uid && p.authorId !== uid && (
               <>
@@ -427,11 +452,19 @@ function Discover() {
   const [country, setCountry] = useState("All");
   const [pos, setPos] = useState("All");
   const [players, setPlayers] = useState(PLAYERS);
+  const [uid, setUid] = useState(null);
+  const [following, setFollowing] = useState({});
 
   useEffect(() => {
     if (!sb) return;
     (async () => {
       try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) {
+          setUid(user.id);
+          const { data: myFollows } = await sb.from("follows").select("followed_id").eq("follower_id", user.id);
+          setFollowing(Object.fromEntries((myFollows || []).map((r) => [r.followed_id, true])));
+        }
         const { data, error } = await sb
           .from("athletes")
           .select("id, sport, position, gender, grad_year, clubs(country)")
@@ -446,6 +479,21 @@ function Discover() {
       } catch (e) { console.error("GOLSZ discover fetch error:", e); }
     })();
   }, []);
+
+  async function toggleFollow(id) {
+    if (!sb || !uid || !id || id === uid) return;
+    const isFollowing = !!following[id];
+    setFollowing((f) => ({ ...f, [id]: !isFollowing }));
+    try {
+      const { error } = isFollowing
+        ? await sb.from("follows").delete().eq("follower_id", uid).eq("followed_id", id)
+        : await sb.from("follows").insert({ follower_id: uid, followed_id: id });
+      if (error) throw error;
+    } catch (e) {
+      console.error("GOLSZ follow error:", e);
+      setFollowing((f) => ({ ...f, [id]: isFollowing }));
+    }
+  }
 
   const results = players.filter((p) =>
     (sport === "All" || p.sport === sport) &&
@@ -473,7 +521,7 @@ function Discover() {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {results.sort((a, b) => b.v - a.v).map((p) => (
-          <div key={p.n} style={{ ...card, margin: 0, padding: 12 }}>
+          <div key={p.id || p.n} style={{ ...card, margin: 0, padding: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <Avatar init={p.i} size={38} />
               <span style={{ display: "flex", gap: 2 }}>
@@ -484,7 +532,22 @@ function Discover() {
             <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace", marginTop: 2 }}>
               {p.pos.toUpperCase()} · {p.g} · '{String(p.grad).slice(2)}
             </div>
-            <div style={{ fontSize: 11, color: C.lime, marginTop: 6 }}>{p.sport}</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+              <span style={{ fontSize: 11, color: C.lime }}>{p.sport}</span>
+              {p.id && uid && p.id !== uid && (
+                <button
+                  onClick={() => toggleFollow(p.id)}
+                  style={{
+                    fontSize: 10.5, fontWeight: 700, padding: "4px 9px", borderRadius: 999, cursor: "pointer",
+                    fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3,
+                    background: following[p.id] ? C.lime : "transparent", color: following[p.id] ? C.pitch : C.chalk,
+                    border: `1px solid ${following[p.id] ? C.lime : C.line2}`,
+                  }}
+                >
+                  <Users size={11} /> {following[p.id] ? "Following" : "Follow"}
+                </button>
+              )}
+            </div>
           </div>
         ))}
         {results.length === 0 && (
