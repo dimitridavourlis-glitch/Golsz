@@ -1266,12 +1266,13 @@ function ProfileEditor({ initial, onClose, onSaved }) {
   );
 }
 
-function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUserId, onBack, onMessage }) {
+function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUserId, onBack, onMessage, onViewProfile }) {
   const [uid, setUid] = useState(null);
   const [profile, setProfile] = useState(null);
   const [athlete, setAthlete] = useState(null);
   const [editing, setEditing] = useState(false);
   const [following, setFollowing] = useState(false);
+  const [followers, setFollowers] = useState(null);
   const real = !!uid;
   const viewingOther = !!(viewUserId && uid && viewUserId !== uid);
 
@@ -1282,6 +1283,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
       if (!user) return;
       setUid(user.id);
       const other = viewUserId && viewUserId !== user.id;
+      const targetId = other ? viewUserId : user.id;
       if (other) {
         // profiles has no public-read policy (dob is sensitive), so the
         // viewed person's name comes from the public_profile_names view —
@@ -1302,6 +1304,16 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
         setProfile(prof || null);
         setAthlete(ath || null);
         if (autoEdit) { setEditing(true); onAutoEditConsumed && onAutoEditConsumed(); }
+      }
+
+      const { data: followRows } = await sb.from("follows").select("follower_id").eq("followed_id", targetId);
+      const followerIds = (followRows || []).map((r) => r.follower_id);
+      if (followerIds.length) {
+        const { data: names } = await sb.from("public_profile_names").select("id, full_name").in("id", followerIds);
+        const nameById = Object.fromEntries((names || []).map((r) => [r.id, r.full_name]));
+        setFollowers(followerIds.map((id) => ({ id, name: nameById[id] || "GOLSZ User" })));
+      } else {
+        setFollowers([]);
       }
     } catch (e) { console.error("GOLSZ passport load error:", e); }
   }
@@ -1465,6 +1477,32 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
         <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 6 }}>SCOUTING BIO</div>
         <div style={{ fontSize: 13.5, lineHeight: 1.55, color: "#C9D6CD" }}>{p.bio}</div>
       </div>
+
+      {/* followers */}
+      {real && (
+        <div style={{ ...card }}>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>
+            {followers === null ? "FOLLOWERS" : `${followers.length} ${followers.length === 1 ? "FOLLOWER" : "FOLLOWERS"}`}
+          </div>
+          {followers === null && <div style={{ fontSize: 12.5, color: C.slate }}>Loading…</div>}
+          {followers && followers.length === 0 && (
+            <div style={{ fontSize: 12.5, color: C.slate }}>{viewingOther ? "No followers yet." : "No followers yet — your Discover and Feed activity is how people find you."}</div>
+          )}
+          {followers && followers.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {followers.map((f) => (
+                <div key={f.id}
+                  onClick={() => onViewProfile && onViewProfile(f.id)}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", cursor: onViewProfile ? "pointer" : "default" }}
+                >
+                  <Avatar init={initials(f.name)} size={30} />
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>{f.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* media */}
       <Highlights viewUserId={viewingOther ? viewUserId : null} />
@@ -2077,7 +2115,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "scout" && <Scout />}
         {page === "events" && <Events />}
-        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={() => setViewProfileId(null)} onMessage={openThread} />}
+        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={() => setViewProfileId(null)} onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "messages" && <Messages thread={thread} setThread={setThread} />}
         {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
       </main>
