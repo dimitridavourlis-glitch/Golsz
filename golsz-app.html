@@ -49,6 +49,8 @@ const ArrowUpRight = svg('<path d="M7 7h10v10"/><path d="M7 17 17 7"/>');
 const Video = svg('<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>');
 const X = svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
 const Pencil = svg('<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>');
+const ShieldAlert = svg('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/>');
+const Trash2 = svg('<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>');
 
 
 
@@ -1253,7 +1255,7 @@ function ProfileEditor({ initial, onClose, onSaved }) {
   );
 }
 
-function Passport({ onSignOut, autoEdit, onAutoEditConsumed }) {
+function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin }) {
   const [uid, setUid] = useState(null);
   const [profile, setProfile] = useState(null);
   const [athlete, setAthlete] = useState(null);
@@ -1267,7 +1269,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed }) {
       if (!user) return;
       setUid(user.id);
       const [{ data: prof }, { data: ath }] = await Promise.all([
-        sb.from("profiles").select("full_name").eq("id", user.id).single(),
+        sb.from("profiles").select("full_name, is_admin").eq("id", user.id).single(),
         sb.from("athletes").select("*").eq("id", user.id).single(),
       ]);
       setProfile(prof || null);
@@ -1419,6 +1421,14 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed }) {
       <RestrictedBanner />
       <FamilyAccess />
 
+      {profile && profile.is_admin && (
+        <button onClick={onOpenAdmin} style={{
+          width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          background: "transparent", border: `1px solid ${C.amber}66`, color: C.amber, borderRadius: 10,
+          padding: "11px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 16,
+        }}><ShieldAlert size={15} /> Admin panel</button>
+      )}
+
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
         <a href="terms.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>Terms & Conditions</a>
         <span style={{ color: C.line2 }}>·</span>
@@ -1434,6 +1444,255 @@ function PassRow({ k, v, mono }) {
     <div style={{ display: "flex", justifyContent: "space-between", padding: "2.5px 0" }}>
       <span style={{ fontSize: 9.5, color: C.slate, fontWeight: 700, letterSpacing: "0.08em", alignSelf: "center" }}>{k}</span>
       <span style={{ fontSize: 12.5, fontWeight: 700, fontFamily: mono ? "'Space Mono', monospace" : "inherit", textAlign: "right" }}>{v}</span>
+    </div>
+  );
+}
+
+/* ============ ADMIN PANEL ============
+   Gated entirely by server-side RLS (is_admin(), migration 009) — every
+   query and mutation here only succeeds if the signed-in user's own
+   profiles.is_admin is true, regardless of how this component is reached.
+   The UI check below (authorized state) is just for a clean "not
+   authorized" message instead of a wall of empty/failed queries. */
+function AdminPanel({ onBack }) {
+  const [authorized, setAuthorized] = useState(null);
+  const [tab, setTab] = useState("reports");
+  const [stats, setStats] = useState(null);
+  const [reports, setReports] = useState(null);
+  const [users, setUsers] = useState(null);
+  const [userQuery, setUserQuery] = useState("");
+  const [events, setEvents] = useState(null);
+  const [evTitle, setEvTitle] = useState(""); const [evSport, setEvSport] = useState("Soccer");
+  const [evLoc, setEvLoc] = useState(""); const [evLevel, setEvLevel] = useState("");
+  const [evDate, setEvDate] = useState(""); const [evSpots, setEvSpots] = useState("");
+
+  async function loadStats() {
+    try {
+      const [{ count: userCount }, { count: postCount }, { count: eventCount }, { count: pendingReports }] = await Promise.all([
+        sb.from("profiles").select("id", { count: "exact", head: true }),
+        sb.from("posts").select("id", { count: "exact", head: true }),
+        sb.from("events").select("id", { count: "exact", head: true }),
+        sb.from("post_reports").select("id", { count: "exact", head: true }).is("resolved_at", null),
+      ]);
+      setStats({ userCount: userCount || 0, postCount: postCount || 0, eventCount: eventCount || 0, pendingReports: pendingReports || 0 });
+    } catch (e) { console.error("GOLSZ admin stats error:", e); }
+  }
+
+  async function loadReports() {
+    try {
+      const { data, error } = await sb.from("post_reports").select("id, post_id, reporter_id, reason, created_at, resolved_at").order("created_at", { ascending: false }).limit(100);
+      if (error) throw error;
+      const postIds = [...new Set((data || []).map((r) => r.post_id))];
+      const { data: posts } = postIds.length ? await sb.from("posts").select("id, author_id, headline, body").in("id", postIds) : { data: [] };
+      const postById = Object.fromEntries((posts || []).map((p) => [p.id, p]));
+      const peopleIds = [...new Set([...(data || []).map((r) => r.reporter_id), ...(posts || []).map((p) => p.author_id)])];
+      const { data: names } = peopleIds.length ? await sb.from("public_profile_names").select("id, full_name").in("id", peopleIds) : { data: [] };
+      const nameById = Object.fromEntries((names || []).map((n) => [n.id, n.full_name]));
+      setReports((data || []).map((r) => {
+        const post = postById[r.post_id];
+        return { ...r, post, reporterName: nameById[r.reporter_id] || "Unknown", authorName: post ? (nameById[post.author_id] || "Unknown") : "(post deleted)" };
+      }));
+    } catch (e) { console.error("GOLSZ admin reports error:", e); setReports([]); }
+  }
+  async function resolveReport(id) {
+    try { await sb.from("post_reports").update({ resolved_at: new Date().toISOString() }).eq("id", id); loadReports(); loadStats(); }
+    catch (e) { console.error("GOLSZ admin resolve report error:", e); }
+  }
+  async function deleteReportedPost(postId, reportId) {
+    try {
+      await sb.from("posts").delete().eq("id", postId);
+      await sb.from("post_reports").update({ resolved_at: new Date().toISOString() }).eq("id", reportId);
+      loadReports(); loadStats();
+    } catch (e) { console.error("GOLSZ admin delete post error:", e); }
+  }
+
+  async function loadUsers(query) {
+    try {
+      let q = sb.from("profiles").select("id, full_name, plan, is_minor, is_admin, created_at").order("created_at", { ascending: false }).limit(100);
+      if (query && query.trim()) q = q.ilike("full_name", `%${query.trim()}%`);
+      const { data, error } = await q;
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (e) { console.error("GOLSZ admin users error:", e); setUsers([]); }
+  }
+  async function setUserAdmin(id, val) {
+    try { await sb.from("profiles").update({ is_admin: val }).eq("id", id); loadUsers(userQuery); }
+    catch (e) { console.error("GOLSZ admin set-admin error:", e); }
+  }
+  async function setUserPlan(id, val) {
+    try { await sb.from("profiles").update({ plan: val }).eq("id", id); loadUsers(userQuery); }
+    catch (e) { console.error("GOLSZ admin set-plan error:", e); }
+  }
+
+  async function loadEvents() {
+    try {
+      const { data, error } = await sb.from("events").select("id, title, sport, location, level, event_date, spots_available").order("event_date", { ascending: true }).limit(100);
+      if (error) throw error;
+      setEvents(data || []);
+    } catch (e) { console.error("GOLSZ admin events error:", e); setEvents([]); }
+  }
+  async function deleteEvent(id) {
+    try { await sb.from("events").delete().eq("id", id); loadEvents(); loadStats(); }
+    catch (e) { console.error("GOLSZ admin delete event error:", e); }
+  }
+  async function createEvent() {
+    if (!evTitle.trim() || !evDate) return;
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      const { error } = await sb.from("events").insert({
+        title: evTitle.trim(), sport: evSport, location: evLoc.trim() || null,
+        level: evLevel.trim() || null, event_date: evDate,
+        spots_available: evSpots ? Number(evSpots) : null, created_by: user.id,
+      });
+      if (error) throw error;
+      setEvTitle(""); setEvLoc(""); setEvLevel(""); setEvDate(""); setEvSpots("");
+      loadEvents(); loadStats();
+    } catch (e) { console.error("GOLSZ admin create event error:", e); }
+  }
+
+  useEffect(() => {
+    if (!sb) { setAuthorized(false); return; }
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) { setAuthorized(false); return; }
+        const { data: prof } = await sb.from("profiles").select("is_admin").eq("id", user.id).single();
+        const ok = !!(prof && prof.is_admin);
+        setAuthorized(ok);
+        if (ok) { loadStats(); loadReports(); loadUsers(); loadEvents(); }
+      } catch (e) { console.error("GOLSZ admin auth-check error:", e); setAuthorized(false); }
+    })();
+  }, []);
+
+  const field = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "8px 10px", fontSize: 13, fontFamily: "inherit", outline: "none" };
+  const tabBtn = (id, label) => (
+    <button onClick={() => setTab(id)} style={{
+      flex: 1, padding: "9px 0", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit",
+      fontSize: 12.5, fontWeight: 700, background: tab === id ? C.lime : "transparent", color: tab === id ? C.pitch : C.slate,
+    }}>{label}</button>
+  );
+
+  if (authorized === null) return <div style={{ padding: 20, color: C.slate, fontSize: 13 }}>Checking access…</div>;
+  if (!authorized) return (
+    <div style={{ padding: 20 }}>
+      <div style={{ fontSize: 13, color: C.slate }}>Admins only.</div>
+      <button onClick={onBack} style={{ ...iconBtn(C.lime), marginTop: 10 }}><ChevronLeft size={16} /> Back</button>
+    </div>
+  );
+
+  return (
+    <div style={{ padding: "8px 12px 20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 2px 12px" }}>
+        <button onClick={onBack} style={iconBtn(C.chalk)}><ChevronLeft size={20} /></button>
+        <SectionTitle noMargin>Admin panel</SectionTitle>
+      </div>
+
+      {stats && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
+          {[["Users", stats.userCount], ["Posts", stats.postCount], ["Events", stats.eventCount], ["Pending", stats.pendingReports]].map(([k, v]) => (
+            <div key={k} style={{ ...card, margin: 0, padding: "10px 8px", textAlign: "center" }}>
+              <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: k === "Pending" && v > 0 ? C.amber : C.lime }}>{v}</div>
+              <div style={{ fontSize: 9, letterSpacing: "0.08em", color: C.slate, fontWeight: 700 }}>{k.toUpperCase()}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 4, background: C.turf, borderRadius: 11, padding: 4, marginBottom: 14 }}>
+        {tabBtn("reports", "Reports")}
+        {tabBtn("users", "Users")}
+        {tabBtn("events", "Events")}
+      </div>
+
+      {tab === "reports" && (
+        <div>
+          {reports === null && <div style={{ color: C.slate, fontSize: 13 }}>Loading…</div>}
+          {reports && reports.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>No reports yet.</div>}
+          {reports && reports.map((r) => (
+            <div key={r.id} style={{ ...card, opacity: r.resolved_at ? 0.5 : 1 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: C.slate, marginBottom: 6 }}>
+                <span>Reported by {r.reporterName}{r.reason ? ` — "${r.reason}"` : ""}</span>
+                <span>{timeAgo(r.created_at)}</span>
+              </div>
+              {r.post ? (
+                <div style={{ fontSize: 13, marginBottom: 8 }}>
+                  <b>{r.authorName}:</b> {r.post.headline}{r.post.body ? ` — ${r.post.body}` : ""}
+                </div>
+              ) : <div style={{ fontSize: 13, color: C.slate, marginBottom: 8, fontStyle: "italic" }}>Post already removed.</div>}
+              {!r.resolved_at ? (
+                <div style={{ display: "flex", gap: 8 }}>
+                  {r.post && (
+                    <button onClick={() => deleteReportedPost(r.post_id, r.id)} style={{ ...iconBtn(C.amber), fontSize: 11.5 }}><Trash2 size={13} /> Delete post</button>
+                  )}
+                  <button onClick={() => resolveReport(r.id)} style={{ ...iconBtn(C.slate), fontSize: 11.5 }}>Dismiss</button>
+                </div>
+              ) : <div style={{ fontSize: 10.5, color: C.lime }}>Resolved</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "users" && (
+        <div>
+          <input value={userQuery} onChange={(e) => setUserQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") loadUsers(userQuery); }}
+            placeholder="Search by name…" style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
+          {users === null && <div style={{ color: C.slate, fontSize: 13 }}>Loading…</div>}
+          {users && users.map((u) => (
+            <div key={u.id} style={{ ...card, display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 6 }}>
+                  {u.full_name || "(no name)"}
+                  {u.is_minor && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amber}66`, borderRadius: 5, padding: "1px 5px" }}>MINOR</span>}
+                  {u.is_admin && <span style={{ fontSize: 9, color: C.lime, border: `1px solid ${C.lime}66`, borderRadius: 5, padding: "1px 5px" }}>ADMIN</span>}
+                </div>
+                <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>joined {timeAgo(u.created_at)} ago</div>
+              </div>
+              <select value={u.plan} onChange={(e) => setUserPlan(u.id, e.target.value)} style={{ ...field, padding: "5px 7px", fontSize: 11.5 }}>
+                <option value="starter">starter</option><option value="pro">pro</option><option value="elite">elite</option>
+              </select>
+              <button onClick={() => setUserAdmin(u.id, !u.is_admin)} style={{
+                fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
+                background: u.is_admin ? "#C8F1351a" : "transparent", color: u.is_admin ? C.lime : C.slate, border: `1px solid ${u.is_admin ? C.lime : C.line2}`,
+              }}>{u.is_admin ? "Revoke admin" : "Make admin"}</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "events" && (
+        <div>
+          <div style={{ ...card }}>
+            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>ADD EVENT</div>
+            <input value={evTitle} onChange={(e) => setEvTitle(e.target.value)} placeholder="Title" style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 8 }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+              <select value={evSport} onChange={(e) => setEvSport(e.target.value)} style={field}>
+                {SPORTS.filter((s) => s !== "All").map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <input type="date" value={evDate} onChange={(e) => setEvDate(e.target.value)} style={field} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+              <input value={evLoc} onChange={(e) => setEvLoc(e.target.value)} placeholder="Location" style={field} />
+              <input value={evLevel} onChange={(e) => setEvLevel(e.target.value)} placeholder="Level" style={field} />
+            </div>
+            <input type="number" value={evSpots} onChange={(e) => setEvSpots(e.target.value)} placeholder="Spots available" style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
+            <button onClick={createEvent} disabled={!evTitle.trim() || !evDate} style={{
+              width: "100%", background: C.lime, color: C.pitch, border: "none", borderRadius: 10, padding: "11px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit",
+              opacity: !evTitle.trim() || !evDate ? 0.5 : 1,
+            }}>Create event</button>
+          </div>
+          {events === null && <div style={{ color: C.slate, fontSize: 13 }}>Loading…</div>}
+          {events && events.map((e) => (
+            <div key={e.id} style={{ ...card, display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 13.5 }}>{e.title}</div>
+                <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{e.event_date} · {e.sport} · {e.location || "—"}</div>
+              </div>
+              <button onClick={() => deleteEvent(e.id)} style={iconBtn(C.amber)}><Trash2 size={15} /></button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1567,7 +1826,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
     if (startOnboarding) return "profile";
     try {
       const p = new URLSearchParams(window.location.search).get("page");
-      const valid = ["feed", "discover", "scout", "events", "profile", "messages"];
+      const valid = ["feed", "discover", "scout", "events", "profile", "messages", "admin"];
       return valid.includes(p) ? p : "feed";
     } catch (e) { return "feed"; }
   });
@@ -1617,8 +1876,9 @@ function GolszApp({ onSignOut, startOnboarding }) {
         {page === "discover" && <Discover onMessage={openThread} />}
         {page === "scout" && <Scout />}
         {page === "events" && <Events />}
-        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} />}
+        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onOpenAdmin={() => setPage("admin")} />}
         {page === "messages" && <Messages thread={thread} setThread={setThread} />}
+        {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
       </main>
 
       {/* bottom nav */}

@@ -131,12 +131,21 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   for real minors in production.
 - **Feed moderation**: `Feed`'s compose box inserts into `posts` directly (RLS-gated, see above). Each real
   post has inline **Report** (writes to `post_reports`) and **Block** (writes to `blocks`, then the poster's
-  future posts are filtered out client-side) actions, hidden on your own posts. There's no moderation queue
-  UI — review `post_reports` and delete rows from `posts` directly via the Supabase table editor;
-  `posts_delete`'s RLS also allows any profile with `is_admin = true` to delete any post, so flip that once
-  on your own `profiles` row via SQL to moderate from the app itself instead.
+  future posts are filtered out client-side) actions, hidden on your own posts.
+- **Admin panel** (migration 009): there's no separate admin login — it's the same auth, gated by
+  `profiles.is_admin`. `AdminPanel` (reached via a button on Passport, only rendered when the signed-in
+  user's own profile has `is_admin = true`) has three tabs: **Reports** (resolve or delete the underlying
+  post for anything in `post_reports`, now trackable via `resolved_at` instead of only being visible in the
+  raw table), **Users** (search `profiles`, toggle `is_admin`, override `plan`), **Events** (create or delete
+  any event — previously nobody could create a real event from the UI at all, only demo data existed).
+  Every capability is enforced server-side by `is_admin()` in RLS, not just hidden in the UI — the component
+  re-checks `is_admin` itself on mount too, so it fails closed (shows "Admins only") regardless of how it's
+  reached. `profiles_admin_write`'s RLS is row-level, not column-level — it technically lets an admin update
+  any column on any profile, not just `is_admin`/`plan`; the UI just doesn't expose more than that. There is
+  no admin ability to delete an account or view/moderate DMs (`messages`) — both would need a server-side
+  Supabase Admin API call (service-role, not the anon client) and were deliberately left out of this pass.
 - **Integration point with the static site**: `GolszApp`'s `page` state initializes from
-  `?page=` in the URL (validated against `feed|discover|scout|events|profile|messages`, default `feed`).
+  `?page=` in the URL (validated against `feed|discover|scout|events|profile|messages|admin`, default `feed`).
   This is the *only* thing connecting the two halves of the repo — the marketing site's nav links are
   plain `<a href="golsz-app.html?page=...">` tags, nothing more. Don't assume any shared state, routing, or
   build artifacts between `index.html`/`contact.html`/`terms.html` and `golsz-app.html`.
