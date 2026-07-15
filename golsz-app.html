@@ -54,6 +54,7 @@ const Trash2 = svg('<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 
 const Plus = svg('<path d="M5 12h14"/><path d="M12 5v14"/>');
 const History = svg('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>');
 const Search = svg('<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>');
+const CalendarPlus = svg('<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M10 16h4"/><path d="M12 14v4"/>');
 
 
 
@@ -183,7 +184,7 @@ function mapAthlete(row, name) {
 function mapEvent(row) {
   const d = new Date(row.event_date + "T00:00:00");
   return {
-    m: d.toLocaleString("en-US", { month: "short" }).toUpperCase(), d: String(d.getDate()).padStart(2, "0"),
+    id: row.id, m: d.toLocaleString("en-US", { month: "short" }).toUpperCase(), d: String(d.getDate()).padStart(2, "0"),
     t: row.title, sport: row.sport || "", loc: row.location || "", lvl: row.level || "", spots: row.spots_available ?? "—",
   };
 }
@@ -253,6 +254,7 @@ function Feed({ onMessage, onViewProfile }) {
   const [composeBody, setComposeBody] = useState("");
   const [composeBusy, setComposeBusy] = useState(false);
   const [composeErr, setComposeErr] = useState("");
+  const [savingEvent, setSavingEvent] = useState(null);
 
   async function loadFeed() {
     if (!sb) return;
@@ -449,6 +451,11 @@ function Feed({ onMessage, onViewProfile }) {
                 <MessageSquare size={15} />
               </button>
             )}
+            {p.postId && uid && (
+              <button onClick={() => setSavingEvent(p)} style={iconBtn(C.slate)} title="Save to my events">
+                <CalendarPlus size={15} />
+              </button>
+            )}
             <button style={{ ...iconBtn(C.slate), marginLeft: "auto" }}><ArrowUpRight size={15} /> Share</button>
             {p.postId && uid && p.authorId !== uid && (
               <>
@@ -465,6 +472,14 @@ function Feed({ onMessage, onViewProfile }) {
         </article>
         );
       })}
+      {savingEvent && (
+        <AddToEventsModal
+          initialTitle={savingEvent.head}
+          initialNotes={savingEvent.body}
+          onClose={() => setSavingEvent(null)}
+          onSaved={() => setSavingEvent(null)}
+        />
+      )}
     </div>
   );
 }
@@ -608,53 +623,191 @@ function Discover({ onMessage, onViewProfile }) {
 }
 
 /* ============ EVENTS ============ */
-function Events() {
-  const [events, setEvents] = useState(EVENTS);
+/* Saving a post or message as "an opportunity" (a combine, a coach's trial
+   offer, etc.) and manually adding one both go through this same modal —
+   it always inserts a private events row (visibility: 'private'), reusing
+   the public events table/schema rather than a parallel one. Only the
+   owner (or an admin) can read a private row back, per events_read in
+   migration 011. */
+function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
+  const [title, setTitle] = useState(initialTitle || "");
+  const [sport, setSport] = useState("");
+  const [location, setLocation] = useState("");
+  const [level, setLevel] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [notes, setNotes] = useState(initialNotes || "");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const field = { width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
+  const label = { fontSize: 9.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700, marginBottom: 5, display: "block" };
 
-  useEffect(() => {
+  async function save() {
+    if (!sb || busy) return;
+    if (!title.trim() || !eventDate) { setErr("Add a title and a date."); return; }
+    setBusy(true); setErr("");
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) throw new Error("Not signed in.");
+      const { error } = await sb.from("events").insert({
+        title: title.trim(), sport: sport || null, location: location.trim() || null,
+        level: level.trim() || null, event_date: eventDate, notes: notes.trim() || null,
+        created_by: user.id, visibility: "private",
+      });
+      if (error) throw error;
+      onSaved();
+    } catch (e) {
+      console.error("GOLSZ add-to-events error:", e);
+      setErr((e && e.message) || "Couldn't save — try again.");
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: 18, boxSizing: "border-box" }} className="noscroll">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontWeight: 800, fontSize: 16 }}>Add to your events</div>
+          <button onClick={onClose} style={iconBtn(C.chalk)}><X size={18} /></button>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <span style={label}>TITLE</span>
+          <input style={field} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Trial with Coach Reyes" />
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+          <div><span style={label}>DATE</span>
+            <input type="date" style={field} value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+          </div>
+          <div><span style={label}>SPORT</span>
+            <select style={field} value={sport} onChange={(e) => setSport(e.target.value)}>
+              <option value="">—</option>
+              {SPORTS.filter((s) => s !== "All").map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+          <div><span style={label}>LOCATION</span>
+            <input style={field} value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Toronto, ON" />
+          </div>
+          <div><span style={label}>LEVEL</span>
+            <input style={field} value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. Open, D1" />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <span style={label}>NOTES</span>
+          <textarea style={{ ...field, resize: "vertical", minHeight: 70 }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any details worth remembering" />
+        </div>
+
+        {err && <div style={{ color: C.amber, fontSize: 12, marginBottom: 10 }}>{err}</div>}
+        <button onClick={save} disabled={busy} style={{
+          width: "100%", background: C.lime, color: C.pitch, border: "none", borderRadius: 12,
+          padding: "13px", fontWeight: 800, fontSize: 15, fontFamily: "inherit",
+          cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
+        }}>{busy ? "Saving…" : "Save to my events"}</button>
+      </div>
+    </div>
+  );
+}
+
+function EventRow({ e, mine, onDelete }) {
+  return (
+    <div style={{ ...card, display: "flex", gap: 12, alignItems: "center" }}>
+      <div style={{
+        textAlign: "center", flexShrink: 0, width: 52, padding: "8px 0", borderRadius: 10,
+        background: C.turf, border: `1px solid ${C.line2}`,
+      }}>
+        <div style={{ fontSize: 9, letterSpacing: "0.1em", color: C.lime, fontWeight: 800 }}>{e.m}</div>
+        <div style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Space Mono', monospace" }}>{e.d}</div>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>{e.t}</div>
+        <div style={{ fontSize: 11.5, color: C.slate, display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
+          <MapPin size={11} /> {e.loc}
+        </div>
+        <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
+          <Tag>{e.sport}</Tag><Tag>{e.lvl}</Tag>
+          {!mine && <Tag warn>{e.spots} spots</Tag>}
+        </div>
+      </div>
+      {mine ? (
+        <button onClick={() => onDelete(e.id)} style={iconBtn(C.amber)}><Trash2 size={16} /></button>
+      ) : (
+        <button style={{
+          background: C.lime, color: C.pitch, border: "none", borderRadius: 9,
+          padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
+        }}>Register</button>
+      )}
+    </div>
+  );
+}
+
+function Events() {
+  const [publicEvents, setPublicEvents] = useState(EVENTS);
+  const [myEvents, setMyEvents] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [uid, setUid] = useState(null);
+
+  async function load() {
     if (!sb) return;
-    (async () => {
-      try {
-        const { data, error } = await sb
-          .from("events")
-          .select("id, title, sport, location, level, event_date, spots_available")
-          .gte("event_date", new Date().toISOString().slice(0, 10))
-          .order("event_date", { ascending: true })
-          .limit(30);
-        if (error) throw error;
-        if (data && data.length) setEvents(data.map(mapEvent));
-      } catch (e) { console.error("GOLSZ events fetch error:", e); }
-    })();
-  }, []);
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) setUid(user.id);
+      const { data, error } = await sb
+        .from("events")
+        .select("id, title, sport, location, level, event_date, spots_available, visibility")
+        .gte("event_date", new Date().toISOString().slice(0, 10))
+        .order("event_date", { ascending: true })
+        .limit(60);
+      if (error) throw error;
+      const rows = data || [];
+      const pub = rows.filter((r) => r.visibility === "public").map(mapEvent);
+      const mine = rows.filter((r) => r.visibility === "private").map(mapEvent);
+      if (pub.length) setPublicEvents(pub); // else keep demo content visible
+      setMyEvents(mine);
+    } catch (e) { console.error("GOLSZ events fetch error:", e); }
+  }
+  useEffect(() => { load(); }, []);
+
+  async function deleteEvent(id) {
+    if (!sb) return;
+    setMyEvents((list) => (list || []).filter((e) => e.id !== id));
+    try { await sb.from("events").delete().eq("id", id); }
+    catch (e) { console.error("GOLSZ delete event error:", e); load(); }
+  }
 
   return (
     <div style={{ padding: "8px 12px 16px" }}>
-      <SectionTitle>Upcoming events</SectionTitle>
-      {events.map((e, i) => (
-        <div key={i} style={{ ...card, display: "flex", gap: 12, alignItems: "center" }}>
-          <div style={{
-            textAlign: "center", flexShrink: 0, width: 52, padding: "8px 0", borderRadius: 10,
-            background: C.turf, border: `1px solid ${C.line2}`,
-          }}>
-            <div style={{ fontSize: 9, letterSpacing: "0.1em", color: C.lime, fontWeight: 800 }}>{e.m}</div>
-            <div style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Space Mono', monospace" }}>{e.d}</div>
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 14 }}>{e.t}</div>
-            <div style={{ fontSize: 11.5, color: C.slate, display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
-              <MapPin size={11} /> {e.loc}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "4px 2px 10px" }}>
+        <SectionTitle noMargin>Upcoming events</SectionTitle>
+        {uid && (
+          <button onClick={() => setShowAdd(true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}>
+            <CalendarPlus size={14} /> Add opportunity
+          </button>
+        )}
+      </div>
+
+      {showAdd && (
+        <AddToEventsModal
+          onClose={() => setShowAdd(false)}
+          onSaved={() => { setShowAdd(false); load(); }}
+        />
+      )}
+
+      {publicEvents.map((e, i) => <EventRow key={e.id || i} e={e} mine={false} />)}
+
+      {myEvents !== null && (
+        <>
+          <SectionTitle>My opportunities</SectionTitle>
+          {myEvents.length === 0 && (
+            <div style={{ color: C.slate, fontSize: 13, padding: "2px 2px 16px" }}>
+              Nothing saved yet — save a post, a message, or add one manually above.
             </div>
-            <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
-              <Tag>{e.sport}</Tag><Tag>{e.lvl}</Tag>
-              <Tag warn>{e.spots} spots</Tag>
-            </div>
-          </div>
-          <button style={{
-            background: C.lime, color: C.pitch, border: "none", borderRadius: 9,
-            padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
-          }}>Register</button>
-        </div>
-      ))}
+          )}
+          {myEvents.map((e) => <EventRow key={e.id} e={e} mine={true} onDelete={deleteEvent} />)}
+        </>
+      )}
     </div>
   );
 }
@@ -681,6 +834,7 @@ function Messages({ thread, setThread }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [savingEvent, setSavingEvent] = useState(null);
 
   useEffect(() => {
     if (!sb) return;
@@ -774,15 +928,30 @@ function Messages({ thread, setThread }) {
             </div>
           )}
           {threadMsgs.map((m) => (
-            <div key={m.id} style={{
-              maxWidth: "78%", marginLeft: m.sender_id === uid ? "auto" : 0, marginBottom: 10,
-              background: m.sender_id === uid ? C.lime : C.turf, color: m.sender_id === uid ? C.pitch : C.chalk,
-              padding: "9px 12px", fontSize: 13.5, lineHeight: 1.45,
-              borderRadius: m.sender_id === uid ? "12px 2px 12px 12px" : "2px 12px 12px 12px",
-              border: m.sender_id === uid ? "none" : `1px solid ${C.line2}`, fontWeight: m.sender_id === uid ? 500 : 400,
-            }}>{m.body}</div>
+            <div key={m.id} style={{ display: "flex", alignItems: "flex-end", gap: 6, marginBottom: 10, justifyContent: m.sender_id === uid ? "flex-end" : "flex-start" }}>
+              {m.sender_id !== uid && (
+                <button onClick={() => setSavingEvent(m)} title="Save to my events" style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0 }}>
+                  <CalendarPlus size={14} />
+                </button>
+              )}
+              <div style={{
+                maxWidth: "78%",
+                background: m.sender_id === uid ? C.lime : C.turf, color: m.sender_id === uid ? C.pitch : C.chalk,
+                padding: "9px 12px", fontSize: 13.5, lineHeight: 1.45,
+                borderRadius: m.sender_id === uid ? "12px 2px 12px 12px" : "2px 12px 12px 12px",
+                border: m.sender_id === uid ? "none" : `1px solid ${C.line2}`, fontWeight: m.sender_id === uid ? 500 : 400,
+              }}>{m.body}</div>
+            </div>
           ))}
         </div>
+        {savingEvent && (
+          <AddToEventsModal
+            initialTitle={`Opportunity from ${name}`}
+            initialNotes={savingEvent.body}
+            onClose={() => setSavingEvent(null)}
+            onSaved={() => setSavingEvent(null)}
+          />
+        )}
         {err && <div style={{ padding: "0 12px 8px", color: C.amber, fontSize: 11.5 }}>{err}</div>}
         <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${C.line}` }}>
           <input value={text} onChange={(e) => setText(e.target.value)}

@@ -152,6 +152,15 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   any column on any profile, not just `is_admin`/`plan`; the UI just doesn't expose more than that. There is
   no admin ability to delete an account or view/moderate DMs (`messages`) — both would need a server-side
   Supabase Admin API call (service-role, not the anon client) and were deliberately left out of this pass.
+- **Personal opportunities** (migration 011): `events.visibility` (`'public'` | `'private'`) reuses the one
+  `events` table for two different things — the admin-curated public directory (unchanged) and a private,
+  per-user "save this as an opportunity" list. `events_read` RLS only exposes private rows to their owner (or
+  an admin); `AddToEventsModal` (used from Feed's per-post button, a per-message button in `Messages` for
+  messages *from* the other person, and a manual "Add opportunity" button on the Events page itself) always
+  inserts `visibility: 'private'` — there's no UI path to create a public event outside the admin panel.
+  `Events()` renders two sections from one query (RLS already returns public + your own private rows): the
+  public list falls back to demo `EVENTS` when empty, same pattern as Feed/Discover; "My opportunities" has
+  no demo fallback and just says so when empty.
 - **Integration point with the static site**: `GolszApp`'s `page` state initializes from
   `?page=` in the URL (validated against `feed|discover|scout|events|profile|messages|admin`, default `feed`).
   This is the *only* thing connecting the two halves of the repo — the marketing site's nav links are
