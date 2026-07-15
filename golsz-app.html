@@ -242,7 +242,7 @@ function RestrictedBanner() {
 }
 
 /* ============ FEED ============ */
-function Feed() {
+function Feed({ onMessage }) {
   const [posts, setPosts] = useState(FEED);
   const [liked, setLiked] = useState({});
   const [uid, setUid] = useState(null);
@@ -429,6 +429,11 @@ function Feed() {
                 <Users size={15} fill={following[p.authorId] ? C.lime : "none"} /> {following[p.authorId] ? "Following" : "Follow"}
               </button>
             )}
+            {p.postId && uid && p.authorId && p.authorId !== uid && following[p.authorId] && (
+              <button onClick={() => onMessage && onMessage(p.authorId)} style={iconBtn(C.slate)}>
+                <MessageSquare size={15} />
+              </button>
+            )}
             <button style={{ ...iconBtn(C.slate), marginLeft: "auto" }}><ArrowUpRight size={15} /> Share</button>
             {p.postId && uid && p.authorId !== uid && (
               <>
@@ -452,7 +457,7 @@ const GENDERS = [["All", "All"], ["M", "Male"], ["F", "Female"]];
 const COUNTRIES = ["All", "Canada", "USA", "England", "Spain", "Germany", "Jamaica", "Japan", "Brazil", "Sweden", "Morocco"];
 const POSITIONS = ["All", "Left Back", "Striker", "Midfielder", "Guard", "Forward", "Center", "Goalie", "Sprinter", "Distance", "Singles"];
 
-function Discover() {
+function Discover({ onMessage }) {
   const [sport, setSport] = useState("All");
   const [gender, setGender] = useState("All");
   const [country, setCountry] = useState("All");
@@ -538,21 +543,35 @@ function Discover() {
             <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace", marginTop: 2 }}>
               {p.pos.toUpperCase()} · {p.g} · '{String(p.grad).slice(2)}
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, gap: 6 }}>
               <span style={{ fontSize: 11, color: C.lime }}>{p.sport}</span>
-              {p.id && uid && p.id !== uid && (
-                <button
-                  onClick={() => toggleFollow(p.id)}
-                  style={{
-                    fontSize: 10.5, fontWeight: 700, padding: "4px 9px", borderRadius: 999, cursor: "pointer",
-                    fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3,
-                    background: following[p.id] ? C.lime : "transparent", color: following[p.id] ? C.pitch : C.chalk,
-                    border: `1px solid ${following[p.id] ? C.lime : C.line2}`,
-                  }}
-                >
-                  <Users size={11} /> {following[p.id] ? "Following" : "Follow"}
-                </button>
-              )}
+              <div style={{ display: "flex", gap: 6 }}>
+                {p.id && uid && p.id !== uid && following[p.id] && (
+                  <button
+                    onClick={() => onMessage && onMessage(p.id)}
+                    style={{
+                      fontSize: 10.5, fontWeight: 700, padding: "4px 8px", borderRadius: 999, cursor: "pointer",
+                      fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3,
+                      background: "transparent", color: C.chalk, border: `1px solid ${C.line2}`,
+                    }}
+                  >
+                    <MessageSquare size={11} />
+                  </button>
+                )}
+                {p.id && uid && p.id !== uid && (
+                  <button
+                    onClick={() => toggleFollow(p.id)}
+                    style={{
+                      fontSize: 10.5, fontWeight: 700, padding: "4px 9px", borderRadius: 999, cursor: "pointer",
+                      fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3,
+                      background: following[p.id] ? C.lime : "transparent", color: following[p.id] ? C.pitch : C.chalk,
+                      border: `1px solid ${following[p.id] ? C.lime : C.line2}`,
+                    }}
+                  >
+                    <Users size={11} /> {following[p.id] ? "Following" : "Follow"}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -647,8 +666,140 @@ function Tag({ children, warn }) {
 }
 
 /* ============ MESSAGES ============ */
+/* Real DMs: two profiles can message each other once one follows the
+   other (either direction) — enforced server-side by can_message() in
+   supabase-migration-007-messages.sql, not just hidden in the UI.
+   `thread` is a real profile uuid (string) once a real conversation is
+   open, an index into the demo THREADS array (number) for the pre-launch
+   fallback, or null for the list view. */
 function Messages({ thread, setThread }) {
-  if (thread !== null) {
+  const [uid, setUid] = useState(null);
+  const [conversations, setConversations] = useState(null);
+  const [threadMsgs, setThreadMsgs] = useState([]);
+  const [counterpart, setCounterpart] = useState(null);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (!sb) return;
+    (async () => {
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) setUid(user.id);
+    })();
+  }, []);
+
+  async function loadConversations() {
+    if (!sb || !uid) return;
+    try {
+      const { data, error } = await sb
+        .from("messages")
+        .select("id, sender_id, recipient_id, body, created_at, read_at")
+        .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
+        .order("created_at", { ascending: false })
+        .limit(300);
+      if (error) throw error;
+      const byCounterpart = new Map();
+      for (const m of data || []) {
+        const other = m.sender_id === uid ? m.recipient_id : m.sender_id;
+        if (!byCounterpart.has(other)) byCounterpart.set(other, { last: m, unread: 0 });
+        if (m.recipient_id === uid && !m.read_at) byCounterpart.get(other).unread += 1;
+      }
+      const ids = [...byCounterpart.keys()];
+      let names = {};
+      if (ids.length) {
+        const { data: ppl } = await sb.from("public_profile_names").select("id, full_name").in("id", ids);
+        names = Object.fromEntries((ppl || []).map((p) => [p.id, p.full_name]));
+      }
+      setConversations(ids.map((id) => {
+        const { last, unread } = byCounterpart.get(id);
+        const name = names[id] || "GOLSZ User";
+        return { id, who: name, init: initials(name), last: last.body, ago: timeAgo(last.created_at), unread: unread > 0 };
+      }));
+    } catch (e) { console.error("GOLSZ messages load error:", e); setConversations([]); }
+  }
+  useEffect(() => { if (uid) loadConversations(); }, [uid]);
+
+  async function loadThread(otherId) {
+    if (!sb || !uid || !otherId) return;
+    try {
+      const [{ data: ppl }, { data: msgs, error }] = await Promise.all([
+        sb.from("public_profile_names").select("id, full_name").eq("id", otherId).maybeSingle(),
+        sb.from("messages").select("id, sender_id, recipient_id, body, created_at, read_at")
+          .or(`and(sender_id.eq.${uid},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${uid})`)
+          .order("created_at", { ascending: true }),
+      ]);
+      if (error) throw error;
+      setCounterpart({ id: otherId, name: (ppl && ppl.full_name) || "GOLSZ User" });
+      setThreadMsgs(msgs || []);
+      const unreadIds = (msgs || []).filter((m) => m.recipient_id === uid && !m.read_at).map((m) => m.id);
+      if (unreadIds.length) {
+        await sb.from("messages").update({ read_at: new Date().toISOString() }).in("id", unreadIds);
+        loadConversations();
+      }
+    } catch (e) { console.error("GOLSZ thread load error:", e); }
+  }
+  useEffect(() => { if (typeof thread === "string" && uid) loadThread(thread); }, [thread, uid]);
+
+  async function send() {
+    if (!sb || !uid || typeof thread !== "string" || !text.trim() || busy) return;
+    setBusy(true); setErr("");
+    const body = text.trim().slice(0, 2000);
+    try {
+      const { error } = await sb.from("messages").insert({ sender_id: uid, recipient_id: thread, body });
+      if (error) throw error;
+      setText("");
+      loadThread(thread);
+      loadConversations();
+    } catch (e) {
+      console.error("GOLSZ send message error:", e);
+      setErr("Couldn't send — you can only message profiles you follow or who follow you.");
+    } finally { setBusy(false); }
+  }
+
+  if (typeof thread === "string") {
+    const name = (counterpart && counterpart.name) || "…";
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: `1px solid ${C.line}` }}>
+          <button onClick={() => setThread(null)} style={iconBtn(C.chalk)}><ChevronLeft size={20} /></button>
+          <Avatar init={initials(name)} size={36} />
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{name}</div>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: 14 }}>
+          {threadMsgs.length === 0 && (
+            <div style={{ textAlign: "center", color: C.slate, fontSize: 12.5, marginTop: 20 }}>
+              Say hello — you can message {name} because you follow each other.
+            </div>
+          )}
+          {threadMsgs.map((m) => (
+            <div key={m.id} style={{
+              maxWidth: "78%", marginLeft: m.sender_id === uid ? "auto" : 0, marginBottom: 10,
+              background: m.sender_id === uid ? C.lime : C.turf, color: m.sender_id === uid ? C.pitch : C.chalk,
+              padding: "9px 12px", fontSize: 13.5, lineHeight: 1.45,
+              borderRadius: m.sender_id === uid ? "12px 2px 12px 12px" : "2px 12px 12px 12px",
+              border: m.sender_id === uid ? "none" : `1px solid ${C.line2}`, fontWeight: m.sender_id === uid ? 500 : 400,
+            }}>{m.body}</div>
+          ))}
+        </div>
+        {err && <div style={{ padding: "0 12px 8px", color: C.amber, fontSize: 11.5 }}>{err}</div>}
+        <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${C.line}` }}>
+          <input value={text} onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") send(); }}
+            placeholder="Message…" style={{
+            flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10,
+            color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none",
+          }} />
+          <button onClick={send} disabled={busy || !text.trim()} style={{
+            background: C.lime, border: "none", borderRadius: 10, width: 44, color: C.pitch,
+            cursor: busy || !text.trim() ? "default" : "pointer", opacity: busy || !text.trim() ? 0.5 : 1,
+          }}><Send size={16} /></button>
+        </div>
+      </div>
+    );
+  }
+
+  if (typeof thread === "number") {
     const t = THREADS[thread];
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -683,11 +834,13 @@ function Messages({ thread, setThread }) {
       </div>
     );
   }
+
+  const real = conversations && conversations.length ? conversations : null;
   return (
     <div style={{ padding: "8px 12px 16px" }}>
       <SectionTitle>Messages</SectionTitle>
-      {THREADS.map((t, i) => (
-        <button key={i} onClick={() => setThread(i)} style={{
+      {(real || THREADS).map((t, i) => (
+        <button key={real ? t.id : i} onClick={() => setThread(real ? t.id : i)} style={{
           ...card, display: "flex", gap: 11, alignItems: "center", width: "100%",
           textAlign: "left", cursor: "pointer", border: `1px solid ${t.unread ? C.line2 : C.line}`,
         }}>
@@ -698,7 +851,7 @@ function Messages({ thread, setThread }) {
               {t.v && <BadgeCheck size={13} color={C.lime} />}
               <span style={{ marginLeft: "auto", fontSize: 10.5, color: C.slate }}>{t.ago}</span>
             </div>
-            <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 3 }}>{t.role}</div>
+            {t.role && <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 3 }}>{t.role}</div>}
             <div style={{ fontSize: 12.5, color: t.unread ? C.chalk : C.slate, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: t.unread ? 600 : 400 }}>
               {t.last}
             </div>
@@ -1199,6 +1352,7 @@ function GolszApp({ onSignOut }) {
     } catch (e) { return "feed"; }
   });
   const [thread, setThread] = useState(null);
+  const [hasUnreadMsgs, setHasUnreadMsgs] = useState(false);
 
   const NAV = [
     { id: "feed", icon: Home, label: "Feed" },
@@ -1209,6 +1363,19 @@ function GolszApp({ onSignOut }) {
   ];
 
   const go = (id) => { setPage(id); if (id !== "messages") setThread(null); };
+  const openThread = (id) => { setThread(id); setPage("messages"); };
+
+  useEffect(() => {
+    if (!sb) return;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        const { count } = await sb.from("messages").select("id", { count: "exact", head: true }).eq("recipient_id", user.id).is("read_at", null);
+        setHasUnreadMsgs((count || 0) > 0);
+      } catch (e) { console.error("GOLSZ unread check error:", e); }
+    })();
+  }, [page]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: C.pitch, color: C.chalk, fontFamily: "'Archivo', system-ui, sans-serif", maxWidth: 480, margin: "0 auto", position: "relative" }}>
@@ -1219,14 +1386,14 @@ function GolszApp({ onSignOut }) {
         <a href="index.html" style={{ fontWeight: 900, fontSize: 24, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none" }}>GOLSZ<span style={{ color: C.lime }}>.</span></a>
         <button onClick={() => { setPage("messages"); setThread(null); }} style={{ position: "relative", background: "none", border: "none", color: page === "messages" ? C.lime : C.chalk, cursor: "pointer", padding: 4 }}>
           <MessageSquare size={22} />
-          <span style={{ position: "absolute", top: 2, right: 2, width: 8, height: 8, borderRadius: 99, background: C.lime, border: `2px solid ${C.pitch}` }} />
+          {hasUnreadMsgs && <span style={{ position: "absolute", top: 2, right: 2, width: 8, height: 8, borderRadius: 99, background: C.lime, border: `2px solid ${C.pitch}` }} />}
         </button>
       </header>
 
       {/* body */}
       <main style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="noscroll">
-        {page === "feed" && <Feed />}
-        {page === "discover" && <Discover />}
+        {page === "feed" && <Feed onMessage={openThread} />}
+        {page === "discover" && <Discover onMessage={openThread} />}
         {page === "scout" && <Scout />}
         {page === "events" && <Events />}
         {page === "profile" && <Passport onSignOut={onSignOut} />}
