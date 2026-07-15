@@ -308,9 +308,15 @@ function Feed() {
     setLiked((l) => ({ ...l, [p.postId]: !isLiked }));
     setPosts((ps) => ps.map((x) => x.postId === p.postId ? { ...x, likes: x.likes + (isLiked ? -1 : 1) } : x));
     try {
-      if (isLiked) await sb.from("post_likes").delete().eq("post_id", p.postId).eq("profile_id", uid);
-      else await sb.from("post_likes").insert({ post_id: p.postId, profile_id: uid });
-    } catch (e) { console.error("GOLSZ like error:", e); }
+      const { error } = isLiked
+        ? await sb.from("post_likes").delete().eq("post_id", p.postId).eq("profile_id", uid)
+        : await sb.from("post_likes").insert({ post_id: p.postId, profile_id: uid });
+      if (error) throw error;
+    } catch (e) {
+      console.error("GOLSZ like error:", e);
+      setLiked((l) => ({ ...l, [p.postId]: isLiked })); // revert on failure
+      setPosts((ps) => ps.map((x) => x.postId === p.postId ? { ...x, likes: x.likes + (isLiked ? 1 : -1) } : x));
+    }
   }
 
   async function createPost() {
