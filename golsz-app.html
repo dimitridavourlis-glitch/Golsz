@@ -2353,8 +2353,8 @@ const sb = (SUPABASE_URL && SUPABASE_ANON_KEY && typeof window !== "undefined" &
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
-function Auth({ onDone }) {
-  const [mode, setMode] = useState("signup");
+function Auth({ onDone, paidReturn }) {
+  const [mode, setMode] = useState(paidReturn ? "login" : "signup");
   const [plan, setPlan] = useState("pro");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -2365,7 +2365,7 @@ function Auth({ onDone }) {
   const [parentEmail, setParentEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState(paidReturn ? "Payment received — if you already confirmed your email, log in below. Otherwise check your inbox for a confirmation link first." : "");
   const isSignup = mode === "signup";
 
   const dobNum = { d: parseInt(dobDay, 10), m: parseInt(dobMonth, 10), y: parseInt(dobYear, 10) };
@@ -2546,9 +2546,15 @@ function Root() {
   const [freshSignup, setFreshSignup] = useState(false);
 
   useEffect(() => {
+    // paidReturn only auto-authenticates in no-backend preview mode (no real
+    // accounts exist to check). With a real backend, a URL param alone must
+    // never grant access — that would let anyone skip signup entirely by
+    // appending ?checkout=success. A real Stripe return still lands here
+    // without a session if email confirmation is pending; Auth shows a
+    // "payment received, confirm your email" notice for that case instead.
     if (!sb) { setAuthed(paidReturn); setReady(true); return; }
     let subscription;
-    sb.auth.getSession().then(({ data }) => { setAuthed(!!(data && data.session) || paidReturn); setReady(true); });
+    sb.auth.getSession().then(({ data }) => { setAuthed(!!(data && data.session)); setReady(true); });
     const r = sb.auth.onAuthStateChange((_e, session) => { setAuthed(!!session); });
     subscription = r && r.data ? r.data.subscription : null;
     return () => { if (subscription) subscription.unsubscribe(); };
@@ -2559,7 +2565,7 @@ function Root() {
   if (!ready) return React.createElement("div", { style: { minHeight: "100vh", background: C.pitch } });
   return authed
     ? React.createElement(GolszApp, { onSignOut: signOut, startOnboarding: freshSignup })
-    : React.createElement(Auth, { onDone: (fresh) => { setFreshSignup(!!fresh); setAuthed(true); } });
+    : React.createElement(Auth, { onDone: (fresh) => { setFreshSignup(!!fresh); setAuthed(true); }, paidReturn });
 }
 
 
