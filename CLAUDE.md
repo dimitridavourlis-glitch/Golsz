@@ -117,10 +117,18 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   would fail/CORS in practice) and exists only as a demo placeholder — it is not a secondary supported
   production path. Real usage always goes through `api/scout.js`.
 - **Scout persists its transcript** to `scout_history` (`{role, content}` objects packed into the
-  `messages` jsonb column, one row per turn) and restores it on mount — see `logTurn()` in the `Scout`
-  component. Rows with `messages = '[]'` are metering markers written server-side by
-  `increment_scout_usage()`, not real turns — they flatten to nothing when the transcript is rebuilt client
-  -side, so no special filtering is needed when reading them back.
+  `messages` jsonb column, one row per turn) — see `logTurn()` in the `Scout` component. Rows with
+  `messages = '[]'` are metering markers written server-side by `increment_scout_usage()`, not real turns —
+  they flatten to nothing when a transcript is rebuilt client-side, so no special filtering is needed.
+- **Scout has real conversation threads** (migration 010, `scout_history.conversation_id`), like Claude/
+  ChatGPT: "New chat" (the `+` button) starts a fresh `conversation_id` client-side and resets `msgs`;
+  "History" (the clock-arrow button) lists every past `conversation_id` for the user (grouped/previewed
+  client-side from `scout_history`, not a separate table) and reopens one on tap. On mount, only the most
+  recent conversation is restored — **this is a behavior change**: before migration 010, every turn a user
+  had ever sent was flattened into one ever-growing chat on load; now older turns are only reachable through
+  History. `conversationId` lives in component state, read via closure inside `send()`/`logTurn()` — if you
+  add new call sites that log turns, make sure they're inside the component (not a ref) so a "New chat"
+  mid-request doesn't retroactively mislabel an in-flight reply's conversation.
 - **Minor safety**: `Auth`'s signup requires a parent/guardian email when the athlete is under 18
   (`isMinor`), sent as `parent_email` in the signup metadata. `handle_new_user()` auto-creates a *pending*
   `parent_links` row if that email already belongs to an account — approval still has to happen explicitly
