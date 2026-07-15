@@ -119,14 +119,6 @@ const PLAYERS = [
   { n: "Ryan Walsh", i: "RW", sport: "Tennis", pos: "Singles", country: "USA", flag: "🇺🇸", g: "M", grad: 2028, v: 2 },
 ];
 
-const EVENTS = [
-  { m: "AUG", d: "16", t: "NCAA Men's Soccer ID Camp", sport: "Soccer", loc: "Syracuse, NY", lvl: "D1", spots: 12 },
-  { m: "AUG", d: "24", t: "Elite Guard Combine", sport: "Basketball", loc: "Chicago, IL", lvl: "Open", spots: 30 },
-  { m: "SEP", d: "03", t: "Ontario Open Trials", sport: "Soccer", loc: "Toronto, ON", lvl: "Provincial", spots: 8 },
-  { m: "SEP", d: "10", t: "National Sprint Combine", sport: "Track", loc: "Kingston, JM", lvl: "Elite", spots: 20 },
-  { m: "SEP", d: "21", t: "U20 Hockey Showcase", sport: "Hockey", loc: "Stockholm, SE", lvl: "Pro-track", spots: 6 },
-];
-
 const THREADS = [
   { who: "Coach Daniela Reyes", role: "Head Coach · Syracuse", init: "DR", v: true, last: "Send me the full match link and we'll talk.", ago: "1h", unread: true,
     msgs: [
@@ -744,7 +736,7 @@ function EventRow({ e, mine, onDelete }) {
 }
 
 function Events() {
-  const [publicEvents, setPublicEvents] = useState(EVENTS);
+  const [publicEvents, setPublicEvents] = useState(null);
   const [myEvents, setMyEvents] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [uid, setUid] = useState(null);
@@ -762,10 +754,8 @@ function Events() {
         .limit(60);
       if (error) throw error;
       const rows = data || [];
-      const pub = rows.filter((r) => r.visibility === "public").map(mapEvent);
-      const mine = rows.filter((r) => r.visibility === "private").map(mapEvent);
-      if (pub.length) setPublicEvents(pub); // else keep demo content visible
-      setMyEvents(mine);
+      setPublicEvents(rows.filter((r) => r.visibility === "public").map(mapEvent));
+      setMyEvents(rows.filter((r) => r.visibility === "private").map(mapEvent));
     } catch (e) { console.error("GOLSZ events fetch error:", e); }
   }
   useEffect(() => { load(); }, []);
@@ -795,7 +785,12 @@ function Events() {
         />
       )}
 
-      {publicEvents.map((e, i) => <EventRow key={e.id || i} e={e} mine={false} />)}
+      {publicEvents && publicEvents.length === 0 && (
+        <div style={{ color: C.slate, fontSize: 13, padding: "2px 2px 16px" }}>
+          No public events on file yet.
+        </div>
+      )}
+      {publicEvents && publicEvents.map((e) => <EventRow key={e.id} e={e} mine={false} />)}
 
       {myEvents !== null && (
         <>
