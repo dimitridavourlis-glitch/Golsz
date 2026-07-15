@@ -1912,7 +1912,7 @@ function Scout() {
               ...card, display: "block", width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit",
               border: `1px solid ${h.id === conversationId ? C.lime : C.line}`,
             }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3 }}>{h.preview || "New conversation"}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3, color: "#FFFFFF" }}>{h.preview || "New conversation"}</div>
               <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{timeAgo(h.lastAt)} ago · {h.turns} messages</div>
             </button>
           ))}
