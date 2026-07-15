@@ -1273,6 +1273,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
   const [editing, setEditing] = useState(false);
   const [following, setFollowing] = useState(false);
   const [followers, setFollowers] = useState(null);
+  const [followingList, setFollowingList] = useState(null);
   const real = !!uid;
   const viewingOther = !!(viewUserId && uid && viewUserId !== uid);
 
@@ -1306,15 +1307,20 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
         if (autoEdit) { setEditing(true); onAutoEditConsumed && onAutoEditConsumed(); }
       }
 
-      const { data: followRows } = await sb.from("follows").select("follower_id").eq("followed_id", targetId);
-      const followerIds = (followRows || []).map((r) => r.follower_id);
-      if (followerIds.length) {
-        const { data: names } = await sb.from("public_profile_names").select("id, full_name").in("id", followerIds);
-        const nameById = Object.fromEntries((names || []).map((r) => [r.id, r.full_name]));
-        setFollowers(followerIds.map((id) => ({ id, name: nameById[id] || "GOLSZ User" })));
-      } else {
-        setFollowers([]);
+      const [{ data: followerRows }, { data: followingRows }] = await Promise.all([
+        sb.from("follows").select("follower_id").eq("followed_id", targetId),
+        sb.from("follows").select("followed_id").eq("follower_id", targetId),
+      ]);
+      const followerIds = (followerRows || []).map((r) => r.follower_id);
+      const followingIds = (followingRows || []).map((r) => r.followed_id);
+      const allIds = [...new Set([...followerIds, ...followingIds])];
+      let nameById = {};
+      if (allIds.length) {
+        const { data: names } = await sb.from("public_profile_names").select("id, full_name").in("id", allIds);
+        nameById = Object.fromEntries((names || []).map((r) => [r.id, r.full_name]));
       }
+      setFollowers(followerIds.map((id) => ({ id, name: nameById[id] || "GOLSZ User" })));
+      setFollowingList(followingIds.map((id) => ({ id, name: nameById[id] || "GOLSZ User" })));
     } catch (e) { console.error("GOLSZ passport load error:", e); }
   }
   useEffect(() => { load(); }, [viewUserId]);
@@ -1478,30 +1484,20 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
         <div style={{ fontSize: 13.5, lineHeight: 1.55, color: "#C9D6CD" }}>{p.bio}</div>
       </div>
 
-      {/* followers */}
+      {/* following + followers */}
       {real && (
-        <div style={{ ...card }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>
-            {followers === null ? "FOLLOWERS" : `${followers.length} ${followers.length === 1 ? "FOLLOWER" : "FOLLOWERS"}`}
-          </div>
-          {followers === null && <div style={{ fontSize: 12.5, color: C.slate }}>Loading…</div>}
-          {followers && followers.length === 0 && (
-            <div style={{ fontSize: 12.5, color: C.slate }}>{viewingOther ? "No followers yet." : "No followers yet — your Discover and Feed activity is how people find you."}</div>
-          )}
-          {followers && followers.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {followers.map((f) => (
-                <div key={f.id}
-                  onClick={() => onViewProfile && onViewProfile(f.id)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", cursor: onViewProfile ? "pointer" : "default" }}
-                >
-                  <Avatar init={initials(f.name)} size={30} />
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{f.name}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <FollowListCard
+          title={(n) => n === null ? "FOLLOWING" : `${n} FOLLOWING`}
+          list={followingList} onViewProfile={onViewProfile}
+          emptyText={viewingOther ? "Not following anyone yet." : "Not following anyone yet — check out Discover."}
+        />
+      )}
+      {real && (
+        <FollowListCard
+          title={(n) => n === null ? "FOLLOWERS" : `${n} ${n === 1 ? "FOLLOWER" : "FOLLOWERS"}`}
+          list={followers} onViewProfile={onViewProfile}
+          emptyText={viewingOther ? "No followers yet." : "No followers yet — your Discover and Feed activity is how people find you."}
+        />
       )}
 
       {/* media */}
@@ -1548,6 +1544,28 @@ function PassRow({ k, v, mono }) {
     <div style={{ display: "flex", justifyContent: "space-between", padding: "2.5px 0" }}>
       <span style={{ fontSize: 9.5, color: C.slate, fontWeight: 700, letterSpacing: "0.08em", alignSelf: "center" }}>{k}</span>
       <span style={{ fontSize: 12.5, fontWeight: 700, fontFamily: mono ? "'Space Mono', monospace" : "inherit", textAlign: "right" }}>{v}</span>
+    </div>
+  );
+}
+function FollowListCard({ title, list, onViewProfile, emptyText }) {
+  return (
+    <div style={{ ...card }}>
+      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{title(list === null ? null : list.length)}</div>
+      {list === null && <div style={{ fontSize: 12.5, color: C.slate }}>Loading…</div>}
+      {list && list.length === 0 && <div style={{ fontSize: 12.5, color: C.slate }}>{emptyText}</div>}
+      {list && list.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {list.map((f) => (
+            <div key={f.id}
+              onClick={() => onViewProfile && onViewProfile(f.id)}
+              style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", cursor: onViewProfile ? "pointer" : "default" }}
+            >
+              <Avatar init={initials(f.name)} size={30} />
+              <span style={{ fontSize: 13, fontWeight: 600 }}>{f.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
