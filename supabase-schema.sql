@@ -9,36 +9,41 @@
 -- ⚠️ THIS IS NOT A FROM-SCRATCH BOOTSTRAP SCRIPT. It assumes the base
 -- tables already exist: profiles, athletes, coaches, agents, clubs,
 -- parent_links, scout_history. Those predate this migration history and
--- were never fully re-documented here — in particular, profiles.role and
--- profiles.plan are Postgres enum types whose exact allowed values were
--- never introspected (only inferred from usage: plan is used as
--- 'free'/'pro'/'elite' throughout the app and the Stripe webhook). Do
--- NOT use this file to provision a fresh empty database without first
--- confirming those enum definitions via:
---   select t.typname, e.enumlabel from pg_type t
---   join pg_enum e on e.enumtypid = t.oid
---   where t.typname in ('user_role', 'plan_tier');
--- (or whatever the real type names are — also unconfirmed; check
---  information_schema.columns.udt_name for profiles.role / profiles.plan).
+-- were never fully re-documented here.
 --
--- Confirmed real base-table shape (2026-07-07 introspection):
---   profiles(id, full_name, role enum, plan enum, dob, created_at,
---            is_minor, pending_parent_email, is_admin, stripe_customer_id)
+-- profiles.plan is a Postgres enum (plan_tier) confirmed LIVE via direct
+-- write attempts (2026-07-15): valid values are 'starter' | 'pro' |
+-- 'elite' — there is NO 'free' value. Every check in this codebase now
+-- uses 'starter' for the free tier (fixed in migration 008 — before that,
+-- api/scout.js checked `plan === 'free'`, a value the enum can't even
+-- hold, so the Scout daily-call limit silently never applied to anyone).
+-- profiles.role's enum values are still unconfirmed.
+--
+-- Confirmed real base-table shape (2026-07-07 introspection, athletes
+-- columns extended 2026-07-15 by migration 008):
+--   profiles(id, full_name, role enum, plan enum('starter'|'pro'|'elite'),
+--            dob, created_at, is_minor, pending_parent_email, is_admin,
+--            stripe_customer_id)
 --   athletes(id, sport, position, height_cm, weight_kg, grad_year, gpa,
---            club_id, highlights jsonb, created_at, gender)
+--            club_id, highlights jsonb, created_at, gender, bio, foot,
+--            recruiting_status, country, club_name)
 --            — id IS profiles.id, there is no separate profile_id column
+--            — club_id/clubs is a separate, empty, read-only directory;
+--              club_name is the real free-text field the UI actually uses
 --   coaches(id, club_id, title)         — RLS on, zero policies, fully locked
 --   agents(id, agency)                  — RLS on, zero policies, fully locked
---   clubs(id, name, city, country, created_at)  — no write policy, read-only
+--   clubs(id, name, city, country, created_at)  — no write policy, read-only, empty
 --   parent_links(id, parent_id, athlete_id, relationship, approved_at, created_at)
 --   scout_history(id, user_id, messages jsonb, created_at)
+--   follows(follower_id, followed_id, created_at)
+--   messages(id, sender_id, recipient_id, body, created_at, read_at)
 --
 -- Everything below this point (posts, post_likes, events, gender column,
 -- the parent-verification RPC/policies, is_minor/admin/stripe columns,
--- post_reports, blocks) is fully created by the statements in this file —
--- safe to re-run against the live project (every statement is
--- idempotent: create-if-not-exists / create-or-replace / drop-then-create
--- policy).
+-- post_reports, blocks, follows, messages, editable-profile columns) is
+-- fully created by the statements in this file — safe to re-run against
+-- the live project (every statement is idempotent: create-if-not-exists /
+-- create-or-replace / drop-then-create policy).
 --
 -- Migration history, in the order actually applied:
 --   1. (undocumented — created the base tables listed above, predates
@@ -46,6 +51,9 @@
 --   2. supabase-migration-002-posts-events.sql
 --   3. supabase-migration-004-fix-real-schema.sql
 --   4. supabase-migration-005-launch-readiness.sql
+--   5. supabase-migration-006-follows.sql
+--   6. supabase-migration-007-messages.sql
+--   7. supabase-migration-008-editable-profiles.sql
 -- ============================================================
 
 -- 10) ADDITIVE — POSTS (Feed) + POST_LIKES + EVENTS
@@ -527,4 +535,191 @@ create policy blocks_delete on blocks for delete using (blocker_id = auth.uid())
 --  - Pro/Elite marketing bullets beyond Scout's daily limit (verified
 --    passport, priority visibility) aren't backed by any gating
 --    mechanic yet — undefined product scope, not built here.
+-- ============================================================
+
+-- ============================================================
+-- Migration 006 — Follows
+-- ============================================================
+-- ============================================================
+-- 006 — Follows (profiles can follow each other)
+-- Additive on top of 002 + 004 + 005.
+-- ============================================================
+
+create table if not exists follows (
+  follower_id  uuid not null references profiles(id) on delete cascade,
+  followed_id  uuid not null references profiles(id) on delete cascade,
+  created_at   timestamptz not null default now(),
+  primary key (follower_id, followed_id),
+  check (follower_id <> followed_id)
+);
+alter table follows enable row level security;
+
+-- public read (same "public directory" pattern as posts/athletes) — needed
+-- so follower/following counts can be shown on any profile, not just your own
+drop policy if exists follows_read on follows;
+create policy follows_read on follows for select using (true);
+
+drop policy if exists follows_write on follows;
+create policy follows_write on follows for insert with check (follower_id = auth.uid());
+
+drop policy if exists follows_delete on follows;
+create policy follows_delete on follows for delete using (follower_id = auth.uid());
+
+-- ============================================================
+-- Done. No minor-safety special case needed here: a restricted minor
+-- already can't post (posts_write) and is hidden from Discover
+-- (athletes_read), so there's no UI path to follow one anyway — the
+-- existing gates already cover it.
+-- ============================================================
+
+-- ============================================================
+-- Migration 007 — Messages
+-- ============================================================
+-- ============================================================
+-- 007 — Direct messages between profiles that follow each other
+-- Additive on top of 002 + 004 + 005 + 006.
+-- ============================================================
+
+create table if not exists messages (
+  id            uuid primary key default gen_random_uuid(),
+  sender_id     uuid not null references profiles(id) on delete cascade,
+  recipient_id  uuid not null references profiles(id) on delete cascade,
+  body          text not null check (char_length(trim(body)) between 1 and 2000),
+  created_at    timestamptz not null default now(),
+  read_at       timestamptz,
+  check (sender_id <> recipient_id)
+);
+create index if not exists messages_thread_idx  on messages (sender_id, recipient_id, created_at);
+create index if not exists messages_thread_idx2 on messages (recipient_id, sender_id, created_at);
+alter table messages enable row level security;
+
+-- Two profiles can message each other once there's a follow relationship
+-- in either direction, and neither has blocked the other. Mirrors "message
+-- anyone you follow, or who follows you" rather than requiring mutual follow.
+create or replace function can_message(a uuid, b uuid)
+returns boolean language sql security definer set search_path to 'public' as $$
+  select exists (
+    select 1 from follows
+    where (follower_id = a and followed_id = b) or (follower_id = b and followed_id = a)
+  ) and not exists (
+    select 1 from blocks
+    where (blocker_id = a and blocked_id = b) or (blocker_id = b and blocked_id = a)
+  );
+$$;
+
+drop policy if exists messages_read on messages;
+create policy messages_read on messages for select using (
+  sender_id = auth.uid() or recipient_id = auth.uid()
+);
+
+-- restricted minors (see is_restricted_minor() in migration 005) can't send
+-- or receive DMs either, same posture as posts/Discover visibility
+drop policy if exists messages_write on messages;
+create policy messages_write on messages for insert with check (
+  sender_id = auth.uid()
+  and not is_restricted_minor(auth.uid())
+  and not is_restricted_minor(recipient_id)
+  and can_message(auth.uid(), recipient_id)
+);
+
+-- recipient marks their own inbound messages read
+drop policy if exists messages_update on messages;
+create policy messages_update on messages for update using (
+  recipient_id = auth.uid()
+) with check (
+  recipient_id = auth.uid()
+);
+
+-- sender can unsend/delete their own messages
+drop policy if exists messages_delete on messages;
+create policy messages_delete on messages for delete using (
+  sender_id = auth.uid()
+);
+
+-- ============================================================
+-- Done. This is the first real backend for the Messages tab — it was a
+-- hardcoded THREADS demo array with no insert/read path at all before.
+-- ============================================================
+
+-- ============================================================
+-- Migration 008 — Editable profiles + plan fix
+-- ============================================================
+-- ============================================================
+-- 008 — Editable athlete profiles + fix plan assignment on signup
+-- Additive on top of 002 + 004 + 005 + 006 + 007.
+-- ============================================================
+
+-- 1) New editable athlete profile fields. bio/foot/recruiting_status/
+--    country/club_name were all display-only fake data in golsz-app.html
+--    before this — no columns existed. club_name is deliberately free
+--    text rather than the clubs(id) FK: clubs is an empty, read-only
+--    directory with no insert policy (a separate, unbuilt "verified club"
+--    feature), not something a user can register themselves into today.
+alter table athletes add column if not exists bio text;
+alter table athletes add column if not exists foot text;
+alter table athletes add column if not exists recruiting_status text;
+alter table athletes add column if not exists country text;
+alter table athletes add column if not exists club_name text;
+-- owner/parent write access to these is already covered by the
+-- pre-existing athletes_rw policy — no new RLS needed.
+
+-- 2) handle_new_user() captured the chosen plan in signup metadata but
+--    never applied it to profiles.plan, which silently kept its column
+--    default ('starter') for every signup. Separately, api/scout.js's
+--    free-tier Scout limit checks `plan === 'free'` — a value the
+--    plan_tier enum doesn't even contain (confirmed live: only
+--    'starter' | 'pro' | 'elite' are valid) — so that check could never
+--    fire for anyone, on any plan. Net effect: the Scout daily-call
+--    limit has not been enforced for a single user in production.
+--    Fixed here (enum-safe) and in api/scout.js + api/stripe-webhook.js,
+--    which now check/set 'starter' instead of the nonexistent 'free'.
+create or replace function handle_new_user()
+returns trigger language plpgsql security definer set search_path to 'public' as $$
+declare
+  v_dob date;
+  v_is_minor boolean := false;
+  v_parent_email text;
+  v_parent_id uuid;
+  v_plan text;
+begin
+  v_dob := nullif(new.raw_user_meta_data->>'date_of_birth', '')::date;
+  if v_dob is not null then
+    v_is_minor := (date_part('year', age(v_dob)) < 18);
+  end if;
+  v_parent_email := nullif(new.raw_user_meta_data->>'parent_email', '');
+
+  v_plan := new.raw_user_meta_data->>'plan';
+  if v_plan is null or v_plan not in ('starter', 'pro', 'elite') then
+    v_plan := 'starter';
+  end if;
+
+  insert into profiles (id, full_name, dob, is_minor, pending_parent_email, plan)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', ''),
+    v_dob,
+    v_is_minor,
+    case when v_is_minor then v_parent_email else null end,
+    v_plan::plan_tier
+  )
+  on conflict (id) do nothing;
+
+  insert into athletes (id) values (new.id)
+  on conflict (id) do nothing;
+
+  if v_is_minor and v_parent_email is not null then
+    select u.id into v_parent_id from auth.users u where u.email = v_parent_email;
+    if v_parent_id is not null and v_parent_id <> new.id then
+      insert into parent_links (parent_id, athlete_id, relationship)
+      values (v_parent_id, new.id, 'parent')
+      on conflict (parent_id, athlete_id) do nothing;
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+-- ============================================================
+-- Done.
 -- ============================================================

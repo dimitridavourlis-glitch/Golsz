@@ -48,6 +48,7 @@ const Users = svg('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle 
 const ArrowUpRight = svg('<path d="M7 7h10v10"/><path d="M7 17 17 7"/>');
 const Video = svg('<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>');
 const X = svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
+const Pencil = svg('<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>');
 
 
 
@@ -173,9 +174,8 @@ function mapPost(row, name, sport) {
 }
 function mapAthlete(row, name) {
   name = name || "GOLSZ Athlete";
-  const country = (row.clubs && row.clubs.country) || "";
+  const country = row.country || "";
   return {
-    // real athletes table has no citizenship/level/verified — country comes via club_id -> clubs
     id: row.id, n: name, i: initials(name), sport: row.sport || "", pos: row.position || "",
     country, flag: flagFor(country), g: row.gender || "", grad: row.grad_year || "", v: 0,
   };
@@ -478,7 +478,7 @@ function Discover({ onMessage }) {
         }
         const { data, error } = await sb
           .from("athletes")
-          .select("id, sport, position, gender, grad_year, clubs(country)")
+          .select("id, sport, position, gender, grad_year, country")
           .limit(200);
         if (error) throw error;
         if (data && data.length) {
@@ -1099,15 +1099,227 @@ function Highlights() {
 }
 
 /* ============ PROFILE — Digital Sports Passport (signature) ============ */
-function Passport({ onSignOut }) {
-  const p = PASSPORT;
-  const mrz = `GLS<CAN<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<LEFTBACK<<<<<${p.id.replace(/[·]/g, "")}<2027CA`;
+/* profiles.full_name + athletes(*) merged into the passport's shape. Real
+   numeric/text fields fall back to "—" when unset rather than showing
+   demo values — a half-real, half-fake profile would undermine trust in
+   a recruiting tool. */
+function toPassport(profile, ath, uid) {
+  const name = (profile && profile.full_name) || "GOLSZ Athlete";
+  const dash = (v) => (v === null || v === undefined || v === "" ? "—" : v);
+  const country = (ath && ath.country) || "";
+  const shortId = uid ? uid.replace(/-/g, "").slice(0, 5).toUpperCase() : "00000";
+  return {
+    name, handle: "@" + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, ""),
+    id: `GLS·${(country ? country.slice(0, 2) : "XX").toUpperCase()}·${dash(ath && ath.grad_year)}·${shortId}`,
+    initials: initials(name), nat: `${flagFor(country)} ${dash(country)}`,
+    sport: dash(ath && ath.sport), position: dash(ath && ath.position), club: dash(ath && ath.club_name),
+    foot: dash(ath && ath.foot), height: ath && ath.height_cm ? `${ath.height_cm} cm` : "—",
+    grad: dash(ath && ath.grad_year), gpa: dash(ath && ath.gpa),
+    weight: ath && ath.weight_kg ? `${ath.weight_kg} kg` : "—",
+    status: dash(ath && ath.recruiting_status),
+    bio: (ath && ath.bio) || "No bio yet — tap Edit profile to add one.",
+  };
+}
+
+function ProfileEditor({ initial, onClose, onSaved }) {
+  const [form, setForm] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const field = { width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
+  const label = { fontSize: 9.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700, marginBottom: 5, display: "block" };
+  const row = (children) => <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>{children}</div>;
+  const group = (lbl, children) => <div style={{ marginBottom: 12 }}><span style={label}>{lbl}</span>{children}</div>;
+
+  async function save() {
+    if (!sb || busy) return;
+    const name = (form.full_name || "").trim();
+    if (!name) { setErr("Name can't be empty."); return; }
+    setBusy(true); setErr("");
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) throw new Error("Not signed in.");
+      const { error: e1 } = await sb.from("profiles").update({ full_name: name }).eq("id", user.id);
+      if (e1) throw e1;
+      const { error: e2 } = await sb.from("athletes").update({
+        sport: form.sport || null,
+        position: (form.position || "").trim() || null,
+        gender: form.gender || null,
+        grad_year: form.grad_year ? Number(form.grad_year) : null,
+        gpa: form.gpa !== "" && form.gpa != null ? Number(form.gpa) : null,
+        height_cm: form.height_cm ? Number(form.height_cm) : null,
+        weight_kg: form.weight_kg ? Number(form.weight_kg) : null,
+        foot: form.foot || null,
+        recruiting_status: form.recruiting_status || null,
+        country: (form.country || "").trim() || null,
+        club_name: (form.club_name || "").trim() || null,
+        bio: (form.bio || "").trim().slice(0, 600) || null,
+      }).eq("id", user.id);
+      if (e2) throw e2;
+      onSaved();
+    } catch (e) {
+      console.error("GOLSZ profile save error:", e);
+      setErr((e && e.message) || "Couldn't save — try again.");
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: 18, boxSizing: "border-box" }} className="noscroll">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontWeight: 800, fontSize: 16 }}>Build your profile</div>
+          <button onClick={onClose} style={iconBtn(C.chalk)}><X size={18} /></button>
+        </div>
+
+        {group("FULL NAME", <input style={field} value={form.full_name || ""} onChange={set("full_name")} placeholder="Your name" />)}
+
+        {row(<>
+          <div><span style={label}>SPORT</span>
+            <select style={field} value={form.sport || ""} onChange={set("sport")}>
+              <option value="">Select…</option>
+              {SPORTS.filter((s) => s !== "All").map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div><span style={label}>POSITION</span>
+            <input style={field} list="position-options" value={form.position || ""} onChange={set("position")} placeholder="e.g. Left Back" />
+            <datalist id="position-options">{POSITIONS.filter((p) => p !== "All").map((p) => <option key={p} value={p} />)}</datalist>
+          </div>
+        </>)}
+
+        {row(<>
+          <div><span style={label}>GENDER</span>
+            <select style={field} value={form.gender || ""} onChange={set("gender")}>
+              <option value="">Select…</option>
+              {GENDERS.filter((g) => g[0] !== "All").map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+          <div><span style={label}>GRAD YEAR</span>
+            <input style={field} type="number" value={form.grad_year || ""} onChange={set("grad_year")} placeholder="2027" />
+          </div>
+        </>)}
+
+        {row(<>
+          <div><span style={label}>HEIGHT (CM)</span>
+            <input style={field} type="number" value={form.height_cm || ""} onChange={set("height_cm")} placeholder="180" />
+          </div>
+          <div><span style={label}>WEIGHT (KG)</span>
+            <input style={field} type="number" value={form.weight_kg || ""} onChange={set("weight_kg")} placeholder="75" />
+          </div>
+        </>)}
+
+        {row(<>
+          <div><span style={label}>GPA</span>
+            <input style={field} type="number" step="0.01" min="0" max="5" value={form.gpa || ""} onChange={set("gpa")} placeholder="3.8" />
+          </div>
+          <div><span style={label}>PREFERRED FOOT</span>
+            <select style={field} value={form.foot || ""} onChange={set("foot")}>
+              <option value="">—</option><option value="Left">Left</option><option value="Right">Right</option><option value="Both">Both</option>
+            </select>
+          </div>
+        </>)}
+
+        {row(<>
+          <div><span style={label}>COUNTRY</span>
+            <input style={field} list="country-options" value={form.country || ""} onChange={set("country")} placeholder="e.g. Canada" />
+            <datalist id="country-options">{COUNTRIES.filter((c) => c !== "All").map((c) => <option key={c} value={c} />)}</datalist>
+          </div>
+          <div><span style={label}>CLUB / TEAM</span>
+            <input style={field} value={form.club_name || ""} onChange={set("club_name")} placeholder="e.g. Toronto FC Academy" />
+          </div>
+        </>)}
+
+        {group("RECRUITING STATUS", (
+          <select style={field} value={form.recruiting_status || ""} onChange={set("recruiting_status")}>
+            <option value="">—</option>
+            <option value="Open to offers">Open to offers</option>
+            <option value="In contact">In contact</option>
+            <option value="Committed">Committed</option>
+            <option value="Signed">Signed</option>
+          </select>
+        ))}
+
+        {group("SCOUTING BIO", (
+          <textarea style={{ ...field, resize: "vertical", minHeight: 80 }} maxLength={600} value={form.bio || ""} onChange={set("bio")} placeholder="A few sentences a coach or scout should know." />
+        ))}
+
+        {err && <div style={{ color: C.amber, fontSize: 12, marginBottom: 10 }}>{err}</div>}
+        <button onClick={save} disabled={busy} style={{
+          width: "100%", background: C.lime, color: C.pitch, border: "none", borderRadius: 12,
+          padding: "13px", fontWeight: 800, fontSize: 15, fontFamily: "inherit",
+          cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
+        }}>{busy ? "Saving…" : "Save profile"}</button>
+      </div>
+    </div>
+  );
+}
+
+function Passport({ onSignOut, autoEdit, onAutoEditConsumed }) {
+  const [uid, setUid] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [athlete, setAthlete] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const real = !!uid;
+
+  async function load() {
+    if (!sb) return;
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return;
+      setUid(user.id);
+      const [{ data: prof }, { data: ath }] = await Promise.all([
+        sb.from("profiles").select("full_name").eq("id", user.id).single(),
+        sb.from("athletes").select("*").eq("id", user.id).single(),
+      ]);
+      setProfile(prof || null);
+      setAthlete(ath || null);
+      if (autoEdit) { setEditing(true); onAutoEditConsumed && onAutoEditConsumed(); }
+    } catch (e) { console.error("GOLSZ passport load error:", e); }
+  }
+  useEffect(() => { load(); }, []);
+
+  const p = real ? toPassport(profile, athlete, uid) : PASSPORT;
+  const mrz = real
+    ? `${p.id.replace(/[·]/g, "<")}<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<<<<<<<<<<<<<<<<<<<<<<<<<<<`
+    : `GLS<CAN<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<LEFTBACK<<<<<${p.id.replace(/[·]/g, "")}<2027CA`;
+  const incomplete = real && athlete && !athlete.sport;
+
+  const editorInitial = () => ({
+    full_name: (profile && profile.full_name) || "",
+    sport: (athlete && athlete.sport) || "", position: (athlete && athlete.position) || "",
+    gender: (athlete && athlete.gender) || "", grad_year: (athlete && athlete.grad_year) || "",
+    gpa: (athlete && athlete.gpa) || "", height_cm: (athlete && athlete.height_cm) || "",
+    weight_kg: (athlete && athlete.weight_kg) || "", foot: (athlete && athlete.foot) || "",
+    recruiting_status: (athlete && athlete.recruiting_status) || "", country: (athlete && athlete.country) || "",
+    club_name: (athlete && athlete.club_name) || "", bio: (athlete && athlete.bio) || "",
+  });
+
   return (
     <div style={{ padding: "8px 12px 20px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "4px 2px 10px" }}>
         <SectionTitle noMargin>Sports Passport</SectionTitle>
-        <span style={{ fontSize: 9.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>GOLSZ · GLOBAL</span>
+        {real ? (
+          <button onClick={() => setEditing(true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}><Pencil size={13} /> Edit profile</button>
+        ) : (
+          <span style={{ fontSize: 9.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>GOLSZ · GLOBAL</span>
+        )}
       </div>
+
+      {incomplete && (
+        <div onClick={() => setEditing(true)} style={{ background: "#C8F1351a", border: `1px solid ${C.lime}44`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+          <Pencil size={16} color={C.lime} />
+          <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.4 }}>
+            <b style={{ color: C.lime }}>Finish building your profile</b> — add your sport, position and stats so coaches and Scout can find you.
+          </div>
+        </div>
+      )}
+
+      {editing && (
+        <ProfileEditor
+          initial={editorInitial()}
+          onClose={() => setEditing(false)}
+          onSaved={() => { setEditing(false); load(); }}
+        />
+      )}
 
       {/* passport document */}
       <div style={{
@@ -1128,7 +1340,7 @@ function Passport({ onSignOut }) {
               border: `1px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center",
               fontFamily: "'Space Mono', monospace", fontWeight: 800, fontSize: 34, color: C.lime,
             }}>{p.initials}</div>
-            <div style={{ textAlign: "center", fontSize: 8.5, color: C.slate, marginTop: 5, fontFamily: "'Space Mono', monospace" }}>VERIFIED PHOTO</div>
+            <div style={{ textAlign: "center", fontSize: 8.5, color: C.slate, marginTop: 5, fontFamily: "'Space Mono', monospace" }}>{real ? "GOLSZ MEMBER" : "VERIFIED PHOTO"}</div>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05, fontStretch: "expanded" }}>{p.name}</div>
@@ -1142,7 +1354,10 @@ function Passport({ onSignOut }) {
 
         {/* data grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, background: C.line, borderTop: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}` }}>
-          {[["FOOT", p.foot], ["HEIGHT", p.height], ["GRAD", p.grad], ["GPA", p.gpa], ["TOP SPEED", p.pace], ["STATUS", p.level]].map(([k, v]) => (
+          {(real
+            ? [["FOOT", p.foot], ["HEIGHT", p.height], ["GRAD", p.grad], ["GPA", p.gpa], ["WEIGHT", p.weight], ["STATUS", p.status]]
+            : [["FOOT", p.foot], ["HEIGHT", p.height], ["GRAD", p.grad], ["GPA", p.gpa], ["TOP SPEED", p.pace], ["STATUS", p.level]]
+          ).map(([k, v]) => (
             <div key={k} style={{ background: C.card, padding: "9px 12px" }}>
               <div style={{ fontSize: 8.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700 }}>{k}</div>
               <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Space Mono', monospace", marginTop: 2 }}>{v}</div>
@@ -1150,24 +1365,26 @@ function Passport({ onSignOut }) {
           ))}
         </div>
 
-        {/* trust stamps */}
-        <div style={{ padding: "12px 14px" }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>TRUST STAMPS</div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {p.badges.map((b) => (
-              <span key={b.label} style={{
-                display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700,
-                padding: "5px 9px", borderRadius: 6, transform: "rotate(-1.5deg)",
-                color: b.on ? C.lime : C.slate,
-                background: b.on ? "#C8F1351a" : "transparent",
-                border: `1.5px solid ${b.on ? C.lime : C.line2}`,
-                opacity: b.on ? 1 : 0.55,
-              }}>
-                <BadgeCheck size={12} /> {b.label} {b.on ? "✓" : "—"}
-              </span>
-            ))}
+        {/* trust stamps — not backed by a real verification system yet, demo only */}
+        {!real && (
+          <div style={{ padding: "12px 14px" }}>
+            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>TRUST STAMPS</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {p.badges.map((b) => (
+                <span key={b.label} style={{
+                  display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700,
+                  padding: "5px 9px", borderRadius: 6, transform: "rotate(-1.5deg)",
+                  color: b.on ? C.lime : C.slate,
+                  background: b.on ? "#C8F1351a" : "transparent",
+                  border: `1.5px solid ${b.on ? C.lime : C.line2}`,
+                  opacity: b.on ? 1 : 0.55,
+                }}>
+                  <BadgeCheck size={12} /> {b.label} {b.on ? "✓" : "—"}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* MRZ machine-readable strip */}
         <div style={{
@@ -1186,16 +1403,18 @@ function Passport({ onSignOut }) {
       {/* media */}
       <Highlights />
 
-      {/* timeline */}
-      <div style={{ ...card, marginBottom: 8 }}>
-        <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>CAREER TIMELINE</div>
-        {p.timeline.map((e, i) => (
-          <div key={i} style={{ display: "flex", gap: 12, marginBottom: i < p.timeline.length - 1 ? 12 : 0 }}>
-            <div style={{ fontFamily: "'Space Mono', monospace", fontWeight: 800, color: C.lime, fontSize: 13, width: 40 }}>{e.yr}</div>
-            <div style={{ fontSize: 13, color: "#C9D6CD", flex: 1, borderLeft: `2px solid ${C.line2}`, paddingLeft: 12 }}>{e.txt}</div>
-          </div>
-        ))}
-      </div>
+      {/* timeline — not backed by a real data model yet, demo only */}
+      {!real && (
+        <div style={{ ...card, marginBottom: 8 }}>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>CAREER TIMELINE</div>
+          {p.timeline.map((e, i) => (
+            <div key={i} style={{ display: "flex", gap: 12, marginBottom: i < p.timeline.length - 1 ? 12 : 0 }}>
+              <div style={{ fontFamily: "'Space Mono', monospace", fontWeight: 800, color: C.lime, fontSize: 13, width: 40 }}>{e.yr}</div>
+              <div style={{ fontSize: 13, color: "#C9D6CD", flex: 1, borderLeft: `2px solid ${C.line2}`, paddingLeft: 12 }}>{e.txt}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <RestrictedBanner />
       <FamilyAccess />
@@ -1343,8 +1562,9 @@ const iconBtn = (color) => ({ display: "inline-flex", alignItems: "center", gap:
 const bubbleAgent = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: "2px 14px 14px 14px", padding: "10px 13px", margin: "0 30px 12px 0", fontSize: 14, lineHeight: 1.55 };
 const bubbleUser = { background: C.lime, color: C.pitch, borderRadius: "14px 2px 14px 14px", padding: "10px 13px", margin: "0 0 12px 30px", fontSize: 14, lineHeight: 1.55, fontWeight: 500 };
 
-function GolszApp({ onSignOut }) {
+function GolszApp({ onSignOut, startOnboarding }) {
   const [page, setPage] = useState(() => {
+    if (startOnboarding) return "profile";
     try {
       const p = new URLSearchParams(window.location.search).get("page");
       const valid = ["feed", "discover", "scout", "events", "profile", "messages"];
@@ -1353,6 +1573,7 @@ function GolszApp({ onSignOut }) {
   });
   const [thread, setThread] = useState(null);
   const [hasUnreadMsgs, setHasUnreadMsgs] = useState(false);
+  const [onboarding, setOnboarding] = useState(!!startOnboarding);
 
   const NAV = [
     { id: "feed", icon: Home, label: "Feed" },
@@ -1396,7 +1617,7 @@ function GolszApp({ onSignOut }) {
         {page === "discover" && <Discover onMessage={openThread} />}
         {page === "scout" && <Scout />}
         {page === "events" && <Events />}
-        {page === "profile" && <Passport onSignOut={onSignOut} />}
+        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} />}
         {page === "messages" && <Messages thread={thread} setThread={setThread} />}
       </main>
 
@@ -1458,7 +1679,7 @@ const SCOUT_ENDPOINT = "/api/scout";  // same-origin — works on any Vercel dep
 const STRIPE_LINKS = { pro: "", elite: "" };  // Stripe Payment Link URLs
 
 const PLANS = [
-  { id: "free",  name: "Starter", price: 0,  tag: "Free forever",    feats: ["Digital Sports Passport (basic)", "AI Scout: 5 school suggestions", "Browse players & events"] },
+  { id: "starter", name: "Starter", price: 0,  tag: "Free forever",    feats: ["Digital Sports Passport (basic)", "AI Scout: 5 school suggestions", "Browse players & events"] },
   { id: "pro",   name: "Pro",     price: 29, tag: "Most popular",     feats: ["Unlimited AI Scout agent", "Full verified passport", "Full target-school lists & roadmap", "Unlimited coach outreach drafts", "Priority combines & trials"] },
   { id: "elite", name: "Elite",   price: 79, tag: "Serious recruits", feats: ["Everything in Pro", "Priority scout visibility", "Human-reviewed highlight feedback", "Early access to showcases"] },
 ];
@@ -1529,7 +1750,7 @@ function Auth({ onDone }) {
           window.location.href = checkoutUrl.toString();
           return; // account exists -> pay
         }
-        if (data.session) { onDone(); } else { setNotice("Account created — check " + email.trim() + " for a confirmation link, then come back and log in."); }
+        if (data.session) { onDone(true); } else { setNotice("Account created — check " + email.trim() + " for a confirmation link, then come back and log in."); }
       } else {
         const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password: pw });
         if (error) throw error;
@@ -1658,6 +1879,7 @@ function Root() {
   const paidReturn = typeof window !== "undefined" && /checkout=success/.test(window.location.search);
   const [authed, setAuthed] = useState(false);
   const [ready, setReady] = useState(false);
+  const [freshSignup, setFreshSignup] = useState(false);
 
   useEffect(() => {
     if (!sb) { setAuthed(paidReturn); setReady(true); return; }
@@ -1672,8 +1894,8 @@ function Root() {
 
   if (!ready) return React.createElement("div", { style: { minHeight: "100vh", background: C.pitch } });
   return authed
-    ? React.createElement(GolszApp, { onSignOut: signOut })
-    : React.createElement(Auth, { onDone: () => setAuthed(true) });
+    ? React.createElement(GolszApp, { onSignOut: signOut, startOnboarding: freshSignup })
+    : React.createElement(Auth, { onDone: (fresh) => { setFreshSignup(!!fresh); setAuthed(true); } });
 }
 
 

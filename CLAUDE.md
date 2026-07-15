@@ -79,11 +79,33 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   tab-bar shell with Scout as the raised center button) and mounted via `Root`, which decides between
   `Auth` and `GolszApp` based on Supabase session state.
 - **Mock data lives at the top of the script** — `PASSPORT`, `FEED`, `PLAYERS`, `EVENTS`, `THREADS` are
-  hardcoded arrays. **Feed, Discover, and Events now fetch real Supabase data when `sb` is configured**,
-  falling back to these arrays only when the real query returns zero rows (so the app still looks populated
-  pre-launch) or when `sb` is null (preview mode). `Passport` and `Messages` are still fully hardcoded —
-  nobody has wired those to real tables yet. When touching Feed/Discover/Events, look for the `mapPost` /
-  `mapAthlete` / `mapEvent` helpers and the `loadFeed()`-style fetch effects, not the arrays themselves.
+  hardcoded arrays, used only as fallbacks. **Feed, Discover, Events, Passport, and Messages all fetch real
+  Supabase data when `sb` is configured and a user is signed in**, falling back to these arrays only when
+  the real query returns zero rows (so the app still looks populated pre-launch) or when `sb`/the session is
+  null (preview mode / logged out). When touching any of these, look for the `mapPost` / `mapAthlete` /
+  `mapEvent` / `toPassport` helpers and the `load*()`-style fetch effects, not the hardcoded arrays.
+- **Passport is a real, editable profile** as of migration 008: `toPassport()` merges `profiles.full_name`
+  with the full `athletes` row (sport, position, gender, grad_year, gpa, height_cm, weight_kg, foot,
+  recruiting_status, country, club_name, bio) into the passport-shaped display object, showing "—" for
+  unset fields rather than demo values. `ProfileEditor` is the edit form (owner-only writes, already covered
+  by the pre-existing `athletes_rw`/`profiles_self` policies — no new RLS was needed). The "Trust Stamps" and
+  "Career Timeline" sections are demo-only flourishes with no backing data model — they're hidden entirely
+  once a real profile loads (`{!real && ...}`), not faked with real data. `club_id`/`clubs` is a separate,
+  empty, read-only directory table (no insert policy) — `athletes.club_name` is the real free-text field the
+  UI actually writes to; don't wire new features to `club_id` without adding real directory-management first.
+- **Onboarding**: a fresh signup that gets an immediate session (`Auth`'s `onDone(true)`) is routed straight
+  to the Passport tab with the profile editor auto-opened (`GolszApp`'s `startOnboarding` prop → initial
+  `page` state → `Passport`'s `autoEdit` prop, consumed once via `onAutoEditConsumed` so revisiting the tab
+  later doesn't reopen it). Existing users with an incomplete profile (`!athletes.sport`) instead see a
+  dismissible "Finish building your profile" banner — not force-interrupted.
+- **Follows** (migration 006): `follows(follower_id, followed_id)`, public read, insert/delete restricted to
+  `follower_id = auth.uid()`. Feed and Discover both maintain their own `following` state/`toggleFollow()` —
+  not shared, each fetches independently.
+- **Messages** (migration 007): real DMs, gated by `can_message()` — two profiles can message only if one
+  follows the other (either direction) and neither has blocked the other; restricted minors (see below)
+  can't send or receive DMs either. `messages_delete` lets a sender unsend their own messages. The header's
+  unread-message dot reflects a real `read_at is null` count now, refetched on every `page` change — it is
+  not realtime/pushed.
 - **Backend config is one block near the bottom of the file**: `SUPABASE_URL` / `SUPABASE_ANON_KEY` are set
   to the live project; `SCOUT_ENDPOINT` is `"/api/scout"` (relative — works on any Vercel deploy without
   hardcoding a domain); `STRIPE_LINKS` is still blank pending real Stripe Payment Links (see "Current
@@ -129,8 +151,13 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   with no rate limiting. This is intentional for early preview deploys, not a bug.
 - `meter()` reads the caller's plan from the `profiles` table and increments usage via the
   `increment_scout_usage` Postgres RPC (defined in `supabase-schema.sql`); free-plan callers are capped at
-  `FREE_DAILY_LIMIT` (default 8/day). This only starts being *correct* once `profiles.plan` reflects real
-  payment — see `api/stripe-webhook.js` below.
+  `FREE_DAILY_LIMIT` (default 8/day). **The free-tier plan value is `'starter'`, not `'free'`** — the live
+  `plan_tier` enum only allows `'starter' | 'pro' | 'elite'` (confirmed 2026-07-15 via direct write attempts;
+  `'free'` errors with `invalid input value for enum plan_tier`). Before migration 008, this check compared
+  against `'free'` and `handle_new_user()` never applied the signup's chosen plan at all, so the daily limit
+  silently never fired for any user — real cost exposure. If you ever add a new plan tier, add it to the
+  Postgres enum first (`alter type plan_tier add value ...`) and confirm it live before referencing it
+  anywhere in code — don't assume a string is a valid enum value just because it appears in `PLANS`.
 
 ### `api/stripe-webhook.js` (Vercel serverless function)
 
@@ -185,12 +212,11 @@ project, not a from-scratch bootstrap script. The real tables:
 
 **Real when configured:** accounts, sessions, sign-out, per-user data isolation via RLS; Feed/Discover/
 Events on real Supabase data (falling back to demo content when empty); a working hosted Scout with the API
-key protected server-side, free-tier metering, and real transcript persistence; parent verification
-(request/approve, RLS-enforced, not just UI); minor safety (restricted posting/Discover visibility until a
-parent approves); Feed post creation with report/block moderation.
-
-**Still mock regardless of config:** `Passport` and `Messages` are fully hardcoded — nobody has wired those
-to real tables (`athletes`/a real conversations table) yet.
+key protected server-side, free-tier metering (now correctly enum-safe, see `api/scout.js` above), and real
+transcript persistence; parent verification (request/approve, RLS-enforced, not just UI); minor safety
+(restricted posting/Discover/DM visibility until a parent approves); Feed post creation with report/block
+moderation; follows (migration 006); real DMs gated by follow relationship (migration 007); a fully editable
+Passport with onboarding auto-opened right after signup (migration 008).
 
 **Not yet built / known gaps:**
 - **Legal review.** The parent-verification flow is mutual in-app consent, not identity-verified

@@ -92,7 +92,7 @@ export default async function handler(req, res) {
     } else if (event.type === "customer.subscription.deleted") {
       const customerId = event.data.object.customer;
       if (customerId) {
-        await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, { plan: "free" });
+        await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, { plan: "starter" });
       }
     }
     // other event types are ignored — Stripe expects a 200 regardless

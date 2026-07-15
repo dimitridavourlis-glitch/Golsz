@@ -54,11 +54,11 @@ async function meter(userId) {
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!url || !key || !userId) return { plan: "unknown", calls: 0 };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
-  let plan = "free";
+  let plan = "starter";
   try {
     const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan", { headers });
     const rows = await p.json();
-    if (Array.isArray(rows) && rows[0]) plan = rows[0].plan || "free";
+    if (Array.isArray(rows) && rows[0]) plan = rows[0].plan || "starter";
   } catch {}
   let calls = 0;
   try {
@@ -90,7 +90,7 @@ export default async function handler(req, res) {
     if (!userId) return res.status(401).json({ error: "Sign in to use the Scout." });
     const { plan, calls } = await meter(userId);
     const limit = Number(process.env.FREE_DAILY_LIMIT || 8);
-    if (plan === "free" && calls > limit) {
+    if (plan === "starter" && calls > limit) {
       return res.status(402).json({ error: "Free daily limit reached. Upgrade to Pro for unlimited Scout." });
     }
   }
