@@ -46,6 +46,7 @@ const Flame = svg('<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-
 const Trophy = svg('<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>');
 const Users = svg('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>');
 const ArrowUpRight = svg('<path d="M7 7h10v10"/><path d="M7 17 17 7"/>');
+const Video = svg('<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>');
 const X = svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
 
 
@@ -378,9 +379,16 @@ function Feed() {
             {p.kind === "commit" && <Trophy size={16} color={C.lime} />}
             {p.kind === "perf" && <Flame size={16} color={C.amber} />}
             {p.kind === "call" && <Radar size={16} color={C.lime} />}
+            {p.kind === "clip" && <Video size={16} color={C.lime} />}
           </div>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{p.head}</div>
-          <div style={{ fontSize: 13.5, color: "#C9D6CD", lineHeight: 1.5 }}>{p.body}</div>
+          {p.kind === "clip" && p.body ? (
+            <a href={p.body} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13.5, color: C.lime, lineHeight: 1.5, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}>
+              <Video size={13} /> Watch highlight
+            </a>
+          ) : (
+            <div style={{ fontSize: 13.5, color: "#C9D6CD", lineHeight: 1.5 }}>{p.body}</div>
+          )}
           <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
             {p.v.map((b) => <Badge key={b} label={b} />)}
           </div>
@@ -816,6 +824,11 @@ function Highlights() {
       await saveList(next);
       setItems(next); setReal(true);
       setTitle(""); setUrl("");
+      // also share it to Feed as a clip post, same as any other post — the
+      // 'clip' kind already existed in posts' schema and the original demo
+      // Feed data for exactly this ("New defensive highlight reel is live")
+      try { await sb.from("posts").insert({ author_id: uid, kind: "clip", headline: entry.title, body: entry.url }); }
+      catch (e) { console.error("GOLSZ clip post error:", e); }
     } catch (e) {
       setErr((e && e.message) ? e.message : "Couldn't add that link.");
     } finally { setBusy(false); }
