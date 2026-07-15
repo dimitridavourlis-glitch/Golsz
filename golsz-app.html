@@ -357,6 +357,18 @@ function Feed({ onMessage }) {
     } catch (e) { console.error("GOLSZ block error:", e); }
   }
 
+  async function deletePost(p) {
+    if (!sb || !uid || !p.postId || p.authorId !== uid) return;
+    setPosts((ps) => ps.filter((x) => x.postId !== p.postId));
+    try {
+      const { error } = await sb.from("posts").delete().eq("id", p.postId);
+      if (error) throw error;
+    } catch (e) {
+      console.error("GOLSZ delete post error:", e);
+      loadFeed(); // revert the optimistic removal on failure
+    }
+  }
+
   async function toggleFollow(authorId) {
     if (!sb || !uid || !authorId || authorId === uid) return;
     const isFollowing = !!following[authorId];
@@ -446,6 +458,9 @@ function Feed({ onMessage }) {
                 </button>
                 <button onClick={() => blockAuthor(p)} style={{ ...iconBtn(C.slate), fontSize: 11 }}>Block</button>
               </>
+            )}
+            {p.postId && uid && p.authorId === uid && (
+              <button onClick={() => deletePost(p)} style={{ ...iconBtn(C.amber), fontSize: 11 }}><Trash2 size={13} /> Delete</button>
             )}
           </div>
         </article>
