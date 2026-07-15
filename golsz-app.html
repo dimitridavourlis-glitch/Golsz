@@ -1702,6 +1702,7 @@ function AdminPanel({ onBack }) {
 /* ============ AI SCOUT (live agent) ============ */
 const SYS = `You are GOLSZ Scout, an AI sports agent. Tagline: "Every Goal Has a Path."
 You are the personal agent for ONE athlete: learn who they are (age, sport, position, location, club/level, grad year, academics, budget, citizenship, goal), build a career roadmap, suggest realistic target programs (reach/match/safety, honest), and draft coach outreach emails on request (draft-only; the athlete sends them).
+Some fields may already be filled in from the athlete's real GOLSZ Passport (profile they built themselves) — treat those as trustworthy and confirmed, not something to re-ask. Open by briefly acknowledging what you already know about them (sport/position/club/grad year if present) instead of asking generic intro questions, then move straight to something useful.
 Be warm, direct, honest — never overpromise. If a target looks unrealistic, say so kindly and show the realistic path. If the athlete seems to be a minor, remind them once to involve a parent/guardian. Use web search for real current programs, coaches, showcases, and eligibility rules. Ask at most ONE question per reply. Keep replies tight for a phone screen.
 OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null}}
 Allowed keys: name, age, sport, position, location, club, level, grad_year, gpa, budget, citizenship, goal. Do not repeat known fields.`;
@@ -1709,6 +1710,16 @@ Allowed keys: name, age, sport, position, location, club, level, grad_year, gpa,
 const CHIPS = ["Build my target school list", "Create my career roadmap", "Draft an email to a coach", "What should I do this month?"];
 
 const SCOUT_GREETING = "I'm your GOLSZ Scout.\n\nTell me about yourself like you'd tell a scout — age, sport, position, where you play, and where you want to end up. I'll build your path from there.";
+function scoutGreetingFor(seeded) {
+  const who = [seeded.sport, seeded.position].filter(Boolean).join(" · ");
+  if (!who && !seeded.name) return SCOUT_GREETING;
+  const first = seeded.name ? seeded.name.split(" ")[0] : null;
+  const hello = first ? `Hey ${first} — ` : "Hey — ";
+  const context = who
+    ? `I've got you down as a ${who}${seeded.club ? ` at ${seeded.club}` : ""}${seeded.grad_year ? `, class of ${seeded.grad_year}` : ""}. `
+    : "";
+  return `${hello}I'm your GOLSZ Scout. ${context}\n\nWhat's the plan — your target school list, this season's roadmap, or something else?`;
+}
 function newScoutConvId() {
   return (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
 }
@@ -1723,16 +1734,19 @@ function Scout() {
   const [history, setHistory] = useState(null);
   const uidRef = useRef(null);
   const endRef = useRef(null);
+  const baseProfileRef = useRef({});
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
 
-  // restore this athlete's most recent Scout conversation, if any. Real
-  // scout_history is (id, user_id, conversation_id, messages jsonb,
-  // created_at) — each transcript row's `messages` is a one-element
-  // [{role,content}] array; metering rows (written server-side by
-  // increment_scout_usage) are `[]` and flatten to nothing here, so no
-  // separate filtering is needed. Only the latest conversation is loaded
-  // on mount — older ones are reachable via History, not auto-flattened
-  // into one ever-growing chat like before.
+  // Seed Scout's working profile from the athlete's real Passport data (so
+  // it already knows who it's helping instead of re-asking basics the
+  // athlete already filled in), then restore their most recent Scout
+  // conversation, if any. Real scout_history is (id, user_id,
+  // conversation_id, messages jsonb, created_at) — each transcript row's
+  // `messages` is a one-element [{role,content}] array; metering rows
+  // (written server-side by increment_scout_usage) are `[]` and flatten to
+  // nothing here, so no separate filtering is needed. Only the latest
+  // conversation is loaded on mount — older ones are reachable via
+  // History, not auto-flattened into one ever-growing chat like before.
   useEffect(() => {
     if (!sb) return;
     (async () => {
@@ -1740,6 +1754,31 @@ function Scout() {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
         uidRef.current = user.id;
+
+        const [{ data: prof }, { data: ath }] = await Promise.all([
+          sb.from("profiles").select("full_name, dob").eq("id", user.id).single(),
+          sb.from("athletes").select("sport, position, grad_year, gpa, country, club_name, recruiting_status").eq("id", user.id).single(),
+        ]);
+        const seeded = {};
+        if (prof && prof.full_name) seeded.name = prof.full_name;
+        if (prof && prof.dob) {
+          const b = new Date(prof.dob), t = new Date();
+          let a = t.getFullYear() - b.getFullYear();
+          if (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--;
+          seeded.age = a;
+        }
+        if (ath) {
+          if (ath.sport) seeded.sport = ath.sport;
+          if (ath.position) seeded.position = ath.position;
+          if (ath.country) { seeded.location = ath.country; seeded.citizenship = ath.country; }
+          if (ath.club_name) seeded.club = ath.club_name;
+          if (ath.recruiting_status) seeded.level = ath.recruiting_status;
+          if (ath.grad_year) seeded.grad_year = ath.grad_year;
+          if (ath.gpa) seeded.gpa = ath.gpa;
+        }
+        baseProfileRef.current = seeded;
+        if (Object.keys(seeded).length) setProfile((p) => ({ ...seeded, ...p }));
+
         const { data, error } = await sb
           .from("scout_history")
           .select("conversation_id, messages, created_at")
@@ -1753,6 +1792,8 @@ function Scout() {
           const restored = rows.filter((r) => r.conversation_id === lastConvId).flatMap((r) => r.messages);
           setConversationId(lastConvId);
           setMsgs(restored.map((m) => ({ role: m.role, text: m.content })));
+        } else {
+          setMsgs([{ role: "assistant", text: scoutGreetingFor(seeded) }]);
         }
       } catch (e) { console.error("GOLSZ scout history load error:", e); }
     })();
@@ -1765,8 +1806,8 @@ function Scout() {
   }
 
   function newChat() {
-    setMsgs([{ role: "assistant", text: SCOUT_GREETING }]);
-    setProfile({});
+    setMsgs([{ role: "assistant", text: scoutGreetingFor(baseProfileRef.current) }]);
+    setProfile(baseProfileRef.current);
     setConversationId(newScoutConvId());
     setShowHistory(false);
   }
