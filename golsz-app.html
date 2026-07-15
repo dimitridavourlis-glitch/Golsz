@@ -246,7 +246,7 @@ function RestrictedBanner() {
 }
 
 /* ============ FEED ============ */
-function Feed({ onMessage }) {
+function Feed({ onMessage, onViewProfile }) {
   const [posts, setPosts] = useState(FEED);
   const [liked, setLiked] = useState({});
   const [uid, setUid] = useState(null);
@@ -407,7 +407,10 @@ function Feed({ onMessage }) {
         const isLiked = !!liked[key];
         return (
         <article key={key} style={card}>
-          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
+          <div
+            onClick={() => p.authorId && onViewProfile && onViewProfile(p.authorId)}
+            style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, cursor: p.authorId ? "pointer" : "default" }}
+          >
             <Avatar init={p.init} ring={C.lime} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -476,7 +479,7 @@ const GENDERS = [["All", "All"], ["M", "Male"], ["F", "Female"]];
 const COUNTRIES = ["All", "Canada", "USA", "England", "Spain", "Germany", "Jamaica", "Japan", "Brazil", "Sweden", "Morocco"];
 const POSITIONS = ["All", "Left Back", "Striker", "Midfielder", "Guard", "Forward", "Center", "Goalie", "Sprinter", "Distance", "Singles"];
 
-function Discover({ onMessage }) {
+function Discover({ onMessage, onViewProfile }) {
   const [sport, setSport] = useState("All");
   const [gender, setGender] = useState("All");
   const [country, setCountry] = useState("All");
@@ -551,7 +554,10 @@ function Discover({ onMessage }) {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {results.sort((a, b) => b.v - a.v).map((p) => (
-          <div key={p.id || p.n} style={{ ...card, margin: 0, padding: 12 }}>
+          <div key={p.id || p.n}
+            onClick={() => p.id && onViewProfile && onViewProfile(p.id)}
+            style={{ ...card, margin: 0, padding: 12, cursor: p.id ? "pointer" : "default" }}
+          >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <Avatar init={p.i} size={38} />
               <span style={{ display: "flex", gap: 2 }}>
@@ -567,7 +573,7 @@ function Discover({ onMessage }) {
               <div style={{ display: "flex", gap: 6 }}>
                 {p.id && uid && p.id !== uid && following[p.id] && (
                   <button
-                    onClick={() => onMessage && onMessage(p.id)}
+                    onClick={(e) => { e.stopPropagation(); onMessage && onMessage(p.id); }}
                     style={{
                       fontSize: 10.5, fontWeight: 700, padding: "4px 8px", borderRadius: 999, cursor: "pointer",
                       fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3,
@@ -579,7 +585,7 @@ function Discover({ onMessage }) {
                 )}
                 {p.id && uid && p.id !== uid && (
                   <button
-                    onClick={() => toggleFollow(p.id)}
+                    onClick={(e) => { e.stopPropagation(); toggleFollow(p.id); }}
                     style={{
                       fontSize: 10.5, fontWeight: 700, padding: "4px 9px", borderRadius: 999, cursor: "pointer",
                       fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3,
@@ -1018,7 +1024,7 @@ function sourceFromUrl(url) {
     return host;
   } catch { return "Video link"; }
 }
-function Highlights() {
+function Highlights({ viewUserId }) {
   const [items, setItems] = useState(PASSPORT.media.map((m) => ({ title: m.t, source: m.src, url: null })));
   const [real, setReal] = useState(false);
   const [uid, setUid] = useState(null);
@@ -1026,6 +1032,7 @@ function Highlights() {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const isOwner = !!(uid && (!viewUserId || viewUserId === uid));
 
   useEffect(() => {
     if (!sb) return;
@@ -1034,24 +1041,27 @@ function Highlights() {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
         setUid(user.id);
-        const { data, error } = await sb.from("athletes").select("highlights").eq("id", user.id).single();
+        const targetId = viewUserId || user.id;
+        const { data, error } = await sb.from("athletes").select("highlights").eq("id", targetId).single();
         if (error) throw error;
         const list = Array.isArray(data && data.highlights) ? data.highlights : [];
         if (list.length) { setItems(list); setReal(true); }
-        // else: leave the demo fallback in place, and `real` stays false so the
-        // first real add doesn't fold the demo placeholders in as if they were data
+        else if (viewUserId) { setItems([]); setReal(true); } // viewing someone else — show their real (empty) state, never our demo placeholders
+        // else: leave the demo fallback in place for your own empty profile, and
+        // `real` stays false so the first real add doesn't fold the demo
+        // placeholders in as if they were data
       } catch (e) { console.error("GOLSZ highlights load error:", e); }
     })();
-  }, []);
+  }, [viewUserId]);
 
   async function saveList(list) {
-    if (!sb || !uid) return;
+    if (!sb || !uid || !isOwner) return;
     try { await sb.from("athletes").update({ highlights: list }).eq("id", uid); }
     catch (e) { console.error("GOLSZ highlights save error:", e); }
   }
 
   async function addHighlight() {
-    if (!sb || !uid || !title.trim() || !url.trim() || busy) return;
+    if (!sb || !uid || !isOwner || !title.trim() || !url.trim() || busy) return;
     setBusy(true); setErr("");
     try {
       let parsed;
@@ -1076,7 +1086,7 @@ function Highlights() {
   }
 
   async function removeHighlight(id) {
-    if (!sb || !uid) return;
+    if (!sb || !uid || !isOwner) return;
     const next = items.filter((m) => m.id !== id);
     setItems(next);
     await saveList(next);
@@ -1085,6 +1095,9 @@ function Highlights() {
   return (
     <div style={{ ...card }}>
       <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>VERIFIED MEDIA</div>
+      {viewUserId && real && items.length === 0 && (
+        <div style={{ fontSize: 12.5, color: C.slate }}>No highlights yet.</div>
+      )}
       {items.map((m, i) => (
         <div key={m.id || i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: i < items.length - 1 ? `1px solid ${C.line}` : "none" }}>
           <div style={{ width: 6, height: 6, borderRadius: 99, background: C.lime, flexShrink: 0 }} />
@@ -1094,12 +1107,12 @@ function Highlights() {
             <span style={{ fontSize: 13, flex: 1 }}>{m.title}</span>
           )}
           <span style={{ fontSize: 10, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{m.source}</span>
-          {real && sb && uid && m.id && (
+          {real && isOwner && m.id && (
             <button onClick={() => removeHighlight(m.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, marginLeft: 4, display: "flex" }}><X size={13} /></button>
           )}
         </div>
       ))}
-      {sb && uid && (
+      {sb && isOwner && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Highlight title (e.g. Full match vs Montreal)"
             style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", marginBottom: 6, boxSizing: "border-box" }} />
@@ -1272,12 +1285,14 @@ function ProfileEditor({ initial, onClose, onSaved }) {
   );
 }
 
-function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin }) {
+function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUserId, onBack, onMessage }) {
   const [uid, setUid] = useState(null);
   const [profile, setProfile] = useState(null);
   const [athlete, setAthlete] = useState(null);
   const [editing, setEditing] = useState(false);
+  const [following, setFollowing] = useState(false);
   const real = !!uid;
+  const viewingOther = !!(viewUserId && uid && viewUserId !== uid);
 
   async function load() {
     if (!sb) return;
@@ -1285,22 +1300,49 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin }) {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
       setUid(user.id);
-      const [{ data: prof }, { data: ath }] = await Promise.all([
-        sb.from("profiles").select("full_name, is_admin").eq("id", user.id).single(),
-        sb.from("athletes").select("*").eq("id", user.id).single(),
-      ]);
-      setProfile(prof || null);
-      setAthlete(ath || null);
-      if (autoEdit) { setEditing(true); onAutoEditConsumed && onAutoEditConsumed(); }
+      const other = viewUserId && viewUserId !== user.id;
+      if (other) {
+        // profiles has no public-read policy (dob is sensitive), so the
+        // viewed person's name comes from the public_profile_names view —
+        // same pattern used in Feed/Discover/Messages.
+        const [{ data: nameRow }, { data: ath }, { data: myFollow }] = await Promise.all([
+          sb.from("public_profile_names").select("full_name").eq("id", viewUserId).maybeSingle(),
+          sb.from("athletes").select("*").eq("id", viewUserId).maybeSingle(),
+          sb.from("follows").select("followed_id").eq("follower_id", user.id).eq("followed_id", viewUserId).maybeSingle(),
+        ]);
+        setProfile(nameRow ? { full_name: nameRow.full_name } : null);
+        setAthlete(ath || null);
+        setFollowing(!!myFollow);
+      } else {
+        const [{ data: prof }, { data: ath }] = await Promise.all([
+          sb.from("profiles").select("full_name, is_admin").eq("id", user.id).single(),
+          sb.from("athletes").select("*").eq("id", user.id).single(),
+        ]);
+        setProfile(prof || null);
+        setAthlete(ath || null);
+        if (autoEdit) { setEditing(true); onAutoEditConsumed && onAutoEditConsumed(); }
+      }
     } catch (e) { console.error("GOLSZ passport load error:", e); }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [viewUserId]);
 
-  const p = real ? toPassport(profile, athlete, uid) : PASSPORT;
+  async function toggleFollowThis() {
+    if (!sb || !uid || !viewUserId || viewUserId === uid) return;
+    const was = following;
+    setFollowing(!was);
+    try {
+      const { error } = was
+        ? await sb.from("follows").delete().eq("follower_id", uid).eq("followed_id", viewUserId)
+        : await sb.from("follows").insert({ follower_id: uid, followed_id: viewUserId });
+      if (error) throw error;
+    } catch (e) { console.error("GOLSZ passport follow error:", e); setFollowing(was); }
+  }
+
+  const p = real ? toPassport(profile, athlete, viewingOther ? viewUserId : uid) : PASSPORT;
   const mrz = real
     ? `${p.id.replace(/[·]/g, "<")}<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<<<<<<<<<<<<<<<<<<<<<<<<<<<`
     : `GLS<CAN<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<LEFTBACK<<<<<${p.id.replace(/[·]/g, "")}<2027CA`;
-  const incomplete = real && athlete && !athlete.sport;
+  const incomplete = !viewingOther && real && athlete && !athlete.sport;
 
   const editorInitial = () => ({
     full_name: (profile && profile.full_name) || "",
@@ -1315,13 +1357,37 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin }) {
   return (
     <div style={{ padding: "8px 12px 20px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "4px 2px 10px" }}>
-        <SectionTitle noMargin>Sports Passport</SectionTitle>
-        {real ? (
+        <SectionTitle noMargin>{viewingOther ? "Athlete Passport" : "Sports Passport"}</SectionTitle>
+        {viewingOther ? (
+          <button onClick={onBack} style={{ ...iconBtn(C.chalk), fontSize: 11.5 }}><ChevronLeft size={16} /> Back</button>
+        ) : real ? (
           <button onClick={() => setEditing(true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}><Pencil size={13} /> Edit profile</button>
         ) : (
           <span style={{ fontSize: 9.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>GOLSZ · GLOBAL</span>
         )}
       </div>
+
+      {viewingOther && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <button onClick={toggleFollowThis} style={{
+            flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+            background: following ? C.lime : "transparent", color: following ? C.pitch : C.chalk,
+            border: `1px solid ${following ? C.lime : C.line2}`,
+          }}>
+            <Users size={15} fill={following ? C.lime : "none"} /> {following ? "Following" : "Follow"}
+          </button>
+          {following && onMessage && (
+            <button onClick={() => onMessage(viewUserId)} style={{
+              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+              background: "transparent", color: C.chalk, border: `1px solid ${C.line2}`,
+            }}>
+              <MessageSquare size={15} /> Message
+            </button>
+          )}
+        </div>
+      )}
 
       {incomplete && (
         <div onClick={() => setEditing(true)} style={{ background: "#C8F1351a", border: `1px solid ${C.lime}44`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
@@ -1420,7 +1486,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin }) {
       </div>
 
       {/* media */}
-      <Highlights />
+      <Highlights viewUserId={viewingOther ? viewUserId : null} />
 
       {/* timeline — not backed by a real data model yet, demo only */}
       {!real && (
@@ -1435,10 +1501,10 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin }) {
         </div>
       )}
 
-      <RestrictedBanner />
-      <FamilyAccess />
+      {!viewingOther && <RestrictedBanner />}
+      {!viewingOther && <FamilyAccess />}
 
-      {profile && profile.is_admin && (
+      {!viewingOther && profile && profile.is_admin && (
         <button onClick={onOpenAdmin} style={{
           width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           background: "transparent", border: `1px solid ${C.amber}66`, color: C.amber, borderRadius: 10,
@@ -1446,13 +1512,15 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin }) {
         }}><ShieldAlert size={15} /> Admin panel</button>
       )}
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
-        <a href="terms.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>Terms & Conditions</a>
-        <span style={{ color: C.line2 }}>·</span>
-        <a href="index.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>golsz.com</a>
-        <span style={{ color: C.line2 }}>·</span>
-        <button onClick={onSignOut} style={{ background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Sign out</button>
-      </div>
+      {!viewingOther && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
+          <a href="terms.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>Terms & Conditions</a>
+          <span style={{ color: C.line2 }}>·</span>
+          <a href="index.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>golsz.com</a>
+          <span style={{ color: C.line2 }}>·</span>
+          <button onClick={onSignOut} style={{ background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Sign out</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1983,6 +2051,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
   const [thread, setThread] = useState(null);
   const [hasUnreadMsgs, setHasUnreadMsgs] = useState(false);
   const [onboarding, setOnboarding] = useState(!!startOnboarding);
+  const [viewProfileId, setViewProfileId] = useState(null);
 
   const NAV = [
     { id: "feed", icon: Home, label: "Feed" },
@@ -1992,8 +2061,9 @@ function GolszApp({ onSignOut, startOnboarding }) {
     { id: "profile", icon: User, label: "Passport" },
   ];
 
-  const go = (id) => { setPage(id); if (id !== "messages") setThread(null); };
+  const go = (id) => { setPage(id); if (id !== "messages") setThread(null); setViewProfileId(null); };
   const openThread = (id) => { setThread(id); setPage("messages"); };
+  const viewProfile = (id) => { setViewProfileId(id); setPage("profile"); };
 
   useEffect(() => {
     if (!sb) return;
@@ -2022,11 +2092,11 @@ function GolszApp({ onSignOut, startOnboarding }) {
 
       {/* body */}
       <main style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="noscroll">
-        {page === "feed" && <Feed onMessage={openThread} />}
-        {page === "discover" && <Discover onMessage={openThread} />}
+        {page === "feed" && <Feed onMessage={openThread} onViewProfile={viewProfile} />}
+        {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "scout" && <Scout />}
         {page === "events" && <Events />}
-        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onOpenAdmin={() => setPage("admin")} />}
+        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={() => setViewProfileId(null)} onMessage={openThread} />}
         {page === "messages" && <Messages thread={thread} setThread={setThread} />}
         {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
       </main>
