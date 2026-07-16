@@ -172,6 +172,14 @@ There is no build/lint/test tooling in this repo. Relevant commands:
 - Deliberately thin: owns the model name, the system prompt, and the tool config (`web_search_20250305`)
   server-side so a browser caller can't override any of them or run up the bill — the client only ever
   sends `{ messages }`.
+- ⚠️ **`api/scout.js`'s `SYSTEM_PROMPT` and `golsz-app.html`'s `SYS` are two separate, hand-duplicated
+  strings that must be kept in sync manually.** `golsz-app.html`'s `SYS` is only used by `Scout()`'s
+  unsupported direct-browser fallback (when `SCOUT_ENDPOINT` is unset) — real production traffic always
+  goes through `api/scout.js`'s `SYSTEM_PROMPT`. This already caused one real bug: an instruction (Scout
+  must never confirm it's Claude/Anthropic-powered) was added only to `golsz-app.html`'s copy and had zero
+  effect in production because `api/scout.js` never saw it. When editing Scout's behavior/instructions,
+  **edit `api/scout.js`'s `SYSTEM_PROMPT` first** (it's the one that matters), then mirror the change into
+  `golsz-app.html`'s `SYS` for consistency — not the other way around.
 - Auth + metering are conditionally skipped: the `getUserId`/`meter` calls only run `if
   (process.env.SUPABASE_URL)`. Without that env var set, the endpoint accepts unauthenticated requests
   with no rate limiting. This is intentional for early preview deploys, not a bug.
