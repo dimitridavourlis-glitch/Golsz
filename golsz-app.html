@@ -588,6 +588,26 @@ const GENDERS = [["All", "All"], ["M", "Male"], ["F", "Female"]];
 const COUNTRIES = ["All", "Canada", "USA", "England", "Spain", "Germany", "Jamaica", "Japan", "Brazil", "Sweden", "Morocco"];
 const POSITIONS = ["All", "Left Back", "Striker", "Midfielder", "Guard", "Forward", "Center", "Goalie", "Sprinter", "Distance", "Singles"];
 
+// Real position lists per sport (used by ProfileEditor's position suggestions)
+// and, where a sport actually has a handedness/footedness attribute scouts
+// care about, the matching label + options for athletes.foot — that column
+// is reused generically (not soccer-specific) since it's just "which side
+// do they favor," and only sports where that's a real, commonly-tracked
+// attribute get the field at all (e.g. no natural equivalent for Track).
+const SPORT_POSITIONS = {
+  Soccer: ["Goalkeeper", "Center Back", "Left Back", "Right Back", "Defensive Midfielder", "Central Midfielder", "Attacking Midfielder", "Left Winger", "Right Winger", "Striker"],
+  Basketball: ["Point Guard", "Shooting Guard", "Small Forward", "Power Forward", "Center"],
+  Track: ["Sprints (100m–200m)", "400m", "Middle Distance (800m–1500m)", "Distance (3000m+)", "Hurdles", "Relay", "Long Jump", "Triple Jump", "High Jump", "Pole Vault", "Shot Put", "Discus", "Javelin", "Hammer Throw", "Multi-Event (Combined)"],
+  Hockey: ["Goalie", "Left Defense", "Right Defense", "Center", "Left Wing", "Right Wing"],
+  Tennis: ["Singles", "Doubles", "Singles & Doubles"],
+};
+const SPORT_PREFERENCE = {
+  Soccer: { label: "PREFERRED FOOT", options: ["Left", "Right", "Both"] },
+  Hockey: { label: "SHOOTS", options: ["Left", "Right"] },
+  Basketball: { label: "DOMINANT HAND", options: ["Left", "Right", "Ambidextrous"] },
+  Tennis: { label: "PLAYS", options: ["Right-handed", "Left-handed", "Ambidextrous"] },
+};
+
 function Discover({ onMessage, onViewProfile }) {
   const [query, setQuery] = useState("");
   const [players, setPlayers] = useState(null);
@@ -1424,7 +1444,8 @@ function toPassport(profile, ath, uid) {
     id: `GLS·${(country ? country.slice(0, 2) : "XX").toUpperCase()}·${dash(ath && ath.grad_year)}·${shortId}`,
     initials: initials(name), nat: `${flagFor(country)} ${dash(country)}`,
     sport: dash(ath && ath.sport), position: dash(ath && ath.position), club: dash(ath && ath.club_name),
-    foot: dash(ath && ath.foot), height: ath && ath.height_cm ? `${ath.height_cm} cm` : "—",
+    foot: dash(ath && ath.foot), prefLabel: (SPORT_PREFERENCE[ath && ath.sport] || {}).label || "FOOT",
+    height: ath && ath.height_cm ? `${ath.height_cm} cm` : "—",
     grad: dash(ath && ath.grad_year), gpa: dash(ath && ath.gpa),
     weight: ath && ath.weight_kg ? `${ath.weight_kg} kg` : "—",
     status: dash(ath && ath.recruiting_status),
@@ -1492,8 +1513,8 @@ function ProfileEditor({ initial, onClose, onSaved }) {
             </select>
           </div>
           <div><span style={label}>POSITION</span>
-            <input style={field} list="position-options" value={form.position || ""} onChange={set("position")} placeholder="e.g. Left Back" />
-            <datalist id="position-options">{POSITIONS.filter((p) => p !== "All").map((p) => <option key={p} value={p} />)}</datalist>
+            <input style={field} list="position-options" value={form.position || ""} onChange={set("position")} placeholder={form.sport ? `e.g. ${(SPORT_POSITIONS[form.sport] || POSITIONS)[0]}` : "Pick a sport first"} />
+            <datalist id="position-options">{(SPORT_POSITIONS[form.sport] || POSITIONS.filter((p) => p !== "All")).map((p) => <option key={p} value={p} />)}</datalist>
           </div>
         </>)}
 
@@ -1518,16 +1539,22 @@ function ProfileEditor({ initial, onClose, onSaved }) {
           </div>
         </>)}
 
-        {row(<>
-          <div><span style={label}>GPA</span>
-            <input style={field} type="number" step="0.01" min="0" max="5" value={form.gpa || ""} onChange={set("gpa")} placeholder="3.8" />
-          </div>
-          <div><span style={label}>PREFERRED FOOT</span>
-            <select style={field} value={form.foot || ""} onChange={set("foot")}>
-              <option value="">—</option><option value="Left">Left</option><option value="Right">Right</option><option value="Both">Both</option>
-            </select>
-          </div>
-        </>)}
+        {(() => {
+          const pref = SPORT_PREFERENCE[form.sport];
+          return row(<>
+            <div><span style={label}>GPA</span>
+              <input style={field} type="number" step="0.01" min="0" max="5" value={form.gpa || ""} onChange={set("gpa")} placeholder="3.8" />
+            </div>
+            {pref ? (
+              <div><span style={label}>{pref.label}</span>
+                <select style={field} value={form.foot || ""} onChange={set("foot")}>
+                  <option value="">—</option>
+                  {pref.options.map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+            ) : <div />}
+          </>);
+        })()}
 
         {row(<>
           <div><span style={label}>COUNTRY</span>
@@ -1744,7 +1771,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
         {/* data grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, background: C.line, borderTop: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}` }}>
           {(real
-            ? [["FOOT", p.foot], ["HEIGHT", p.height], ["GRAD", p.grad], ["GPA", p.gpa], ["WEIGHT", p.weight], ["STATUS", p.status]]
+            ? [[p.prefLabel, p.foot], ["HEIGHT", p.height], ["GRAD", p.grad], ["GPA", p.gpa], ["WEIGHT", p.weight], ["STATUS", p.status]]
             : [["FOOT", p.foot], ["HEIGHT", p.height], ["GRAD", p.grad], ["GPA", p.gpa], ["TOP SPEED", p.pace], ["STATUS", p.level]]
           ).map(([k, v]) => (
             <div key={k} style={{ background: C.card, padding: "9px 12px" }}>
