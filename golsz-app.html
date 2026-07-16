@@ -907,6 +907,18 @@ function Messages({ thread, setThread }) {
     } finally { setBusy(false); }
   }
 
+  async function deleteMessage(id) {
+    if (!sb || !uid) return;
+    setThreadMsgs((list) => list.filter((m) => m.id !== id));
+    try {
+      const { error } = await sb.from("messages").delete().eq("id", id).eq("sender_id", uid);
+      if (error) throw error;
+    } catch (e) {
+      console.error("GOLSZ delete message error:", e);
+      loadThread(thread); // revert the optimistic removal on failure
+    }
+  }
+
   if (typeof thread === "string") {
     const name = (counterpart && counterpart.name) || "…";
     return (
@@ -936,6 +948,11 @@ function Messages({ thread, setThread }) {
                 borderRadius: m.sender_id === uid ? "12px 2px 12px 12px" : "2px 12px 12px 12px",
                 border: m.sender_id === uid ? "none" : `1px solid ${C.line2}`, fontWeight: m.sender_id === uid ? 500 : 400,
               }}>{m.body}</div>
+              {m.sender_id === uid && (
+                <button onClick={() => deleteMessage(m.id)} title="Delete message" style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0 }}>
+                  <Trash2 size={14} />
+                </button>
+              )}
             </div>
           ))}
         </div>
