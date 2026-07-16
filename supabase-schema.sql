@@ -61,6 +61,7 @@
 --  11. supabase-migration-012-scout-history-delete.sql
 --  12. supabase-migration-013-hide-conversations.sql
 --  13. supabase-migration-014-push-notifications.sql
+--  14. supabase-migration-015-realtime-messages.sql
 -- ============================================================
 
 -- 10) ADDITIVE — POSTS (Feed) + POST_LIKES + EVENTS
@@ -930,6 +931,13 @@ create policy push_subscriptions_rw on push_subscriptions for all using (
 ) with check (
   user_id = auth.uid()
 );
+
+-- ============================================================
+-- 15) ADDITIVE — live message delivery via Realtime
+-- See supabase-migration-015-realtime-messages.sql for full context.
+-- ============================================================
+
+alter publication supabase_realtime add table messages;
 
 -- ============================================================
 -- Done.

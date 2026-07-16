@@ -293,9 +293,17 @@ there is no fake-content fallback anywhere in the app anymore); a working hosted
 protected server-side, free-tier metering (now correctly enum-safe, see `api/scout.js` above), and real
 transcript persistence; parent verification (request/approve, RLS-enforced, not just UI); minor safety
 (restricted posting/Discover/DM visibility until a parent approves); Feed post creation with report/block
-moderation; follows (migration 006); real DMs gated by follow relationship (migration 007); a fully editable
-Passport with onboarding auto-opened right after signup (migration 008); real Web Push notifications for new
-messages and new followers (migration 014, `api/send-push.js`).
+moderation; follows (migration 006); real DMs gated by follow relationship (migration 007) with live delivery
+via Realtime (migration 015 — an open thread updates the moment a reply arrives, no manual refresh); a fully
+editable Passport with onboarding auto-opened right after signup (migration 008); real Web Push notifications
+for new messages and new followers (migration 014, `api/send-push.js`).
+
+**Message-button visibility matches `can_message()` exactly.** `can_message(a, b)` allows messaging when
+either profile follows the other, not just when the current viewer is the follower. Feed/Discover/Passport
+each track both `following` (who I follow) and `followedBy`/`followedByThem` (who follows me) and show the
+Message button on `following || followedBy` — showing it only for `following` (an earlier version of this)
+meant someone who follows you but you haven't followed back had no way to see they *could* message you, even
+though the backend allowed it. If you add another place that surfaces a Message button, gate it the same way.
 
 **Not yet built / known gaps:**
 - **Legal review.** The parent-verification flow is mutual in-app consent, not identity-verified

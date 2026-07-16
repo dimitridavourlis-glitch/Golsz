@@ -292,6 +292,7 @@ function Feed({ onMessage, onViewProfile }) {
   const [blockedIds, setBlockedIds] = useState([]);
   const [reportedIds, setReportedIds] = useState({});
   const [following, setFollowing] = useState({});
+  const [followedBy, setFollowedBy] = useState({});
   const [composeHeadline, setComposeHeadline] = useState("");
   const [composeBody, setComposeBody] = useState("");
   const [composeBusy, setComposeBusy] = useState(false);
@@ -310,8 +311,12 @@ function Feed({ onMessage, onViewProfile }) {
         const { data: blocks } = await sb.from("blocks").select("blocked_id").eq("blocker_id", user.id);
         blocked = (blocks || []).map((b) => b.blocked_id);
         setBlockedIds(blocked);
-        const { data: myFollows } = await sb.from("follows").select("followed_id").eq("follower_id", user.id);
+        const [{ data: myFollows }, { data: myFollowers }] = await Promise.all([
+          sb.from("follows").select("followed_id").eq("follower_id", user.id),
+          sb.from("follows").select("follower_id").eq("followed_id", user.id),
+        ]);
         setFollowing(Object.fromEntries((myFollows || []).map((r) => [r.followed_id, true])));
+        setFollowedBy(Object.fromEntries((myFollowers || []).map((r) => [r.follower_id, true])));
       }
 
       const { data, error } = await sb
@@ -537,7 +542,7 @@ function Feed({ onMessage, onViewProfile }) {
                 <Users size={15} fill={following[p.authorId] ? C.lime : "none"} /> {following[p.authorId] ? "Following" : "Follow"}
               </button>
             )}
-            {p.postId && uid && p.authorId && p.authorId !== uid && following[p.authorId] && (
+            {p.postId && uid && p.authorId && p.authorId !== uid && (following[p.authorId] || followedBy[p.authorId]) && (
               <button onClick={() => onMessage && onMessage(p.authorId)} style={iconBtn(C.slate)}>
                 <MessageSquare size={15} />
               </button>
@@ -588,6 +593,7 @@ function Discover({ onMessage, onViewProfile }) {
   const [players, setPlayers] = useState(null);
   const [uid, setUid] = useState(null);
   const [following, setFollowing] = useState({});
+  const [followedBy, setFollowedBy] = useState({});
 
   useEffect(() => {
     if (!sb) return;
@@ -596,8 +602,12 @@ function Discover({ onMessage, onViewProfile }) {
         const { data: { user } } = await sb.auth.getUser();
         if (user) {
           setUid(user.id);
-          const { data: myFollows } = await sb.from("follows").select("followed_id").eq("follower_id", user.id);
+          const [{ data: myFollows }, { data: myFollowers }] = await Promise.all([
+            sb.from("follows").select("followed_id").eq("follower_id", user.id),
+            sb.from("follows").select("follower_id").eq("followed_id", user.id),
+          ]);
           setFollowing(Object.fromEntries((myFollows || []).map((r) => [r.followed_id, true])));
+          setFollowedBy(Object.fromEntries((myFollowers || []).map((r) => [r.follower_id, true])));
         }
         const { data, error } = await sb
           .from("athletes")
@@ -675,7 +685,7 @@ function Discover({ onMessage, onViewProfile }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, gap: 6 }}>
               <span style={{ fontSize: 11, color: C.lime }}>{p.sport}</span>
               <div style={{ display: "flex", gap: 6 }}>
-                {p.id && uid && p.id !== uid && following[p.id] && (
+                {p.id && uid && p.id !== uid && (following[p.id] || followedBy[p.id]) && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onMessage && onMessage(p.id); }}
                     style={{
@@ -920,6 +930,8 @@ function Messages({ thread, setThread }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [savingEvent, setSavingEvent] = useState(null);
+  const threadRef = useRef(thread);
+  useEffect(() => { threadRef.current = thread; }, [thread]);
 
   useEffect(() => {
     if (!sb) return;
@@ -928,6 +940,26 @@ function Messages({ thread, setThread }) {
       if (user) setUid(user.id);
     })();
   }, []);
+
+  // live delivery: without this a conversation only ever refreshed on an
+  // explicit action (opening it, hitting send) — postgres_changes respects
+  // messages_read RLS, so this only ever fires for rows this user can
+  // already see (see supabase-migration-015-realtime-messages.sql).
+  useEffect(() => {
+    if (!sb || !uid) return;
+    const channel = sb
+      .channel(`messages-inbox-${uid}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `recipient_id=eq.${uid}` }, (payload) => {
+        const m = payload.new;
+        if (threadRef.current === m.sender_id) {
+          setThreadMsgs((list) => (list.some((x) => x.id === m.id) ? list : [...list, m]));
+          sb.from("messages").update({ read_at: new Date().toISOString() }).eq("id", m.id).then(() => {});
+        }
+        loadConversations();
+      })
+      .subscribe();
+    return () => { sb.removeChannel(channel); };
+  }, [uid]);
 
   async function loadConversations() {
     if (!sb || !uid) return;
@@ -1538,6 +1570,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
   const [athlete, setAthlete] = useState(null);
   const [editing, setEditing] = useState(false);
   const [following, setFollowing] = useState(false);
+  const [followedByThem, setFollowedByThem] = useState(false);
   const [followers, setFollowers] = useState(null);
   const [followingList, setFollowingList] = useState(null);
   const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo immediately
@@ -1556,14 +1589,16 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
         // profiles has no public-read policy (dob is sensitive), so the
         // viewed person's name comes from the public_profile_names view —
         // same pattern used in Feed/Discover/Messages.
-        const [{ data: nameRow }, { data: ath }, { data: myFollow }] = await Promise.all([
+        const [{ data: nameRow }, { data: ath }, { data: myFollow }, { data: theirFollow }] = await Promise.all([
           sb.from("public_profile_names").select("full_name").eq("id", viewUserId).maybeSingle(),
           sb.from("athletes").select("*").eq("id", viewUserId).maybeSingle(),
           sb.from("follows").select("followed_id").eq("follower_id", user.id).eq("followed_id", viewUserId).maybeSingle(),
+          sb.from("follows").select("follower_id").eq("follower_id", viewUserId).eq("followed_id", user.id).maybeSingle(),
         ]);
         setProfile(nameRow ? { full_name: nameRow.full_name } : null);
         setAthlete(ath || null);
         setFollowing(!!myFollow);
+        setFollowedByThem(!!theirFollow);
       } else {
         const [{ data: prof }, { data: ath }] = await Promise.all([
           sb.from("profiles").select("full_name, is_admin").eq("id", user.id).single(),
@@ -1646,7 +1681,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
           }}>
             <Users size={15} fill={following ? C.lime : "none"} /> {following ? "Following" : "Follow"}
           </button>
-          {following && onMessage && (
+          {(following || followedByThem) && onMessage && (
             <button onClick={() => onMessage(viewUserId)} style={{
               flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
               padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
