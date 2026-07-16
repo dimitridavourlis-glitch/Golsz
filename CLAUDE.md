@@ -75,15 +75,23 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   `<script>` tags, JSX transpiled in-browser via Babel standalone (`<script type="text/babel">`). No JSX
   build step — edit the file directly and reload.
 - Component tree lives under one `<script>` block: `Feed`, `Discover`, `Events`, `Messages`, `Passport`
-  (the "Digital Sports Passport" profile UI), `Scout` (AI chat), assembled by `GolszApp` (the bottom
-  tab-bar shell with Scout as the raised center button) and mounted via `Root`, which decides between
-  `Auth` and `GolszApp` based on Supabase session state.
-- **Mock data lives at the top of the script** — `PASSPORT`, `FEED`, `PLAYERS`, `EVENTS`, `THREADS` are
-  hardcoded arrays, used only as fallbacks. **Feed, Discover, Events, Passport, and Messages all fetch real
-  Supabase data when `sb` is configured and a user is signed in**, falling back to these arrays only when
-  the real query returns zero rows (so the app still looks populated pre-launch) or when `sb`/the session is
-  null (preview mode / logged out). When touching any of these, look for the `mapPost` / `mapAthlete` /
-  `mapEvent` / `toPassport` helpers and the `load*()`-style fetch effects, not the hardcoded arrays.
+  (the "Digital Sports Passport" profile UI), `Scout` (AI chat), assembled by `GolszApp` (bottom tab bar on
+  mobile, sidebar nav on desktop — see "Responsive layout" below) and mounted via `Root`, which decides
+  between `Auth` and `GolszApp` based on Supabase session state.
+- **All real data, no demo fallback anywhere** — `FEED`, `PLAYERS`, `EVENTS`, `THREADS` were all removed;
+  the only hardcoded array left is `PASSPORT`, and it's used exclusively in the no-backend-at-all preview
+  mode (`!sb`), never as a fallback for a real-but-empty query. Feed/Discover/Events/Passport/Messages all
+  show an explicit "Loading…" state while their fetch is in flight and an honest empty state when it
+  resolves to nothing — look for the `mapPost` / `mapAthlete` / `mapEvent` / `toPassport` helpers and the
+  `load*()`-style fetch effects when touching any of these, not any hardcoded array.
+- **Responsive layout** (`useIsDesktop()`, `min-width: 900px`): `GolszApp` renders two structurally
+  different shells from the same page components/state — a sidebar-nav desktop layout and the original
+  mobile bottom-tab-bar layout — branching on `isDesktop` before the final `return`. `Auth`'s plan cards
+  (`.pricing-grid`) and `Discover`'s results (`.discover-grid`) go from 1/2 columns to 3 via CSS media
+  queries in the shared `CSS` template string, not inline logic. **`<style>{CSS}</style>` must be included
+  in every top-level screen** (`GolszApp`, `Auth`, `ResetPassword`) — `Auth` was missing it entirely until
+  this was caught (no fonts, no focus-visible outlines, no responsive grid on the whole pre-login flow);
+  if you add another top-level screen, don't forget it there too.
 - **Passport is a real, editable profile** as of migration 008: `toPassport()` merges `profiles.full_name`
   with the full `athletes` row (sport, position, gender, grad_year, gpa, height_cm, weight_kg, foot,
   recruiting_status, country, club_name, bio) into the passport-shaped display object, showing "—" for
