@@ -158,9 +158,16 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   an admin); `AddToEventsModal` (used from Feed's per-post button, a per-message button in `Messages` for
   messages *from* the other person, and a manual "Add opportunity" button on the Events page itself) always
   inserts `visibility: 'private'` — there's no UI path to create a public event outside the admin panel.
-  `Events()` renders two sections from one query (RLS already returns public + your own private rows): the
-  public list falls back to demo `EVENTS` when empty, same pattern as Feed/Discover; "My opportunities" has
-  no demo fallback and just says so when empty.
+  `Events()` renders two sections from one query (RLS already returns public + your own private rows) —
+  both always real data, no demo fallback (the old `EVENTS` demo array was removed).
+- **Deleting a DM conversation is a per-user hide, not a real delete** (migration 013,
+  `hidden_conversations`): `messages_delete` RLS only lets you delete messages you sent, so a true "delete
+  the whole conversation" would either leave the other person's messages behind or require letting either
+  side delete the other's messages (silently wiping the thread for both people). Instead, hitting delete on
+  a conversation just upserts a `hidden_conversations(user_id, other_id, hidden_at)` row; `loadConversations()`
+  filters out any thread whose last message is older than `hidden_at`. Nothing is destroyed, the other
+  participant's view is untouched, and the thread reappears automatically the moment a new message arrives
+  after the hide — same behavior as most DM apps' delete/archive.
 - **Integration point with the static site**: `GolszApp`'s `page` state initializes from
   `?page=` in the URL (validated against `feed|discover|scout|events|profile|messages|admin`, default `feed`).
   This is the *only* thing connecting the two halves of the repo — the marketing site's nav links are
