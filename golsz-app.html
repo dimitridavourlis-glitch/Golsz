@@ -1850,6 +1850,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
 
       {!viewingOther && <RestrictedBanner />}
       {!viewingOther && <FamilyAccess />}
+      {!viewingOther && <BlockedAccounts />}
 
       {!viewingOther && profile && profile.is_admin && (
         <button onClick={onOpenAdmin} style={{
@@ -1907,6 +1908,85 @@ function FollowListCard({ title, list, onViewProfile, emptyText }) {
             >
               <Avatar init={initials(f.name)} size={30} />
               <span style={{ fontSize: 13, fontWeight: 600 }}>{f.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============ BLOCKED ACCOUNTS ============
+   Blocking someone (Feed's Block button) silently drops their posts from
+   your feed with no way back — this is the way back. blocks_delete RLS
+   (blocker_id = auth.uid()) already allows unblocking; there was just no
+   UI for it before now. */
+function BlockedAccounts() {
+  const [uid, setUid] = useState(null);
+  const [blocked, setBlocked] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const [removingId, setRemovingId] = useState(null);
+
+  async function load() {
+    if (!sb) return;
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return;
+      setUid(user.id);
+      const { data: rows, error } = await sb.from("blocks").select("blocked_id").eq("blocker_id", user.id);
+      if (error) throw error;
+      const ids = (rows || []).map((r) => r.blocked_id);
+      let nameById = {};
+      if (ids.length) {
+        const { data: names } = await sb.from("public_profile_names").select("id, full_name").in("id", ids);
+        nameById = Object.fromEntries((names || []).map((r) => [r.id, r.full_name]));
+      }
+      setBlocked(ids.map((id) => ({ id, name: nameById[id] || "GOLSZ User" })));
+    } catch (e) { console.error("GOLSZ blocked-accounts load error:", e); setBlocked((b) => b || []); }
+  }
+  useEffect(() => { load(); }, []);
+
+  async function unblock(id) {
+    if (!sb || !uid || removingId) return;
+    setRemovingId(id);
+    try {
+      const { error } = await sb.from("blocks").delete().eq("blocker_id", uid).eq("blocked_id", id);
+      if (error) throw error;
+      setBlocked((list) => (list || []).filter((b) => b.id !== id));
+    } catch (e) { console.error("GOLSZ unblock error:", e); }
+    finally { setRemovingId(null); }
+  }
+
+  if (!sb) return null;
+  const count = blocked === null ? null : blocked.length;
+
+  return (
+    <div style={{ ...card }}>
+      <button
+        onClick={() => count > 0 && setExpanded((e) => !e)}
+        disabled={!count}
+        style={{
+          background: "none", border: "none", padding: 0, cursor: count ? "pointer" : "default",
+          fontFamily: "inherit", fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700,
+          marginBottom: expanded ? 8 : 0, display: "flex", alignItems: "center", gap: 5,
+        }}
+      >
+        {count === null ? "BLOCKED ACCOUNTS" : `${count} BLOCKED ${count === 1 ? "ACCOUNT" : "ACCOUNTS"}`}
+        {count > 0 && (expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+      </button>
+      {blocked === null && <div style={{ fontSize: 12.5, color: C.slate, marginTop: 8 }}>Loading…</div>}
+      {blocked && blocked.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, marginTop: 8 }}>You haven't blocked anyone.</div>}
+      {expanded && blocked && blocked.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {blocked.map((b) => (
+            <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
+              <Avatar init={initials(b.name)} size={30} />
+              <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{b.name}</span>
+              <button onClick={() => unblock(b.id)} disabled={removingId === b.id} style={{
+                fontSize: 11, fontWeight: 700, padding: "5px 10px", borderRadius: 999, cursor: "pointer",
+                fontFamily: "inherit", background: "transparent", color: C.lime, border: `1px solid ${C.lime}66`,
+                opacity: removingId === b.id ? 0.5 : 1,
+              }}>{removingId === b.id ? "…" : "Unblock"}</button>
             </div>
           ))}
         </div>
