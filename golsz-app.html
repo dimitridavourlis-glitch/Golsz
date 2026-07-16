@@ -398,10 +398,19 @@ function Feed({ onMessage, onViewProfile }) {
               </div>
               <div style={{ fontSize: 11, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{p.sport} · {p.ago}</div>
             </div>
-            {p.kind === "commit" && <Trophy size={16} color={C.lime} />}
-            {p.kind === "perf" && <Flame size={16} color={C.amber} />}
-            {p.kind === "call" && <Radar size={16} color={C.lime} />}
-            {p.kind === "clip" && <Video size={16} color={C.lime} />}
+            {p.kind !== "post" && (
+              <div style={{
+                width: 30, height: 30, borderRadius: "50%", flexShrink: 0, display: "flex",
+                alignItems: "center", justifyContent: "center",
+                background: p.kind === "perf" ? "#C89B3C1a" : "#C8F1351a",
+                border: `1px solid ${p.kind === "perf" ? C.amber : C.lime}44`,
+              }}>
+                {p.kind === "commit" && <Trophy size={14} color={C.lime} />}
+                {p.kind === "perf" && <Flame size={14} color={C.amber} />}
+                {p.kind === "call" && <Radar size={14} color={C.lime} />}
+                {p.kind === "clip" && <Video size={14} color={C.lime} />}
+              </div>
+            )}
           </div>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{p.head}</div>
           {p.kind === "clip" && p.body ? (
