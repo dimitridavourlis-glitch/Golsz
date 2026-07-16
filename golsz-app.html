@@ -914,7 +914,7 @@ function Messages({ thread, setThread }) {
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: `1px solid ${C.line}` }}>
           <button onClick={() => setThread(null)} style={iconBtn(C.chalk)}><ChevronLeft size={20} /></button>
           <Avatar init={initials(name)} size={36} />
-          <div style={{ fontWeight: 700, fontSize: 14 }}>{name}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: "#4A9EFF" }}>{name}</div>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: 14 }}>
           {threadMsgs.length === 0 && (
@@ -972,7 +972,7 @@ function Messages({ thread, setThread }) {
           <button onClick={() => setThread(null)} style={iconBtn(C.chalk)}><ChevronLeft size={20} /></button>
           <Avatar init={t.init} size={36} />
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: 700, fontSize: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: 700, fontSize: 14, color: "#4A9EFF" }}>
               {t.who} {t.v && <BadgeCheck size={13} color={C.lime} />}
             </div>
             <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{t.role}</div>
@@ -1012,7 +1012,7 @@ function Messages({ thread, setThread }) {
           <Avatar init={t.init} ring={t.v ? C.lime : C.line2} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>{t.who}</span>
+              <span style={{ fontWeight: 700, fontSize: 14, color: "#4A9EFF" }}>{t.who}</span>
               {t.v && <BadgeCheck size={13} color={C.lime} />}
               <span style={{ marginLeft: "auto", fontSize: 10.5, color: C.slate }}>{t.ago}</span>
             </div>
