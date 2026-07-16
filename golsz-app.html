@@ -200,6 +200,7 @@ function Feed({ onMessage, onViewProfile }) {
   const [composeBusy, setComposeBusy] = useState(false);
   const [composeErr, setComposeErr] = useState("");
   const [savingEvent, setSavingEvent] = useState(null);
+  const [sharedKey, setSharedKey] = useState(null);
 
   async function loadFeed() {
     if (!sb) return;
@@ -282,6 +283,24 @@ function Feed({ onMessage, onViewProfile }) {
       console.error("GOLSZ create post error:", e);
       setComposeErr((e && e.message) ? e.message : "Couldn't post. Try again.");
     } finally { setComposeBusy(false); }
+  }
+
+  async function sharePost(p, key) {
+    const text = p.body ? `${p.who}: ${p.head} — ${p.body}` : `${p.who}: ${p.head}`;
+    const url = `${window.location.origin}${window.location.pathname}?page=feed`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "GOLSZ", text, url });
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(`${text}\n${url}`);
+        setSharedKey(key);
+        setTimeout(() => setSharedKey((k) => (k === key ? null : k)), 2000);
+      }
+    } catch (e) {
+      if (e && e.name !== "AbortError") console.error("GOLSZ share error:", e);
+    }
   }
 
   async function reportPost(p) {
@@ -403,7 +422,9 @@ function Feed({ onMessage, onViewProfile }) {
                 <CalendarPlus size={15} />
               </button>
             )}
-            <button style={{ ...iconBtn(C.slate), marginLeft: "auto" }}><ArrowUpRight size={15} /> Share</button>
+            <button onClick={() => sharePost(p, key)} style={{ ...iconBtn(sharedKey === key ? C.lime : C.slate), marginLeft: "auto" }}>
+              <ArrowUpRight size={15} /> {sharedKey === key ? "Copied!" : "Share"}
+            </button>
             {p.postId && uid && p.authorId !== uid && (
               <>
                 <button onClick={() => reportPost(p)} style={{ ...iconBtn(reportedIds[p.postId] ? C.amber : C.slate), fontSize: 11 }}>
