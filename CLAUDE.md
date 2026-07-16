@@ -107,6 +107,23 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   CSS vars (`--lime-border`, `--amber-border`) exist specifically because `${C.lime}66`-style hex-alpha-suffix
   concatenation doesn't work once `C.lime` is a `var()` string (`var(--lime)66` isn't valid CSS) — use those
   instead of trying to append alpha digits to any `C.*` value.
+- **Language (i18n) — English/French/Spanish/Greek, partial coverage by design.** `I18N` (a plain object of
+  `{en, fr, es, el}` dictionaries) + `LangContext`/`LangProvider`/`useLang()` live right after `useTheme()`.
+  `LangProvider` wraps the entire app once, at the `ReactDOM.createRoot(...).render(...)` call — any component
+  can call `const { t } = useLang();` and immediately get working translations with zero extra plumbing.
+  Persisted to `localStorage["golsz-lang"]`, same pattern as theme. **Only nav (mobile bottom bar + desktop
+  sidebar), `Auth` (signup/login/plans/forgot-password), and `Feed` are translated** — this was a deliberate
+  scope cut (the user chose "core screens first" over a full one-pass translation) to keep the change
+  reviewable and the risk of missed strings/broken layouts low. `Scout`, `Messages`, `Discover`, `Passport`,
+  `Events`, `AdminPanel`, and `ResetPassword` still render in English regardless of the selected language —
+  extending coverage means adding keys to all four `I18N` sub-objects and calling `useLang()`/`t()` in that
+  component, nothing more. `PLANS` (used by `Auth`) intentionally keeps `name` in English (a brand/tier label,
+  like Spotify's "Premium") but sources `tag`/features from `plan_<id>_tag` / `plan_<id>_featN` keys via
+  `featKeys` — if you add a plan or change its features, add the matching keys to all four languages or `t()`
+  will silently fall back to the key name in fr/es/el. The "MOST POPULAR" ribbon is keyed off `pl.id === "pro"`
+  now, not an English string match — don't revert that to `pl.tag === "Most popular"`, `tag` isn't English
+  text anymore. Language selection lives inside the existing `SettingsButton` modal (a "LANGUAGE" section under
+  "BACKGROUND"), not a separate button.
 - **Passport is a real, editable profile** as of migration 008: `toPassport()` merges `profiles.full_name`
   with the full `athletes` row (sport, position, gender, grad_year, gpa, height_cm, weight_kg, foot,
   recruiting_status, country, club_name, bio) into the passport-shaped display object, showing "—" for

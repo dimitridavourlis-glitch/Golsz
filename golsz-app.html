@@ -20,7 +20,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
-const { useState, useRef, useEffect } = React;
+const { useState, useRef, useEffect, useContext } = React;
 
 function svg(inner){
   return function Icon(props){
@@ -58,6 +58,7 @@ const Pencil = svg('<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 
 const ShieldAlert = svg('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/>');
 const Ban = svg('<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>');
 const SettingsIcon = svg('<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>');
+const Globe = svg('<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>');
 const Sun = svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>');
 const Moon = svg('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>');
 const Trash2 = svg('<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>');
@@ -143,6 +144,185 @@ function useTheme() {
     try { localStorage.setItem("golsz-theme", theme); } catch (e) {}
   }, [theme]);
   return [theme, setThemeState];
+}
+
+/* ============ LANGUAGE (i18n) ============
+   First pass, scoped deliberately: navigation, Auth (sign up / log in /
+   plans / reset password), and Feed are fully translated; every other
+   screen (Scout, Messages, Discover, Passport, Events, Admin) still
+   renders in English until a follow-up pass extends I18N and switches
+   those components to useLang()/t() too. LangProvider wraps the whole
+   app in Root(), so any component can call useLang() and immediately
+   get a working t() — extending coverage never requires touching this
+   plumbing again, just adding keys to I18N and calling t() at the call
+   site. */
+const I18N = {
+  en: {
+    loading: "Loading…",
+    nav_home: "Home", nav_discover: "Discover", nav_scout: "Scout", nav_ai_scout: "AI Scout",
+    nav_events: "Events", nav_passport: "Passport", nav_profile: "Profile", nav_messages: "Messages",
+    nav_signout: "Sign out",
+    auth_tagline: "EVERY GOAL HAS A PATH", auth_signup: "Sign up", auth_login: "Log in",
+    auth_choose_plan: "CHOOSE YOUR PLAN", auth_most_popular: "MOST POPULAR",
+    auth_full_name: "Full name", auth_email: "Email", auth_password: "Password",
+    auth_forgot: "Forgot password?", auth_dob: "Date of birth",
+    auth_minor_notice: "Athletes under 18 need a parent or guardian's approval to unlock the full account. Enter their email — if they already have a GOLSZ account, we'll send a request; your account stays restricted (no public posts, hidden from Discover) until they approve it.",
+    auth_parent_email: "Parent or guardian's email",
+    auth_check_email: "CHECK YOUR EMAIL",
+    auth_secure_checkout: "Secure checkout by Stripe · billed monthly · cancel anytime",
+    auth_already_have: "Already have an account? ", auth_new_to_golsz: "New to GOLSZ? ",
+    auth_back_to_login: "Back to log in",
+    auth_reset_title: "Reset your password",
+    auth_reset_desc: "Enter your account email and we'll send you a link to set a new password.",
+    auth_send_reset: "Send reset link", auth_sending: "Sending…",
+    auth_reset_sent_pre: "If an account exists for ",
+    auth_reset_sent_post: ", a reset link is on its way. Open it to set a new password.",
+    auth_working: "Working…", auth_create_free: "Create free account",
+    auth_continue_payment: "Continue to payment — ", auth_per_month: "/month",
+    auth_couldnt_signup: "COULDN'T COMPLETE SIGNUP", auth_couldnt_login: "COULDN'T LOG IN",
+    plan_starter_tag: "Free forever", plan_pro_tag: "Most popular", plan_elite_tag: "Serious recruits",
+    plan_starter_feat1: "Digital Sports Passport (basic)", plan_starter_feat2: "AI Scout: 5 school suggestions", plan_starter_feat3: "Browse players & events",
+    plan_pro_feat1: "Unlimited AI Scout agent", plan_pro_feat2: "Full verified passport", plan_pro_feat3: "Full target-school lists & roadmap", plan_pro_feat4: "Unlimited coach outreach drafts", plan_pro_feat5: "Priority combines & trials",
+    plan_elite_feat1: "Everything in Pro", plan_elite_feat2: "Priority scout visibility", plan_elite_feat3: "Human-reviewed highlight feedback", plan_elite_feat4: "Early access to showcases",
+    feed_title: "Your feed", feed_search: "Search your feed…", feed_share_update: "Share an update…",
+    feed_new_post: "NEW POST", feed_whats_happening: "What's happening?", feed_add_details: "Add details (optional)",
+    feed_post: "Post", feed_posting: "Posting…",
+    feed_no_posts: "No posts yet — be the first to share something.",
+    feed_no_match: "No posts match that search.",
+    action_follow: "Follow", action_following: "Following", action_share: "Share", action_copied: "Copied!",
+    action_report: "Report", action_reported: "Reported", action_block: "Block", action_delete: "Delete",
+    settings_title: "Settings", settings_background: "BACKGROUND", settings_dark: "Dark", settings_light: "Light",
+    settings_language: "LANGUAGE",
+  },
+  fr: {
+    loading: "Chargement…",
+    nav_home: "Accueil", nav_discover: "Découvrir", nav_scout: "Agent", nav_ai_scout: "Agent IA",
+    nav_events: "Événements", nav_passport: "Passeport", nav_profile: "Profil", nav_messages: "Messages",
+    nav_signout: "Déconnexion",
+    auth_tagline: "CHAQUE BUT A UN CHEMIN", auth_signup: "S'inscrire", auth_login: "Connexion",
+    auth_choose_plan: "CHOISISSEZ VOTRE FORMULE", auth_most_popular: "LE PLUS POPULAIRE",
+    auth_full_name: "Nom complet", auth_email: "E-mail", auth_password: "Mot de passe",
+    auth_forgot: "Mot de passe oublié ?", auth_dob: "Date de naissance",
+    auth_minor_notice: "Les athlètes de moins de 18 ans ont besoin de l'approbation d'un parent ou tuteur pour débloquer le compte complet. Indiquez son e-mail — s'il possède déjà un compte GOLSZ, nous lui enverrons une demande ; votre compte reste restreint (aucune publication publique, masqué de Découvrir) jusqu'à son approbation.",
+    auth_parent_email: "E-mail du parent ou tuteur",
+    auth_check_email: "VÉRIFIEZ VOS E-MAILS",
+    auth_secure_checkout: "Paiement sécurisé par Stripe · facturation mensuelle · annulez à tout moment",
+    auth_already_have: "Vous avez déjà un compte ? ", auth_new_to_golsz: "Nouveau sur GOLSZ ? ",
+    auth_back_to_login: "Retour à la connexion",
+    auth_reset_title: "Réinitialisez votre mot de passe",
+    auth_reset_desc: "Indiquez l'e-mail de votre compte et nous vous enverrons un lien pour définir un nouveau mot de passe.",
+    auth_send_reset: "Envoyer le lien", auth_sending: "Envoi…",
+    auth_reset_sent_pre: "Si un compte existe pour ",
+    auth_reset_sent_post: ", un lien de réinitialisation est en route. Ouvrez-le pour définir un nouveau mot de passe.",
+    auth_working: "Chargement…", auth_create_free: "Créer un compte gratuit",
+    auth_continue_payment: "Continuer vers le paiement — ", auth_per_month: "/mois",
+    auth_couldnt_signup: "INSCRIPTION IMPOSSIBLE", auth_couldnt_login: "CONNEXION IMPOSSIBLE",
+    plan_starter_tag: "Gratuit à vie", plan_pro_tag: "Le plus populaire", plan_elite_tag: "Recrues sérieuses",
+    plan_starter_feat1: "Passeport Sportif Numérique (basique)", plan_starter_feat2: "Agent IA : 5 suggestions d'écoles", plan_starter_feat3: "Parcourez joueurs et événements",
+    plan_pro_feat1: "Agent IA illimité", plan_pro_feat2: "Passeport entièrement vérifié", plan_pro_feat3: "Listes complètes d'écoles cibles et feuille de route", plan_pro_feat4: "Brouillons illimités de contact avec les entraîneurs", plan_pro_feat5: "Combines et essais prioritaires",
+    plan_elite_feat1: "Tout ce qui est dans Pro", plan_elite_feat2: "Visibilité prioritaire auprès des recruteurs", plan_elite_feat3: "Retour d'expert sur vos temps forts", plan_elite_feat4: "Accès anticipé aux showcases",
+    feed_title: "Votre fil", feed_search: "Rechercher dans votre fil…", feed_share_update: "Partager une actualité…",
+    feed_new_post: "NOUVELLE PUBLICATION", feed_whats_happening: "Quoi de neuf ?", feed_add_details: "Ajouter des détails (facultatif)",
+    feed_post: "Publier", feed_posting: "Publication…",
+    feed_no_posts: "Aucune publication pour l'instant — soyez le premier à partager quelque chose.",
+    feed_no_match: "Aucune publication ne correspond à cette recherche.",
+    action_follow: "Suivre", action_following: "Abonné", action_share: "Partager", action_copied: "Copié !",
+    action_report: "Signaler", action_reported: "Signalé", action_block: "Bloquer", action_delete: "Supprimer",
+    settings_title: "Paramètres", settings_background: "ARRIÈRE-PLAN", settings_dark: "Sombre", settings_light: "Clair",
+    settings_language: "LANGUE",
+  },
+  es: {
+    loading: "Cargando…",
+    nav_home: "Inicio", nav_discover: "Descubrir", nav_scout: "Agente", nav_ai_scout: "Agente IA",
+    nav_events: "Eventos", nav_passport: "Pasaporte", nav_profile: "Perfil", nav_messages: "Mensajes",
+    nav_signout: "Cerrar sesión",
+    auth_tagline: "CADA META TIENE UN CAMINO", auth_signup: "Registrarse", auth_login: "Iniciar sesión",
+    auth_choose_plan: "ELIGE TU PLAN", auth_most_popular: "MÁS POPULAR",
+    auth_full_name: "Nombre completo", auth_email: "Correo electrónico", auth_password: "Contraseña",
+    auth_forgot: "¿Olvidaste tu contraseña?", auth_dob: "Fecha de nacimiento",
+    auth_minor_notice: "Los deportistas menores de 18 años necesitan la aprobación de un padre, madre o tutor para desbloquear la cuenta completa. Introduce su correo electrónico — si ya tiene una cuenta de GOLSZ, le enviaremos una solicitud; tu cuenta permanecerá restringida (sin publicaciones públicas, oculta en Descubrir) hasta que la apruebe.",
+    auth_parent_email: "Correo del padre, madre o tutor",
+    auth_check_email: "REVISA TU CORREO",
+    auth_secure_checkout: "Pago seguro con Stripe · facturación mensual · cancela cuando quieras",
+    auth_already_have: "¿Ya tienes una cuenta? ", auth_new_to_golsz: "¿Nuevo en GOLSZ? ",
+    auth_back_to_login: "Volver a iniciar sesión",
+    auth_reset_title: "Restablece tu contraseña",
+    auth_reset_desc: "Introduce el correo de tu cuenta y te enviaremos un enlace para establecer una nueva contraseña.",
+    auth_send_reset: "Enviar enlace", auth_sending: "Enviando…",
+    auth_reset_sent_pre: "Si existe una cuenta para ",
+    auth_reset_sent_post: ", un enlace de restablecimiento está en camino. Ábrelo para establecer una nueva contraseña.",
+    auth_working: "Procesando…", auth_create_free: "Crear cuenta gratuita",
+    auth_continue_payment: "Continuar al pago — ", auth_per_month: "/mes",
+    auth_couldnt_signup: "NO SE PUDO COMPLETAR EL REGISTRO", auth_couldnt_login: "NO SE PUDO INICIAR SESIÓN",
+    plan_starter_tag: "Gratis para siempre", plan_pro_tag: "Más popular", plan_elite_tag: "Reclutas serios",
+    plan_starter_feat1: "Pasaporte Deportivo Digital (básico)", plan_starter_feat2: "Agente IA: 5 sugerencias de escuelas", plan_starter_feat3: "Explora jugadores y eventos",
+    plan_pro_feat1: "Agente IA ilimitado", plan_pro_feat2: "Pasaporte completamente verificado", plan_pro_feat3: "Listas completas de escuelas objetivo y hoja de ruta", plan_pro_feat4: "Borradores ilimitados de contacto con entrenadores", plan_pro_feat5: "Pruebas y combines prioritarios",
+    plan_elite_feat1: "Todo lo de Pro", plan_elite_feat2: "Visibilidad prioritaria ante ojeadores", plan_elite_feat3: "Retroalimentación de expertos sobre tus mejores jugadas", plan_elite_feat4: "Acceso anticipado a showcases",
+    feed_title: "Tu feed", feed_search: "Buscar en tu feed…", feed_share_update: "Comparte una novedad…",
+    feed_new_post: "NUEVA PUBLICACIÓN", feed_whats_happening: "¿Qué está pasando?", feed_add_details: "Añade detalles (opcional)",
+    feed_post: "Publicar", feed_posting: "Publicando…",
+    feed_no_posts: "Aún no hay publicaciones — sé el primero en compartir algo.",
+    feed_no_match: "Ninguna publicación coincide con esa búsqueda.",
+    action_follow: "Seguir", action_following: "Siguiendo", action_share: "Compartir", action_copied: "¡Copiado!",
+    action_report: "Reportar", action_reported: "Reportado", action_block: "Bloquear", action_delete: "Eliminar",
+    settings_title: "Configuración", settings_background: "FONDO", settings_dark: "Oscuro", settings_light: "Claro",
+    settings_language: "IDIOMA",
+  },
+  el: {
+    loading: "Φόρτωση…",
+    nav_home: "Αρχική", nav_discover: "Ανακάλυψη", nav_scout: "Σκάουτ", nav_ai_scout: "AI Σκάουτ",
+    nav_events: "Εκδηλώσεις", nav_passport: "Διαβατήριο", nav_profile: "Προφίλ", nav_messages: "Μηνύματα",
+    nav_signout: "Αποσύνδεση",
+    auth_tagline: "ΚΑΘΕ ΣΤΟΧΟΣ ΕΧΕΙ ΕΝΑ ΜΟΝΟΠΑΤΙ", auth_signup: "Εγγραφή", auth_login: "Σύνδεση",
+    auth_choose_plan: "ΕΠΙΛΕΞΤΕ ΤΟ ΠΑΚΕΤΟ ΣΑΣ", auth_most_popular: "ΔΗΜΟΦΙΛΕΣΤΕΡΟ",
+    auth_full_name: "Ονοματεπώνυμο", auth_email: "Email", auth_password: "Κωδικός πρόσβασης",
+    auth_forgot: "Ξεχάσατε τον κωδικό;", auth_dob: "Ημερομηνία γέννησης",
+    auth_minor_notice: "Οι αθλητές κάτω των 18 ετών χρειάζονται την έγκριση γονέα ή κηδεμόνα για να ξεκλειδώσουν τον πλήρη λογαριασμό. Εισαγάγετε το email του — αν έχει ήδη λογαριασμό GOLSZ, θα του στείλουμε αίτημα· ο λογαριασμός σας παραμένει περιορισμένος (χωρίς δημόσιες αναρτήσεις, κρυφός από την Ανακάλυψη) μέχρι να το εγκρίνει.",
+    auth_parent_email: "Email γονέα ή κηδεμόνα",
+    auth_check_email: "ΕΛΕΓΞΤΕ ΤΟ EMAIL ΣΑΣ",
+    auth_secure_checkout: "Ασφαλής πληρωμή μέσω Stripe · μηνιαία χρέωση · ακύρωση οποτεδήποτε",
+    auth_already_have: "Έχετε ήδη λογαριασμό; ", auth_new_to_golsz: "Νέος στο GOLSZ; ",
+    auth_back_to_login: "Επιστροφή στη σύνδεση",
+    auth_reset_title: "Επαναφορά κωδικού πρόσβασης",
+    auth_reset_desc: "Εισαγάγετε το email του λογαριασμού σας και θα σας στείλουμε έναν σύνδεσμο για να ορίσετε νέο κωδικό.",
+    auth_send_reset: "Αποστολή συνδέσμου", auth_sending: "Αποστολή…",
+    auth_reset_sent_pre: "Αν υπάρχει λογαριασμός για ",
+    auth_reset_sent_post: ", ένας σύνδεσμος επαναφοράς είναι καθ' οδόν. Ανοίξτε τον για να ορίσετε νέο κωδικό.",
+    auth_working: "Επεξεργασία…", auth_create_free: "Δημιουργία δωρεάν λογαριασμού",
+    auth_continue_payment: "Συνέχεια στην πληρωμή — ", auth_per_month: "/μήνα",
+    auth_couldnt_signup: "Η ΕΓΓΡΑΦΗ ΑΠΕΤΥΧΕ", auth_couldnt_login: "Η ΣΥΝΔΕΣΗ ΑΠΕΤΥΧΕ",
+    plan_starter_tag: "Δωρεάν για πάντα", plan_pro_tag: "Δημοφιλέστερο", plan_elite_tag: "Σοβαροί υποψήφιοι",
+    plan_starter_feat1: "Ψηφιακό Αθλητικό Διαβατήριο (βασικό)", plan_starter_feat2: "AI Σκάουτ: 5 προτάσεις σχολών", plan_starter_feat3: "Περιήγηση σε αθλητές & εκδηλώσεις",
+    plan_pro_feat1: "Απεριόριστος πράκτορας AI Σκάουτ", plan_pro_feat2: "Πλήρως επαληθευμένο διαβατήριο", plan_pro_feat3: "Πλήρεις λίστες σχολών-στόχων & οδικός χάρτης", plan_pro_feat4: "Απεριόριστα προσχέδια επικοινωνίας με προπονητές", plan_pro_feat5: "Προτεραιότητα σε δοκιμές & trials",
+    plan_elite_feat1: "Όλα όσα περιλαμβάνει το Pro", plan_elite_feat2: "Προτεραιότητα προβολής σε σκάουτ", plan_elite_feat3: "Ανθρώπινη αξιολόγηση highlights", plan_elite_feat4: "Πρόωρη πρόσβαση σε showcases",
+    feed_title: "Η ροή σας", feed_search: "Αναζήτηση στη ροή σας…", feed_share_update: "Μοιραστείτε μια ενημέρωση…",
+    feed_new_post: "ΝΕΑ ΑΝΑΡΤΗΣΗ", feed_whats_happening: "Τι συμβαίνει;", feed_add_details: "Προσθήκη λεπτομερειών (προαιρετικό)",
+    feed_post: "Ανάρτηση", feed_posting: "Ανάρτηση…",
+    feed_no_posts: "Δεν υπάρχουν αναρτήσεις ακόμα — μοιραστείτε κάτι πρώτοι.",
+    feed_no_match: "Καμία ανάρτηση δεν ταιριάζει με αυτή την αναζήτηση.",
+    action_follow: "Ακολούθηση", action_following: "Ακολουθείτε", action_share: "Κοινοποίηση", action_copied: "Αντιγράφηκε!",
+    action_report: "Αναφορά", action_reported: "Αναφέρθηκε", action_block: "Αποκλεισμός", action_delete: "Διαγραφή",
+    settings_title: "Ρυθμίσεις", settings_background: "ΦΟΝΤΟ", settings_dark: "Σκούρο", settings_light: "Ανοιχτό",
+    settings_language: "ΓΛΩΣΣΑ",
+  },
+};
+const LANGS = [["en", "English"], ["fr", "Français"], ["es", "Español"], ["el", "Ελληνικά"]];
+const LangContext = React.createContext(null);
+function useLang() {
+  const ctx = useContext(LangContext);
+  if (ctx) return ctx;
+  return { lang: "en", setLang: () => {}, t: (k) => (I18N.en[k] || k) };
+}
+function LangProvider({ children }) {
+  const [lang, setLang] = useState(() => {
+    try { const saved = localStorage.getItem("golsz-lang"); if (saved && I18N[saved]) return saved; } catch (e) {}
+    return "en";
+  });
+  useEffect(() => {
+    try { localStorage.setItem("golsz-lang", lang); } catch (e) {}
+  }, [lang]);
+  const t = (key) => (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+  return <LangContext.Provider value={{ lang, setLang, t }}>{children}</LangContext.Provider>;
 }
 
 /* ============ PUSH NOTIFICATIONS ============
@@ -232,33 +412,45 @@ function NotificationBell() {
 function SettingsButton() {
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useTheme();
+  const { lang, setLang, t } = useLang();
 
   return (
     <>
-      <button onClick={() => setOpen(true)} title="Settings" style={{ background: "none", border: "none", color: C.chalk, cursor: "pointer", padding: 4, display: "flex" }}>
+      <button onClick={() => setOpen(true)} title={t("settings_title")} style={{ background: "none", border: "none", color: C.chalk, cursor: "pointer", padding: 4, display: "flex" }}>
         <SettingsIcon size={22} />
       </button>
       {open && (
         <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setOpen(false)}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", padding: 18, boxSizing: "border-box" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-              <div style={{ fontWeight: 800, fontSize: 16 }}>Settings</div>
+              <div style={{ fontWeight: 800, fontSize: 16 }}>{t("settings_title")}</div>
               <button onClick={() => setOpen(false)} style={iconBtn(C.chalk)}><X size={18} /></button>
             </div>
-            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>BACKGROUND</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 4 }}>
+            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_background")}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
               <button onClick={() => setTheme("dark")} style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
                 cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
                 background: theme === "dark" ? "#C8F1351a" : C.turf, color: theme === "dark" ? C.lime : C.chalk,
                 border: `1.5px solid ${theme === "dark" ? C.lime : C.line2}`,
-              }}><Moon size={16} /> Dark</button>
+              }}><Moon size={16} /> {t("settings_dark")}</button>
               <button onClick={() => setTheme("light")} style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
                 cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
                 background: theme === "light" ? "#C8F1351a" : C.turf, color: theme === "light" ? C.lime : C.chalk,
                 border: `1.5px solid ${theme === "light" ? C.lime : C.line2}`,
-              }}><Sun size={16} /> Light</button>
+              }}><Sun size={16} /> {t("settings_light")}</button>
+            </div>
+            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_language")}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {LANGS.map(([code, label]) => (
+                <button key={code} onClick={() => setLang(code)} style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 12,
+                  cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
+                  background: lang === code ? "#C8F1351a" : C.turf, color: lang === code ? C.lime : C.chalk,
+                  border: `1.5px solid ${lang === code ? C.lime : C.line2}`,
+                }}><Globe size={15} /> {label}</button>
+              ))}
             </div>
           </div>
         </div>
@@ -363,6 +555,7 @@ function RestrictedBanner() {
 
 /* ============ FEED ============ */
 function Feed({ onMessage, onViewProfile }) {
+  const { t } = useLang();
   const [posts, setPosts] = useState(null);
   const [query, setQuery] = useState("");
   const [liked, setLiked] = useState({});
@@ -533,7 +726,7 @@ function Feed({ onMessage, onViewProfile }) {
   return (
     <div style={{ padding: "8px 12px 16px" }}>
       <RestrictedBanner />
-      <SectionTitle>Your feed</SectionTitle>
+      <SectionTitle>{t("feed_title")}</SectionTitle>
 
       {sb && uid && !composeOpen && (
         <button onClick={() => setComposeOpen(true)} style={{
@@ -541,7 +734,7 @@ function Feed({ onMessage, onViewProfile }) {
           fontFamily: "inherit", textAlign: "left", padding: "10px 14px",
         }}>
           <Avatar size={30} init="+" />
-          <span style={{ flex: 1, fontSize: 13.5, color: C.slate }}>Share an update…</span>
+          <span style={{ flex: 1, fontSize: 13.5, color: C.slate }}>{t("feed_share_update")}</span>
           <Plus size={17} color={C.lime} />
         </button>
       )}
@@ -549,17 +742,17 @@ function Feed({ onMessage, onViewProfile }) {
       {sb && uid && composeOpen && (
         <div style={{ ...card, padding: 14 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <span style={{ fontSize: 11, letterSpacing: "0.12em", color: C.slate, fontWeight: 700 }}>NEW POST</span>
+            <span style={{ fontSize: 11, letterSpacing: "0.12em", color: C.slate, fontWeight: 700 }}>{t("feed_new_post")}</span>
             <button onClick={() => { setComposeOpen(false); setComposeErr(""); }} style={iconBtn(C.slate)}><X size={16} /></button>
           </div>
-          <input autoFocus value={composeHeadline} onChange={(e) => setComposeHeadline(e.target.value)} placeholder="What's happening?" maxLength={120}
+          <input autoFocus value={composeHeadline} onChange={(e) => setComposeHeadline(e.target.value)} placeholder={t("feed_whats_happening")} maxLength={120}
             style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
-          <textarea value={composeBody} onChange={(e) => setComposeBody(e.target.value)} placeholder="Add details (optional)" rows={2}
+          <textarea value={composeBody} onChange={(e) => setComposeBody(e.target.value)} placeholder={t("feed_add_details")} rows={2}
             style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13, fontFamily: "inherit", outline: "none", resize: "none", marginBottom: 8, boxSizing: "border-box" }} />
           {composeErr && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8 }}>{composeErr}</div>}
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button onClick={createPost} disabled={!composeHeadline.trim() || composeBusy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 18px", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", opacity: !composeHeadline.trim() || composeBusy ? 0.5 : 1 }}>
-              {composeBusy ? "Posting…" : "Post"}
+              {composeBusy ? t("feed_posting") : t("feed_post")}
             </button>
           </div>
         </div>
@@ -570,7 +763,7 @@ function Feed({ onMessage, onViewProfile }) {
           <Search size={16} color={C.slate} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }} />
           <input
             value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search your feed…"
+            placeholder={t("feed_search")}
             style={{
               width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12,
               color: C.chalk, padding: "11px 14px 11px 38px", fontSize: 13.5, fontFamily: "inherit",
@@ -580,9 +773,9 @@ function Feed({ onMessage, onViewProfile }) {
         </div>
       )}
 
-      {posts === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>Loading…</div>}
-      {posts && posts.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>No posts yet — be the first to share something.</div>}
-      {posts && posts.length > 0 && visiblePosts.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>No posts match that search.</div>}
+      {posts === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
+      {posts && posts.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("feed_no_posts")}</div>}
+      {posts && posts.length > 0 && visiblePosts.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("feed_no_match")}</div>}
       {visiblePosts && visiblePosts.map((p, i) => {
         const key = p.postId || i;
         const isLiked = !!liked[key];
@@ -635,7 +828,7 @@ function Feed({ onMessage, onViewProfile }) {
                 onClick={() => toggleFollow(p.authorId)}
                 style={iconBtn(following[p.authorId] ? C.lime : C.slate)}
               >
-                <Users size={15} fill={following[p.authorId] ? C.lime : "none"} /> {following[p.authorId] ? "Following" : "Follow"}
+                <Users size={15} fill={following[p.authorId] ? C.lime : "none"} /> {following[p.authorId] ? t("action_following") : t("action_follow")}
               </button>
             )}
             {p.postId && uid && p.authorId && p.authorId !== uid && (following[p.authorId] || followedBy[p.authorId]) && (
@@ -649,18 +842,18 @@ function Feed({ onMessage, onViewProfile }) {
               </button>
             )}
             <button onClick={() => sharePost(p, key)} style={{ ...iconBtn(sharedKey === key ? C.lime : C.slate), marginLeft: "auto" }}>
-              <ArrowUpRight size={15} /> {sharedKey === key ? "Copied!" : "Share"}
+              <ArrowUpRight size={15} /> {sharedKey === key ? t("action_copied") : t("action_share")}
             </button>
             {p.postId && uid && p.authorId !== uid && (
               <>
                 <button onClick={() => reportPost(p)} style={{ ...iconBtn(reportedIds[p.postId] ? C.amber : C.slate), fontSize: 11 }}>
-                  {reportedIds[p.postId] ? "Reported" : "Report"}
+                  {reportedIds[p.postId] ? t("action_reported") : t("action_report")}
                 </button>
-                <button onClick={() => blockAuthor(p)} style={{ ...iconBtn(C.slate), fontSize: 11 }}>Block</button>
+                <button onClick={() => blockAuthor(p)} style={{ ...iconBtn(C.slate), fontSize: 11 }}>{t("action_block")}</button>
               </>
             )}
             {p.postId && uid && p.authorId === uid && (
-              <button onClick={() => deletePost(p)} style={{ ...iconBtn(C.amber), fontSize: 11 }}><Trash2 size={13} /> Delete</button>
+              <button onClick={() => deletePost(p)} style={{ ...iconBtn(C.amber), fontSize: 11 }}><Trash2 size={13} /> {t("action_delete")}</button>
             )}
           </div>
         </article>
@@ -2660,22 +2853,23 @@ function GolszApp({ onSignOut, startOnboarding }) {
   const [onboarding, setOnboarding] = useState(!!startOnboarding);
   const [viewProfileId, setViewProfileId] = useState(null);
   const isDesktop = useIsDesktop();
+  const { t } = useLang();
 
   const NAV = [
-    { id: "feed", icon: Home, label: "Feed" },
-    { id: "discover", icon: Compass, label: "Discover" },
-    { id: "scout", icon: Radar, label: "Scout", center: true },
-    { id: "events", icon: CalendarDays, label: "Events" },
-    { id: "profile", icon: User, label: "Passport" },
+    { id: "feed", icon: Home, label: t("nav_home") },
+    { id: "discover", icon: Compass, label: t("nav_discover") },
+    { id: "scout", icon: Radar, label: t("nav_scout"), center: true },
+    { id: "events", icon: CalendarDays, label: t("nav_events") },
+    { id: "profile", icon: User, label: t("nav_passport") },
   ];
 
   const SIDEBAR_NAV = [
-    { id: "feed", icon: Home, label: "Home" },
-    { id: "discover", icon: Compass, label: "Discover" },
-    { id: "scout", icon: Radar, label: "AI Scout" },
-    { id: "events", icon: CalendarDays, label: "Events" },
-    { id: "messages", icon: MessageSquare, label: "Messages", badge: hasUnreadMsgs },
-    { id: "profile", icon: User, label: "Profile" },
+    { id: "feed", icon: Home, label: t("nav_home") },
+    { id: "discover", icon: Compass, label: t("nav_discover") },
+    { id: "scout", icon: Radar, label: t("nav_ai_scout") },
+    { id: "events", icon: CalendarDays, label: t("nav_events") },
+    { id: "messages", icon: MessageSquare, label: t("nav_messages"), badge: hasUnreadMsgs },
+    { id: "profile", icon: User, label: t("nav_profile") },
   ];
 
   const go = (id) => { setPage(id); if (id !== "messages") setThread(null); setViewProfileId(null); };
@@ -2728,7 +2922,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
             display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 10,
             background: "transparent", border: `1px solid ${C.line2}`, cursor: "pointer", fontFamily: "inherit",
             color: C.slate, fontSize: 13, fontWeight: 600, textAlign: "left", marginTop: 8,
-          }}>Sign out</button>
+          }}>{t("nav_signout")}</button>
         </aside>
 
         {/* main content */}
@@ -2857,10 +3051,13 @@ const SCOUT_ENDPOINT = "/api/scout";  // same-origin — works on any Vercel dep
 const STRIPE_LINKS = { pro: "", elite: "" };  // Stripe Payment Link URLs
 const VAPID_PUBLIC_KEY = "BNrfmAAoP_PL4FocIjzfw5aaxzHsuCknwUeG5pX21v7cjvMCzt3PL2d70QbBJrcz3l36bfgnJ_N4wmC9EiM11mI"; // safe to be public — pairs with the server-only VAPID_PRIVATE_KEY
 
+// name is a brand/tier label (like Spotify's "Premium") kept in English across
+// every language; tag + feature bullets are translated via plan_<id>_tag /
+// plan_<id>_featN keys in I18N — see Auth's plan-card rendering.
 const PLANS = [
-  { id: "starter", name: "Starter", price: 0,  tag: "Free forever",    feats: ["Digital Sports Passport (basic)", "AI Scout: 5 school suggestions", "Browse players & events"] },
-  { id: "pro",   name: "Pro",     price: 29, tag: "Most popular",     feats: ["Unlimited AI Scout agent", "Full verified passport", "Full target-school lists & roadmap", "Unlimited coach outreach drafts", "Priority combines & trials"] },
-  { id: "elite", name: "Elite",   price: 79, tag: "Serious recruits", feats: ["Everything in Pro", "Priority scout visibility", "Human-reviewed highlight feedback", "Early access to showcases"] },
+  { id: "starter", name: "Starter", price: 0,  featKeys: ["plan_starter_feat1", "plan_starter_feat2", "plan_starter_feat3"] },
+  { id: "pro",   name: "Pro",     price: 29, featKeys: ["plan_pro_feat1", "plan_pro_feat2", "plan_pro_feat3", "plan_pro_feat4", "plan_pro_feat5"] },
+  { id: "elite", name: "Elite",   price: 79, featKeys: ["plan_elite_feat1", "plan_elite_feat2", "plan_elite_feat3", "plan_elite_feat4"] },
 ];
 
 // Supabase client (null when not configured -> app runs in preview mode)
@@ -2870,6 +3067,7 @@ const sb = (SUPABASE_URL && SUPABASE_ANON_KEY && typeof window !== "undefined" &
 
 function Auth({ onDone, paidReturn }) {
   const isDesktop = useIsDesktop();
+  const { t } = useLang();
   const [mode, setMode] = useState(paidReturn ? "login" : "signup");
   const [plan, setPlan] = useState("pro");
   const [name, setName] = useState("");
@@ -2968,10 +3166,10 @@ function Auth({ onDone, paidReturn }) {
     }
   }
 
-  const cta = busy ? "Working\u2026"
-    : !isSignup ? "Log in"
-    : selected.price === 0 ? "Create free account"
-    : "Continue to payment \u2014 $" + selected.price + "/month";
+  const cta = busy ? t("auth_working")
+    : !isSignup ? t("auth_login")
+    : selected.price === 0 ? t("auth_create_free")
+    : t("auth_continue_payment") + "$" + selected.price + t("auth_per_month");
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 18px", background: "radial-gradient(1100px 560px at 50% -12%, " + C.turf + ", " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
@@ -2979,11 +3177,11 @@ function Auth({ onDone, paidReturn }) {
       <div style={{ width: "100%", maxWidth: (isSignup && !forgotMode && isDesktop) ? 920 : 430 }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <div style={{ fontWeight: 900, fontSize: 40, letterSpacing: "0.03em", fontStretch: "expanded" }}>GOLSZ<span style={{ color: C.lime }}>.</span></div>
-          <div style={{ fontSize: 10, letterSpacing: "0.3em", color: C.slate, fontWeight: 700, marginTop: 4 }}>EVERY GOAL HAS A PATH</div>
+          <div style={{ fontSize: 10, letterSpacing: "0.3em", color: C.slate, fontWeight: 700, marginTop: 4 }}>{t("auth_tagline")}</div>
         </div>
 
         <div style={{ display: "flex", background: C.card, border: "1px solid " + C.line, borderRadius: 12, padding: 4, marginBottom: 16 }}>
-          {[["signup", "Sign up"], ["login", "Log in"]].map(([m, l]) => (
+          {[["signup", t("auth_signup")], ["login", t("auth_login")]].map(([m, l]) => (
             <button key={m} onClick={() => { setMode(m); setErr(""); setNotice(""); }} style={{ flex: 1, padding: "10px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14, background: mode === m ? C.lime : "transparent", color: mode === m ? C.ink : C.slate }}>{l}</button>
           ))}
         </div>
@@ -2993,24 +3191,24 @@ function Auth({ onDone, paidReturn }) {
             resetSent ? (
               <>
                 <div style={{ background: "#C8F1351a", border: "1px solid #C8F13544", borderRadius: 10, padding: "10px 12px", marginBottom: 14 }}>
-                  <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>CHECK YOUR EMAIL</div>
-                  <div style={{ color: C.chalk, fontSize: 12.5, lineHeight: 1.4 }}>If an account exists for {email.trim()}, a reset link is on its way. Open it to set a new password.</div>
+                  <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
+                  <div style={{ color: C.chalk, fontSize: 12.5, lineHeight: 1.4 }}>{t("auth_reset_sent_pre")}{email.trim()}{t("auth_reset_sent_post")}</div>
                 </div>
-                <button onClick={() => { setForgotMode(false); setResetSent(false); setErr(""); }} style={{ width: "100%", background: "transparent", border: `1px solid ${C.line2}`, color: C.chalk, borderRadius: 12, padding: "13px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Back to log in</button>
+                <button onClick={() => { setForgotMode(false); setResetSent(false); setErr(""); }} style={{ width: "100%", background: "transparent", border: `1px solid ${C.line2}`, color: C.chalk, borderRadius: 12, padding: "13px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>{t("auth_back_to_login")}</button>
               </>
             ) : (
               <>
-                <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>Reset your password</div>
-                <div style={{ fontSize: 12.5, color: C.slate, marginBottom: 14, lineHeight: 1.4 }}>Enter your account email and we'll send you a link to set a new password.</div>
-                <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" style={field} />
+                <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>{t("auth_reset_title")}</div>
+                <div style={{ fontSize: 12.5, color: C.slate, marginBottom: 14, lineHeight: 1.4 }}>{t("auth_reset_desc")}</div>
+                <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth_email")} type="email" style={field} />
                 {err && (
                   <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
                     <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
                   </div>
                 )}
-                <button disabled={!email.trim() || busy} onClick={sendReset} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!email.trim() || busy) ? "default" : "pointer", opacity: (!email.trim() || busy) ? 0.45 : 1, fontFamily: "inherit" }}>{busy ? "Sending…" : "Send reset link"}</button>
+                <button disabled={!email.trim() || busy} onClick={sendReset} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!email.trim() || busy) ? "default" : "pointer", opacity: (!email.trim() || busy) ? 0.45 : 1, fontFamily: "inherit" }}>{busy ? t("auth_sending") : t("auth_send_reset")}</button>
                 <div style={{ textAlign: "center", marginTop: 14, fontSize: 13, color: C.slate }}>
-                  <span onClick={() => { setForgotMode(false); setErr(""); }} style={{ color: C.lime, fontWeight: 700, cursor: "pointer" }}>Back to log in</span>
+                  <span onClick={() => { setForgotMode(false); setErr(""); }} style={{ color: C.lime, fontWeight: 700, cursor: "pointer" }}>{t("auth_back_to_login")}</span>
                 </div>
               </>
             )
@@ -3018,7 +3216,7 @@ function Auth({ onDone, paidReturn }) {
           <>
           {isSignup && (
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 10, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>CHOOSE YOUR PLAN</div>
+              <div style={{ fontSize: 10, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("auth_choose_plan")}</div>
               <div className="pricing-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
                 {PLANS.map((pl) => {
                   const on = plan === pl.id;
@@ -3028,8 +3226,8 @@ function Auth({ onDone, paidReturn }) {
                       background: on ? "#C8F1351a" : C.turf, border: `1.5px solid ${on ? C.lime : C.line2}`,
                       borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 10,
                     }}>
-                      {pl.tag === "Most popular" && (
-                        <span style={{ position: "absolute", top: -10, left: 14, background: C.lime, color: C.ink, fontSize: 9, fontWeight: 800, letterSpacing: "0.06em", padding: "3px 9px", borderRadius: 999 }}>MOST POPULAR</span>
+                      {pl.id === "pro" && (
+                        <span style={{ position: "absolute", top: -10, left: 14, background: C.lime, color: C.ink, fontSize: 9, fontWeight: 800, letterSpacing: "0.06em", padding: "3px 9px", borderRadius: 999 }}>{t("auth_most_popular")}</span>
                       )}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <span style={{ fontSize: 15, fontWeight: 800, color: C.chalk }}>{pl.name}</span>
@@ -3042,9 +3240,12 @@ function Auth({ onDone, paidReturn }) {
                         {pl.price > 0 && <span style={{ fontSize: 12, color: C.slate }}> /mo</span>}
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
-                        {pl.feats.map((f) => (
-                          <div key={f} style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12, color: C.body, lineHeight: 1.35 }}>
-                            <BadgeCheck size={13} color={C.lime} style={{ flexShrink: 0, marginTop: 1 }} /> {f}
+                        {t(`plan_${pl.id}_tag`) && (
+                          <div style={{ fontSize: 11.5, color: C.slate, fontStyle: "italic" }}>{t(`plan_${pl.id}_tag`)}</div>
+                        )}
+                        {pl.featKeys.map((fk) => (
+                          <div key={fk} style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12, color: C.body, lineHeight: 1.35 }}>
+                            <BadgeCheck size={13} color={C.lime} style={{ flexShrink: 0, marginTop: 1 }} /> {t(fk)}
                           </div>
                         ))}
                       </div>
@@ -3055,18 +3256,18 @@ function Auth({ onDone, paidReturn }) {
             </div>
           )}
 
-          {isSignup && <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" style={field} />}
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" style={field} />
-          <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Password" type="password" style={{ ...field, marginBottom: isSignup ? 12 : 4 }} />
+          {isSignup && <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth_full_name")} style={field} />}
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth_email")} type="email" style={field} />
+          <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder={t("auth_password")} type="password" style={{ ...field, marginBottom: isSignup ? 12 : 4 }} />
           {!isSignup && (
             <div style={{ textAlign: "right", marginBottom: 10 }}>
-              <span onClick={() => { setForgotMode(true); setErr(""); setResetSent(false); }} style={{ color: C.slate, fontSize: 12, cursor: "pointer" }}>Forgot password?</span>
+              <span onClick={() => { setForgotMode(true); setErr(""); setResetSent(false); }} style={{ color: C.slate, fontSize: 12, cursor: "pointer" }}>{t("auth_forgot")}</span>
             </div>
           )}
 
           {isSignup && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>Date of birth</div>
+              <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("auth_dob")}</div>
               <div style={{ display: "flex", gap: 8 }}>
                 <input value={dobDay} onChange={(e) => setDobDay(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="DD" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
                 <input value={dobMonth} onChange={(e) => setDobMonth(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="MM" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
@@ -3075,9 +3276,9 @@ function Auth({ onDone, paidReturn }) {
               {isMinor && (
                 <div style={{ marginTop: 10 }}>
                   <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8, lineHeight: 1.4 }}>
-                    Athletes under 18 need a parent or guardian's approval to unlock the full account. Enter their email — if they already have a GOLSZ account, we'll send a request; your account stays restricted (no public posts, hidden from Discover) until they approve it.
+                    {t("auth_minor_notice")}
                   </div>
-                  <input value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} placeholder="Parent or guardian's email" type="email" style={{ ...field, marginBottom: 0 }} />
+                  <input value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} placeholder={t("auth_parent_email")} type="email" style={{ ...field, marginBottom: 0 }} />
                 </div>
               )}
             </div>
@@ -3085,14 +3286,14 @@ function Auth({ onDone, paidReturn }) {
 
           {notice && (
             <div style={{ background: "#C8F1351a", border: "1px solid #C8F13544", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
-              <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>CHECK YOUR EMAIL</div>
+              <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
               <div style={{ color: C.chalk, fontSize: 12.5, lineHeight: 1.4 }}>{notice}</div>
             </div>
           )}
 
           {err && (
             <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
-              <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignup ? "COULDN'T COMPLETE SIGNUP" : "COULDN'T LOG IN"}</div>
+              <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignup ? t("auth_couldnt_signup") : t("auth_couldnt_login")}</div>
               <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
             </div>
           )}
@@ -3100,12 +3301,12 @@ function Auth({ onDone, paidReturn }) {
           <button disabled={!ok || busy} onClick={submit} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!ok || busy) ? "default" : "pointer", opacity: (!ok || busy) ? 0.45 : 1, fontFamily: "inherit" }}>{cta}</button>
 
           {isSignup && selected.price > 0 && (
-            <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: C.slate }}>Secure checkout by Stripe · billed monthly · cancel anytime</div>
+            <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: C.slate }}>{t("auth_secure_checkout")}</div>
           )}
 
           <div style={{ textAlign: "center", marginTop: 14, fontSize: 13, color: C.slate }}>
-            {isSignup ? "Already have an account? " : "New to GOLSZ? "}
-            <span onClick={() => { setMode(isSignup ? "login" : "signup"); setErr(""); }} style={{ color: C.lime, fontWeight: 700, cursor: "pointer" }}>{isSignup ? "Log in" : "Sign up"}</span>
+            {isSignup ? t("auth_already_have") : t("auth_new_to_golsz")}
+            <span onClick={() => { setMode(isSignup ? "login" : "signup"); setErr(""); }} style={{ color: C.lime, fontWeight: 700, cursor: "pointer" }}>{isSignup ? t("auth_login") : t("auth_signup")}</span>
           </div>
           </>
           )}
@@ -3210,7 +3411,7 @@ function Root() {
 }
 
 
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(Root));
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(LangProvider, null, React.createElement(Root)));
 </script>
 </body>
 </html>
