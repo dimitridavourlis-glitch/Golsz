@@ -294,6 +294,7 @@ function Feed({ onMessage, onViewProfile }) {
   const [reportedIds, setReportedIds] = useState({});
   const [following, setFollowing] = useState({});
   const [followedBy, setFollowedBy] = useState({});
+  const [composeOpen, setComposeOpen] = useState(false);
   const [composeHeadline, setComposeHeadline] = useState("");
   const [composeBody, setComposeBody] = useState("");
   const [composeBusy, setComposeBusy] = useState(false);
@@ -380,7 +381,7 @@ function Feed({ onMessage, onViewProfile }) {
         body: composeBody.trim() || null,
       });
       if (error) throw error;
-      setComposeHeadline(""); setComposeBody("");
+      setComposeHeadline(""); setComposeBody(""); setComposeOpen(false);
       loadFeed();
     } catch (e) {
       console.error("GOLSZ create post error:", e);
@@ -457,8 +458,38 @@ function Feed({ onMessage, onViewProfile }) {
       <RestrictedBanner />
       <SectionTitle>Your feed</SectionTitle>
 
+      {sb && uid && !composeOpen && (
+        <button onClick={() => setComposeOpen(true)} style={{
+          ...card, width: "100%", display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
+          fontFamily: "inherit", textAlign: "left", padding: "10px 14px",
+        }}>
+          <Avatar size={30} init="+" />
+          <span style={{ flex: 1, fontSize: 13.5, color: C.slate }}>Share an update…</span>
+          <Plus size={17} color={C.lime} />
+        </button>
+      )}
+
+      {sb && uid && composeOpen && (
+        <div style={{ ...card, padding: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <span style={{ fontSize: 11, letterSpacing: "0.12em", color: C.slate, fontWeight: 700 }}>NEW POST</span>
+            <button onClick={() => { setComposeOpen(false); setComposeErr(""); }} style={iconBtn(C.slate)}><X size={16} /></button>
+          </div>
+          <input autoFocus value={composeHeadline} onChange={(e) => setComposeHeadline(e.target.value)} placeholder="What's happening?" maxLength={120}
+            style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
+          <textarea value={composeBody} onChange={(e) => setComposeBody(e.target.value)} placeholder="Add details (optional)" rows={2}
+            style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13, fontFamily: "inherit", outline: "none", resize: "none", marginBottom: 8, boxSizing: "border-box" }} />
+          {composeErr && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8 }}>{composeErr}</div>}
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <button onClick={createPost} disabled={!composeHeadline.trim() || composeBusy} style={{ background: C.lime, color: C.pitch, border: "none", borderRadius: 9, padding: "9px 18px", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", opacity: !composeHeadline.trim() || composeBusy ? 0.5 : 1 }}>
+              {composeBusy ? "Posting…" : "Post"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {posts && posts.length > 0 && (
-        <div style={{ position: "relative", marginBottom: 12 }}>
+        <div style={{ position: "relative", marginBottom: 12, marginTop: 12 }}>
           <Search size={16} color={C.slate} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }} />
           <input
             value={query} onChange={(e) => setQuery(e.target.value)}
@@ -469,19 +500,6 @@ function Feed({ onMessage, onViewProfile }) {
               outline: "none", boxSizing: "border-box",
             }}
           />
-        </div>
-      )}
-
-      {sb && uid && (
-        <div style={{ ...card }}>
-          <input value={composeHeadline} onChange={(e) => setComposeHeadline(e.target.value)} placeholder="What's happening?" maxLength={120}
-            style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
-          <textarea value={composeBody} onChange={(e) => setComposeBody(e.target.value)} placeholder="Add details (optional)" rows={2}
-            style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13, fontFamily: "inherit", outline: "none", resize: "none", marginBottom: 8, boxSizing: "border-box" }} />
-          {composeErr && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8 }}>{composeErr}</div>}
-          <button onClick={createPost} disabled={!composeHeadline.trim() || composeBusy} style={{ background: C.lime, color: C.pitch, border: "none", borderRadius: 9, padding: "9px 16px", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", opacity: !composeHeadline.trim() || composeBusy ? 0.5 : 1 }}>
-            {composeBusy ? "Posting…" : "Post"}
-          </button>
         </div>
       )}
 
