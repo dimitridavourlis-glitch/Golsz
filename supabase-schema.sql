@@ -58,6 +58,7 @@
 --   8. supabase-migration-009-admin-panel.sql
 --   9. supabase-migration-010-scout-conversations.sql
 --  10. supabase-migration-011-personal-events.sql
+--  11. supabase-migration-012-scout-history-delete.sql
 -- ============================================================
 
 -- 10) ADDITIVE — POSTS (Feed) + POST_LIKES + EVENTS
@@ -841,6 +842,30 @@ alter table events add column if not exists notes text;
 drop policy if exists events_read on events;
 create policy events_read on events for select using (
   visibility = 'public' or created_by = auth.uid() or is_admin()
+);
+
+-- ============================================================
+-- Done.
+-- ============================================================
+
+-- ============================================================
+-- Migration 012 — Scout conversation delete
+-- ============================================================
+-- ============================================================
+-- 012 — Allow deleting your own Scout conversations
+-- Additive on top of 002 + 004 + 005 + 006 + 007 + 008 + 009 + 010 + 011.
+--
+-- scout_history predates this migration series (base table, RLS policies
+-- undocumented/unconfirmed — see supabase-schema.sql's header warning).
+-- Rather than guess at and possibly clash with an existing policy name,
+-- this just adds a new, uniquely-named delete policy — RLS policies for
+-- the same command are OR'd together, so this is safe to run regardless
+-- of whatever already exists on the table.
+-- ============================================================
+
+drop policy if exists scout_history_delete on scout_history;
+create policy scout_history_delete on scout_history for delete using (
+  user_id = auth.uid()
 );
 
 -- ============================================================

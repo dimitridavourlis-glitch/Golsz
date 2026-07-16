@@ -2075,10 +2075,8 @@ function Scout() {
     setShowHistory(false);
   }
 
-  async function openHistory() {
-    if (showHistory) { setShowHistory(false); return; }
+  async function loadHistoryList() {
     if (!sb || !uidRef.current) return;
-    setShowHistory(true);
     try {
       const { data, error } = await sb
         .from("scout_history")
@@ -2104,6 +2102,12 @@ function Scout() {
     } catch (e) { console.error("GOLSZ scout history list error:", e); setHistory([]); }
   }
 
+  function openHistory() {
+    if (showHistory) { setShowHistory(false); return; }
+    setShowHistory(true);
+    loadHistoryList();
+  }
+
   async function loadConversation(id) {
     if (!sb || !uidRef.current) return;
     try {
@@ -2117,6 +2121,26 @@ function Scout() {
       setConversationId(id);
       setShowHistory(false);
     } catch (e) { console.error("GOLSZ scout load conversation error:", e); }
+  }
+
+  async function deleteConversation(id) {
+    if (!sb || !uidRef.current) return;
+    setHistory((h) => (h || []).filter((c) => c.id !== id));
+    try {
+      const { error } = await sb.from("scout_history").delete().eq("user_id", uidRef.current).eq("conversation_id", id);
+      if (error) throw error;
+      if (id === conversationId) {
+        // the open conversation was deleted — reset to a fresh chat rather
+        // than leaving the transcript on screen with nothing behind it
+        const fresh = newScoutConvId();
+        setConversationId(fresh);
+        setProfile(baseProfileRef.current);
+        setMsgs([{ role: "assistant", text: scoutGreetingFor(baseProfileRef.current) }]);
+      }
+    } catch (e) {
+      console.error("GOLSZ delete conversation error:", e);
+      loadHistoryList(); // reload the real list on failure, undoing the optimistic removal
+    }
   }
 
   async function send(text) {
@@ -2171,13 +2195,18 @@ function Scout() {
           {history === null && <div style={{ color: C.slate, fontSize: 13 }}>Loading…</div>}
           {history && history.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>No past conversations yet.</div>}
           {history && history.map((h) => (
-            <button key={h.id} onClick={() => loadConversation(h.id)} style={{
-              ...card, display: "block", width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit",
+            <div key={h.id} style={{
+              ...card, display: "flex", alignItems: "center", gap: 8,
               border: `1px solid ${h.id === conversationId ? C.lime : C.line}`,
             }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3, color: "#FFFFFF" }}>{h.preview || "New conversation"}</div>
-              <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{timeAgo(h.lastAt)} ago · {h.turns} messages</div>
-            </button>
+              <button onClick={() => loadConversation(h.id)} style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3, color: "#FFFFFF" }}>{h.preview || "New conversation"}</div>
+                <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{timeAgo(h.lastAt)} ago · {h.turns} messages</div>
+              </button>
+              <button onClick={() => deleteConversation(h.id)} title="Delete conversation" style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0, display: "flex" }}>
+                <Trash2 size={15} />
+              </button>
+            </div>
           ))}
         </div>
       ) : (
