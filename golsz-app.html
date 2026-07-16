@@ -39,6 +39,8 @@ const MessageSquare = svg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h
 const BadgeCheck = svg('<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/>');
 const MapPin = svg('<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>');
 const ChevronLeft = svg('<path d="m15 18-6-6 6-6"/>');
+const ChevronDown = svg('<path d="m6 9 6 6 6-6"/>');
+const ChevronUp = svg('<path d="m18 15-6-6-6 6"/>');
 const Send = svg('<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>');
 const Heart = svg('<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>');
 const SlidersHorizontal = svg('<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>');
@@ -1675,12 +1677,25 @@ function PassRow({ k, v, mono }) {
   );
 }
 function FollowListCard({ title, list, onViewProfile, emptyText }) {
+  const [expanded, setExpanded] = useState(false);
+  const count = list === null ? null : list.length;
   return (
     <div style={{ ...card }}>
-      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{title(list === null ? null : list.length)}</div>
-      {list === null && <div style={{ fontSize: 12.5, color: C.slate }}>Loading…</div>}
-      {list && list.length === 0 && <div style={{ fontSize: 12.5, color: C.slate }}>{emptyText}</div>}
-      {list && list.length > 0 && (
+      <button
+        onClick={() => count > 0 && setExpanded((e) => !e)}
+        disabled={!count}
+        style={{
+          background: "none", border: "none", padding: 0, cursor: count ? "pointer" : "default",
+          fontFamily: "inherit", fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700,
+          marginBottom: expanded ? 8 : 0, display: "flex", alignItems: "center", gap: 5,
+        }}
+      >
+        {title(count)}
+        {count > 0 && (expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+      </button>
+      {list === null && <div style={{ fontSize: 12.5, color: C.slate, marginTop: 8 }}>Loading…</div>}
+      {list && list.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, marginTop: 8 }}>{emptyText}</div>}
+      {expanded && list && list.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {list.map((f) => (
             <div key={f.id}
