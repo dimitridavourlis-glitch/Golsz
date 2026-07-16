@@ -1437,6 +1437,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
   const [following, setFollowing] = useState(false);
   const [followers, setFollowers] = useState(null);
   const [followingList, setFollowingList] = useState(null);
+  const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo immediately
   const real = !!uid;
   const viewingOther = !!(viewUserId && uid && viewUserId !== uid);
 
@@ -1485,6 +1486,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
       setFollowers(followerIds.map((id) => ({ id, name: nameById[id] || "GOLSZ User" })));
       setFollowingList(followingIds.map((id) => ({ id, name: nameById[id] || "GOLSZ User" })));
     } catch (e) { console.error("GOLSZ passport load error:", e); }
+    finally { setLoaded(true); }
   }
   useEffect(() => { load(); }, [viewUserId]);
 
@@ -1515,6 +1517,8 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
     recruiting_status: (athlete && athlete.recruiting_status) || "", country: (athlete && athlete.country) || "",
     club_name: (athlete && athlete.club_name) || "", bio: (athlete && athlete.bio) || "",
   });
+
+  if (!loaded) return <div style={{ padding: "40px 20px", textAlign: "center", color: C.slate, fontSize: 13 }}>Loading…</div>;
 
   return (
     <div style={{ padding: "8px 12px 20px" }}>
@@ -2009,7 +2013,8 @@ function newScoutConvId() {
 }
 
 function Scout() {
-  const [msgs, setMsgs] = useState([{ role: "assistant", text: SCOUT_GREETING }]);
+  const [msgs, setMsgs] = useState(sb ? null : [{ role: "assistant", text: SCOUT_GREETING }]);
+  const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo greeting immediately
   const [profile, setProfile] = useState({});
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -2036,7 +2041,7 @@ function Scout() {
     (async () => {
       try {
         const { data: { user } } = await sb.auth.getUser();
-        if (!user) return;
+        if (!user) { setMsgs([{ role: "assistant", text: SCOUT_GREETING }]); return; }
         uidRef.current = user.id;
 
         const [{ data: prof }, { data: ath }] = await Promise.all([
@@ -2079,7 +2084,10 @@ function Scout() {
         } else {
           setMsgs([{ role: "assistant", text: scoutGreetingFor(seeded) }]);
         }
-      } catch (e) { console.error("GOLSZ scout history load error:", e); }
+      } catch (e) {
+        console.error("GOLSZ scout history load error:", e);
+        setMsgs((m) => m || [{ role: "assistant", text: SCOUT_GREETING }]);
+      } finally { setLoaded(true); }
     })();
   }, []);
 
@@ -2165,9 +2173,9 @@ function Scout() {
   }
 
   async function send(text) {
-    const content = text.trim(); if (!content || busy) return;
+    const content = text.trim(); if (!content || busy || !loaded) return;
     setInput("");
-    const next = [...msgs, { role: "user", text: content }];
+    const next = [...(msgs || []), { role: "user", text: content }];
     setMsgs(next); setBusy(true);
     logTurn("user", content);
     try {
@@ -2232,7 +2240,8 @@ function Scout() {
         </div>
       ) : (
         <div style={{ flex: 1, overflowY: "auto", padding: "14px 12px 6px" }}>
-          {msgs.map((m, i) => (
+          {!loaded && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>Loading…</div>}
+          {msgs && msgs.map((m, i) => (
             <div key={i} className="msg" style={m.role === "user" ? bubbleUser : bubbleAgent}>
               {m.role === "assistant" && <div style={{ fontSize: 9, letterSpacing: "0.22em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>SCOUT</div>}
               <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
@@ -2246,13 +2255,13 @@ function Scout() {
       {!showHistory && (
         <>
           <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "6px 12px", scrollbarWidth: "none" }} className="noscroll">
-            {CHIPS.map((q) => <button key={q} onClick={() => send(q)} disabled={busy} style={{ flex: "0 0 auto", background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 999, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>{q}</button>)}
+            {CHIPS.map((q) => <button key={q} onClick={() => send(q)} disabled={busy || !loaded} style={{ flex: "0 0 auto", background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 999, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>{q}</button>)}
           </div>
           <div style={{ display: "flex", gap: 8, padding: "10px 12px 14px", borderTop: `1px solid ${C.line}` }}>
             <textarea rows={1} value={input} placeholder="Talk to your scout…" onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
               style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, color: C.chalk, padding: "11px 13px", fontSize: 14, fontFamily: "inherit", resize: "none", outline: "none" }} />
-            <button onClick={() => send(input)} disabled={busy || !input.trim()} style={{ background: C.lime, color: C.pitch, border: "none", borderRadius: 12, width: 46, cursor: "pointer", opacity: busy || !input.trim() ? 0.4 : 1 }}><Send size={17} /></button>
+            <button onClick={() => send(input)} disabled={busy || !loaded || !input.trim()} style={{ background: C.lime, color: C.pitch, border: "none", borderRadius: 12, width: 46, cursor: "pointer", opacity: busy || !loaded || !input.trim() ? 0.4 : 1 }}><Send size={17} /></button>
           </div>
         </>
       )}
