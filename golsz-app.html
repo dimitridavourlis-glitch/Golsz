@@ -84,6 +84,7 @@ const C = {
   chalk: "var(--chalk)", slate: "var(--slate)", line: "var(--line)", line2: "var(--line2)",
   amber: "var(--amber)", body: "var(--body-text)", warnText: "var(--warn-text)",
   msgName: "var(--msg-name)", limeBorder: "var(--lime-border)", amberBorder: "var(--amber-border)",
+  passportWash: "var(--passport-wash)", passportStrip: "var(--passport-strip)",
   ink: "#0D1210",
 };
 
@@ -818,7 +819,7 @@ function Discover({ onMessage, onViewProfile }) {
                     style={{
                       fontSize: 10.5, fontWeight: 700, padding: "4px 9px", borderRadius: 999, cursor: "pointer",
                       fontFamily: "inherit", display: "flex", alignItems: "center", gap: 3,
-                      background: following[p.id] ? C.lime : "transparent", color: following[p.id] ? C.pitch : C.chalk,
+                      background: following[p.id] ? C.lime : "transparent", color: following[p.id] ? C.ink : C.chalk,
                       border: `1px solid ${following[p.id] ? C.lime : C.line2}`,
                     }}
                   >
@@ -1200,7 +1201,7 @@ function Messages({ thread, setThread }) {
               )}
               <div style={{
                 maxWidth: "78%",
-                background: m.sender_id === uid ? C.lime : C.turf, color: m.sender_id === uid ? C.pitch : C.chalk,
+                background: m.sender_id === uid ? C.lime : C.turf, color: m.sender_id === uid ? C.ink : C.chalk,
                 padding: "9px 12px", fontSize: 13.5, lineHeight: 1.45,
                 borderRadius: m.sender_id === uid ? "12px 2px 12px 12px" : "2px 12px 12px 12px",
                 border: m.sender_id === uid ? "none" : `1px solid ${C.line2}`, fontWeight: m.sender_id === uid ? 500 : 400,
@@ -1781,7 +1782,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
   if (!loaded) return <div style={{ padding: "40px 20px", textAlign: "center", color: C.slate, fontSize: 13 }}>Loading…</div>;
 
   return (
-    <div style={{ padding: "8px 12px 20px" }}>
+    <div style={{ padding: "8px 12px 20px", background: C.passportWash }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "4px 2px 10px" }}>
         <SectionTitle noMargin>{viewingOther ? "Athlete Passport" : "Sports Passport"}</SectionTitle>
         {viewingOther ? (
@@ -1798,7 +1799,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
           <button onClick={toggleFollowThis} style={{
             flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
             padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-            background: following ? C.lime : "transparent", color: following ? C.pitch : C.chalk,
+            background: following ? C.lime : "transparent", color: following ? C.ink : C.chalk,
             border: `1px solid ${following ? C.lime : C.line2}`,
           }}>
             <Users size={15} fill={following ? C.lime : "none"} /> {following ? "Following" : "Follow"}
@@ -1839,7 +1840,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
         boxShadow: `0 0 0 1px ${C.pitch}, 0 20px 40px -20px #000`,
       }}>
         {/* header strip */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: `1px dashed ${C.line2}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: `1px dashed ${C.line2}`, background: C.passportStrip }}>
           <span style={{ fontSize: 10, letterSpacing: "0.22em", fontWeight: 800, color: C.lime }}>DIGITAL SPORTS PASSPORT</span>
           <span style={{ fontSize: 9.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{p.nat}</span>
         </div>
@@ -2204,7 +2205,7 @@ function AdminPanel({ onBack }) {
   const tabBtn = (id, label) => (
     <button onClick={() => setTab(id)} style={{
       flex: 1, padding: "9px 0", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit",
-      fontSize: 12.5, fontWeight: 700, background: tab === id ? C.lime : "transparent", color: tab === id ? C.pitch : C.slate,
+      fontSize: 12.5, fontWeight: 700, background: tab === id ? C.lime : "transparent", color: tab === id ? C.ink : C.slate,
     }}>{label}</button>
   );
 
@@ -2818,12 +2819,15 @@ const CSS = `
     --chalk: #F2F5F0; --slate: #8DA396; --line: #1F2E25; --line2: #2C4033;
     --amber: #C89B3C; --body-text: #C9D6CD; --warn-text: #E7C56B; --msg-name: #4A9EFF;
     --lime-border: rgba(200,241,53,0.35); --amber-border: rgba(200,155,60,0.35);
+    --passport-wash: transparent; --passport-strip: rgba(200,241,53,0.1);
   }
   html[data-theme="light"] {
     --pitch: #F5F7F3; --turf: #EDF0EA; --card: #FFFFFF; --lime: #6B9C1F;
     --chalk: #14201A; --slate: #5B6B62; --line: #E1E7DE; --line2: #CFD8CA;
     --amber: #8A6A22; --body-text: #33463A; --warn-text: #8A6A22; --msg-name: #1D5FC4;
     --lime-border: rgba(107,156,31,0.3); --amber-border: rgba(138,106,34,0.3);
+    --passport-wash: linear-gradient(180deg, #E3F1D4 0%, #F5F7F3 340px);
+    --passport-strip: #DCEDC7;
   }
 
   body { margin: 0; background: ${C.pitch}; }
@@ -2980,7 +2984,7 @@ function Auth({ onDone, paidReturn }) {
 
         <div style={{ display: "flex", background: C.card, border: "1px solid " + C.line, borderRadius: 12, padding: 4, marginBottom: 16 }}>
           {[["signup", "Sign up"], ["login", "Log in"]].map(([m, l]) => (
-            <button key={m} onClick={() => { setMode(m); setErr(""); setNotice(""); }} style={{ flex: 1, padding: "10px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14, background: mode === m ? C.lime : "transparent", color: mode === m ? C.pitch : C.slate }}>{l}</button>
+            <button key={m} onClick={() => { setMode(m); setErr(""); setNotice(""); }} style={{ flex: 1, padding: "10px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14, background: mode === m ? C.lime : "transparent", color: mode === m ? C.ink : C.slate }}>{l}</button>
           ))}
         </div>
 
