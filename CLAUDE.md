@@ -192,6 +192,10 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   silently never fired for any user — real cost exposure. If you ever add a new plan tier, add it to the
   Postgres enum first (`alter type plan_tier add value ...`) and confirm it live before referencing it
   anywhere in code — don't assume a string is a valid enum value just because it appears in `PLANS`.
+- `meter()` also reads `profiles.is_admin`; the daily-limit check is skipped entirely when `isAdmin` is
+  true, regardless of `plan`. Admins are exempt from Scout's rate limit even on the Starter plan — being
+  admin doesn't otherwise change `plan`, so without this check an admin account would get capped like
+  anyone else.
 
 ### `api/stripe-webhook.js` (Vercel serverless function)
 
