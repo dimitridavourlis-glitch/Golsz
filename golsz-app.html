@@ -86,39 +86,6 @@ const PASSPORT = {
   ],
 };
 
-const FEED = [
-  { who: "Amara Osei", init: "AO", nat: "🇬🇭", sport: "Basketball · Guard", v: ["Club", "Perf"],
-    kind: "commit", head: "Committed to Baylor University 🐻",
-    body: "Signed my NLI today. Grateful to everyone who believed in the path. WNBA next.", likes: 214, ago: "2h" },
-  { who: "Dimitri K.", init: "DK", nat: "🇨🇦", sport: "Soccer · Left Back", v: ["ID", "Perf"],
-    kind: "clip", head: "New defensive highlight reel is live",
-    body: "90 minutes vs Montreal broken down. Overlaps, recovery runs, set-piece marking.", likes: 88, ago: "5h" },
-  { who: "Keisha Bennett", init: "KB", nat: "🇯🇲", sport: "Track · 100m", v: ["Perf"],
-    kind: "perf", head: "Performance Verified: 11.24s (100m)",
-    body: "Wind-legal, electronically timed at the National Juniors. On file with GOLSZ.", likes: 331, ago: "8h" },
-  { who: "Coach Reyes", init: "CR", nat: "🇺🇸", sport: "Scout · NCAA D1", v: ["ID", "Coach"],
-    kind: "call", head: "Scouting left backs, class of 2027",
-    body: "Prioritizing two-footed defenders with pace over 33 km/h. Verified footage only.", likes: 47, ago: "1d" },
-  { who: "Lucas Meyer", init: "LM", nat: "🇩🇪", sport: "Hockey · Center", v: ["Club"],
-    kind: "commit", head: "Trial invite: Djurgårdens IF U20",
-    body: "Flying to Stockholm next month. The agent found the opening and drafted the outreach.", likes: 122, ago: "1d" },
-];
-
-const PLAYERS = [
-  { n: "Amara Osei", i: "AO", sport: "Basketball", pos: "Guard", country: "Ghana", flag: "🇬🇭", g: "F", grad: 2026, v: 3 },
-  { n: "Dimitri K.", i: "DK", sport: "Soccer", pos: "Left Back", country: "Canada", flag: "🇨🇦", g: "M", grad: 2027, v: 4 },
-  { n: "Keisha Bennett", i: "KB", sport: "Track", pos: "Sprinter", country: "Jamaica", flag: "🇯🇲", g: "F", grad: 2027, v: 2 },
-  { n: "Lucas Meyer", i: "LM", sport: "Hockey", pos: "Center", country: "Germany", flag: "🇩🇪", g: "M", grad: 2026, v: 3 },
-  { n: "Sofia Marín", i: "SM", sport: "Soccer", pos: "Striker", country: "Spain", flag: "🇪🇸", g: "F", grad: 2028, v: 3 },
-  { n: "Noah Clarke", i: "NC", sport: "Soccer", pos: "Left Back", country: "England", flag: "🏴", g: "M", grad: 2027, v: 2 },
-  { n: "Aiko Tanaka", i: "AT", sport: "Tennis", pos: "Singles", country: "Japan", flag: "🇯🇵", g: "F", grad: 2026, v: 4 },
-  { n: "Diego Santos", i: "DS", sport: "Basketball", pos: "Forward", country: "Brazil", flag: "🇧🇷", g: "M", grad: 2028, v: 2 },
-  { n: "Mia Larsen", i: "ML", sport: "Hockey", pos: "Goalie", country: "Sweden", flag: "🇸🇪", g: "F", grad: 2027, v: 3 },
-  { n: "Omar Haddad", i: "OH", sport: "Track", pos: "Distance", country: "Morocco", flag: "🇲🇦", g: "M", grad: 2026, v: 2 },
-  { n: "Chloe Dubois", i: "CD", sport: "Soccer", pos: "Midfielder", country: "Canada", flag: "🇨🇦", g: "F", grad: 2027, v: 3 },
-  { n: "Ryan Walsh", i: "RW", sport: "Tennis", pos: "Singles", country: "USA", flag: "🇺🇸", g: "M", grad: 2028, v: 2 },
-];
-
 const THREADS = [
   { who: "Coach Daniela Reyes", role: "Head Coach · Syracuse", init: "DR", v: true, last: "Send me the full match link and we'll talk.", ago: "1h", unread: true,
     msgs: [
@@ -236,7 +203,7 @@ function RestrictedBanner() {
 
 /* ============ FEED ============ */
 function Feed({ onMessage, onViewProfile }) {
-  const [posts, setPosts] = useState(FEED);
+  const [posts, setPosts] = useState(null);
   const [liked, setLiked] = useState({});
   const [uid, setUid] = useState(null);
   const [blockedIds, setBlockedIds] = useState([]);
@@ -286,10 +253,10 @@ function Feed({ onMessage, onViewProfile }) {
           const { data: mine } = await sb.from("post_likes").select("post_id").eq("profile_id", user.id).in("post_id", ids);
           if (mine) setLiked(Object.fromEntries(mine.map((r) => [r.post_id, true])));
         }
-      } else if (data && data.length === 0) {
-        setPosts(FEED); // no real posts yet — keep demo content visible
+      } else {
+        setPosts([]); // no real posts yet — honest empty state, no demo content
       }
-    } catch (e) { console.error("GOLSZ feed fetch error:", e); }
+    } catch (e) { console.error("GOLSZ feed fetch error:", e); setPosts((p) => p || []); }
   }
   useEffect(() => { loadFeed(); }, []);
 
@@ -392,7 +359,9 @@ function Feed({ onMessage, onViewProfile }) {
         </div>
       )}
 
-      {posts.map((p, i) => {
+      {posts === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>Loading…</div>}
+      {posts && posts.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>No posts yet — be the first to share something.</div>}
+      {posts && posts.map((p, i) => {
         const key = p.postId || i;
         const isLiked = !!liked[key];
         return (
@@ -484,7 +453,7 @@ const POSITIONS = ["All", "Left Back", "Striker", "Midfielder", "Guard", "Forwar
 
 function Discover({ onMessage, onViewProfile }) {
   const [query, setQuery] = useState("");
-  const [players, setPlayers] = useState(PLAYERS);
+  const [players, setPlayers] = useState(null);
   const [uid, setUid] = useState(null);
   const [following, setFollowing] = useState({});
 
@@ -508,8 +477,10 @@ function Discover({ onMessage, onViewProfile }) {
           const { data: names } = await sb.from("public_profile_names").select("id, full_name").in("id", ids);
           const nameById = Object.fromEntries((names || []).map((r) => [r.id, r.full_name]));
           setPlayers(data.map((row) => mapAthlete(row, nameById[row.id])));
+        } else {
+          setPlayers([]); // no real athletes yet — honest empty state, no demo content
         }
-      } catch (e) { console.error("GOLSZ discover fetch error:", e); }
+      } catch (e) { console.error("GOLSZ discover fetch error:", e); setPlayers((p) => p || []); }
     })();
   }, []);
 
@@ -529,7 +500,7 @@ function Discover({ onMessage, onViewProfile }) {
   }
 
   const q = query.trim().toLowerCase();
-  const results = players.filter((p) =>
+  const results = (players || []).filter((p) =>
     !q || [p.n, p.sport, p.pos, p.country, p.g].some((f) => (f || "").toLowerCase().includes(q))
   );
 
@@ -604,9 +575,12 @@ function Discover({ onMessage, onViewProfile }) {
             </div>
           </div>
         ))}
-        {results.length === 0 && (
+        {players === null && (
+          <div style={{ gridColumn: "1 / -1", textAlign: "center", color: C.slate, padding: "30px 0", fontSize: 13 }}>Loading…</div>
+        )}
+        {players !== null && results.length === 0 && (
           <div style={{ gridColumn: "1 / -1", textAlign: "center", color: C.slate, padding: "30px 0", fontSize: 13 }}>
-            No athletes match these filters yet. Widen the search.
+            {players.length === 0 ? "No athletes on file yet." : "No athletes match that search."}
           </div>
         )}
       </div>
