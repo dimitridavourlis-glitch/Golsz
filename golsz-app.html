@@ -86,27 +86,13 @@ const PASSPORT = {
   ],
 };
 
-const THREADS = [
-  { who: "Coach Daniela Reyes", role: "Head Coach · Syracuse", init: "DR", v: true, last: "Send me the full match link and we'll talk.", ago: "1h", unread: true,
-    msgs: [
-      { me: false, t: "Saw your left-back reel — the recovery pace stood out." },
-      { me: true, t: "Thank you Coach. I'm class of 2027, two-footed, currently at Toronto FC Academy." },
-      { me: false, t: "Send me the full match link and we'll talk." },
-    ] },
-  { who: "Marcus Lindqvist", role: "Scout · Djurgårdens IF", init: "ML", v: true, last: "Trial dates attached. Can you travel?", ago: "3h", unread: false,
-    msgs: [
-      { me: false, t: "Trial dates attached. Can you travel?" },
-    ] },
-  { who: "Baylor Recruiting", role: "University · NCAA D1", init: "BU", v: true, last: "We'd love your academic transcript.", ago: "2d", unread: false,
-    msgs: [
-      { me: false, t: "We'd love your academic transcript." },
-    ] },
-];
-
-/* ============ Supabase data helpers (Feed/Discover/Events) ============
-   Each screen fetches real rows when `sb` is configured and falls back to
-   the hardcoded arrays above when the query errors or returns nothing —
-   so the app still looks alive pre-launch, before anyone has posted. */
+/* ============ Supabase data helpers (Feed/Discover/Events/Messages) ============
+   Everything here is always real data, fetched fresh on every visit — no
+   hardcoded demo fallback anywhere anymore (the last of it, THREADS, was
+   removed along with the rest: PASSPORT.media, FEED, PLAYERS, EVENTS).
+   Screens show an explicit "Loading…" state while the fetch is in flight
+   and an honest empty state when it resolves to nothing, rather than ever
+   flashing or falling back to fake content. */
 function initials(name) {
   return (name || "").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
 }
@@ -792,9 +778,8 @@ function Tag({ children, warn }) {
 /* Real DMs: two profiles can message each other once one follows the
    other (either direction) — enforced server-side by can_message() in
    supabase-migration-007-messages.sql, not just hidden in the UI.
-   `thread` is a real profile uuid (string) once a real conversation is
-   open, an index into the demo THREADS array (number) for the pre-launch
-   fallback, or null for the list view. */
+   `thread` is a real profile uuid (string) once a conversation is open,
+   or null for the list view — always real data, no demo fallback. */
 function Messages({ thread, setThread }) {
   const [uid, setUid] = useState(null);
   const [conversations, setConversations] = useState(null);
@@ -975,52 +960,21 @@ function Messages({ thread, setThread }) {
     );
   }
 
-  if (typeof thread === "number") {
-    const t = THREADS[thread];
-    return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: `1px solid ${C.line}` }}>
-          <button onClick={() => setThread(null)} style={iconBtn(C.chalk)}><ChevronLeft size={20} /></button>
-          <Avatar init={t.init} size={36} />
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: 700, fontSize: 14, color: "#4A9EFF" }}>
-              {t.who} {t.v && <BadgeCheck size={13} color={C.lime} />}
-            </div>
-            <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{t.role}</div>
-          </div>
-        </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: 14 }}>
-          {t.msgs.map((m, i) => (
-            <div key={i} style={{
-              maxWidth: "78%", marginLeft: m.me ? "auto" : 0, marginBottom: 10,
-              background: m.me ? C.lime : C.turf, color: m.me ? C.pitch : C.chalk,
-              padding: "9px 12px", fontSize: 13.5, lineHeight: 1.45,
-              borderRadius: m.me ? "12px 2px 12px 12px" : "2px 12px 12px 12px",
-              border: m.me ? "none" : `1px solid ${C.line2}`, fontWeight: m.me ? 500 : 400,
-            }}>{m.t}</div>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${C.line}` }}>
-          <input placeholder="Message…" style={{
-            flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10,
-            color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none",
-          }} />
-          <button style={{ background: C.lime, border: "none", borderRadius: 10, width: 44, color: C.pitch, cursor: "pointer" }}><Send size={16} /></button>
-        </div>
-      </div>
-    );
-  }
-
-  const real = conversations && conversations.length ? conversations : null;
   return (
     <div style={{ padding: "8px 12px 16px" }}>
       <SectionTitle>Messages</SectionTitle>
-      {(real || THREADS).map((t, i) => (
-        <div key={real ? t.id : i} style={{
+      {conversations === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>Loading…</div>}
+      {conversations && conversations.length === 0 && (
+        <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>
+          No conversations yet — follow someone and message them from Discover.
+        </div>
+      )}
+      {conversations && conversations.map((t) => (
+        <div key={t.id} style={{
           ...card, display: "flex", gap: 11, alignItems: "center",
           border: `1px solid ${t.unread ? C.line2 : C.line}`,
         }}>
-          <button onClick={() => setThread(real ? t.id : i)} style={{
+          <button onClick={() => setThread(t.id)} style={{
             display: "flex", gap: 11, alignItems: "center", flex: 1, minWidth: 0,
             textAlign: "left", cursor: "pointer", background: "none", border: "none", padding: 0, fontFamily: "inherit",
           }}>
@@ -1038,11 +992,9 @@ function Messages({ thread, setThread }) {
               </div>
             </div>
           </button>
-          {real && (
-            <button onClick={() => hideConversation(t.id)} title="Delete conversation" style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0, display: "flex" }}>
-              <Trash2 size={16} />
-            </button>
-          )}
+          <button onClick={() => hideConversation(t.id)} title="Delete conversation" style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0, display: "flex" }}>
+            <Trash2 size={16} />
+          </button>
         </div>
       ))}
     </div>
