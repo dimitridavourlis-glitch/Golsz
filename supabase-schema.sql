@@ -60,6 +60,7 @@
 --  10. supabase-migration-011-personal-events.sql
 --  11. supabase-migration-012-scout-history-delete.sql
 --  12. supabase-migration-013-hide-conversations.sql
+--  13. supabase-migration-014-push-notifications.sql
 -- ============================================================
 
 -- 10) ADDITIVE — POSTS (Feed) + POST_LIKES + EVENTS
@@ -903,6 +904,28 @@ alter table hidden_conversations enable row level security;
 
 drop policy if exists hidden_conversations_rw on hidden_conversations;
 create policy hidden_conversations_rw on hidden_conversations for all using (
+  user_id = auth.uid()
+) with check (
+  user_id = auth.uid()
+);
+
+-- ============================================================
+-- 14) ADDITIVE — PUSH_SUBSCRIPTIONS (real Web Push notifications)
+-- See supabase-migration-014-push-notifications.sql for full context.
+-- ============================================================
+
+create table if not exists push_subscriptions (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references profiles(id) on delete cascade,
+  endpoint   text not null unique,
+  p256dh     text not null,
+  auth       text not null,
+  created_at timestamptz not null default now()
+);
+alter table push_subscriptions enable row level security;
+
+drop policy if exists push_subscriptions_rw on push_subscriptions;
+create policy push_subscriptions_rw on push_subscriptions for all using (
   user_id = auth.uid()
 ) with check (
   user_id = auth.uid()

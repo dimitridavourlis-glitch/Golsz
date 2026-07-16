@@ -233,6 +233,29 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   `checkout.session.completed` and `customer.subscription.deleted`; the signing secret it gives you is
   `STRIPE_WEBHOOK_SECRET`.
 
+### `api/send-push.js` (Vercel serverless function)
+
+- Real OS-level push notifications (phone lock screen / laptop notification center), not an in-app-only
+  bell. Two moving parts: the client (in `golsz-app.html`) subscribes the browser via the Push API and
+  stores the subscription in `push_subscriptions` (migration 014); this function is what actually sends.
+- **Not triggered by a client request.** It's called by two Supabase Database Webhooks you configure by
+  hand in the Dashboard (Database → Webhooks): one on `messages` INSERT, one on `follows` INSERT. Supabase
+  POSTs `{ type, table, record, old_record }`; this reads who to notify from `record` and looks up their
+  `push_subscriptions` rows with the service role key.
+- **Uses the `web-push` npm package** (the one deliberate exception to the "no npm dependency" pattern
+  `api/scout.js`/`api/stripe-webhook.js` follow) — hand-rolling VAPID JWT signing + RFC 8291 payload
+  encryption (ECDH/HKDF/AES-128-GCM) is real cryptography with no live device to test failures against; a
+  maintained library is the safer call here. `package.json` at the repo root pulls it in; Vercel installs it
+  automatically at deploy time, same as any Node serverless project.
+- Requires a shared secret (`SUPABASE_WEBHOOK_SECRET`) checked against the `x-webhook-secret` header — set
+  that same value as a custom header on both Database Webhooks in the Supabase Dashboard, so this endpoint
+  can reject anything that isn't actually Supabase.
+- `VAPID_PUBLIC_KEY` is duplicated in `golsz-app.html` (client-safe, it's public by design) and in Vercel's
+  env vars (server needs it too, to pair with `VAPID_PRIVATE_KEY` when signing). If you ever regenerate the
+  VAPID keypair (`npx web-push generate-vapid-keys`), update both places or push sends will fail silently.
+- Stale subscriptions (endpoint gone — uninstalled PWA, permission revoked, etc.) return 404/410 from the
+  push service; this function deletes them from `push_subscriptions` on that response instead of retrying.
+
 ### `supabase-schema.sql`
 
 **Read the warning at the top of this repo's README section above before touching this file** — it's a
@@ -265,12 +288,14 @@ project, not a from-scratch bootstrap script. The real tables:
 ## Current state
 
 **Real when configured:** accounts, sessions, sign-out, per-user data isolation via RLS; Feed/Discover/
-Events on real Supabase data (falling back to demo content when empty); a working hosted Scout with the API
-key protected server-side, free-tier metering (now correctly enum-safe, see `api/scout.js` above), and real
+Events on real Supabase data with honest loading/empty states (every hardcoded demo array was removed —
+there is no fake-content fallback anywhere in the app anymore); a working hosted Scout with the API key
+protected server-side, free-tier metering (now correctly enum-safe, see `api/scout.js` above), and real
 transcript persistence; parent verification (request/approve, RLS-enforced, not just UI); minor safety
 (restricted posting/Discover/DM visibility until a parent approves); Feed post creation with report/block
 moderation; follows (migration 006); real DMs gated by follow relationship (migration 007); a fully editable
-Passport with onboarding auto-opened right after signup (migration 008).
+Passport with onboarding auto-opened right after signup (migration 008); real Web Push notifications for new
+messages and new followers (migration 014, `api/send-push.js`).
 
 **Not yet built / known gaps:**
 - **Legal review.** The parent-verification flow is mutual in-app consent, not identity-verified
@@ -287,3 +312,8 @@ Passport with onboarding auto-opened right after signup (migration 008).
   nothing signs anyone up with those roles yet.
 - **Deeper moderation** (a real review queue, automated detection) beyond report/block/admin-delete.
 - Production monitoring/alerting (e.g. Sentry) — nothing wired up yet.
+- **Push notifications need one-time manual setup** before they'll actually fire: `VAPID_PUBLIC_KEY`,
+  `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, and `SUPABASE_WEBHOOK_SECRET` set as Vercel env vars, plus two
+  Database Webhooks created by hand in the Supabase Dashboard (see `api/send-push.js` above). The
+  client-side subscribe/unsubscribe UI (`NotificationBell` in `golsz-app.html`) works regardless, but
+  nothing actually gets sent until that server-side wiring is done.

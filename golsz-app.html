@@ -43,6 +43,7 @@ const ChevronDown = svg('<path d="m6 9 6 6 6-6"/>');
 const ChevronUp = svg('<path d="m18 15-6-6-6 6"/>');
 const Send = svg('<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>');
 const Heart = svg('<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>');
+const Bell = svg('<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>');
 const SlidersHorizontal = svg('<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>');
 const Flame = svg('<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5"/>');
 const Trophy = svg('<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>');
@@ -106,6 +107,86 @@ function useIsDesktop() {
     return () => { if (mq.removeEventListener) mq.removeEventListener("change", handler); else mq.removeListener(handler); };
   }, []);
   return isDesktop;
+}
+
+/* ============ PUSH NOTIFICATIONS ============
+   Real OS-level notifications (phone lock screen, laptop notification
+   center) for new messages and new followers — sent server-side by
+   api/send-push.js via Supabase Database Webhooks, not something the
+   client can fake or simulate. This file only handles the subscribe/
+   unsubscribe handshake and storing the subscription in push_subscriptions
+   (migration 014); see api/send-push.js for what actually triggers a push. */
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+}
+function pushSupported() {
+  return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+}
+async function enablePushNotifications(uid) {
+  if (!sb || !uid || !pushSupported()) return false;
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") return false;
+  const reg = await navigator.serviceWorker.register("/sw.js");
+  const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
+  const json = sub.toJSON();
+  const { error } = await sb.from("push_subscriptions").upsert(
+    { user_id: uid, endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth },
+    { onConflict: "endpoint" }
+  );
+  if (error) throw error;
+  return true;
+}
+async function disablePushNotifications(uid) {
+  if (!pushSupported()) return;
+  const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+  const sub = reg && await reg.pushManager.getSubscription();
+  if (sub) {
+    if (sb && uid) await sb.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+    await sub.unsubscribe();
+  }
+}
+function NotificationBell() {
+  const [uid, setUid] = useState(null);
+  const [enabled, setEnabled] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!sb || !pushSupported()) return;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        setUid(user.id);
+        if (Notification.permission === "granted") {
+          const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+          const sub = reg && await reg.pushManager.getSubscription();
+          setEnabled(!!sub);
+        }
+      } catch (e) { console.error("GOLSZ push status check error:", e); }
+    })();
+  }, []);
+
+  async function toggle() {
+    if (!uid || busy) return;
+    setBusy(true);
+    try {
+      if (enabled) { await disablePushNotifications(uid); setEnabled(false); }
+      else { const ok = await enablePushNotifications(uid); setEnabled(ok); }
+    } catch (e) { console.error("GOLSZ push toggle error:", e); }
+    finally { setBusy(false); }
+  }
+
+  if (!sb || !pushSupported()) return null;
+  return (
+    <button onClick={toggle} disabled={busy} title={enabled ? "Notifications on — tap to turn off" : "Turn on notifications for messages & new followers"}
+      style={{ position: "relative", background: "none", border: "none", color: enabled ? C.lime : C.chalk, cursor: "pointer", padding: 4, opacity: busy ? 0.6 : 1 }}>
+      <Bell size={22} />
+      {enabled && <span style={{ position: "absolute", top: 3, right: 3, width: 7, height: 7, borderRadius: 99, background: C.lime, border: `2px solid ${C.pitch}` }} />}
+    </button>
+  );
 }
 
 function initials(name) {
@@ -2389,7 +2470,10 @@ function GolszApp({ onSignOut, startOnboarding }) {
 
         {/* sidebar */}
         <aside style={{ width: 232, flexShrink: 0, borderRight: `1px solid ${C.line}`, display: "flex", flexDirection: "column", padding: "22px 14px", position: "sticky", top: 0, height: "100vh" }}>
-          <a href="index.html" style={{ fontWeight: 900, fontSize: 22, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none", padding: "0 10px", marginBottom: 26, display: "block" }}>GOLSZ<span style={{ color: C.lime }}>.</span></a>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 10px", marginBottom: 26 }}>
+            <a href="index.html" style={{ fontWeight: 900, fontSize: 22, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none" }}>GOLSZ<span style={{ color: C.lime }}>.</span></a>
+            <NotificationBell />
+          </div>
           <nav style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
             {SIDEBAR_NAV.map((n) => {
               const active = page === n.id;
@@ -2436,10 +2520,13 @@ function GolszApp({ onSignOut, startOnboarding }) {
       {/* top bar */}
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px 10px", borderBottom: `1px solid ${C.line}`, flexShrink: 0 }}>
         <a href="index.html" style={{ fontWeight: 900, fontSize: 24, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none" }}>GOLSZ<span style={{ color: C.lime }}>.</span></a>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <NotificationBell />
         <button onClick={() => { setPage("messages"); setThread(null); }} style={{ position: "relative", background: "none", border: "none", color: page === "messages" ? C.lime : C.chalk, cursor: "pointer", padding: 4 }}>
           <MessageSquare size={22} />
           {hasUnreadMsgs && <span style={{ position: "absolute", top: 2, right: 2, width: 8, height: 8, borderRadius: 99, background: C.lime, border: `2px solid ${C.pitch}` }} />}
         </button>
+        </div>
       </header>
 
       {/* body */}
@@ -2514,6 +2601,7 @@ const SUPABASE_URL = "https://wachjqfhlbchcuovyewg.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Po2PXFdCkqZ26mtkJEJ4fA_HHBy5i_s";
 const SCOUT_ENDPOINT = "/api/scout";  // same-origin — works on any Vercel deploy + `vercel dev` locally
 const STRIPE_LINKS = { pro: "", elite: "" };  // Stripe Payment Link URLs
+const VAPID_PUBLIC_KEY = "BNrfmAAoP_PL4FocIjzfw5aaxzHsuCknwUeG5pX21v7cjvMCzt3PL2d70QbBJrcz3l36bfgnJ_N4wmC9EiM11mI"; // safe to be public — pairs with the server-only VAPID_PRIVATE_KEY
 
 const PLANS = [
   { id: "starter", name: "Starter", price: 0,  tag: "Free forever",    feats: ["Digital Sports Passport (basic)", "AI Scout: 5 school suggestions", "Browse players & events"] },
