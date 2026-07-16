@@ -92,6 +92,21 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   in every top-level screen** (`GolszApp`, `Auth`, `ResetPassword`) — `Auth` was missing it entirely until
   this was caught (no fonts, no focus-visible outlines, no responsive grid on the whole pre-login flow);
   if you add another top-level screen, don't forget it there too.
+- **Theming (dark/light background, Settings button)**: every color in `C` (`C.pitch`, `C.chalk`, `C.lime`,
+  etc.) is a CSS custom property string (`"var(--pitch)"`, ...), not a hardcoded hex value — the actual hex
+  values live in the `CSS` template string's `:root { ... }` (dark, default) and `html[data-theme="light"]
+  { ... }` (light) blocks. `useTheme()` toggles the `data-theme` attribute on `<html>` and persists to
+  `localStorage["golsz-theme"]`; a tiny synchronous script in `<head>` reads that key before React even loads
+  so there's no flash of the wrong background on reload. `SettingsButton` (header/sidebar, next to
+  `NotificationBell`) is the only UI for it today. **`C.ink` is a deliberate exception** — a plain fixed hex
+  (`#0D1210`), not a var — used for dark text sitting on top of lime buttons/chips (`background: C.lime,
+  color: C.ink`); it must stay dark in both themes, since lime itself gets darkened for the light theme and
+  theme-following text on top of it would go illegible. **Any new color must be added as a CSS var**, not a
+  raw hex literal in a `style={{}}` object — a hardcoded hex will render correctly in dark mode (since that
+  matches the old palette) but silently stay dark-mode-only forever once someone's on the light theme. Two
+  CSS vars (`--lime-border`, `--amber-border`) exist specifically because `${C.lime}66`-style hex-alpha-suffix
+  concatenation doesn't work once `C.lime` is a `var()` string (`var(--lime)66` isn't valid CSS) — use those
+  instead of trying to append alpha digits to any `C.*` value.
 - **Passport is a real, editable profile** as of migration 008: `toPassport()` merges `profiles.full_name`
   with the full `athletes` row (sport, position, gender, grad_year, gpa, height_cm, weight_kg, foot,
   recruiting_status, country, club_name, bio) into the passport-shaped display object, showing "—" for

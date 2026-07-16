@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>GOLSZ — Every Goal Has a Path</title>
 <style>
-  html,body{margin:0;background:#0D1210;}
+  html,body{margin:0;}
+  html:not([data-theme="light"]) body{background:#0D1210;}
+  html[data-theme="light"] body{background:#F5F7F3;}
   #root{min-height:100vh;}
 </style>
+<script>try{if(localStorage.getItem("golsz-theme")==="light")document.documentElement.setAttribute("data-theme","light");}catch(e){}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -54,6 +57,9 @@ const X = svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
 const Pencil = svg('<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>');
 const ShieldAlert = svg('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/>');
 const Ban = svg('<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>');
+const SettingsIcon = svg('<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>');
+const Sun = svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>');
+const Moon = svg('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>');
 const Trash2 = svg('<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>');
 const Plus = svg('<path d="M5 12h14"/><path d="M12 5v14"/>');
 const History = svg('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>');
@@ -64,11 +70,21 @@ const CalendarPlus = svg('<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" 
 
 
 /* ============ GOLSZ — brand tokens ============
-   Pitch #0D1210 · Turf #16241C · Goal Lime #C8F135 · Chalk #F2F5F0 · Slate #8DA396 */
+   These are CSS custom properties (set in the CSS template below, values
+   swapped per data-theme via useTheme()), NOT hardcoded hex — that's what
+   makes the Settings > Background toggle able to reskin the whole app
+   without touching every call site. C.ink is the one deliberate exception:
+   it's the dark text color used on top of lime buttons/chips and must
+   stay dark in both themes (a lime button with theme-following text would
+   go illegible the moment lime gets darkened for the light theme), so it's
+   a plain fixed hex, not a variable. Any NEW color added here should be a
+   var() too, or it'll silently stay dark-mode-only when the page is light. */
 const C = {
-  pitch: "#0D1210", turf: "#16241C", card: "#121D17", lime: "#C8F135",
-  chalk: "#F2F5F0", slate: "#8DA396", line: "#1F2E25", line2: "#2C4033",
-  amber: "#C89B3C",
+  pitch: "var(--pitch)", turf: "var(--turf)", card: "var(--card)", lime: "var(--lime)",
+  chalk: "var(--chalk)", slate: "var(--slate)", line: "var(--line)", line2: "var(--line2)",
+  amber: "var(--amber)", body: "var(--body-text)", warnText: "var(--warn-text)",
+  msgName: "var(--msg-name)", limeBorder: "var(--lime-border)", amberBorder: "var(--amber-border)",
+  ink: "#0D1210",
 };
 
 /* ============ mock data ============ */
@@ -108,6 +124,24 @@ function useIsDesktop() {
     return () => { if (mq.removeEventListener) mq.removeEventListener("change", handler); else mq.removeListener(handler); };
   }, []);
   return isDesktop;
+}
+
+/* ============ THEME (dark / light background) ============
+   Persisted to localStorage + applied as a data-theme attribute on
+   <html> (read synchronously by the inline script in <head>, before React
+   even loads, so there's no flash of the wrong background on reload).
+   Every color in C is a CSS var (see the CSS template below) so flipping
+   this one attribute reskins the whole app — nothing else needs to know
+   the theme exists. */
+function useTheme() {
+  const [theme, setThemeState] = useState(() => {
+    try { return localStorage.getItem("golsz-theme") === "light" ? "light" : "dark"; } catch (e) { return "dark"; }
+  });
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    try { localStorage.setItem("golsz-theme", theme); } catch (e) {}
+  }, [theme]);
+  return [theme, setThemeState];
 }
 
 /* ============ PUSH NOTIFICATIONS ============
@@ -187,6 +221,48 @@ function NotificationBell() {
       <Bell size={22} />
       {enabled && <span style={{ position: "absolute", top: 3, right: 3, width: 7, height: 7, borderRadius: 99, background: C.lime, border: `2px solid ${C.pitch}` }} />}
     </button>
+  );
+}
+
+/* ============ SETTINGS ============
+   Currently just the Background (theme) toggle, but it's its own modal
+   rather than inlining a toggle into the header so there's an obvious
+   place to add more app-wide preferences later without redesigning. */
+function SettingsButton() {
+  const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useTheme();
+
+  return (
+    <>
+      <button onClick={() => setOpen(true)} title="Settings" style={{ background: "none", border: "none", color: C.chalk, cursor: "pointer", padding: 4, display: "flex" }}>
+        <SettingsIcon size={22} />
+      </button>
+      {open && (
+        <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", padding: 18, boxSizing: "border-box" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+              <div style={{ fontWeight: 800, fontSize: 16 }}>Settings</div>
+              <button onClick={() => setOpen(false)} style={iconBtn(C.chalk)}><X size={18} /></button>
+            </div>
+            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>BACKGROUND</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 4 }}>
+              <button onClick={() => setTheme("dark")} style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
+                cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
+                background: theme === "dark" ? "#C8F1351a" : C.turf, color: theme === "dark" ? C.lime : C.chalk,
+                border: `1.5px solid ${theme === "dark" ? C.lime : C.line2}`,
+              }}><Moon size={16} /> Dark</button>
+              <button onClick={() => setTheme("light")} style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
+                cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
+                background: theme === "light" ? "#C8F1351a" : C.turf, color: theme === "light" ? C.lime : C.chalk,
+                border: `1.5px solid ${theme === "light" ? C.lime : C.line2}`,
+              }}><Sun size={16} /> Light</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -481,7 +557,7 @@ function Feed({ onMessage, onViewProfile }) {
             style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13, fontFamily: "inherit", outline: "none", resize: "none", marginBottom: 8, boxSizing: "border-box" }} />
           {composeErr && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8 }}>{composeErr}</div>}
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <button onClick={createPost} disabled={!composeHeadline.trim() || composeBusy} style={{ background: C.lime, color: C.pitch, border: "none", borderRadius: 9, padding: "9px 18px", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", opacity: !composeHeadline.trim() || composeBusy ? 0.5 : 1 }}>
+            <button onClick={createPost} disabled={!composeHeadline.trim() || composeBusy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 18px", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", opacity: !composeHeadline.trim() || composeBusy ? 0.5 : 1 }}>
               {composeBusy ? "Posting…" : "Post"}
             </button>
           </div>
@@ -543,7 +619,7 @@ function Feed({ onMessage, onViewProfile }) {
               <Video size={13} /> Watch highlight
             </a>
           ) : (
-            <div style={{ fontSize: 13.5, color: "#C9D6CD", lineHeight: 1.5 }}>{p.body}</div>
+            <div style={{ fontSize: 13.5, color: C.body, lineHeight: 1.5 }}>{p.body}</div>
           )}
           <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
             {p.v.map((b) => <Badge key={b} label={b} />)}
@@ -846,7 +922,7 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
 
         {err && <div style={{ color: C.amber, fontSize: 12, marginBottom: 10 }}>{err}</div>}
         <button onClick={save} disabled={busy} style={{
-          width: "100%", background: C.lime, color: C.pitch, border: "none", borderRadius: 12,
+          width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12,
           padding: "13px", fontWeight: 800, fontSize: 15, fontFamily: "inherit",
           cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
         }}>{busy ? "Saving…" : "Save to my events"}</button>
@@ -879,7 +955,7 @@ function EventRow({ e, mine, onDelete }) {
         <button onClick={() => onDelete(e.id)} style={iconBtn(C.amber)}><Trash2 size={16} /></button>
       ) : (
         <button style={{
-          background: C.lime, color: C.pitch, border: "none", borderRadius: 9,
+          background: C.lime, color: C.ink, border: "none", borderRadius: 9,
           padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
         }}>Register</button>
       )}
@@ -1107,7 +1183,7 @@ function Messages({ thread, setThread }) {
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: `1px solid ${C.line}` }}>
           <button onClick={() => setThread(null)} style={iconBtn(C.chalk)}><ChevronLeft size={20} /></button>
           <Avatar init={initials(name)} size={36} />
-          <div style={{ fontWeight: 700, fontSize: 14, color: "#4A9EFF" }}>{name}</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: C.msgName }}>{name}</div>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: 14 }}>
           {threadMsgs.length === 0 && (
@@ -1154,7 +1230,7 @@ function Messages({ thread, setThread }) {
             color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none",
           }} />
           <button onClick={send} disabled={busy || !text.trim()} style={{
-            background: C.lime, border: "none", borderRadius: 10, width: 44, color: C.pitch,
+            background: C.lime, border: "none", borderRadius: 10, width: 44, color: C.ink,
             cursor: busy || !text.trim() ? "default" : "pointer", opacity: busy || !text.trim() ? 0.5 : 1,
           }}><Send size={16} /></button>
         </div>
@@ -1203,7 +1279,7 @@ function Messages({ thread, setThread }) {
             <Avatar init={t.init} ring={t.v ? C.lime : C.line2} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: "#4A9EFF" }}>{t.who}</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: C.msgName }}>{t.who}</span>
                 {t.v && <BadgeCheck size={13} color={C.lime} />}
                 {t.unread && <span style={{ width: 8, height: 8, borderRadius: 99, background: C.lime, flexShrink: 0, marginLeft: 4 }} />}
                 <span style={{ marginLeft: "auto", fontSize: 10.5, color: C.slate }}>{t.ago}</span>
@@ -1333,7 +1409,7 @@ function FamilyAccess() {
       </div>
       <div style={{ display: "flex", gap: 6 }}>
         <input value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="Relationship (optional)" style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
-        <button onClick={requestLink} disabled={busy || !email.trim()} style={{ background: C.lime, color: C.pitch, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: busy || !email.trim() ? 0.5 : 1 }}>Send</button>
+        <button onClick={requestLink} disabled={busy || !email.trim()} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: busy || !email.trim() ? 0.5 : 1 }}>Send</button>
       </div>
       {msg && <div style={{ fontSize: 11.5, color: C.slate, marginTop: 8 }}>{msg}</div>}
       <div style={{ fontSize: 10.5, color: C.slate, marginTop: 10, lineHeight: 1.4 }}>
@@ -1437,7 +1513,7 @@ function Highlights({ viewUserId }) {
           <div style={{ display: "flex", gap: 6 }}>
             <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Link (YouTube, Veo, Hudl…)"
               style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
-            <button onClick={addHighlight} disabled={!title.trim() || !url.trim() || busy} style={{ background: C.lime, color: C.pitch, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!title.trim() || !url.trim() || busy) ? 0.5 : 1 }}>
+            <button onClick={addHighlight} disabled={!title.trim() || !url.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!title.trim() || !url.trim() || busy) ? 0.5 : 1 }}>
               {busy ? "…" : "Add"}
             </button>
           </div>
@@ -1601,7 +1677,7 @@ function ProfileEditor({ initial, onClose, onSaved }) {
 
         {err && <div style={{ color: C.amber, fontSize: 12, marginBottom: 10 }}>{err}</div>}
         <button onClick={save} disabled={busy} style={{
-          width: "100%", background: C.lime, color: C.pitch, border: "none", borderRadius: 12,
+          width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12,
           padding: "13px", fontWeight: 800, fontSize: 15, fontFamily: "inherit",
           cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
         }}>{busy ? "Saving…" : "Save profile"}</button>
@@ -1740,7 +1816,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
       )}
 
       {incomplete && (
-        <div onClick={() => setEditing(true)} style={{ background: "#C8F1351a", border: `1px solid ${C.lime}44`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+        <div onClick={() => setEditing(true)} style={{ background: "#C8F1351a", border: `1px solid ${C.limeBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
           <Pencil size={16} color={C.lime} />
           <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.4 }}>
             <b style={{ color: C.lime }}>Finish building your profile</b> — add your sport, position and stats so coaches and Scout can find you.
@@ -1832,7 +1908,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
       {/* bio */}
       <div style={{ ...card, marginTop: 14 }}>
         <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 6 }}>SCOUTING BIO</div>
-        <div style={{ fontSize: 13.5, lineHeight: 1.55, color: "#C9D6CD" }}>{p.bio}</div>
+        <div style={{ fontSize: 13.5, lineHeight: 1.55, color: C.body }}>{p.bio}</div>
       </div>
 
       {/* following + followers */}
@@ -1861,7 +1937,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
           {p.timeline.map((e, i) => (
             <div key={i} style={{ display: "flex", gap: 12, marginBottom: i < p.timeline.length - 1 ? 12 : 0 }}>
               <div style={{ fontFamily: "'Space Mono', monospace", fontWeight: 800, color: C.lime, fontSize: 13, width: 40 }}>{e.yr}</div>
-              <div style={{ fontSize: 13, color: "#C9D6CD", flex: 1, borderLeft: `2px solid ${C.line2}`, paddingLeft: 12 }}>{e.txt}</div>
+              <div style={{ fontSize: 13, color: C.body, flex: 1, borderLeft: `2px solid ${C.line2}`, paddingLeft: 12 }}>{e.txt}</div>
             </div>
           ))}
         </div>
@@ -1874,7 +1950,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
       {!viewingOther && profile && profile.is_admin && (
         <button onClick={onOpenAdmin} style={{
           width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-          background: "transparent", border: `1px solid ${C.amber}66`, color: C.amber, borderRadius: 10,
+          background: "transparent", border: `1px solid ${C.amberBorder}`, color: C.amber, borderRadius: 10,
           padding: "11px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 16,
         }}><ShieldAlert size={15} /> Admin panel</button>
       )}
@@ -1984,7 +2060,7 @@ function BlockedAccounts() {
         <Ban size={16} color={count ? C.amber : C.slate} />
         <span style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>Blocked accounts</span>
         {count > 0 && (
-          <span style={{ fontSize: 11, fontWeight: 800, color: C.pitch, background: C.amber, borderRadius: 999, padding: "1px 8px" }}>{count}</span>
+          <span style={{ fontSize: 11, fontWeight: 800, color: C.ink, background: C.amber, borderRadius: 999, padding: "1px 8px" }}>{count}</span>
         )}
       </div>
       {blocked === null && <div style={{ fontSize: 12.5, color: C.slate }}>Loading…</div>}
@@ -1997,7 +2073,7 @@ function BlockedAccounts() {
               <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{b.name}</span>
               <button onClick={() => unblock(b.id)} disabled={removingId === b.id} style={{
                 fontSize: 11, fontWeight: 700, padding: "5px 10px", borderRadius: 999, cursor: "pointer",
-                fontFamily: "inherit", background: "transparent", color: C.lime, border: `1px solid ${C.lime}66`,
+                fontFamily: "inherit", background: "transparent", color: C.lime, border: `1px solid ${C.limeBorder}`,
                 opacity: removingId === b.id ? 0.5 : 1,
               }}>{removingId === b.id ? "…" : "Unblock"}</button>
             </div>
@@ -2203,8 +2279,8 @@ function AdminPanel({ onBack }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 6 }}>
                   {u.full_name || "(no name)"}
-                  {u.is_minor && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amber}66`, borderRadius: 5, padding: "1px 5px" }}>MINOR</span>}
-                  {u.is_admin && <span style={{ fontSize: 9, color: C.lime, border: `1px solid ${C.lime}66`, borderRadius: 5, padding: "1px 5px" }}>ADMIN</span>}
+                  {u.is_minor && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 5, padding: "1px 5px" }}>MINOR</span>}
+                  {u.is_admin && <span style={{ fontSize: 9, color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 5, padding: "1px 5px" }}>ADMIN</span>}
                 </div>
                 <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>joined {timeAgo(u.created_at)} ago</div>
               </div>
@@ -2237,7 +2313,7 @@ function AdminPanel({ onBack }) {
             </div>
             <input type="number" value={evSpots} onChange={(e) => setEvSpots(e.target.value)} placeholder="Spots available" style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
             <button onClick={createEvent} disabled={!evTitle.trim() || !evDate} style={{
-              width: "100%", background: C.lime, color: C.pitch, border: "none", borderRadius: 10, padding: "11px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit",
+              width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 10, padding: "11px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit",
               opacity: !evTitle.trim() || !evDate ? 0.5 : 1,
             }}>Create event</button>
           </div>
@@ -2501,7 +2577,7 @@ function Scout() {
               border: `1px solid ${h.id === conversationId ? C.lime : C.line}`,
             }}>
               <button onClick={() => loadConversation(h.id)} style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3, color: "#FFFFFF" }}>{h.preview || "New conversation"}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3, color: C.chalk }}>{h.preview || "New conversation"}</div>
                 <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{timeAgo(h.lastAt)} ago · {h.turns} messages</div>
               </button>
               <button onClick={() => deleteConversation(h.id)} title="Delete conversation" style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0, display: "flex" }}>
@@ -2552,7 +2628,7 @@ function Scout() {
             <textarea rows={1} value={input} placeholder="Talk to your scout…" onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
               style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, color: C.chalk, padding: "11px 13px", fontSize: 14, fontFamily: "inherit", resize: "none", outline: "none" }} />
-            <button onClick={() => send(input)} disabled={busy || !loaded || !input.trim()} style={{ background: C.lime, color: C.pitch, border: "none", borderRadius: 12, width: 46, cursor: "pointer", opacity: busy || !loaded || !input.trim() ? 0.4 : 1 }}><Send size={17} /></button>
+            <button onClick={() => send(input)} disabled={busy || !loaded || !input.trim()} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 12, width: 46, cursor: "pointer", opacity: busy || !loaded || !input.trim() ? 0.4 : 1 }}><Send size={17} /></button>
           </div>
         </>
       )}
@@ -2567,7 +2643,7 @@ function SectionTitle({ children, noMargin }) {
 const card = { background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14, marginBottom: 12, boxShadow: "0 6px 18px -12px rgba(0,0,0,0.6)" };
 const iconBtn = (color) => ({ display: "inline-flex", alignItems: "center", gap: 5, background: "none", border: "none", color, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 0 });
 const bubbleAgent = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: "2px 14px 14px 14px", padding: "10px 13px", margin: "0 30px 12px 0", fontSize: 14, lineHeight: 1.55 };
-const bubbleUser = { background: C.lime, color: C.pitch, borderRadius: "14px 2px 14px 14px", padding: "10px 13px", margin: "0 0 12px 30px", fontSize: 14, lineHeight: 1.55, fontWeight: 500 };
+const bubbleUser = { background: C.lime, color: C.ink, borderRadius: "14px 2px 14px 14px", padding: "10px 13px", margin: "0 0 12px 30px", fontSize: 14, lineHeight: 1.55, fontWeight: 500 };
 
 function GolszApp({ onSignOut, startOnboarding }) {
   const [page, setPage] = useState(() => {
@@ -2626,7 +2702,10 @@ function GolszApp({ onSignOut, startOnboarding }) {
         <aside style={{ width: 232, flexShrink: 0, borderRight: `1px solid ${C.line}`, display: "flex", flexDirection: "column", padding: "22px 14px", position: "sticky", top: 0, height: "100vh" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 10px", marginBottom: 26 }}>
             <a href="index.html" style={{ fontWeight: 900, fontSize: 22, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none" }}>GOLSZ<span style={{ color: C.lime }}>.</span></a>
-            <NotificationBell />
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <SettingsButton />
+              <NotificationBell />
+            </div>
           </div>
           <nav style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
             {SIDEBAR_NAV.map((n) => {
@@ -2675,6 +2754,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px 10px", borderBottom: `1px solid ${C.line}`, flexShrink: 0 }}>
         <a href="index.html" style={{ fontWeight: 900, fontSize: 24, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none" }}>GOLSZ<span style={{ color: C.lime }}>.</span></a>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <SettingsButton />
         <NotificationBell />
         <button onClick={() => { setPage("messages"); setThread(null); }} style={{ position: "relative", background: "none", border: "none", color: page === "messages" ? C.lime : C.chalk, cursor: "pointer", padding: 4 }}>
           <MessageSquare size={22} />
@@ -2701,7 +2781,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
           if (n.center) {
             return (
               <button key={n.id} onClick={() => go(n.id)} style={{
-                background: C.lime, color: C.pitch, border: `3px solid ${C.pitch}`, borderRadius: "50%",
+                background: C.lime, color: C.ink, border: `3px solid ${C.pitch}`, borderRadius: "50%",
                 width: 58, height: 58, marginTop: -22, boxShadow: `0 8px 20px -6px #C8F13566`,
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                 cursor: "pointer", fontFamily: "inherit",
@@ -2730,6 +2810,22 @@ function GolszApp({ onSignOut, startOnboarding }) {
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100,400..900;125,400..900&family=Space+Mono:wght@400;700&display=swap');
   * { box-sizing: border-box; }
+
+  /* GOLSZ theme tokens — dark is the default/fallback (:root), light
+     overrides via [data-theme="light"] on <html> (see useTheme()). */
+  :root {
+    --pitch: #0D1210; --turf: #16241C; --card: #121D17; --lime: #C8F135;
+    --chalk: #F2F5F0; --slate: #8DA396; --line: #1F2E25; --line2: #2C4033;
+    --amber: #C89B3C; --body-text: #C9D6CD; --warn-text: #E7C56B; --msg-name: #4A9EFF;
+    --lime-border: rgba(200,241,53,0.35); --amber-border: rgba(200,155,60,0.35);
+  }
+  html[data-theme="light"] {
+    --pitch: #F5F7F3; --turf: #EDF0EA; --card: #FFFFFF; --lime: #6B9C1F;
+    --chalk: #14201A; --slate: #5B6B62; --line: #E1E7DE; --line2: #CFD8CA;
+    --amber: #8A6A22; --body-text: #33463A; --warn-text: #8A6A22; --msg-name: #1D5FC4;
+    --lime-border: rgba(107,156,31,0.3); --amber-border: rgba(138,106,34,0.3);
+  }
+
   body { margin: 0; background: ${C.pitch}; }
   .noscroll::-webkit-scrollbar { display: none; }
   .noscroll { -ms-overflow-style: none; scrollbar-width: none; }
@@ -2740,7 +2836,7 @@ const CSS = `
   .running span:nth-child(2){ animation-delay:.15s } .running span:nth-child(3){ animation-delay:.3s }
   @keyframes run { 0%,100%{opacity:.25;transform:translateY(0)} 50%{opacity:1;transform:translateY(-3px)} }
   @media (prefers-reduced-motion: reduce){ .msg,.running span{ animation:none } }
-  textarea::placeholder, input::placeholder { color: #5C6E63; }
+  textarea::placeholder, input::placeholder { color: ${C.slate}; }
   button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid ${C.lime}; outline-offset: 2px; }
   @media (min-width: 900px) {
     .discover-grid { grid-template-columns: repeat(3, 1fr) !important; }
@@ -2874,7 +2970,7 @@ function Auth({ onDone, paidReturn }) {
     : "Continue to payment \u2014 $" + selected.price + "/month";
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 18px", background: "radial-gradient(1100px 560px at 50% -12%, #16241C, " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 18px", background: "radial-gradient(1100px 560px at 50% -12%, " + C.turf + ", " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
       <style>{CSS}</style>
       <div style={{ width: "100%", maxWidth: (isSignup && !forgotMode && isDesktop) ? 920 : 430 }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
@@ -2905,10 +3001,10 @@ function Auth({ onDone, paidReturn }) {
                 <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" style={field} />
                 {err && (
                   <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
-                    <div style={{ color: "#E7C56B", fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
+                    <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
                   </div>
                 )}
-                <button disabled={!email.trim() || busy} onClick={sendReset} style={{ width: "100%", background: C.lime, color: C.pitch, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!email.trim() || busy) ? "default" : "pointer", opacity: (!email.trim() || busy) ? 0.45 : 1, fontFamily: "inherit" }}>{busy ? "Sending…" : "Send reset link"}</button>
+                <button disabled={!email.trim() || busy} onClick={sendReset} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!email.trim() || busy) ? "default" : "pointer", opacity: (!email.trim() || busy) ? 0.45 : 1, fontFamily: "inherit" }}>{busy ? "Sending…" : "Send reset link"}</button>
                 <div style={{ textAlign: "center", marginTop: 14, fontSize: 13, color: C.slate }}>
                   <span onClick={() => { setForgotMode(false); setErr(""); }} style={{ color: C.lime, fontWeight: 700, cursor: "pointer" }}>Back to log in</span>
                 </div>
@@ -2929,21 +3025,21 @@ function Auth({ onDone, paidReturn }) {
                       borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 10,
                     }}>
                       {pl.tag === "Most popular" && (
-                        <span style={{ position: "absolute", top: -10, left: 14, background: C.lime, color: C.pitch, fontSize: 9, fontWeight: 800, letterSpacing: "0.06em", padding: "3px 9px", borderRadius: 999 }}>MOST POPULAR</span>
+                        <span style={{ position: "absolute", top: -10, left: 14, background: C.lime, color: C.ink, fontSize: 9, fontWeight: 800, letterSpacing: "0.06em", padding: "3px 9px", borderRadius: 999 }}>MOST POPULAR</span>
                       )}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: 15, fontWeight: 800, color: "#FFFFFF" }}>{pl.name}</span>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: C.chalk }}>{pl.name}</span>
                         <div style={{ width: 18, height: 18, borderRadius: 99, border: `2px solid ${on ? C.lime : C.line2}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                           {on && <div style={{ width: 8, height: 8, borderRadius: 99, background: C.lime }} />}
                         </div>
                       </div>
                       <div>
-                        <span style={{ fontSize: 24, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: "#FFFFFF" }}>{pl.price === 0 ? "Free" : "$" + pl.price}</span>
+                        <span style={{ fontSize: 24, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.chalk }}>{pl.price === 0 ? "Free" : "$" + pl.price}</span>
                         {pl.price > 0 && <span style={{ fontSize: 12, color: C.slate }}> /mo</span>}
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
                         {pl.feats.map((f) => (
-                          <div key={f} style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12, color: "#C9D6CD", lineHeight: 1.35 }}>
+                          <div key={f} style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12, color: C.body, lineHeight: 1.35 }}>
                             <BadgeCheck size={13} color={C.lime} style={{ flexShrink: 0, marginTop: 1 }} /> {f}
                           </div>
                         ))}
@@ -2993,11 +3089,11 @@ function Auth({ onDone, paidReturn }) {
           {err && (
             <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
               <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignup ? "COULDN'T COMPLETE SIGNUP" : "COULDN'T LOG IN"}</div>
-              <div style={{ color: "#E7C56B", fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
+              <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
             </div>
           )}
 
-          <button disabled={!ok || busy} onClick={submit} style={{ width: "100%", background: C.lime, color: C.pitch, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!ok || busy) ? "default" : "pointer", opacity: (!ok || busy) ? 0.45 : 1, fontFamily: "inherit" }}>{cta}</button>
+          <button disabled={!ok || busy} onClick={submit} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!ok || busy) ? "default" : "pointer", opacity: (!ok || busy) ? 0.45 : 1, fontFamily: "inherit" }}>{cta}</button>
 
           {isSignup && selected.price > 0 && (
             <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: C.slate }}>Secure checkout by Stripe · billed monthly · cancel anytime</div>
@@ -3042,7 +3138,7 @@ function ResetPassword({ onDone }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 18px", background: "radial-gradient(1100px 560px at 50% -12%, #16241C, " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 18px", background: "radial-gradient(1100px 560px at 50% -12%, " + C.turf + ", " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
       <style>{CSS}</style>
       <div style={{ width: "100%", maxWidth: 430 }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
@@ -3053,7 +3149,7 @@ function ResetPassword({ onDone }) {
             <>
               <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6, color: C.lime }}>Password updated</div>
               <div style={{ fontSize: 13, color: C.slate, marginBottom: 16 }}>You're all set — continue into GOLSZ.</div>
-              <button onClick={onDone} style={{ width: "100%", background: C.lime, color: C.pitch, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>Continue</button>
+              <button onClick={onDone} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>Continue</button>
             </>
           ) : (
             <>
@@ -3063,10 +3159,10 @@ function ResetPassword({ onDone }) {
               <input value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Confirm new password" type="password" style={{ ...field, marginBottom: 14 }} />
               {err && (
                 <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
-                  <div style={{ color: "#E7C56B", fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
+                  <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
                 </div>
               )}
-              <button disabled={busy} onClick={save} style={{ width: "100%", background: C.lime, color: C.pitch, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, fontFamily: "inherit" }}>{busy ? "Saving…" : "Update password"}</button>
+              <button disabled={busy} onClick={save} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, fontFamily: "inherit" }}>{busy ? "Saving…" : "Update password"}</button>
             </>
           )}
         </div>
