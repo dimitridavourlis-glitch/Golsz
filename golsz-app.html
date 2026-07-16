@@ -53,6 +53,7 @@ const Video = svg('<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 
 const X = svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
 const Pencil = svg('<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>');
 const ShieldAlert = svg('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/>');
+const Ban = svg('<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>');
 const Trash2 = svg('<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>');
 const Plus = svg('<path d="M5 12h14"/><path d="M12 5v14"/>');
 const History = svg('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>');
@@ -1924,7 +1925,6 @@ function FollowListCard({ title, list, onViewProfile, emptyText }) {
 function BlockedAccounts() {
   const [uid, setUid] = useState(null);
   const [blocked, setBlocked] = useState(null);
-  const [expanded, setExpanded] = useState(false);
   const [removingId, setRemovingId] = useState(null);
 
   async function load() {
@@ -1961,22 +1961,17 @@ function BlockedAccounts() {
   const count = blocked === null ? null : blocked.length;
 
   return (
-    <div style={{ ...card }}>
-      <button
-        onClick={() => count > 0 && setExpanded((e) => !e)}
-        disabled={!count}
-        style={{
-          background: "none", border: "none", padding: 0, cursor: count ? "pointer" : "default",
-          fontFamily: "inherit", fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700,
-          marginBottom: expanded ? 8 : 0, display: "flex", alignItems: "center", gap: 5,
-        }}
-      >
-        {count === null ? "BLOCKED ACCOUNTS" : `${count} BLOCKED ${count === 1 ? "ACCOUNT" : "ACCOUNTS"}`}
-        {count > 0 && (expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
-      </button>
-      {blocked === null && <div style={{ fontSize: 12.5, color: C.slate, marginTop: 8 }}>Loading…</div>}
-      {blocked && blocked.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, marginTop: 8 }}>You haven't blocked anyone.</div>}
-      {expanded && blocked && blocked.length > 0 && (
+    <div style={{ ...card, border: `1px solid ${count ? C.amber + "44" : C.line}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <Ban size={16} color={count ? C.amber : C.slate} />
+        <span style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>Blocked accounts</span>
+        {count > 0 && (
+          <span style={{ fontSize: 11, fontWeight: 800, color: C.pitch, background: C.amber, borderRadius: 999, padding: "1px 8px" }}>{count}</span>
+        )}
+      </div>
+      {blocked === null && <div style={{ fontSize: 12.5, color: C.slate }}>Loading…</div>}
+      {blocked && blocked.length === 0 && <div style={{ fontSize: 12.5, color: C.slate }}>You haven't blocked anyone.</div>}
+      {blocked && blocked.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {blocked.map((b) => (
             <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
