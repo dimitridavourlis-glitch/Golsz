@@ -153,13 +153,14 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   no admin ability to delete an account or view/moderate DMs (`messages`) — both would need a server-side
   Supabase Admin API call (service-role, not the anon client) and were deliberately left out of this pass.
 - **Personal opportunities** (migration 011): `events.visibility` (`'public'` | `'private'`) reuses the one
-  `events` table for two different things — the admin-curated public directory (unchanged) and a private,
-  per-user "save this as an opportunity" list. `events_read` RLS only exposes private rows to their owner (or
-  an admin); `AddToEventsModal` (used from Feed's per-post button, a per-message button in `Messages` for
-  messages *from* the other person, and a manual "Add opportunity" button on the Events page itself) always
-  inserts `visibility: 'private'` — there's no UI path to create a public event outside the admin panel.
-  `Events()` renders two sections from one query (RLS already returns public + your own private rows) —
-  both always real data, no demo fallback (the old `EVENTS` demo array was removed).
+  `events` table for two different things — the admin-curated public directory (still exists, still visible
+  in the admin panel and via `events_read` RLS) and a private, per-user "save this as an opportunity" list.
+  `AddToEventsModal` (used from Feed's per-post button, a per-message button in `Messages` for messages
+  *from* the other person, and a manual "Add opportunity" button on the Events page) always inserts
+  `visibility: 'private'` — there's no UI path to create a public event outside the admin panel.
+  `Events()` (the athlete-facing page) only queries and renders `visibility = 'private'` rows — the public
+  directory has no UI surface of its own right now beyond the admin panel's Events tab; it isn't shown to
+  athletes. Real data only, no demo fallback (the old `EVENTS` array was removed).
 - **Deleting a DM conversation is a per-user hide, not a real delete** (migration 013,
   `hidden_conversations`): `messages_delete` RLS only lets you delete messages you sent, so a true "delete
   the whole conversation" would either leave the other person's messages behind or require letting either

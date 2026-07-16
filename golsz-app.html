@@ -717,7 +717,6 @@ function EventRow({ e, mine, onDelete }) {
 }
 
 function Events() {
-  const [publicEvents, setPublicEvents] = useState(null);
   const [myEvents, setMyEvents] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [uid, setUid] = useState(null);
@@ -730,13 +729,12 @@ function Events() {
       const { data, error } = await sb
         .from("events")
         .select("id, title, sport, location, level, event_date, spots_available, visibility")
+        .eq("visibility", "private")
         .gte("event_date", new Date().toISOString().slice(0, 10))
         .order("event_date", { ascending: true })
         .limit(60);
       if (error) throw error;
-      const rows = data || [];
-      setPublicEvents(rows.filter((r) => r.visibility === "public").map(mapEvent));
-      setMyEvents(rows.filter((r) => r.visibility === "private").map(mapEvent));
+      setMyEvents((data || []).map(mapEvent));
     } catch (e) { console.error("GOLSZ events fetch error:", e); }
   }
   useEffect(() => { load(); }, []);
@@ -751,7 +749,7 @@ function Events() {
   return (
     <div style={{ padding: "8px 12px 16px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "4px 2px 10px" }}>
-        <SectionTitle noMargin>Upcoming events</SectionTitle>
+        <SectionTitle noMargin>My opportunities</SectionTitle>
         {uid && (
           <button onClick={() => setShowAdd(true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}>
             <CalendarPlus size={14} /> Add opportunity
@@ -766,24 +764,13 @@ function Events() {
         />
       )}
 
-      {publicEvents && publicEvents.length === 0 && (
+      {myEvents === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>Loading…</div>}
+      {myEvents && myEvents.length === 0 && (
         <div style={{ color: C.slate, fontSize: 13, padding: "2px 2px 16px" }}>
-          No public events on file yet.
+          Nothing saved yet — save a post, a message, or add one manually above.
         </div>
       )}
-      {publicEvents && publicEvents.map((e) => <EventRow key={e.id} e={e} mine={false} />)}
-
-      {myEvents !== null && (
-        <>
-          <SectionTitle>My opportunities</SectionTitle>
-          {myEvents.length === 0 && (
-            <div style={{ color: C.slate, fontSize: 13, padding: "2px 2px 16px" }}>
-              Nothing saved yet — save a post, a message, or add one manually above.
-            </div>
-          )}
-          {myEvents.map((e) => <EventRow key={e.id} e={e} mine={true} onDelete={deleteEvent} />)}
-        </>
-      )}
+      {myEvents && myEvents.map((e) => <EventRow key={e.id} e={e} mine={true} onDelete={deleteEvent} />)}
     </div>
   );
 }
