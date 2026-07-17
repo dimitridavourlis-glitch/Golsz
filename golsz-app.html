@@ -59,6 +59,7 @@ const ShieldAlert = svg('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01
 const Ban = svg('<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>');
 const SettingsIcon = svg('<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>');
 const Globe = svg('<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>');
+const ImageIcon = svg('<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>');
 const Sun = svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>');
 const Moon = svg('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>');
 const Trash2 = svg('<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>');
@@ -189,6 +190,9 @@ const I18N = {
     feed_post: "Post", feed_posting: "Posting…",
     feed_no_posts: "No posts yet — be the first to share something.",
     feed_no_match: "No posts match that search.",
+    feed_add_photo: "Add photo", feed_remove_photo: "Remove photo",
+    feed_image_type_err: "Please choose an image file.", feed_image_size_err: "Images must be under 8MB.",
+    feed_post_err: "Couldn't post. Try again.",
     action_follow: "Follow", action_following: "Following", action_share: "Share", action_copied: "Copied!",
     action_report: "Report", action_reported: "Reported", action_block: "Block", action_delete: "Delete",
     settings_title: "Settings", settings_background: "BACKGROUND", settings_dark: "Dark", settings_light: "Light",
@@ -309,6 +313,9 @@ const I18N = {
     feed_post: "Publier", feed_posting: "Publication…",
     feed_no_posts: "Aucune publication pour l'instant — soyez le premier à partager quelque chose.",
     feed_no_match: "Aucune publication ne correspond à cette recherche.",
+    feed_add_photo: "Ajouter une photo", feed_remove_photo: "Supprimer la photo",
+    feed_image_type_err: "Veuillez choisir un fichier image.", feed_image_size_err: "Les images doivent faire moins de 8 Mo.",
+    feed_post_err: "Impossible de publier. Réessayez.",
     action_follow: "Suivre", action_following: "Abonné", action_share: "Partager", action_copied: "Copié !",
     action_report: "Signaler", action_reported: "Signalé", action_block: "Bloquer", action_delete: "Supprimer",
     settings_title: "Paramètres", settings_background: "ARRIÈRE-PLAN", settings_dark: "Sombre", settings_light: "Clair",
@@ -429,6 +436,9 @@ const I18N = {
     feed_post: "Publicar", feed_posting: "Publicando…",
     feed_no_posts: "Aún no hay publicaciones — sé el primero en compartir algo.",
     feed_no_match: "Ninguna publicación coincide con esa búsqueda.",
+    feed_add_photo: "Añadir foto", feed_remove_photo: "Quitar foto",
+    feed_image_type_err: "Elige un archivo de imagen.", feed_image_size_err: "Las imágenes deben pesar menos de 8 MB.",
+    feed_post_err: "No se pudo publicar. Inténtalo de nuevo.",
     action_follow: "Seguir", action_following: "Siguiendo", action_share: "Compartir", action_copied: "¡Copiado!",
     action_report: "Reportar", action_reported: "Reportado", action_block: "Bloquear", action_delete: "Eliminar",
     settings_title: "Configuración", settings_background: "FONDO", settings_dark: "Oscuro", settings_light: "Claro",
@@ -549,6 +559,9 @@ const I18N = {
     feed_post: "Ανάρτηση", feed_posting: "Ανάρτηση…",
     feed_no_posts: "Δεν υπάρχουν αναρτήσεις ακόμα — μοιραστείτε κάτι πρώτοι.",
     feed_no_match: "Καμία ανάρτηση δεν ταιριάζει με αυτή την αναζήτηση.",
+    feed_add_photo: "Προσθήκη φωτογραφίας", feed_remove_photo: "Αφαίρεση φωτογραφίας",
+    feed_image_type_err: "Επιλέξτε ένα αρχείο εικόνας.", feed_image_size_err: "Οι εικόνες πρέπει να είναι κάτω από 8MB.",
+    feed_post_err: "Δεν ήταν δυνατή η ανάρτηση. Δοκιμάστε ξανά.",
     action_follow: "Ακολούθηση", action_following: "Ακολουθείτε", action_share: "Κοινοποίηση", action_copied: "Αντιγράφηκε!",
     action_report: "Αναφορά", action_reported: "Αναφέρθηκε", action_block: "Αποκλεισμός", action_delete: "Διαγραφή",
     settings_title: "Ρυθμίσεις", settings_background: "ΦΟΝΤΟ", settings_dark: "Σκούρο", settings_light: "Ανοιχτό",
@@ -822,6 +835,22 @@ const DATE_PATTERNS = [
 function hasDateMention(text) {
   return !!text && DATE_PATTERNS.some((re) => re.test(text));
 }
+const URL_RE_SPLIT = /(https?:\/\/[^\s]+)/g;
+const URL_RE_TEST = /^https?:\/\/[^\s]+$/;
+// Renders plain post text with any http(s) URL turned into a real link —
+// this is the whole "links" half of Feed's photo/link attachment support:
+// no separate link field, just paste a URL into the post and it's clickable.
+// Two regexes deliberately: reusing one `g`-flagged RegExp for both
+// .split() and .test() corrupts lastIndex between calls and silently
+// drops every other match.
+function Linkify({ text, color }) {
+  if (!text) return null;
+  const parts = text.split(URL_RE_SPLIT);
+  return parts.map((part, i) => URL_RE_TEST.test(part)
+    ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: color || C.lime, wordBreak: "break-all" }}>{part}</a>
+    : <span key={i}>{part}</span>
+  );
+}
 const FLAGS = {
   canada: "🇨🇦", "united states": "🇺🇸", usa: "🇺🇸", england: "🏴", "united kingdom": "🏴",
   spain: "🇪🇸", germany: "🇩🇪", jamaica: "🇯🇲", japan: "🇯🇵", brazil: "🇧🇷", sweden: "🇸🇪",
@@ -835,7 +864,7 @@ function mapPost(row, name, sport) {
     // there's no "verified" concept anywhere in the real schema — badges stay empty for real posts
     postId: row.id, authorId: row.author_id, who: name, init: initials(name), nat: "", sport: sport || "",
     v: [], kind: row.kind, head: row.headline,
-    body: row.body || "", likes: row.likes_count || 0, ago: timeAgo(row.created_at),
+    body: row.body || "", image: row.image_url || null, likes: row.likes_count || 0, ago: timeAgo(row.created_at),
   };
 }
 function mapAthlete(row, name) {
@@ -922,6 +951,8 @@ function Feed({ onMessage, onViewProfile }) {
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeHeadline, setComposeHeadline] = useState("");
   const [composeBody, setComposeBody] = useState("");
+  const [composeImageFile, setComposeImageFile] = useState(null);
+  const [composeImagePreview, setComposeImagePreview] = useState(null);
   const [composeBusy, setComposeBusy] = useState(false);
   const [composeErr, setComposeErr] = useState("");
   const [savingEvent, setSavingEvent] = useState(null);
@@ -948,7 +979,7 @@ function Feed({ onMessage, onViewProfile }) {
 
       const { data, error } = await sb
         .from("posts")
-        .select("id, author_id, kind, headline, body, likes_count, created_at")
+        .select("id, author_id, kind, headline, body, image_url, likes_count, created_at")
         .order("created_at", { ascending: false })
         .limit(30);
       if (error) throw error;
@@ -996,21 +1027,46 @@ function Feed({ onMessage, onViewProfile }) {
     }
   }
 
+  function pickImage(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ""; // allow picking the same file again after removing it
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setComposeErr(t("feed_image_type_err")); return; }
+    if (file.size > 8 * 1024 * 1024) { setComposeErr(t("feed_image_size_err")); return; }
+    setComposeErr("");
+    setComposeImageFile(file);
+    setComposeImagePreview(URL.createObjectURL(file));
+  }
+  function clearImage() {
+    if (composeImagePreview) URL.revokeObjectURL(composeImagePreview);
+    setComposeImageFile(null);
+    setComposeImagePreview(null);
+  }
+
   async function createPost() {
     if (!sb || !uid || !composeHeadline.trim() || composeBusy) return;
     setComposeBusy(true); setComposeErr("");
     try {
+      let imageUrl = null;
+      if (composeImageFile) {
+        const ext = (composeImageFile.name.split(".").pop() || "jpg").toLowerCase().slice(0, 5);
+        const path = `${uid}/${Date.now()}.${ext}`;
+        const { error: upErr } = await sb.storage.from("post-images").upload(path, composeImageFile);
+        if (upErr) throw upErr;
+        imageUrl = sb.storage.from("post-images").getPublicUrl(path).data.publicUrl;
+      }
       const { error } = await sb.from("posts").insert({
         author_id: uid, kind: "post",
         headline: composeHeadline.trim().slice(0, 120),
         body: composeBody.trim() || null,
+        image_url: imageUrl,
       });
       if (error) throw error;
-      setComposeHeadline(""); setComposeBody(""); setComposeOpen(false);
+      setComposeHeadline(""); setComposeBody(""); clearImage(); setComposeOpen(false);
       loadFeed();
     } catch (e) {
       console.error("GOLSZ create post error:", e);
-      setComposeErr((e && e.message) ? e.message : "Couldn't post. Try again.");
+      setComposeErr((e && e.message) ? e.message : t("feed_post_err"));
     } finally { setComposeBusy(false); }
   }
 
@@ -1098,14 +1154,27 @@ function Feed({ onMessage, onViewProfile }) {
         <div style={{ ...card, padding: 14 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <span style={{ fontSize: 11, letterSpacing: "0.12em", color: C.slate, fontWeight: 700 }}>{t("feed_new_post")}</span>
-            <button onClick={() => { setComposeOpen(false); setComposeErr(""); }} style={iconBtn(C.slate)}><X size={16} /></button>
+            <button onClick={() => { setComposeOpen(false); setComposeErr(""); clearImage(); }} style={iconBtn(C.slate)}><X size={16} /></button>
           </div>
           <input autoFocus value={composeHeadline} onChange={(e) => setComposeHeadline(e.target.value)} placeholder={t("feed_whats_happening")} maxLength={120}
             style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
           <textarea value={composeBody} onChange={(e) => setComposeBody(e.target.value)} placeholder={t("feed_add_details")} rows={2}
             style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13, fontFamily: "inherit", outline: "none", resize: "none", marginBottom: 8, boxSizing: "border-box" }} />
+          {composeImagePreview && (
+            <div style={{ position: "relative", marginBottom: 8, display: "inline-block" }}>
+              <img src={composeImagePreview} style={{ maxHeight: 160, maxWidth: "100%", borderRadius: 10, display: "block" }} />
+              <button onClick={clearImage} title={t("feed_remove_photo")} style={{
+                position: "absolute", top: 6, right: 6, background: "#000000cc", border: "none", borderRadius: "50%",
+                width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.chalk,
+              }}><X size={13} /></button>
+            </div>
+          )}
           {composeErr && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8 }}>{composeErr}</div>}
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <label title={t("feed_add_photo")} style={{ display: "flex", alignItems: "center", cursor: "pointer", color: C.slate, padding: 6 }}>
+              <input type="file" accept="image/*" onChange={pickImage} style={{ display: "none" }} />
+              <ImageIcon size={19} />
+            </label>
             <button onClick={createPost} disabled={!composeHeadline.trim() || composeBusy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 18px", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", opacity: !composeHeadline.trim() || composeBusy ? 0.5 : 1 }}>
               {composeBusy ? t("feed_posting") : t("feed_post")}
             </button>
@@ -1168,7 +1237,10 @@ function Feed({ onMessage, onViewProfile }) {
               <Video size={13} /> {t("highlights_watch")}
             </a>
           ) : (
-            <div style={{ fontSize: 13.5, color: C.body, lineHeight: 1.5 }}>{p.body}</div>
+            <div style={{ fontSize: 13.5, color: C.body, lineHeight: 1.5 }}><Linkify text={p.body} /></div>
+          )}
+          {p.image && (
+            <img src={p.image} loading="lazy" style={{ width: "100%", maxHeight: 360, objectFit: "cover", borderRadius: 12, marginTop: 10, border: `1px solid ${C.line2}` }} />
           )}
           <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
             {p.v.map((b) => <Badge key={b} label={b} />)}

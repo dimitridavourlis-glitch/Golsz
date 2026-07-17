@@ -140,6 +140,14 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   English. This only affects the real server-side prompt — `golsz-app.html`'s `SYS` fallback constant (the
   unsupported direct-browser path, see the dual-system-prompt warning above) was deliberately left alone since
   it isn't what production actually uses.
+- **Feed posts support a photo and links** (migration 016): `posts.image_url` is set client-side after a
+  successful upload to the `post-images` Storage bucket (public read; write/delete restricted by RLS to files
+  under the uploader's own `${uid}/...` path prefix — see `storage.foldername(name))[1] = auth.uid()::text` in
+  the migration). No dedicated "link" field or UI — `Linkify` auto-detects any `http(s)://` URL typed into a
+  post's body text and renders it as a real link at display time, both in Feed and anywhere else `p.body` is
+  shown. `URL_RE_SPLIT` (has the `g` flag, used for `.split()`) and `URL_RE_TEST` (no `g` flag, used for
+  `.test()`) are deliberately two separate `RegExp` objects — reusing one global-flagged regex for both would
+  corrupt `lastIndex` between calls and silently drop every other match.
 - **Passport is a real, editable profile** as of migration 008: `toPassport()` merges `profiles.full_name`
   with the full `athletes` row (sport, position, gender, grad_year, gpa, height_cm, weight_kg, foot,
   recruiting_status, country, club_name, bio) into the passport-shaped display object, showing "—" for

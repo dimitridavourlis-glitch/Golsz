@@ -62,6 +62,7 @@
 --  12. supabase-migration-013-hide-conversations.sql
 --  13. supabase-migration-014-push-notifications.sql
 --  14. supabase-migration-015-realtime-messages.sql
+--  15. supabase-migration-016-post-images.sql
 -- ============================================================
 
 -- 10) ADDITIVE — POSTS (Feed) + POST_LIKES + EVENTS
@@ -938,6 +939,32 @@ create policy push_subscriptions_rw on push_subscriptions for all using (
 -- ============================================================
 
 alter publication supabase_realtime add table messages;
+
+-- ============================================================
+-- 16) ADDITIVE — photo attachments on Feed posts
+-- See supabase-migration-016-post-images.sql for full context.
+-- ============================================================
+
+alter table posts add column if not exists image_url text;
+
+insert into storage.buckets (id, name, public)
+values ('post-images', 'post-images', true)
+on conflict (id) do nothing;
+
+drop policy if exists post_images_read on storage.objects;
+create policy post_images_read on storage.objects for select using (
+  bucket_id = 'post-images'
+);
+
+drop policy if exists post_images_write on storage.objects;
+create policy post_images_write on storage.objects for insert with check (
+  bucket_id = 'post-images' and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists post_images_delete on storage.objects;
+create policy post_images_delete on storage.objects for delete using (
+  bucket_id = 'post-images' and (storage.foldername(name))[1] = auth.uid()::text
+);
 
 -- ============================================================
 -- Done.
