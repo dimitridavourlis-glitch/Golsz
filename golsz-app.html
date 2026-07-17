@@ -800,6 +800,28 @@ function timeAgo(iso) {
   if (s < 86400) return Math.floor(s / 3600) + "h";
   return Math.floor(s / 86400) + "d";
 }
+/* A lightweight heuristic, not a real date parser — good enough to gate
+   "save this message as an opportunity" on whether it actually mentions a
+   date, rather than offering that on every single message. Matches month
+   names, numeric dates, ISO dates, and day-of-week mentions. English-only
+   (month/day names); numeric/ISO patterns still catch dates written in
+   other languages since digits are universal. False negatives (a real
+   date phrased in a way this misses) are the safe failure mode — the
+   button just won't show, same as any message without a date. */
+const DATE_MONTHS = "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?";
+const DATE_DAYS = "mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:rs(?:day)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?";
+const DATE_PATTERNS = [
+  new RegExp(`\\b(${DATE_MONTHS})\\.?\\s+\\d{1,2}(st|nd|rd|th)?\\b`, "i"),
+  new RegExp(`\\b\\d{1,2}(st|nd|rd|th)?\\s+(of\\s+)?(${DATE_MONTHS})\\b`, "i"),
+  new RegExp(`\\b(next|this|coming)\\s+(${DATE_DAYS})\\b`, "i"),
+  new RegExp(`\\b(${DATE_DAYS})\\b`, "i"),
+  /\btomorrow\b/i,
+  /\b\d{4}-\d{2}-\d{2}\b/,
+  /\b\d{1,2}[\/\-.]\d{1,2}([\/\-.]\d{2,4})?\b/,
+];
+function hasDateMention(text) {
+  return !!text && DATE_PATTERNS.some((re) => re.test(text));
+}
 const FLAGS = {
   canada: "🇨🇦", "united states": "🇺🇸", usa: "🇺🇸", england: "🏴", "united kingdom": "🏴",
   spain: "🇪🇸", germany: "🇩🇪", jamaica: "🇯🇲", japan: "🇯🇵", brazil: "🇧🇷", sweden: "🇸🇪",
@@ -1725,7 +1747,7 @@ function Messages({ thread, setThread }) {
           )}
           {threadMsgs.map((m) => (
             <div key={m.id} style={{ display: "flex", alignItems: "flex-end", gap: 6, marginBottom: 10, justifyContent: m.sender_id === uid ? "flex-end" : "flex-start" }}>
-              {m.sender_id !== uid && (
+              {m.sender_id !== uid && hasDateMention(m.body) && (
                 <button onClick={() => setSavingEvent(m)} title={t("messages_save_to_events")} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0 }}>
                   <CalendarPlus size={14} />
                 </button>
