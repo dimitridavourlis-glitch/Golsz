@@ -818,7 +818,7 @@ function SettingsButton() {
       <button onClick={() => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); setOpen(true); }} title={t("settings_title")} style={{ background: "none", border: "none", color: C.chalk, cursor: "pointer", padding: 4, display: "flex" }}>
         <SettingsIcon size={22} />
       </button>
-      {open && (
+      {open && ReactDOM.createPortal(
         <div style={{ position: "fixed", inset: 0, background: "#000000a6", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setOpen(false)}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 420, width: "100%", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
@@ -852,7 +852,8 @@ function SettingsButton() {
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
