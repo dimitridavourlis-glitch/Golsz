@@ -815,7 +815,7 @@ function SettingsButton() {
 
   return (
     <>
-      <button onClick={() => setOpen(true)} title={t("settings_title")} style={{ background: "none", border: "none", color: C.chalk, cursor: "pointer", padding: 4, display: "flex" }}>
+      <button onClick={() => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); setOpen(true); }} title={t("settings_title")} style={{ background: "none", border: "none", color: C.chalk, cursor: "pointer", padding: 4, display: "flex" }}>
         <SettingsIcon size={22} />
       </button>
       {open && (
