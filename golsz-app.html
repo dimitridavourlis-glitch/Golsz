@@ -202,6 +202,7 @@ const I18N = {
     notif_blocked: "Notifications are blocked in your browser or phone settings. Enable them there, then try again.",
     notif_error: "Something went wrong turning on notifications. Try again.",
     notif_title_on: "Notifications on — tap to turn off", notif_title_off: "Turn on notifications for messages & new followers",
+    settings_notifications: "NOTIFICATIONS", settings_notif_on: "On", settings_notif_off: "Off",
     restricted_title: "Restricted account.", restricted_body: "Your posts stay private and you're hidden from Discover until a parent or guardian approves access — see Family & Parent Access on your Profile.",
     back: "Back",
     discover_title: "Discover players", discover_search: "Search by name, sport, position, country…",
@@ -330,6 +331,7 @@ const I18N = {
     notif_blocked: "Les notifications sont bloquées dans les réglages de votre navigateur ou téléphone. Activez-les, puis réessayez.",
     notif_error: "Une erreur s'est produite lors de l'activation des notifications. Réessayez.",
     notif_title_on: "Notifications activées — touchez pour désactiver", notif_title_off: "Activer les notifications pour les messages et nouveaux abonnés",
+    settings_notifications: "NOTIFICATIONS", settings_notif_on: "Activées", settings_notif_off: "Désactivées",
     restricted_title: "Compte restreint.", restricted_body: "Vos publications restent privées et vous êtes masqué de Découvrir jusqu'à ce qu'un parent ou tuteur approuve l'accès — voir Famille et accès parental sur votre profil.",
     back: "Retour",
     discover_title: "Découvrir des athlètes", discover_search: "Rechercher par nom, sport, poste, pays…",
@@ -458,6 +460,7 @@ const I18N = {
     notif_blocked: "Las notificaciones están bloqueadas en la configuración de tu navegador o teléfono. Actívalas allí y vuelve a intentarlo.",
     notif_error: "Algo salió mal al activar las notificaciones. Inténtalo de nuevo.",
     notif_title_on: "Notificaciones activadas — toca para desactivar", notif_title_off: "Activa las notificaciones de mensajes y nuevos seguidores",
+    settings_notifications: "NOTIFICACIONES", settings_notif_on: "Activadas", settings_notif_off: "Desactivadas",
     restricted_title: "Cuenta restringida.", restricted_body: "Tus publicaciones permanecen privadas y estás oculto en Descubrir hasta que un padre, madre o tutor apruebe el acceso — consulta Familia y acceso parental en tu perfil.",
     back: "Atrás",
     discover_title: "Descubrir jugadores", discover_search: "Buscar por nombre, deporte, posición, país…",
@@ -586,6 +589,7 @@ const I18N = {
     notif_blocked: "Οι ειδοποιήσεις είναι αποκλεισμένες στις ρυθμίσεις του προγράμματος περιήγησης ή του τηλεφώνου σας. Ενεργοποιήστε τις εκεί και δοκιμάστε ξανά.",
     notif_error: "Κάτι πήγε στραβά κατά την ενεργοποίηση των ειδοποιήσεων. Δοκιμάστε ξανά.",
     notif_title_on: "Ειδοποιήσεις ενεργές — πατήστε για απενεργοποίηση", notif_title_off: "Ενεργοποιήστε ειδοποιήσεις για μηνύματα & νέους ακόλουθους",
+    settings_notifications: "ΕΙΔΟΠΟΙΗΣΕΙΣ", settings_notif_on: "Ενεργές", settings_notif_off: "Ανενεργές",
     restricted_title: "Περιορισμένος λογαριασμός.", restricted_body: "Οι αναρτήσεις σας παραμένουν ιδιωτικές και είστε κρυφοί από την Ανακάλυψη μέχρι να εγκρίνει την πρόσβαση γονέας ή κηδεμόνας — δείτε το Οικογένεια & Γονική Πρόσβαση στο προφίλ σας.",
     back: "Πίσω",
     discover_title: "Ανακαλύψτε αθλητές", discover_search: "Αναζήτηση με όνομα, άθλημα, θέση, χώρα…",
@@ -812,6 +816,44 @@ function SettingsButton() {
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useTheme();
   const { lang, setLang, t } = useLang();
+  const [uid, setUid] = useState(null);
+  const [notifEnabled, setNotifEnabled] = useState(false);
+  const [notifBusy, setNotifBusy] = useState(false);
+  const [notifMsg, setNotifMsg] = useState("");
+
+  useEffect(() => {
+    if (!sb || !pushSupported()) return;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        setUid(user.id);
+        if (Notification.permission === "granted") {
+          const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+          const sub = reg && await reg.pushManager.getSubscription();
+          setNotifEnabled(!!sub);
+        }
+      } catch (e) { console.error("GOLSZ settings push status error:", e); }
+    })();
+  }, []);
+
+  async function toggleNotifs(wantOn) {
+    if (!uid || notifBusy || wantOn === notifEnabled) return;
+    setNotifBusy(true); setNotifMsg("");
+    try {
+      if (wantOn) {
+        const ok = await enablePushNotifications(uid);
+        setNotifEnabled(ok);
+        if (!ok) setNotifMsg(t("notif_blocked"));
+      } else {
+        await disablePushNotifications(uid);
+        setNotifEnabled(false);
+      }
+    } catch (e) {
+      console.error("GOLSZ settings push toggle error:", e);
+      setNotifMsg(t("notif_error"));
+    } finally { setNotifBusy(false); }
+  }
 
   return (
     <>
@@ -840,6 +882,26 @@ function SettingsButton() {
                 border: `1.5px solid ${theme === "light" ? C.lime : C.line2}`,
               }}><Sun size={16} /> {t("settings_light")}</button>
             </div>
+            {sb && pushSupported() && (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_notifications")}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <button onClick={() => toggleNotifs(true)} disabled={notifBusy} style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
+                    cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, opacity: notifBusy ? 0.6 : 1,
+                    background: notifEnabled ? "#C8F1351a" : C.turf, color: notifEnabled ? C.lime : C.chalk,
+                    border: `1.5px solid ${notifEnabled ? C.lime : C.line2}`,
+                  }}><Bell size={16} /> {t("settings_notif_on")}</button>
+                  <button onClick={() => toggleNotifs(false)} disabled={notifBusy} style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
+                    cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, opacity: notifBusy ? 0.6 : 1,
+                    background: !notifEnabled ? "#C8F1351a" : C.turf, color: !notifEnabled ? C.lime : C.chalk,
+                    border: `1.5px solid ${!notifEnabled ? C.lime : C.line2}`,
+                  }}>{t("settings_notif_off")}</button>
+                </div>
+                {notifMsg && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 8, lineHeight: 1.4 }}>{notifMsg}</div>}
+              </div>
+            )}
             <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_language")}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {LANGS.map(([code, label]) => (
