@@ -63,6 +63,7 @@
 --  13. supabase-migration-014-push-notifications.sql
 --  14. supabase-migration-015-realtime-messages.sql
 --  15. supabase-migration-016-post-images.sql
+--  16. supabase-migration-017-post-images-hardening.sql
 -- ============================================================
 
 -- 10) ADDITIVE — POSTS (Feed) + POST_LIKES + EVENTS
@@ -958,13 +959,26 @@ create policy post_images_read on storage.objects for select using (
 
 drop policy if exists post_images_write on storage.objects;
 create policy post_images_write on storage.objects for insert with check (
-  bucket_id = 'post-images' and (storage.foldername(name))[1] = auth.uid()::text
+  bucket_id = 'post-images'
+  and (storage.foldername(name))[1] = auth.uid()::text
+  and not is_restricted_minor(auth.uid())
 );
 
 drop policy if exists post_images_delete on storage.objects;
 create policy post_images_delete on storage.objects for delete using (
   bucket_id = 'post-images' and (storage.foldername(name))[1] = auth.uid()::text
 );
+
+-- ============================================================
+-- 17) ADDITIVE — close two post-images gaps (restricted-minor upload,
+-- server-side size/type enforcement)
+-- See supabase-migration-017-post-images-hardening.sql for full context.
+-- ============================================================
+
+update storage.buckets
+set file_size_limit = 8388608,
+    allowed_mime_types = array['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif']
+where id = 'post-images';
 
 -- ============================================================
 -- Done.

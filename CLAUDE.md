@@ -148,6 +148,14 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   shown. `URL_RE_SPLIT` (has the `g` flag, used for `.split()`) and `URL_RE_TEST` (no `g` flag, used for
   `.test()`) are deliberately two separate `RegExp` objects — reusing one global-flagged regex for both would
   corrupt `lastIndex` between calls and silently drop every other match.
+  **Post-images access, precisely**: every non-restricted-minor real account can upload (no plan/tier gate) —
+  migration 017 added `not is_restricted_minor(auth.uid())` to `post_images_write` to match `posts_write`'s
+  posture exactly, since the original migration 016 policy only checked the uploader's own uid-prefixed path,
+  not whether they were restricted at all. Migration 017 also moved the 8MB size / image-only type check from
+  client-side-only (`pickImage()`'s courtesy check) to real enforcement via the bucket's `file_size_limit` /
+  `allowed_mime_types` columns — before that, anyone calling the Storage API directly with their own
+  credentials could've uploaded a larger or non-image file. Uploaded images are publicly readable by anyone
+  with the URL, signed in or not — consistent with `posts_read using (true)`, not a new category of exposure.
 - **Passport is a real, editable profile** as of migration 008: `toPassport()` merges `profiles.full_name`
   with the full `athletes` row (sport, position, gender, grad_year, gpa, height_cm, weight_kg, foot,
   recruiting_status, country, club_name, bio) into the passport-shaped display object, showing "—" for
