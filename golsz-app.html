@@ -819,8 +819,8 @@ function SettingsButton() {
         <SettingsIcon size={22} />
       </button>
       {open && (
-        <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }} onClick={() => setOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", padding: 18, boxSizing: "border-box" }}>
+        <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 420, width: "100%", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
               <div style={{ fontWeight: 800, fontSize: 16 }}>{t("settings_title")}</div>
               <button onClick={() => setOpen(false)} style={iconBtn(C.chalk)}><X size={18} /></button>
