@@ -1,0 +1,12 @@
+{
+  "name": "GOLSZ — Every Goal Has a Path",
+  "short_name": "GOLSZ",
+  "start_url": "/golsz-app.html",
+  "display": "standalone",
+  "background_color": "#0D1210",
+  "theme_color": "#0D1210",
+  "icons": [
+    { "src": "/assets/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/favicon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

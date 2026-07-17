@@ -4,6 +4,16 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>GOLSZ — Every Goal Has a Path</title>
+<!-- iOS only supports real Web Push notifications when the site is
+     launched from an icon added via "Add to Home Screen" (standalone
+     mode) — never in regular mobile Safari, even on iOS 16.4+. These
+     tags are what make that installed launch actually run standalone
+     instead of opening back up in Safari's UI chrome. -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="GOLSZ" />
+<link rel="apple-touch-icon" href="/assets/favicon.png" />
+<link rel="manifest" href="/manifest.json" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -203,6 +213,7 @@ const I18N = {
     notif_error: "Something went wrong turning on notifications. Try again.",
     notif_title_on: "Notifications on — tap to turn off", notif_title_off: "Turn on notifications for messages & new followers",
     settings_notifications: "NOTIFICATIONS", settings_notif_on: "On", settings_notif_off: "Off",
+    notif_ios_homescreen: "On iPhone/iPad, notifications only work after you add GOLSZ to your Home Screen: tap Share, then \"Add to Home Screen\" — then open GOLSZ from that icon and turn notifications on from there.",
     restricted_title: "Restricted account.", restricted_body: "Your posts stay private and you're hidden from Discover until a parent or guardian approves access — see Family & Parent Access on your Profile.",
     back: "Back",
     discover_title: "Discover players", discover_search: "Search by name, sport, position, country…",
@@ -332,6 +343,7 @@ const I18N = {
     notif_error: "Une erreur s'est produite lors de l'activation des notifications. Réessayez.",
     notif_title_on: "Notifications activées — touchez pour désactiver", notif_title_off: "Activer les notifications pour les messages et nouveaux abonnés",
     settings_notifications: "NOTIFICATIONS", settings_notif_on: "Activées", settings_notif_off: "Désactivées",
+    notif_ios_homescreen: "Sur iPhone/iPad, les notifications ne fonctionnent qu'après avoir ajouté GOLSZ à votre écran d'accueil : appuyez sur Partager, puis « Sur l'écran d'accueil » — ouvrez ensuite GOLSZ depuis cette icône et activez les notifications à partir de là.",
     restricted_title: "Compte restreint.", restricted_body: "Vos publications restent privées et vous êtes masqué de Découvrir jusqu'à ce qu'un parent ou tuteur approuve l'accès — voir Famille et accès parental sur votre profil.",
     back: "Retour",
     discover_title: "Découvrir des athlètes", discover_search: "Rechercher par nom, sport, poste, pays…",
@@ -461,6 +473,7 @@ const I18N = {
     notif_error: "Algo salió mal al activar las notificaciones. Inténtalo de nuevo.",
     notif_title_on: "Notificaciones activadas — toca para desactivar", notif_title_off: "Activa las notificaciones de mensajes y nuevos seguidores",
     settings_notifications: "NOTIFICACIONES", settings_notif_on: "Activadas", settings_notif_off: "Desactivadas",
+    notif_ios_homescreen: "En iPhone/iPad, las notificaciones solo funcionan después de añadir GOLSZ a tu pantalla de inicio: toca Compartir y luego \"Añadir a pantalla de inicio\" — después abre GOLSZ desde ese icono y activa las notificaciones desde ahí.",
     restricted_title: "Cuenta restringida.", restricted_body: "Tus publicaciones permanecen privadas y estás oculto en Descubrir hasta que un padre, madre o tutor apruebe el acceso — consulta Familia y acceso parental en tu perfil.",
     back: "Atrás",
     discover_title: "Descubrir jugadores", discover_search: "Buscar por nombre, deporte, posición, país…",
@@ -590,6 +603,7 @@ const I18N = {
     notif_error: "Κάτι πήγε στραβά κατά την ενεργοποίηση των ειδοποιήσεων. Δοκιμάστε ξανά.",
     notif_title_on: "Ειδοποιήσεις ενεργές — πατήστε για απενεργοποίηση", notif_title_off: "Ενεργοποιήστε ειδοποιήσεις για μηνύματα & νέους ακόλουθους",
     settings_notifications: "ΕΙΔΟΠΟΙΗΣΕΙΣ", settings_notif_on: "Ενεργές", settings_notif_off: "Ανενεργές",
+    notif_ios_homescreen: "Σε iPhone/iPad, οι ειδοποιήσεις λειτουργούν μόνο αφού προσθέσετε το GOLSZ στην Αρχική οθόνη: πατήστε Κοινή χρήση και μετά «Προσθήκη στην Αρχική οθόνη» — έπειτα ανοίξτε το GOLSZ από αυτό το εικονίδιο και ενεργοποιήστε τις ειδοποιήσεις από εκεί.",
     restricted_title: "Περιορισμένος λογαριασμός.", restricted_body: "Οι αναρτήσεις σας παραμένουν ιδιωτικές και είστε κρυφοί από την Ανακάλυψη μέχρι να εγκρίνει την πρόσβαση γονέας ή κηδεμόνας — δείτε το Οικογένεια & Γονική Πρόσβαση στο προφίλ σας.",
     back: "Πίσω",
     discover_title: "Ανακαλύψτε αθλητές", discover_search: "Αναζήτηση με όνομα, άθλημα, θέση, χώρα…",
@@ -710,8 +724,25 @@ function urlBase64ToUint8Array(base64String) {
 function pushSupported() {
   return typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 }
+function isIOSDevice() {
+  return typeof navigator !== "undefined" && (/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+}
+function isStandaloneDisplay() {
+  return typeof window !== "undefined" && ((window.navigator && window.navigator.standalone === true) || (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches));
+}
 async function enablePushNotifications(uid) {
   if (!sb || !uid || !pushSupported()) return false;
+  // iOS never supports real Web Push in regular Safari/Chrome browsing —
+  // only when launched from a Home Screen icon (standalone mode), even on
+  // iOS 16.4+. Feature-detecting PushManager doesn't catch this: it can be
+  // present but still throw the moment you try to actually subscribe.
+  // Checking this upfront gives a real, actionable message instead of a
+  // generic "something went wrong" from a native rejection.
+  if (isIOSDevice() && !isStandaloneDisplay()) {
+    const err = new Error("iOS requires installing to the Home Screen first");
+    err.code = "IOS_NEEDS_HOMESCREEN";
+    throw err;
+  }
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return false;
   const reg = await navigator.serviceWorker.register("/sw.js");
@@ -779,7 +810,7 @@ function NotificationBell() {
       }
     } catch (e) {
       console.error("GOLSZ push toggle error:", e);
-      showToast(t("notif_error"));
+      showToast(e && e.code === "IOS_NEEDS_HOMESCREEN" ? t("notif_ios_homescreen") : t("notif_error"));
     } finally { setBusy(false); }
   }
 
@@ -851,7 +882,7 @@ function SettingsButton() {
       }
     } catch (e) {
       console.error("GOLSZ settings push toggle error:", e);
-      setNotifMsg(t("notif_error"));
+      setNotifMsg(e && e.code === "IOS_NEEDS_HOMESCREEN" ? t("notif_ios_homescreen") : t("notif_error"));
     } finally { setNotifBusy(false); }
   }
 

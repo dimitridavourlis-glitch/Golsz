@@ -319,6 +319,17 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   VAPID keypair (`npx web-push generate-vapid-keys`), update both places or push sends will fail silently.
 - Stale subscriptions (endpoint gone — uninstalled PWA, permission revoked, etc.) return 404/410 from the
   push service; this function deletes them from `push_subscriptions` on that response instead of retrying.
+- **iOS only supports Web Push from an installed Home Screen app, never regular Safari/Chrome browsing** —
+  true even on iOS 16.4+. `PushManager` can be feature-detected as present in regular mobile Safari and still
+  throw the moment `pushManager.subscribe()` actually runs, which used to surface as a generic "something went
+  wrong" with no way to self-diagnose. `isIOSDevice()` + `isStandaloneDisplay()` (both in `golsz-app.html`,
+  next to `pushSupported()`) check for this upfront in `enablePushNotifications()` and throw a
+  `{ code: "IOS_NEEDS_HOMESCREEN" }` error instead, which `NotificationBell` and `SettingsButton` both catch
+  and turn into real instructions (`notif_ios_homescreen`, translated) — "Share → Add to Home Screen" — rather
+  than a dead-end error. This is also why `<head>` now has the `apple-mobile-web-app-capable` meta tags and a
+  `manifest.json`: without those, "Add to Home Screen" on iOS just makes a bookmark that still opens inside
+  Safari's UI chrome (not standalone), so `isStandaloneDisplay()` would never actually pass even after
+  installing.
 
 ### `supabase-schema.sql`
 
