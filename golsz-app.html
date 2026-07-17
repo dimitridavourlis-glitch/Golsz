@@ -192,7 +192,7 @@ const I18N = {
     feed_no_match: "No posts match that search.",
     feed_add_photo: "Add photo", feed_remove_photo: "Remove photo",
     feed_image_type_err: "Please choose an image file.", feed_image_size_err: "Images must be under 8MB.",
-    feed_post_err: "Couldn't post. Try again.",
+    feed_post_err: "Couldn't post. Try again.", feed_shared_photo: "Shared a photo",
     action_follow: "Follow", action_following: "Following", action_share: "Share", action_copied: "Copied!",
     action_report: "Report", action_reported: "Reported", action_block: "Block", action_delete: "Delete",
     settings_title: "Settings", settings_background: "BACKGROUND", settings_dark: "Dark", settings_light: "Light",
@@ -320,7 +320,7 @@ const I18N = {
     feed_no_match: "Aucune publication ne correspond à cette recherche.",
     feed_add_photo: "Ajouter une photo", feed_remove_photo: "Supprimer la photo",
     feed_image_type_err: "Veuillez choisir un fichier image.", feed_image_size_err: "Les images doivent faire moins de 8 Mo.",
-    feed_post_err: "Impossible de publier. Réessayez.",
+    feed_post_err: "Impossible de publier. Réessayez.", feed_shared_photo: "A partagé une photo",
     action_follow: "Suivre", action_following: "Abonné", action_share: "Partager", action_copied: "Copié !",
     action_report: "Signaler", action_reported: "Signalé", action_block: "Bloquer", action_delete: "Supprimer",
     settings_title: "Paramètres", settings_background: "ARRIÈRE-PLAN", settings_dark: "Sombre", settings_light: "Clair",
@@ -448,7 +448,7 @@ const I18N = {
     feed_no_match: "Ninguna publicación coincide con esa búsqueda.",
     feed_add_photo: "Añadir foto", feed_remove_photo: "Quitar foto",
     feed_image_type_err: "Elige un archivo de imagen.", feed_image_size_err: "Las imágenes deben pesar menos de 8 MB.",
-    feed_post_err: "No se pudo publicar. Inténtalo de nuevo.",
+    feed_post_err: "No se pudo publicar. Inténtalo de nuevo.", feed_shared_photo: "Compartió una foto",
     action_follow: "Seguir", action_following: "Siguiendo", action_share: "Compartir", action_copied: "¡Copiado!",
     action_report: "Reportar", action_reported: "Reportado", action_block: "Bloquear", action_delete: "Eliminar",
     settings_title: "Configuración", settings_background: "FONDO", settings_dark: "Oscuro", settings_light: "Claro",
@@ -576,7 +576,7 @@ const I18N = {
     feed_no_match: "Καμία ανάρτηση δεν ταιριάζει με αυτή την αναζήτηση.",
     feed_add_photo: "Προσθήκη φωτογραφίας", feed_remove_photo: "Αφαίρεση φωτογραφίας",
     feed_image_type_err: "Επιλέξτε ένα αρχείο εικόνας.", feed_image_size_err: "Οι εικόνες πρέπει να είναι κάτω από 8MB.",
-    feed_post_err: "Δεν ήταν δυνατή η ανάρτηση. Δοκιμάστε ξανά.",
+    feed_post_err: "Δεν ήταν δυνατή η ανάρτηση. Δοκιμάστε ξανά.", feed_shared_photo: "Μοιράστηκε μια φωτογραφία",
     action_follow: "Ακολούθηση", action_following: "Ακολουθείτε", action_share: "Κοινοποίηση", action_copied: "Αντιγράφηκε!",
     action_report: "Αναφορά", action_reported: "Αναφέρθηκε", action_block: "Αποκλεισμός", action_delete: "Διαγραφή",
     settings_title: "Ρυθμίσεις", settings_background: "ΦΟΝΤΟ", settings_dark: "Σκούρο", settings_light: "Ανοιχτό",
@@ -1099,7 +1099,7 @@ function Feed({ onMessage, onViewProfile }) {
   }
 
   async function createPost() {
-    if (!sb || !uid || !composeHeadline.trim() || composeBusy) return;
+    if (!sb || !uid || (!composeHeadline.trim() && !composeImageFile) || composeBusy) return;
     setComposeBusy(true); setComposeErr("");
     try {
       let imageUrl = null;
@@ -1110,9 +1110,10 @@ function Feed({ onMessage, onViewProfile }) {
         if (upErr) throw upErr;
         imageUrl = sb.storage.from("post-images").getPublicUrl(path).data.publicUrl;
       }
+      const headline = composeHeadline.trim().slice(0, 120) || (composeImageFile ? t("feed_shared_photo") : "");
       const { error } = await sb.from("posts").insert({
         author_id: uid, kind: "post",
-        headline: composeHeadline.trim().slice(0, 120),
+        headline,
         body: composeBody.trim() || null,
         image_url: imageUrl,
       });
@@ -1230,7 +1231,7 @@ function Feed({ onMessage, onViewProfile }) {
               <input type="file" accept="image/*" onChange={pickImage} style={{ display: "none" }} />
               <ImageIcon size={19} />
             </label>
-            <button onClick={createPost} disabled={!composeHeadline.trim() || composeBusy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 18px", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", opacity: !composeHeadline.trim() || composeBusy ? 0.5 : 1 }}>
+            <button onClick={createPost} disabled={(!composeHeadline.trim() && !composeImageFile) || composeBusy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 18px", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", opacity: (!composeHeadline.trim() && !composeImageFile) || composeBusy ? 0.5 : 1 }}>
               {composeBusy ? t("feed_posting") : t("feed_post")}
             </button>
           </div>
