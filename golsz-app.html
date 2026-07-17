@@ -197,6 +197,11 @@ const I18N = {
     action_report: "Report", action_reported: "Reported", action_block: "Block", action_delete: "Delete",
     settings_title: "Settings", settings_background: "BACKGROUND", settings_dark: "Dark", settings_light: "Light",
     settings_language: "LANGUAGE",
+    notif_on: "Notifications turned on — you'll get alerts for new messages and new followers.",
+    notif_off: "Notifications turned off.",
+    notif_blocked: "Notifications are blocked in your browser or phone settings. Enable them there, then try again.",
+    notif_error: "Something went wrong turning on notifications. Try again.",
+    notif_title_on: "Notifications on — tap to turn off", notif_title_off: "Turn on notifications for messages & new followers",
     restricted_title: "Restricted account.", restricted_body: "Your posts stay private and you're hidden from Discover until a parent or guardian approves access — see Family & Parent Access on your Profile.",
     back: "Back",
     discover_title: "Discover players", discover_search: "Search by name, sport, position, country…",
@@ -320,6 +325,11 @@ const I18N = {
     action_report: "Signaler", action_reported: "Signalé", action_block: "Bloquer", action_delete: "Supprimer",
     settings_title: "Paramètres", settings_background: "ARRIÈRE-PLAN", settings_dark: "Sombre", settings_light: "Clair",
     settings_language: "LANGUE",
+    notif_on: "Notifications activées — vous recevrez des alertes pour les nouveaux messages et abonnés.",
+    notif_off: "Notifications désactivées.",
+    notif_blocked: "Les notifications sont bloquées dans les réglages de votre navigateur ou téléphone. Activez-les, puis réessayez.",
+    notif_error: "Une erreur s'est produite lors de l'activation des notifications. Réessayez.",
+    notif_title_on: "Notifications activées — touchez pour désactiver", notif_title_off: "Activer les notifications pour les messages et nouveaux abonnés",
     restricted_title: "Compte restreint.", restricted_body: "Vos publications restent privées et vous êtes masqué de Découvrir jusqu'à ce qu'un parent ou tuteur approuve l'accès — voir Famille et accès parental sur votre profil.",
     back: "Retour",
     discover_title: "Découvrir des athlètes", discover_search: "Rechercher par nom, sport, poste, pays…",
@@ -443,6 +453,11 @@ const I18N = {
     action_report: "Reportar", action_reported: "Reportado", action_block: "Bloquear", action_delete: "Eliminar",
     settings_title: "Configuración", settings_background: "FONDO", settings_dark: "Oscuro", settings_light: "Claro",
     settings_language: "IDIOMA",
+    notif_on: "Notificaciones activadas — recibirás alertas de nuevos mensajes y seguidores.",
+    notif_off: "Notificaciones desactivadas.",
+    notif_blocked: "Las notificaciones están bloqueadas en la configuración de tu navegador o teléfono. Actívalas allí y vuelve a intentarlo.",
+    notif_error: "Algo salió mal al activar las notificaciones. Inténtalo de nuevo.",
+    notif_title_on: "Notificaciones activadas — toca para desactivar", notif_title_off: "Activa las notificaciones de mensajes y nuevos seguidores",
     restricted_title: "Cuenta restringida.", restricted_body: "Tus publicaciones permanecen privadas y estás oculto en Descubrir hasta que un padre, madre o tutor apruebe el acceso — consulta Familia y acceso parental en tu perfil.",
     back: "Atrás",
     discover_title: "Descubrir jugadores", discover_search: "Buscar por nombre, deporte, posición, país…",
@@ -566,6 +581,11 @@ const I18N = {
     action_report: "Αναφορά", action_reported: "Αναφέρθηκε", action_block: "Αποκλεισμός", action_delete: "Διαγραφή",
     settings_title: "Ρυθμίσεις", settings_background: "ΦΟΝΤΟ", settings_dark: "Σκούρο", settings_light: "Ανοιχτό",
     settings_language: "ΓΛΩΣΣΑ",
+    notif_on: "Οι ειδοποιήσεις ενεργοποιήθηκαν — θα λαμβάνετε ειδοποιήσεις για νέα μηνύματα και ακόλουθους.",
+    notif_off: "Οι ειδοποιήσεις απενεργοποιήθηκαν.",
+    notif_blocked: "Οι ειδοποιήσεις είναι αποκλεισμένες στις ρυθμίσεις του προγράμματος περιήγησης ή του τηλεφώνου σας. Ενεργοποιήστε τις εκεί και δοκιμάστε ξανά.",
+    notif_error: "Κάτι πήγε στραβά κατά την ενεργοποίηση των ειδοποιήσεων. Δοκιμάστε ξανά.",
+    notif_title_on: "Ειδοποιήσεις ενεργές — πατήστε για απενεργοποίηση", notif_title_off: "Ενεργοποιήστε ειδοποιήσεις για μηνύματα & νέους ακόλουθους",
     restricted_title: "Περιορισμένος λογαριασμός.", restricted_body: "Οι αναρτήσεις σας παραμένουν ιδιωτικές και είστε κρυφοί από την Ανακάλυψη μέχρι να εγκρίνει την πρόσβαση γονέας ή κηδεμόνας — δείτε το Οικογένεια & Γονική Πρόσβαση στο προφίλ σας.",
     back: "Πίσω",
     discover_title: "Ανακαλύψτε αθλητές", discover_search: "Αναζήτηση με όνομα, άθλημα, θέση, χώρα…",
@@ -710,9 +730,12 @@ async function disablePushNotifications(uid) {
   }
 }
 function NotificationBell() {
+  const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
 
   useEffect(() => {
     if (!sb || !pushSupported()) return;
@@ -728,25 +751,56 @@ function NotificationBell() {
         }
       } catch (e) { console.error("GOLSZ push status check error:", e); }
     })();
+    return () => { if (toastTimer.current) clearTimeout(toastTimer.current); };
   }, []);
+
+  function showToast(msg) {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 4500);
+  }
 
   async function toggle() {
     if (!uid || busy) return;
     setBusy(true);
     try {
-      if (enabled) { await disablePushNotifications(uid); setEnabled(false); }
-      else { const ok = await enablePushNotifications(uid); setEnabled(ok); }
-    } catch (e) { console.error("GOLSZ push toggle error:", e); }
-    finally { setBusy(false); }
+      if (enabled) {
+        await disablePushNotifications(uid);
+        setEnabled(false);
+        showToast(t("notif_off"));
+      } else {
+        const ok = await enablePushNotifications(uid);
+        setEnabled(ok);
+        showToast(ok ? t("notif_on") : t("notif_blocked"));
+      }
+    } catch (e) {
+      console.error("GOLSZ push toggle error:", e);
+      showToast(t("notif_error"));
+    } finally { setBusy(false); }
   }
 
   if (!sb || !pushSupported()) return null;
   return (
-    <button onClick={toggle} disabled={busy} title={enabled ? "Notifications on — tap to turn off" : "Turn on notifications for messages & new followers"}
-      style={{ position: "relative", background: "none", border: "none", color: enabled ? C.lime : C.chalk, cursor: "pointer", padding: 4, opacity: busy ? 0.6 : 1 }}>
-      <Bell size={22} />
-      {enabled && <span style={{ position: "absolute", top: 3, right: 3, width: 7, height: 7, borderRadius: 99, background: C.lime, border: `2px solid ${C.pitch}` }} />}
-    </button>
+    <span style={{ position: "relative", display: "inline-flex" }}>
+      <button onClick={toggle} disabled={busy} title={enabled ? t("notif_title_on") : t("notif_title_off")}
+        style={{ position: "relative", background: "none", border: "none", color: enabled ? C.lime : C.chalk, cursor: "pointer", padding: 4, opacity: busy ? 0.6 : 1 }}>
+        <Bell size={22} />
+        {enabled && <span style={{ position: "absolute", top: 3, right: 3, width: 7, height: 7, borderRadius: 99, background: C.lime, border: `2px solid ${C.pitch}` }} />}
+      </button>
+      {toast && (
+        <div onClick={() => setToast(null)} style={{
+          position: "absolute", top: "calc(100% + 10px)", right: 0, zIndex: 70, cursor: "pointer",
+          background: C.card, border: `1px solid ${C.line2}`, borderRadius: 12, padding: "11px 13px",
+          width: 230, fontSize: 12.5, lineHeight: 1.4, color: C.chalk,
+          boxShadow: "0 14px 32px -14px rgba(0,0,0,0.75)",
+        }} className="msg">
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <Bell size={14} color={enabled ? C.lime : C.slate} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>{toast}</span>
+          </div>
+        </div>
+      )}
+    </span>
   );
 }
 
