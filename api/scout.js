@@ -25,6 +25,11 @@ If asked what AI model or company powers you, who made you, or whether you're Ch
 OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null}}
 Allowed keys: name, age, sport, position, location, club, level, grad_year, gpa, budget, citizenship, goal. Do not repeat known fields.`;
 
+// Matches golsz-app.html's LANGS — validated against this allowlist rather
+// than trusting the client's lang string directly, since it gets
+// interpolated into the system prompt sent to the model.
+const LANG_NAMES = { en: "English", fr: "French", es: "Spanish", el: "Greek" };
+
 function cors(res) {
   res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN || "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -87,6 +92,10 @@ export default async function handler(req, res) {
   if (typeof body === "string") { try { body = JSON.parse(body); } catch { body = {}; } }
   const messages = body && body.messages;
   if (!Array.isArray(messages)) return res.status(400).json({ error: "messages[] required" });
+  const langName = LANG_NAMES[body && body.lang];
+  const systemPrompt = langName && langName !== "English"
+    ? `${SYSTEM_PROMPT}\n\nRespond in ${langName} — the athlete has GOLSZ set to ${langName}. Keep the same JSON output shape; only the "reply" text and any drafted email should be in ${langName}.`
+    : SYSTEM_PROMPT;
 
   // ---- optional auth + metering (enabled only when Supabase env is set) ----
   if (process.env.SUPABASE_URL) {
@@ -111,7 +120,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: process.env.SCOUT_MODEL || "claude-sonnet-5",
         max_tokens: 1000,
-        system: SYSTEM_PROMPT,
+        system: systemPrompt,
         messages,
         tools: [{ type: "web_search_20250305", name: "web_search" }],
       }),

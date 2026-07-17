@@ -193,6 +193,89 @@ const I18N = {
     action_report: "Report", action_reported: "Reported", action_block: "Block", action_delete: "Delete",
     settings_title: "Settings", settings_background: "BACKGROUND", settings_dark: "Dark", settings_light: "Light",
     settings_language: "LANGUAGE",
+    restricted_title: "Restricted account.", restricted_body: "Your posts stay private and you're hidden from Discover until a parent or guardian approves access — see Family & Parent Access on your Profile.",
+    back: "Back",
+    discover_title: "Discover players", discover_search: "Search by name, sport, position, country…",
+    discover_count_one: "ATHLETE ON FILE", discover_count_other: "ATHLETES ON FILE",
+    discover_no_athletes: "No athletes on file yet.", discover_no_match: "No athletes match that search.",
+    events_add_title: "Add to your events", events_field_title: "TITLE", events_title_ph: "e.g. Trial with Coach Reyes",
+    events_field_date: "DATE", events_field_sport: "SPORT", events_field_location: "LOCATION", events_location_ph: "e.g. Toronto, ON",
+    events_field_level: "LEVEL", events_level_ph: "e.g. Open, D1", events_field_notes: "NOTES", events_notes_ph: "Any details worth remembering",
+    events_save: "Save to my events", events_saving: "Saving…", events_err_title_date: "Add a title and a date.",
+    events_err_save: "Couldn't save — try again.", events_register: "Register", events_spots: "spots",
+    events_my_title: "My opportunities", events_add_button: "Add opportunity",
+    events_empty: "Nothing saved yet — save a post, a message, or add one manually above.",
+    messages_title: "Messages", messages_search: "Search conversations…",
+    messages_empty: "No conversations yet — follow someone and message them from Discover.",
+    messages_no_match: "No conversations match that search.",
+    messages_say_hello_pre: "Say hello — you can message ", messages_say_hello_post: " because you follow each other.",
+    messages_placeholder: "Message…", messages_delete_conv: "Delete conversation", messages_delete_msg: "Delete message",
+    messages_save_to_events: "Save to my events",
+    messages_cant_send: "Couldn't send — you can only message profiles you follow or who follow you.",
+    messages_opportunity_from: "Opportunity from ",
+    family_title: "FAMILY & PARENT ACCESS", family_pending: "PENDING REQUESTS FOR YOU", family_wants_access: " wants parent access",
+    family_someone: "Someone", family_approve: "Approve", family_deny: "Deny",
+    family_granted_title: "PEOPLE WITH ACCESS TO YOUR ACCOUNT", family_parent_fallback: "Parent", family_revoke: "Revoke",
+    family_mylinks_title: "ACCOUNTS YOU HAVE ACCESS TO", family_athlete_fallback: "Athlete",
+    family_approved: "APPROVED", family_pending_status: "PENDING",
+    family_request_title: "REQUEST ACCESS TO A MINOR'S ACCOUNT", family_email_ph: "Their GOLSZ email",
+    family_relationship_ph: "Relationship (optional)", family_send: "Send",
+    family_disclaimer: "The account owner must approve before a parent can see their private data. This confirms mutual consent — it isn't independent identity verification.",
+    family_sent_msg: "Request sent — waiting on their approval.", family_not_found_msg: "No GOLSZ account found with that email.",
+    family_couldnt_send: "Couldn't send request.",
+    highlights_title: "VERIFIED MEDIA", highlights_empty: "No highlights yet.",
+    highlights_title_ph: "Highlight title (e.g. Full match vs Montreal)", highlights_link_ph: "Link (YouTube, Veo, Hudl…)",
+    highlights_add: "Add", highlights_invalid_url: "Enter a valid video link (starting with https://).",
+    highlights_add_err: "Couldn't add that link.", highlights_watch: "Watch highlight",
+    editor_title: "Build your profile", editor_name_label: "FULL NAME", editor_name_ph: "Your name",
+    editor_sport_label: "SPORT", editor_select: "Select…", editor_position_label: "POSITION",
+    editor_position_pick_sport: "Pick a sport first", editor_gender_label: "GENDER", editor_grad_year_label: "GRAD YEAR",
+    editor_height_label: "HEIGHT (CM)", editor_weight_label: "WEIGHT (KG)", editor_gpa_label: "GPA",
+    editor_country_label: "COUNTRY", editor_country_ph: "e.g. Canada", editor_club_label: "CLUB / TEAM",
+    editor_club_ph: "e.g. Toronto FC Academy", editor_status_label: "RECRUITING STATUS",
+    editor_bio_label: "SCOUTING BIO", editor_bio_ph: "A few sentences a coach or scout should know.",
+    editor_save: "Save profile", editor_saving: "Saving…", editor_name_required: "Name can't be empty.",
+    editor_save_err: "Couldn't save — try again.",
+    passport_title_self: "Sports Passport", passport_title_other: "Athlete Passport", passport_edit: "Edit profile",
+    passport_follow: "Follow", passport_following: "Following", passport_message: "Message",
+    passport_finish_bold: "Finish building your profile",
+    passport_finish_rest: " — add your sport, position and stats so coaches and Scout can find you.",
+    passport_member: "GOLSZ MEMBER", passport_sport: "SPORT", passport_position: "POSITION", passport_club: "CLUB",
+    passport_passport_no: "PASSPORT NO.", passport_height: "HEIGHT", passport_grad: "GRAD", passport_gpa: "GPA",
+    passport_weight: "WEIGHT", passport_status: "STATUS", passport_bio_title: "SCOUTING BIO",
+    passport_no_bio: "No bio yet — tap Edit profile to add one.",
+    passport_following_count: "FOLLOWING", passport_followers_count: "FOLLOWERS", passport_follower_singular: "FOLLOWER",
+    passport_not_following_other: "Not following anyone yet.", passport_not_following_self: "Not following anyone yet — check out Discover.",
+    passport_no_followers_other: "No followers yet.",
+    passport_no_followers_self: "No followers yet — your Discover and Feed activity is how people find you.",
+    passport_admin_panel: "Admin panel", passport_terms: "Terms & Conditions", passport_athlete_fallback: "GOLSZ Athlete",
+    blocked_title: "Blocked accounts", blocked_empty: "You haven't blocked anyone.", blocked_unblock: "Unblock",
+    admin_checking: "Checking access…", admin_only: "Admins only.", admin_title: "Admin panel",
+    admin_stat_users: "USERS", admin_stat_posts: "POSTS", admin_stat_events: "EVENTS", admin_stat_pending: "PENDING",
+    admin_tab_reports: "Reports", admin_tab_users: "Users", admin_tab_events: "Events",
+    admin_no_reports: "No reports yet.", admin_reported_by: "Reported by ", admin_post_removed: "Post already removed.",
+    admin_delete_post: "Delete post", admin_dismiss: "Dismiss", admin_resolved: "Resolved",
+    admin_search_name: "Search by name…", admin_no_name: "(no name)", admin_minor: "MINOR", admin_admin: "ADMIN",
+    admin_joined: "joined ", admin_ago: " ago", admin_revoke_admin: "Revoke admin", admin_make_admin: "Make admin",
+    admin_add_event: "ADD EVENT", admin_title_ph: "Title", admin_location_ph: "Location", admin_level_ph: "Level",
+    admin_spots_ph: "Spots available", admin_create_event: "Create event",
+    scout_header: "AI SCOUT", scout_fields_on_file: "FIELDS ON FILE", scout_live_agent: "LIVE AGENT",
+    scout_history_title: "History", scout_new_chat: "New chat", scout_no_past: "No past conversations yet.",
+    scout_new_conversation: "New conversation", scout_ago_messages: " messages", scout_delete_conv: "Delete conversation",
+    scout_scout_label: "SCOUT", scout_input_ph: "Talk to your scout…",
+    scout_connection_dropped: "Connection dropped mid-play. Send that again and I'm on it.",
+    scout_greeting: "I'm your GOLSZ Scout.\n\nTell me about yourself like you'd tell a scout — age, sport, position, where you play, and where you want to end up. I'll build your path from there.",
+    scout_chip1: "Build my target school list", scout_chip2: "Create my career roadmap",
+    scout_chip3: "Draft an email to a coach", scout_chip4: "What should I do this month?",
+    scout_hey: "Hey", scout_im_your_scout: "I'm your GOLSZ Scout.",
+    scout_got_you_down_pre: "I've got you down as a ", scout_at: " at ", scout_class_of: ", class of ",
+    scout_whats_plan: "What's the plan — your target school list, this season's roadmap, or something else?",
+    reset_pw_updated: "Password updated", reset_pw_allset: "You're all set — continue into GOLSZ.",
+    reset_pw_continue: "Continue", reset_pw_set_new: "Set a new password",
+    reset_pw_choose: "Choose a new password for your GOLSZ account.", reset_pw_new_ph: "New password",
+    reset_pw_confirm_ph: "Confirm new password", reset_pw_update_btn: "Update password",
+    reset_pw_min_len: "Password must be at least 6 characters.", reset_pw_mismatch: "Passwords don't match.",
+    reset_pw_err: "Couldn't update password.",
   },
   fr: {
     loading: "Chargement…",
@@ -230,6 +313,89 @@ const I18N = {
     action_report: "Signaler", action_reported: "Signalé", action_block: "Bloquer", action_delete: "Supprimer",
     settings_title: "Paramètres", settings_background: "ARRIÈRE-PLAN", settings_dark: "Sombre", settings_light: "Clair",
     settings_language: "LANGUE",
+    restricted_title: "Compte restreint.", restricted_body: "Vos publications restent privées et vous êtes masqué de Découvrir jusqu'à ce qu'un parent ou tuteur approuve l'accès — voir Famille et accès parental sur votre profil.",
+    back: "Retour",
+    discover_title: "Découvrir des athlètes", discover_search: "Rechercher par nom, sport, poste, pays…",
+    discover_count_one: "ATHLÈTE RÉPERTORIÉ", discover_count_other: "ATHLÈTES RÉPERTORIÉS",
+    discover_no_athletes: "Aucun athlète répertorié pour l'instant.", discover_no_match: "Aucun athlète ne correspond à cette recherche.",
+    events_add_title: "Ajouter à vos événements", events_field_title: "TITRE", events_title_ph: "ex. Essai avec l'entraîneur Reyes",
+    events_field_date: "DATE", events_field_sport: "SPORT", events_field_location: "LIEU", events_location_ph: "ex. Toronto, ON",
+    events_field_level: "NIVEAU", events_level_ph: "ex. Ouvert, D1", events_field_notes: "NOTES", events_notes_ph: "Tout détail à retenir",
+    events_save: "Enregistrer dans mes événements", events_saving: "Enregistrement…", events_err_title_date: "Ajoutez un titre et une date.",
+    events_err_save: "Impossible d'enregistrer — réessayez.", events_register: "S'inscrire", events_spots: "places",
+    events_my_title: "Mes opportunités", events_add_button: "Ajouter une opportunité",
+    events_empty: "Rien d'enregistré pour l'instant — enregistrez une publication, un message, ou ajoutez-en un manuellement ci-dessus.",
+    messages_title: "Messages", messages_search: "Rechercher des conversations…",
+    messages_empty: "Aucune conversation pour l'instant — suivez quelqu'un et envoyez-lui un message depuis Découvrir.",
+    messages_no_match: "Aucune conversation ne correspond à cette recherche.",
+    messages_say_hello_pre: "Dites bonjour — vous pouvez écrire à ", messages_say_hello_post: " car vous vous suivez mutuellement.",
+    messages_placeholder: "Message…", messages_delete_conv: "Supprimer la conversation", messages_delete_msg: "Supprimer le message",
+    messages_save_to_events: "Enregistrer dans mes événements",
+    messages_cant_send: "Envoi impossible — vous ne pouvez écrire qu'aux profils que vous suivez ou qui vous suivent.",
+    messages_opportunity_from: "Opportunité de ",
+    family_title: "FAMILLE ET ACCÈS PARENTAL", family_pending: "DEMANDES EN ATTENTE POUR VOUS", family_wants_access: " souhaite un accès parental",
+    family_someone: "Quelqu'un", family_approve: "Approuver", family_deny: "Refuser",
+    family_granted_title: "PERSONNES AYANT ACCÈS À VOTRE COMPTE", family_parent_fallback: "Parent", family_revoke: "Révoquer",
+    family_mylinks_title: "COMPTES AUXQUELS VOUS AVEZ ACCÈS", family_athlete_fallback: "Athlète",
+    family_approved: "APPROUVÉ", family_pending_status: "EN ATTENTE",
+    family_request_title: "DEMANDER L'ACCÈS AU COMPTE D'UN MINEUR", family_email_ph: "Son e-mail GOLSZ",
+    family_relationship_ph: "Lien de parenté (facultatif)", family_send: "Envoyer",
+    family_disclaimer: "Le titulaire du compte doit approuver avant qu'un parent puisse voir ses données privées. Ceci confirme un consentement mutuel — ce n'est pas une vérification d'identité indépendante.",
+    family_sent_msg: "Demande envoyée — en attente de son approbation.", family_not_found_msg: "Aucun compte GOLSZ trouvé avec cet e-mail.",
+    family_couldnt_send: "Impossible d'envoyer la demande.",
+    highlights_title: "MÉDIAS VÉRIFIÉS", highlights_empty: "Aucun temps fort pour l'instant.",
+    highlights_title_ph: "Titre du temps fort (ex. Match complet vs Montréal)", highlights_link_ph: "Lien (YouTube, Veo, Hudl…)",
+    highlights_add: "Ajouter", highlights_invalid_url: "Indiquez un lien vidéo valide (commençant par https://).",
+    highlights_add_err: "Impossible d'ajouter ce lien.", highlights_watch: "Voir le temps fort",
+    editor_title: "Créez votre profil", editor_name_label: "NOM COMPLET", editor_name_ph: "Votre nom",
+    editor_sport_label: "SPORT", editor_select: "Sélectionner…", editor_position_label: "POSTE",
+    editor_position_pick_sport: "Choisissez d'abord un sport", editor_gender_label: "GENRE", editor_grad_year_label: "ANNÉE DE DIPLÔME",
+    editor_height_label: "TAILLE (CM)", editor_weight_label: "POIDS (KG)", editor_gpa_label: "MOYENNE (GPA)",
+    editor_country_label: "PAYS", editor_country_ph: "ex. Canada", editor_club_label: "CLUB / ÉQUIPE",
+    editor_club_ph: "ex. Toronto FC Academy", editor_status_label: "STATUT DE RECRUTEMENT",
+    editor_bio_label: "BIO DE RECRUTEMENT", editor_bio_ph: "Quelques phrases qu'un entraîneur ou recruteur devrait connaître.",
+    editor_save: "Enregistrer le profil", editor_saving: "Enregistrement…", editor_name_required: "Le nom ne peut pas être vide.",
+    editor_save_err: "Impossible d'enregistrer — réessayez.",
+    passport_title_self: "Passeport Sportif", passport_title_other: "Passeport de l'athlète", passport_edit: "Modifier le profil",
+    passport_follow: "Suivre", passport_following: "Abonné", passport_message: "Message",
+    passport_finish_bold: "Terminez votre profil",
+    passport_finish_rest: " — ajoutez votre sport, poste et statistiques pour que les entraîneurs et Scout puissent vous trouver.",
+    passport_member: "MEMBRE GOLSZ", passport_sport: "SPORT", passport_position: "POSTE", passport_club: "CLUB",
+    passport_passport_no: "N° PASSEPORT", passport_height: "TAILLE", passport_grad: "DIPLÔME", passport_gpa: "GPA",
+    passport_weight: "POIDS", passport_status: "STATUT", passport_bio_title: "BIO DE RECRUTEMENT",
+    passport_no_bio: "Pas encore de bio — touchez Modifier le profil pour en ajouter une.",
+    passport_following_count: "ABONNEMENTS", passport_followers_count: "ABONNÉS", passport_follower_singular: "ABONNÉ",
+    passport_not_following_other: "Ne suit encore personne.", passport_not_following_self: "Vous ne suivez encore personne — allez voir Découvrir.",
+    passport_no_followers_other: "Pas encore d'abonnés.",
+    passport_no_followers_self: "Pas encore d'abonnés — votre activité sur Découvrir et le fil est ce qui permet aux gens de vous trouver.",
+    passport_admin_panel: "Panneau d'administration", passport_terms: "Conditions d'utilisation", passport_athlete_fallback: "Athlète GOLSZ",
+    blocked_title: "Comptes bloqués", blocked_empty: "Vous n'avez bloqué personne.", blocked_unblock: "Débloquer",
+    admin_checking: "Vérification de l'accès…", admin_only: "Réservé aux administrateurs.", admin_title: "Panneau d'administration",
+    admin_stat_users: "UTILISATEURS", admin_stat_posts: "PUBLICATIONS", admin_stat_events: "ÉVÉNEMENTS", admin_stat_pending: "EN ATTENTE",
+    admin_tab_reports: "Signalements", admin_tab_users: "Utilisateurs", admin_tab_events: "Événements",
+    admin_no_reports: "Aucun signalement pour l'instant.", admin_reported_by: "Signalé par ", admin_post_removed: "Publication déjà supprimée.",
+    admin_delete_post: "Supprimer la publication", admin_dismiss: "Ignorer", admin_resolved: "Résolu",
+    admin_search_name: "Rechercher par nom…", admin_no_name: "(sans nom)", admin_minor: "MINEUR", admin_admin: "ADMIN",
+    admin_joined: "inscrit il y a ", admin_ago: "", admin_revoke_admin: "Révoquer admin", admin_make_admin: "Nommer admin",
+    admin_add_event: "AJOUTER UN ÉVÉNEMENT", admin_title_ph: "Titre", admin_location_ph: "Lieu", admin_level_ph: "Niveau",
+    admin_spots_ph: "Places disponibles", admin_create_event: "Créer l'événement",
+    scout_header: "AI SCOUT", scout_fields_on_file: "CHAMPS ENREGISTRÉS", scout_live_agent: "AGENT EN DIRECT",
+    scout_history_title: "Historique", scout_new_chat: "Nouvelle discussion", scout_no_past: "Aucune conversation passée.",
+    scout_new_conversation: "Nouvelle conversation", scout_ago_messages: " messages", scout_delete_conv: "Supprimer la conversation",
+    scout_scout_label: "SCOUT", scout_input_ph: "Parlez à votre agent…",
+    scout_connection_dropped: "Connexion interrompue en plein jeu. Renvoyez ça et je m'en occupe.",
+    scout_greeting: "Je suis votre Agent GOLSZ.\n\nParlez-moi de vous comme vous le feriez à un recruteur — âge, sport, poste, où vous jouez, et où vous voulez aller. Je construirai votre parcours à partir de là.",
+    scout_chip1: "Créer ma liste d'écoles cibles", scout_chip2: "Créer ma feuille de route de carrière",
+    scout_chip3: "Rédiger un e-mail à un entraîneur", scout_chip4: "Que devrais-je faire ce mois-ci ?",
+    scout_hey: "Salut", scout_im_your_scout: "Je suis votre Agent GOLSZ.",
+    scout_got_you_down_pre: "Je vous ai noté comme ", scout_at: " à ", scout_class_of: ", promotion ",
+    scout_whats_plan: "Quel est le plan — votre liste d'écoles cibles, la feuille de route de cette saison, ou autre chose ?",
+    reset_pw_updated: "Mot de passe mis à jour", reset_pw_allset: "Tout est prêt — continuez vers GOLSZ.",
+    reset_pw_continue: "Continuer", reset_pw_set_new: "Définir un nouveau mot de passe",
+    reset_pw_choose: "Choisissez un nouveau mot de passe pour votre compte GOLSZ.", reset_pw_new_ph: "Nouveau mot de passe",
+    reset_pw_confirm_ph: "Confirmer le nouveau mot de passe", reset_pw_update_btn: "Mettre à jour le mot de passe",
+    reset_pw_min_len: "Le mot de passe doit contenir au moins 6 caractères.", reset_pw_mismatch: "Les mots de passe ne correspondent pas.",
+    reset_pw_err: "Impossible de mettre à jour le mot de passe.",
   },
   es: {
     loading: "Cargando…",
@@ -267,6 +433,89 @@ const I18N = {
     action_report: "Reportar", action_reported: "Reportado", action_block: "Bloquear", action_delete: "Eliminar",
     settings_title: "Configuración", settings_background: "FONDO", settings_dark: "Oscuro", settings_light: "Claro",
     settings_language: "IDIOMA",
+    restricted_title: "Cuenta restringida.", restricted_body: "Tus publicaciones permanecen privadas y estás oculto en Descubrir hasta que un padre, madre o tutor apruebe el acceso — consulta Familia y acceso parental en tu perfil.",
+    back: "Atrás",
+    discover_title: "Descubrir jugadores", discover_search: "Buscar por nombre, deporte, posición, país…",
+    discover_count_one: "ATLETA REGISTRADO", discover_count_other: "ATLETAS REGISTRADOS",
+    discover_no_athletes: "Aún no hay atletas registrados.", discover_no_match: "Ningún atleta coincide con esa búsqueda.",
+    events_add_title: "Añadir a tus eventos", events_field_title: "TÍTULO", events_title_ph: "ej. Prueba con el entrenador Reyes",
+    events_field_date: "FECHA", events_field_sport: "DEPORTE", events_field_location: "UBICACIÓN", events_location_ph: "ej. Toronto, ON",
+    events_field_level: "NIVEL", events_level_ph: "ej. Abierto, D1", events_field_notes: "NOTAS", events_notes_ph: "Cualquier detalle que valga la pena recordar",
+    events_save: "Guardar en mis eventos", events_saving: "Guardando…", events_err_title_date: "Añade un título y una fecha.",
+    events_err_save: "No se pudo guardar — inténtalo de nuevo.", events_register: "Registrarse", events_spots: "plazas",
+    events_my_title: "Mis oportunidades", events_add_button: "Añadir oportunidad",
+    events_empty: "Aún no hay nada guardado — guarda una publicación, un mensaje, o añade uno manualmente arriba.",
+    messages_title: "Mensajes", messages_search: "Buscar conversaciones…",
+    messages_empty: "Aún no hay conversaciones — sigue a alguien y envíale un mensaje desde Descubrir.",
+    messages_no_match: "Ninguna conversación coincide con esa búsqueda.",
+    messages_say_hello_pre: "Saluda — puedes escribirle a ", messages_say_hello_post: " porque se siguen mutuamente.",
+    messages_placeholder: "Mensaje…", messages_delete_conv: "Eliminar conversación", messages_delete_msg: "Eliminar mensaje",
+    messages_save_to_events: "Guardar en mis eventos",
+    messages_cant_send: "No se pudo enviar — solo puedes escribir a perfiles que sigues o que te siguen.",
+    messages_opportunity_from: "Oportunidad de ",
+    family_title: "FAMILIA Y ACCESO PARENTAL", family_pending: "SOLICITUDES PENDIENTES PARA TI", family_wants_access: " quiere acceso parental",
+    family_someone: "Alguien", family_approve: "Aprobar", family_deny: "Rechazar",
+    family_granted_title: "PERSONAS CON ACCESO A TU CUENTA", family_parent_fallback: "Padre/madre", family_revoke: "Revocar",
+    family_mylinks_title: "CUENTAS A LAS QUE TIENES ACCESO", family_athlete_fallback: "Atleta",
+    family_approved: "APROBADO", family_pending_status: "PENDIENTE",
+    family_request_title: "SOLICITAR ACCESO A LA CUENTA DE UN MENOR", family_email_ph: "Su correo de GOLSZ",
+    family_relationship_ph: "Parentesco (opcional)", family_send: "Enviar",
+    family_disclaimer: "El titular de la cuenta debe aprobar antes de que un padre o madre pueda ver sus datos privados. Esto confirma el consentimiento mutuo — no es una verificación de identidad independiente.",
+    family_sent_msg: "Solicitud enviada — esperando su aprobación.", family_not_found_msg: "No se encontró ninguna cuenta de GOLSZ con ese correo.",
+    family_couldnt_send: "No se pudo enviar la solicitud.",
+    highlights_title: "MEDIOS VERIFICADOS", highlights_empty: "Aún no hay mejores jugadas.",
+    highlights_title_ph: "Título de la jugada (ej. Partido completo vs Montreal)", highlights_link_ph: "Enlace (YouTube, Veo, Hudl…)",
+    highlights_add: "Añadir", highlights_invalid_url: "Introduce un enlace de vídeo válido (que empiece por https://).",
+    highlights_add_err: "No se pudo añadir ese enlace.", highlights_watch: "Ver la jugada",
+    editor_title: "Crea tu perfil", editor_name_label: "NOMBRE COMPLETO", editor_name_ph: "Tu nombre",
+    editor_sport_label: "DEPORTE", editor_select: "Seleccionar…", editor_position_label: "POSICIÓN",
+    editor_position_pick_sport: "Elige primero un deporte", editor_gender_label: "GÉNERO", editor_grad_year_label: "AÑO DE GRADUACIÓN",
+    editor_height_label: "ALTURA (CM)", editor_weight_label: "PESO (KG)", editor_gpa_label: "PROMEDIO (GPA)",
+    editor_country_label: "PAÍS", editor_country_ph: "ej. Canadá", editor_club_label: "CLUB / EQUIPO",
+    editor_club_ph: "ej. Toronto FC Academy", editor_status_label: "ESTADO DE RECLUTAMIENTO",
+    editor_bio_label: "BIOGRAFÍA DEPORTIVA", editor_bio_ph: "Unas frases que un entrenador u ojeador debería saber.",
+    editor_save: "Guardar perfil", editor_saving: "Guardando…", editor_name_required: "El nombre no puede estar vacío.",
+    editor_save_err: "No se pudo guardar — inténtalo de nuevo.",
+    passport_title_self: "Pasaporte Deportivo", passport_title_other: "Pasaporte del atleta", passport_edit: "Editar perfil",
+    passport_follow: "Seguir", passport_following: "Siguiendo", passport_message: "Mensaje",
+    passport_finish_bold: "Termina de crear tu perfil",
+    passport_finish_rest: " — añade tu deporte, posición y estadísticas para que los entrenadores y Scout puedan encontrarte.",
+    passport_member: "MIEMBRO DE GOLSZ", passport_sport: "DEPORTE", passport_position: "POSICIÓN", passport_club: "CLUB",
+    passport_passport_no: "N.º DE PASAPORTE", passport_height: "ALTURA", passport_grad: "GRADUACIÓN", passport_gpa: "GPA",
+    passport_weight: "PESO", passport_status: "ESTADO", passport_bio_title: "BIOGRAFÍA DEPORTIVA",
+    passport_no_bio: "Aún no hay biografía — toca Editar perfil para añadir una.",
+    passport_following_count: "SIGUIENDO", passport_followers_count: "SEGUIDORES", passport_follower_singular: "SEGUIDOR",
+    passport_not_following_other: "Aún no sigue a nadie.", passport_not_following_self: "Aún no sigues a nadie — echa un vistazo a Descubrir.",
+    passport_no_followers_other: "Aún no tiene seguidores.",
+    passport_no_followers_self: "Aún no tienes seguidores — tu actividad en Descubrir y el feed es cómo la gente te encuentra.",
+    passport_admin_panel: "Panel de administración", passport_terms: "Términos y condiciones", passport_athlete_fallback: "Atleta de GOLSZ",
+    blocked_title: "Cuentas bloqueadas", blocked_empty: "No has bloqueado a nadie.", blocked_unblock: "Desbloquear",
+    admin_checking: "Comprobando acceso…", admin_only: "Solo administradores.", admin_title: "Panel de administración",
+    admin_stat_users: "USUARIOS", admin_stat_posts: "PUBLICACIONES", admin_stat_events: "EVENTOS", admin_stat_pending: "PENDIENTES",
+    admin_tab_reports: "Reportes", admin_tab_users: "Usuarios", admin_tab_events: "Eventos",
+    admin_no_reports: "Aún no hay reportes.", admin_reported_by: "Reportado por ", admin_post_removed: "Publicación ya eliminada.",
+    admin_delete_post: "Eliminar publicación", admin_dismiss: "Descartar", admin_resolved: "Resuelto",
+    admin_search_name: "Buscar por nombre…", admin_no_name: "(sin nombre)", admin_minor: "MENOR", admin_admin: "ADMIN",
+    admin_joined: "se unió hace ", admin_ago: "", admin_revoke_admin: "Revocar admin", admin_make_admin: "Hacer admin",
+    admin_add_event: "AÑADIR EVENTO", admin_title_ph: "Título", admin_location_ph: "Ubicación", admin_level_ph: "Nivel",
+    admin_spots_ph: "Plazas disponibles", admin_create_event: "Crear evento",
+    scout_header: "AI SCOUT", scout_fields_on_file: "CAMPOS REGISTRADOS", scout_live_agent: "AGENTE EN VIVO",
+    scout_history_title: "Historial", scout_new_chat: "Nuevo chat", scout_no_past: "Aún no hay conversaciones pasadas.",
+    scout_new_conversation: "Nueva conversación", scout_ago_messages: " mensajes", scout_delete_conv: "Eliminar conversación",
+    scout_scout_label: "SCOUT", scout_input_ph: "Habla con tu agente…",
+    scout_connection_dropped: "Se perdió la conexión a mitad de la jugada. Envíalo de nuevo y me encargo.",
+    scout_greeting: "Soy tu Agente GOLSZ.\n\nCuéntame sobre ti como se lo contarías a un ojeador — edad, deporte, posición, dónde juegas y a dónde quieres llegar. Construiré tu camino a partir de ahí.",
+    scout_chip1: "Crear mi lista de escuelas objetivo", scout_chip2: "Crear mi hoja de ruta profesional",
+    scout_chip3: "Redactar un correo a un entrenador", scout_chip4: "¿Qué debería hacer este mes?",
+    scout_hey: "Hola", scout_im_your_scout: "Soy tu Agente GOLSZ.",
+    scout_got_you_down_pre: "Te tengo anotado como ", scout_at: " en ", scout_class_of: ", promoción ",
+    scout_whats_plan: "¿Cuál es el plan — tu lista de escuelas objetivo, la hoja de ruta de esta temporada, o algo más?",
+    reset_pw_updated: "Contraseña actualizada", reset_pw_allset: "Todo listo — continúa a GOLSZ.",
+    reset_pw_continue: "Continuar", reset_pw_set_new: "Establece una nueva contraseña",
+    reset_pw_choose: "Elige una nueva contraseña para tu cuenta de GOLSZ.", reset_pw_new_ph: "Nueva contraseña",
+    reset_pw_confirm_ph: "Confirmar nueva contraseña", reset_pw_update_btn: "Actualizar contraseña",
+    reset_pw_min_len: "La contraseña debe tener al menos 6 caracteres.", reset_pw_mismatch: "Las contraseñas no coinciden.",
+    reset_pw_err: "No se pudo actualizar la contraseña.",
   },
   el: {
     loading: "Φόρτωση…",
@@ -304,6 +553,89 @@ const I18N = {
     action_report: "Αναφορά", action_reported: "Αναφέρθηκε", action_block: "Αποκλεισμός", action_delete: "Διαγραφή",
     settings_title: "Ρυθμίσεις", settings_background: "ΦΟΝΤΟ", settings_dark: "Σκούρο", settings_light: "Ανοιχτό",
     settings_language: "ΓΛΩΣΣΑ",
+    restricted_title: "Περιορισμένος λογαριασμός.", restricted_body: "Οι αναρτήσεις σας παραμένουν ιδιωτικές και είστε κρυφοί από την Ανακάλυψη μέχρι να εγκρίνει την πρόσβαση γονέας ή κηδεμόνας — δείτε το Οικογένεια & Γονική Πρόσβαση στο προφίλ σας.",
+    back: "Πίσω",
+    discover_title: "Ανακαλύψτε αθλητές", discover_search: "Αναζήτηση με όνομα, άθλημα, θέση, χώρα…",
+    discover_count_one: "ΑΘΛΗΤΗΣ ΚΑΤΑΧΩΡΗΜΕΝΟΣ", discover_count_other: "ΑΘΛΗΤΕΣ ΚΑΤΑΧΩΡΗΜΕΝΟΙ",
+    discover_no_athletes: "Δεν υπάρχουν ακόμα καταχωρημένοι αθλητές.", discover_no_match: "Κανένας αθλητής δεν ταιριάζει με αυτή την αναζήτηση.",
+    events_add_title: "Προσθήκη στις εκδηλώσεις σας", events_field_title: "ΤΙΤΛΟΣ", events_title_ph: "π.χ. Δοκιμή με τον Προπονητή Reyes",
+    events_field_date: "ΗΜΕΡΟΜΗΝΙΑ", events_field_sport: "ΑΘΛΗΜΑ", events_field_location: "ΤΟΠΟΘΕΣΙΑ", events_location_ph: "π.χ. Τορόντο, ON",
+    events_field_level: "ΕΠΙΠΕΔΟ", events_level_ph: "π.χ. Open, D1", events_field_notes: "ΣΗΜΕΙΩΣΕΙΣ", events_notes_ph: "Οποιαδήποτε λεπτομέρεια αξίζει να θυμάστε",
+    events_save: "Αποθήκευση στις εκδηλώσεις μου", events_saving: "Αποθήκευση…", events_err_title_date: "Προσθέστε τίτλο και ημερομηνία.",
+    events_err_save: "Δεν ήταν δυνατή η αποθήκευση — δοκιμάστε ξανά.", events_register: "Εγγραφή", events_spots: "θέσεις",
+    events_my_title: "Οι ευκαιρίες μου", events_add_button: "Προσθήκη ευκαιρίας",
+    events_empty: "Δεν έχει αποθηκευτεί τίποτα ακόμα — αποθηκεύστε μια ανάρτηση, ένα μήνυμα, ή προσθέστε μία χειροκίνητα παραπάνω.",
+    messages_title: "Μηνύματα", messages_search: "Αναζήτηση συνομιλιών…",
+    messages_empty: "Δεν υπάρχουν συνομιλίες ακόμα — ακολουθήστε κάποιον και στείλτε του μήνυμα από την Ανακάλυψη.",
+    messages_no_match: "Καμία συνομιλία δεν ταιριάζει με αυτή την αναζήτηση.",
+    messages_say_hello_pre: "Πείτε γεια — μπορείτε να στείλετε μήνυμα στον/στην ", messages_say_hello_post: " επειδή αλληλοακολουθείστε.",
+    messages_placeholder: "Μήνυμα…", messages_delete_conv: "Διαγραφή συνομιλίας", messages_delete_msg: "Διαγραφή μηνύματος",
+    messages_save_to_events: "Αποθήκευση στις εκδηλώσεις μου",
+    messages_cant_send: "Δεν ήταν δυνατή η αποστολή — μπορείτε να στείλετε μήνυμα μόνο σε προφίλ που ακολουθείτε ή που σας ακολουθούν.",
+    messages_opportunity_from: "Ευκαιρία από ",
+    family_title: "ΟΙΚΟΓΕΝΕΙΑ & ΓΟΝΙΚΗ ΠΡΟΣΒΑΣΗ", family_pending: "ΕΚΚΡΕΜΗ ΑΙΤΗΜΑΤΑ ΓΙΑ ΕΣΑΣ", family_wants_access: " θέλει γονική πρόσβαση",
+    family_someone: "Κάποιος", family_approve: "Έγκριση", family_deny: "Απόρριψη",
+    family_granted_title: "ΑΤΟΜΑ ΜΕ ΠΡΟΣΒΑΣΗ ΣΤΟΝ ΛΟΓΑΡΙΑΣΜΟ ΣΑΣ", family_parent_fallback: "Γονέας", family_revoke: "Ανάκληση",
+    family_mylinks_title: "ΛΟΓΑΡΙΑΣΜΟΙ ΣΤΟΥΣ ΟΠΟΙΟΥΣ ΕΧΕΤΕ ΠΡΟΣΒΑΣΗ", family_athlete_fallback: "Αθλητής",
+    family_approved: "ΕΓΚΡΙΘΗΚΕ", family_pending_status: "ΕΚΚΡΕΜΕΙ",
+    family_request_title: "ΑΙΤΗΜΑ ΠΡΟΣΒΑΣΗΣ ΣΕ ΛΟΓΑΡΙΑΣΜΟ ΑΝΗΛΙΚΟΥ", family_email_ph: "Το email του στο GOLSZ",
+    family_relationship_ph: "Σχέση (προαιρετικό)", family_send: "Αποστολή",
+    family_disclaimer: "Ο κάτοχος του λογαριασμού πρέπει να εγκρίνει πριν ένας γονέας δει τα ιδιωτικά του δεδομένα. Αυτό επιβεβαιώνει αμοιβαία συναίνεση — δεν αποτελεί ανεξάρτητη επαλήθευση ταυτότητας.",
+    family_sent_msg: "Το αίτημα στάλθηκε — αναμονή έγκρισης.", family_not_found_msg: "Δεν βρέθηκε λογαριασμός GOLSZ με αυτό το email.",
+    family_couldnt_send: "Δεν ήταν δυνατή η αποστολή του αιτήματος.",
+    highlights_title: "ΕΠΑΛΗΘΕΥΜΕΝΑ ΜΕΣΑ", highlights_empty: "Δεν υπάρχουν highlights ακόμα.",
+    highlights_title_ph: "Τίτλος highlight (π.χ. Πλήρης αγώνας εναντίον Μόντρεαλ)", highlights_link_ph: "Σύνδεσμος (YouTube, Veo, Hudl…)",
+    highlights_add: "Προσθήκη", highlights_invalid_url: "Εισαγάγετε έγκυρο σύνδεσμο βίντεο (που να ξεκινά με https://).",
+    highlights_add_err: "Δεν ήταν δυνατή η προσθήκη αυτού του συνδέσμου.", highlights_watch: "Δείτε το highlight",
+    editor_title: "Δημιουργήστε το προφίλ σας", editor_name_label: "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", editor_name_ph: "Το όνομά σας",
+    editor_sport_label: "ΑΘΛΗΜΑ", editor_select: "Επιλέξτε…", editor_position_label: "ΘΕΣΗ",
+    editor_position_pick_sport: "Επιλέξτε πρώτα άθλημα", editor_gender_label: "ΦΥΛΟ", editor_grad_year_label: "ΕΤΟΣ ΑΠΟΦΟΙΤΗΣΗΣ",
+    editor_height_label: "ΥΨΟΣ (ΕΚ)", editor_weight_label: "ΒΑΡΟΣ (ΚΙΛΑ)", editor_gpa_label: "ΒΑΘΜΟΣ (GPA)",
+    editor_country_label: "ΧΩΡΑ", editor_country_ph: "π.χ. Καναδάς", editor_club_label: "ΣΥΛΛΟΓΟΣ / ΟΜΑΔΑ",
+    editor_club_ph: "π.χ. Toronto FC Academy", editor_status_label: "ΚΑΤΑΣΤΑΣΗ ΣΤΡΑΤΟΛΟΓΗΣΗΣ",
+    editor_bio_label: "ΒΙΟΓΡΑΦΙΚΟ ΣΚΑΟΥΤΙΝΓΚ", editor_bio_ph: "Λίγες προτάσεις που πρέπει να ξέρει ένας προπονητής ή σκάουτ.",
+    editor_save: "Αποθήκευση προφίλ", editor_saving: "Αποθήκευση…", editor_name_required: "Το όνομα δεν μπορεί να είναι κενό.",
+    editor_save_err: "Δεν ήταν δυνατή η αποθήκευση — δοκιμάστε ξανά.",
+    passport_title_self: "Αθλητικό Διαβατήριο", passport_title_other: "Διαβατήριο Αθλητή", passport_edit: "Επεξεργασία προφίλ",
+    passport_follow: "Ακολούθηση", passport_following: "Ακολουθείτε", passport_message: "Μήνυμα",
+    passport_finish_bold: "Ολοκληρώστε το προφίλ σας",
+    passport_finish_rest: " — προσθέστε άθλημα, θέση και στατιστικά ώστε προπονητές και το Scout να σας βρουν.",
+    passport_member: "ΜΕΛΟΣ GOLSZ", passport_sport: "ΑΘΛΗΜΑ", passport_position: "ΘΕΣΗ", passport_club: "ΣΥΛΛΟΓΟΣ",
+    passport_passport_no: "ΑΡ. ΔΙΑΒΑΤΗΡΙΟΥ", passport_height: "ΥΨΟΣ", passport_grad: "ΑΠΟΦΟΙΤΗΣΗ", passport_gpa: "GPA",
+    passport_weight: "ΒΑΡΟΣ", passport_status: "ΚΑΤΑΣΤΑΣΗ", passport_bio_title: "ΒΙΟΓΡΑΦΙΚΟ ΣΚΑΟΥΤΙΝΓΚ",
+    passport_no_bio: "Δεν υπάρχει βιογραφικό ακόμα — πατήστε Επεξεργασία προφίλ για να προσθέσετε ένα.",
+    passport_following_count: "ΑΚΟΛΟΥΘΕΙ", passport_followers_count: "ΑΚΟΛΟΥΘΟΙ", passport_follower_singular: "ΑΚΟΛΟΥΘΟΣ",
+    passport_not_following_other: "Δεν ακολουθεί κανέναν ακόμα.", passport_not_following_self: "Δεν ακολουθείτε κανέναν ακόμα — δείτε την Ανακάλυψη.",
+    passport_no_followers_other: "Δεν έχει ακόλουθους ακόμα.",
+    passport_no_followers_self: "Δεν έχετε ακόλουθους ακόμα — η δραστηριότητά σας στην Ανακάλυψη και τη ροή είναι ο τρόπος να σας βρουν.",
+    passport_admin_panel: "Πίνακας διαχείρισης", passport_terms: "Όροι & Προϋποθέσεις", passport_athlete_fallback: "Αθλητής GOLSZ",
+    blocked_title: "Αποκλεισμένοι λογαριασμοί", blocked_empty: "Δεν έχετε αποκλείσει κανέναν.", blocked_unblock: "Άρση αποκλεισμού",
+    admin_checking: "Έλεγχος πρόσβασης…", admin_only: "Μόνο για διαχειριστές.", admin_title: "Πίνακας διαχείρισης",
+    admin_stat_users: "ΧΡΗΣΤΕΣ", admin_stat_posts: "ΑΝΑΡΤΗΣΕΙΣ", admin_stat_events: "ΕΚΔΗΛΩΣΕΙΣ", admin_stat_pending: "ΕΚΚΡΕΜΗ",
+    admin_tab_reports: "Αναφορές", admin_tab_users: "Χρήστες", admin_tab_events: "Εκδηλώσεις",
+    admin_no_reports: "Δεν υπάρχουν αναφορές ακόμα.", admin_reported_by: "Αναφέρθηκε από ", admin_post_removed: "Η ανάρτηση έχει ήδη αφαιρεθεί.",
+    admin_delete_post: "Διαγραφή ανάρτησης", admin_dismiss: "Απόρριψη", admin_resolved: "Επιλύθηκε",
+    admin_search_name: "Αναζήτηση με όνομα…", admin_no_name: "(χωρίς όνομα)", admin_minor: "ΑΝΗΛΙΚΟΣ", admin_admin: "ADMIN",
+    admin_joined: "εγγράφηκε πριν από ", admin_ago: "", admin_revoke_admin: "Ανάκληση admin", admin_make_admin: "Ορισμός ως admin",
+    admin_add_event: "ΠΡΟΣΘΗΚΗ ΕΚΔΗΛΩΣΗΣ", admin_title_ph: "Τίτλος", admin_location_ph: "Τοποθεσία", admin_level_ph: "Επίπεδο",
+    admin_spots_ph: "Διαθέσιμες θέσεις", admin_create_event: "Δημιουργία εκδήλωσης",
+    scout_header: "AI SCOUT", scout_fields_on_file: "ΠΕΔΙΑ ΚΑΤΑΧΩΡΗΜΕΝΑ", scout_live_agent: "ΖΩΝΤΑΝΟΣ ΠΡΑΚΤΟΡΑΣ",
+    scout_history_title: "Ιστορικό", scout_new_chat: "Νέα συνομιλία", scout_no_past: "Δεν υπάρχουν προηγούμενες συνομιλίες ακόμα.",
+    scout_new_conversation: "Νέα συνομιλία", scout_ago_messages: " μηνύματα", scout_delete_conv: "Διαγραφή συνομιλίας",
+    scout_scout_label: "SCOUT", scout_input_ph: "Μιλήστε στον σκάουτ σας…",
+    scout_connection_dropped: "Η σύνδεση διακόπηκε στη μέση. Στείλτε το ξανά και θα το αναλάβω.",
+    scout_greeting: "Είμαι ο GOLSZ Σκάουτ σας.\n\nΠείτε μου για εσάς όπως θα λέγατε σε έναν σκάουτ — ηλικία, άθλημα, θέση, πού παίζετε και πού θέλετε να καταλήξετε. Θα χτίσω τη διαδρομή σας από εκεί.",
+    scout_chip1: "Δημιουργία λίστας σχολών-στόχων", scout_chip2: "Δημιουργία οδικού χάρτη καριέρας",
+    scout_chip3: "Σύνταξη email σε προπονητή", scout_chip4: "Τι πρέπει να κάνω αυτόν τον μήνα;",
+    scout_hey: "Γεια", scout_im_your_scout: "Είμαι ο GOLSZ Σκάουτ σας.",
+    scout_got_you_down_pre: "Σας έχω καταγεγραμμένο ως ", scout_at: " στο ", scout_class_of: ", τάξη αποφοίτησης ",
+    scout_whats_plan: "Ποιο είναι το σχέδιο — η λίστα σχολών-στόχων σας, ο οδικός χάρτης αυτής της σεζόν, ή κάτι άλλο;",
+    reset_pw_updated: "Ο κωδικός ενημερώθηκε", reset_pw_allset: "Όλα έτοιμα — συνεχίστε στο GOLSZ.",
+    reset_pw_continue: "Συνέχεια", reset_pw_set_new: "Ορισμός νέου κωδικού",
+    reset_pw_choose: "Επιλέξτε νέο κωδικό για τον λογαριασμό σας στο GOLSZ.", reset_pw_new_ph: "Νέος κωδικός",
+    reset_pw_confirm_ph: "Επιβεβαίωση νέου κωδικού", reset_pw_update_btn: "Ενημέρωση κωδικού",
+    reset_pw_min_len: "Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες.", reset_pw_mismatch: "Οι κωδικοί δεν ταιριάζουν.",
+    reset_pw_err: "Δεν ήταν δυνατή η ενημέρωση του κωδικού.",
   },
 };
 const LANGS = [["en", "English"], ["fr", "Français"], ["es", "Español"], ["el", "Ελληνικά"]];
@@ -528,6 +860,7 @@ function Badge({ label }) {
    server-side RLS; this is just a visible explanation of why posting is
    blocked / why you don't show up in Discover). */
 function RestrictedBanner() {
+  const { t } = useLang();
   const [restricted, setRestricted] = useState(false);
   useEffect(() => {
     if (!sb) return;
@@ -547,7 +880,7 @@ function RestrictedBanner() {
     <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
       <span style={{ fontSize: 18 }}>🔒</span>
       <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.4 }}>
-        <b style={{ color: C.amber }}>Restricted account.</b> Your posts stay private and you're hidden from Discover until a parent or guardian approves access — see Family &amp; Parent Access on your Profile.
+        <b style={{ color: C.amber }}>{t("restricted_title")}</b> {t("restricted_body")}
       </div>
     </div>
   );
@@ -810,7 +1143,7 @@ function Feed({ onMessage, onViewProfile }) {
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{p.head}</div>
           {p.kind === "clip" && p.body ? (
             <a href={p.body} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13.5, color: C.lime, lineHeight: 1.5, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}>
-              <Video size={13} /> Watch highlight
+              <Video size={13} /> {t("highlights_watch")}
             </a>
           ) : (
             <div style={{ fontSize: 13.5, color: C.body, lineHeight: 1.5 }}>{p.body}</div>
@@ -837,7 +1170,7 @@ function Feed({ onMessage, onViewProfile }) {
               </button>
             )}
             {p.postId && uid && (
-              <button onClick={() => setSavingEvent(p)} style={iconBtn(C.slate)} title="Save to my events">
+              <button onClick={() => setSavingEvent(p)} style={iconBtn(C.slate)} title={t("messages_save_to_events")}>
                 <CalendarPlus size={15} />
               </button>
             )}
@@ -898,6 +1231,7 @@ const SPORT_PREFERENCE = {
 };
 
 function Discover({ onMessage, onViewProfile }) {
+  const { t } = useLang();
   const [query, setQuery] = useState("");
   const [players, setPlayers] = useState(null);
   const [uid, setUid] = useState(null);
@@ -957,12 +1291,12 @@ function Discover({ onMessage, onViewProfile }) {
 
   return (
     <div style={{ padding: "8px 12px 16px" }}>
-      <SectionTitle>Discover players</SectionTitle>
+      <SectionTitle>{t("discover_title")}</SectionTitle>
       <div style={{ position: "relative", marginBottom: 4 }}>
         <Search size={16} color={C.slate} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }} />
         <input
           value={query} onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name, sport, position, country…"
+          placeholder={t("discover_search")}
           style={{
             width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12,
             color: C.chalk, padding: "12px 14px 12px 38px", fontSize: 14, fontFamily: "inherit",
@@ -972,7 +1306,7 @@ function Discover({ onMessage, onViewProfile }) {
       </div>
       <div style={{ margin: "14px 2px 8px" }}>
         <span style={{ fontSize: 11, color: C.slate, fontFamily: "'Space Mono', monospace" }}>
-          {results.length} {results.length === 1 ? "ATHLETE" : "ATHLETES"} ON FILE
+          {results.length} {results.length === 1 ? t("discover_count_one") : t("discover_count_other")}
         </span>
       </div>
       <div className="discover-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -1016,7 +1350,7 @@ function Discover({ onMessage, onViewProfile }) {
                       border: `1px solid ${following[p.id] ? C.lime : C.line2}`,
                     }}
                   >
-                    <Users size={11} /> {following[p.id] ? "Following" : "Follow"}
+                    <Users size={11} /> {following[p.id] ? t("action_following") : t("action_follow")}
                   </button>
                 )}
               </div>
@@ -1024,11 +1358,11 @@ function Discover({ onMessage, onViewProfile }) {
           </div>
         ))}
         {players === null && (
-          <div style={{ gridColumn: "1 / -1", textAlign: "center", color: C.slate, padding: "30px 0", fontSize: 13 }}>Loading…</div>
+          <div style={{ gridColumn: "1 / -1", textAlign: "center", color: C.slate, padding: "30px 0", fontSize: 13 }}>{t("loading")}</div>
         )}
         {players !== null && results.length === 0 && (
           <div style={{ gridColumn: "1 / -1", textAlign: "center", color: C.slate, padding: "30px 0", fontSize: 13 }}>
-            {players.length === 0 ? "No athletes on file yet." : "No athletes match that search."}
+            {players.length === 0 ? t("discover_no_athletes") : t("discover_no_match")}
           </div>
         )}
       </div>
@@ -1044,6 +1378,7 @@ function Discover({ onMessage, onViewProfile }) {
    owner (or an admin) can read a private row back, per events_read in
    migration 011. */
 function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
+  const { t } = useLang();
   const [title, setTitle] = useState(initialTitle || "");
   const [sport, setSport] = useState("");
   const [location, setLocation] = useState("");
@@ -1057,7 +1392,7 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
 
   async function save() {
     if (!sb || busy) return;
-    if (!title.trim() || !eventDate) { setErr("Add a title and a date."); return; }
+    if (!title.trim() || !eventDate) { setErr(t("events_err_title_date")); return; }
     setBusy(true); setErr("");
     try {
       const { data: { user } } = await sb.auth.getUser();
@@ -1071,7 +1406,7 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
       onSaved();
     } catch (e) {
       console.error("GOLSZ add-to-events error:", e);
-      setErr((e && e.message) || "Couldn't save — try again.");
+      setErr((e && e.message) || t("events_err_save"));
     } finally { setBusy(false); }
   }
 
@@ -1079,20 +1414,20 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: 18, boxSizing: "border-box" }} className="noscroll">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>Add to your events</div>
+          <div style={{ fontWeight: 800, fontSize: 16 }}>{t("events_add_title")}</div>
           <button onClick={onClose} style={iconBtn(C.chalk)}><X size={18} /></button>
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <span style={label}>TITLE</span>
-          <input style={field} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Trial with Coach Reyes" />
+          <span style={label}>{t("events_field_title")}</span>
+          <input style={field} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("events_title_ph")} />
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-          <div><span style={label}>DATE</span>
+          <div><span style={label}>{t("events_field_date")}</span>
             <input type="date" style={field} value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
           </div>
-          <div><span style={label}>SPORT</span>
+          <div><span style={label}>{t("events_field_sport")}</span>
             <select style={field} value={sport} onChange={(e) => setSport(e.target.value)}>
               <option value="">—</option>
               {SPORTS.filter((s) => s !== "All").map((s) => <option key={s} value={s}>{s}</option>)}
@@ -1101,17 +1436,17 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-          <div><span style={label}>LOCATION</span>
-            <input style={field} value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Toronto, ON" />
+          <div><span style={label}>{t("events_field_location")}</span>
+            <input style={field} value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t("events_location_ph")} />
           </div>
-          <div><span style={label}>LEVEL</span>
-            <input style={field} value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. Open, D1" />
+          <div><span style={label}>{t("events_field_level")}</span>
+            <input style={field} value={level} onChange={(e) => setLevel(e.target.value)} placeholder={t("events_level_ph")} />
           </div>
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <span style={label}>NOTES</span>
-          <textarea style={{ ...field, resize: "vertical", minHeight: 70 }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any details worth remembering" />
+          <span style={label}>{t("events_field_notes")}</span>
+          <textarea style={{ ...field, resize: "vertical", minHeight: 70 }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("events_notes_ph")} />
         </div>
 
         {err && <div style={{ color: C.amber, fontSize: 12, marginBottom: 10 }}>{err}</div>}
@@ -1119,13 +1454,14 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
           width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12,
           padding: "13px", fontWeight: 800, fontSize: 15, fontFamily: "inherit",
           cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
-        }}>{busy ? "Saving…" : "Save to my events"}</button>
+        }}>{busy ? t("events_saving") : t("events_save")}</button>
       </div>
     </div>
   );
 }
 
 function EventRow({ e, mine, onDelete }) {
+  const { t } = useLang();
   return (
     <div style={{ ...card, display: "flex", gap: 12, alignItems: "center" }}>
       <div style={{
@@ -1142,7 +1478,7 @@ function EventRow({ e, mine, onDelete }) {
         </div>
         <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
           <Tag>{e.sport}</Tag><Tag>{e.lvl}</Tag>
-          {!mine && <Tag warn>{e.spots} spots</Tag>}
+          {!mine && <Tag warn>{e.spots} {t("events_spots")}</Tag>}
         </div>
       </div>
       {mine ? (
@@ -1151,13 +1487,14 @@ function EventRow({ e, mine, onDelete }) {
         <button style={{
           background: C.lime, color: C.ink, border: "none", borderRadius: 9,
           padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
-        }}>Register</button>
+        }}>{t("events_register")}</button>
       )}
     </div>
   );
 }
 
 function Events() {
+  const { t } = useLang();
   const [myEvents, setMyEvents] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [uid, setUid] = useState(null);
@@ -1190,10 +1527,10 @@ function Events() {
   return (
     <div style={{ padding: "8px 12px 16px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "4px 2px 10px" }}>
-        <SectionTitle noMargin>My opportunities</SectionTitle>
+        <SectionTitle noMargin>{t("events_my_title")}</SectionTitle>
         {uid && (
           <button onClick={() => setShowAdd(true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}>
-            <CalendarPlus size={14} /> Add opportunity
+            <CalendarPlus size={14} /> {t("events_add_button")}
           </button>
         )}
       </div>
@@ -1205,10 +1542,10 @@ function Events() {
         />
       )}
 
-      {myEvents === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>Loading…</div>}
+      {myEvents === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
       {myEvents && myEvents.length === 0 && (
         <div style={{ color: C.slate, fontSize: 13, padding: "2px 2px 16px" }}>
-          Nothing saved yet — save a post, a message, or add one manually above.
+          {t("events_empty")}
         </div>
       )}
       {myEvents && myEvents.map((e) => <EventRow key={e.id} e={e} mine={true} onDelete={deleteEvent} />)}
@@ -1230,6 +1567,7 @@ function Tag({ children, warn }) {
    `thread` is a real profile uuid (string) once a conversation is open,
    or null for the list view — always real data, no demo fallback. */
 function Messages({ thread, setThread }) {
+  const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [conversations, setConversations] = useState(null);
   const [query, setQuery] = useState("");
@@ -1354,7 +1692,7 @@ function Messages({ thread, setThread }) {
       loadConversations();
     } catch (e) {
       console.error("GOLSZ send message error:", e);
-      setErr("Couldn't send — you can only message profiles you follow or who follow you.");
+      setErr(t("messages_cant_send"));
     } finally { setBusy(false); }
   }
 
@@ -1382,13 +1720,13 @@ function Messages({ thread, setThread }) {
         <div style={{ flex: 1, overflowY: "auto", padding: 14 }}>
           {threadMsgs.length === 0 && (
             <div style={{ textAlign: "center", color: C.slate, fontSize: 12.5, marginTop: 20 }}>
-              Say hello — you can message {name} because you follow each other.
+              {t("messages_say_hello_pre")}{name}{t("messages_say_hello_post")}
             </div>
           )}
           {threadMsgs.map((m) => (
             <div key={m.id} style={{ display: "flex", alignItems: "flex-end", gap: 6, marginBottom: 10, justifyContent: m.sender_id === uid ? "flex-end" : "flex-start" }}>
               {m.sender_id !== uid && (
-                <button onClick={() => setSavingEvent(m)} title="Save to my events" style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0 }}>
+                <button onClick={() => setSavingEvent(m)} title={t("messages_save_to_events")} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0 }}>
                   <CalendarPlus size={14} />
                 </button>
               )}
@@ -1400,7 +1738,7 @@ function Messages({ thread, setThread }) {
                 border: m.sender_id === uid ? "none" : `1px solid ${C.line2}`, fontWeight: m.sender_id === uid ? 500 : 400,
               }}>{m.body}</div>
               {m.sender_id === uid && (
-                <button onClick={() => deleteMessage(m.id)} title="Delete message" style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0 }}>
+                <button onClick={() => deleteMessage(m.id)} title={t("messages_delete_msg")} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0 }}>
                   <Trash2 size={14} />
                 </button>
               )}
@@ -1409,7 +1747,7 @@ function Messages({ thread, setThread }) {
         </div>
         {savingEvent && (
           <AddToEventsModal
-            initialTitle={`Opportunity from ${name}`}
+            initialTitle={`${t("messages_opportunity_from")}${name}`}
             initialNotes={savingEvent.body}
             onClose={() => setSavingEvent(null)}
             onSaved={() => setSavingEvent(null)}
@@ -1419,7 +1757,7 @@ function Messages({ thread, setThread }) {
         <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${C.line}` }}>
           <input value={text} onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") send(); }}
-            placeholder="Message…" style={{
+            placeholder={t("messages_placeholder")} style={{
             flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10,
             color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none",
           }} />
@@ -1437,13 +1775,13 @@ function Messages({ thread, setThread }) {
 
   return (
     <div style={{ padding: "8px 12px 16px" }}>
-      <SectionTitle>Messages</SectionTitle>
+      <SectionTitle>{t("messages_title")}</SectionTitle>
       {conversations && conversations.length > 0 && (
         <div style={{ position: "relative", marginBottom: 12 }}>
           <Search size={16} color={C.slate} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }} />
           <input
             value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search conversations…"
+            placeholder={t("messages_search")}
             style={{
               width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12,
               color: C.chalk, padding: "11px 14px 11px 38px", fontSize: 13.5, fontFamily: "inherit",
@@ -1452,39 +1790,39 @@ function Messages({ thread, setThread }) {
           />
         </div>
       )}
-      {conversations === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>Loading…</div>}
+      {conversations === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
       {conversations && conversations.length === 0 && (
         <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>
-          No conversations yet — follow someone and message them from Discover.
+          {t("messages_empty")}
         </div>
       )}
       {conversations && conversations.length > 0 && visibleConversations.length === 0 && (
-        <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>No conversations match that search.</div>
+        <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("messages_no_match")}</div>
       )}
-      {visibleConversations && visibleConversations.map((t) => (
-        <div key={t.id} style={{
+      {visibleConversations && visibleConversations.map((conv) => (
+        <div key={conv.id} style={{
           ...card, display: "flex", gap: 11, alignItems: "center",
-          border: `1px solid ${t.unread ? C.line2 : C.line}`,
+          border: `1px solid ${conv.unread ? C.line2 : C.line}`,
         }}>
-          <button onClick={() => setThread(t.id)} style={{
+          <button onClick={() => setThread(conv.id)} style={{
             display: "flex", gap: 11, alignItems: "center", flex: 1, minWidth: 0,
             textAlign: "left", cursor: "pointer", background: "none", border: "none", padding: 0, fontFamily: "inherit",
           }}>
-            <Avatar init={t.init} ring={t.v ? C.lime : C.line2} />
+            <Avatar init={conv.init} ring={conv.v ? C.lime : C.line2} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: C.msgName }}>{t.who}</span>
-                {t.v && <BadgeCheck size={13} color={C.lime} />}
-                {t.unread && <span style={{ width: 8, height: 8, borderRadius: 99, background: C.lime, flexShrink: 0, marginLeft: 4 }} />}
-                <span style={{ marginLeft: "auto", fontSize: 10.5, color: C.slate }}>{t.ago}</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: C.msgName }}>{conv.who}</span>
+                {conv.v && <BadgeCheck size={13} color={C.lime} />}
+                {conv.unread && <span style={{ width: 8, height: 8, borderRadius: 99, background: C.lime, flexShrink: 0, marginLeft: 4 }} />}
+                <span style={{ marginLeft: "auto", fontSize: 10.5, color: C.slate }}>{conv.ago}</span>
               </div>
-              {t.role && <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 3 }}>{t.role}</div>}
-              <div style={{ fontSize: 12.5, color: t.unread ? C.chalk : C.slate, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: t.unread ? 600 : 400 }}>
-                {t.last}
+              {conv.role && <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 3 }}>{conv.role}</div>}
+              <div style={{ fontSize: 12.5, color: conv.unread ? C.chalk : C.slate, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: conv.unread ? 600 : 400 }}>
+                {conv.last}
               </div>
             </div>
           </button>
-          <button onClick={() => hideConversation(t.id)} title="Delete conversation" style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0, display: "flex" }}>
+          <button onClick={() => hideConversation(conv.id)} title={t("messages_delete_conv")} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0, display: "flex" }}>
             <Trash2 size={16} />
           </button>
         </div>
@@ -1500,6 +1838,7 @@ function Messages({ thread, setThread }) {
    supabase-migration-003-parent-verification.sql). This is mutual in-app
    consent, not identity-verified parental consent. */
 function FamilyAccess() {
+  const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [email, setEmail] = useState("");
   const [relationship, setRelationship] = useState("");
@@ -1543,10 +1882,10 @@ function FamilyAccess() {
     try {
       const { data, error } = await sb.rpc("request_parent_link", { p_child_email: email.trim(), p_relationship: relationship.trim() || null });
       if (error) throw error;
-      setMsg(data ? "Request sent — waiting on their approval." : "No GOLSZ account found with that email.");
+      setMsg(data ? t("family_sent_msg") : t("family_not_found_msg"));
       setEmail(""); setRelationship("");
       load();
-    } catch (e) { setMsg(e.message || "Couldn't send request."); }
+    } catch (e) { setMsg(e.message || t("family_couldnt_send")); }
     finally { setBusy(false); }
   }
   async function approve(id) { try { await sb.from("parent_links").update({ approved_at: new Date().toISOString() }).eq("id", id); load(); } catch (e) { console.error("GOLSZ approve error:", e); } }
@@ -1554,20 +1893,20 @@ function FamilyAccess() {
 
   if (!sb || !uid) return null;
   const rowStyle = { display: "flex", alignItems: "center", gap: 8, padding: "6px 0" };
-  const smallBtn = (outline) => ({ background: outline ? "transparent" : C.lime, color: outline ? C.slate : C.pitch, border: outline ? `1px solid ${C.line2}` : "none", borderRadius: 7, padding: "5px 10px", fontSize: 11, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" });
+  const smallBtn = (outline) => ({ background: outline ? "transparent" : C.lime, color: outline ? C.slate : C.ink, border: outline ? `1px solid ${C.line2}` : "none", borderRadius: 7, padding: "5px 10px", fontSize: 11, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" });
 
   return (
     <div style={{ ...card, marginBottom: 8 }}>
-      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>FAMILY & PARENT ACCESS</div>
+      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("family_title")}</div>
 
       {pending.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: C.amber, fontWeight: 700, marginBottom: 6 }}>PENDING REQUESTS FOR YOU</div>
+          <div style={{ fontSize: 11, color: C.amber, fontWeight: 700, marginBottom: 6 }}>{t("family_pending")}</div>
           {pending.map((r) => (
             <div key={r.id} style={rowStyle}>
-              <span style={{ flex: 1, fontSize: 13 }}>{r.name || "Someone"} wants parent access{r.relationship ? ` (${r.relationship})` : ""}</span>
-              <button onClick={() => approve(r.id)} style={smallBtn(false)}>Approve</button>
-              <button onClick={() => remove(r.id)} style={smallBtn(true)}>Deny</button>
+              <span style={{ flex: 1, fontSize: 13 }}>{r.name || t("family_someone")}{t("family_wants_access")}{r.relationship ? ` (${r.relationship})` : ""}</span>
+              <button onClick={() => approve(r.id)} style={smallBtn(false)}>{t("family_approve")}</button>
+              <button onClick={() => remove(r.id)} style={smallBtn(true)}>{t("family_deny")}</button>
             </div>
           ))}
         </div>
@@ -1575,11 +1914,11 @@ function FamilyAccess() {
 
       {grantedToMe.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>PEOPLE WITH ACCESS TO YOUR ACCOUNT</div>
+          <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("family_granted_title")}</div>
           {grantedToMe.map((r) => (
             <div key={r.id} style={rowStyle}>
-              <span style={{ flex: 1, fontSize: 13 }}>{r.name || "Parent"}{r.relationship ? ` · ${r.relationship}` : ""}</span>
-              <button onClick={() => remove(r.id)} style={smallBtn(true)}>Revoke</button>
+              <span style={{ flex: 1, fontSize: 13 }}>{r.name || t("family_parent_fallback")}{r.relationship ? ` · ${r.relationship}` : ""}</span>
+              <button onClick={() => remove(r.id)} style={smallBtn(true)}>{t("family_revoke")}</button>
             </div>
           ))}
         </div>
@@ -1587,27 +1926,27 @@ function FamilyAccess() {
 
       {myLinks.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>ACCOUNTS YOU HAVE ACCESS TO</div>
+          <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("family_mylinks_title")}</div>
           {myLinks.map((r) => (
             <div key={r.id} style={rowStyle}>
-              <span style={{ flex: 1, fontSize: 13 }}>{r.name || "Athlete"}{r.relationship ? ` · ${r.relationship}` : ""}</span>
-              <span style={{ fontSize: 10.5, color: r.approved_at ? C.lime : C.amber, fontWeight: 700 }}>{r.approved_at ? "APPROVED" : "PENDING"}</span>
+              <span style={{ flex: 1, fontSize: 13 }}>{r.name || t("family_athlete_fallback")}{r.relationship ? ` · ${r.relationship}` : ""}</span>
+              <span style={{ fontSize: 10.5, color: r.approved_at ? C.lime : C.amber, fontWeight: 700 }}>{r.approved_at ? t("family_approved") : t("family_pending_status")}</span>
             </div>
           ))}
         </div>
       )}
 
-      <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>REQUEST ACCESS TO A MINOR'S ACCOUNT</div>
+      <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("family_request_title")}</div>
       <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their GOLSZ email" style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("family_email_ph")} style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
       </div>
       <div style={{ display: "flex", gap: 6 }}>
-        <input value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="Relationship (optional)" style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
-        <button onClick={requestLink} disabled={busy || !email.trim()} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: busy || !email.trim() ? 0.5 : 1 }}>Send</button>
+        <input value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder={t("family_relationship_ph")} style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+        <button onClick={requestLink} disabled={busy || !email.trim()} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: busy || !email.trim() ? 0.5 : 1 }}>{t("family_send")}</button>
       </div>
       {msg && <div style={{ fontSize: 11.5, color: C.slate, marginTop: 8 }}>{msg}</div>}
       <div style={{ fontSize: 10.5, color: C.slate, marginTop: 10, lineHeight: 1.4 }}>
-        The account owner must approve before a parent can see their private data. This confirms mutual consent — it isn't independent identity verification.
+        {t("family_disclaimer")}
       </div>
     </div>
   );
@@ -1619,6 +1958,7 @@ function FamilyAccess() {
    jsonb column. Always real data — no demo placeholders — and each entry
    only ever shows its title and link, nothing fabricated. */
 function Highlights({ viewUserId }) {
+  const { t } = useLang();
   const [items, setItems] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [uid, setUid] = useState(null);
@@ -1655,7 +1995,7 @@ function Highlights({ viewUserId }) {
     setBusy(true); setErr("");
     try {
       let parsed;
-      try { parsed = new URL(url.trim()); } catch { throw new Error("Enter a valid video link (starting with https://)."); }
+      try { parsed = new URL(url.trim()); } catch { throw new Error(t("highlights_invalid_url")); }
       const entry = {
         id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
         title: title.trim(), url: parsed.toString(),
@@ -1670,7 +2010,7 @@ function Highlights({ viewUserId }) {
       try { await sb.from("posts").insert({ author_id: uid, kind: "clip", headline: entry.title, body: entry.url }); }
       catch (e) { console.error("GOLSZ clip post error:", e); }
     } catch (e) {
-      setErr((e && e.message) ? e.message : "Couldn't add that link.");
+      setErr((e && e.message) ? e.message : t("highlights_add_err"));
     } finally { setBusy(false); }
   }
 
@@ -1683,9 +2023,9 @@ function Highlights({ viewUserId }) {
 
   return (
     <div style={{ ...card }}>
-      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>VERIFIED MEDIA</div>
+      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("highlights_title")}</div>
       {loaded && items.length === 0 && (
-        <div style={{ fontSize: 12.5, color: C.slate }}>No highlights yet.</div>
+        <div style={{ fontSize: 12.5, color: C.slate }}>{t("highlights_empty")}</div>
       )}
       {items.map((m, i) => (
         <div key={m.id || i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: i < items.length - 1 ? `1px solid ${C.line}` : "none" }}>
@@ -1702,13 +2042,13 @@ function Highlights({ viewUserId }) {
       ))}
       {sb && isOwner && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Highlight title (e.g. Full match vs Montreal)"
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("highlights_title_ph")}
             style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", marginBottom: 6, boxSizing: "border-box" }} />
           <div style={{ display: "flex", gap: 6 }}>
-            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Link (YouTube, Veo, Hudl…)"
+            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder={t("highlights_link_ph")}
               style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
             <button onClick={addHighlight} disabled={!title.trim() || !url.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!title.trim() || !url.trim() || busy) ? 0.5 : 1 }}>
-              {busy ? "…" : "Add"}
+              {busy ? "…" : t("highlights_add")}
             </button>
           </div>
           {err && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 6 }}>{err}</div>}
@@ -1723,8 +2063,8 @@ function Highlights({ viewUserId }) {
    numeric/text fields fall back to "—" when unset rather than showing
    demo values — a half-real, half-fake profile would undermine trust in
    a recruiting tool. */
-function toPassport(profile, ath, uid) {
-  const name = (profile && profile.full_name) || "GOLSZ Athlete";
+function toPassport(profile, ath, uid, t) {
+  const name = (profile && profile.full_name) || t("passport_athlete_fallback");
   const dash = (v) => (v === null || v === undefined || v === "" ? "—" : v);
   const country = (ath && ath.country) || "";
   const shortId = uid ? uid.replace(/-/g, "").slice(0, 5).toUpperCase() : "00000";
@@ -1738,11 +2078,12 @@ function toPassport(profile, ath, uid) {
     grad: dash(ath && ath.grad_year), gpa: dash(ath && ath.gpa),
     weight: ath && ath.weight_kg ? `${ath.weight_kg} kg` : "—",
     status: dash(ath && ath.recruiting_status),
-    bio: (ath && ath.bio) || "No bio yet — tap Edit profile to add one.",
+    bio: (ath && ath.bio) || t("passport_no_bio"),
   };
 }
 
 function ProfileEditor({ initial, onClose, onSaved }) {
+  const { t } = useLang();
   const [form, setForm] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -1755,7 +2096,7 @@ function ProfileEditor({ initial, onClose, onSaved }) {
   async function save() {
     if (!sb || busy) return;
     const name = (form.full_name || "").trim();
-    if (!name) { setErr("Name can't be empty."); return; }
+    if (!name) { setErr(t("editor_name_required")); return; }
     setBusy(true); setErr("");
     try {
       const { data: { user } } = await sb.auth.getUser();
@@ -1780,7 +2121,7 @@ function ProfileEditor({ initial, onClose, onSaved }) {
       onSaved();
     } catch (e) {
       console.error("GOLSZ profile save error:", e);
-      setErr((e && e.message) || "Couldn't save — try again.");
+      setErr((e && e.message) || t("editor_save_err"));
     } finally { setBusy(false); }
   }
 
@@ -1788,42 +2129,42 @@ function ProfileEditor({ initial, onClose, onSaved }) {
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: 18, boxSizing: "border-box" }} className="noscroll">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>Build your profile</div>
+          <div style={{ fontWeight: 800, fontSize: 16 }}>{t("editor_title")}</div>
           <button onClick={onClose} style={iconBtn(C.chalk)}><X size={18} /></button>
         </div>
 
-        {group("FULL NAME", <input style={field} value={form.full_name || ""} onChange={set("full_name")} placeholder="Your name" />)}
+        {group(t("editor_name_label"), <input style={field} value={form.full_name || ""} onChange={set("full_name")} placeholder={t("editor_name_ph")} />)}
 
         {row(<>
-          <div><span style={label}>SPORT</span>
+          <div><span style={label}>{t("editor_sport_label")}</span>
             <select style={field} value={form.sport || ""} onChange={set("sport")}>
-              <option value="">Select…</option>
+              <option value="">{t("editor_select")}</option>
               {SPORTS.filter((s) => s !== "All").map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <div><span style={label}>POSITION</span>
-            <input style={field} list="position-options" value={form.position || ""} onChange={set("position")} placeholder={form.sport ? `e.g. ${(SPORT_POSITIONS[form.sport] || POSITIONS)[0]}` : "Pick a sport first"} />
+          <div><span style={label}>{t("editor_position_label")}</span>
+            <input style={field} list="position-options" value={form.position || ""} onChange={set("position")} placeholder={form.sport ? `e.g. ${(SPORT_POSITIONS[form.sport] || POSITIONS)[0]}` : t("editor_position_pick_sport")} />
             <datalist id="position-options">{(SPORT_POSITIONS[form.sport] || POSITIONS.filter((p) => p !== "All")).map((p) => <option key={p} value={p} />)}</datalist>
           </div>
         </>)}
 
         {row(<>
-          <div><span style={label}>GENDER</span>
+          <div><span style={label}>{t("editor_gender_label")}</span>
             <select style={field} value={form.gender || ""} onChange={set("gender")}>
-              <option value="">Select…</option>
+              <option value="">{t("editor_select")}</option>
               {GENDERS.filter((g) => g[0] !== "All").map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
-          <div><span style={label}>GRAD YEAR</span>
+          <div><span style={label}>{t("editor_grad_year_label")}</span>
             <input style={field} type="number" value={form.grad_year || ""} onChange={set("grad_year")} placeholder="2027" />
           </div>
         </>)}
 
         {row(<>
-          <div><span style={label}>HEIGHT (CM)</span>
+          <div><span style={label}>{t("editor_height_label")}</span>
             <input style={field} type="number" value={form.height_cm || ""} onChange={set("height_cm")} placeholder="180" />
           </div>
-          <div><span style={label}>WEIGHT (KG)</span>
+          <div><span style={label}>{t("editor_weight_label")}</span>
             <input style={field} type="number" value={form.weight_kg || ""} onChange={set("weight_kg")} placeholder="75" />
           </div>
         </>)}
@@ -1831,7 +2172,7 @@ function ProfileEditor({ initial, onClose, onSaved }) {
         {(() => {
           const pref = SPORT_PREFERENCE[form.sport];
           return row(<>
-            <div><span style={label}>GPA</span>
+            <div><span style={label}>{t("editor_gpa_label")}</span>
               <input style={field} type="number" step="0.01" min="0" max="5" value={form.gpa || ""} onChange={set("gpa")} placeholder="3.8" />
             </div>
             {pref ? (
@@ -1846,16 +2187,16 @@ function ProfileEditor({ initial, onClose, onSaved }) {
         })()}
 
         {row(<>
-          <div><span style={label}>COUNTRY</span>
-            <input style={field} list="country-options" value={form.country || ""} onChange={set("country")} placeholder="e.g. Canada" />
+          <div><span style={label}>{t("editor_country_label")}</span>
+            <input style={field} list="country-options" value={form.country || ""} onChange={set("country")} placeholder={t("editor_country_ph")} />
             <datalist id="country-options">{COUNTRIES.filter((c) => c !== "All").map((c) => <option key={c} value={c} />)}</datalist>
           </div>
-          <div><span style={label}>CLUB / TEAM</span>
-            <input style={field} value={form.club_name || ""} onChange={set("club_name")} placeholder="e.g. Toronto FC Academy" />
+          <div><span style={label}>{t("editor_club_label")}</span>
+            <input style={field} value={form.club_name || ""} onChange={set("club_name")} placeholder={t("editor_club_ph")} />
           </div>
         </>)}
 
-        {group("RECRUITING STATUS", (
+        {group(t("editor_status_label"), (
           <select style={field} value={form.recruiting_status || ""} onChange={set("recruiting_status")}>
             <option value="">—</option>
             <option value="Open to offers">Open to offers</option>
@@ -1865,8 +2206,8 @@ function ProfileEditor({ initial, onClose, onSaved }) {
           </select>
         ))}
 
-        {group("SCOUTING BIO", (
-          <textarea style={{ ...field, resize: "vertical", minHeight: 80 }} maxLength={600} value={form.bio || ""} onChange={set("bio")} placeholder="A few sentences a coach or scout should know." />
+        {group(t("editor_bio_label"), (
+          <textarea style={{ ...field, resize: "vertical", minHeight: 80 }} maxLength={600} value={form.bio || ""} onChange={set("bio")} placeholder={t("editor_bio_ph")} />
         ))}
 
         {err && <div style={{ color: C.amber, fontSize: 12, marginBottom: 10 }}>{err}</div>}
@@ -1874,13 +2215,14 @@ function ProfileEditor({ initial, onClose, onSaved }) {
           width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12,
           padding: "13px", fontWeight: 800, fontSize: 15, fontFamily: "inherit",
           cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
-        }}>{busy ? "Saving…" : "Save profile"}</button>
+        }}>{busy ? t("editor_saving") : t("editor_save")}</button>
       </div>
     </div>
   );
 }
 
 function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUserId, onBack, onMessage, onViewProfile }) {
+  const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [profile, setProfile] = useState(null);
   const [athlete, setAthlete] = useState(null);
@@ -1956,7 +2298,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
     } catch (e) { console.error("GOLSZ passport follow error:", e); setFollowing(was); }
   }
 
-  const p = real ? toPassport(profile, athlete, viewingOther ? viewUserId : uid) : PASSPORT;
+  const p = real ? toPassport(profile, athlete, viewingOther ? viewUserId : uid, t) : PASSPORT;
   const mrz = real
     ? `${p.id.replace(/[·]/g, "<")}<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<<<<<<<<<<<<<<<<<<<<<<<<<<<`
     : `GLS<CAN<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<LEFTBACK<<<<<${p.id.replace(/[·]/g, "")}<2027CA`;
@@ -1972,16 +2314,16 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
     club_name: (athlete && athlete.club_name) || "", bio: (athlete && athlete.bio) || "",
   });
 
-  if (!loaded) return <div style={{ padding: "40px 20px", textAlign: "center", color: C.slate, fontSize: 13 }}>Loading…</div>;
+  if (!loaded) return <div style={{ padding: "40px 20px", textAlign: "center", color: C.slate, fontSize: 13 }}>{t("loading")}</div>;
 
   return (
     <div style={{ padding: "8px 12px 20px", background: C.passportWash }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "4px 2px 10px" }}>
-        <SectionTitle noMargin>{viewingOther ? "Athlete Passport" : "Sports Passport"}</SectionTitle>
+        <SectionTitle noMargin>{viewingOther ? t("passport_title_other") : t("passport_title_self")}</SectionTitle>
         {viewingOther ? (
-          <button onClick={onBack} style={{ ...iconBtn(C.chalk), fontSize: 11.5 }}><ChevronLeft size={16} /> Back</button>
+          <button onClick={onBack} style={{ ...iconBtn(C.chalk), fontSize: 11.5 }}><ChevronLeft size={16} /> {t("back")}</button>
         ) : real ? (
-          <button onClick={() => setEditing(true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}><Pencil size={13} /> Edit profile</button>
+          <button onClick={() => setEditing(true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}><Pencil size={13} /> {t("passport_edit")}</button>
         ) : (
           <span style={{ fontSize: 9.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>GOLSZ · GLOBAL</span>
         )}
@@ -1995,7 +2337,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
             background: following ? C.lime : "transparent", color: following ? C.ink : C.chalk,
             border: `1px solid ${following ? C.lime : C.line2}`,
           }}>
-            <Users size={15} fill={following ? C.lime : "none"} /> {following ? "Following" : "Follow"}
+            <Users size={15} fill={following ? C.lime : "none"} /> {following ? t("passport_following") : t("passport_follow")}
           </button>
           {(following || followedByThem) && onMessage && (
             <button onClick={() => onMessage(viewUserId)} style={{
@@ -2003,7 +2345,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
               padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
               background: "transparent", color: C.chalk, border: `1px solid ${C.line2}`,
             }}>
-              <MessageSquare size={15} /> Message
+              <MessageSquare size={15} /> {t("passport_message")}
             </button>
           )}
         </div>
@@ -2013,7 +2355,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
         <div onClick={() => setEditing(true)} style={{ background: "#C8F1351a", border: `1px solid ${C.limeBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
           <Pencil size={16} color={C.lime} />
           <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.4 }}>
-            <b style={{ color: C.lime }}>Finish building your profile</b> — add your sport, position and stats so coaches and Scout can find you.
+            <b style={{ color: C.lime }}>{t("passport_finish_bold")}</b>{t("passport_finish_rest")}
           </div>
         </div>
       )}
@@ -2045,22 +2387,22 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
               border: `1px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center",
               fontFamily: "'Space Mono', monospace", fontWeight: 800, fontSize: 34, color: C.lime,
             }}>{p.initials}</div>
-            <div style={{ textAlign: "center", fontSize: 8.5, color: C.slate, marginTop: 5, fontFamily: "'Space Mono', monospace" }}>{real ? "GOLSZ MEMBER" : "VERIFIED PHOTO"}</div>
+            <div style={{ textAlign: "center", fontSize: 8.5, color: C.slate, marginTop: 5, fontFamily: "'Space Mono', monospace" }}>{real ? t("passport_member") : "VERIFIED PHOTO"}</div>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05, fontStretch: "expanded" }}>{p.name}</div>
             <div style={{ fontSize: 11, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 10 }}>{p.handle}</div>
-            <PassRow k="SPORT" v={p.sport} />
-            <PassRow k="POSITION" v={p.position} />
-            <PassRow k="CLUB" v={p.club} />
-            <PassRow k="PASSPORT NO." v={p.id} mono />
+            <PassRow k={t("passport_sport")} v={p.sport} />
+            <PassRow k={t("passport_position")} v={p.position} />
+            <PassRow k={t("passport_club")} v={p.club} />
+            <PassRow k={t("passport_passport_no")} v={p.id} mono />
           </div>
         </div>
 
         {/* data grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, background: C.line, borderTop: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}` }}>
           {(real
-            ? [[p.prefLabel, p.foot], ["HEIGHT", p.height], ["GRAD", p.grad], ["GPA", p.gpa], ["WEIGHT", p.weight], ["STATUS", p.status]]
+            ? [[p.prefLabel, p.foot], [t("passport_height"), p.height], [t("passport_grad"), p.grad], [t("passport_gpa"), p.gpa], [t("passport_weight"), p.weight], [t("passport_status"), p.status]]
             : [["FOOT", p.foot], ["HEIGHT", p.height], ["GRAD", p.grad], ["GPA", p.gpa], ["TOP SPEED", p.pace], ["STATUS", p.level]]
           ).map(([k, v]) => (
             <div key={k} style={{ background: C.card, padding: "9px 12px" }}>
@@ -2101,23 +2443,23 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
 
       {/* bio */}
       <div style={{ ...card, marginTop: 14 }}>
-        <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 6 }}>SCOUTING BIO</div>
+        <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("passport_bio_title")}</div>
         <div style={{ fontSize: 13.5, lineHeight: 1.55, color: C.body }}>{p.bio}</div>
       </div>
 
       {/* following + followers */}
       {real && (
         <FollowListCard
-          title={(n) => n === null ? "FOLLOWING" : `${n} FOLLOWING`}
+          title={(n) => n === null ? t("passport_following_count") : `${n} ${t("passport_following_count")}`}
           list={followingList} onViewProfile={onViewProfile}
-          emptyText={viewingOther ? "Not following anyone yet." : "Not following anyone yet — check out Discover."}
+          emptyText={viewingOther ? t("passport_not_following_other") : t("passport_not_following_self")}
         />
       )}
       {real && (
         <FollowListCard
-          title={(n) => n === null ? "FOLLOWERS" : `${n} ${n === 1 ? "FOLLOWER" : "FOLLOWERS"}`}
+          title={(n) => n === null ? t("passport_followers_count") : `${n} ${n === 1 ? t("passport_follower_singular") : t("passport_followers_count")}`}
           list={followers} onViewProfile={onViewProfile}
-          emptyText={viewingOther ? "No followers yet." : "No followers yet — your Discover and Feed activity is how people find you."}
+          emptyText={viewingOther ? t("passport_no_followers_other") : t("passport_no_followers_self")}
         />
       )}
 
@@ -2146,16 +2488,16 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
           width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           background: "transparent", border: `1px solid ${C.amberBorder}`, color: C.amber, borderRadius: 10,
           padding: "11px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", marginTop: 16,
-        }}><ShieldAlert size={15} /> Admin panel</button>
+        }}><ShieldAlert size={15} /> {t("passport_admin_panel")}</button>
       )}
 
       {!viewingOther && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
-          <a href="terms.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>Terms & Conditions</a>
+          <a href="terms.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>{t("passport_terms")}</a>
           <span style={{ color: C.line2 }}>·</span>
           <a href="index.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>golsz.com</a>
           <span style={{ color: C.line2 }}>·</span>
-          <button onClick={onSignOut} style={{ background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Sign out</button>
+          <button onClick={onSignOut} style={{ background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{t("nav_signout")}</button>
         </div>
       )}
     </div>
@@ -2170,6 +2512,7 @@ function PassRow({ k, v, mono }) {
   );
 }
 function FollowListCard({ title, list, onViewProfile, emptyText }) {
+  const { t } = useLang();
   const [expanded, setExpanded] = useState(false);
   const count = list === null ? null : list.length;
   return (
@@ -2186,7 +2529,7 @@ function FollowListCard({ title, list, onViewProfile, emptyText }) {
         {title(count)}
         {count > 0 && (expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
       </button>
-      {list === null && <div style={{ fontSize: 12.5, color: C.slate, marginTop: 8 }}>Loading…</div>}
+      {list === null && <div style={{ fontSize: 12.5, color: C.slate, marginTop: 8 }}>{t("loading")}</div>}
       {list && list.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, marginTop: 8 }}>{emptyText}</div>}
       {expanded && list && list.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -2211,6 +2554,7 @@ function FollowListCard({ title, list, onViewProfile, emptyText }) {
    (blocker_id = auth.uid()) already allows unblocking; there was just no
    UI for it before now. */
 function BlockedAccounts() {
+  const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [blocked, setBlocked] = useState(null);
   const [removingId, setRemovingId] = useState(null);
@@ -2252,13 +2596,13 @@ function BlockedAccounts() {
     <div style={{ ...card, border: `1px solid ${count ? C.amber + "44" : C.line}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <Ban size={16} color={count ? C.amber : C.slate} />
-        <span style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>Blocked accounts</span>
+        <span style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>{t("blocked_title")}</span>
         {count > 0 && (
           <span style={{ fontSize: 11, fontWeight: 800, color: C.ink, background: C.amber, borderRadius: 999, padding: "1px 8px" }}>{count}</span>
         )}
       </div>
-      {blocked === null && <div style={{ fontSize: 12.5, color: C.slate }}>Loading…</div>}
-      {blocked && blocked.length === 0 && <div style={{ fontSize: 12.5, color: C.slate }}>You haven't blocked anyone.</div>}
+      {blocked === null && <div style={{ fontSize: 12.5, color: C.slate }}>{t("loading")}</div>}
+      {blocked && blocked.length === 0 && <div style={{ fontSize: 12.5, color: C.slate }}>{t("blocked_empty")}</div>}
       {blocked && blocked.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {blocked.map((b) => (
@@ -2269,7 +2613,7 @@ function BlockedAccounts() {
                 fontSize: 11, fontWeight: 700, padding: "5px 10px", borderRadius: 999, cursor: "pointer",
                 fontFamily: "inherit", background: "transparent", color: C.lime, border: `1px solid ${C.limeBorder}`,
                 opacity: removingId === b.id ? 0.5 : 1,
-              }}>{removingId === b.id ? "…" : "Unblock"}</button>
+              }}>{removingId === b.id ? "…" : t("blocked_unblock")}</button>
             </div>
           ))}
         </div>
@@ -2285,6 +2629,7 @@ function BlockedAccounts() {
    The UI check below (authorized state) is just for a clean "not
    authorized" message instead of a wall of empty/failed queries. */
 function AdminPanel({ onBack }) {
+  const { t } = useLang();
   const [authorized, setAuthorized] = useState(null);
   const [tab, setTab] = useState("reports");
   const [stats, setStats] = useState(null);
@@ -2402,11 +2747,11 @@ function AdminPanel({ onBack }) {
     }}>{label}</button>
   );
 
-  if (authorized === null) return <div style={{ padding: 20, color: C.slate, fontSize: 13 }}>Checking access…</div>;
+  if (authorized === null) return <div style={{ padding: 20, color: C.slate, fontSize: 13 }}>{t("admin_checking")}</div>;
   if (!authorized) return (
     <div style={{ padding: 20 }}>
-      <div style={{ fontSize: 13, color: C.slate }}>Admins only.</div>
-      <button onClick={onBack} style={{ ...iconBtn(C.lime), marginTop: 10 }}><ChevronLeft size={16} /> Back</button>
+      <div style={{ fontSize: 13, color: C.slate }}>{t("admin_only")}</div>
+      <button onClick={onBack} style={{ ...iconBtn(C.lime), marginTop: 10 }}><ChevronLeft size={16} /> {t("back")}</button>
     </div>
   );
 
@@ -2414,49 +2759,49 @@ function AdminPanel({ onBack }) {
     <div style={{ padding: "8px 12px 20px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 2px 12px" }}>
         <button onClick={onBack} style={iconBtn(C.chalk)}><ChevronLeft size={20} /></button>
-        <SectionTitle noMargin>Admin panel</SectionTitle>
+        <SectionTitle noMargin>{t("admin_title")}</SectionTitle>
       </div>
 
       {stats && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
-          {[["Users", stats.userCount], ["Posts", stats.postCount], ["Events", stats.eventCount], ["Pending", stats.pendingReports]].map(([k, v]) => (
-            <div key={k} style={{ ...card, margin: 0, padding: "10px 8px", textAlign: "center" }}>
-              <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: k === "Pending" && v > 0 ? C.amber : C.lime }}>{v}</div>
-              <div style={{ fontSize: 9, letterSpacing: "0.08em", color: C.slate, fontWeight: 700 }}>{k.toUpperCase()}</div>
+          {[["users", t("admin_stat_users"), stats.userCount], ["posts", t("admin_stat_posts"), stats.postCount], ["events", t("admin_stat_events"), stats.eventCount], ["pending", t("admin_stat_pending"), stats.pendingReports]].map(([id, label, v]) => (
+            <div key={id} style={{ ...card, margin: 0, padding: "10px 8px", textAlign: "center" }}>
+              <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: id === "pending" && v > 0 ? C.amber : C.lime }}>{v}</div>
+              <div style={{ fontSize: 9, letterSpacing: "0.08em", color: C.slate, fontWeight: 700 }}>{label}</div>
             </div>
           ))}
         </div>
       )}
 
       <div style={{ display: "flex", gap: 4, background: C.turf, borderRadius: 11, padding: 4, marginBottom: 14 }}>
-        {tabBtn("reports", "Reports")}
-        {tabBtn("users", "Users")}
-        {tabBtn("events", "Events")}
+        {tabBtn("reports", t("admin_tab_reports"))}
+        {tabBtn("users", t("admin_tab_users"))}
+        {tabBtn("events", t("admin_tab_events"))}
       </div>
 
       {tab === "reports" && (
         <div>
-          {reports === null && <div style={{ color: C.slate, fontSize: 13 }}>Loading…</div>}
-          {reports && reports.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>No reports yet.</div>}
+          {reports === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+          {reports && reports.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_reports")}</div>}
           {reports && reports.map((r) => (
             <div key={r.id} style={{ ...card, opacity: r.resolved_at ? 0.5 : 1 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: C.slate, marginBottom: 6 }}>
-                <span>Reported by {r.reporterName}{r.reason ? ` — "${r.reason}"` : ""}</span>
+                <span>{t("admin_reported_by")}{r.reporterName}{r.reason ? ` — "${r.reason}"` : ""}</span>
                 <span>{timeAgo(r.created_at)}</span>
               </div>
               {r.post ? (
                 <div style={{ fontSize: 13, marginBottom: 8 }}>
                   <b>{r.authorName}:</b> {r.post.headline}{r.post.body ? ` — ${r.post.body}` : ""}
                 </div>
-              ) : <div style={{ fontSize: 13, color: C.slate, marginBottom: 8, fontStyle: "italic" }}>Post already removed.</div>}
+              ) : <div style={{ fontSize: 13, color: C.slate, marginBottom: 8, fontStyle: "italic" }}>{t("admin_post_removed")}</div>}
               {!r.resolved_at ? (
                 <div style={{ display: "flex", gap: 8 }}>
                   {r.post && (
-                    <button onClick={() => deleteReportedPost(r.post_id, r.id)} style={{ ...iconBtn(C.amber), fontSize: 11.5 }}><Trash2 size={13} /> Delete post</button>
+                    <button onClick={() => deleteReportedPost(r.post_id, r.id)} style={{ ...iconBtn(C.amber), fontSize: 11.5 }}><Trash2 size={13} /> {t("admin_delete_post")}</button>
                   )}
-                  <button onClick={() => resolveReport(r.id)} style={{ ...iconBtn(C.slate), fontSize: 11.5 }}>Dismiss</button>
+                  <button onClick={() => resolveReport(r.id)} style={{ ...iconBtn(C.slate), fontSize: 11.5 }}>{t("admin_dismiss")}</button>
                 </div>
-              ) : <div style={{ fontSize: 10.5, color: C.lime }}>Resolved</div>}
+              ) : <div style={{ fontSize: 10.5, color: C.lime }}>{t("admin_resolved")}</div>}
             </div>
           ))}
         </div>
@@ -2466,17 +2811,17 @@ function AdminPanel({ onBack }) {
         <div>
           <input value={userQuery} onChange={(e) => setUserQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") loadUsers(userQuery); }}
-            placeholder="Search by name…" style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
-          {users === null && <div style={{ color: C.slate, fontSize: 13 }}>Loading…</div>}
+            placeholder={t("admin_search_name")} style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
+          {users === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
           {users && users.map((u) => (
             <div key={u.id} style={{ ...card, display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 6 }}>
-                  {u.full_name || "(no name)"}
-                  {u.is_minor && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 5, padding: "1px 5px" }}>MINOR</span>}
-                  {u.is_admin && <span style={{ fontSize: 9, color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 5, padding: "1px 5px" }}>ADMIN</span>}
+                  {u.full_name || t("admin_no_name")}
+                  {u.is_minor && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_minor")}</span>}
+                  {u.is_admin && <span style={{ fontSize: 9, color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_admin")}</span>}
                 </div>
-                <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>joined {timeAgo(u.created_at)} ago</div>
+                <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{t("admin_joined")}{timeAgo(u.created_at)}{t("admin_ago")}</div>
               </div>
               <select value={u.plan} onChange={(e) => setUserPlan(u.id, e.target.value)} style={{ ...field, padding: "5px 7px", fontSize: 11.5 }}>
                 <option value="starter">starter</option><option value="pro">pro</option><option value="elite">elite</option>
@@ -2484,7 +2829,7 @@ function AdminPanel({ onBack }) {
               <button onClick={() => setUserAdmin(u.id, !u.is_admin)} style={{
                 fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
                 background: u.is_admin ? "#C8F1351a" : "transparent", color: u.is_admin ? C.lime : C.slate, border: `1px solid ${u.is_admin ? C.lime : C.line2}`,
-              }}>{u.is_admin ? "Revoke admin" : "Make admin"}</button>
+              }}>{u.is_admin ? t("admin_revoke_admin") : t("admin_make_admin")}</button>
             </div>
           ))}
         </div>
@@ -2493,8 +2838,8 @@ function AdminPanel({ onBack }) {
       {tab === "events" && (
         <div>
           <div style={{ ...card }}>
-            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>ADD EVENT</div>
-            <input value={evTitle} onChange={(e) => setEvTitle(e.target.value)} placeholder="Title" style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 8 }} />
+            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_add_event")}</div>
+            <input value={evTitle} onChange={(e) => setEvTitle(e.target.value)} placeholder={t("admin_title_ph")} style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 8 }} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
               <select value={evSport} onChange={(e) => setEvSport(e.target.value)} style={field}>
                 {SPORTS.filter((s) => s !== "All").map((s) => <option key={s} value={s}>{s}</option>)}
@@ -2502,16 +2847,16 @@ function AdminPanel({ onBack }) {
               <input type="date" value={evDate} onChange={(e) => setEvDate(e.target.value)} style={field} />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-              <input value={evLoc} onChange={(e) => setEvLoc(e.target.value)} placeholder="Location" style={field} />
-              <input value={evLevel} onChange={(e) => setEvLevel(e.target.value)} placeholder="Level" style={field} />
+              <input value={evLoc} onChange={(e) => setEvLoc(e.target.value)} placeholder={t("admin_location_ph")} style={field} />
+              <input value={evLevel} onChange={(e) => setEvLevel(e.target.value)} placeholder={t("admin_level_ph")} style={field} />
             </div>
-            <input type="number" value={evSpots} onChange={(e) => setEvSpots(e.target.value)} placeholder="Spots available" style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
+            <input type="number" value={evSpots} onChange={(e) => setEvSpots(e.target.value)} placeholder={t("admin_spots_ph")} style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
             <button onClick={createEvent} disabled={!evTitle.trim() || !evDate} style={{
               width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 10, padding: "11px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit",
               opacity: !evTitle.trim() || !evDate ? 0.5 : 1,
-            }}>Create event</button>
+            }}>{t("admin_create_event")}</button>
           </div>
-          {events === null && <div style={{ color: C.slate, fontSize: 13 }}>Loading…</div>}
+          {events === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
           {events && events.map((e) => (
             <div key={e.id} style={{ ...card, display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -2536,26 +2881,26 @@ If asked what AI model or company powers you, who made you, or whether you're Ch
 OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null}}
 Allowed keys: name, age, sport, position, location, club, level, grad_year, gpa, budget, citizenship, goal. Do not repeat known fields.`;
 
-const CHIPS = ["Build my target school list", "Create my career roadmap", "Draft an email to a coach", "What should I do this month?"];
 const CHIP_ICONS = [Compass, Radar, MessageSquare, CalendarDays];
+function chipsFor(t) { return [t("scout_chip1"), t("scout_chip2"), t("scout_chip3"), t("scout_chip4")]; }
 
-const SCOUT_GREETING = "I'm your GOLSZ Scout.\n\nTell me about yourself like you'd tell a scout — age, sport, position, where you play, and where you want to end up. I'll build your path from there.";
-function scoutGreetingFor(seeded) {
+function scoutGreetingFor(seeded, t) {
   const who = [seeded.sport, seeded.position].filter(Boolean).join(" · ");
-  if (!who && !seeded.name) return SCOUT_GREETING;
+  if (!who && !seeded.name) return t("scout_greeting");
   const first = seeded.name ? seeded.name.split(" ")[0] : null;
-  const hello = first ? `Hey ${first} — ` : "Hey — ";
+  const hello = first ? `${t("scout_hey")} ${first} — ` : `${t("scout_hey")} — `;
   const context = who
-    ? `I've got you down as a ${who}${seeded.club ? ` at ${seeded.club}` : ""}${seeded.grad_year ? `, class of ${seeded.grad_year}` : ""}. `
+    ? `${t("scout_got_you_down_pre")}${who}${seeded.club ? `${t("scout_at")}${seeded.club}` : ""}${seeded.grad_year ? `${t("scout_class_of")}${seeded.grad_year}` : ""}. `
     : "";
-  return `${hello}I'm your GOLSZ Scout. ${context}\n\nWhat's the plan — your target school list, this season's roadmap, or something else?`;
+  return `${hello}${t("scout_im_your_scout")} ${context}\n\n${t("scout_whats_plan")}`;
 }
 function newScoutConvId() {
   return (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
 }
 
 function Scout() {
-  const [msgs, setMsgs] = useState(sb ? null : [{ role: "assistant", text: SCOUT_GREETING }]);
+  const { t, lang } = useLang();
+  const [msgs, setMsgs] = useState(sb ? null : [{ role: "assistant", text: t("scout_greeting") }]);
   const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo greeting immediately
   const [profile, setProfile] = useState({});
   const [input, setInput] = useState("");
@@ -2583,7 +2928,7 @@ function Scout() {
     (async () => {
       try {
         const { data: { user } } = await sb.auth.getUser();
-        if (!user) { setMsgs([{ role: "assistant", text: SCOUT_GREETING }]); return; }
+        if (!user) { setMsgs([{ role: "assistant", text: t("scout_greeting") }]); return; }
         uidRef.current = user.id;
 
         const [{ data: prof }, { data: ath }] = await Promise.all([
@@ -2624,11 +2969,11 @@ function Scout() {
           setConversationId(lastConvId);
           setMsgs(restored.map((m) => ({ role: m.role, text: m.content })));
         } else {
-          setMsgs([{ role: "assistant", text: scoutGreetingFor(seeded) }]);
+          setMsgs([{ role: "assistant", text: scoutGreetingFor(seeded, t) }]);
         }
       } catch (e) {
         console.error("GOLSZ scout history load error:", e);
-        setMsgs((m) => m || [{ role: "assistant", text: SCOUT_GREETING }]);
+        setMsgs((m) => m || [{ role: "assistant", text: t("scout_greeting") }]);
       } finally { setLoaded(true); }
     })();
   }, []);
@@ -2640,7 +2985,7 @@ function Scout() {
   }
 
   function newChat() {
-    setMsgs([{ role: "assistant", text: scoutGreetingFor(baseProfileRef.current) }]);
+    setMsgs([{ role: "assistant", text: scoutGreetingFor(baseProfileRef.current, t) }]);
     setProfile(baseProfileRef.current);
     setConversationId(newScoutConvId());
     setShowHistory(false);
@@ -2688,7 +3033,7 @@ function Scout() {
         .order("created_at", { ascending: true });
       if (error) throw error;
       const restored = (data || []).flatMap((r) => Array.isArray(r.messages) ? r.messages : []);
-      setMsgs(restored.length ? restored.map((m) => ({ role: m.role, text: m.content })) : [{ role: "assistant", text: SCOUT_GREETING }]);
+      setMsgs(restored.length ? restored.map((m) => ({ role: m.role, text: m.content })) : [{ role: "assistant", text: t("scout_greeting") }]);
       setConversationId(id);
       setShowHistory(false);
     } catch (e) { console.error("GOLSZ scout load conversation error:", e); }
@@ -2706,7 +3051,7 @@ function Scout() {
         const fresh = newScoutConvId();
         setConversationId(fresh);
         setProfile(baseProfileRef.current);
-        setMsgs([{ role: "assistant", text: scoutGreetingFor(baseProfileRef.current) }]);
+        setMsgs([{ role: "assistant", text: scoutGreetingFor(baseProfileRef.current, t) }]);
       }
     } catch (e) {
       console.error("GOLSZ delete conversation error:", e);
@@ -2728,7 +3073,7 @@ function Scout() {
       const _endpoint = (typeof SCOUT_ENDPOINT !== "undefined" && SCOUT_ENDPOINT) ? SCOUT_ENDPOINT : "https://api.anthropic.com/v1/messages";
       const res = await fetch(_endpoint, {
         method: "POST", headers: _hdr,
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, system: SYS, messages: api, tools: [{ type: "web_search_20250305", name: "web_search" }] }),
+        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, system: SYS, messages: api, lang, tools: [{ type: "web_search_20250305", name: "web_search" }] }),
       });
       const data = await res.json();
       const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
@@ -2742,39 +3087,40 @@ function Scout() {
       setMsgs((m) => [...m, { role: "assistant", text: reply }]);
       logTurn("assistant", reply);
     } catch {
-      setMsgs((m) => [...m, { role: "assistant", text: "Connection dropped mid-play. Send that again and I'm on it." }]);
+      setMsgs((m) => [...m, { role: "assistant", text: t("scout_connection_dropped") }]);
     } finally { setBusy(false); }
   }
 
   const known = Object.keys(profile).filter((k) => profile[k]);
+  const CHIPS = chipsFor(t);
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 8 }}>
         <Radar size={18} color={C.lime} />
-        <span style={{ fontWeight: 800, letterSpacing: "0.04em" }}>AI SCOUT</span>
+        <span style={{ fontWeight: 800, letterSpacing: "0.04em" }}>{t("scout_header")}</span>
         <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 10, color: C.slate, fontFamily: "'Space Mono', monospace" }}>
-            {known.length ? `${known.length} FIELDS ON FILE` : "LIVE AGENT"}
+            {known.length ? `${known.length} ${t("scout_fields_on_file")}` : t("scout_live_agent")}
           </span>
-          <button onClick={openHistory} title="History" style={iconBtn(showHistory ? C.lime : C.slate)}><History size={16} /></button>
-          <button onClick={newChat} title="New chat" style={iconBtn(C.lime)}><Plus size={17} /></button>
+          <button onClick={openHistory} title={t("scout_history_title")} style={iconBtn(showHistory ? C.lime : C.slate)}><History size={16} /></button>
+          <button onClick={newChat} title={t("scout_new_chat")} style={iconBtn(C.lime)}><Plus size={17} /></button>
         </span>
       </div>
 
       {showHistory ? (
         <div style={{ flex: 1, overflowY: "auto", padding: "14px 12px 6px" }}>
-          {history === null && <div style={{ color: C.slate, fontSize: 13 }}>Loading…</div>}
-          {history && history.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>No past conversations yet.</div>}
+          {history === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+          {history && history.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("scout_no_past")}</div>}
           {history && history.map((h) => (
             <div key={h.id} style={{
               ...card, display: "flex", alignItems: "center", gap: 8,
               border: `1px solid ${h.id === conversationId ? C.lime : C.line}`,
             }}>
               <button onClick={() => loadConversation(h.id)} style={{ flex: 1, minWidth: 0, textAlign: "left", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3, color: C.chalk }}>{h.preview || "New conversation"}</div>
-                <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{timeAgo(h.lastAt)} ago · {h.turns} messages</div>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3, color: C.chalk }}>{h.preview || t("scout_new_conversation")}</div>
+                <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{timeAgo(h.lastAt)} ago ·{t("scout_ago_messages")} {h.turns}</div>
               </button>
-              <button onClick={() => deleteConversation(h.id)} title="Delete conversation" style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0, display: "flex" }}>
+              <button onClick={() => deleteConversation(h.id)} title={t("scout_delete_conv")} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0, display: "flex" }}>
                 <Trash2 size={15} />
               </button>
             </div>
@@ -2782,10 +3128,10 @@ function Scout() {
         </div>
       ) : (
         <div style={{ flex: 1, overflowY: "auto", padding: "14px 12px 6px" }}>
-          {!loaded && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>Loading…</div>}
+          {!loaded && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
           {msgs && msgs.map((m, i) => (
             <div key={i} className="msg" style={m.role === "user" ? bubbleUser : bubbleAgent}>
-              {m.role === "assistant" && <div style={{ fontSize: 9, letterSpacing: "0.22em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>SCOUT</div>}
+              {m.role === "assistant" && <div style={{ fontSize: 9, letterSpacing: "0.22em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("scout_scout_label")}</div>}
               <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
             </div>
           ))}
@@ -2819,7 +3165,7 @@ function Scout() {
             </div>
           )}
           <div style={{ display: "flex", gap: 8, padding: "10px 12px 14px", borderTop: `1px solid ${C.line}` }}>
-            <textarea rows={1} value={input} placeholder="Talk to your scout…" onChange={(e) => setInput(e.target.value)}
+            <textarea rows={1} value={input} placeholder={t("scout_input_ph")} onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
               style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, color: C.chalk, padding: "11px 13px", fontSize: 14, fontFamily: "inherit", resize: "none", outline: "none" }} />
             <button onClick={() => send(input)} disabled={busy || !loaded || !input.trim()} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 12, width: 46, cursor: "pointer", opacity: busy || !loaded || !input.trim() ? 0.4 : 1 }}><Send size={17} /></button>
@@ -3321,6 +3667,7 @@ function Auth({ onDone, paidReturn }) {
    auto-detects the recovery token in the URL and starts a real session
    scoped just enough to call updateUser({ password }). */
 function ResetPassword({ onDone }) {
+  const { t } = useLang();
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
   const [busy, setBusy] = useState(false);
@@ -3330,15 +3677,15 @@ function ResetPassword({ onDone }) {
 
   async function save() {
     if (busy) return;
-    if (!pw || pw.length < 6) { setErr("Password must be at least 6 characters."); return; }
-    if (pw !== pw2) { setErr("Passwords don't match."); return; }
+    if (!pw || pw.length < 6) { setErr(t("reset_pw_min_len")); return; }
+    if (pw !== pw2) { setErr(t("reset_pw_mismatch")); return; }
     setBusy(true); setErr("");
     try {
       const { error } = await sb.auth.updateUser({ password: pw });
       if (error) throw error;
       setDone(true);
     } catch (e) {
-      setErr((e && e.message) || "Couldn't update password.");
+      setErr((e && e.message) || t("reset_pw_err"));
     } finally { setBusy(false); }
   }
 
@@ -3352,22 +3699,22 @@ function ResetPassword({ onDone }) {
         <div style={{ background: C.card, border: "1px solid " + C.line, borderRadius: 18, padding: 20 }}>
           {done ? (
             <>
-              <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6, color: C.lime }}>Password updated</div>
-              <div style={{ fontSize: 13, color: C.slate, marginBottom: 16 }}>You're all set — continue into GOLSZ.</div>
-              <button onClick={onDone} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>Continue</button>
+              <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6, color: C.lime }}>{t("reset_pw_updated")}</div>
+              <div style={{ fontSize: 13, color: C.slate, marginBottom: 16 }}>{t("reset_pw_allset")}</div>
+              <button onClick={onDone} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>{t("reset_pw_continue")}</button>
             </>
           ) : (
             <>
-              <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>Set a new password</div>
-              <div style={{ fontSize: 12.5, color: C.slate, marginBottom: 14 }}>Choose a new password for your GOLSZ account.</div>
-              <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password" type="password" style={field} />
-              <input value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Confirm new password" type="password" style={{ ...field, marginBottom: 14 }} />
+              <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>{t("reset_pw_set_new")}</div>
+              <div style={{ fontSize: 12.5, color: C.slate, marginBottom: 14 }}>{t("reset_pw_choose")}</div>
+              <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder={t("reset_pw_new_ph")} type="password" style={field} />
+              <input value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder={t("reset_pw_confirm_ph")} type="password" style={{ ...field, marginBottom: 14 }} />
               {err && (
                 <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
                   <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
                 </div>
               )}
-              <button disabled={busy} onClick={save} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, fontFamily: "inherit" }}>{busy ? "Saving…" : "Update password"}</button>
+              <button disabled={busy} onClick={save} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, fontFamily: "inherit" }}>{busy ? t("events_saving") : t("reset_pw_update_btn")}</button>
             </>
           )}
         </div>

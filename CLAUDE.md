@@ -107,23 +107,39 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   CSS vars (`--lime-border`, `--amber-border`) exist specifically because `${C.lime}66`-style hex-alpha-suffix
   concatenation doesn't work once `C.lime` is a `var()` string (`var(--lime)66` isn't valid CSS) — use those
   instead of trying to append alpha digits to any `C.*` value.
-- **Language (i18n) — English/French/Spanish/Greek, partial coverage by design.** `I18N` (a plain object of
-  `{en, fr, es, el}` dictionaries) + `LangContext`/`LangProvider`/`useLang()` live right after `useTheme()`.
-  `LangProvider` wraps the entire app once, at the `ReactDOM.createRoot(...).render(...)` call — any component
-  can call `const { t } = useLang();` and immediately get working translations with zero extra plumbing.
-  Persisted to `localStorage["golsz-lang"]`, same pattern as theme. **Only nav (mobile bottom bar + desktop
-  sidebar), `Auth` (signup/login/plans/forgot-password), and `Feed` are translated** — this was a deliberate
-  scope cut (the user chose "core screens first" over a full one-pass translation) to keep the change
-  reviewable and the risk of missed strings/broken layouts low. `Scout`, `Messages`, `Discover`, `Passport`,
-  `Events`, `AdminPanel`, and `ResetPassword` still render in English regardless of the selected language —
-  extending coverage means adding keys to all four `I18N` sub-objects and calling `useLang()`/`t()` in that
-  component, nothing more. `PLANS` (used by `Auth`) intentionally keeps `name` in English (a brand/tier label,
-  like Spotify's "Premium") but sources `tag`/features from `plan_<id>_tag` / `plan_<id>_featN` keys via
-  `featKeys` — if you add a plan or change its features, add the matching keys to all four languages or `t()`
-  will silently fall back to the key name in fr/es/el. The "MOST POPULAR" ribbon is keyed off `pl.id === "pro"`
-  now, not an English string match — don't revert that to `pl.tag === "Most popular"`, `tag` isn't English
-  text anymore. Language selection lives inside the existing `SettingsButton` modal (a "LANGUAGE" section under
-  "BACKGROUND"), not a separate button.
+- **Language (i18n) — English/French/Spanish/Greek, full app coverage.** `I18N` (a plain object of
+  `{en, fr, es, el}` dictionaries, ~150 keys each) + `LangContext`/`LangProvider`/`useLang()` live right after
+  `useTheme()`. `LangProvider` wraps the entire app once, at the `ReactDOM.createRoot(...).render(...)` call —
+  any component can call `const { t } = useLang();` and immediately get working translations with zero extra
+  plumbing. Persisted to `localStorage["golsz-lang"]`, same pattern as theme. Language selection lives inside
+  the existing `SettingsButton` modal (a "LANGUAGE" section under "BACKGROUND"), not a separate button.
+  Every screen (nav, `Auth`, `Feed`, `Discover`, `Messages`, `Scout`, `Passport` + its sub-components
+  `FamilyAccess`/`Highlights`/`ProfileEditor`/`FollowListCard`/`BlockedAccounts`, `Events`/`AddToEventsModal`,
+  `AdminPanel`, `ResetPassword`) is translated. **Deliberately left in English, by design, not oversight:**
+  literal data values stored as-is in the DB (sport/position names in `SPORT_POSITIONS`/`POSITIONS`,
+  `recruiting_status` option values, `SPORT_PREFERENCE` labels/options like "Left"/"Right") — translating the
+  label without translating what's actually stored would create a display/data mismatch; plan tier names
+  ("Starter"/"Pro"/"Elite", a brand label like Spotify's "Premium"); and a handful of rare edge-case fallback
+  strings ("Unknown" reporter name, "(post deleted)", "Not signed in.") that aren't worth a translation key.
+  `PLANS` sources `tag`/features from `plan_<id>_tag` / `plan_<id>_featN` keys via `featKeys` — if you add a
+  plan or change its features, add the matching keys to all four languages or `t()` will silently fall back to
+  the key name in fr/es/el. The "MOST POPULAR" ribbon is keyed off `pl.id === "pro"`, not an English string
+  match — don't revert that to `pl.tag === "Most popular"`, `tag` isn't English text anymore.
+  **`toPassport()` and `scoutGreetingFor()` are plain functions, not components** — they can't call `useLang()`
+  themselves (hooks rule), so they take `t` as an explicit parameter from the calling component instead; if you
+  add another helper like this that needs translated text, follow the same pattern rather than trying to call
+  `useLang()` outside a component.
+  **Watch for `t` shadowing**: several `.map()` callbacks in this codebase used `t` as a loop variable before
+  `t` meant "translate" (e.g. Messages' conversation list) — `(t) => t.who` inside a component that also
+  destructures `const { t } = useLang()` shadows the translator with the loop item, and `t("some_key")` inside
+  that scope throws `t is not a function`. Already renamed the real collision (conversation `t` → `conv` in
+  `Messages`); if you add a new `.map()` in a translated component, don't name the item `t`.
+  **Scout's AI replies are language-aware too**, not just the UI chrome: the client sends `lang` in the
+  `/api/scout` request body; `api/scout.js` validates it against `LANG_NAMES` (never interpolates the raw
+  client string) and appends a "Respond in {language}" instruction to the real `SYSTEM_PROMPT` when it isn't
+  English. This only affects the real server-side prompt — `golsz-app.html`'s `SYS` fallback constant (the
+  unsupported direct-browser path, see the dual-system-prompt warning above) was deliberately left alone since
+  it isn't what production actually uses.
 - **Passport is a real, editable profile** as of migration 008: `toPassport()` merges `profiles.full_name`
   with the full `athletes` row (sport, position, gender, grad_year, gpa, height_cm, weight_kg, foot,
   recruiting_status, country, club_name, bio) into the passport-shaped display object, showing "—" for
