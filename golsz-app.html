@@ -1106,7 +1106,13 @@ function Feed({ onMessage, onViewProfile }) {
       if (composeImageFile) {
         const ext = (composeImageFile.name.split(".").pop() || "jpg").toLowerCase().slice(0, 5);
         const path = `${uid}/${Date.now()}.${ext}`;
-        const { error: upErr } = await sb.storage.from("post-images").upload(path, composeImageFile);
+        // Uploading the raw File object directly can arrive at Supabase Storage
+        // with an empty body ("No content provided") in some mobile browsers —
+        // reading it into an ArrayBuffer first is the reliable way to upload.
+        const bytes = await composeImageFile.arrayBuffer();
+        const { error: upErr } = await sb.storage.from("post-images").upload(path, bytes, {
+          contentType: composeImageFile.type || "image/jpeg",
+        });
         if (upErr) throw upErr;
         imageUrl = sb.storage.from("post-images").getPublicUrl(path).data.publicUrl;
       }
