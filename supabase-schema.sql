@@ -1114,5 +1114,50 @@ alter table athletes add column if not exists license text;
 alter table athletes add column if not exists looking_for_players boolean;
 
 -- ============================================================
+-- 22) ADDITIVE — search_players() for AI Scout's real-player search
+-- See supabase-migration-022-search-players.sql for full context.
+-- ============================================================
+
+create or replace function search_players(
+  p_sport text default null,
+  p_position text default null,
+  p_country text default null,
+  p_grad_year int default null,
+  p_gender text default null,
+  p_recruiting_status text default null,
+  p_limit int default 10
+)
+returns table (
+  id uuid,
+  full_name text,
+  sport text,
+  position text,
+  country text,
+  club_name text,
+  grad_year int,
+  gender text,
+  recruiting_status text
+)
+language sql security definer set search_path to 'public' as $$
+  select p.id, p.full_name, a.sport, a.position, a.country, a.club_name, a.grad_year, a.gender, a.recruiting_status
+  from athletes a
+  join profiles p on p.id = a.id
+  where a.sport is not null
+    and (p.occupation is null or p.occupation = 'Player')
+    and not is_restricted_minor(a.id)
+    and not is_banned(a.id)
+    and (p_sport is null or a.sport ilike p_sport)
+    and (p_position is null or a.position ilike '%' || p_position || '%')
+    and (p_country is null or a.country ilike p_country)
+    and (p_grad_year is null or a.grad_year = p_grad_year)
+    and (p_gender is null or a.gender = p_gender)
+    and (p_recruiting_status is null or a.recruiting_status = p_recruiting_status)
+  order by a.created_at desc nulls last
+  limit least(coalesce(p_limit, 10), 25);
+$$;
+
+grant execute on function search_players(text, text, text, int, text, text, int) to authenticated;
+
+-- ============================================================
 -- Done.
 -- ============================================================

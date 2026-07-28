@@ -276,6 +276,19 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   true, regardless of `plan`. Admins are exempt from Scout's rate limit even on the Starter plan — being
   admin doesn't otherwise change `plan`, so without this check an admin account would get capped like
   anyone else.
+- **`search_golsz_players` (migration 022)**: a second tool alongside `web_search_20250305`, but a *client-side*
+  one from Anthropic's perspective — Anthropic only tells us the model wants to call it; this file has to
+  actually run it and send a `tool_result` back, which is why the single Anthropic `fetch` became a loop
+  (`MAX_TOOL_TURNS = 4`) that keeps turning the conversation over to Anthropic and back until `stop_reason`
+  stops being `"tool_use"` for this tool. If it's still mid-tool-call after 4 turns, one final no-tools call
+  forces real reply text rather than returning an empty `content` array (the client only renders text blocks,
+  so that would've reproduced the empty-bubble bug documented elsewhere in this file). `searchPlayers()` calls
+  the `search_players()` Postgres function with the service-role key, which **bypasses RLS entirely** — all
+  the "don't surface a restricted minor or a banned account" filtering lives inside that SQL function
+  (`is_restricted_minor()`/`is_banned()`, same helpers `athletes_read` RLS already uses), not in this file.
+  Also scoped to `occupation = 'Player'` (or unset) since every profile gets an `athletes` row regardless of
+  occupation, so a Coach/Scout/Physio's own athletes row (sport set, if they filled one in) shouldn't turn up
+  in a search for real players.
 
 ### `api/stripe-webhook.js` (Vercel serverless function)
 
@@ -372,6 +385,11 @@ project, not a from-scratch bootstrap script. The real tables:
   technically exists until that follow-up is built.
 - There is no `programs` table (an earlier iteration had one for an NCAA/NAIA/USPORTS school directory) —
   Scout's target-school suggestions come entirely from its live web-search tool call, not a seeded table.
+- **`search_players()` (migration 022)**: `security definer` function backing Scout's `search_golsz_players`
+  tool (see `api/scout.js` above) — filters by sport/position/country/grad_year/gender/recruiting_status,
+  scoped to `occupation is null or occupation = 'Player'` and re-applying `is_restricted_minor()`/`is_banned()`
+  by hand, since the service-role caller bypasses `athletes_read` RLS entirely. This is the only thing
+  standing between Scout's search tool and surfacing someone Discover itself would never show.
 - `handle_new_user()` reads `full_name` / `date_of_birth` / `parent_email` out of the signup JWT's
   `raw_user_meta_data` (populated by `Auth`'s `signUp({ options: { data: {...} } })`), computes `is_minor`
   from the DOB, and auto-creates a pending `parent_links` row if `parent_email` already has an account.
