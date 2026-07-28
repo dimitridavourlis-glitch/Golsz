@@ -1592,6 +1592,11 @@ function Feed({ onMessage, onViewProfile }) {
 
 /* ============ DISCOVER (player database) ============ */
 const SPORTS = ["All", "Soccer", "Basketball", "Track", "Hockey", "Tennis"];
+// Separate from SPORTS (which drives Discover's athlete filter, SPORT_POSITIONS,
+// SPORT_PREFERENCE — all athlete-specific) since a Coach/Agent/Scout/Physio isn't
+// filtered through any of those; their sport list is scoped to what they'd
+// realistically be signing up to work in.
+const NON_PLAYER_SPORTS = ["Soccer", "Baseball", "Basketball", "Hockey", "American Football", "Other"];
 const GENDERS = [["All", "All"], ["M", "Male"], ["F", "Female"]];
 const SCHOOL_LEVELS = ["High School", "University", "Other"];
 const OCCUPATIONS = ["Player", "Scout", "Agent", "Coach", "Physio", "Other"];
@@ -2491,7 +2496,7 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
     const name = (form.full_name || "").trim();
     if (!name) { setErr(t("editor_name_required")); return; }
     if (!form.occupation) { setErr(t("auth_occupation_required")); return; }
-    if (isPlayer && !form.sport) { setErr(t("editor_sport_required")); return; }
+    if (!form.sport) { setErr(t("editor_sport_required")); return; }
     if (!isPlayer && !(form.club_name || "").trim()) { setErr(t("editor_team_required")); return; }
     setBusy(true); setErr("");
     try {
@@ -2542,17 +2547,19 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
           </select>
         ))}
 
-        {isPlayer && row(<>
+        {row(<>
           <div><span style={label}>{t("editor_sport_label")}</span>
             <select style={field} value={form.sport || ""} onChange={set("sport")}>
               <option value="">{t("editor_select")}</option>
-              {SPORTS.filter((s) => s !== "All").map((s) => <option key={s} value={s}>{s}</option>)}
+              {(isPlayer ? SPORTS.filter((s) => s !== "All") : NON_PLAYER_SPORTS).map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <div><span style={label}>{t("editor_position_label")}</span>
-            <input style={field} list="position-options" value={form.position || ""} onChange={set("position")} placeholder={form.sport ? `e.g. ${(SPORT_POSITIONS[form.sport] || POSITIONS)[0]}` : t("editor_position_pick_sport")} />
-            <datalist id="position-options">{(SPORT_POSITIONS[form.sport] || POSITIONS.filter((p) => p !== "All")).map((p) => <option key={p} value={p} />)}</datalist>
-          </div>
+          {isPlayer ? (
+            <div><span style={label}>{t("editor_position_label")}</span>
+              <input style={field} list="position-options" value={form.position || ""} onChange={set("position")} placeholder={form.sport ? `e.g. ${(SPORT_POSITIONS[form.sport] || POSITIONS)[0]}` : t("editor_position_pick_sport")} />
+              <datalist id="position-options">{(SPORT_POSITIONS[form.sport] || POSITIONS.filter((p) => p !== "All")).map((p) => <option key={p} value={p} />)}</datalist>
+            </div>
+          ) : <div />}
         </>)}
 
         {isPlayer && row(<>
@@ -2743,7 +2750,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const occupationSet = !!(profile && profile.occupation);
   const isPlayerProfile = !occupationSet || profile.occupation === "Player";
   const incomplete = !viewingOther && real && profile && athlete && (
-    !occupationSet || (isPlayerProfile ? !athlete.sport : !athlete.club_name)
+    !occupationSet || !athlete.sport || (!isPlayerProfile && !athlete.club_name)
   );
 
   const editorInitial = () => ({
@@ -2851,6 +2858,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
               </>
             ) : (
               <>
+                <PassRow k={t("passport_sport")} v={p.sport} />
                 <PassRow k={t("passport_club")} v={p.club} />
                 <PassRow k={t("passport_license")} v={p.license} />
               </>
