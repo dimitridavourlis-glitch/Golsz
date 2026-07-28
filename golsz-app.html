@@ -257,6 +257,7 @@ const I18N = {
     editor_club_ph: "e.g. Toronto FC Academy", editor_status_label: "RECRUITING STATUS",
     editor_bio_label: "SCOUTING BIO", editor_bio_ph: "A few sentences a coach or scout should know.",
     editor_save: "Save profile", editor_saving: "Saving…", editor_name_required: "Name can't be empty.",
+    editor_sport_required: "Pick a sport to continue.", editor_locked_notice: "Finish your profile to unlock the rest of GOLSZ.",
     editor_save_err: "Couldn't save — try again.",
     passport_title_self: "Sports Passport", passport_title_other: "Athlete Passport", passport_edit: "Edit profile",
     passport_follow: "Follow", passport_following: "Following", passport_message: "Message",
@@ -389,6 +390,7 @@ const I18N = {
     editor_club_ph: "ex. Toronto FC Academy", editor_status_label: "STATUT DE RECRUTEMENT",
     editor_bio_label: "BIO DE RECRUTEMENT", editor_bio_ph: "Quelques phrases qu'un entraîneur ou recruteur devrait connaître.",
     editor_save: "Enregistrer le profil", editor_saving: "Enregistrement…", editor_name_required: "Le nom ne peut pas être vide.",
+    editor_sport_required: "Choisissez un sport pour continuer.", editor_locked_notice: "Terminez votre profil pour débloquer le reste de GOLSZ.",
     editor_save_err: "Impossible d'enregistrer — réessayez.",
     passport_title_self: "Passeport Sportif", passport_title_other: "Passeport de l'athlète", passport_edit: "Modifier le profil",
     passport_follow: "Suivre", passport_following: "Abonné", passport_message: "Message",
@@ -521,6 +523,7 @@ const I18N = {
     editor_club_ph: "ej. Toronto FC Academy", editor_status_label: "ESTADO DE RECLUTAMIENTO",
     editor_bio_label: "BIOGRAFÍA DEPORTIVA", editor_bio_ph: "Unas frases que un entrenador u ojeador debería saber.",
     editor_save: "Guardar perfil", editor_saving: "Guardando…", editor_name_required: "El nombre no puede estar vacío.",
+    editor_sport_required: "Elige un deporte para continuar.", editor_locked_notice: "Termina tu perfil para desbloquear el resto de GOLSZ.",
     editor_save_err: "No se pudo guardar — inténtalo de nuevo.",
     passport_title_self: "Pasaporte Deportivo", passport_title_other: "Pasaporte del atleta", passport_edit: "Editar perfil",
     passport_follow: "Seguir", passport_following: "Siguiendo", passport_message: "Mensaje",
@@ -653,6 +656,7 @@ const I18N = {
     editor_club_ph: "π.χ. Toronto FC Academy", editor_status_label: "ΚΑΤΑΣΤΑΣΗ ΣΤΡΑΤΟΛΟΓΗΣΗΣ",
     editor_bio_label: "ΒΙΟΓΡΑΦΙΚΟ ΣΚΑΟΥΤΙΝΓΚ", editor_bio_ph: "Λίγες προτάσεις που πρέπει να ξέρει ένας προπονητής ή σκάουτ.",
     editor_save: "Αποθήκευση προφίλ", editor_saving: "Αποθήκευση…", editor_name_required: "Το όνομα δεν μπορεί να είναι κενό.",
+    editor_sport_required: "Επιλέξτε ένα άθλημα για να συνεχίσετε.", editor_locked_notice: "Ολοκληρώστε το προφίλ σας για να ξεκλειδώσετε το υπόλοιπο GOLSZ.",
     editor_save_err: "Δεν ήταν δυνατή η αποθήκευση — δοκιμάστε ξανά.",
     passport_title_self: "Αθλητικό Διαβατήριο", passport_title_other: "Διαβατήριο Αθλητή", passport_edit: "Επεξεργασία προφίλ",
     passport_follow: "Ακολούθηση", passport_following: "Ακολουθείτε", passport_message: "Μήνυμα",
@@ -2341,7 +2345,7 @@ function toPassport(profile, ath, uid, t) {
   };
 }
 
-function ProfileEditor({ initial, onClose, onSaved }) {
+function ProfileEditor({ initial, locked, onClose, onSaved }) {
   const { t } = useLang();
   const [form, setForm] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -2356,6 +2360,7 @@ function ProfileEditor({ initial, onClose, onSaved }) {
     if (!sb || busy) return;
     const name = (form.full_name || "").trim();
     if (!name) { setErr(t("editor_name_required")); return; }
+    if (!form.sport) { setErr(t("editor_sport_required")); return; }
     setBusy(true); setErr("");
     try {
       const { data: { user } } = await sb.auth.getUser();
@@ -2388,10 +2393,11 @@ function ProfileEditor({ initial, onClose, onSaved }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: 18, boxSizing: "border-box" }} className="noscroll">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: locked ? 4 : 16 }}>
           <div style={{ fontWeight: 800, fontSize: 16 }}>{t("editor_title")}</div>
-          <button onClick={onClose} style={iconBtn(C.chalk)}><X size={18} /></button>
+          {!locked && <button onClick={onClose} style={iconBtn(C.chalk)}><X size={18} /></button>}
         </div>
+        {locked && <div style={{ fontSize: 12, color: C.lime, marginBottom: 14 }}>{t("editor_locked_notice")}</div>}
 
         {group(t("editor_name_label"), <input style={field} value={form.full_name || ""} onChange={set("full_name")} placeholder={t("editor_name_ph")} />)}
 
@@ -2491,7 +2497,7 @@ function ProfileEditor({ initial, onClose, onSaved }) {
   );
 }
 
-function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUserId, onBack, onMessage, onViewProfile }) {
+function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, onOpenAdmin, viewUserId, onBack, onMessage, onViewProfile }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -2555,6 +2561,15 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
     finally { setLoaded(true); }
   }
   useEffect(() => { load(); }, [viewUserId]);
+
+  // Keeps GolszApp's app-wide lock (see mustFinishProfile there) in sync
+  // with the real, live state of this athlete's own profile — fires once
+  // on initial load and again after every save, so the rest of the app
+  // unlocks the moment a sport gets saved, without needing a full reload.
+  useEffect(() => {
+    if (!loaded || viewingOther || !onProfileStatus) return;
+    onProfileStatus(!!(athlete && athlete.sport));
+  }, [loaded, athlete, viewingOther]);
 
   async function toggleFollowThis() {
     if (!sb || !uid || !viewUserId || viewUserId === uid) return;
@@ -2631,9 +2646,10 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
         </div>
       )}
 
-      {editing && (
+      {(editing || incomplete) && (
         <ProfileEditor
           initial={editorInitial()}
+          locked={incomplete}
           onClose={() => setEditing(false)}
           onSaved={() => { setEditing(false); load(); }}
         />
@@ -3526,8 +3542,31 @@ function GolszApp({ onSignOut, startOnboarding }) {
   const [hasUnreadMsgs, setHasUnreadMsgs] = useState(false);
   const [onboarding, setOnboarding] = useState(!!startOnboarding);
   const [viewProfileId, setViewProfileId] = useState(null);
+  // null = still checking, true/false once we know. Gates the rest of the
+  // app behind finishing the Passport (see the "must complete profile"
+  // effect below) — until athletes.sport is set, a brand-new (or
+  // never-finished) account can only see Passport, no other tab.
+  const [profileComplete, setProfileComplete] = useState(null);
   const isDesktop = useIsDesktop();
   const { t } = useLang();
+
+  useEffect(() => {
+    if (!sb) { setProfileComplete(true); return; } // preview mode, nothing to gate
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) { setProfileComplete(true); return; }
+        const { data } = await sb.from("athletes").select("sport").eq("id", user.id).single();
+        setProfileComplete(!!(data && data.sport));
+      } catch (e) {
+        console.error("GOLSZ profile-complete check error:", e);
+        setProfileComplete(true); // fail open — a fetch hiccup shouldn't lock someone out of their own app
+      }
+    })();
+  }, []);
+
+  const mustFinishProfile = profileComplete === false;
+  useEffect(() => { if (mustFinishProfile) setPage("profile"); }, [mustFinishProfile]);
 
   const NAV = [
     { id: "feed", icon: Home, label: t("nav_home") },
@@ -3546,9 +3585,9 @@ function GolszApp({ onSignOut, startOnboarding }) {
     { id: "profile", icon: User, label: t("nav_profile") },
   ];
 
-  const go = (id) => { setPage(id); if (id !== "messages") setThread(null); setViewProfileId(null); };
-  const openThread = (id) => { setThread(id); setPage("messages"); };
-  const viewProfile = (id) => { setViewProfileId(id); setPage("profile"); };
+  const go = (id) => { if (mustFinishProfile && id !== "profile") return; setPage(id); if (id !== "messages") setThread(null); setViewProfileId(null); };
+  const openThread = (id) => { if (mustFinishProfile) return; setThread(id); setPage("messages"); };
+  const viewProfile = (id) => { if (mustFinishProfile) return; setViewProfileId(id); setPage("profile"); };
 
   useEffect(() => {
     if (!sb) return;
@@ -3579,11 +3618,13 @@ function GolszApp({ onSignOut, startOnboarding }) {
           <nav style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
             {SIDEBAR_NAV.map((n) => {
               const active = page === n.id;
+              const locked = mustFinishProfile && n.id !== "profile";
               return (
                 <button key={n.id} onClick={() => go(n.id)} style={{
                   display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 10,
-                  background: active ? "#C8F1351a" : "transparent", border: "none", cursor: "pointer", fontFamily: "inherit",
+                  background: active ? "#C8F1351a" : "transparent", border: "none", cursor: locked ? "default" : "pointer", fontFamily: "inherit",
                   color: active ? C.lime : C.chalk, fontSize: 14, fontWeight: active ? 700 : 600, textAlign: "left",
+                  opacity: locked ? 0.35 : 1,
                 }}>
                   <n.icon size={19} strokeWidth={active ? 2.4 : 2} />
                   {n.label}
@@ -3606,7 +3647,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
             {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
             {page === "scout" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout /></div>}
             {page === "events" && <Events />}
-            {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={() => setViewProfileId(null)} onMessage={openThread} onViewProfile={viewProfile} />}
+            {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={() => setViewProfileId(null)} onMessage={openThread} onViewProfile={viewProfile} />}
             {page === "messages" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Messages thread={thread} setThread={setThread} /></div>}
             {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
           </div>
@@ -3625,7 +3666,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <SettingsButton />
         <NotificationBell />
-        <button onClick={() => { setPage("messages"); setThread(null); }} style={{ position: "relative", background: "none", border: "none", color: page === "messages" ? C.lime : C.chalk, cursor: "pointer", padding: 4 }}>
+        <button onClick={() => { if (mustFinishProfile) return; setPage("messages"); setThread(null); }} style={{ position: "relative", background: "none", border: "none", color: page === "messages" ? C.lime : C.chalk, cursor: mustFinishProfile ? "default" : "pointer", opacity: mustFinishProfile ? 0.35 : 1, padding: 4 }}>
           <MessageSquare size={22} />
           {hasUnreadMsgs && <span style={{ position: "absolute", top: 2, right: 2, width: 8, height: 8, borderRadius: 99, background: C.lime, border: `2px solid ${C.pitch}` }} />}
         </button>
@@ -3638,7 +3679,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "scout" && <Scout />}
         {page === "events" && <Events />}
-        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={() => setViewProfileId(null)} onMessage={openThread} onViewProfile={viewProfile} />}
+        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={() => setViewProfileId(null)} onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "messages" && <Messages thread={thread} setThread={setThread} />}
         {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
       </main>
@@ -3647,13 +3688,15 @@ function GolszApp({ onSignOut, startOnboarding }) {
       <nav style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-around", padding: "8px 8px calc(12px + env(safe-area-inset-bottom, 0px))", borderTop: `1px solid ${C.line}`, background: C.pitch, flexShrink: 0 }}>
         {NAV.map((n) => {
           const active = page === n.id;
+          const locked = mustFinishProfile && n.id !== "profile";
           if (n.center) {
             return (
               <button key={n.id} onClick={() => go(n.id)} style={{
                 background: C.lime, color: C.ink, border: `3px solid ${C.pitch}`, borderRadius: "50%",
                 width: 58, height: 58, marginTop: -22, boxShadow: `0 8px 20px -6px #C8F13566`,
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                cursor: "pointer", fontFamily: "inherit",
+                cursor: locked ? "default" : "pointer", fontFamily: "inherit",
+                opacity: locked ? 0.35 : 1,
               }}>
                 <n.icon size={22} strokeWidth={2.4} />
                 <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: "0.06em", marginTop: 1 }}>{n.label}</span>
@@ -3662,9 +3705,10 @@ function GolszApp({ onSignOut, startOnboarding }) {
           }
           return (
             <button key={n.id} onClick={() => go(n.id)} style={{
-              background: "none", border: "none", cursor: "pointer", fontFamily: "inherit",
+              background: "none", border: "none", cursor: locked ? "default" : "pointer", fontFamily: "inherit",
               display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
               color: active ? C.lime : C.slate, flex: 1, padding: "4px 0",
+              opacity: locked ? 0.35 : 1,
             }}>
               <n.icon size={21} strokeWidth={active ? 2.4 : 2} />
               <span style={{ fontSize: 9.5, fontWeight: active ? 800 : 600 }}>{n.label}</span>
