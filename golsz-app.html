@@ -213,6 +213,10 @@ const I18N = {
     notif_error: "Something went wrong turning on notifications. Try again.",
     notif_title_on: "Notifications on — tap to turn off", notif_title_off: "Turn on notifications for messages & new followers",
     settings_notifications: "NOTIFICATIONS", settings_notif_on: "On", settings_notif_off: "Off",
+    settings_plan: "PLAN", settings_plan_current: "Current", settings_plan_switch: "Choose",
+    settings_plan_checkout_unavailable: "Checkout isn't set up yet — check back soon.",
+    settings_plan_downgrade_note: "Switched to Starter. This won't cancel an existing paid subscription — use the receipt email Stripe sent you to manage or cancel billing.",
+    settings_plan_err: "Couldn't update your plan — try again.",
     notif_ios_homescreen: "On iPhone/iPad, notifications only work after you add GOLSZ to your Home Screen: tap Share, then \"Add to Home Screen\" — then open GOLSZ from that icon and turn notifications on from there.",
     restricted_title: "Restricted account.", restricted_body: "Your posts stay private and you're hidden from Discover until a parent or guardian approves access — see Family & Parent Access on your Profile.",
     back: "Back",
@@ -352,6 +356,10 @@ const I18N = {
     notif_error: "Une erreur s'est produite lors de l'activation des notifications. Réessayez.",
     notif_title_on: "Notifications activées — touchez pour désactiver", notif_title_off: "Activer les notifications pour les messages et nouveaux abonnés",
     settings_notifications: "NOTIFICATIONS", settings_notif_on: "Activées", settings_notif_off: "Désactivées",
+    settings_plan: "FORMULE", settings_plan_current: "Actuelle", settings_plan_switch: "Choisir",
+    settings_plan_checkout_unavailable: "Le paiement n'est pas encore configuré — revenez bientôt.",
+    settings_plan_downgrade_note: "Passé à Starter. Cela n'annule pas un abonnement payant existant — utilisez l'e-mail de reçu envoyé par Stripe pour gérer ou annuler la facturation.",
+    settings_plan_err: "Impossible de mettre à jour votre formule — réessayez.",
     notif_ios_homescreen: "Sur iPhone/iPad, les notifications ne fonctionnent qu'après avoir ajouté GOLSZ à votre écran d'accueil : appuyez sur Partager, puis « Sur l'écran d'accueil » — ouvrez ensuite GOLSZ depuis cette icône et activez les notifications à partir de là.",
     restricted_title: "Compte restreint.", restricted_body: "Vos publications restent privées et vous êtes masqué de Découvrir jusqu'à ce qu'un parent ou tuteur approuve l'accès — voir Famille et accès parental sur votre profil.",
     back: "Retour",
@@ -491,6 +499,10 @@ const I18N = {
     notif_error: "Algo salió mal al activar las notificaciones. Inténtalo de nuevo.",
     notif_title_on: "Notificaciones activadas — toca para desactivar", notif_title_off: "Activa las notificaciones de mensajes y nuevos seguidores",
     settings_notifications: "NOTIFICACIONES", settings_notif_on: "Activadas", settings_notif_off: "Desactivadas",
+    settings_plan: "PLAN", settings_plan_current: "Actual", settings_plan_switch: "Elegir",
+    settings_plan_checkout_unavailable: "El pago aún no está configurado — vuelve pronto.",
+    settings_plan_downgrade_note: "Cambiado a Starter. Esto no cancela una suscripción de pago existente — usa el correo del recibo de Stripe para gestionar o cancelar la facturación.",
+    settings_plan_err: "No se pudo actualizar tu plan — inténtalo de nuevo.",
     notif_ios_homescreen: "En iPhone/iPad, las notificaciones solo funcionan después de añadir GOLSZ a tu pantalla de inicio: toca Compartir y luego \"Añadir a pantalla de inicio\" — después abre GOLSZ desde ese icono y activa las notificaciones desde ahí.",
     restricted_title: "Cuenta restringida.", restricted_body: "Tus publicaciones permanecen privadas y estás oculto en Descubrir hasta que un padre, madre o tutor apruebe el acceso — consulta Familia y acceso parental en tu perfil.",
     back: "Atrás",
@@ -630,6 +642,10 @@ const I18N = {
     notif_error: "Κάτι πήγε στραβά κατά την ενεργοποίηση των ειδοποιήσεων. Δοκιμάστε ξανά.",
     notif_title_on: "Ειδοποιήσεις ενεργές — πατήστε για απενεργοποίηση", notif_title_off: "Ενεργοποιήστε ειδοποιήσεις για μηνύματα & νέους ακόλουθους",
     settings_notifications: "ΕΙΔΟΠΟΙΗΣΕΙΣ", settings_notif_on: "Ενεργές", settings_notif_off: "Ανενεργές",
+    settings_plan: "ΠΑΚΕΤΟ", settings_plan_current: "Τρέχον", settings_plan_switch: "Επιλογή",
+    settings_plan_checkout_unavailable: "Η πληρωμή δεν έχει ρυθμιστεί ακόμα — ελέγξτε ξανά σύντομα.",
+    settings_plan_downgrade_note: "Αλλάξατε σε Starter. Αυτό δεν ακυρώνει τυχόν υπάρχουσα συνδρομή — χρησιμοποιήστε το email απόδειξης από το Stripe για να διαχειριστείτε ή να ακυρώσετε τη χρέωση.",
+    settings_plan_err: "Δεν ήταν δυνατή η ενημέρωση του πακέτου σας — δοκιμάστε ξανά.",
     notif_ios_homescreen: "Σε iPhone/iPad, οι ειδοποιήσεις λειτουργούν μόνο αφού προσθέσετε το GOLSZ στην Αρχική οθόνη: πατήστε Κοινή χρήση και μετά «Προσθήκη στην Αρχική οθόνη» — έπειτα ανοίξτε το GOLSZ από αυτό το εικονίδιο και ενεργοποιήστε τις ειδοποιήσεις από εκεί.",
     restricted_title: "Περιορισμένος λογαριασμός.", restricted_body: "Οι αναρτήσεις σας παραμένουν ιδιωτικές και είστε κρυφοί από την Ανακάλυψη μέχρι να εγκρίνει την πρόσβαση γονέας ή κηδεμόνας — δείτε το Οικογένεια & Γονική Πρόσβαση στο προφίλ σας.",
     back: "Πίσω",
@@ -884,9 +900,28 @@ function SettingsButton() {
   const [theme, setTheme] = useTheme();
   const { lang, setLang, t } = useLang();
   const [uid, setUid] = useState(null);
+  const [currentPlan, setCurrentPlan] = useState(null);
+  const [planBusy, setPlanBusy] = useState(false);
+  const [planMsg, setPlanMsg] = useState("");
   const [notifEnabled, setNotifEnabled] = useState(false);
   const [notifBusy, setNotifBusy] = useState(false);
   const [notifMsg, setNotifMsg] = useState("");
+
+  // Split from the push-status effect below (which bails out entirely when
+  // pushSupported() is false) since uid/plan need to load regardless of
+  // whether this browser supports Web Push at all.
+  useEffect(() => {
+    if (!sb) return;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        setUid(user.id);
+        const { data: prof } = await sb.from("profiles").select("plan").eq("id", user.id).single();
+        if (prof && prof.plan) setCurrentPlan(prof.plan);
+      } catch (e) { console.error("GOLSZ settings profile error:", e); }
+    })();
+  }, []);
 
   useEffect(() => {
     if (!sb || !pushSupported()) return;
@@ -894,7 +929,6 @@ function SettingsButton() {
       try {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
-        setUid(user.id);
         if (Notification.permission === "granted") {
           const reg = await navigator.serviceWorker.getRegistration("/sw.js");
           const sub = reg && await reg.pushManager.getSubscription();
@@ -903,6 +937,30 @@ function SettingsButton() {
       } catch (e) { console.error("GOLSZ settings push status error:", e); }
     })();
   }, []);
+
+  async function choosePlan(planId) {
+    if (!sb || !uid || planBusy || planId === currentPlan) return;
+    setPlanBusy(true); setPlanMsg("");
+    try {
+      if (planId === "starter") {
+        const { error } = await sb.from("profiles").update({ plan: "starter" }).eq("id", uid);
+        if (error) throw error;
+        setCurrentPlan("starter");
+        setPlanMsg(t("settings_plan_downgrade_note"));
+      } else {
+        const link = STRIPE_LINKS[planId];
+        if (!link) { setPlanMsg(t("settings_plan_checkout_unavailable")); return; }
+        const { data: { user } } = await sb.auth.getUser();
+        const checkoutUrl = new URL(link);
+        checkoutUrl.searchParams.set("client_reference_id", uid);
+        if (user && user.email) checkoutUrl.searchParams.set("prefilled_email", user.email);
+        window.location.href = checkoutUrl.toString();
+      }
+    } catch (e) {
+      console.error("GOLSZ settings plan change error:", e);
+      setPlanMsg(t("settings_plan_err"));
+    } finally { setPlanBusy(false); }
+  }
 
   async function toggleNotifs(wantOn) {
     if (!uid || notifBusy || wantOn === notifEnabled) return;
@@ -929,7 +987,7 @@ function SettingsButton() {
       </button>
       {open && ReactDOM.createPortal(
         <div style={{ position: "fixed", inset: 0, background: "#000000a6", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 420, width: "100%", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
+          <div onClick={(e) => e.stopPropagation()} className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 420, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
               <div style={{ fontWeight: 800, fontSize: 16 }}>{t("settings_title")}</div>
               <button onClick={() => setOpen(false)} style={iconBtn(C.chalk)}><X size={18} /></button>
@@ -949,6 +1007,33 @@ function SettingsButton() {
                 border: `1.5px solid ${theme === "light" ? C.lime : C.line2}`,
               }}><Sun size={16} /> {t("settings_light")}</button>
             </div>
+            {sb && uid && (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_plan")}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {PLANS.map((pl) => {
+                    const isCurrent = currentPlan === pl.id;
+                    return (
+                      <button key={pl.id} onClick={() => choosePlan(pl.id)} disabled={planBusy || isCurrent} style={{
+                        textAlign: "left", cursor: isCurrent ? "default" : "pointer", fontFamily: "inherit",
+                        background: isCurrent ? "#C8F1351a" : C.turf, border: `1.5px solid ${isCurrent ? C.lime : C.line2}`,
+                        borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                        opacity: planBusy && !isCurrent ? 0.6 : 1,
+                      }}>
+                        <div>
+                          <div style={{ fontSize: 13.5, fontWeight: 800, color: isCurrent ? C.lime : C.chalk }}>{pl.name}</div>
+                          <div style={{ fontSize: 11.5, color: C.slate }}>{pl.price === 0 ? "Free" : "$" + pl.price + " /mo"}</div>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: isCurrent ? C.lime : C.slate }}>
+                          {isCurrent ? t("settings_plan_current") : t("settings_plan_switch")}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {planMsg && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 8, lineHeight: 1.4 }}>{planMsg}</div>}
+              </div>
+            )}
             {sb && pushSupported() && (
               <div style={{ marginBottom: 18 }}>
                 <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_notifications")}</div>
