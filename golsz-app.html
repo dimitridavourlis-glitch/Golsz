@@ -251,6 +251,7 @@ const I18N = {
     editor_title: "Build your profile", editor_name_label: "FULL NAME", editor_name_ph: "Your name",
     editor_sport_label: "SPORT", editor_select: "Select…", editor_position_label: "POSITION",
     editor_position_pick_sport: "Pick a sport first", editor_gender_label: "GENDER", editor_grad_year_label: "GRAD YEAR",
+    editor_school_level_label: "SCHOOL LEVEL",
     editor_height_label: "HEIGHT (CM)", editor_weight_label: "WEIGHT (KG)", editor_gpa_label: "GPA",
     editor_country_label: "COUNTRY", editor_country_ph: "e.g. Canada", editor_club_label: "CLUB / TEAM",
     editor_club_ph: "e.g. Toronto FC Academy", editor_status_label: "RECRUITING STATUS",
@@ -382,6 +383,7 @@ const I18N = {
     editor_title: "Créez votre profil", editor_name_label: "NOM COMPLET", editor_name_ph: "Votre nom",
     editor_sport_label: "SPORT", editor_select: "Sélectionner…", editor_position_label: "POSTE",
     editor_position_pick_sport: "Choisissez d'abord un sport", editor_gender_label: "GENRE", editor_grad_year_label: "ANNÉE DE DIPLÔME",
+    editor_school_level_label: "NIVEAU SCOLAIRE",
     editor_height_label: "TAILLE (CM)", editor_weight_label: "POIDS (KG)", editor_gpa_label: "MOYENNE (GPA)",
     editor_country_label: "PAYS", editor_country_ph: "ex. Canada", editor_club_label: "CLUB / ÉQUIPE",
     editor_club_ph: "ex. Toronto FC Academy", editor_status_label: "STATUT DE RECRUTEMENT",
@@ -513,6 +515,7 @@ const I18N = {
     editor_title: "Crea tu perfil", editor_name_label: "NOMBRE COMPLETO", editor_name_ph: "Tu nombre",
     editor_sport_label: "DEPORTE", editor_select: "Seleccionar…", editor_position_label: "POSICIÓN",
     editor_position_pick_sport: "Elige primero un deporte", editor_gender_label: "GÉNERO", editor_grad_year_label: "AÑO DE GRADUACIÓN",
+    editor_school_level_label: "NIVEL ESCOLAR",
     editor_height_label: "ALTURA (CM)", editor_weight_label: "PESO (KG)", editor_gpa_label: "PROMEDIO (GPA)",
     editor_country_label: "PAÍS", editor_country_ph: "ej. Canadá", editor_club_label: "CLUB / EQUIPO",
     editor_club_ph: "ej. Toronto FC Academy", editor_status_label: "ESTADO DE RECLUTAMIENTO",
@@ -644,6 +647,7 @@ const I18N = {
     editor_title: "Δημιουργήστε το προφίλ σας", editor_name_label: "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", editor_name_ph: "Το όνομά σας",
     editor_sport_label: "ΑΘΛΗΜΑ", editor_select: "Επιλέξτε…", editor_position_label: "ΘΕΣΗ",
     editor_position_pick_sport: "Επιλέξτε πρώτα άθλημα", editor_gender_label: "ΦΥΛΟ", editor_grad_year_label: "ΕΤΟΣ ΑΠΟΦΟΙΤΗΣΗΣ",
+    editor_school_level_label: "ΕΚΠΑΙΔΕΥΤΙΚΟ ΕΠΙΠΕΔΟ",
     editor_height_label: "ΥΨΟΣ (ΕΚ)", editor_weight_label: "ΒΑΡΟΣ (ΚΙΛΑ)", editor_gpa_label: "ΒΑΘΜΟΣ (GPA)",
     editor_country_label: "ΧΩΡΑ", editor_country_ph: "π.χ. Καναδάς", editor_club_label: "ΣΥΛΛΟΓΟΣ / ΟΜΑΔΑ",
     editor_club_ph: "π.χ. Toronto FC Academy", editor_status_label: "ΚΑΤΑΣΤΑΣΗ ΣΤΡΑΤΟΛΟΓΗΣΗΣ",
@@ -1460,6 +1464,7 @@ function Feed({ onMessage, onViewProfile }) {
 /* ============ DISCOVER (player database) ============ */
 const SPORTS = ["All", "Soccer", "Basketball", "Track", "Hockey", "Tennis"];
 const GENDERS = [["All", "All"], ["M", "Male"], ["F", "Female"]];
+const SCHOOL_LEVELS = ["High School", "University", "Other"];
 const COUNTRIES = ["All", "Canada", "USA", "England", "Spain", "Germany", "Jamaica", "Japan", "Brazil", "Sweden", "Morocco"];
 const POSITIONS = ["All", "Left Back", "Striker", "Midfielder", "Guard", "Forward", "Center", "Goalie", "Sprinter", "Distance", "Singles"];
 
@@ -2328,7 +2333,8 @@ function toPassport(profile, ath, uid, t) {
     sport: dash(ath && ath.sport), position: dash(ath && ath.position), club: dash(ath && ath.club_name),
     foot: dash(ath && ath.foot), prefLabel: (SPORT_PREFERENCE[ath && ath.sport] || {}).label || "FOOT",
     height: ath && ath.height_cm ? `${ath.height_cm} cm` : "—",
-    grad: dash(ath && ath.grad_year), gpa: dash(ath && ath.gpa),
+    grad: [ath && ath.grad_year, ath && ath.education_level].filter(Boolean).join(" · ") || "—",
+    gpa: dash(ath && ath.gpa),
     weight: ath && ath.weight_kg ? `${ath.weight_kg} kg` : "—",
     status: dash(ath && ath.recruiting_status),
     bio: (ath && ath.bio) || t("passport_no_bio"),
@@ -2366,6 +2372,7 @@ function ProfileEditor({ initial, onClose, onSaved }) {
         weight_kg: form.weight_kg ? Number(form.weight_kg) : null,
         foot: form.foot || null,
         recruiting_status: form.recruiting_status || null,
+        education_level: form.education_level || null,
         country: (form.country || "").trim() || null,
         club_name: (form.club_name || "").trim() || null,
         bio: (form.bio || "").trim().slice(0, 600) || null,
@@ -2411,6 +2418,16 @@ function ProfileEditor({ initial, onClose, onSaved }) {
           <div><span style={label}>{t("editor_grad_year_label")}</span>
             <input style={field} type="number" value={form.grad_year || ""} onChange={set("grad_year")} placeholder="2027" />
           </div>
+        </>)}
+
+        {row(<>
+          <div><span style={label}>{t("editor_school_level_label")}</span>
+            <select style={field} value={form.education_level || ""} onChange={set("education_level")}>
+              <option value="">—</option>
+              {SCHOOL_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
+          <div />
         </>)}
 
         {row(<>
@@ -2563,7 +2580,8 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onOpenAdmin, viewUs
     gender: (athlete && athlete.gender) || "", grad_year: (athlete && athlete.grad_year) || "",
     gpa: (athlete && athlete.gpa) || "", height_cm: (athlete && athlete.height_cm) || "",
     weight_kg: (athlete && athlete.weight_kg) || "", foot: (athlete && athlete.foot) || "",
-    recruiting_status: (athlete && athlete.recruiting_status) || "", country: (athlete && athlete.country) || "",
+    recruiting_status: (athlete && athlete.recruiting_status) || "", education_level: (athlete && athlete.education_level) || "",
+    country: (athlete && athlete.country) || "",
     club_name: (athlete && athlete.club_name) || "", bio: (athlete && athlete.bio) || "",
   });
 

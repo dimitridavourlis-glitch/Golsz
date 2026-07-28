@@ -981,5 +981,12 @@ set file_size_limit = 8388608,
 where id = 'post-images';
 
 -- ============================================================
+-- 18) ADDITIVE — athletes.education_level (High School / University / Other)
+-- See supabase-migration-018-education-level.sql for full context.
+-- ============================================================
+
+alter table athletes add column if not exists education_level text;
+
+-- ============================================================
 -- Done.
 -- ============================================================
