@@ -119,7 +119,11 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: process.env.SCOUT_MODEL || "claude-sonnet-5",
-        max_tokens: 1000,
+        // 1000 was cutting off longer replies (drafted coach emails, full
+        // roadmaps) mid-sentence — since Scout's whole response is one JSON
+        // object, a truncated reply also breaks the JSON.parse on the
+        // client and falls back to showing the raw truncated blob.
+        max_tokens: 4096,
         system: systemPrompt,
         messages,
         tools: [{ type: "web_search_20250305", name: "web_search" }],

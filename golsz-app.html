@@ -3372,9 +3372,19 @@ function Scout() {
       const _endpoint = (typeof SCOUT_ENDPOINT !== "undefined" && SCOUT_ENDPOINT) ? SCOUT_ENDPOINT : "https://api.anthropic.com/v1/messages";
       const res = await fetch(_endpoint, {
         method: "POST", headers: _hdr,
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, system: SYS, messages: api, lang, tools: [{ type: "web_search_20250305", name: "web_search" }] }),
+        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 4096, system: SYS, messages: api, lang, tools: [{ type: "web_search_20250305", name: "web_search" }] }),
       });
       const data = await res.json();
+      // A non-2xx response (rate limit, auth hiccup, upstream 5xx) still
+      // arrives here as valid JSON — without this check data.content is
+      // undefined, raw ends up "", and an empty assistant bubble gets
+      // added with no visible error, which looked like Scout just never
+      // replied. Throwing here routes it through the catch below instead.
+      if (!res.ok) {
+        const e = new Error((data && data.error) || t("scout_connection_dropped"));
+        e.code = "SCOUT_HTTP_ERROR";
+        throw e;
+      }
       const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
       let reply = raw, updates = null;
       try {
@@ -3385,8 +3395,9 @@ function Scout() {
       if (updates && typeof updates === "object") setProfile((p) => ({ ...p, ...updates }));
       setMsgs((m) => [...m, { role: "assistant", text: reply }]);
       logTurn("assistant", reply);
-    } catch {
-      setMsgs((m) => [...m, { role: "assistant", text: t("scout_connection_dropped") }]);
+    } catch (e) {
+      const msg = e && e.code === "SCOUT_HTTP_ERROR" ? e.message : t("scout_connection_dropped");
+      setMsgs((m) => [...m, { role: "assistant", text: msg }]);
     } finally { setBusy(false); }
   }
 
