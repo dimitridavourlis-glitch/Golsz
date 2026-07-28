@@ -177,6 +177,7 @@ const I18N = {
     auth_choose_plan: "CHOOSE YOUR PLAN", auth_most_popular: "MOST POPULAR",
     auth_full_name: "Full name", auth_email: "Email", auth_password: "Password",
     auth_forgot: "Forgot password?", auth_dob: "Date of birth",
+    auth_occupation: "I am a…", auth_occupation_required: "Pick what best describes you.",
     auth_minor_notice: "Athletes under 18 need a parent or guardian's approval to unlock the full account. Enter their email — if they already have a GOLSZ account, we'll send a request; your account stays restricted (no public posts, hidden from Discover) until they approve it.",
     auth_parent_email: "Parent or guardian's email",
     auth_check_email: "CHECK YOUR EMAIL",
@@ -320,6 +321,7 @@ const I18N = {
     auth_choose_plan: "CHOISISSEZ VOTRE FORMULE", auth_most_popular: "LE PLUS POPULAIRE",
     auth_full_name: "Nom complet", auth_email: "E-mail", auth_password: "Mot de passe",
     auth_forgot: "Mot de passe oublié ?", auth_dob: "Date de naissance",
+    auth_occupation: "Je suis…", auth_occupation_required: "Choisissez ce qui vous décrit le mieux.",
     auth_minor_notice: "Les athlètes de moins de 18 ans ont besoin de l'approbation d'un parent ou tuteur pour débloquer le compte complet. Indiquez son e-mail — s'il possède déjà un compte GOLSZ, nous lui enverrons une demande ; votre compte reste restreint (aucune publication publique, masqué de Découvrir) jusqu'à son approbation.",
     auth_parent_email: "E-mail du parent ou tuteur",
     auth_check_email: "VÉRIFIEZ VOS E-MAILS",
@@ -463,6 +465,7 @@ const I18N = {
     auth_choose_plan: "ELIGE TU PLAN", auth_most_popular: "MÁS POPULAR",
     auth_full_name: "Nombre completo", auth_email: "Correo electrónico", auth_password: "Contraseña",
     auth_forgot: "¿Olvidaste tu contraseña?", auth_dob: "Fecha de nacimiento",
+    auth_occupation: "Soy…", auth_occupation_required: "Elige lo que mejor te describe.",
     auth_minor_notice: "Los deportistas menores de 18 años necesitan la aprobación de un padre, madre o tutor para desbloquear la cuenta completa. Introduce su correo electrónico — si ya tiene una cuenta de GOLSZ, le enviaremos una solicitud; tu cuenta permanecerá restringida (sin publicaciones públicas, oculta en Descubrir) hasta que la apruebe.",
     auth_parent_email: "Correo del padre, madre o tutor",
     auth_check_email: "REVISA TU CORREO",
@@ -606,6 +609,7 @@ const I18N = {
     auth_choose_plan: "ΕΠΙΛΕΞΤΕ ΤΟ ΠΑΚΕΤΟ ΣΑΣ", auth_most_popular: "ΔΗΜΟΦΙΛΕΣΤΕΡΟ",
     auth_full_name: "Ονοματεπώνυμο", auth_email: "Email", auth_password: "Κωδικός πρόσβασης",
     auth_forgot: "Ξεχάσατε τον κωδικό;", auth_dob: "Ημερομηνία γέννησης",
+    auth_occupation: "Είμαι…", auth_occupation_required: "Επιλέξτε αυτό που σας περιγράφει καλύτερα.",
     auth_minor_notice: "Οι αθλητές κάτω των 18 ετών χρειάζονται την έγκριση γονέα ή κηδεμόνα για να ξεκλειδώσουν τον πλήρη λογαριασμό. Εισαγάγετε το email του — αν έχει ήδη λογαριασμό GOLSZ, θα του στείλουμε αίτημα· ο λογαριασμός σας παραμένει περιορισμένος (χωρίς δημόσιες αναρτήσεις, κρυφός από την Ανακάλυψη) μέχρι να το εγκρίνει.",
     auth_parent_email: "Email γονέα ή κηδεμόνα",
     auth_check_email: "ΕΛΕΓΞΤΕ ΤΟ EMAIL ΣΑΣ",
@@ -1578,6 +1582,7 @@ function Feed({ onMessage, onViewProfile }) {
 const SPORTS = ["All", "Soccer", "Basketball", "Track", "Hockey", "Tennis"];
 const GENDERS = [["All", "All"], ["M", "Male"], ["F", "Female"]];
 const SCHOOL_LEVELS = ["High School", "University", "Other"];
+const OCCUPATIONS = ["Scout", "Agent", "Coach", "Physio", "Other"];
 const COUNTRIES = ["All", "Canada", "USA", "England", "Spain", "Germany", "Jamaica", "Japan", "Brazil", "Sweden", "Morocco"];
 const POSITIONS = ["All", "Left Back", "Striker", "Midfielder", "Guard", "Forward", "Center", "Goalie", "Sprinter", "Distance", "Singles"];
 
@@ -2440,7 +2445,8 @@ function toPassport(profile, ath, uid, t) {
   const country = (ath && ath.country) || "";
   const shortId = uid ? uid.replace(/-/g, "").slice(0, 5).toUpperCase() : "00000";
   return {
-    name, handle: "@" + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, ""),
+    name, occupation: (profile && profile.occupation) || "",
+    handle: "@" + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, ""),
     id: `GLS·${(country ? country.slice(0, 2) : "XX").toUpperCase()}·${dash(ath && ath.grad_year)}·${shortId}`,
     initials: initials(name), nat: `${flagFor(country)} ${dash(country)}`,
     sport: dash(ath && ath.sport), position: dash(ath && ath.position), club: dash(ath && ath.club_name),
@@ -2474,7 +2480,7 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
     try {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) throw new Error("Not signed in.");
-      const { error: e1 } = await sb.from("profiles").update({ full_name: name }).eq("id", user.id);
+      const { error: e1 } = await sb.from("profiles").update({ full_name: name, occupation: form.occupation || null }).eq("id", user.id);
       if (e1) throw e1;
       const { error: e2 } = await sb.from("athletes").update({
         sport: form.sport || null,
@@ -2509,6 +2515,13 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
         {locked && <div style={{ fontSize: 12, color: C.lime, marginBottom: 14 }}>{t("editor_locked_notice")}</div>}
 
         {group(t("editor_name_label"), <input style={field} value={form.full_name || ""} onChange={set("full_name")} placeholder={t("editor_name_ph")} />)}
+
+        {group(t("auth_occupation"), (
+          <select style={field} value={form.occupation || ""} onChange={set("occupation")}>
+            <option value="">{t("editor_select")}</option>
+            {OCCUPATIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        ))}
 
         {row(<>
           <div><span style={label}>{t("editor_sport_label")}</span>
@@ -2633,18 +2646,18 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         // viewed person's name comes from the public_profile_names view —
         // same pattern used in Feed/Discover/Messages.
         const [{ data: nameRow }, { data: ath }, { data: myFollow }, { data: theirFollow }] = await Promise.all([
-          sb.from("public_profile_names").select("full_name").eq("id", viewUserId).maybeSingle(),
+          sb.from("public_profile_names").select("full_name, occupation").eq("id", viewUserId).maybeSingle(),
           sb.from("athletes").select("*").eq("id", viewUserId).maybeSingle(),
           sb.from("follows").select("followed_id").eq("follower_id", user.id).eq("followed_id", viewUserId).maybeSingle(),
           sb.from("follows").select("follower_id").eq("follower_id", viewUserId).eq("followed_id", user.id).maybeSingle(),
         ]);
-        setProfile(nameRow ? { full_name: nameRow.full_name } : null);
+        setProfile(nameRow ? { full_name: nameRow.full_name, occupation: nameRow.occupation } : null);
         setAthlete(ath || null);
         setFollowing(!!myFollow);
         setFollowedByThem(!!theirFollow);
       } else {
         const [{ data: prof }, { data: ath }] = await Promise.all([
-          sb.from("profiles").select("full_name, is_admin").eq("id", user.id).single(),
+          sb.from("profiles").select("full_name, is_admin, occupation").eq("id", user.id).single(),
           sb.from("athletes").select("*").eq("id", user.id).single(),
         ]);
         setProfile(prof || null);
@@ -2699,7 +2712,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const incomplete = !viewingOther && real && athlete && !athlete.sport;
 
   const editorInitial = () => ({
-    full_name: (profile && profile.full_name) || "",
+    full_name: (profile && profile.full_name) || "", occupation: (profile && profile.occupation) || "",
     sport: (athlete && athlete.sport) || "", position: (athlete && athlete.position) || "",
     gender: (athlete && athlete.gender) || "", grad_year: (athlete && athlete.grad_year) || "",
     gpa: (athlete && athlete.gpa) || "", height_cm: (athlete && athlete.height_cm) || "",
@@ -2786,7 +2799,12 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
             <div style={{ textAlign: "center", fontSize: 8.5, color: C.slate, marginTop: 5, fontFamily: "'Space Mono', monospace" }}>{real ? t("passport_member") : "VERIFIED PHOTO"}</div>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05, fontStretch: "expanded" }}>{p.name}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05, fontStretch: "expanded" }}>{p.name}</div>
+              {p.occupation && (
+                <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 999, padding: "2px 8px" }}>{p.occupation.toUpperCase()}</span>
+              )}
+            </div>
             <div style={{ fontSize: 11, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 10 }}>{p.handle}</div>
             <PassRow k={t("passport_sport")} v={p.sport} />
             <PassRow k={t("passport_position")} v={p.position} />
@@ -3946,6 +3964,7 @@ function Auth({ onDone, paidReturn }) {
   const [mode, setMode] = useState(paidReturn ? "login" : "signup");
   const [plan, setPlan] = useState("pro");
   const [name, setName] = useState("");
+  const [occupation, setOccupation] = useState("");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [dobDay, setDobDay] = useState("");
@@ -3989,7 +4008,7 @@ function Auth({ onDone, paidReturn }) {
   const isMinor = age !== null && age < 18;
   const parentEmailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail.trim());
 
-  const ok = email.trim() && pw.trim() && (!isSignup || (name.trim() && dobOk && (!isMinor || parentEmailOk)));
+  const ok = email.trim() && pw.trim() && (!isSignup || (name.trim() && !!occupation && dobOk && (!isMinor || parentEmailOk)));
   const selected = PLANS.find((p) => p.id === plan) || PLANS[1];
   const field = { width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 12, color: C.chalk, padding: "13px 14px", fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 12, boxSizing: "border-box" };
   const dobField = { ...field, marginBottom: 0, textAlign: "center" };
@@ -4008,7 +4027,7 @@ function Auth({ onDone, paidReturn }) {
       if (isSignup) {
         const { data, error } = await sb.auth.signUp({ email: email.trim(), password: pw, options: { data: {
           full_name: name.trim(), plan: selected.id, date_of_birth: dobIso,
-          parent_email: isMinor ? parentEmail.trim() : "",
+          parent_email: isMinor ? parentEmail.trim() : "", occupation,
         } } });
         if (error) throw error;
         if (selected.price > 0 && STRIPE_LINKS[plan] && data.user) {
@@ -4132,6 +4151,12 @@ function Auth({ onDone, paidReturn }) {
           )}
 
           {isSignup && <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth_full_name")} style={field} />}
+          {isSignup && (
+            <select value={occupation} onChange={(e) => setOccupation(e.target.value)} style={field}>
+              <option value="">{t("auth_occupation")}</option>
+              {OCCUPATIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          )}
           <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth_email")} type="email" style={field} />
           <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder={t("auth_password")} type="password" style={{ ...field, marginBottom: isSignup ? 12 : 4 }} />
           {!isSignup && (

@@ -338,9 +338,16 @@ reference/documentation concatenation of the migrations that actually ran (002, 
 project, not a from-scratch bootstrap script. The real tables:
 
 - `profiles` — root identity, 1:1 with `auth.users`. Real columns: `id, full_name, role, plan, dob,
-  created_at, is_minor, pending_parent_email, is_admin, stripe_customer_id, is_banned`. **No `email`
-  column** — look it up via `auth.users` inside a `security definer` function if you ever need it, same
-  pattern as `request_parent_link()`.
+  created_at, is_minor, pending_parent_email, is_admin, stripe_customer_id, is_banned, occupation`. **No
+  `email` column** — look it up via `auth.users` inside a `security definer` function if you ever need it,
+  same pattern as `request_parent_link()`. **`occupation`** (migration 020) is a separate, purpose-built
+  `check`-constrained text column (`'Scout' | 'Agent' | 'Coach' | 'Physio' | 'Other'`) — deliberately not
+  reusing the pre-existing `role` column, since this file's own header warning says `role`'s enum values were
+  never confirmed live. Captured at signup (`handle_new_user()` reads it from `raw_user_meta_data`, same as
+  `date_of_birth`/`parent_email`/`plan`), editable later via `ProfileEditor`, and shown on the Passport header
+  for both your own profile and anyone else's — which is why it's also added to `public_profile_names` (the
+  narrow view that exists so Feed/Discover/Passport can show someone else's name without a blanket public-read
+  policy on `profiles` itself, which would also leak `dob`/`plan`/`is_admin`).
 - `athletes` / `coaches` / `agents` — 1:1 extensions of `profiles`, keyed by `id` (equal to `profiles.id`,
   **not** a separate `profile_id` column).
 - `clubs` — standalone orgs, no write policy (read-only to every client today).
