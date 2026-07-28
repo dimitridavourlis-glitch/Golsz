@@ -338,9 +338,9 @@ reference/documentation concatenation of the migrations that actually ran (002, 
 project, not a from-scratch bootstrap script. The real tables:
 
 - `profiles` — root identity, 1:1 with `auth.users`. Real columns: `id, full_name, role, plan, dob,
-  created_at, is_minor, pending_parent_email, is_admin, stripe_customer_id`. **No `email` column** — look
-  it up via `auth.users` inside a `security definer` function if you ever need it, same pattern as
-  `request_parent_link()`.
+  created_at, is_minor, pending_parent_email, is_admin, stripe_customer_id, is_banned`. **No `email`
+  column** — look it up via `auth.users` inside a `security definer` function if you ever need it, same
+  pattern as `request_parent_link()`.
 - `athletes` / `coaches` / `agents` — 1:1 extensions of `profiles`, keyed by `id` (equal to `profiles.id`,
   **not** a separate `profile_id` column).
 - `clubs` — standalone orgs, no write policy (read-only to every client today).
@@ -352,6 +352,17 @@ project, not a from-scratch bootstrap script. The real tables:
 - `posts` / `post_likes` / `events` — added in migration 002; Feed/Discover/Events' real data source.
 - `post_reports` / `blocks` — added in migration 005; minimum-viable moderation (report + block + admin
   delete via `is_admin()`, no queue UI).
+- **Admin moderation (migration 019)**: `profiles.is_banned` (gates `posts_write`/`athletes_read` the same
+  shape as `is_restricted_minor`, and the client force-signs a banned user out — see `Root()`'s ban check in
+  `golsz-app.html`) and `events.is_blocked` (hides an event from everyone but admins via `events_read`,
+  without deleting it). `admin_delete_profile(p_target uuid)` is a `security definer` RPC (only usable by
+  `is_admin()`) that deletes `athletes`/`coaches`/`agents`/`parent_links`/`scout_history` for that user
+  explicitly, then `profiles` (which cascades `posts`/`post_likes`/`post_reports`/`blocks`/`follows`/
+  `messages`/`hidden_conversations`/`push_subscriptions`). **Neither ban nor delete touches `auth.users`** —
+  that needs the Supabase Admin API with a service-role key (no server endpoint for it yet; the pattern
+  would look like `api/scout.js` calling `supabase.auth.admin.updateUserById`/`deleteUser`). A banned/deleted
+  user's *profile* is fully gone/blocked from the app's perspective, but their raw login credential still
+  technically exists until that follow-up is built.
 - There is no `programs` table (an earlier iteration had one for an NCAA/NAIA/USPORTS school directory) —
   Scout's target-school suggestions come entirely from its live web-search tool call, not a seeded table.
 - `handle_new_user()` reads `full_name` / `date_of_birth` / `parent_email` out of the signup JWT's
@@ -394,6 +405,8 @@ though the backend allowed it. If you add another place that surfaces a Message 
 - **`coaches`/`agents`** have RLS enabled with zero policies (fully locked, even to their own owner) since
   nothing signs anyone up with those roles yet.
 - **Deeper moderation** (a real review queue, automated detection) beyond report/block/admin-delete.
+- **Ban/delete don't reach `auth.users`** (see migration 019 above) — a banned or deleted account's login
+  credential still exists in Supabase Auth until an Admin-API-backed serverless endpoint is built.
 - Production monitoring/alerting (e.g. Sentry) — nothing wired up yet.
 - **Push notifications need one-time manual setup** before they'll actually fire: `VAPID_PUBLIC_KEY`,
   `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, and `SUPABASE_WEBHOOK_SECRET` set as Vercel env vars, plus two

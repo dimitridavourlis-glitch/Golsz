@@ -988,5 +988,56 @@ where id = 'post-images';
 alter table athletes add column if not exists education_level text;
 
 -- ============================================================
+-- 19) ADDITIVE — admin: ban accounts, delete accounts, block events
+-- See supabase-migration-019-admin-ban-block.sql for full context.
+-- ============================================================
+
+alter table profiles add column if not exists is_banned boolean not null default false;
+alter table events add column if not exists is_blocked boolean not null default false;
+
+create or replace function is_banned(p_user uuid)
+returns boolean language sql security definer set search_path to 'public' as $$
+  select coalesce((select is_banned from profiles where id = p_user), false);
+$$;
+
+drop policy if exists posts_write on posts;
+create policy posts_write on posts for insert with check (
+  (author_id = auth.uid() and not is_restricted_minor(auth.uid()) and not is_banned(auth.uid()))
+  or is_parent_of(author_id)
+);
+
+drop policy if exists athletes_read on athletes;
+create policy athletes_read on athletes for select using (
+  (not is_restricted_minor(id) or id = auth.uid() or is_parent_of(id) or is_admin())
+  and (not is_banned(id) or id = auth.uid() or is_admin())
+);
+
+drop policy if exists events_read on events;
+create policy events_read on events for select using (
+  (visibility = 'public' or created_by = auth.uid() or is_admin())
+  and (not is_blocked or is_admin())
+);
+
+create or replace function admin_delete_profile(p_target uuid)
+returns void language plpgsql security definer set search_path to 'public' as $$
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  if p_target = auth.uid() then
+    raise exception 'cannot delete your own account';
+  end if;
+  delete from scout_history where user_id = p_target;
+  delete from parent_links where athlete_id = p_target or parent_id = p_target;
+  delete from athletes where id = p_target;
+  delete from coaches where id = p_target;
+  delete from agents where id = p_target;
+  delete from profiles where id = p_target;
+end;
+$$;
+
+grant execute on function admin_delete_profile(uuid) to authenticated;
+
+-- ============================================================
 -- Done.
 -- ============================================================
