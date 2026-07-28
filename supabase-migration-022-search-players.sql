@@ -35,7 +35,7 @@ returns table (
   id uuid,
   full_name text,
   sport text,
-  position text,
+  "position" text,
   country text,
   club_name text,
   grad_year int,
