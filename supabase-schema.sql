@@ -1044,7 +1044,7 @@ grant execute on function admin_delete_profile(uuid) to authenticated;
 -- ============================================================
 
 alter table profiles add column if not exists occupation text
-  check (occupation in ('Scout', 'Agent', 'Coach', 'Physio', 'Other'));
+  check (occupation in ('Player', 'Scout', 'Agent', 'Coach', 'Physio', 'Other'));
 
 create or replace view public_profile_names as
 select id, full_name, occupation from profiles;
@@ -1073,7 +1073,7 @@ begin
   end if;
 
   v_occupation := nullif(new.raw_user_meta_data->>'occupation', '');
-  if v_occupation is not null and v_occupation not in ('Scout', 'Agent', 'Coach', 'Physio', 'Other') then
+  if v_occupation is not null and v_occupation not in ('Player', 'Scout', 'Agent', 'Coach', 'Physio', 'Other') then
     v_occupation := null;
   end if;
 
