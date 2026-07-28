@@ -18,7 +18,7 @@
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
   html[data-theme="light"] body{background:#F5F7F3;}
-  #root{min-height:100vh;}
+  #root{min-height:100vh;min-height:100dvh;}
 </style>
 <script>try{if(localStorage.getItem("golsz-theme")==="light")document.documentElement.setAttribute("data-theme","light");}catch(e){}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
@@ -3616,11 +3616,11 @@ function GolszApp({ onSignOut, startOnboarding }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: C.pitch, color: C.chalk, fontFamily: "'Archivo', system-ui, sans-serif", maxWidth: 480, margin: "0 auto", position: "relative" }}>
+    <div className="app-shell" style={{ display: "flex", flexDirection: "column", background: C.pitch, color: C.chalk, fontFamily: "'Archivo', system-ui, sans-serif", maxWidth: 480, margin: "0 auto", position: "relative" }}>
       <style>{CSS}</style>
 
       {/* top bar */}
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px 10px", borderBottom: `1px solid ${C.line}`, flexShrink: 0 }}>
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(12px + env(safe-area-inset-top, 0px)) 16px 10px", borderBottom: `1px solid ${C.line}`, flexShrink: 0 }}>
         <a href="index.html" style={{ fontWeight: 900, fontSize: 24, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none" }}>GOLSZ<span style={{ color: C.lime }}>.</span></a>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <SettingsButton />
@@ -3644,7 +3644,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
       </main>
 
       {/* bottom nav */}
-      <nav style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-around", padding: "8px 8px 12px", borderTop: `1px solid ${C.line}`, background: C.pitch, flexShrink: 0 }}>
+      <nav style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-around", padding: "8px 8px calc(12px + env(safe-area-inset-bottom, 0px))", borderTop: `1px solid ${C.line}`, background: C.pitch, flexShrink: 0 }}>
         {NAV.map((n) => {
           const active = page === n.id;
           if (n.center) {
@@ -3699,6 +3699,14 @@ const CSS = `
   }
 
   body { margin: 0; background: ${C.pitch}; }
+  /* iOS Safari's address bar collapses/expands as you scroll, but 100vh
+     is locked to the tallest (address-bar-hidden) case — the shell would
+     render taller than the actually-visible viewport whenever the bar was
+     showing, shoving the bottom nav off-screen and making the outer page
+     rubber-band/scroll instead of just the inner .noscroll content area.
+     100dvh tracks the real visible height; 100vh above is just the
+     pre-dvh-support fallback (Safari < 15.4). */
+  .app-shell { height: 100vh; height: 100dvh; }
   .noscroll::-webkit-scrollbar { display: none; }
   .noscroll { -ms-overflow-style: none; scrollbar-width: none; }
   .msg { animation: rise .22s ease; }
