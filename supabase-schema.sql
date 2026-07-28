@@ -1106,5 +1106,13 @@ end;
 $$;
 
 -- ============================================================
+-- 21) ADDITIVE — non-player Passport fields (license, looking for players)
+-- See supabase-migration-021-non-player-passport.sql for full context.
+-- ============================================================
+
+alter table athletes add column if not exists license text;
+alter table athletes add column if not exists looking_for_players boolean;
+
+-- ============================================================
 -- Done.
 -- ============================================================

@@ -169,7 +169,7 @@ function useTheme() {
    site. */
 const I18N = {
   en: {
-    loading: "Loading…",
+    loading: "Loading…", yes: "Yes", no: "No",
     nav_home: "Home", nav_discover: "Discover", nav_scout: "Scout", nav_ai_scout: "AI Scout",
     nav_events: "Events", nav_passport: "Passport", nav_profile: "Profile", nav_messages: "Messages",
     nav_signout: "Sign out",
@@ -263,6 +263,8 @@ const I18N = {
     editor_bio_label: "SCOUTING BIO", editor_bio_ph: "A few sentences a coach or scout should know.",
     editor_save: "Save profile", editor_saving: "Saving…", editor_name_required: "Name can't be empty.",
     editor_sport_required: "Pick a sport to continue.", editor_locked_notice: "Finish your profile to unlock the rest of GOLSZ.",
+    editor_team_required: "Tell us which team you're with.", editor_license_label: "LICENSE(S)", editor_license_ph: "e.g. UEFA A License",
+    editor_looking_label: "LOOKING FOR PLAYERS",
     editor_save_err: "Couldn't save — try again.",
     passport_title_self: "Sports Passport", passport_title_other: "Athlete Passport", passport_edit: "Edit profile",
     passport_follow: "Follow", passport_following: "Following", passport_message: "Message",
@@ -271,6 +273,7 @@ const I18N = {
     passport_member: "GOLSZ MEMBER", passport_sport: "SPORT", passport_position: "POSITION", passport_club: "CLUB",
     passport_passport_no: "PASSPORT NO.", passport_height: "HEIGHT", passport_grad: "GRAD", passport_gpa: "GPA",
     passport_weight: "WEIGHT", passport_status: "STATUS", passport_bio_title: "SCOUTING BIO",
+    passport_license: "LICENSE", passport_looking_for: "LOOKING FOR PLAYERS",
     passport_no_bio: "No bio yet — tap Edit profile to add one.",
     passport_following_count: "FOLLOWING", passport_followers_count: "FOLLOWERS", passport_follower_singular: "FOLLOWER",
     passport_not_following_other: "Not following anyone yet.", passport_not_following_self: "Not following anyone yet — check out Discover.",
@@ -313,7 +316,7 @@ const I18N = {
     reset_pw_err: "Couldn't update password.",
   },
   fr: {
-    loading: "Chargement…",
+    loading: "Chargement…", yes: "Oui", no: "Non",
     nav_home: "Accueil", nav_discover: "Découvrir", nav_scout: "Agent", nav_ai_scout: "Agent IA",
     nav_events: "Événements", nav_passport: "Passeport", nav_profile: "Profil", nav_messages: "Messages",
     nav_signout: "Déconnexion",
@@ -407,6 +410,8 @@ const I18N = {
     editor_bio_label: "BIO DE RECRUTEMENT", editor_bio_ph: "Quelques phrases qu'un entraîneur ou recruteur devrait connaître.",
     editor_save: "Enregistrer le profil", editor_saving: "Enregistrement…", editor_name_required: "Le nom ne peut pas être vide.",
     editor_sport_required: "Choisissez un sport pour continuer.", editor_locked_notice: "Terminez votre profil pour débloquer le reste de GOLSZ.",
+    editor_team_required: "Indiquez avec quelle équipe vous êtes.", editor_license_label: "LICENCE(S)", editor_license_ph: "ex. Licence UEFA A",
+    editor_looking_label: "RECHERCHE DE JOUEURS",
     editor_save_err: "Impossible d'enregistrer — réessayez.",
     passport_title_self: "Passeport Sportif", passport_title_other: "Passeport de l'athlète", passport_edit: "Modifier le profil",
     passport_follow: "Suivre", passport_following: "Abonné", passport_message: "Message",
@@ -415,6 +420,7 @@ const I18N = {
     passport_member: "MEMBRE GOLSZ", passport_sport: "SPORT", passport_position: "POSTE", passport_club: "CLUB",
     passport_passport_no: "N° PASSEPORT", passport_height: "TAILLE", passport_grad: "DIPLÔME", passport_gpa: "GPA",
     passport_weight: "POIDS", passport_status: "STATUT", passport_bio_title: "BIO DE RECRUTEMENT",
+    passport_license: "LICENCE", passport_looking_for: "RECHERCHE DE JOUEURS",
     passport_no_bio: "Pas encore de bio — touchez Modifier le profil pour en ajouter une.",
     passport_following_count: "ABONNEMENTS", passport_followers_count: "ABONNÉS", passport_follower_singular: "ABONNÉ",
     passport_not_following_other: "Ne suit encore personne.", passport_not_following_self: "Vous ne suivez encore personne — allez voir Découvrir.",
@@ -457,7 +463,7 @@ const I18N = {
     reset_pw_err: "Impossible de mettre à jour le mot de passe.",
   },
   es: {
-    loading: "Cargando…",
+    loading: "Cargando…", yes: "Sí", no: "No",
     nav_home: "Inicio", nav_discover: "Descubrir", nav_scout: "Agente", nav_ai_scout: "Agente IA",
     nav_events: "Eventos", nav_passport: "Pasaporte", nav_profile: "Perfil", nav_messages: "Mensajes",
     nav_signout: "Cerrar sesión",
@@ -551,6 +557,8 @@ const I18N = {
     editor_bio_label: "BIOGRAFÍA DEPORTIVA", editor_bio_ph: "Unas frases que un entrenador u ojeador debería saber.",
     editor_save: "Guardar perfil", editor_saving: "Guardando…", editor_name_required: "El nombre no puede estar vacío.",
     editor_sport_required: "Elige un deporte para continuar.", editor_locked_notice: "Termina tu perfil para desbloquear el resto de GOLSZ.",
+    editor_team_required: "Indica con qué equipo estás.", editor_license_label: "LICENCIA(S)", editor_license_ph: "ej. Licencia UEFA A",
+    editor_looking_label: "BUSCANDO JUGADORES",
     editor_save_err: "No se pudo guardar — inténtalo de nuevo.",
     passport_title_self: "Pasaporte Deportivo", passport_title_other: "Pasaporte del atleta", passport_edit: "Editar perfil",
     passport_follow: "Seguir", passport_following: "Siguiendo", passport_message: "Mensaje",
@@ -559,6 +567,7 @@ const I18N = {
     passport_member: "MIEMBRO DE GOLSZ", passport_sport: "DEPORTE", passport_position: "POSICIÓN", passport_club: "CLUB",
     passport_passport_no: "N.º DE PASAPORTE", passport_height: "ALTURA", passport_grad: "GRADUACIÓN", passport_gpa: "GPA",
     passport_weight: "PESO", passport_status: "ESTADO", passport_bio_title: "BIOGRAFÍA DEPORTIVA",
+    passport_license: "LICENCIA", passport_looking_for: "BUSCANDO JUGADORES",
     passport_no_bio: "Aún no hay biografía — toca Editar perfil para añadir una.",
     passport_following_count: "SIGUIENDO", passport_followers_count: "SEGUIDORES", passport_follower_singular: "SEGUIDOR",
     passport_not_following_other: "Aún no sigue a nadie.", passport_not_following_self: "Aún no sigues a nadie — echa un vistazo a Descubrir.",
@@ -601,7 +610,7 @@ const I18N = {
     reset_pw_err: "No se pudo actualizar la contraseña.",
   },
   el: {
-    loading: "Φόρτωση…",
+    loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
     nav_home: "Αρχική", nav_discover: "Ανακάλυψη", nav_scout: "Σκάουτ", nav_ai_scout: "AI Σκάουτ",
     nav_events: "Εκδηλώσεις", nav_passport: "Διαβατήριο", nav_profile: "Προφίλ", nav_messages: "Μηνύματα",
     nav_signout: "Αποσύνδεση",
@@ -695,6 +704,8 @@ const I18N = {
     editor_bio_label: "ΒΙΟΓΡΑΦΙΚΟ ΣΚΑΟΥΤΙΝΓΚ", editor_bio_ph: "Λίγες προτάσεις που πρέπει να ξέρει ένας προπονητής ή σκάουτ.",
     editor_save: "Αποθήκευση προφίλ", editor_saving: "Αποθήκευση…", editor_name_required: "Το όνομα δεν μπορεί να είναι κενό.",
     editor_sport_required: "Επιλέξτε ένα άθλημα για να συνεχίσετε.", editor_locked_notice: "Ολοκληρώστε το προφίλ σας για να ξεκλειδώσετε το υπόλοιπο GOLSZ.",
+    editor_team_required: "Πείτε μας με ποια ομάδα είστε.", editor_license_label: "ΑΔΕΙΑ/ΕΣ", editor_license_ph: "π.χ. Άδεια UEFA A",
+    editor_looking_label: "ΑΝΑΖΗΤΗΣΗ ΠΑΙΚΤΩΝ",
     editor_save_err: "Δεν ήταν δυνατή η αποθήκευση — δοκιμάστε ξανά.",
     passport_title_self: "Αθλητικό Διαβατήριο", passport_title_other: "Διαβατήριο Αθλητή", passport_edit: "Επεξεργασία προφίλ",
     passport_follow: "Ακολούθηση", passport_following: "Ακολουθείτε", passport_message: "Μήνυμα",
@@ -703,6 +714,7 @@ const I18N = {
     passport_member: "ΜΕΛΟΣ GOLSZ", passport_sport: "ΑΘΛΗΜΑ", passport_position: "ΘΕΣΗ", passport_club: "ΣΥΛΛΟΓΟΣ",
     passport_passport_no: "ΑΡ. ΔΙΑΒΑΤΗΡΙΟΥ", passport_height: "ΥΨΟΣ", passport_grad: "ΑΠΟΦΟΙΤΗΣΗ", passport_gpa: "GPA",
     passport_weight: "ΒΑΡΟΣ", passport_status: "ΚΑΤΑΣΤΑΣΗ", passport_bio_title: "ΒΙΟΓΡΑΦΙΚΟ ΣΚΑΟΥΤΙΝΓΚ",
+    passport_license: "ΑΔΕΙΑ", passport_looking_for: "ΑΝΑΖΗΤΗΣΗ ΠΑΙΚΤΩΝ",
     passport_no_bio: "Δεν υπάρχει βιογραφικό ακόμα — πατήστε Επεξεργασία προφίλ για να προσθέσετε ένα.",
     passport_following_count: "ΑΚΟΛΟΥΘΕΙ", passport_followers_count: "ΑΚΟΛΟΥΘΟΙ", passport_follower_singular: "ΑΚΟΛΟΥΘΟΣ",
     passport_not_following_other: "Δεν ακολουθεί κανέναν ακόμα.", passport_not_following_self: "Δεν ακολουθείτε κανέναν ακόμα — δείτε την Ανακάλυψη.",
@@ -1582,7 +1594,7 @@ function Feed({ onMessage, onViewProfile }) {
 const SPORTS = ["All", "Soccer", "Basketball", "Track", "Hockey", "Tennis"];
 const GENDERS = [["All", "All"], ["M", "Male"], ["F", "Female"]];
 const SCHOOL_LEVELS = ["High School", "University", "Other"];
-const OCCUPATIONS = ["Scout", "Agent", "Coach", "Physio", "Other"];
+const OCCUPATIONS = ["Player", "Scout", "Agent", "Coach", "Physio", "Other"];
 const COUNTRIES = ["All", "Canada", "USA", "England", "Spain", "Germany", "Jamaica", "Japan", "Brazil", "Sweden", "Morocco"];
 const POSITIONS = ["All", "Left Back", "Striker", "Midfielder", "Guard", "Forward", "Center", "Goalie", "Sprinter", "Distance", "Singles"];
 
@@ -2456,6 +2468,8 @@ function toPassport(profile, ath, uid, t) {
     gpa: dash(ath && ath.gpa),
     weight: ath && ath.weight_kg ? `${ath.weight_kg} kg` : "—",
     status: dash(ath && ath.recruiting_status),
+    license: dash(ath && ath.license),
+    lookingForPlayers: ath && ath.looking_for_players === true ? t("yes") : ath && ath.looking_for_players === false ? t("no") : "—",
     bio: (ath && ath.bio) || t("passport_no_bio"),
   };
 }
@@ -2470,12 +2484,15 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
   const label = { fontSize: 9.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700, marginBottom: 5, display: "block" };
   const row = (children) => <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>{children}</div>;
   const group = (lbl, children) => <div style={{ marginBottom: 12 }}><span style={label}>{lbl}</span>{children}</div>;
+  const isPlayer = !form.occupation || form.occupation === "Player";
 
   async function save() {
     if (!sb || busy) return;
     const name = (form.full_name || "").trim();
     if (!name) { setErr(t("editor_name_required")); return; }
-    if (!form.sport) { setErr(t("editor_sport_required")); return; }
+    if (!form.occupation) { setErr(t("auth_occupation_required")); return; }
+    if (isPlayer && !form.sport) { setErr(t("editor_sport_required")); return; }
+    if (!isPlayer && !(form.club_name || "").trim()) { setErr(t("editor_team_required")); return; }
     setBusy(true); setErr("");
     try {
       const { data: { user } } = await sb.auth.getUser();
@@ -2495,6 +2512,8 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
         education_level: form.education_level || null,
         country: (form.country || "").trim() || null,
         club_name: (form.club_name || "").trim() || null,
+        license: (form.license || "").trim() || null,
+        looking_for_players: form.looking_for_players === "" || form.looking_for_players == null ? null : form.looking_for_players === "true",
         bio: (form.bio || "").trim().slice(0, 600) || null,
       }).eq("id", user.id);
       if (e2) throw e2;
@@ -2523,7 +2542,7 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
           </select>
         ))}
 
-        {row(<>
+        {isPlayer && row(<>
           <div><span style={label}>{t("editor_sport_label")}</span>
             <select style={field} value={form.sport || ""} onChange={set("sport")}>
               <option value="">{t("editor_select")}</option>
@@ -2536,7 +2555,7 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
           </div>
         </>)}
 
-        {row(<>
+        {isPlayer && row(<>
           <div><span style={label}>{t("editor_gender_label")}</span>
             <select style={field} value={form.gender || ""} onChange={set("gender")}>
               <option value="">{t("editor_select")}</option>
@@ -2548,7 +2567,7 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
           </div>
         </>)}
 
-        {row(<>
+        {isPlayer && row(<>
           <div><span style={label}>{t("editor_school_level_label")}</span>
             <select style={field} value={form.education_level || ""} onChange={set("education_level")}>
               <option value="">—</option>
@@ -2558,7 +2577,7 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
           <div />
         </>)}
 
-        {row(<>
+        {isPlayer && row(<>
           <div><span style={label}>{t("editor_height_label")}</span>
             <input style={field} type="number" value={form.height_cm || ""} onChange={set("height_cm")} placeholder="180" />
           </div>
@@ -2567,7 +2586,7 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
           </div>
         </>)}
 
-        {(() => {
+        {isPlayer && (() => {
           const pref = SPORT_PREFERENCE[form.sport];
           return row(<>
             <div><span style={label}>{t("editor_gpa_label")}</span>
@@ -2584,6 +2603,18 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
           </>);
         })()}
 
+        {!isPlayer && group(t("editor_license_label"), (
+          <input style={field} value={form.license || ""} onChange={set("license")} placeholder={t("editor_license_ph")} />
+        ))}
+
+        {!isPlayer && group(t("editor_looking_label"), (
+          <select style={field} value={form.looking_for_players || ""} onChange={set("looking_for_players")}>
+            <option value="">—</option>
+            <option value="true">{t("yes")}</option>
+            <option value="false">{t("no")}</option>
+          </select>
+        ))}
+
         {row(<>
           <div><span style={label}>{t("editor_country_label")}</span>
             <input style={field} list="country-options" value={form.country || ""} onChange={set("country")} placeholder={t("editor_country_ph")} />
@@ -2594,7 +2625,7 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
           </div>
         </>)}
 
-        {group(t("editor_status_label"), (
+        {isPlayer && group(t("editor_status_label"), (
           <select style={field} value={form.recruiting_status || ""} onChange={set("recruiting_status")}>
             <option value="">—</option>
             <option value="Open to offers">Open to offers</option>
@@ -2709,7 +2740,11 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const mrz = real
     ? `${p.id.replace(/[·]/g, "<")}<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<<<<<<<<<<<<<<<<<<<<<<<<<<<`
     : `GLS<CAN<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<LEFTBACK<<<<<${p.id.replace(/[·]/g, "")}<2027CA`;
-  const incomplete = !viewingOther && real && athlete && !athlete.sport;
+  const occupationSet = !!(profile && profile.occupation);
+  const isPlayerProfile = !occupationSet || profile.occupation === "Player";
+  const incomplete = !viewingOther && real && profile && athlete && (
+    !occupationSet || (isPlayerProfile ? !athlete.sport : !athlete.club_name)
+  );
 
   const editorInitial = () => ({
     full_name: (profile && profile.full_name) || "", occupation: (profile && profile.occupation) || "",
@@ -2720,6 +2755,8 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     recruiting_status: (athlete && athlete.recruiting_status) || "", education_level: (athlete && athlete.education_level) || "",
     country: (athlete && athlete.country) || "",
     club_name: (athlete && athlete.club_name) || "", bio: (athlete && athlete.bio) || "",
+    license: (athlete && athlete.license) || "",
+    looking_for_players: athlete && athlete.looking_for_players === true ? "true" : athlete && athlete.looking_for_players === false ? "false" : "",
   });
 
   if (!loaded) return <div style={{ padding: "40px 20px", textAlign: "center", color: C.slate, fontSize: 13 }}>{t("loading")}</div>;
@@ -2806,18 +2843,29 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
               )}
             </div>
             <div style={{ fontSize: 11, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 10 }}>{p.handle}</div>
-            <PassRow k={t("passport_sport")} v={p.sport} />
-            <PassRow k={t("passport_position")} v={p.position} />
-            <PassRow k={t("passport_club")} v={p.club} />
+            {isPlayerProfile ? (
+              <>
+                <PassRow k={t("passport_sport")} v={p.sport} />
+                <PassRow k={t("passport_position")} v={p.position} />
+                <PassRow k={t("passport_club")} v={p.club} />
+              </>
+            ) : (
+              <>
+                <PassRow k={t("passport_club")} v={p.club} />
+                <PassRow k={t("passport_license")} v={p.license} />
+              </>
+            )}
             <PassRow k={t("passport_passport_no")} v={p.id} mono />
           </div>
         </div>
 
         {/* data grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, background: C.line, borderTop: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}` }}>
-          {(real
-            ? [[p.prefLabel, p.foot], [t("passport_height"), p.height], [t("passport_grad"), p.grad], [t("passport_gpa"), p.gpa], [t("passport_weight"), p.weight], [t("passport_status"), p.status]]
-            : [["FOOT", p.foot], ["HEIGHT", p.height], ["GRAD", p.grad], ["GPA", p.gpa], ["TOP SPEED", p.pace], ["STATUS", p.level]]
+        <div style={{ display: "grid", gridTemplateColumns: isPlayerProfile ? "1fr 1fr 1fr" : "1fr", gap: 1, background: C.line, borderTop: `1px solid ${C.line}`, borderBottom: `1px solid ${C.line}` }}>
+          {(isPlayerProfile
+            ? (real
+              ? [[p.prefLabel, p.foot], [t("passport_height"), p.height], [t("passport_grad"), p.grad], [t("passport_gpa"), p.gpa], [t("passport_weight"), p.weight], [t("passport_status"), p.status]]
+              : [["FOOT", p.foot], ["HEIGHT", p.height], ["GRAD", p.grad], ["GPA", p.gpa], ["TOP SPEED", p.pace], ["STATUS", p.level]])
+            : [[t("passport_looking_for"), p.lookingForPlayers]]
           ).map(([k, v]) => (
             <div key={k} style={{ background: C.card, padding: "9px 12px" }}>
               <div style={{ fontSize: 8.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700 }}>{k}</div>
@@ -3964,7 +4012,6 @@ function Auth({ onDone, paidReturn }) {
   const [mode, setMode] = useState(paidReturn ? "login" : "signup");
   const [plan, setPlan] = useState("pro");
   const [name, setName] = useState("");
-  const [occupation, setOccupation] = useState("");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [dobDay, setDobDay] = useState("");
@@ -4008,7 +4055,7 @@ function Auth({ onDone, paidReturn }) {
   const isMinor = age !== null && age < 18;
   const parentEmailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail.trim());
 
-  const ok = email.trim() && pw.trim() && (!isSignup || (name.trim() && !!occupation && dobOk && (!isMinor || parentEmailOk)));
+  const ok = email.trim() && pw.trim() && (!isSignup || (name.trim() && dobOk && (!isMinor || parentEmailOk)));
   const selected = PLANS.find((p) => p.id === plan) || PLANS[1];
   const field = { width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 12, color: C.chalk, padding: "13px 14px", fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 12, boxSizing: "border-box" };
   const dobField = { ...field, marginBottom: 0, textAlign: "center" };
@@ -4027,7 +4074,7 @@ function Auth({ onDone, paidReturn }) {
       if (isSignup) {
         const { data, error } = await sb.auth.signUp({ email: email.trim(), password: pw, options: { data: {
           full_name: name.trim(), plan: selected.id, date_of_birth: dobIso,
-          parent_email: isMinor ? parentEmail.trim() : "", occupation,
+          parent_email: isMinor ? parentEmail.trim() : "",
         } } });
         if (error) throw error;
         if (selected.price > 0 && STRIPE_LINKS[plan] && data.user) {
@@ -4151,12 +4198,6 @@ function Auth({ onDone, paidReturn }) {
           )}
 
           {isSignup && <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth_full_name")} style={field} />}
-          {isSignup && (
-            <select value={occupation} onChange={(e) => setOccupation(e.target.value)} style={field}>
-              <option value="">{t("auth_occupation")}</option>
-              {OCCUPATIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-            </select>
-          )}
           <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth_email")} type="email" style={field} />
           <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder={t("auth_password")} type="password" style={{ ...field, marginBottom: isSignup ? 12 : 4 }} />
           {!isSignup && (
