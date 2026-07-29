@@ -425,6 +425,21 @@ project, not a from-scratch bootstrap script. The real tables:
 - `handle_new_user()` reads `full_name` / `date_of_birth` / `parent_email` out of the signup JWT's
   `raw_user_meta_data` (populated by `Auth`'s `signUp({ options: { data: {...} } })`), computes `is_minor`
   from the DOB, and auto-creates a pending `parent_links` row if `parent_email` already has an account.
+- **`profiles.is_verified` (migration 024)**: the real problem this closes — `occupation` is entirely
+  self-declared (anyone can pick Scout/Agent/Coach/Physio at signup, zero check), and it's shown as a
+  trust-looking badge right next to the person's name on the Passport, which is exactly the setup for
+  impersonating a recruiter to a minor. This column doesn't verify anything by itself — an admin still has
+  to do that manually (check a coaching license, call the claimed club/agency, etc.) — it just records the
+  result and, critically, flips the *default*: `golsz-app.html`'s Passport now shows a distinct amber
+  "UNVERIFIED {OCCUPATION}" badge plus a same-styled warning banner (never send money, involve a
+  parent/guardian before meeting in person) for any non-Player occupation until an admin flips this to true,
+  instead of every occupation getting the same trusted-looking lime pill it did before. `is_verified` is in
+  `protect_profile_columns()`'s (migration 023) protected-column set alongside `is_admin`/`is_banned` — for
+  the same reason those are protected: without that, a scammer could just set `is_verified = true` on
+  themselves via the same client call pattern that made the plan/`is_admin` self-escalation possible before
+  migration 023, defeating the entire point. Also added to `public_profile_names` (same reasoning as
+  `occupation` in migration 020 — an athlete viewing someone *else's* profile needs to see this, not just
+  their own). Verify/unverify is an admin-panel action (Users tab), shown only for non-Player occupations.
 - Any new table holding a minor's private data should gate access with the same
   `auth.uid() = owner_id OR is_parent_of(owner_id)` pattern `profiles`/`scout_history` already use.
 

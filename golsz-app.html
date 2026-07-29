@@ -274,6 +274,8 @@ const I18N = {
     passport_passport_no: "PASSPORT NO.", passport_height: "HEIGHT", passport_grad: "GRAD", passport_gpa: "GPA",
     passport_weight: "WEIGHT", passport_status: "STATUS", passport_bio_title: "SCOUTING BIO",
     passport_license: "LICENSE", passport_looking_for: "LOOKING FOR PLAYERS",
+    passport_unverified_prefix: "UNVERIFIED ", passport_verified_tooltip: "Verified by GOLSZ",
+    passport_unverified_warning: "This account says it's a {occupation}, but GOLSZ hasn't verified that claim. Be cautious — never send money or share sensitive information, and involve a parent/guardian before meeting anyone in person.",
     passport_no_bio: "No bio yet — tap Edit profile to add one.",
     passport_following_count: "FOLLOWING", passport_followers_count: "FOLLOWERS", passport_follower_singular: "FOLLOWER",
     passport_not_following_other: "Not following anyone yet.", passport_not_following_self: "Not following anyone yet — check out Discover.",
@@ -291,6 +293,8 @@ const I18N = {
     admin_add_event: "ADD EVENT", admin_title_ph: "Title", admin_location_ph: "Location", admin_level_ph: "Level",
     admin_spots_ph: "Spots available", admin_create_event: "Create event",
     admin_banned: "BANNED", admin_block_user: "Block", admin_unblock_user: "Unblock",
+    admin_unverified: "unverified", admin_verify_user: "Verify", admin_unverify_user: "Unverify",
+    admin_verify_user_err: "Couldn't update verification status.",
     admin_delete_user: "Delete", admin_delete_user_confirm: "Permanently delete this account? This can't be undone.",
     admin_delete_user_err: "Couldn't delete account.", admin_ban_user_err: "Couldn't update this account.",
     admin_blocked: "BLOCKED", admin_block_event: "Block", admin_unblock_event: "Unblock",
@@ -424,6 +428,8 @@ const I18N = {
     passport_passport_no: "N° PASSEPORT", passport_height: "TAILLE", passport_grad: "DIPLÔME", passport_gpa: "GPA",
     passport_weight: "POIDS", passport_status: "STATUT", passport_bio_title: "BIO DE RECRUTEMENT",
     passport_license: "LICENCE", passport_looking_for: "RECHERCHE DE JOUEURS",
+    passport_unverified_prefix: "NON VÉRIFIÉ ", passport_verified_tooltip: "Vérifié par GOLSZ",
+    passport_unverified_warning: "Ce compte prétend être {occupation}, mais GOLSZ n'a pas vérifié cette affirmation. Soyez prudent — n'envoyez jamais d'argent ni d'informations sensibles, et impliquez un parent/tuteur avant toute rencontre en personne.",
     passport_no_bio: "Pas encore de bio — touchez Modifier le profil pour en ajouter une.",
     passport_following_count: "ABONNEMENTS", passport_followers_count: "ABONNÉS", passport_follower_singular: "ABONNÉ",
     passport_not_following_other: "Ne suit encore personne.", passport_not_following_self: "Vous ne suivez encore personne — allez voir Découvrir.",
@@ -439,6 +445,8 @@ const I18N = {
     admin_search_name: "Rechercher par nom…", admin_no_name: "(sans nom)", admin_minor: "MINEUR", admin_admin: "ADMIN",
     admin_joined: "inscrit il y a ", admin_ago: "", admin_revoke_admin: "Révoquer admin", admin_make_admin: "Nommer admin",
     admin_banned: "BANNI", admin_block_user: "Bloquer", admin_unblock_user: "Débloquer",
+    admin_unverified: "non vérifié", admin_verify_user: "Vérifier", admin_unverify_user: "Annuler la vérification",
+    admin_verify_user_err: "Impossible de mettre à jour le statut de vérification.",
     admin_delete_user: "Supprimer", admin_delete_user_confirm: "Supprimer définitivement ce compte ? Cette action est irréversible.",
     admin_delete_user_err: "Impossible de supprimer ce compte.", admin_ban_user_err: "Impossible de mettre à jour ce compte.",
     admin_blocked: "BLOQUÉ", admin_block_event: "Bloquer", admin_unblock_event: "Débloquer",
@@ -574,6 +582,8 @@ const I18N = {
     passport_passport_no: "N.º DE PASAPORTE", passport_height: "ALTURA", passport_grad: "GRADUACIÓN", passport_gpa: "GPA",
     passport_weight: "PESO", passport_status: "ESTADO", passport_bio_title: "BIOGRAFÍA DEPORTIVA",
     passport_license: "LICENCIA", passport_looking_for: "BUSCANDO JUGADORES",
+    passport_unverified_prefix: "NO VERIFICADO ", passport_verified_tooltip: "Verificado por GOLSZ",
+    passport_unverified_warning: "Esta cuenta dice ser {occupation}, pero GOLSZ no ha verificado esa afirmación. Ten cuidado — nunca envíes dinero ni información sensible, e involucra a un padre/tutor antes de reunirte con alguien en persona.",
     passport_no_bio: "Aún no hay biografía — toca Editar perfil para añadir una.",
     passport_following_count: "SIGUIENDO", passport_followers_count: "SEGUIDORES", passport_follower_singular: "SEGUIDOR",
     passport_not_following_other: "Aún no sigue a nadie.", passport_not_following_self: "Aún no sigues a nadie — echa un vistazo a Descubrir.",
@@ -589,6 +599,8 @@ const I18N = {
     admin_search_name: "Buscar por nombre…", admin_no_name: "(sin nombre)", admin_minor: "MENOR", admin_admin: "ADMIN",
     admin_joined: "se unió hace ", admin_ago: "", admin_revoke_admin: "Revocar admin", admin_make_admin: "Hacer admin",
     admin_banned: "BANEADO", admin_block_user: "Bloquear", admin_unblock_user: "Desbloquear",
+    admin_unverified: "no verificado", admin_verify_user: "Verificar", admin_unverify_user: "Anular verificación",
+    admin_verify_user_err: "No se pudo actualizar el estado de verificación.",
     admin_delete_user: "Eliminar", admin_delete_user_confirm: "¿Eliminar esta cuenta de forma permanente? Esto no se puede deshacer.",
     admin_delete_user_err: "No se pudo eliminar la cuenta.", admin_ban_user_err: "No se pudo actualizar esta cuenta.",
     admin_blocked: "BLOQUEADO", admin_block_event: "Bloquear", admin_unblock_event: "Desbloquear",
@@ -724,6 +736,8 @@ const I18N = {
     passport_passport_no: "ΑΡ. ΔΙΑΒΑΤΗΡΙΟΥ", passport_height: "ΥΨΟΣ", passport_grad: "ΑΠΟΦΟΙΤΗΣΗ", passport_gpa: "GPA",
     passport_weight: "ΒΑΡΟΣ", passport_status: "ΚΑΤΑΣΤΑΣΗ", passport_bio_title: "ΒΙΟΓΡΑΦΙΚΟ ΣΚΑΟΥΤΙΝΓΚ",
     passport_license: "ΑΔΕΙΑ", passport_looking_for: "ΑΝΑΖΗΤΗΣΗ ΠΑΙΚΤΩΝ",
+    passport_unverified_prefix: "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ ", passport_verified_tooltip: "Επαληθευμένο από το GOLSZ",
+    passport_unverified_warning: "Αυτός ο λογαριασμός δηλώνει {occupation}, αλλά το GOLSZ δεν έχει επαληθεύσει αυτόν τον ισχυρισμό. Να είστε προσεκτικοί — μην στέλνετε ποτέ χρήματα ή ευαίσθητες πληροφορίες, και ενημερώστε γονέα/κηδεμόνα πριν συναντήσετε κάποιον από κοντά.",
     passport_no_bio: "Δεν υπάρχει βιογραφικό ακόμα — πατήστε Επεξεργασία προφίλ για να προσθέσετε ένα.",
     passport_following_count: "ΑΚΟΛΟΥΘΕΙ", passport_followers_count: "ΑΚΟΛΟΥΘΟΙ", passport_follower_singular: "ΑΚΟΛΟΥΘΟΣ",
     passport_not_following_other: "Δεν ακολουθεί κανέναν ακόμα.", passport_not_following_self: "Δεν ακολουθείτε κανέναν ακόμα — δείτε την Ανακάλυψη.",
@@ -739,6 +753,8 @@ const I18N = {
     admin_search_name: "Αναζήτηση με όνομα…", admin_no_name: "(χωρίς όνομα)", admin_minor: "ΑΝΗΛΙΚΟΣ", admin_admin: "ADMIN",
     admin_joined: "εγγράφηκε πριν από ", admin_ago: "", admin_revoke_admin: "Ανάκληση admin", admin_make_admin: "Ορισμός ως admin",
     admin_banned: "ΑΠΟΚΛΕΙΣΜΕΝΟΣ", admin_block_user: "Αποκλεισμός", admin_unblock_user: "Άρση αποκλεισμού",
+    admin_unverified: "μη επαληθευμένο", admin_verify_user: "Επαλήθευση", admin_unverify_user: "Αναίρεση επαλήθευσης",
+    admin_verify_user_err: "Δεν ήταν δυνατή η ενημέρωση της κατάστασης επαλήθευσης.",
     admin_delete_user: "Διαγραφή", admin_delete_user_confirm: "Οριστική διαγραφή αυτού του λογαριασμού; Δεν αναιρείται.",
     admin_delete_user_err: "Δεν ήταν δυνατή η διαγραφή του λογαριασμού.", admin_ban_user_err: "Δεν ήταν δυνατή η ενημέρωση αυτού του λογαριασμού.",
     admin_blocked: "ΑΠΟΚΛΕΙΣΜΕΝΟ", admin_block_event: "Αποκλεισμός", admin_unblock_event: "Άρση αποκλεισμού",
@@ -2474,7 +2490,7 @@ function toPassport(profile, ath, uid, t) {
   const country = (ath && ath.country) || "";
   const shortId = uid ? uid.replace(/-/g, "").slice(0, 5).toUpperCase() : "00000";
   return {
-    name, occupation: (profile && profile.occupation) || "",
+    name, occupation: (profile && profile.occupation) || "", isVerified: !!(profile && profile.is_verified),
     handle: "@" + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, ""),
     id: `GLS·${(country ? country.slice(0, 2) : "XX").toUpperCase()}·${dash(ath && ath.grad_year)}·${shortId}`,
     initials: initials(name), nat: `${flagFor(country)} ${dash(country)}`,
@@ -2696,18 +2712,18 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         // viewed person's name comes from the public_profile_names view —
         // same pattern used in Feed/Discover/Messages.
         const [{ data: nameRow }, { data: ath }, { data: myFollow }, { data: theirFollow }] = await Promise.all([
-          sb.from("public_profile_names").select("full_name, occupation").eq("id", viewUserId).maybeSingle(),
+          sb.from("public_profile_names").select("full_name, occupation, is_verified").eq("id", viewUserId).maybeSingle(),
           sb.from("athletes").select("*").eq("id", viewUserId).maybeSingle(),
           sb.from("follows").select("followed_id").eq("follower_id", user.id).eq("followed_id", viewUserId).maybeSingle(),
           sb.from("follows").select("follower_id").eq("follower_id", viewUserId).eq("followed_id", user.id).maybeSingle(),
         ]);
-        setProfile(nameRow ? { full_name: nameRow.full_name, occupation: nameRow.occupation } : null);
+        setProfile(nameRow ? { full_name: nameRow.full_name, occupation: nameRow.occupation, is_verified: nameRow.is_verified } : null);
         setAthlete(ath || null);
         setFollowing(!!myFollow);
         setFollowedByThem(!!theirFollow);
       } else {
         const [{ data: prof }, { data: ath }] = await Promise.all([
-          sb.from("profiles").select("full_name, is_admin, occupation").eq("id", user.id).single(),
+          sb.from("profiles").select("full_name, is_admin, occupation, is_verified").eq("id", user.id).single(),
           sb.from("athletes").select("*").eq("id", user.id).single(),
         ]);
         setProfile(prof || null);
@@ -2815,6 +2831,15 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         </div>
       )}
 
+      {viewingOther && p.occupation && p.occupation !== "Player" && !p.isVerified && (
+        <div style={{ background: "#C89B3C1a", border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", alignItems: "flex-start", gap: 10 }}>
+          <ShieldAlert size={16} color={C.amber} style={{ flexShrink: 0, marginTop: 1 }} />
+          <div style={{ fontSize: 12, color: C.chalk, lineHeight: 1.45 }}>
+            {t("passport_unverified_warning").replace("{occupation}", p.occupation)}
+          </div>
+        </div>
+      )}
+
       {incomplete && (
         <div onClick={() => setEditing(true)} style={{ background: "#C8F1351a", border: `1px solid ${C.limeBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
           <Pencil size={16} color={C.lime} />
@@ -2857,9 +2882,15 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05, fontStretch: "expanded" }}>{p.name}</div>
-              {p.occupation && (
+              {p.occupation && (p.occupation === "Player" ? (
                 <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 999, padding: "2px 8px" }}>{p.occupation.toUpperCase()}</span>
-              )}
+              ) : p.isVerified ? (
+                <span title={t("passport_verified_tooltip")} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 999, padding: "2px 8px" }}>
+                  <BadgeCheck size={11} /> {p.occupation.toUpperCase()}
+                </span>
+              ) : (
+                <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 999, padding: "2px 8px" }}>{t("passport_unverified_prefix")}{p.occupation.toUpperCase()}</span>
+              ))}
             </div>
             <div style={{ fontSize: 11, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 10 }}>{p.handle}</div>
             {isPlayerProfile ? (
@@ -3166,7 +3197,7 @@ function AdminPanel({ onBack }) {
 
   async function loadUsers(query) {
     try {
-      let q = sb.from("profiles").select("id, full_name, plan, is_minor, is_admin, is_banned, created_at").order("created_at", { ascending: false }).limit(100);
+      let q = sb.from("profiles").select("id, full_name, plan, is_minor, is_admin, is_banned, occupation, is_verified, created_at").order("created_at", { ascending: false }).limit(100);
       if (query && query.trim()) q = q.ilike("full_name", `%${query.trim()}%`);
       const { data, error } = await q;
       if (error) throw error;
@@ -3184,6 +3215,10 @@ function AdminPanel({ onBack }) {
   async function setUserBanned(id, val) {
     try { const { error } = await sb.from("profiles").update({ is_banned: val }).eq("id", id); if (error) throw error; loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin ban error:", e); alert(t("admin_ban_user_err")); }
+  }
+  async function setUserVerified(id, val) {
+    try { const { error } = await sb.from("profiles").update({ is_verified: val }).eq("id", id); if (error) throw error; loadUsers(userQuery); }
+    catch (e) { console.error("GOLSZ admin verify error:", e); alert(t("admin_verify_user_err")); }
   }
   async function deleteUser(id) {
     if (!window.confirm(t("admin_delete_user_confirm"))) return;
@@ -3321,6 +3356,11 @@ function AdminPanel({ onBack }) {
                   {u.is_minor && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_minor")}</span>}
                   {u.is_admin && <span style={{ fontSize: 9, color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_admin")}</span>}
                   {u.is_banned && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_banned")}</span>}
+                  {u.occupation && u.occupation !== "Player" && (
+                    <span style={{ fontSize: 9, color: u.is_verified ? C.lime : C.amber, border: `1px solid ${u.is_verified ? C.limeBorder : C.amberBorder}`, borderRadius: 5, padding: "1px 5px" }}>
+                      {u.occupation.toUpperCase()}{u.is_verified ? "" : ` · ${t("admin_unverified")}`}
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{t("admin_joined")}{timeAgo(u.created_at)}{t("admin_ago")}</div>
               </div>
@@ -3328,6 +3368,12 @@ function AdminPanel({ onBack }) {
                 <select value={u.plan} onChange={(e) => setUserPlan(u.id, e.target.value)} style={{ ...field, padding: "5px 7px", fontSize: 11.5 }}>
                   <option value="starter">starter</option><option value="pro">pro</option><option value="elite">elite</option>
                 </select>
+                {u.occupation && u.occupation !== "Player" && (
+                  <button onClick={() => setUserVerified(u.id, !u.is_verified)} style={{
+                    fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
+                    background: u.is_verified ? "#C8F1351a" : "transparent", color: u.is_verified ? C.lime : C.slate, border: `1px solid ${u.is_verified ? C.lime : C.line2}`,
+                  }}>{u.is_verified ? t("admin_unverify_user") : t("admin_verify_user")}</button>
+                )}
                 <button onClick={() => setUserAdmin(u.id, !u.is_admin)} style={{
                   fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
                   background: u.is_admin ? "#C8F1351a" : "transparent", color: u.is_admin ? C.lime : C.slate, border: `1px solid ${u.is_admin ? C.lime : C.line2}`,

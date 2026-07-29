@@ -1207,5 +1207,34 @@ revoke execute on function increment_scout_usage(uuid) from public;
 grant execute on function increment_scout_usage(uuid) to service_role;
 
 -- ============================================================
+-- 24) ADDITIVE — admin-controlled "verified" badge for non-player accounts
+-- See supabase-migration-024-verified-badge.sql for full context.
+-- ============================================================
+
+alter table profiles add column if not exists is_verified boolean not null default false;
+
+create or replace view public_profile_names as
+select id, full_name, occupation, is_verified from profiles;
+
+grant select on public_profile_names to anon, authenticated;
+
+create or replace function protect_profile_columns()
+returns trigger language plpgsql security definer set search_path to 'public' as $$
+begin
+  if auth.role() is null or auth.role() = 'service_role' or is_admin() then
+    return new;
+  end if;
+  new.is_admin := old.is_admin;
+  new.is_banned := old.is_banned;
+  new.is_verified := old.is_verified;
+  new.stripe_customer_id := old.stripe_customer_id;
+  if new.plan is distinct from old.plan and new.plan <> 'starter' then
+    new.plan := old.plan;
+  end if;
+  return new;
+end;
+$$;
+
+-- ============================================================
 -- Done.
 -- ============================================================
