@@ -425,44 +425,43 @@ project, not a from-scratch bootstrap script. The real tables:
 - `handle_new_user()` reads `full_name` / `date_of_birth` / `parent_email` out of the signup JWT's
   `raw_user_meta_data` (populated by `Auth`'s `signUp({ options: { data: {...} } })`), computes `is_minor`
   from the DOB, and auto-creates a pending `parent_links` row if `parent_email` already has an account.
-- **`profiles.is_verified` (migration 024)**: the real problem this closes — `occupation` is entirely
-  self-declared (anyone can pick Scout/Agent/Coach/Physio at signup, zero check), and it's shown as a
-  trust-looking badge right next to the person's name on the Passport, which is exactly the setup for
-  impersonating a recruiter to a minor. This column doesn't verify anything by itself — an admin still has
-  to do that manually (check a coaching license, call the claimed club/agency, etc.) — it just records the
-  result and, critically, flips the *default*: `golsz-app.html`'s Passport now shows a distinct amber
-  "UNVERIFIED {OCCUPATION}" badge plus a same-styled warning banner (never send money, involve a
-  parent/guardian before meeting in person) for any non-Player occupation until an admin flips this to true,
-  instead of every occupation getting the same trusted-looking lime pill it did before. `is_verified` is in
-  `protect_profile_columns()`'s (migration 023) protected-column set alongside `is_admin`/`is_banned` — for
-  the same reason those are protected: without that, a scammer could just set `is_verified = true` on
-  themselves via the same client call pattern that made the plan/`is_admin` self-escalation possible before
-  migration 023, defeating the entire point. Also added to `public_profile_names` (same reasoning as
-  `occupation` in migration 020 — an athlete viewing someone *else's* profile needs to see this, not just
-  their own). Verify/unverify is an admin-panel action (Users tab), shown only for non-Player occupations.
-- **`verification_requests` + gated verification, Pro/Elite only (migration 025)**: migration 024 gave
-  admins a manual Verify/Unverify toggle, but nothing let a coach/scout/agent actually *ask* to be verified,
-  and nothing surfaced that ask to an admin. This adds a real request/review table
-  (`id, user_id, status ('pending'|'approved'|'denied'), note, created_at, reviewed_at, reviewed_by`) instead
-  of just a status column, so there's an actual history — a unique partial index
-  (`verification_requests_one_pending_per_user`) keeps it to one open request per person. `golsz-app.html`'s
-  Passport shows a "Request verification" button (opening an optional note textarea) for any non-Player,
-  unverified own-profile — but only in the eligible-plan branch; Starter accounts see an upsell message
-  instead of a button. The admin panel's new "Requests" tab lists pending rows joined against
-  `profiles(full_name, occupation, plan)` with Approve/Deny buttons calling
-  `admin_review_verification_request(p_request_id, p_approve)`.
-  **New rule this migration adds: verification only exists for Pro/Elite** — enforced three separate ways,
-  because there are three different code paths that could otherwise create an inconsistent state: (1)
-  `verification_requests_insert`'s `WITH CHECK` blocks a Starter account from creating a request at all; (2)
-  `admin_review_verification_request()` re-checks the requester's plan at approval time, not just at request
-  time, in case they downgraded in between and raises a clear exception the admin UI surfaces via `alert()`;
-  (3) `protect_profile_columns()` (migration 023/024) now *unconditionally* resets `is_verified` to `false`
-  any time a row's `plan` isn't `pro`/`elite` — including for `service_role`, which matters because
-  `api/stripe-webhook.js`'s `customer.subscription.deleted` handler sets `plan` back to `'starter'` using the
-  service-role key on a real cancellation; a previously-verified Pro user whose subscription lapses loses the
-  badge as part of that same webhook write, not as a separate manual cleanup step. A `check` constraint
-  (`is_verified_requires_paid_plan`) backs all three up as a last-resort guard against a future code change
-  that forgets this invariant — it should never actually fire given the trigger.
+- **`profiles.is_verified` (migration 024, superseded by `verified_tier` in migration 025 — see below)**: the
+  real problem this closed — `occupation` is entirely self-declared (anyone can pick Scout/Agent/Coach/Physio
+  at signup, zero check), and it's shown as a trust-looking badge right next to the person's name on the
+  Passport, which is exactly the setup for impersonating a recruiter to a minor. This didn't (and doesn't)
+  verify anything by itself — an admin still does that manually (checks a coaching license, calls the
+  claimed club/agency, etc.) — it just recorded the result and flipped the *default*: `golsz-app.html`'s
+  Passport shows a distinct amber "UNVERIFIED {OCCUPATION}" badge plus a same-styled warning banner (never
+  send money, involve a parent/guardian before meeting in person) for any non-Player occupation with no
+  badge, instead of every occupation getting the same trusted-looking lime pill.
+- **`profiles.verified_tier` (migration 025)**: replaces the plain `is_verified` boolean with a three-state
+  column (`'none' | 'pro' | 'elite'`) so the Passport can show a *differently colored* check for Elite vs Pro
+  (lime vs blue, see `C.elite`/`C.eliteBorder`) — deliberately **not** a self-service request workflow (an
+  earlier draft of this migration built exactly that — a `verification_requests` table plus an admin
+  approve/deny screen — but it was rewritten before ever being applied to the live database once the actual
+  requirement turned out to be different; the drops at the top of
+  `supabase-migration-025-verified-tier.sql` are defensive cleanup for that unused table, in case it was ever
+  run). The real design has two independent ways `verified_tier` changes:
+  1. **Automatic, on plan change**: `protect_profile_columns()` (migrations 023/024) now also syncs
+     `verified_tier` to match `new.plan` — but *only* inside the `if new.plan is distinct from old.plan`
+     branch, i.e. only when a write actually changes the plan value. Subscribing to Pro auto-grants the Pro
+     check, Elite auto-grants the Elite check, and dropping to Starter (self-service cancel in Settings, an
+     admin's manual plan change, or `api/stripe-webhook.js`'s `service_role` write on a real Stripe
+     cancellation) auto-clears it. This one function body is the single place all three of those write paths
+     go through, so none of them need to duplicate this logic.
+  2. **Manual, admin override, independent of plan**: the Admin Panel's Users tab has three buttons per
+     non-Player user (Unverified / Pro check / Elite check) that call
+     `profiles.update({ verified_tier })` directly — this is the actual point of the feature. An admin can
+     revoke a still-paying Pro/Elite account's check the moment they look "shady," without cancelling their
+     subscription or touching `plan` at all (the update only ever writes `verified_tier`), and conversely can
+     grant a badge to a Starter account as a courtesy with no payment involved. This survives indefinitely
+     because rule 1 only fires on an actual plan *change* — a Stripe renewal writes the same plan value that
+     was already there, so it can never silently overwrite an admin's manual revoke/grant.
+  `verified_tier` is in `protect_profile_columns()`'s protected-column set for *non-admin, non-service-role*
+  callers, same reasoning `is_admin`/`is_banned` are protected (a regular user could otherwise self-grant a
+  check the same way plan/`is_admin` self-escalation was possible before migration 023). Also carried in
+  `public_profile_names` (same reasoning as `occupation` in migration 020) so viewing someone *else's*
+  profile shows their tier, not just your own.
 - Any new table holding a minor's private data should gate access with the same
   `auth.uid() = owner_id OR is_parent_of(owner_id)` pattern `profiles`/`scout_history` already use.
 
