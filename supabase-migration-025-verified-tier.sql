@@ -55,12 +55,14 @@ alter table profiles add column if not exists verified_tier text not null defaul
 update profiles set verified_tier = case when plan = 'elite' then 'elite' else 'pro' end
   where is_verified = true and verified_tier = 'none';
 
-alter table profiles drop column if exists is_verified;
-
+-- Must repoint the view off is_verified before dropping the column —
+-- Postgres refuses to drop a column a view still depends on.
 create or replace view public_profile_names as
 select id, full_name, occupation, verified_tier from profiles;
 
 grant select on public_profile_names to anon, authenticated;
+
+alter table profiles drop column if exists is_verified;
 
 create or replace function protect_profile_columns()
 returns trigger language plpgsql security definer set search_path to 'public' as $$
