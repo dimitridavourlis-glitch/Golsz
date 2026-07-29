@@ -2880,14 +2880,19 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
             <div style={{ textAlign: "center", fontSize: 8.5, color: C.slate, marginTop: 5, fontFamily: "'Space Mono', monospace" }}>{real ? t("passport_member") : "VERIFIED PHOTO"}</div>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
               <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05, fontStretch: "expanded" }}>{p.name}</div>
+              {p.occupation && p.occupation !== "Player" && p.isVerified && (
+                <span title={t("passport_verified_tooltip")} style={{ display: "inline-flex", flexShrink: 0 }}>
+                  <BadgeCheck size={17} color={C.pitch} fill={C.lime} strokeWidth={2.5} />
+                </span>
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
               {p.occupation && (p.occupation === "Player" ? (
                 <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 999, padding: "2px 8px" }}>{p.occupation.toUpperCase()}</span>
               ) : p.isVerified ? (
-                <span title={t("passport_verified_tooltip")} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 999, padding: "2px 8px" }}>
-                  <BadgeCheck size={11} /> {p.occupation.toUpperCase()}
-                </span>
+                <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 999, padding: "2px 8px" }}>{p.occupation.toUpperCase()}</span>
               ) : (
                 <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 999, padding: "2px 8px" }}>{t("passport_unverified_prefix")}{p.occupation.toUpperCase()}</span>
               ))}
