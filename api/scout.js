@@ -155,13 +155,24 @@ export default async function handler(req, res) {
     : SYSTEM_PROMPT;
 
   // ---- optional auth + metering (enabled only when Supabase env is set) ----
+  // Three tiers: Starter capped low, Pro capped higher, Elite (and admins)
+  // unlimited. `plan` only ever holds 'starter'|'pro'|'elite' (the live
+  // plan_tier enum — see CLAUDE.md), so anything else falls through to
+  // the Starter limit rather than accidentally going uncapped.
   if (process.env.SUPABASE_URL) {
     const userId = await getUserId(req.headers.authorization);
     if (!userId) return res.status(401).json({ error: "Sign in to use the Scout." });
     const { plan, isAdmin, calls } = await meter(userId);
-    const limit = Number(process.env.FREE_DAILY_LIMIT || 8);
-    if (!isAdmin && plan === "starter" && calls > limit) {
-      return res.status(402).json({ error: "Free daily limit reached. Upgrade to Pro for unlimited Scout." });
+    if (!isAdmin && plan !== "elite") {
+      const limit = plan === "pro"
+        ? Number(process.env.PRO_DAILY_LIMIT || 100)
+        : Number(process.env.FREE_DAILY_LIMIT || 8);
+      if (calls > limit) {
+        const message = plan === "pro"
+          ? "Daily Scout limit reached. Upgrade to Elite for unlimited Scout."
+          : "Free daily limit reached. Upgrade to Pro for more, or Elite for unlimited Scout.";
+        return res.status(402).json({ error: message });
+      }
     }
   }
 

@@ -264,16 +264,22 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   (process.env.SUPABASE_URL)`. Without that env var set, the endpoint accepts unauthenticated requests
   with no rate limiting. This is intentional for early preview deploys, not a bug.
 - `meter()` reads the caller's plan from the `profiles` table and increments usage via the
-  `increment_scout_usage` Postgres RPC (defined in `supabase-schema.sql`); free-plan callers are capped at
-  `FREE_DAILY_LIMIT` (default 8/day). **The free-tier plan value is `'starter'`, not `'free'`** — the live
-  `plan_tier` enum only allows `'starter' | 'pro' | 'elite'` (confirmed 2026-07-15 via direct write attempts;
-  `'free'` errors with `invalid input value for enum plan_tier`). Before migration 008, this check compared
-  against `'free'` and `handle_new_user()` never applied the signup's chosen plan at all, so the daily limit
-  silently never fired for any user — real cost exposure. If you ever add a new plan tier, add it to the
-  Postgres enum first (`alter type plan_tier add value ...`) and confirm it live before referencing it
-  anywhere in code — don't assume a string is a valid enum value just because it appears in `PLANS`.
+  `increment_scout_usage` Postgres RPC (defined in `supabase-schema.sql`). **Three tiers, not a binary free/
+  paid gate**: Starter is capped at `FREE_DAILY_LIMIT` (default 8/day), Pro at `PRO_DAILY_LIMIT` (default
+  100/day), Elite is uncapped entirely — matching `PLANS`' marketing copy in `golsz-app.html` (Pro's card
+  says "Extended AI Scout access", Elite's says "Unlimited AI Scout agent" as its own explicit bullet, not
+  just inherited via "Everything in Pro"). Elite used to be the same "unlimited" as Pro before this 3-tier
+  split — if you ever adjust the limits, keep the marketing copy honest rather than letting it drift, since
+  that's exactly the mismatch this split fixed (Pro's card claimed "Unlimited" when it wasn't going to stay
+  that way). **The free-tier plan value is `'starter'`, not `'free'`** — the live `plan_tier` enum only
+  allows `'starter' | 'pro' | 'elite'` (confirmed 2026-07-15 via direct write attempts; `'free'` errors with
+  `invalid input value for enum plan_tier`). Before migration 008, this check compared against `'free'` and
+  `handle_new_user()` never applied the signup's chosen plan at all, so the daily limit silently never fired
+  for any user — real cost exposure. If you ever add a new plan tier, add it to the Postgres enum first
+  (`alter type plan_tier add value ...`) and confirm it live before referencing it anywhere in code — don't
+  assume a string is a valid enum value just because it appears in `PLANS`.
 - `meter()` also reads `profiles.is_admin`; the daily-limit check is skipped entirely when `isAdmin` is
-  true, regardless of `plan`. Admins are exempt from Scout's rate limit even on the Starter plan — being
+  true, regardless of `plan`. Admins are exempt from Scout's rate limit no matter their plan — being
   admin doesn't otherwise change `plan`, so without this check an admin account would get capped like
   anyone else.
 - **`search_golsz_players` (migration 022)**: a second tool alongside `web_search_20250305`, but a *client-side*
