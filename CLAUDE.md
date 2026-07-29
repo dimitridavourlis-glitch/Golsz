@@ -264,14 +264,16 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   (process.env.SUPABASE_URL)`. Without that env var set, the endpoint accepts unauthenticated requests
   with no rate limiting. This is intentional for early preview deploys, not a bug.
 - `meter()` reads the caller's plan from the `profiles` table and increments usage via the
-  `increment_scout_usage` Postgres RPC (defined in `supabase-schema.sql`). **Three tiers, not a binary free/
-  paid gate**: Starter is capped at `FREE_DAILY_LIMIT` (default 8/day), Pro at `PRO_DAILY_LIMIT` (default
-  100/day), Elite is uncapped entirely — matching `PLANS`' marketing copy in `golsz-app.html` (Pro's card
-  says "Extended AI Scout access", Elite's says "Unlimited AI Scout agent" as its own explicit bullet, not
-  just inherited via "Everything in Pro"). Elite used to be the same "unlimited" as Pro before this 3-tier
-  split — if you ever adjust the limits, keep the marketing copy honest rather than letting it drift, since
-  that's exactly the mismatch this split fixed (Pro's card claimed "Unlimited" when it wasn't going to stay
-  that way). **The free-tier plan value is `'starter'`, not `'free'`** — the live `plan_tier` enum only
+  `increment_scout_usage` Postgres RPC (defined in `supabase-schema.sql`). **Three tiers, all capped —
+  Elite is a higher ceiling, not unlimited**: Starter at `FREE_DAILY_LIMIT` (default 8/day), Pro at
+  `PRO_DAILY_LIMIT` (default 10/day), Elite at `ELITE_DAILY_LIMIT` (default 25/day). This matches `PLANS`'
+  marketing copy in `golsz-app.html` — Pro's card says "Extended AI Scout access", Elite's says "Even more
+  AI Scout access"; neither claims "Unlimited" anymore. **This has already changed shape twice** (Pro/Elite
+  both uncapped → Pro capped/Elite uncapped → all three capped) — if you touch these limits again, update
+  the marketing copy in the same commit rather than letting it drift out of sync with reality, since the
+  whole point of the last two passes was fixing exactly that kind of mismatch (a card claiming "Unlimited"
+  when the code no longer guaranteed it). **The free-tier plan value is `'starter'`, not `'free'`** — the
+  live `plan_tier` enum only
   allows `'starter' | 'pro' | 'elite'` (confirmed 2026-07-15 via direct write attempts; `'free'` errors with
   `invalid input value for enum plan_tier`). Before migration 008, this check compared against `'free'` and
   `handle_new_user()` never applied the signup's chosen plan at all, so the daily limit silently never fired
