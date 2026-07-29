@@ -1159,5 +1159,52 @@ $$;
 grant execute on function search_players(text, text, text, int, text, text, int) to authenticated;
 
 -- ============================================================
+-- 23) ADDITIVE — security hardening (plan/admin self-escalation, event
+-- un-blocking, Scout usage-counter griefing)
+-- See supabase-migration-023-security-hardening.sql for full context.
+-- ============================================================
+
+create or replace function protect_profile_columns()
+returns trigger language plpgsql security definer set search_path to 'public' as $$
+begin
+  if auth.role() is null or auth.role() = 'service_role' or is_admin() then
+    return new;
+  end if;
+  new.is_admin := old.is_admin;
+  new.is_banned := old.is_banned;
+  new.stripe_customer_id := old.stripe_customer_id;
+  if new.plan is distinct from old.plan and new.plan <> 'starter' then
+    new.plan := old.plan;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_profile_columns_trigger on profiles;
+create trigger protect_profile_columns_trigger
+  before update on profiles
+  for each row execute function protect_profile_columns();
+
+create or replace function protect_event_columns()
+returns trigger language plpgsql security definer set search_path to 'public' as $$
+begin
+  if auth.role() is null or auth.role() = 'service_role' or is_admin() then
+    return new;
+  end if;
+  new.is_blocked := old.is_blocked;
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_event_columns_trigger on events;
+create trigger protect_event_columns_trigger
+  before update on events
+  for each row execute function protect_event_columns();
+
+revoke execute on function increment_scout_usage(uuid) from public;
+revoke execute on function increment_scout_usage(uuid) from authenticated;
+grant execute on function increment_scout_usage(uuid) to service_role;
+
+-- ============================================================
 -- Done.
 -- ============================================================

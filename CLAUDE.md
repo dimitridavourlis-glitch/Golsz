@@ -297,7 +297,8 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   signature verification requires the raw request bytes, not Vercel's auto-parsed JSON.
 - Handles two event types: `checkout.session.completed` (sets `profiles.plan` + `stripe_customer_id`,
   identified via `client_reference_id` — see below) and `customer.subscription.deleted` (reverts to
-  `'free'`, matched by `stripe_customer_id`). Everything else is acknowledged with 200 and ignored.
+  `'starter'` — **not** `'free'`, which isn't a valid `plan_tier` value, see the enum note above — matched by
+  `stripe_customer_id`). Everything else is acknowledged with 200 and ignored.
 - **Plan is inferred from `amount_total`** (Pro ≥ $29 → `'pro'`, Elite ≥ $79 → `'elite'`), because Stripe
   Payment Links don't carry arbitrary metadata through the URL — only `client_reference_id` and
   `prefilled_email`. If Pro/Elite pricing ever changes, update the thresholds in this file to match `PLANS`
@@ -383,6 +384,29 @@ project, not a from-scratch bootstrap script. The real tables:
   would look like `api/scout.js` calling `supabase.auth.admin.updateUserById`/`deleteUser`). A banned/deleted
   user's *profile* is fully gone/blocked from the app's perspective, but their raw login credential still
   technically exists until that follow-up is built.
+- **⚠️ RLS in this project is row-level, not column-level — don't assume "you can update your own row" also
+  means "only the columns the UI exposes."** `profiles_self` (an undocumented base policy, see the file-level
+  warning above) grants a broad self-row UPDATE on `profiles`, which — with no column-aware guard — would let
+  any signed-in user set their own `plan` to `'pro'`/`'elite'` for free, or flip `is_admin`/`is_banned` on
+  themselves, via the exact same client call shape Settings' legitimate "switch to Starter"
+  (`profiles.update({ plan: "starter" })`) already uses. Found and closed in migration 023 via a
+  `protect_profile_columns()` `BEFORE UPDATE` trigger (not RLS — RLS's `WITH CHECK` only sees the new row, not
+  a column-by-column diff against the old one): `is_admin`/`is_banned`/`stripe_customer_id` are silently reset
+  to their prior value, and `plan` may only ever self-change *to* `'starter'`, unless the caller is an
+  existing admin, `service_role` (the Stripe webhook), or has no PostgREST role context at all (`auth.role()
+  is null` — direct SQL, i.e. the Supabase SQL Editor, which is how the very first admin gets bootstrapped;
+  see "flip your own `profiles.is_admin` to true once via SQL" below). The same shape applied to
+  `events.is_blocked` (an event's own creator could otherwise un-block their own admin-blocked listing) —
+  `protect_event_columns()`, same pattern. **If you add another admin-only or payment-derived column to a
+  table a regular user can already UPDATE their own row of, add it to one of these triggers (or a new one) —
+  don't assume the existing RLS policy already covers it.**
+- **`increment_scout_usage(p_user uuid)` is server-only, not by RLS but by revoked grants** (migration 023) —
+  it never checked that the caller *is* `p_user` (it's meant to only run inside `api/scout.js`, metering the
+  real signed-in caller that function already verified via `getUserId()`), so any authenticated client could
+  previously call it directly via `supabase.rpc()` with an arbitrary `p_user` and inflate a *different* user's
+  daily count, locking them out of free-tier Scout early. `EXECUTE` is now revoked from `public`/`authenticated`
+  and granted only to `service_role`, which is how `api/scout.js` always calls it — no behavior change for the
+  real caller, just closes the direct-RPC path for everyone else.
 - There is no `programs` table (an earlier iteration had one for an NCAA/NAIA/USPORTS school directory) —
   Scout's target-school suggestions come entirely from its live web-search tool call, not a seeded table.
 - **`search_players()` (migration 022)**: `security definer` function backing Scout's `search_golsz_players`
