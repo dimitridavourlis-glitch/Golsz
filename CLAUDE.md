@@ -440,6 +440,29 @@ project, not a from-scratch bootstrap script. The real tables:
   migration 023, defeating the entire point. Also added to `public_profile_names` (same reasoning as
   `occupation` in migration 020 — an athlete viewing someone *else's* profile needs to see this, not just
   their own). Verify/unverify is an admin-panel action (Users tab), shown only for non-Player occupations.
+- **`verification_requests` + gated verification, Pro/Elite only (migration 025)**: migration 024 gave
+  admins a manual Verify/Unverify toggle, but nothing let a coach/scout/agent actually *ask* to be verified,
+  and nothing surfaced that ask to an admin. This adds a real request/review table
+  (`id, user_id, status ('pending'|'approved'|'denied'), note, created_at, reviewed_at, reviewed_by`) instead
+  of just a status column, so there's an actual history — a unique partial index
+  (`verification_requests_one_pending_per_user`) keeps it to one open request per person. `golsz-app.html`'s
+  Passport shows a "Request verification" button (opening an optional note textarea) for any non-Player,
+  unverified own-profile — but only in the eligible-plan branch; Starter accounts see an upsell message
+  instead of a button. The admin panel's new "Requests" tab lists pending rows joined against
+  `profiles(full_name, occupation, plan)` with Approve/Deny buttons calling
+  `admin_review_verification_request(p_request_id, p_approve)`.
+  **New rule this migration adds: verification only exists for Pro/Elite** — enforced three separate ways,
+  because there are three different code paths that could otherwise create an inconsistent state: (1)
+  `verification_requests_insert`'s `WITH CHECK` blocks a Starter account from creating a request at all; (2)
+  `admin_review_verification_request()` re-checks the requester's plan at approval time, not just at request
+  time, in case they downgraded in between and raises a clear exception the admin UI surfaces via `alert()`;
+  (3) `protect_profile_columns()` (migration 023/024) now *unconditionally* resets `is_verified` to `false`
+  any time a row's `plan` isn't `pro`/`elite` — including for `service_role`, which matters because
+  `api/stripe-webhook.js`'s `customer.subscription.deleted` handler sets `plan` back to `'starter'` using the
+  service-role key on a real cancellation; a previously-verified Pro user whose subscription lapses loses the
+  badge as part of that same webhook write, not as a separate manual cleanup step. A `check` constraint
+  (`is_verified_requires_paid_plan`) backs all three up as a last-resort guard against a future code change
+  that forgets this invariant — it should never actually fire given the trigger.
 - Any new table holding a minor's private data should gate access with the same
   `auth.uid() = owner_id OR is_parent_of(owner_id)` pattern `profiles`/`scout_history` already use.
 

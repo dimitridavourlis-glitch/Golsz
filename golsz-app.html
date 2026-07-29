@@ -276,6 +276,13 @@ const I18N = {
     passport_license: "LICENSE", passport_looking_for: "LOOKING FOR PLAYERS",
     passport_unverified_prefix: "UNVERIFIED ", passport_verified_tooltip: "Verified by GOLSZ",
     passport_unverified_warning: "This account says it's a {occupation}, but GOLSZ hasn't verified that claim. Be cautious — never send money or share sensitive information, and involve a parent/guardian before meeting anyone in person.",
+    passport_verify_upsell: "Verification is available on Pro and Elite. Upgrade in Settings to request it.",
+    passport_verify_pending: "Verification request pending review.",
+    passport_verify_denied: "Your last verification request was denied.",
+    passport_request_verification: "Request verification", passport_request_again: "Request again",
+    passport_verify_note_ph: "Tell us about your coaching background, license, or club (optional)",
+    passport_submit_request: "Submit request", passport_cancel: "Cancel",
+    passport_verify_request_err: "Couldn't submit your request — try again.",
     passport_no_bio: "No bio yet — tap Edit profile to add one.",
     passport_following_count: "FOLLOWING", passport_followers_count: "FOLLOWERS", passport_follower_singular: "FOLLOWER",
     passport_not_following_other: "Not following anyone yet.", passport_not_following_self: "Not following anyone yet — check out Discover.",
@@ -295,6 +302,9 @@ const I18N = {
     admin_banned: "BANNED", admin_block_user: "Block", admin_unblock_user: "Unblock",
     admin_unverified: "unverified", admin_verify_user: "Verify", admin_unverify_user: "Unverify",
     admin_verify_user_err: "Couldn't update verification status.",
+    admin_tab_verify: "Requests", admin_no_verify_requests: "No pending verification requests.",
+    admin_unknown_user: "Unknown user", admin_approve: "Approve", admin_deny: "Deny",
+    admin_verify_request_err: "Couldn't process this request — try again.",
     admin_delete_user: "Delete", admin_delete_user_confirm: "Permanently delete this account? This can't be undone.",
     admin_delete_user_err: "Couldn't delete account.", admin_ban_user_err: "Couldn't update this account.",
     admin_blocked: "BLOCKED", admin_block_event: "Block", admin_unblock_event: "Unblock",
@@ -430,6 +440,13 @@ const I18N = {
     passport_license: "LICENCE", passport_looking_for: "RECHERCHE DE JOUEURS",
     passport_unverified_prefix: "NON VÉRIFIÉ ", passport_verified_tooltip: "Vérifié par GOLSZ",
     passport_unverified_warning: "Ce compte prétend être {occupation}, mais GOLSZ n'a pas vérifié cette affirmation. Soyez prudent — n'envoyez jamais d'argent ni d'informations sensibles, et impliquez un parent/tuteur avant toute rencontre en personne.",
+    passport_verify_upsell: "La vérification est disponible avec Pro et Elite. Passez à l'un de ces forfaits dans Paramètres pour la demander.",
+    passport_verify_pending: "Demande de vérification en attente d'examen.",
+    passport_verify_denied: "Votre dernière demande de vérification a été refusée.",
+    passport_request_verification: "Demander la vérification", passport_request_again: "Redemander",
+    passport_verify_note_ph: "Parlez-nous de votre parcours d'entraîneur, licence ou club (facultatif)",
+    passport_submit_request: "Envoyer la demande", passport_cancel: "Annuler",
+    passport_verify_request_err: "Impossible d'envoyer votre demande — réessayez.",
     passport_no_bio: "Pas encore de bio — touchez Modifier le profil pour en ajouter une.",
     passport_following_count: "ABONNEMENTS", passport_followers_count: "ABONNÉS", passport_follower_singular: "ABONNÉ",
     passport_not_following_other: "Ne suit encore personne.", passport_not_following_self: "Vous ne suivez encore personne — allez voir Découvrir.",
@@ -447,6 +464,9 @@ const I18N = {
     admin_banned: "BANNI", admin_block_user: "Bloquer", admin_unblock_user: "Débloquer",
     admin_unverified: "non vérifié", admin_verify_user: "Vérifier", admin_unverify_user: "Annuler la vérification",
     admin_verify_user_err: "Impossible de mettre à jour le statut de vérification.",
+    admin_tab_verify: "Demandes", admin_no_verify_requests: "Aucune demande de vérification en attente.",
+    admin_unknown_user: "Utilisateur inconnu", admin_approve: "Approuver", admin_deny: "Refuser",
+    admin_verify_request_err: "Impossible de traiter cette demande — réessayez.",
     admin_delete_user: "Supprimer", admin_delete_user_confirm: "Supprimer définitivement ce compte ? Cette action est irréversible.",
     admin_delete_user_err: "Impossible de supprimer ce compte.", admin_ban_user_err: "Impossible de mettre à jour ce compte.",
     admin_blocked: "BLOQUÉ", admin_block_event: "Bloquer", admin_unblock_event: "Débloquer",
@@ -584,6 +604,13 @@ const I18N = {
     passport_license: "LICENCIA", passport_looking_for: "BUSCANDO JUGADORES",
     passport_unverified_prefix: "NO VERIFICADO ", passport_verified_tooltip: "Verificado por GOLSZ",
     passport_unverified_warning: "Esta cuenta dice ser {occupation}, pero GOLSZ no ha verificado esa afirmación. Ten cuidado — nunca envíes dinero ni información sensible, e involucra a un padre/tutor antes de reunirte con alguien en persona.",
+    passport_verify_upsell: "La verificación está disponible en Pro y Elite. Mejora tu plan en Ajustes para solicitarla.",
+    passport_verify_pending: "Solicitud de verificación pendiente de revisión.",
+    passport_verify_denied: "Tu última solicitud de verificación fue rechazada.",
+    passport_request_verification: "Solicitar verificación", passport_request_again: "Solicitar de nuevo",
+    passport_verify_note_ph: "Cuéntanos sobre tu trayectoria como entrenador, licencia o club (opcional)",
+    passport_submit_request: "Enviar solicitud", passport_cancel: "Cancelar",
+    passport_verify_request_err: "No se pudo enviar tu solicitud — inténtalo de nuevo.",
     passport_no_bio: "Aún no hay biografía — toca Editar perfil para añadir una.",
     passport_following_count: "SIGUIENDO", passport_followers_count: "SEGUIDORES", passport_follower_singular: "SEGUIDOR",
     passport_not_following_other: "Aún no sigue a nadie.", passport_not_following_self: "Aún no sigues a nadie — echa un vistazo a Descubrir.",
@@ -601,6 +628,9 @@ const I18N = {
     admin_banned: "BANEADO", admin_block_user: "Bloquear", admin_unblock_user: "Desbloquear",
     admin_unverified: "no verificado", admin_verify_user: "Verificar", admin_unverify_user: "Anular verificación",
     admin_verify_user_err: "No se pudo actualizar el estado de verificación.",
+    admin_tab_verify: "Solicitudes", admin_no_verify_requests: "No hay solicitudes de verificación pendientes.",
+    admin_unknown_user: "Usuario desconocido", admin_approve: "Aprobar", admin_deny: "Rechazar",
+    admin_verify_request_err: "No se pudo procesar esta solicitud — inténtalo de nuevo.",
     admin_delete_user: "Eliminar", admin_delete_user_confirm: "¿Eliminar esta cuenta de forma permanente? Esto no se puede deshacer.",
     admin_delete_user_err: "No se pudo eliminar la cuenta.", admin_ban_user_err: "No se pudo actualizar esta cuenta.",
     admin_blocked: "BLOQUEADO", admin_block_event: "Bloquear", admin_unblock_event: "Desbloquear",
@@ -738,6 +768,13 @@ const I18N = {
     passport_license: "ΑΔΕΙΑ", passport_looking_for: "ΑΝΑΖΗΤΗΣΗ ΠΑΙΚΤΩΝ",
     passport_unverified_prefix: "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ ", passport_verified_tooltip: "Επαληθευμένο από το GOLSZ",
     passport_unverified_warning: "Αυτός ο λογαριασμός δηλώνει {occupation}, αλλά το GOLSZ δεν έχει επαληθεύσει αυτόν τον ισχυρισμό. Να είστε προσεκτικοί — μην στέλνετε ποτέ χρήματα ή ευαίσθητες πληροφορίες, και ενημερώστε γονέα/κηδεμόνα πριν συναντήσετε κάποιον από κοντά.",
+    passport_verify_upsell: "Η επαλήθευση είναι διαθέσιμη στα πακέτα Pro και Elite. Αναβαθμιστείτε στις Ρυθμίσεις για να την ζητήσετε.",
+    passport_verify_pending: "Το αίτημα επαλήθευσης εκκρεμεί για έλεγχο.",
+    passport_verify_denied: "Το τελευταίο σας αίτημα επαλήθευσης απορρίφθηκε.",
+    passport_request_verification: "Αίτημα επαλήθευσης", passport_request_again: "Νέο αίτημα",
+    passport_verify_note_ph: "Πείτε μας για την προπονητική σας εμπειρία, άδεια ή ομάδα (προαιρετικό)",
+    passport_submit_request: "Υποβολή αιτήματος", passport_cancel: "Ακύρωση",
+    passport_verify_request_err: "Δεν ήταν δυνατή η υποβολή του αιτήματος — δοκιμάστε ξανά.",
     passport_no_bio: "Δεν υπάρχει βιογραφικό ακόμα — πατήστε Επεξεργασία προφίλ για να προσθέσετε ένα.",
     passport_following_count: "ΑΚΟΛΟΥΘΕΙ", passport_followers_count: "ΑΚΟΛΟΥΘΟΙ", passport_follower_singular: "ΑΚΟΛΟΥΘΟΣ",
     passport_not_following_other: "Δεν ακολουθεί κανέναν ακόμα.", passport_not_following_self: "Δεν ακολουθείτε κανέναν ακόμα — δείτε την Ανακάλυψη.",
@@ -755,6 +792,9 @@ const I18N = {
     admin_banned: "ΑΠΟΚΛΕΙΣΜΕΝΟΣ", admin_block_user: "Αποκλεισμός", admin_unblock_user: "Άρση αποκλεισμού",
     admin_unverified: "μη επαληθευμένο", admin_verify_user: "Επαλήθευση", admin_unverify_user: "Αναίρεση επαλήθευσης",
     admin_verify_user_err: "Δεν ήταν δυνατή η ενημέρωση της κατάστασης επαλήθευσης.",
+    admin_tab_verify: "Αιτήματα", admin_no_verify_requests: "Δεν υπάρχουν εκκρεμή αιτήματα επαλήθευσης.",
+    admin_unknown_user: "Άγνωστος χρήστης", admin_approve: "Έγκριση", admin_deny: "Απόρριψη",
+    admin_verify_request_err: "Δεν ήταν δυνατή η επεξεργασία του αιτήματος — δοκιμάστε ξανά.",
     admin_delete_user: "Διαγραφή", admin_delete_user_confirm: "Οριστική διαγραφή αυτού του λογαριασμού; Δεν αναιρείται.",
     admin_delete_user_err: "Δεν ήταν δυνατή η διαγραφή του λογαριασμού.", admin_ban_user_err: "Δεν ήταν δυνατή η ενημέρωση αυτού του λογαριασμού.",
     admin_blocked: "ΑΠΟΚΛΕΙΣΜΕΝΟ", admin_block_event: "Αποκλεισμός", admin_unblock_event: "Άρση αποκλεισμού",
@@ -2695,6 +2735,10 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const [followedByThem, setFollowedByThem] = useState(false);
   const [followers, setFollowers] = useState(null);
   const [followingList, setFollowingList] = useState(null);
+  const [verifyRequest, setVerifyRequest] = useState(null); // own latest verification_requests row, if any
+  const [requestingVerification, setRequestingVerification] = useState(false);
+  const [verifyNote, setVerifyNote] = useState("");
+  const [verifyBusy, setVerifyBusy] = useState(false);
   const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo immediately
   const real = !!uid;
   const viewingOther = !!(viewUserId && uid && viewUserId !== uid);
@@ -2722,12 +2766,14 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         setFollowing(!!myFollow);
         setFollowedByThem(!!theirFollow);
       } else {
-        const [{ data: prof }, { data: ath }] = await Promise.all([
-          sb.from("profiles").select("full_name, is_admin, occupation, is_verified").eq("id", user.id).single(),
+        const [{ data: prof }, { data: ath }, { data: vreq }] = await Promise.all([
+          sb.from("profiles").select("full_name, is_admin, occupation, is_verified, plan").eq("id", user.id).single(),
           sb.from("athletes").select("*").eq("id", user.id).single(),
+          sb.from("verification_requests").select("id, status, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
         ]);
         setProfile(prof || null);
         setAthlete(ath || null);
+        setVerifyRequest(vreq || null);
         if (autoEdit) { setEditing(true); onAutoEditConsumed && onAutoEditConsumed(); }
       }
 
@@ -2771,12 +2817,32 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     } catch (e) { console.error("GOLSZ passport follow error:", e); setFollowing(was); }
   }
 
+  async function requestVerification() {
+    if (!sb || !uid || verifyBusy) return;
+    setVerifyBusy(true);
+    try {
+      const { data, error } = await sb.from("verification_requests")
+        .insert({ user_id: uid, note: verifyNote.trim() || null })
+        .select("id, status, created_at").single();
+      if (error) throw error;
+      setVerifyRequest(data);
+      setRequestingVerification(false);
+      setVerifyNote("");
+    } catch (e) {
+      console.error("GOLSZ verification request error:", e);
+      alert(t("passport_verify_request_err"));
+    } finally { setVerifyBusy(false); }
+  }
+
   const p = real ? toPassport(profile, athlete, viewingOther ? viewUserId : uid, t) : PASSPORT;
   const mrz = real
     ? `${p.id.replace(/[·]/g, "<")}<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<<<<<<<<<<<<<<<<<<<<<<<<<<<`
     : `GLS<CAN<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<LEFTBACK<<<<<${p.id.replace(/[·]/g, "")}<2027CA`;
   const occupationSet = !!(profile && profile.occupation);
   const isPlayerProfile = !occupationSet || profile.occupation === "Player";
+  const eligibleForVerification = !viewingOther && real && occupationSet && !isPlayerProfile && !p.isVerified;
+  const planAllowsVerification = !!(profile && (profile.plan === "pro" || profile.plan === "elite"));
+  const lastRequestStatus = verifyRequest && verifyRequest.status;
   const incomplete = !viewingOther && real && profile && athlete && (
     !occupationSet || !athlete.sport || (!isPlayerProfile && !athlete.club_name)
   );
@@ -2846,6 +2912,51 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.4 }}>
             <b style={{ color: C.lime }}>{t("passport_finish_bold")}</b>{t("passport_finish_rest")}
           </div>
+        </div>
+      )}
+
+      {eligibleForVerification && (
+        <div style={{ background: "#C89B3C1a", border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12 }}>
+          {!planAllowsVerification ? (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <ShieldAlert size={16} color={C.amber} style={{ flexShrink: 0, marginTop: 1 }} />
+              <div style={{ fontSize: 12, color: C.chalk, lineHeight: 1.45 }}>{t("passport_verify_upsell")}</div>
+            </div>
+          ) : lastRequestStatus === "pending" ? (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <ShieldAlert size={16} color={C.amber} style={{ flexShrink: 0, marginTop: 1 }} />
+              <div style={{ fontSize: 12, color: C.chalk, lineHeight: 1.45 }}>{t("passport_verify_pending")}</div>
+            </div>
+          ) : requestingVerification ? (
+            <div>
+              <textarea
+                value={verifyNote} onChange={(e) => setVerifyNote(e.target.value)} placeholder={t("passport_verify_note_ph")}
+                style={{ width: "100%", minHeight: 64, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "8px 10px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box", resize: "vertical" }}
+              />
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <button onClick={requestVerification} disabled={verifyBusy} style={{
+                  flex: 1, padding: "8px 12px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: verifyBusy ? "default" : "pointer", fontFamily: "inherit",
+                  background: C.lime, color: C.ink, border: "none", opacity: verifyBusy ? 0.6 : 1,
+                }}>{t("passport_submit_request")}</button>
+                <button onClick={() => { setRequestingVerification(false); setVerifyNote(""); }} style={{
+                  padding: "8px 12px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                  background: "transparent", color: C.chalk, border: `1px solid ${C.line2}`,
+                }}>{t("passport_cancel")}</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              {lastRequestStatus === "denied" && (
+                <div style={{ fontSize: 12, color: C.chalk, lineHeight: 1.45 }}>{t("passport_verify_denied")}</div>
+              )}
+              <button onClick={() => setRequestingVerification(true)} style={{
+                padding: "8px 12px", borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                background: "transparent", color: C.amber, border: `1px solid ${C.amberBorder}`,
+              }}>
+                {lastRequestStatus === "denied" ? t("passport_request_again") : t("passport_request_verification")}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -3153,6 +3264,8 @@ function AdminPanel({ onBack }) {
   const [tab, setTab] = useState("reports");
   const [stats, setStats] = useState(null);
   const [reports, setReports] = useState(null);
+  const [verifyRequests, setVerifyRequests] = useState(null);
+  const [reviewBusyId, setReviewBusyId] = useState(null);
   const [users, setUsers] = useState(null);
   const [userQuery, setUserQuery] = useState("");
   const [events, setEvents] = useState(null);
@@ -3198,6 +3311,29 @@ function AdminPanel({ onBack }) {
       await sb.from("post_reports").update({ resolved_at: new Date().toISOString() }).eq("id", reportId);
       loadReports(); loadStats();
     } catch (e) { console.error("GOLSZ admin delete post error:", e); }
+  }
+
+  async function loadVerifyRequests() {
+    try {
+      const { data, error } = await sb.from("verification_requests").select("id, user_id, status, note, created_at").eq("status", "pending").order("created_at", { ascending: true }).limit(100);
+      if (error) throw error;
+      const userIds = [...new Set((data || []).map((r) => r.user_id))];
+      const { data: profs } = userIds.length ? await sb.from("profiles").select("id, full_name, occupation, plan").in("id", userIds) : { data: [] };
+      const profById = Object.fromEntries((profs || []).map((p) => [p.id, p]));
+      setVerifyRequests((data || []).map((r) => ({ ...r, profile: profById[r.user_id] || null })));
+    } catch (e) { console.error("GOLSZ admin verify-requests error:", e); setVerifyRequests([]); }
+  }
+  async function reviewVerifyRequest(id, approve) {
+    if (reviewBusyId) return;
+    setReviewBusyId(id);
+    try {
+      const { error } = await sb.rpc("admin_review_verification_request", { p_request_id: id, p_approve: approve });
+      if (error) throw error;
+      loadVerifyRequests(); loadUsers(userQuery);
+    } catch (e) {
+      console.error("GOLSZ admin review verification error:", e);
+      alert((e && e.message) || t("admin_verify_request_err"));
+    } finally { setReviewBusyId(null); }
   }
 
   async function loadUsers(query) {
@@ -3274,7 +3410,7 @@ function AdminPanel({ onBack }) {
         const { data: prof } = await sb.from("profiles").select("is_admin").eq("id", user.id).single();
         const ok = !!(prof && prof.is_admin);
         setAuthorized(ok);
-        if (ok) { loadStats(); loadReports(); loadUsers(); loadEvents(); }
+        if (ok) { loadStats(); loadReports(); loadVerifyRequests(); loadUsers(); loadEvents(); }
       } catch (e) { console.error("GOLSZ admin auth-check error:", e); setAuthorized(false); }
     })();
   }, []);
@@ -3315,9 +3451,30 @@ function AdminPanel({ onBack }) {
 
       <div style={{ display: "flex", gap: 4, background: C.turf, borderRadius: 11, padding: 4, marginBottom: 14 }}>
         {tabBtn("reports", t("admin_tab_reports"))}
+        {tabBtn("verify", t("admin_tab_verify") + (verifyRequests && verifyRequests.length ? ` (${verifyRequests.length})` : ""))}
         {tabBtn("users", t("admin_tab_users"))}
         {tabBtn("events", t("admin_tab_events"))}
       </div>
+
+      {tab === "verify" && (
+        <div>
+          {verifyRequests === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+          {verifyRequests && verifyRequests.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_verify_requests")}</div>}
+          {verifyRequests && verifyRequests.map((r) => (
+            <div key={r.id} style={card}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: C.slate, marginBottom: 6 }}>
+                <span>{(r.profile && r.profile.full_name) || t("admin_unknown_user")} — {(r.profile && r.profile.occupation) || "—"} · {(r.profile && r.profile.plan) || "—"}</span>
+                <span>{timeAgo(r.created_at)}</span>
+              </div>
+              {r.note && <div style={{ fontSize: 13, marginBottom: 8, color: C.chalk }}>{r.note}</div>}
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => reviewVerifyRequest(r.id, true)} disabled={reviewBusyId === r.id} style={{ ...iconBtn(C.lime), fontSize: 11.5, opacity: reviewBusyId === r.id ? 0.6 : 1 }}>{t("admin_approve")}</button>
+                <button onClick={() => reviewVerifyRequest(r.id, false)} disabled={reviewBusyId === r.id} style={{ ...iconBtn(C.amber), fontSize: 11.5, opacity: reviewBusyId === r.id ? 0.6 : 1 }}>{t("admin_deny")}</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {tab === "reports" && (
         <div>

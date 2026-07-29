@@ -1236,5 +1236,104 @@ end;
 $$;
 
 -- ============================================================
+-- 25) ADDITIVE — verification request/review workflow, gated to Pro/Elite
+-- See supabase-migration-025-verification-requests.sql for full context.
+-- ============================================================
+
+alter table profiles add constraint is_verified_requires_paid_plan
+  check (not is_verified or plan in ('pro', 'elite'));
+
+create or replace function protect_profile_columns()
+returns trigger language plpgsql security definer set search_path to 'public' as $$
+begin
+  if not (auth.role() is null or auth.role() = 'service_role' or is_admin()) then
+    new.is_admin := old.is_admin;
+    new.is_banned := old.is_banned;
+    new.is_verified := old.is_verified;
+    new.stripe_customer_id := old.stripe_customer_id;
+    if new.plan is distinct from old.plan and new.plan <> 'starter' then
+      new.plan := old.plan;
+    end if;
+  end if;
+
+  if new.plan not in ('pro', 'elite') then
+    new.is_verified := false;
+  end if;
+
+  return new;
+end;
+$$;
+
+create table if not exists verification_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'denied')),
+  note text,
+  created_at timestamptz not null default now(),
+  reviewed_at timestamptz,
+  reviewed_by uuid references profiles(id) on delete set null
+);
+
+create index if not exists verification_requests_user_idx on verification_requests (user_id, created_at desc);
+
+create unique index if not exists verification_requests_one_pending_per_user
+  on verification_requests (user_id) where (status = 'pending');
+
+alter table verification_requests enable row level security;
+
+drop policy if exists verification_requests_select on verification_requests;
+create policy verification_requests_select on verification_requests for select using (
+  user_id = auth.uid() or is_admin()
+);
+
+drop policy if exists verification_requests_insert on verification_requests;
+create policy verification_requests_insert on verification_requests for insert with check (
+  user_id = auth.uid()
+  and status = 'pending'
+  and exists (select 1 from profiles p where p.id = auth.uid() and p.plan in ('pro', 'elite'))
+);
+
+drop policy if exists verification_requests_delete on verification_requests;
+create policy verification_requests_delete on verification_requests for delete using (
+  (user_id = auth.uid() and status = 'pending') or is_admin()
+);
+
+create or replace function admin_review_verification_request(p_request_id uuid, p_approve boolean)
+returns void language plpgsql security definer set search_path to 'public' as $$
+declare
+  v_user_id uuid;
+  v_plan text;
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+
+  select user_id into v_user_id from verification_requests where id = p_request_id and status = 'pending';
+  if v_user_id is null then
+    raise exception 'request not found or already reviewed';
+  end if;
+
+  if p_approve then
+    select plan into v_plan from profiles where id = v_user_id;
+    if v_plan not in ('pro', 'elite') then
+      raise exception 'this account is not on Pro or Elite — they need to upgrade before they can be verified';
+    end if;
+  end if;
+
+  update verification_requests
+  set status = case when p_approve then 'approved' else 'denied' end,
+      reviewed_at = now(),
+      reviewed_by = auth.uid()
+  where id = p_request_id;
+
+  if p_approve then
+    update profiles set is_verified = true where id = v_user_id;
+  end if;
+end;
+$$;
+
+grant execute on function admin_review_verification_request(uuid, boolean) to authenticated;
+
+-- ============================================================
 -- Done.
 -- ============================================================
