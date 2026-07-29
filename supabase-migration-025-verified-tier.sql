@@ -56,8 +56,11 @@ update profiles set verified_tier = case when plan = 'elite' then 'elite' else '
   where is_verified = true and verified_tier = 'none';
 
 -- Must repoint the view off is_verified before dropping the column —
--- Postgres refuses to drop a column a view still depends on.
-create or replace view public_profile_names as
+-- Postgres refuses to drop a column a view still depends on, and
+-- CREATE OR REPLACE VIEW can't rename an existing output column in
+-- place (is_verified -> verified_tier), so this needs a real drop/recreate.
+drop view if exists public_profile_names;
+create view public_profile_names as
 select id, full_name, occupation, verified_tier from profiles;
 
 grant select on public_profile_names to anon, authenticated;

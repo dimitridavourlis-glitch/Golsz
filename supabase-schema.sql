@@ -1251,7 +1251,8 @@ alter table profiles add column if not exists verified_tier text not null defaul
 update profiles set verified_tier = case when plan = 'elite' then 'elite' else 'pro' end
   where is_verified = true and verified_tier = 'none';
 
-create or replace view public_profile_names as
+drop view if exists public_profile_names;
+create view public_profile_names as
 select id, full_name, occupation, verified_tier from profiles;
 
 grant select on public_profile_names to anon, authenticated;
