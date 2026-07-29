@@ -1201,8 +1201,9 @@ create trigger protect_event_columns_trigger
   before update on events
   for each row execute function protect_event_columns();
 
-revoke execute on function increment_scout_usage(uuid) from public;
+revoke execute on function increment_scout_usage(uuid) from anon;
 revoke execute on function increment_scout_usage(uuid) from authenticated;
+revoke execute on function increment_scout_usage(uuid) from public;
 grant execute on function increment_scout_usage(uuid) to service_role;
 
 -- ============================================================

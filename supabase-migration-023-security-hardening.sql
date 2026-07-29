@@ -95,8 +95,15 @@ create trigger protect_event_columns_trigger
   before update on events
   for each row execute function protect_event_columns();
 
-revoke execute on function increment_scout_usage(uuid) from public;
+-- Supabase grants EXECUTE on every new public-schema function directly to
+-- both anon and authenticated by default (not merely inherited through the
+-- "public" pseudo-role) — revoking only from public/authenticated leaves
+-- the anon grant untouched, confirmed live when this was first applied
+-- (the anon key could still call it after that revoke). All three have to
+-- be revoked explicitly.
+revoke execute on function increment_scout_usage(uuid) from anon;
 revoke execute on function increment_scout_usage(uuid) from authenticated;
+revoke execute on function increment_scout_usage(uuid) from public;
 grant execute on function increment_scout_usage(uuid) to service_role;
 
 -- ============================================================
