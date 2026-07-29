@@ -4150,10 +4150,47 @@ function Auth({ onDone, paidReturn }) {
   const [parentEmail, setParentEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [notice, setNotice] = useState(paidReturn ? "Payment received — if you already confirmed your email, log in below. Otherwise check your inbox for a confirmation link first." : "");
+  const [notice, setNotice] = useState(paidReturn ? "Payment received! If this is the only tab open, log in below once you've confirmed your email. Otherwise close this tab and go back to where you signed up — it'll sign you in automatically the moment your email is confirmed, from whatever device you use to confirm it." : "");
   const [forgotMode, setForgotMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [confirmPolling, setConfirmPolling] = useState(false);
+  const pollRef = useRef(null);
   const isSignup = mode === "signup";
+
+  useEffect(() => () => { if (pollRef.current) clearTimeout(pollRef.current); }, []);
+
+  // Email confirmation links always authenticate whichever device opens
+  // them, not necessarily the device that signed up — someone might sign
+  // up on a laptop but confirm from their phone's mail app. Rather than
+  // relying on that link to get THIS tab logged in, this tab just quietly
+  // keeps retrying a real sign-in with the credentials already typed here
+  // until Supabase reports the account confirmed, then drops straight into
+  // the app — no matter where the confirmation actually happened.
+  function startConfirmPolling(pollEmail, pollPw) {
+    if (pollRef.current) return;
+    setConfirmPolling(true);
+    const deadline = Date.now() + 30 * 60 * 1000; // give up after 30 minutes
+    let delay = 5000;
+    const tick = async () => {
+      try {
+        const { data, error } = await sb.auth.signInWithPassword({ email: pollEmail, password: pollPw });
+        if (!error && data && data.session) {
+          pollRef.current = null;
+          setConfirmPolling(false);
+          onDone(true);
+          return;
+        }
+        // Supabase rate-limits repeated sign-in attempts — back off harder
+        // instead of hammering it on a fixed schedule for 30 minutes straight.
+        if (error && (error.status === 429 || /rate limit/i.test(error.message || ""))) {
+          delay = Math.min(delay * 2, 60000);
+        }
+      } catch (e) { /* network hiccup — just retry on the same schedule */ }
+      if (Date.now() > deadline) { pollRef.current = null; setConfirmPolling(false); return; }
+      pollRef.current = setTimeout(tick, delay);
+    };
+    pollRef.current = setTimeout(tick, delay);
+  }
 
   async function sendReset() {
     if (!sb || !email.trim() || busy) return;
@@ -4191,7 +4228,7 @@ function Auth({ onDone, paidReturn }) {
   const dobField = { ...field, marginBottom: 0, textAlign: "center" };
 
   async function submit() {
-    if (!ok || busy) return;
+    if (!ok || busy || confirmPolling) return;
     setErr("");
     setNotice("");
     // preview mode: no backend configured -> behave like the demo
@@ -4199,10 +4236,23 @@ function Auth({ onDone, paidReturn }) {
       if (isSignup && selected.price > 0 && STRIPE_LINKS[plan]) { window.location.href = STRIPE_LINKS[plan]; return; }
       onDone(); return;
     }
+    // Open a blank tab synchronously, before any `await` — browsers only
+    // allow window.open() without treating it as a blocked popup when it's
+    // called directly inside the click's call stack, and signUp() below is
+    // async so we don't have the real checkout URL yet. We point this tab
+    // at the real URL once signUp() resolves. Keeping checkout in a
+    // separate tab (instead of navigating this one away) is what lets this
+    // tab stay alive and keep polling for email confirmation the whole time.
+    let checkoutTab = null;
+    if (isSignup && selected.price > 0 && STRIPE_LINKS[plan]) {
+      checkoutTab = window.open("", "_blank");
+    }
     setBusy(true);
     try {
       if (isSignup) {
-        const { data, error } = await sb.auth.signUp({ email: email.trim(), password: pw, options: { data: {
+        const signupEmail = email.trim();
+        const signupPw = pw;
+        const { data, error } = await sb.auth.signUp({ email: signupEmail, password: signupPw, options: { data: {
           full_name: name.trim(), plan: selected.id, date_of_birth: dobIso,
           parent_email: isMinor ? parentEmail.trim() : "",
         } } });
@@ -4211,17 +4261,39 @@ function Auth({ onDone, paidReturn }) {
           // attribute the checkout back to this account for the Stripe webhook
           const checkoutUrl = new URL(STRIPE_LINKS[plan]);
           checkoutUrl.searchParams.set("client_reference_id", data.user.id);
-          checkoutUrl.searchParams.set("prefilled_email", email.trim());
-          window.location.href = checkoutUrl.toString();
-          return; // account exists -> pay
+          checkoutUrl.searchParams.set("prefilled_email", signupEmail);
+          if (checkoutTab) {
+            try { checkoutTab.location.href = checkoutUrl.toString(); }
+            catch (e) { checkoutTab = null; }
+          }
+          if (!checkoutTab) {
+            // popup blocked or the tab got closed — fall back to the old
+            // same-tab redirect; checkout still works, this tab just won't
+            // be around afterward to auto-detect confirmation.
+            window.location.href = checkoutUrl.toString();
+            return;
+          }
+          if (data.session) {
+            onDone(true);
+          } else {
+            setNotice("Complete your payment in the new tab. This page will sign you in automatically the moment your email is confirmed — from whatever device you use to confirm it.");
+            startConfirmPolling(signupEmail, signupPw);
+          }
+          return;
         }
-        if (data.session) { onDone(true); } else { setNotice("Account created — check " + email.trim() + " for a confirmation link, then come back and log in."); }
+        if (data.session) {
+          onDone(true);
+        } else {
+          setNotice("Account created — check " + signupEmail + " for a confirmation link. This page will sign you in automatically once you confirm it — no need to come back and log in by hand.");
+          startConfirmPolling(signupEmail, signupPw);
+        }
       } else {
         const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password: pw });
         if (error) throw error;
         onDone();
       }
     } catch (e) {
+      if (checkoutTab) { try { checkoutTab.close(); } catch (e2) {} }
       console.error("GOLSZ auth error:", e);
       let msg = "Something went wrong. Try again.";
       if (e && typeof e.message === "string" && e.message.trim()) {
@@ -4237,7 +4309,8 @@ function Auth({ onDone, paidReturn }) {
     }
   }
 
-  const cta = busy ? t("auth_working")
+  const cta = confirmPolling ? "Waiting for you to confirm your email…"
+    : busy ? t("auth_working")
     : !isSignup ? t("auth_login")
     : selected.price === 0 ? t("auth_create_free")
     : t("auth_continue_payment") + "$" + selected.price + t("auth_per_month");
@@ -4369,7 +4442,7 @@ function Auth({ onDone, paidReturn }) {
             </div>
           )}
 
-          <button disabled={!ok || busy} onClick={submit} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!ok || busy) ? "default" : "pointer", opacity: (!ok || busy) ? 0.45 : 1, fontFamily: "inherit" }}>{cta}</button>
+          <button disabled={!ok || busy || confirmPolling} onClick={submit} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!ok || busy || confirmPolling) ? "default" : "pointer", opacity: (!ok || busy || confirmPolling) ? 0.45 : 1, fontFamily: "inherit" }}>{cta}</button>
 
           {isSignup && selected.price > 0 && (
             <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: C.slate }}>{t("auth_secure_checkout")}</div>
