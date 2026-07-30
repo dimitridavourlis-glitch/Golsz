@@ -383,12 +383,16 @@ There is no build/lint/test tooling in this repo. Relevant commands:
 - Replaced the old standalone "Events" tab — event management (create/block/delete) didn't go away, it moved
   into a collapsed "▾ Manage events" sub-view within Analytics (`showEventsManager` state in `AdminPanel`),
   reusing the exact same `loadEvents`/`createEvent`/`deleteEvent`/`setEventBlocked` logic unchanged.
-- `loadAnalytics()` in `AdminPanel` fetches `profiles`/`posts`/`follows` directly (all already admin-or-public
-  readable — `profiles_admin_read`, `posts_read`, `follows_read`) and aggregates signups/posts-per-day (last
-  14 days), plan/occupation/verified-tier mix, total follows, and a top-5-most-followed leaderboard **in JS**
+- `loadAnalytics()` in `AdminPanel` fetches `profiles`/`posts`/`follows`/`athletes` directly (all already
+  admin-or-public readable — `profiles_admin_read`, `posts_read`, `follows_read`, `athletes_read` all bypass
+  for `is_admin()`) and aggregates signups/posts-per-day (last 14 days), plan/occupation/verified-tier/sport/
+  gender mix, total follows, a top-5-most-followed leaderboard, and a top-5-countries leaderboard **in JS**
   against a capped row set (`.limit(2000)` per table) — fine at today's scale, but would need real SQL
   aggregation (views, not client-side reduction) if the user base grows a lot. This is a known, deliberate
-  scaling ceiling, not an oversight.
+  scaling ceiling, not an oversight. Sport/gender/country all live on `athletes` (set by any occupation, not
+  just Player — see `ProfileEditor`), not `profiles`. `country` is free text (a `<datalist>` only suggests
+  values, doesn't restrict), so unlike sport/gender it's tallied as a top-5 leaderboard rather than a small
+  fixed set of categories.
 - **`messages` and `scout_history` are never read row-by-row for this** — both hold real private content (DM
   text, AI Scout conversations) and have no admin-read policy (`messages_read` is sender/recipient-only;
   `scout_history` has no admin policy at all). Instead, `admin_analytics_counts()` (`security definer`,

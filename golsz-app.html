@@ -305,6 +305,8 @@ const I18N = {
     admin_total_follows: "FOLLOWS", admin_verified_count: "VERIFIED", admin_banned_count: "BANNED",
     admin_mrr_estimate: "EST. MRR", admin_signups_14d: "SIGNUPS (14D)", admin_posts_14d: "POSTS (14D)",
     admin_plan_mix: "PLAN MIX", admin_occupation_mix: "OCCUPATION MIX", admin_verification_mix: "VERIFICATION MIX",
+    admin_sport_mix: "SPORT MIX", admin_gender_mix: "GENDER MIX", admin_top_countries: "TOP COUNTRIES",
+    admin_not_set: "Not set", admin_gender_male: "Male", admin_gender_female: "Female",
     admin_scout_conversations: "SCOUT CHATS", admin_scout_users: "SCOUT USERS", admin_messages_total: "MESSAGES",
     admin_messages_7d: "MESSAGES 7D", admin_push_subscribers: "PUSH SUBS", admin_top_followed: "TOP FOLLOWED",
     admin_no_data: "No data yet.", admin_manage_events: "Manage events", admin_analytics_err: "Couldn't load analytics.",
@@ -465,6 +467,8 @@ const I18N = {
     admin_total_follows: "ABONNEMENTS", admin_verified_count: "VÉRIFIÉS", admin_banned_count: "BANNIS",
     admin_mrr_estimate: "MRR EST.", admin_signups_14d: "INSCRITS (14J)", admin_posts_14d: "PUBLICATIONS (14J)",
     admin_plan_mix: "RÉPARTITION DES FORFAITS", admin_occupation_mix: "RÉPARTITION DES RÔLES", admin_verification_mix: "RÉPARTITION DE VÉRIFICATION",
+    admin_sport_mix: "RÉPARTITION DES SPORTS", admin_gender_mix: "RÉPARTITION PAR GENRE", admin_top_countries: "PRINCIPAUX PAYS",
+    admin_not_set: "Non défini", admin_gender_male: "Homme", admin_gender_female: "Femme",
     admin_scout_conversations: "CONVERSATIONS SCOUT", admin_scout_users: "UTILISATEURS SCOUT", admin_messages_total: "MESSAGES",
     admin_messages_7d: "MESSAGES 7J", admin_push_subscribers: "ABONNÉS PUSH", admin_top_followed: "PLUS SUIVIS",
     admin_no_data: "Aucune donnée pour l'instant.", admin_manage_events: "Gérer les événements", admin_analytics_err: "Impossible de charger les statistiques.",
@@ -627,6 +631,8 @@ const I18N = {
     admin_total_follows: "SEGUIMIENTOS", admin_verified_count: "VERIFICADOS", admin_banned_count: "BANEADOS",
     admin_mrr_estimate: "MRR EST.", admin_signups_14d: "REGISTROS (14D)", admin_posts_14d: "PUBLICACIONES (14D)",
     admin_plan_mix: "MEZCLA DE PLANES", admin_occupation_mix: "MEZCLA DE OCUPACIONES", admin_verification_mix: "MEZCLA DE VERIFICACIÓN",
+    admin_sport_mix: "MEZCLA DE DEPORTES", admin_gender_mix: "MEZCLA DE GÉNERO", admin_top_countries: "PAÍSES PRINCIPALES",
+    admin_not_set: "No definido", admin_gender_male: "Masculino", admin_gender_female: "Femenino",
     admin_scout_conversations: "CHATS DE SCOUT", admin_scout_users: "USUARIOS DE SCOUT", admin_messages_total: "MENSAJES",
     admin_messages_7d: "MENSAJES 7D", admin_push_subscribers: "SUSCRIPTORES PUSH", admin_top_followed: "MÁS SEGUIDOS",
     admin_no_data: "Aún no hay datos.", admin_manage_events: "Gestionar eventos", admin_analytics_err: "No se pudieron cargar las estadísticas.",
@@ -789,6 +795,8 @@ const I18N = {
     admin_total_follows: "ΑΚΟΛΟΥΘΗΣΕΙΣ", admin_verified_count: "ΕΠΑΛΗΘΕΥΜΕΝΟΙ", admin_banned_count: "ΑΠΟΚΛΕΙΣΜΕΝΟΙ",
     admin_mrr_estimate: "ΕΚΤ. MRR", admin_signups_14d: "ΕΓΓΡΑΦΕΣ (14Η)", admin_posts_14d: "ΑΝΑΡΤΗΣΕΙΣ (14Η)",
     admin_plan_mix: "ΚΑΤΑΝΟΜΗ ΠΑΚΕΤΩΝ", admin_occupation_mix: "ΚΑΤΑΝΟΜΗ ΡΟΛΩΝ", admin_verification_mix: "ΚΑΤΑΝΟΜΗ ΕΠΑΛΗΘΕΥΣΗΣ",
+    admin_sport_mix: "ΚΑΤΑΝΟΜΗ ΑΘΛΗΜΑΤΩΝ", admin_gender_mix: "ΚΑΤΑΝΟΜΗ ΦΥΛΟΥ", admin_top_countries: "ΚΟΡΥΦΑΙΕΣ ΧΩΡΕΣ",
+    admin_not_set: "Δεν έχει οριστεί", admin_gender_male: "Άνδρας", admin_gender_female: "Γυναίκα",
     admin_scout_conversations: "ΣΥΝΟΜΙΛΙΕΣ SCOUT", admin_scout_users: "ΧΡΗΣΤΕΣ SCOUT", admin_messages_total: "ΜΗΝΥΜΑΤΑ",
     admin_messages_7d: "ΜΗΝΥΜΑΤΑ 7Η", admin_push_subscribers: "ΣΥΝΔΡΟΜΗΤΕΣ PUSH", admin_top_followed: "ΔΗΜΟΦΙΛΕΣΤΕΡΟΙ",
     admin_no_data: "Δεν υπάρχουν δεδομένα ακόμα.", admin_manage_events: "Διαχείριση εκδηλώσεων", admin_analytics_err: "Δεν ήταν δυνατή η φόρτωση των στατιστικών.",
@@ -3367,10 +3375,11 @@ function AdminPanel({ onBack }) {
   // would need real SQL aggregation if the user base grows a lot.
   async function loadAnalytics() {
     try {
-      const [{ data: profRows }, { data: postRows }, { data: followRows }, { data: counts, error: countsErr }] = await Promise.all([
+      const [{ data: profRows }, { data: postRows }, { data: followRows }, { data: athleteRows }, { data: counts, error: countsErr }] = await Promise.all([
         sb.from("profiles").select("plan, occupation, verified_tier, is_banned, is_minor, created_at").order("created_at", { ascending: false }).limit(2000),
         sb.from("posts").select("id, created_at").order("created_at", { ascending: false }).limit(2000),
         sb.from("follows").select("follower_id, followed_id").limit(2000),
+        sb.from("athletes").select("sport, gender, country").limit(2000),
         sb.rpc("admin_analytics_counts"),
       ]);
       if (countsErr) throw countsErr;
@@ -3415,6 +3424,29 @@ function AdminPanel({ onBack }) {
         topFollowed = topFollowedIds.map(([id, count]) => ({ id, name: nameById[id] || "GOLSZ User", count }));
       }
 
+      // Sport/gender/country all live on `athletes`, not `profiles` — set
+      // by anyone who's filled in their Passport, any occupation, not
+      // just Player (see ProfileEditor). `country` is free text (a
+      // datalist suggests values, doesn't restrict), so unlike sport/
+      // gender it's an open-ended tally, not a small fixed set — top 5
+      // rather than every distinct value.
+      const athletes = athleteRows || [];
+      const notSetLabel = t("admin_not_set");
+      const sportCounts = {};
+      SPORTS.filter((s) => s !== "All").forEach((s) => { sportCounts[s] = 0; });
+      let sportUnset = 0;
+      const genderCounts = { Male: 0, Female: 0 };
+      let genderUnset = 0;
+      const countryTally = new Map();
+      athletes.forEach((a) => {
+        if (a.sport && sportCounts[a.sport] !== undefined) sportCounts[a.sport]++; else sportUnset++;
+        if (a.gender === "M") genderCounts.Male++; else if (a.gender === "F") genderCounts.Female++; else genderUnset++;
+        const country = (a.country || "").trim();
+        if (country) countryTally.set(country, (countryTally.get(country) || 0) + 1);
+      });
+      const topCountries = [...countryTally.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+        .map(([country, count]) => ({ country, count }));
+
       setAnalytics({
         totalUsers: profiles.length,
         signupsToday, signupsWeek,
@@ -3426,6 +3458,10 @@ function AdminPanel({ onBack }) {
         postsPerDay: bucketByDay(postRows),
         planCounts, occCounts, tierCounts,
         topFollowed,
+        totalAthletes: athletes.length,
+        sportCounts, sportUnset, notSetLabel,
+        genderCounts, genderUnset,
+        topCountries,
         messagesTotal: (counts && counts.messages_total) || 0,
         messages7d: (counts && counts.messages_7d) || 0,
         scoutConversations: (counts && counts.scout_conversations_total) || 0,
@@ -3633,6 +3669,33 @@ function AdminPanel({ onBack }) {
                 <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_occupation_mix")}</div>
                 {Object.entries(analytics.occCounts).map(([occ, count]) => (
                   <BreakdownBar key={occ} label={occ} count={count} total={analytics.totalUsers} color={C.lime} />
+                ))}
+              </div>
+
+              <div style={{ ...card }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_sport_mix")}</div>
+                {Object.entries(analytics.sportCounts).map(([sport, count]) => (
+                  <BreakdownBar key={sport} label={sport} count={count} total={analytics.totalAthletes} color={C.lime} />
+                ))}
+                {analytics.sportUnset > 0 && (
+                  <BreakdownBar label={analytics.notSetLabel} count={analytics.sportUnset} total={analytics.totalAthletes} color={C.slate} />
+                )}
+              </div>
+
+              <div style={{ ...card }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_gender_mix")}</div>
+                <BreakdownBar label={t("admin_gender_male")} count={analytics.genderCounts.Male} total={analytics.totalAthletes} color={C.lime} />
+                <BreakdownBar label={t("admin_gender_female")} count={analytics.genderCounts.Female} total={analytics.totalAthletes} color={C.elite} />
+                {analytics.genderUnset > 0 && (
+                  <BreakdownBar label={analytics.notSetLabel} count={analytics.genderUnset} total={analytics.totalAthletes} color={C.slate} />
+                )}
+              </div>
+
+              <div style={{ ...card }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_top_countries")}</div>
+                {analytics.topCountries.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("admin_no_data")}</div>}
+                {analytics.topCountries.map((c) => (
+                  <BreakdownBar key={c.country} label={c.country} count={c.count} total={analytics.totalAthletes} color={C.lime} />
                 ))}
               </div>
 
