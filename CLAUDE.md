@@ -378,6 +378,51 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   (`AdminPanel`'s `callAdminUserAction()` in `golsz-app.html`) — not `sb.rpc()`, since there's no RPC to call
   anymore for these two actions.
 
+### Admin action audit log (migration 030)
+
+- `admin_action_log` (`admin_id`, `action`, `target_id`, `detail jsonb`, `created_at`) records every
+  ban/unban/delete/plan-change/verify/report-moderation/event-management action taken from the Admin Panel.
+  Built so it stays trustworthy even if an admin account itself is compromised: there is **no `authenticated`
+  insert/update/delete policy at all** — the only two ways a row can be written are (a) `service_role` from
+  `api/admin-user-action.js` (bypasses RLS, used for ban/unban/delete since those already need the service
+  key for the real Auth API calls), or (b) `log_admin_action(p_action, p_target_id, p_detail)`, a
+  `security definer` RPC that always stamps `admin_id` as `auth.uid()` itself, ignoring whatever the caller
+  passes — so a compromised admin session can log real actions under its own name but can never forge an
+  entry blaming someone else or blank out its own trail. Reads are admin-only (`is_admin()`), same as every
+  other admin-only table here.
+- Client side, `AdminPanel`'s `logAdmin(action, targetId, detail)` (`golsz-app.html`) fire-and-forgets the RPC
+  after every action that doesn't already log server-side — `resolveReport`, `deleteReportedPost`,
+  `setUserAdmin`, `setUserPlan`, `setUserVerifiedTier`, `deleteEvent`, `setEventBlocked`, `createEvent`.
+  `setUserBanned`/`deleteUser` do **not** also call `logAdmin()` — those go through
+  `api/admin-user-action.js`, which already writes the log entry server-side via a direct service-role
+  insert (not the RPC — a service-role caller has no `auth.uid()`, so the RPC's `is_admin()` check would
+  reject it); calling `logAdmin()` for those too would just duplicate the entry.
+- New 4th "Audit log" tab in `AdminPanel`, alongside Reports/Users/Analytics — `loadAuditLog()` fetches the
+  last 100 rows plus admin names (via `public_profile_names`) and renders them as simple cards (admin name,
+  action, JSON detail, target id, time-ago). No new charting/UI dependency, same style as the other tabs.
+
+### Content-Security-Policy header (`vercel.json`)
+
+- Static response headers (CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) applied via
+  Vercel's `headers` config, scoped to everything except `/api/*` (serverless functions set their own CORS
+  headers programmatically — a blanket static rule would conflict). Only takes effect on an actual Vercel
+  deployment, not local static preview.
+- `script-src` deliberately still includes `'unsafe-inline'` and `'unsafe-eval'` — this app has no build
+  step, and Babel-standalone transpiles/executes JSX at runtime in the browser, which needs eval-like
+  execution. A stricter `script-src` isn't achievable without rebuilding how the app is served (a real build
+  step). This is an accepted, documented trade-off, not an oversight — the policy still meaningfully
+  restricts which *origins* scripts/styles/images/connections can come from (cdnjs/jsdelivr/fonts/Supabase/
+  Anthropic only), it just can't fully sandbox the eval'd JSX itself.
+
+### Signup bot protection (honeypot)
+
+- `Auth`'s signup form (`golsz-app.html`) has a hidden `website` field (off-screen via inline style, plus
+  `tabIndex={-1}`/`aria-hidden="true"`/`autoComplete="off"`) that no real user can see or tab into, but that
+  generic form-filling bots commonly fill in anyway. `submit()` checks it first and silently returns (no
+  error, no signup attempt) if it has any value — giving an automated script no signal that its submission
+  was rejected, rather than a real error it could learn from. Real signups never touch this path since the
+  field stays empty for anyone actually looking at the form.
+
 ### `PostsGrid` — Instagram-style posts grid on the Passport
 
 - Same `viewUserId` convention as `Highlights` right above it in `golsz-app.html` (`null` = own profile) —
@@ -568,6 +613,10 @@ meant someone who follows you but you haven't followed back had no way to see th
 though the backend allowed it. If you add another place that surfaces a Message button, gate it the same way.
 
 **Not yet built / known gaps:**
+- **No 2FA/MFA and no granular admin roles.** A security audit this session identified both as real gaps —
+  every admin has the exact same full `is_admin` flag (no reduced-scope roles), and there's no second factor
+  on login for anyone, admin or not. Deliberately deferred (not forgotten) in favor of shipping CSP, the
+  admin audit log, and signup bot protection first — see those sections above.
 - **Legal review.** The parent-verification flow is mutual in-app consent, not identity-verified
   COPPA/GDPR-K parental consent. `terms.html` also still contains a placeholder line stating real
   moderation/content terms "will be published before real accounts go live." Both need a lawyer's pass

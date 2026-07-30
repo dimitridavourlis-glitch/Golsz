@@ -298,8 +298,9 @@ const I18N = {
     blocked_title: "Blocked accounts", blocked_empty: "You haven't blocked anyone.", blocked_unblock: "Unblock",
     admin_checking: "Checking access…", admin_only: "Admins only.", admin_title: "Admin panel",
     admin_stat_users: "USERS", admin_stat_posts: "POSTS", admin_stat_events: "EVENTS", admin_stat_pending: "PENDING",
-    admin_tab_reports: "Reports", admin_tab_users: "Users", admin_tab_analytics: "Analytics",
+    admin_tab_reports: "Reports", admin_tab_users: "Users", admin_tab_analytics: "Analytics", admin_tab_audit: "Audit log",
     admin_no_reports: "No reports yet.", admin_reported_by: "Reported by ", admin_post_removed: "Post already removed.",
+    admin_no_audit_log: "No admin actions logged yet.", admin_audit_target: "Target: ", admin_unknown_admin: "Unknown admin",
     admin_delete_post: "Delete post", admin_dismiss: "Dismiss", admin_resolved: "Resolved",
     admin_search_name: "Search by name…", admin_no_name: "(no name)", admin_minor: "MINOR", admin_admin: "ADMIN",
     admin_joined: "joined ", admin_ago: " ago", admin_revoke_admin: "Revoke admin", admin_make_admin: "Make admin",
@@ -472,8 +473,9 @@ const I18N = {
     blocked_title: "Comptes bloqués", blocked_empty: "Vous n'avez bloqué personne.", blocked_unblock: "Débloquer",
     admin_checking: "Vérification de l'accès…", admin_only: "Réservé aux administrateurs.", admin_title: "Panneau d'administration",
     admin_stat_users: "UTILISATEURS", admin_stat_posts: "PUBLICATIONS", admin_stat_events: "ÉVÉNEMENTS", admin_stat_pending: "EN ATTENTE",
-    admin_tab_reports: "Signalements", admin_tab_users: "Utilisateurs", admin_tab_analytics: "Analytique",
+    admin_tab_reports: "Signalements", admin_tab_users: "Utilisateurs", admin_tab_analytics: "Analytique", admin_tab_audit: "Journal d'audit",
     admin_no_reports: "Aucun signalement pour l'instant.", admin_reported_by: "Signalé par ", admin_post_removed: "Publication déjà supprimée.",
+    admin_no_audit_log: "Aucune action admin enregistrée pour l'instant.", admin_audit_target: "Cible : ", admin_unknown_admin: "Admin inconnu",
     admin_delete_post: "Supprimer la publication", admin_dismiss: "Ignorer", admin_resolved: "Résolu",
     admin_search_name: "Rechercher par nom…", admin_no_name: "(sans nom)", admin_minor: "MINEUR", admin_admin: "ADMIN",
     admin_joined: "inscrit il y a ", admin_ago: "", admin_revoke_admin: "Révoquer admin", admin_make_admin: "Nommer admin",
@@ -646,8 +648,9 @@ const I18N = {
     blocked_title: "Cuentas bloqueadas", blocked_empty: "No has bloqueado a nadie.", blocked_unblock: "Desbloquear",
     admin_checking: "Comprobando acceso…", admin_only: "Solo administradores.", admin_title: "Panel de administración",
     admin_stat_users: "USUARIOS", admin_stat_posts: "PUBLICACIONES", admin_stat_events: "EVENTOS", admin_stat_pending: "PENDIENTES",
-    admin_tab_reports: "Reportes", admin_tab_users: "Usuarios", admin_tab_analytics: "Analítica",
+    admin_tab_reports: "Reportes", admin_tab_users: "Usuarios", admin_tab_analytics: "Analítica", admin_tab_audit: "Registro de auditoría",
     admin_no_reports: "Aún no hay reportes.", admin_reported_by: "Reportado por ", admin_post_removed: "Publicación ya eliminada.",
+    admin_no_audit_log: "Aún no hay acciones de administrador registradas.", admin_audit_target: "Objetivo: ", admin_unknown_admin: "Admin desconocido",
     admin_delete_post: "Eliminar publicación", admin_dismiss: "Descartar", admin_resolved: "Resuelto",
     admin_search_name: "Buscar por nombre…", admin_no_name: "(sin nombre)", admin_minor: "MENOR", admin_admin: "ADMIN",
     admin_joined: "se unió hace ", admin_ago: "", admin_revoke_admin: "Revocar admin", admin_make_admin: "Hacer admin",
@@ -820,8 +823,9 @@ const I18N = {
     blocked_title: "Αποκλεισμένοι λογαριασμοί", blocked_empty: "Δεν έχετε αποκλείσει κανέναν.", blocked_unblock: "Άρση αποκλεισμού",
     admin_checking: "Έλεγχος πρόσβασης…", admin_only: "Μόνο για διαχειριστές.", admin_title: "Πίνακας διαχείρισης",
     admin_stat_users: "ΧΡΗΣΤΕΣ", admin_stat_posts: "ΑΝΑΡΤΗΣΕΙΣ", admin_stat_events: "ΕΚΔΗΛΩΣΕΙΣ", admin_stat_pending: "ΕΚΚΡΕΜΗ",
-    admin_tab_reports: "Αναφορές", admin_tab_users: "Χρήστες", admin_tab_analytics: "Αναλυτικά",
+    admin_tab_reports: "Αναφορές", admin_tab_users: "Χρήστες", admin_tab_analytics: "Αναλυτικά", admin_tab_audit: "Αρχείο καταγραφής",
     admin_no_reports: "Δεν υπάρχουν αναφορές ακόμα.", admin_reported_by: "Αναφέρθηκε από ", admin_post_removed: "Η ανάρτηση έχει ήδη αφαιρεθεί.",
+    admin_no_audit_log: "Δεν έχουν καταγραφεί ενέργειες διαχειριστή ακόμα.", admin_audit_target: "Στόχος: ", admin_unknown_admin: "Άγνωστος διαχειριστής",
     admin_delete_post: "Διαγραφή ανάρτησης", admin_dismiss: "Απόρριψη", admin_resolved: "Επιλύθηκε",
     admin_search_name: "Αναζήτηση με όνομα…", admin_no_name: "(χωρίς όνομα)", admin_minor: "ΑΝΗΛΙΚΟΣ", admin_admin: "ADMIN",
     admin_joined: "εγγράφηκε πριν από ", admin_ago: "", admin_revoke_admin: "Ανάκληση admin", admin_make_admin: "Ορισμός ως admin",
@@ -3554,6 +3558,7 @@ function AdminPanel({ onBack }) {
   const [evDate, setEvDate] = useState(""); const [evSpots, setEvSpots] = useState("");
   const [analytics, setAnalytics] = useState(null);
   const [showEventsManager, setShowEventsManager] = useState(false);
+  const [auditLog, setAuditLog] = useState(null);
 
   async function loadStats() {
     try {
@@ -3583,14 +3588,25 @@ function AdminPanel({ onBack }) {
       }));
     } catch (e) { console.error("GOLSZ admin reports error:", e); setReports([]); }
   }
+  // Fire-and-forget — logging failing silently shouldn't block the admin
+  // action itself from succeeding. See migration 030: this RPC always
+  // stamps admin_id as the real caller (auth.uid()), never whatever the
+  // client passes, so the log stays trustworthy even from a compromised
+  // admin session.
+  function logAdmin(action, targetId, detail) {
+    sb.rpc("log_admin_action", { p_action: action, p_target_id: targetId || null, p_detail: detail || null })
+      .then(({ error }) => { if (error) console.error("GOLSZ admin audit log error:", error); });
+  }
+
   async function resolveReport(id) {
-    try { await sb.from("post_reports").update({ resolved_at: new Date().toISOString() }).eq("id", id); loadReports(); loadStats(); }
+    try { await sb.from("post_reports").update({ resolved_at: new Date().toISOString() }).eq("id", id); logAdmin("resolve_report", id); loadReports(); loadStats(); }
     catch (e) { console.error("GOLSZ admin resolve report error:", e); }
   }
   async function deleteReportedPost(postId, reportId) {
     try {
       await sb.from("posts").delete().eq("id", postId);
       await sb.from("post_reports").update({ resolved_at: new Date().toISOString() }).eq("id", reportId);
+      logAdmin("delete_post", postId, { report_id: reportId });
       loadReports(); loadStats();
     } catch (e) { console.error("GOLSZ admin delete post error:", e); }
   }
@@ -3605,11 +3621,11 @@ function AdminPanel({ onBack }) {
     } catch (e) { console.error("GOLSZ admin users error:", e); setUsers([]); }
   }
   async function setUserAdmin(id, val) {
-    try { await sb.from("profiles").update({ is_admin: val }).eq("id", id); loadUsers(userQuery); }
+    try { await sb.from("profiles").update({ is_admin: val }).eq("id", id); logAdmin(val ? "make_admin" : "revoke_admin", id); loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin set-admin error:", e); }
   }
   async function setUserPlan(id, val) {
-    try { await sb.from("profiles").update({ plan: val }).eq("id", id); loadUsers(userQuery); }
+    try { await sb.from("profiles").update({ plan: val }).eq("id", id); logAdmin("set_plan", id, { plan: val }); loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin set-plan error:", e); }
   }
   // Ban/delete need the real Supabase Admin API (service role key,
@@ -3631,7 +3647,7 @@ function AdminPanel({ onBack }) {
     catch (e) { console.error("GOLSZ admin ban error:", e); alert(t("admin_ban_user_err")); }
   }
   async function setUserVerifiedTier(id, tier) {
-    try { const { error } = await sb.from("profiles").update({ verified_tier: tier }).eq("id", id); if (error) throw error; loadUsers(userQuery); }
+    try { const { error } = await sb.from("profiles").update({ verified_tier: tier }).eq("id", id); if (error) throw error; logAdmin("set_verified_tier", id, { tier }); loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin verify error:", e); alert(t("admin_verify_user_err")); }
   }
   async function deleteUser(id) {
@@ -3650,11 +3666,11 @@ function AdminPanel({ onBack }) {
     } catch (e) { console.error("GOLSZ admin events error:", e); setEvents([]); }
   }
   async function deleteEvent(id) {
-    try { await sb.from("events").delete().eq("id", id); loadEvents(); loadStats(); }
+    try { await sb.from("events").delete().eq("id", id); logAdmin("delete_event", id); loadEvents(); loadStats(); }
     catch (e) { console.error("GOLSZ admin delete event error:", e); }
   }
   async function setEventBlocked(id, val) {
-    try { const { error } = await sb.from("events").update({ is_blocked: val }).eq("id", id); if (error) throw error; loadEvents(); }
+    try { const { error } = await sb.from("events").update({ is_blocked: val }).eq("id", id); if (error) throw error; logAdmin(val ? "block_event" : "unblock_event", id); loadEvents(); }
     catch (e) { console.error("GOLSZ admin block event error:", e); alert(t("admin_block_event_err")); }
   }
   async function createEvent() {
@@ -3667,9 +3683,24 @@ function AdminPanel({ onBack }) {
         spots_available: evSpots ? Number(evSpots) : null, created_by: user.id,
       });
       if (error) throw error;
+      logAdmin("create_event", null, { title: evTitle.trim() });
       setEvTitle(""); setEvLoc(""); setEvLevel(""); setEvDate(""); setEvSpots("");
       loadEvents(); loadStats();
     } catch (e) { console.error("GOLSZ admin create event error:", e); }
+  }
+
+  // admin_action_log has no authenticated write policy at all (migration
+  // 030) — reads are fine directly since admin_action_log_read is gated
+  // on is_admin(), same pattern as every other admin-only table here.
+  async function loadAuditLog() {
+    try {
+      const { data, error } = await sb.from("admin_action_log").select("id, admin_id, action, target_id, detail, created_at").order("created_at", { ascending: false }).limit(100);
+      if (error) throw error;
+      const adminIds = [...new Set((data || []).map((r) => r.admin_id).filter(Boolean))];
+      const { data: names } = adminIds.length ? await sb.from("public_profile_names").select("id, full_name").in("id", adminIds) : { data: [] };
+      const nameById = Object.fromEntries((names || []).map((n) => [n.id, n.full_name]));
+      setAuditLog((data || []).map((r) => ({ ...r, adminName: nameById[r.admin_id] || t("admin_unknown_admin") })));
+    } catch (e) { console.error("GOLSZ admin audit log error:", e); setAuditLog([]); }
   }
 
   // Everything here is either already admin-readable directly
@@ -3788,7 +3819,7 @@ function AdminPanel({ onBack }) {
         const { data: prof } = await sb.from("profiles").select("is_admin").eq("id", user.id).single();
         const ok = !!(prof && prof.is_admin);
         setAuthorized(ok);
-        if (ok) { loadStats(); loadReports(); loadUsers(); loadEvents(); loadAnalytics(); }
+        if (ok) { loadStats(); loadReports(); loadUsers(); loadEvents(); loadAnalytics(); loadAuditLog(); }
       } catch (e) { console.error("GOLSZ admin auth-check error:", e); setAuthorized(false); }
     })();
   }, []);
@@ -3831,6 +3862,7 @@ function AdminPanel({ onBack }) {
         {tabBtn("reports", t("admin_tab_reports"))}
         {tabBtn("users", t("admin_tab_users"))}
         {tabBtn("analytics", t("admin_tab_analytics"))}
+        {tabBtn("audit", t("admin_tab_audit"))}
       </div>
 
       {tab === "reports" && (
@@ -4085,6 +4117,26 @@ function AdminPanel({ onBack }) {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {tab === "audit" && (
+        <div>
+          {auditLog === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+          {auditLog && auditLog.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_audit_log")}</div>}
+          {auditLog && auditLog.map((a) => (
+            <div key={a.id} style={card}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: C.slate, marginBottom: 4 }}>
+                <span>{a.adminName}</span>
+                <span>{timeAgo(a.created_at)}</span>
+              </div>
+              <div style={{ fontSize: 13 }}>
+                <b>{a.action}</b>
+                {a.detail ? <span style={{ color: C.slate }}> — {JSON.stringify(a.detail)}</span> : null}
+              </div>
+              {a.target_id && <div style={{ fontSize: 10, color: C.slate, fontFamily: "'Space Mono', monospace", marginTop: 3 }}>{t("admin_audit_target")}{a.target_id}</div>}
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -4760,6 +4812,7 @@ function Auth({ onDone, paidReturn }) {
   const [dobMonth, setDobMonth] = useState("");
   const [dobYear, setDobYear] = useState("");
   const [parentEmail, setParentEmail] = useState("");
+  const [website, setWebsite] = useState(""); // honeypot — real users never see or fill this field, only bots that auto-fill every input do
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [notice, setNotice] = useState(paidReturn ? "Payment received! If this is the only tab open, log in below once you've confirmed your email. Otherwise close this tab and go back to where you signed up — it'll sign you in automatically the moment your email is confirmed, from whatever device you use to confirm it." : "");
@@ -4841,6 +4894,11 @@ function Auth({ onDone, paidReturn }) {
 
   async function submit() {
     if (!ok || busy || confirmPolling) return;
+    // Honeypot: a real user never sees or fills this field, so anything
+    // in it means an automated script filled every input on the page.
+    // Return without an error so a bot gets no signal telling it apart
+    // from a real (if slow) submission.
+    if (isSignup && website.trim()) return;
     setErr("");
     setNotice("");
     // preview mode: no backend configured -> behave like the demo
@@ -5012,6 +5070,13 @@ function Auth({ onDone, paidReturn }) {
             </div>
           )}
 
+          {isSignup && (
+            <input
+              value={website} onChange={(e) => setWebsite(e.target.value)}
+              name="website" autoComplete="off" tabIndex={-1} aria-hidden="true"
+              style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+            />
+          )}
           {isSignup && <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth_full_name")} style={field} />}
           <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth_email")} type="email" style={field} />
           <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder={t("auth_password")} type="password" style={{ ...field, marginBottom: isSignup ? 12 : 4 }} />

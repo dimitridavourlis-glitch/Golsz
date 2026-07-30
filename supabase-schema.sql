@@ -1421,5 +1421,41 @@ create policy avatars_delete on storage.objects for delete using (
 );
 
 -- ============================================================
+-- 30) ADDITIVE — admin action audit log
+-- See supabase-migration-030-admin-audit-log.sql for full context.
+-- ============================================================
+
+create table if not exists admin_action_log (
+  id uuid primary key default gen_random_uuid(),
+  admin_id uuid references profiles(id) on delete set null,
+  action text not null,
+  target_id uuid,
+  detail jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists admin_action_log_created_idx on admin_action_log (created_at desc);
+
+alter table admin_action_log enable row level security;
+
+drop policy if exists admin_action_log_read on admin_action_log;
+create policy admin_action_log_read on admin_action_log for select using (
+  is_admin()
+);
+
+create or replace function log_admin_action(p_action text, p_target_id uuid, p_detail jsonb default null)
+returns void language plpgsql security definer set search_path to 'public' as $$
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  insert into admin_action_log (admin_id, action, target_id, detail)
+  values (auth.uid(), p_action, p_target_id, p_detail);
+end;
+$$;
+
+grant execute on function log_admin_action(text, uuid, jsonb) to authenticated;
+
+-- ============================================================
 -- Done.
 -- ============================================================

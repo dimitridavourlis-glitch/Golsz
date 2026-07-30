@@ -64,6 +64,20 @@ async function patchProfile(supaUrl, serviceKey, targetId, body) {
   });
 }
 
+// Writes directly via service role (bypasses RLS the same way every
+// other write in this function does) rather than the log_admin_action()
+// RPC — that RPC exists for the client-side admin actions, which don't
+// otherwise have a trusted way to write this table at all.
+async function logAdminAction(supaUrl, serviceKey, adminId, action, targetId, detail) {
+  try {
+    await fetch(`${supaUrl}/rest/v1/admin_action_log`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ admin_id: adminId, action, target_id: targetId, detail: detail || null }),
+    });
+  } catch (e) { console.error("GOLSZ admin audit log error:", e); }
+}
+
 export default async function handler(req, res) {
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -102,6 +116,7 @@ export default async function handler(req, res) {
       });
       if (!banRes.ok) throw new Error(`Auth API ban update failed (${banRes.status})`);
       await patchProfile(supaUrl, serviceKey, targetId, { is_banned: action === "ban" });
+      await logAdminAction(supaUrl, serviceKey, callerId, action, targetId);
       return res.status(200).json({ ok: true });
     }
 
@@ -122,6 +137,7 @@ export default async function handler(req, res) {
         headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
       });
       if (!delRes.ok) throw new Error(`Auth API user delete failed (${delRes.status})`);
+      await logAdminAction(supaUrl, serviceKey, callerId, "delete", targetId);
       return res.status(200).json({ ok: true });
     }
 
