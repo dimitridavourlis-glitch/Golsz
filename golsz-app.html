@@ -287,7 +287,7 @@ const I18N = {
     blocked_title: "Blocked accounts", blocked_empty: "You haven't blocked anyone.", blocked_unblock: "Unblock",
     admin_checking: "Checking access…", admin_only: "Admins only.", admin_title: "Admin panel",
     admin_stat_users: "USERS", admin_stat_posts: "POSTS", admin_stat_events: "EVENTS", admin_stat_pending: "PENDING",
-    admin_tab_reports: "Reports", admin_tab_users: "Users", admin_tab_events: "Events",
+    admin_tab_reports: "Reports", admin_tab_users: "Users", admin_tab_analytics: "Analytics",
     admin_no_reports: "No reports yet.", admin_reported_by: "Reported by ", admin_post_removed: "Post already removed.",
     admin_delete_post: "Delete post", admin_dismiss: "Dismiss", admin_resolved: "Resolved",
     admin_search_name: "Search by name…", admin_no_name: "(no name)", admin_minor: "MINOR", admin_admin: "ADMIN",
@@ -301,6 +301,13 @@ const I18N = {
     admin_delete_user_err: "Couldn't delete account.", admin_ban_user_err: "Couldn't update this account.",
     admin_blocked: "BLOCKED", admin_block_event: "Block", admin_unblock_event: "Unblock",
     admin_block_event_err: "Couldn't update this event.",
+    admin_overview: "OVERVIEW", admin_signups_today: "SIGNUPS TODAY", admin_signups_week: "SIGNUPS 7D",
+    admin_total_follows: "FOLLOWS", admin_verified_count: "VERIFIED", admin_banned_count: "BANNED",
+    admin_mrr_estimate: "EST. MRR", admin_signups_14d: "SIGNUPS (14D)", admin_posts_14d: "POSTS (14D)",
+    admin_plan_mix: "PLAN MIX", admin_occupation_mix: "OCCUPATION MIX", admin_verification_mix: "VERIFICATION MIX",
+    admin_scout_conversations: "SCOUT CHATS", admin_scout_users: "SCOUT USERS", admin_messages_total: "MESSAGES",
+    admin_messages_7d: "MESSAGES 7D", admin_push_subscribers: "PUSH SUBS", admin_top_followed: "TOP FOLLOWED",
+    admin_no_data: "No data yet.", admin_manage_events: "Manage events", admin_analytics_err: "Couldn't load analytics.",
     banned_title: "Account suspended", banned_message: "Your GOLSZ account has been suspended. If you think this is a mistake, contact support.",
     scout_header: "AI SCOUT", scout_fields_on_file: "FIELDS ON FILE", scout_live_agent: "LIVE AGENT",
     scout_history_title: "History", scout_new_chat: "New chat", scout_no_past: "No past conversations yet.",
@@ -442,7 +449,7 @@ const I18N = {
     blocked_title: "Comptes bloqués", blocked_empty: "Vous n'avez bloqué personne.", blocked_unblock: "Débloquer",
     admin_checking: "Vérification de l'accès…", admin_only: "Réservé aux administrateurs.", admin_title: "Panneau d'administration",
     admin_stat_users: "UTILISATEURS", admin_stat_posts: "PUBLICATIONS", admin_stat_events: "ÉVÉNEMENTS", admin_stat_pending: "EN ATTENTE",
-    admin_tab_reports: "Signalements", admin_tab_users: "Utilisateurs", admin_tab_events: "Événements",
+    admin_tab_reports: "Signalements", admin_tab_users: "Utilisateurs", admin_tab_analytics: "Analytique",
     admin_no_reports: "Aucun signalement pour l'instant.", admin_reported_by: "Signalé par ", admin_post_removed: "Publication déjà supprimée.",
     admin_delete_post: "Supprimer la publication", admin_dismiss: "Ignorer", admin_resolved: "Résolu",
     admin_search_name: "Rechercher par nom…", admin_no_name: "(sans nom)", admin_minor: "MINEUR", admin_admin: "ADMIN",
@@ -454,6 +461,13 @@ const I18N = {
     admin_delete_user_err: "Impossible de supprimer ce compte.", admin_ban_user_err: "Impossible de mettre à jour ce compte.",
     admin_blocked: "BLOQUÉ", admin_block_event: "Bloquer", admin_unblock_event: "Débloquer",
     admin_block_event_err: "Impossible de mettre à jour cet événement.",
+    admin_overview: "APERÇU", admin_signups_today: "INSCRITS AUJOURD'HUI", admin_signups_week: "INSCRITS 7J",
+    admin_total_follows: "ABONNEMENTS", admin_verified_count: "VÉRIFIÉS", admin_banned_count: "BANNIS",
+    admin_mrr_estimate: "MRR EST.", admin_signups_14d: "INSCRITS (14J)", admin_posts_14d: "PUBLICATIONS (14J)",
+    admin_plan_mix: "RÉPARTITION DES FORFAITS", admin_occupation_mix: "RÉPARTITION DES RÔLES", admin_verification_mix: "RÉPARTITION DE VÉRIFICATION",
+    admin_scout_conversations: "CONVERSATIONS SCOUT", admin_scout_users: "UTILISATEURS SCOUT", admin_messages_total: "MESSAGES",
+    admin_messages_7d: "MESSAGES 7J", admin_push_subscribers: "ABONNÉS PUSH", admin_top_followed: "PLUS SUIVIS",
+    admin_no_data: "Aucune donnée pour l'instant.", admin_manage_events: "Gérer les événements", admin_analytics_err: "Impossible de charger les statistiques.",
     banned_title: "Compte suspendu", banned_message: "Votre compte GOLSZ a été suspendu. Si vous pensez qu'il s'agit d'une erreur, contactez le support.",
     admin_add_event: "AJOUTER UN ÉVÉNEMENT", admin_title_ph: "Titre", admin_location_ph: "Lieu", admin_level_ph: "Niveau",
     admin_spots_ph: "Places disponibles", admin_create_event: "Créer l'événement",
@@ -597,7 +611,7 @@ const I18N = {
     blocked_title: "Cuentas bloqueadas", blocked_empty: "No has bloqueado a nadie.", blocked_unblock: "Desbloquear",
     admin_checking: "Comprobando acceso…", admin_only: "Solo administradores.", admin_title: "Panel de administración",
     admin_stat_users: "USUARIOS", admin_stat_posts: "PUBLICACIONES", admin_stat_events: "EVENTOS", admin_stat_pending: "PENDIENTES",
-    admin_tab_reports: "Reportes", admin_tab_users: "Usuarios", admin_tab_events: "Eventos",
+    admin_tab_reports: "Reportes", admin_tab_users: "Usuarios", admin_tab_analytics: "Analítica",
     admin_no_reports: "Aún no hay reportes.", admin_reported_by: "Reportado por ", admin_post_removed: "Publicación ya eliminada.",
     admin_delete_post: "Eliminar publicación", admin_dismiss: "Descartar", admin_resolved: "Resuelto",
     admin_search_name: "Buscar por nombre…", admin_no_name: "(sin nombre)", admin_minor: "MENOR", admin_admin: "ADMIN",
@@ -609,6 +623,13 @@ const I18N = {
     admin_delete_user_err: "No se pudo eliminar la cuenta.", admin_ban_user_err: "No se pudo actualizar esta cuenta.",
     admin_blocked: "BLOQUEADO", admin_block_event: "Bloquear", admin_unblock_event: "Desbloquear",
     admin_block_event_err: "No se pudo actualizar este evento.",
+    admin_overview: "RESUMEN", admin_signups_today: "REGISTROS HOY", admin_signups_week: "REGISTROS 7D",
+    admin_total_follows: "SEGUIMIENTOS", admin_verified_count: "VERIFICADOS", admin_banned_count: "BANEADOS",
+    admin_mrr_estimate: "MRR EST.", admin_signups_14d: "REGISTROS (14D)", admin_posts_14d: "PUBLICACIONES (14D)",
+    admin_plan_mix: "MEZCLA DE PLANES", admin_occupation_mix: "MEZCLA DE OCUPACIONES", admin_verification_mix: "MEZCLA DE VERIFICACIÓN",
+    admin_scout_conversations: "CHATS DE SCOUT", admin_scout_users: "USUARIOS DE SCOUT", admin_messages_total: "MENSAJES",
+    admin_messages_7d: "MENSAJES 7D", admin_push_subscribers: "SUSCRIPTORES PUSH", admin_top_followed: "MÁS SEGUIDOS",
+    admin_no_data: "Aún no hay datos.", admin_manage_events: "Gestionar eventos", admin_analytics_err: "No se pudieron cargar las estadísticas.",
     banned_title: "Cuenta suspendida", banned_message: "Tu cuenta de GOLSZ ha sido suspendida. Si crees que esto es un error, contacta con soporte.",
     admin_add_event: "AÑADIR EVENTO", admin_title_ph: "Título", admin_location_ph: "Ubicación", admin_level_ph: "Nivel",
     admin_spots_ph: "Plazas disponibles", admin_create_event: "Crear evento",
@@ -752,7 +773,7 @@ const I18N = {
     blocked_title: "Αποκλεισμένοι λογαριασμοί", blocked_empty: "Δεν έχετε αποκλείσει κανέναν.", blocked_unblock: "Άρση αποκλεισμού",
     admin_checking: "Έλεγχος πρόσβασης…", admin_only: "Μόνο για διαχειριστές.", admin_title: "Πίνακας διαχείρισης",
     admin_stat_users: "ΧΡΗΣΤΕΣ", admin_stat_posts: "ΑΝΑΡΤΗΣΕΙΣ", admin_stat_events: "ΕΚΔΗΛΩΣΕΙΣ", admin_stat_pending: "ΕΚΚΡΕΜΗ",
-    admin_tab_reports: "Αναφορές", admin_tab_users: "Χρήστες", admin_tab_events: "Εκδηλώσεις",
+    admin_tab_reports: "Αναφορές", admin_tab_users: "Χρήστες", admin_tab_analytics: "Αναλυτικά",
     admin_no_reports: "Δεν υπάρχουν αναφορές ακόμα.", admin_reported_by: "Αναφέρθηκε από ", admin_post_removed: "Η ανάρτηση έχει ήδη αφαιρεθεί.",
     admin_delete_post: "Διαγραφή ανάρτησης", admin_dismiss: "Απόρριψη", admin_resolved: "Επιλύθηκε",
     admin_search_name: "Αναζήτηση με όνομα…", admin_no_name: "(χωρίς όνομα)", admin_minor: "ΑΝΗΛΙΚΟΣ", admin_admin: "ADMIN",
@@ -764,6 +785,13 @@ const I18N = {
     admin_delete_user_err: "Δεν ήταν δυνατή η διαγραφή του λογαριασμού.", admin_ban_user_err: "Δεν ήταν δυνατή η ενημέρωση αυτού του λογαριασμού.",
     admin_blocked: "ΑΠΟΚΛΕΙΣΜΕΝΟ", admin_block_event: "Αποκλεισμός", admin_unblock_event: "Άρση αποκλεισμού",
     admin_block_event_err: "Δεν ήταν δυνατή η ενημέρωση αυτής της εκδήλωσης.",
+    admin_overview: "ΕΠΙΣΚΟΠΗΣΗ", admin_signups_today: "ΕΓΓΡΑΦΕΣ ΣΗΜΕΡΑ", admin_signups_week: "ΕΓΓΡΑΦΕΣ 7Η",
+    admin_total_follows: "ΑΚΟΛΟΥΘΗΣΕΙΣ", admin_verified_count: "ΕΠΑΛΗΘΕΥΜΕΝΟΙ", admin_banned_count: "ΑΠΟΚΛΕΙΣΜΕΝΟΙ",
+    admin_mrr_estimate: "ΕΚΤ. MRR", admin_signups_14d: "ΕΓΓΡΑΦΕΣ (14Η)", admin_posts_14d: "ΑΝΑΡΤΗΣΕΙΣ (14Η)",
+    admin_plan_mix: "ΚΑΤΑΝΟΜΗ ΠΑΚΕΤΩΝ", admin_occupation_mix: "ΚΑΤΑΝΟΜΗ ΡΟΛΩΝ", admin_verification_mix: "ΚΑΤΑΝΟΜΗ ΕΠΑΛΗΘΕΥΣΗΣ",
+    admin_scout_conversations: "ΣΥΝΟΜΙΛΙΕΣ SCOUT", admin_scout_users: "ΧΡΗΣΤΕΣ SCOUT", admin_messages_total: "ΜΗΝΥΜΑΤΑ",
+    admin_messages_7d: "ΜΗΝΥΜΑΤΑ 7Η", admin_push_subscribers: "ΣΥΝΔΡΟΜΗΤΕΣ PUSH", admin_top_followed: "ΔΗΜΟΦΙΛΕΣΤΕΡΟΙ",
+    admin_no_data: "Δεν υπάρχουν δεδομένα ακόμα.", admin_manage_events: "Διαχείριση εκδηλώσεων", admin_analytics_err: "Δεν ήταν δυνατή η φόρτωση των στατιστικών.",
     banned_title: "Ο λογαριασμός ανεστάλη", banned_message: "Ο λογαριασμός σας στο GOLSZ έχει ανασταλεί. Αν πιστεύετε ότι πρόκειται για λάθος, επικοινωνήστε με την υποστήριξη.",
     admin_add_event: "ΠΡΟΣΘΗΚΗ ΕΚΔΗΛΩΣΗΣ", admin_title_ph: "Τίτλος", admin_location_ph: "Τοποθεσία", admin_level_ph: "Επίπεδο",
     admin_spots_ph: "Διαθέσιμες θέσεις", admin_create_event: "Δημιουργία εκδήλωσης",
@@ -3158,6 +3186,38 @@ function BlockedAccounts() {
   );
 }
 
+/* Dependency-free vertical bar sparkline — this codebase deliberately
+   has no charting library (no build step, fixed CDN scripts only), so
+   this is plain divs sized by percentage of the max value, same
+   hand-rolled-UI spirit as the svg() icon helper above. */
+function Bars({ data, color }) {
+  const max = Math.max(1, ...data.map((d) => d.value));
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 70 }}>
+      {data.map((d, i) => (
+        <div key={i} title={`${d.label}: ${d.value}`} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
+          <div style={{ width: "100%", borderRadius: 3, background: color, height: `${Math.max(2, (d.value / max) * 100)}%` }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* Simple labeled horizontal bar for breakdowns (plan/occupation/tier mix) */
+function BreakdownBar({ label, count, total, color }) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.slate, marginBottom: 3 }}>
+        <span>{label}</span><span>{count} ({pct}%)</span>
+      </div>
+      <div style={{ background: C.turf, borderRadius: 6, height: 6, overflow: "hidden" }}>
+        <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 6 }} />
+      </div>
+    </div>
+  );
+}
+
 /* ============ ADMIN PANEL ============
    Gated entirely by server-side RLS (is_admin(), migration 009) — every
    query and mutation here only succeeds if the signed-in user's own
@@ -3177,6 +3237,8 @@ function AdminPanel({ onBack }) {
   const [evTitle, setEvTitle] = useState(""); const [evSport, setEvSport] = useState("Soccer");
   const [evLoc, setEvLoc] = useState(""); const [evLevel, setEvLevel] = useState("");
   const [evDate, setEvDate] = useState(""); const [evSpots, setEvSpots] = useState("");
+  const [analytics, setAnalytics] = useState(null);
+  const [showEventsManager, setShowEventsManager] = useState(false);
 
   async function loadStats() {
     try {
@@ -3295,6 +3357,84 @@ function AdminPanel({ onBack }) {
     } catch (e) { console.error("GOLSZ admin create event error:", e); }
   }
 
+  // Everything here is either already admin-readable directly
+  // (profiles/posts/follows all have an admin-or-public select policy)
+  // or comes from admin_analytics_counts() (migration 028) — a
+  // security-definer RPC that returns only pre-aggregated numbers for
+  // messages/scout_history, since those hold real private content and
+  // are never exposed row-by-row to an admin. Aggregation happens here
+  // in JS against a capped row set, which is fine at today's scale but
+  // would need real SQL aggregation if the user base grows a lot.
+  async function loadAnalytics() {
+    try {
+      const [{ data: profRows }, { data: postRows }, { data: followRows }, { data: counts, error: countsErr }] = await Promise.all([
+        sb.from("profiles").select("plan, occupation, verified_tier, is_banned, is_minor, created_at").order("created_at", { ascending: false }).limit(2000),
+        sb.from("posts").select("id, created_at").order("created_at", { ascending: false }).limit(2000),
+        sb.from("follows").select("follower_id, followed_id").limit(2000),
+        sb.rpc("admin_analytics_counts"),
+      ]);
+      if (countsErr) throw countsErr;
+
+      const dayKey = (iso) => iso.slice(0, 10);
+      const last14Days = Array.from({ length: 14 }, (_, i) => {
+        const d = new Date(); d.setDate(d.getDate() - (13 - i));
+        return d.toISOString().slice(0, 10);
+      });
+      const bucketByDay = (rows) => {
+        const map = new Map(last14Days.map((d) => [d, 0]));
+        (rows || []).forEach((r) => { const k = dayKey(r.created_at); if (map.has(k)) map.set(k, map.get(k) + 1); });
+        return last14Days.map((d) => ({ label: d.slice(5), value: map.get(d) }));
+      };
+
+      const profiles = profRows || [];
+      const today = new Date().toISOString().slice(0, 10);
+      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+      const signupsToday = profiles.filter((p) => dayKey(p.created_at) === today).length;
+      const signupsWeek = profiles.filter((p) => dayKey(p.created_at) >= weekAgo).length;
+
+      const planCounts = { starter: 0, pro: 0, elite: 0 };
+      const occCounts = { Player: 0, Scout: 0, Agent: 0, Coach: 0, Physio: 0, Other: 0 };
+      const tierCounts = { none: 0, pro: 0, elite: 0 };
+      let bannedCount = 0;
+      profiles.forEach((p) => {
+        if (planCounts[p.plan] !== undefined) planCounts[p.plan]++;
+        const occ = p.occupation || "Player";
+        if (occCounts[occ] !== undefined) occCounts[occ]++;
+        const tier = p.verified_tier || "none";
+        if (tierCounts[tier] !== undefined) tierCounts[tier]++;
+        if (p.is_banned) bannedCount++;
+      });
+
+      const followedTally = new Map();
+      (followRows || []).forEach((f) => followedTally.set(f.followed_id, (followedTally.get(f.followed_id) || 0) + 1));
+      const topFollowedIds = [...followedTally.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+      let topFollowed = [];
+      if (topFollowedIds.length) {
+        const { data: names } = await sb.from("public_profile_names").select("id, full_name").in("id", topFollowedIds.map(([id]) => id));
+        const nameById = Object.fromEntries((names || []).map((n) => [n.id, n.full_name]));
+        topFollowed = topFollowedIds.map(([id, count]) => ({ id, name: nameById[id] || "GOLSZ User", count }));
+      }
+
+      setAnalytics({
+        totalUsers: profiles.length,
+        signupsToday, signupsWeek,
+        totalFollows: (followRows || []).length,
+        verifiedCount: tierCounts.pro + tierCounts.elite,
+        bannedCount,
+        mrrEstimate: planCounts.pro * 29 + planCounts.elite * 79,
+        signupsPerDay: bucketByDay(profiles),
+        postsPerDay: bucketByDay(postRows),
+        planCounts, occCounts, tierCounts,
+        topFollowed,
+        messagesTotal: (counts && counts.messages_total) || 0,
+        messages7d: (counts && counts.messages_7d) || 0,
+        scoutConversations: (counts && counts.scout_conversations_total) || 0,
+        scoutUsers: (counts && counts.scout_users_total) || 0,
+        pushSubscribers: (counts && counts.push_subscribers_total) || 0,
+      });
+    } catch (e) { console.error("GOLSZ admin analytics error:", e); setAnalytics(false); }
+  }
+
   useEffect(() => {
     if (!sb) { setAuthorized(false); return; }
     (async () => {
@@ -3305,7 +3445,7 @@ function AdminPanel({ onBack }) {
         const { data: prof } = await sb.from("profiles").select("is_admin").eq("id", user.id).single();
         const ok = !!(prof && prof.is_admin);
         setAuthorized(ok);
-        if (ok) { loadStats(); loadReports(); loadUsers(); loadEvents(); }
+        if (ok) { loadStats(); loadReports(); loadUsers(); loadEvents(); loadAnalytics(); }
       } catch (e) { console.error("GOLSZ admin auth-check error:", e); setAuthorized(false); }
     })();
   }, []);
@@ -3347,7 +3487,7 @@ function AdminPanel({ onBack }) {
       <div style={{ display: "flex", gap: 4, background: C.turf, borderRadius: 11, padding: 4, marginBottom: 14 }}>
         {tabBtn("reports", t("admin_tab_reports"))}
         {tabBtn("users", t("admin_tab_users"))}
-        {tabBtn("events", t("admin_tab_events"))}
+        {tabBtn("analytics", t("admin_tab_analytics"))}
       </div>
 
       {tab === "reports" && (
@@ -3448,44 +3588,133 @@ function AdminPanel({ onBack }) {
         </div>
       )}
 
-      {tab === "events" && (
+      {tab === "analytics" && (
         <div>
-          <div style={{ ...card }}>
-            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_add_event")}</div>
-            <input value={evTitle} onChange={(e) => setEvTitle(e.target.value)} placeholder={t("admin_title_ph")} style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 8 }} />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-              <select value={evSport} onChange={(e) => setEvSport(e.target.value)} style={field}>
-                {SPORTS.filter((s) => s !== "All").map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <input type="date" value={evDate} onChange={(e) => setEvDate(e.target.value)} style={field} />
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-              <input value={evLoc} onChange={(e) => setEvLoc(e.target.value)} placeholder={t("admin_location_ph")} style={field} />
-              <input value={evLevel} onChange={(e) => setEvLevel(e.target.value)} placeholder={t("admin_level_ph")} style={field} />
-            </div>
-            <input type="number" value={evSpots} onChange={(e) => setEvSpots(e.target.value)} placeholder={t("admin_spots_ph")} style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
-            <button onClick={createEvent} disabled={!evTitle.trim() || !evDate} style={{
-              width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 10, padding: "11px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit",
-              opacity: !evTitle.trim() || !evDate ? 0.5 : 1,
-            }}>{t("admin_create_event")}</button>
-          </div>
-          {events === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
-          {events && events.map((e) => (
-            <div key={e.id} style={{ ...card, display: "flex", alignItems: "center", gap: 10, opacity: e.is_blocked ? 0.6 : 1 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                  {e.title}
-                  {e.is_blocked && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_blocked")}</span>}
-                </div>
-                <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{e.event_date} · {e.sport} · {e.location || "—"}</div>
+          {analytics === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+          {analytics === false && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_analytics_err")}</div>}
+          {analytics && (
+            <>
+              <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, margin: "2px 0 8px" }}>{t("admin_overview")}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
+                {[
+                  [t("admin_signups_today"), analytics.signupsToday],
+                  [t("admin_signups_week"), analytics.signupsWeek],
+                  [t("admin_total_follows"), analytics.totalFollows],
+                  [t("admin_verified_count"), analytics.verifiedCount],
+                  [t("admin_banned_count"), analytics.bannedCount],
+                  [t("admin_mrr_estimate"), "$" + analytics.mrrEstimate],
+                ].map(([label, v]) => (
+                  <div key={label} style={{ ...card, margin: 0, padding: "10px 8px", textAlign: "center" }}>
+                    <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{v}</div>
+                    <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{label}</div>
+                  </div>
+                ))}
               </div>
-              <button onClick={() => setEventBlocked(e.id, !e.is_blocked)} style={{
-                fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                background: e.is_blocked ? "#C89B3C1a" : "transparent", color: e.is_blocked ? C.amber : C.slate, border: `1px solid ${e.is_blocked ? C.amber : C.line2}`,
-              }}>{e.is_blocked ? t("admin_unblock_event") : t("admin_block_event")}</button>
-              <button onClick={() => deleteEvent(e.id)} style={iconBtn(C.amber)}><Trash2 size={15} /></button>
-            </div>
-          ))}
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+                <div style={{ ...card, margin: 0 }}>
+                  <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_signups_14d")}</div>
+                  <Bars data={analytics.signupsPerDay} color={C.lime} />
+                </div>
+                <div style={{ ...card, margin: 0 }}>
+                  <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_posts_14d")}</div>
+                  <Bars data={analytics.postsPerDay} color={C.elite} />
+                </div>
+              </div>
+
+              <div style={{ ...card }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_plan_mix")}</div>
+                <BreakdownBar label="Starter" count={analytics.planCounts.starter} total={analytics.totalUsers} color={C.slate} />
+                <BreakdownBar label="Pro" count={analytics.planCounts.pro} total={analytics.totalUsers} color={C.lime} />
+                <BreakdownBar label="Elite" count={analytics.planCounts.elite} total={analytics.totalUsers} color={C.elite} />
+              </div>
+
+              <div style={{ ...card }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_occupation_mix")}</div>
+                {Object.entries(analytics.occCounts).map(([occ, count]) => (
+                  <BreakdownBar key={occ} label={occ} count={count} total={analytics.totalUsers} color={C.lime} />
+                ))}
+              </div>
+
+              <div style={{ ...card }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_verification_mix")}</div>
+                <BreakdownBar label={t("admin_tier_none")} count={analytics.tierCounts.none} total={analytics.totalUsers} color={C.amber} />
+                <BreakdownBar label={t("admin_tier_pro")} count={analytics.tierCounts.pro} total={analytics.totalUsers} color={C.lime} />
+                <BreakdownBar label={t("admin_tier_elite")} count={analytics.tierCounts.elite} total={analytics.totalUsers} color={C.elite} />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
+                {[
+                  [t("admin_scout_conversations"), analytics.scoutConversations],
+                  [t("admin_scout_users"), analytics.scoutUsers],
+                  [t("admin_messages_total"), analytics.messagesTotal],
+                  [t("admin_messages_7d"), analytics.messages7d],
+                  [t("admin_push_subscribers"), analytics.pushSubscribers],
+                ].map(([label, v]) => (
+                  <div key={label} style={{ ...card, margin: 0, padding: "10px 8px", textAlign: "center" }}>
+                    <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{v}</div>
+                    <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ ...card }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_top_followed")}</div>
+                {analytics.topFollowed.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("admin_no_data")}</div>}
+                {analytics.topFollowed.map((u, i) => (
+                  <div key={u.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: i < analytics.topFollowed.length - 1 ? `1px solid ${C.line}` : "none", fontSize: 13 }}>
+                    <span>{i + 1}. {u.name}</span>
+                    <span style={{ color: C.slate, fontFamily: "'Space Mono', monospace" }}>{u.count}</span>
+                  </div>
+                ))}
+              </div>
+
+              <button onClick={() => setShowEventsManager((s) => !s)} style={{ ...iconBtn(C.chalk), width: "100%", justifyContent: "center", marginBottom: showEventsManager ? 10 : 0 }}>
+                {showEventsManager ? "▴" : "▾"} {t("admin_manage_events")}
+              </button>
+
+              {showEventsManager && (
+                <div>
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_add_event")}</div>
+                    <input value={evTitle} onChange={(e) => setEvTitle(e.target.value)} placeholder={t("admin_title_ph")} style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 8 }} />
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                      <select value={evSport} onChange={(e) => setEvSport(e.target.value)} style={field}>
+                        {SPORTS.filter((s) => s !== "All").map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <input type="date" value={evDate} onChange={(e) => setEvDate(e.target.value)} style={field} />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                      <input value={evLoc} onChange={(e) => setEvLoc(e.target.value)} placeholder={t("admin_location_ph")} style={field} />
+                      <input value={evLevel} onChange={(e) => setEvLevel(e.target.value)} placeholder={t("admin_level_ph")} style={field} />
+                    </div>
+                    <input type="number" value={evSpots} onChange={(e) => setEvSpots(e.target.value)} placeholder={t("admin_spots_ph")} style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
+                    <button onClick={createEvent} disabled={!evTitle.trim() || !evDate} style={{
+                      width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 10, padding: "11px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit",
+                      opacity: !evTitle.trim() || !evDate ? 0.5 : 1,
+                    }}>{t("admin_create_event")}</button>
+                  </div>
+                  {events === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+                  {events && events.map((e) => (
+                    <div key={e.id} style={{ ...card, display: "flex", alignItems: "center", gap: 10, opacity: e.is_blocked ? 0.6 : 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          {e.title}
+                          {e.is_blocked && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_blocked")}</span>}
+                        </div>
+                        <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{e.event_date} · {e.sport} · {e.location || "—"}</div>
+                      </div>
+                      <button onClick={() => setEventBlocked(e.id, !e.is_blocked)} style={{
+                        fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
+                        background: e.is_blocked ? "#C89B3C1a" : "transparent", color: e.is_blocked ? C.amber : C.slate, border: `1px solid ${e.is_blocked ? C.amber : C.line2}`,
+                      }}>{e.is_blocked ? t("admin_unblock_event") : t("admin_block_event")}</button>
+                      <button onClick={() => deleteEvent(e.id)} style={iconBtn(C.amber)}><Trash2 size={15} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>

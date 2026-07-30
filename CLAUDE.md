@@ -378,6 +378,27 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   (`AdminPanel`'s `callAdminUserAction()` in `golsz-app.html`) — not `sb.rpc()`, since there's no RPC to call
   anymore for these two actions.
 
+### Admin Panel "Analytics" tab (migration 028)
+
+- Replaced the old standalone "Events" tab — event management (create/block/delete) didn't go away, it moved
+  into a collapsed "▾ Manage events" sub-view within Analytics (`showEventsManager` state in `AdminPanel`),
+  reusing the exact same `loadEvents`/`createEvent`/`deleteEvent`/`setEventBlocked` logic unchanged.
+- `loadAnalytics()` in `AdminPanel` fetches `profiles`/`posts`/`follows` directly (all already admin-or-public
+  readable — `profiles_admin_read`, `posts_read`, `follows_read`) and aggregates signups/posts-per-day (last
+  14 days), plan/occupation/verified-tier mix, total follows, and a top-5-most-followed leaderboard **in JS**
+  against a capped row set (`.limit(2000)` per table) — fine at today's scale, but would need real SQL
+  aggregation (views, not client-side reduction) if the user base grows a lot. This is a known, deliberate
+  scaling ceiling, not an oversight.
+- **`messages` and `scout_history` are never read row-by-row for this** — both hold real private content (DM
+  text, AI Scout conversations) and have no admin-read policy (`messages_read` is sender/recipient-only;
+  `scout_history` has no admin policy at all). Instead, `admin_analytics_counts()` (`security definer`,
+  `is_admin()`-gated, same pattern as every other admin RPC in this schema) returns only pre-aggregated
+  numbers — total/7-day message counts, Scout conversation/user counts, push subscriber count — never a raw
+  row or any message/conversation content.
+- `Bars` and `BreakdownBar` (both in `golsz-app.html`, right above `AdminPanel`) are the only "charting" —
+  plain `<div>`s sized by percentage, no charting library, consistent with this project's zero-extra-
+  dependency client (same spirit as the hand-rolled `svg()` icon helper).
+
 ### `supabase-schema.sql`
 
 **Read the warning at the top of this repo's README section above before touching this file** — it's a

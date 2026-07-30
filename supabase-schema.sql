@@ -1354,5 +1354,31 @@ create policy agents_rw on agents for all using (
 );
 
 -- ============================================================
+-- 28) ADDITIVE — admin analytics aggregate counts
+-- See supabase-migration-028-admin-analytics.sql for full context.
+-- ============================================================
+
+create or replace function admin_analytics_counts()
+returns jsonb language plpgsql security definer set search_path to 'public' as $$
+declare
+  result jsonb;
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  select jsonb_build_object(
+    'messages_total', (select count(*) from messages),
+    'messages_7d', (select count(*) from messages where created_at > now() - interval '7 days'),
+    'scout_conversations_total', (select count(*) from scout_history),
+    'scout_users_total', (select count(distinct user_id) from scout_history),
+    'push_subscribers_total', (select count(distinct user_id) from push_subscriptions)
+  ) into result;
+  return result;
+end;
+$$;
+
+grant execute on function admin_analytics_counts() to authenticated;
+
+-- ============================================================
 -- Done.
 -- ============================================================
