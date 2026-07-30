@@ -1891,7 +1891,7 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: 18, boxSizing: "border-box" }} className="noscroll">
+      <div style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: "18px 18px calc(18px + env(safe-area-inset-bottom, 0px))", boxSizing: "border-box" }} className="noscroll">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div style={{ fontWeight: 800, fontSize: 16 }}>{t("events_add_title")}</div>
           <button onClick={onClose} style={iconBtn(C.chalk)}><X size={18} /></button>
@@ -2709,7 +2709,7 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: 18, boxSizing: "border-box" }} className="noscroll">
+      <div style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: "18px 18px calc(18px + env(safe-area-inset-bottom, 0px))", boxSizing: "border-box" }} className="noscroll">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: locked ? 4 : 16 }}>
           <div style={{ fontWeight: 800, fontSize: 16 }}>{t("editor_title")}</div>
           {!locked && <button onClick={onClose} style={iconBtn(C.chalk)}><X size={18} /></button>}
