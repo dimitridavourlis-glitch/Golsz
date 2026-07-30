@@ -378,6 +378,16 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   (`AdminPanel`'s `callAdminUserAction()` in `golsz-app.html`) — not `sb.rpc()`, since there's no RPC to call
   anymore for these two actions.
 
+### `PostsGrid` — Instagram-style posts grid on the Passport
+
+- Same `viewUserId` convention as `Highlights` right above it in `golsz-app.html` (`null` = own profile) —
+  shown on both your own Passport and anyone else's. Fetches that person's own `posts` rows (already
+  public-read via `posts_read`, no new RLS) and lays them out as a 3-column square grid.
+- Image posts show the photo (`image_url`); text-only or `clip` (video-link) posts show a clean truncated-
+  text tile instead of a blank square, so the grid never has empty-looking cells. Tapping any tile opens the
+  full post (headline/body/image/likes/timestamp) in a bottom-sheet, same modal chrome as `ProfileEditor`.
+- No new database objects — this only reads a table that was already fully public-read for Feed.
+
 ### Admin Panel "Analytics" tab (migration 028)
 
 - Replaced the old standalone "Events" tab — event management (create/block/delete) didn't go away, it moved

@@ -251,6 +251,7 @@ const I18N = {
     family_sent_msg: "Request sent — waiting on their approval.", family_not_found_msg: "No GOLSZ account found with that email.",
     family_couldnt_send: "Couldn't send request.",
     highlights_title: "VERIFIED MEDIA", highlights_empty: "No highlights yet.",
+    passport_posts_title: "POSTS", passport_posts_empty: "No posts yet.",
     highlights_title_ph: "Highlight title (e.g. Full match vs Montreal)", highlights_link_ph: "Link (YouTube, Veo, Hudl…)",
     highlights_add: "Add", highlights_invalid_url: "Enter a valid video link (starting with https://).",
     highlights_add_err: "Couldn't add that link.", highlights_watch: "Watch highlight",
@@ -415,6 +416,7 @@ const I18N = {
     family_sent_msg: "Demande envoyée — en attente de son approbation.", family_not_found_msg: "Aucun compte GOLSZ trouvé avec cet e-mail.",
     family_couldnt_send: "Impossible d'envoyer la demande.",
     highlights_title: "MÉDIAS VÉRIFIÉS", highlights_empty: "Aucun temps fort pour l'instant.",
+    passport_posts_title: "PUBLICATIONS", passport_posts_empty: "Aucune publication pour l'instant.",
     highlights_title_ph: "Titre du temps fort (ex. Match complet vs Montréal)", highlights_link_ph: "Lien (YouTube, Veo, Hudl…)",
     highlights_add: "Ajouter", highlights_invalid_url: "Indiquez un lien vidéo valide (commençant par https://).",
     highlights_add_err: "Impossible d'ajouter ce lien.", highlights_watch: "Voir le temps fort",
@@ -579,6 +581,7 @@ const I18N = {
     family_sent_msg: "Solicitud enviada — esperando su aprobación.", family_not_found_msg: "No se encontró ninguna cuenta de GOLSZ con ese correo.",
     family_couldnt_send: "No se pudo enviar la solicitud.",
     highlights_title: "MEDIOS VERIFICADOS", highlights_empty: "Aún no hay mejores jugadas.",
+    passport_posts_title: "PUBLICACIONES", passport_posts_empty: "Aún no hay publicaciones.",
     highlights_title_ph: "Título de la jugada (ej. Partido completo vs Montreal)", highlights_link_ph: "Enlace (YouTube, Veo, Hudl…)",
     highlights_add: "Añadir", highlights_invalid_url: "Introduce un enlace de vídeo válido (que empiece por https://).",
     highlights_add_err: "No se pudo añadir ese enlace.", highlights_watch: "Ver la jugada",
@@ -743,6 +746,7 @@ const I18N = {
     family_sent_msg: "Το αίτημα στάλθηκε — αναμονή έγκρισης.", family_not_found_msg: "Δεν βρέθηκε λογαριασμός GOLSZ με αυτό το email.",
     family_couldnt_send: "Δεν ήταν δυνατή η αποστολή του αιτήματος.",
     highlights_title: "ΕΠΑΛΗΘΕΥΜΕΝΑ ΜΕΣΑ", highlights_empty: "Δεν υπάρχουν highlights ακόμα.",
+    passport_posts_title: "ΑΝΑΡΤΗΣΕΙΣ", passport_posts_empty: "Δεν υπάρχουν αναρτήσεις ακόμα.",
     highlights_title_ph: "Τίτλος highlight (π.χ. Πλήρης αγώνας εναντίον Μόντρεαλ)", highlights_link_ph: "Σύνδεσμος (YouTube, Veo, Hudl…)",
     highlights_add: "Προσθήκη", highlights_invalid_url: "Εισαγάγετε έγκυρο σύνδεσμο βίντεο (που να ξεκινά με https://).",
     highlights_add_err: "Δεν ήταν δυνατή η προσθήκη αυτού του συνδέσμου.", highlights_watch: "Δείτε το highlight",
@@ -2520,6 +2524,96 @@ function Highlights({ viewUserId }) {
   );
 }
 
+/* ============ POSTS GRID (Instagram-style) ============
+   Same viewUserId convention as Highlights above (null = own profile).
+   Square-tile grid of this person's own Feed posts — image posts show
+   the photo; text-only posts (or clip/video posts) show a clean
+   truncated-text tile instead of leaving a blank square. Tapping any
+   tile opens the full post in a bottom-sheet, same visual chrome as
+   ProfileEditor's modal elsewhere in this file. */
+function PostsGrid({ viewUserId }) {
+  const { t } = useLang();
+  const [posts, setPosts] = useState(null);
+  const [openPost, setOpenPost] = useState(null);
+
+  useEffect(() => {
+    if (!sb) return;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        const targetId = viewUserId || user.id;
+        const { data, error } = await sb.from("posts")
+          .select("id, kind, headline, body, image_url, likes_count, created_at")
+          .eq("author_id", targetId)
+          .order("created_at", { ascending: false })
+          .limit(30);
+        if (error) throw error;
+        setPosts(data || []);
+      } catch (e) { console.error("GOLSZ posts grid load error:", e); setPosts([]); }
+    })();
+  }, [viewUserId]);
+
+  if (posts === null) return null;
+
+  return (
+    <div style={{ ...card }}>
+      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("passport_posts_title")}</div>
+      {posts.length === 0 ? (
+        <div style={{ fontSize: 12.5, color: C.slate }}>{t("passport_posts_empty")}</div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 3 }}>
+          {posts.map((p) => (
+            <div key={p.id} onClick={() => setOpenPost(p)} style={{
+              position: "relative", cursor: "pointer", borderRadius: 4, overflow: "hidden",
+              aspectRatio: "1 / 1", background: C.turf, border: `1px solid ${C.line}`,
+            }}>
+              {p.image_url ? (
+                <img src={p.image_url} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <div style={{ width: "100%", height: "100%", padding: 8, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", boxSizing: "border-box" }}>
+                  <span style={{
+                    fontSize: 10.5, color: C.body, lineHeight: 1.3, display: "-webkit-box",
+                    WebkitLineClamp: 5, WebkitBoxOrient: "vertical", overflow: "hidden",
+                  }}>{p.headline || p.body || ""}</span>
+                </div>
+              )}
+              {p.kind === "clip" && (
+                <span style={{ position: "absolute", top: 5, right: 5 }}><Video size={13} color="#fff" /></span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {openPost && (
+        <div onClick={() => setOpenPost(null)} style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div onClick={(e) => e.stopPropagation()} className="noscroll" style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: 18, boxSizing: "border-box" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={() => setOpenPost(null)} style={iconBtn(C.chalk)}><X size={18} /></button>
+            </div>
+            {openPost.headline && <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{openPost.headline}</div>}
+            {openPost.kind === "clip" && openPost.body ? (
+              <a href={openPost.body} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13.5, color: C.lime, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                <Video size={13} /> {t("highlights_watch")}
+              </a>
+            ) : (
+              <div style={{ fontSize: 13.5, color: C.body, lineHeight: 1.5 }}><Linkify text={openPost.body} /></div>
+            )}
+            {openPost.image_url && (
+              <img src={openPost.image_url} style={{ width: "100%", borderRadius: 12, marginTop: 10, border: `1px solid ${C.line2}` }} />
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.line}`, fontSize: 12, color: C.slate }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Heart size={14} /> {openPost.likes_count || 0}</span>
+              <span>{timeAgo(openPost.created_at)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ============ PROFILE — Digital Sports Passport (signature) ============ */
 /* profiles.full_name + athletes(*) merged into the passport's shape. Real
    numeric/text fields fall back to "—" when unset rather than showing
@@ -3037,6 +3131,9 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
 
       {/* media */}
       <Highlights viewUserId={viewingOther ? viewUserId : null} />
+
+      {/* posts grid */}
+      {real && <PostsGrid viewUserId={viewingOther ? viewUserId : null} />}
 
       {/* timeline — not backed by a real data model yet, demo only */}
       {!real && (
