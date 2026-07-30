@@ -216,6 +216,7 @@ const I18N = {
     notif_error: "Something went wrong turning on notifications. Try again.",
     notif_title_on: "Notifications on — tap to turn off", notif_title_off: "Turn on notifications for messages & new followers",
     settings_notifications: "NOTIFICATIONS", settings_notif_on: "On", settings_notif_off: "Off",
+    settings_account: "ACCOUNT", settings_change_password: "Change password", settings_cancel: "Cancel",
     settings_plan: "PLAN", settings_plan_current: "Current", settings_plan_switch: "Choose",
     settings_plan_checkout_unavailable: "Checkout isn't set up yet — check back soon.",
     settings_plan_downgrade_note: "Switched to Starter. This won't cancel an existing paid subscription — use the receipt email Stripe sent you to manage or cancel billing.",
@@ -384,6 +385,7 @@ const I18N = {
     notif_error: "Une erreur s'est produite lors de l'activation des notifications. Réessayez.",
     notif_title_on: "Notifications activées — touchez pour désactiver", notif_title_off: "Activer les notifications pour les messages et nouveaux abonnés",
     settings_notifications: "NOTIFICATIONS", settings_notif_on: "Activées", settings_notif_off: "Désactivées",
+    settings_account: "COMPTE", settings_change_password: "Changer le mot de passe", settings_cancel: "Annuler",
     settings_plan: "FORMULE", settings_plan_current: "Actuelle", settings_plan_switch: "Choisir",
     settings_plan_checkout_unavailable: "Le paiement n'est pas encore configuré — revenez bientôt.",
     settings_plan_downgrade_note: "Passé à Starter. Cela n'annule pas un abonnement payant existant — utilisez l'e-mail de reçu envoyé par Stripe pour gérer ou annuler la facturation.",
@@ -552,6 +554,7 @@ const I18N = {
     notif_error: "Algo salió mal al activar las notificaciones. Inténtalo de nuevo.",
     notif_title_on: "Notificaciones activadas — toca para desactivar", notif_title_off: "Activa las notificaciones de mensajes y nuevos seguidores",
     settings_notifications: "NOTIFICACIONES", settings_notif_on: "Activadas", settings_notif_off: "Desactivadas",
+    settings_account: "CUENTA", settings_change_password: "Cambiar contraseña", settings_cancel: "Cancelar",
     settings_plan: "PLAN", settings_plan_current: "Actual", settings_plan_switch: "Elegir",
     settings_plan_checkout_unavailable: "El pago aún no está configurado — vuelve pronto.",
     settings_plan_downgrade_note: "Cambiado a Starter. Esto no cancela una suscripción de pago existente — usa el correo del recibo de Stripe para gestionar o cancelar la facturación.",
@@ -720,6 +723,7 @@ const I18N = {
     notif_error: "Κάτι πήγε στραβά κατά την ενεργοποίηση των ειδοποιήσεων. Δοκιμάστε ξανά.",
     notif_title_on: "Ειδοποιήσεις ενεργές — πατήστε για απενεργοποίηση", notif_title_off: "Ενεργοποιήστε ειδοποιήσεις για μηνύματα & νέους ακόλουθους",
     settings_notifications: "ΕΙΔΟΠΟΙΗΣΕΙΣ", settings_notif_on: "Ενεργές", settings_notif_off: "Ανενεργές",
+    settings_account: "ΛΟΓΑΡΙΑΣΜΟΣ", settings_change_password: "Αλλαγή κωδικού", settings_cancel: "Ακύρωση",
     settings_plan: "ΠΑΚΕΤΟ", settings_plan_current: "Τρέχον", settings_plan_switch: "Επιλογή",
     settings_plan_checkout_unavailable: "Η πληρωμή δεν έχει ρυθμιστεί ακόμα — ελέγξτε ξανά σύντομα.",
     settings_plan_downgrade_note: "Αλλάξατε σε Starter. Αυτό δεν ακυρώνει τυχόν υπάρχουσα συνδρομή — χρησιμοποιήστε το email απόδειξης από το Stripe για να διαχειριστείτε ή να ακυρώσετε τη χρέωση.",
@@ -1008,6 +1012,12 @@ function SettingsButton() {
   const [notifEnabled, setNotifEnabled] = useState(false);
   const [notifBusy, setNotifBusy] = useState(false);
   const [notifMsg, setNotifMsg] = useState("");
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwErr, setPwErr] = useState("");
+  const [pwDone, setPwDone] = useState(false);
 
   // Split from the push-status effect below (which bails out entirely when
   // pushSupported() is false) since uid/plan need to load regardless of
@@ -1082,6 +1092,21 @@ function SettingsButton() {
     } finally { setNotifBusy(false); }
   }
 
+  async function changePassword() {
+    if (!sb || pwBusy) return;
+    if (!pw || pw.length < 6) { setPwErr(t("reset_pw_min_len")); return; }
+    if (pw !== pw2) { setPwErr(t("reset_pw_mismatch")); return; }
+    setPwBusy(true); setPwErr("");
+    try {
+      const { error } = await sb.auth.updateUser({ password: pw });
+      if (error) throw error;
+      setPwDone(true); setPw(""); setPw2("");
+    } catch (e) {
+      console.error("GOLSZ change password error:", e);
+      setPwErr((e && e.message) || t("reset_pw_err"));
+    } finally { setPwBusy(false); }
+  }
+
   return (
     <>
       <button onClick={() => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); setOpen(true); }} title={t("settings_title")} style={{ background: "none", border: "none", color: C.chalk, cursor: "pointer", padding: 4, display: "flex" }}>
@@ -1154,6 +1179,41 @@ function SettingsButton() {
                   }}>{t("settings_notif_off")}</button>
                 </div>
                 {notifMsg && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 8, lineHeight: 1.4 }}>{notifMsg}</div>}
+              </div>
+            )}
+            {sb && uid && (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_account")}</div>
+                {!pwOpen ? (
+                  <button onClick={() => { setPwOpen(true); setPwDone(false); setPwErr(""); }} style={{
+                    width: "100%", textAlign: "left", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12,
+                    padding: "12px 14px", color: C.chalk, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                  }}>{t("settings_change_password")}</button>
+                ) : (
+                  <div style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, padding: 14 }}>
+                    {pwDone ? (
+                      <div style={{ fontSize: 13, color: C.lime, fontWeight: 700 }}>{t("reset_pw_updated")}</div>
+                    ) : (
+                      <>
+                        <input value={pw} onChange={(e) => setPw(e.target.value)} type="password" placeholder={t("reset_pw_new_ph")}
+                          style={{ width: "100%", background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
+                        <input value={pw2} onChange={(e) => setPw2(e.target.value)} type="password" placeholder={t("reset_pw_confirm_ph")}
+                          style={{ width: "100%", background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
+                        {pwErr && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8 }}>{pwErr}</div>}
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={changePassword} disabled={pwBusy} style={{
+                            flex: 1, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px",
+                            fontWeight: 800, fontSize: 12.5, cursor: pwBusy ? "default" : "pointer", fontFamily: "inherit", opacity: pwBusy ? 0.6 : 1,
+                          }}>{pwBusy ? t("events_saving") : t("reset_pw_update_btn")}</button>
+                          <button onClick={() => { setPwOpen(false); setPw(""); setPw2(""); setPwErr(""); }} style={{
+                            background: "transparent", color: C.slate, border: `1px solid ${C.line2}`, borderRadius: 9,
+                            padding: "9px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                          }}>{t("settings_cancel")}</button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_language")}</div>
