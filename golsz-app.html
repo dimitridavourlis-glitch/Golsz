@@ -2613,7 +2613,15 @@ function Highlights({ viewUserId }) {
     setBusy(true); setErr("");
     try {
       let parsed;
-      try { parsed = new URL(url.trim()); } catch { throw new Error(t("highlights_invalid_url")); }
+      // new URL() only rejects malformed strings, not unsafe schemes —
+      // javascript:/data:/vbscript: all parse successfully and would
+      // otherwise get stored and later rendered as a real <a href>,
+      // executing on click. Restricting to http(s) here is what actually
+      // enforces the "must start with https://" this already claimed.
+      try {
+        parsed = new URL(url.trim());
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("bad protocol");
+      } catch { throw new Error(t("highlights_invalid_url")); }
       const entry = {
         id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
         title: title.trim(), url: parsed.toString(),

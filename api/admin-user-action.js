@@ -70,7 +70,14 @@ export default async function handler(req, res) {
   if (!(await isAdmin(supaUrl, serviceKey, callerId))) return res.status(403).json({ error: "Admins only." });
 
   const { action, targetId } = req.body || {};
-  if (!targetId || typeof targetId !== "string") return res.status(400).json({ error: "Missing targetId" });
+  // targetId gets embedded directly into an Admin API URL path and a
+  // PostgREST filter below — validating it's actually a UUID first (not
+  // just "a string") closes off any path-traversal/filter-injection
+  // shape before it reaches either one.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!targetId || typeof targetId !== "string" || !UUID_RE.test(targetId)) {
+    return res.status(400).json({ error: "Missing or invalid targetId" });
+  }
   if (targetId === callerId) return res.status(400).json({ error: "Cannot act on your own account this way." });
 
   try {
