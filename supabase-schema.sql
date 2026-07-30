@@ -1319,5 +1319,40 @@ create trigger notify_new_follower
   for each row execute function notify_send_push();
 
 -- ============================================================
+-- 27) ADDITIVE — real auth-layer ban/delete, plus coaches/agents RLS
+-- See supabase-migration-027-admin-auth-actions.sql for full context.
+-- ============================================================
+
+drop function if exists admin_delete_profile(uuid);
+
+create or replace function admin_delete_profile_data(p_target uuid)
+returns void language plpgsql security definer set search_path to 'public' as $$
+begin
+  delete from scout_history where user_id = p_target;
+  delete from parent_links where athlete_id = p_target or parent_id = p_target;
+  delete from athletes where id = p_target;
+  delete from coaches where id = p_target;
+  delete from agents where id = p_target;
+end;
+$$;
+
+revoke all on function admin_delete_profile_data(uuid) from public, authenticated, anon;
+grant execute on function admin_delete_profile_data(uuid) to service_role;
+
+drop policy if exists coaches_rw on coaches;
+create policy coaches_rw on coaches for all using (
+  id = auth.uid()
+) with check (
+  id = auth.uid()
+);
+
+drop policy if exists agents_rw on agents;
+create policy agents_rw on agents for all using (
+  id = auth.uid()
+) with check (
+  id = auth.uid()
+);
+
+-- ============================================================
 -- Done.
 -- ============================================================

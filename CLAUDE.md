@@ -363,6 +363,21 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   Safari's UI chrome (not standalone), so `isStandaloneDisplay()` would never actually pass even after
   installing.
 
+### `api/admin-user-action.js` (Vercel serverless function)
+
+- Backs the Admin Panel's ban/unban/delete buttons (migration 027) — the one place in the app that needs the
+  real Supabase Admin API (service role key), so it can't be a client-callable RPC. Verifies the caller's JWT
+  and checks `profiles.is_admin` itself (same `getUserId()` pattern as `api/scout.js`) before doing anything.
+- `ban`/`unban` set `ban_duration` on the real `auth.users` row via the Admin API (`"876000h"` ≈ forever,
+  `"none"` to lift it) in addition to the existing `profiles.is_banned` flag — the flag alone only ever gated
+  app-level RLS/UI, not whether the account could actually log in.
+- `delete` calls `admin_delete_profile_data(p_target uuid)` (`security definer`, granted to `service_role`
+  only) to clean up the tables that don't cascade from `profiles`, then deletes the real `auth.users` row via
+  the Admin API, which cascades to `profiles` and everything already cascading from it.
+- Client calls this via `fetch("/api/admin-user-action", ...)` with a real `Authorization: Bearer` header
+  (`AdminPanel`'s `callAdminUserAction()` in `golsz-app.html`) — not `sb.rpc()`, since there's no RPC to call
+  anymore for these two actions.
+
 ### `supabase-schema.sql`
 
 **Read the warning at the top of this repo's README section above before touching this file** — it's a
@@ -391,17 +406,25 @@ project, not a from-scratch bootstrap script. The real tables:
 - `posts` / `post_likes` / `events` — added in migration 002; Feed/Discover/Events' real data source.
 - `post_reports` / `blocks` — added in migration 005; minimum-viable moderation (report + block + admin
   delete via `is_admin()`, no queue UI).
-- **Admin moderation (migration 019)**: `profiles.is_banned` (gates `posts_write`/`athletes_read` the same
-  shape as `is_restricted_minor`, and the client force-signs a banned user out — see `Root()`'s ban check in
-  `golsz-app.html`) and `events.is_blocked` (hides an event from everyone but admins via `events_read`,
-  without deleting it). `admin_delete_profile(p_target uuid)` is a `security definer` RPC (only usable by
-  `is_admin()`) that deletes `athletes`/`coaches`/`agents`/`parent_links`/`scout_history` for that user
-  explicitly, then `profiles` (which cascades `posts`/`post_likes`/`post_reports`/`blocks`/`follows`/
-  `messages`/`hidden_conversations`/`push_subscriptions`). **Neither ban nor delete touches `auth.users`** —
-  that needs the Supabase Admin API with a service-role key (no server endpoint for it yet; the pattern
-  would look like `api/scout.js` calling `supabase.auth.admin.updateUserById`/`deleteUser`). A banned/deleted
-  user's *profile* is fully gone/blocked from the app's perspective, but their raw login credential still
-  technically exists until that follow-up is built.
+- **Admin moderation (migration 019, ban/delete moved to the real auth layer in migration 027)**:
+  `profiles.is_banned` (gates `posts_write`/`athletes_read` the same shape as `is_restricted_minor`, and the
+  client force-signs a banned user out — see `Root()`'s ban check in `golsz-app.html`) and `events.is_blocked`
+  (hides an event from everyone but admins via `events_read`, without deleting it) are still the app-level
+  flags. But ban/unban/delete from the Admin Panel now go through `api/admin-user-action.js` instead of a
+  direct client-side `profiles` update or RPC call — that endpoint verifies the caller is really an admin
+  (via their JWT + a `profiles.is_admin` lookup, using the service role key), then calls the **Supabase Admin
+  API** to do the real thing: `ban` sets `ban_duration` on the `auth.users` row (Supabase has no literal
+  "forever," so `"876000h"` — ~100 years — is the convention for "until an admin lifts it") in addition to
+  `profiles.is_banned`, and `delete` calls `admin_delete_profile_data(p_target uuid)` (a `security definer`
+  function, granted to `service_role` only — **not** `authenticated`, since unlike the RPC it replaces it has
+  no `is_admin()` check of its own; the endpoint already did that check before ever calling it) to clean up
+  `athletes`/`coaches`/`agents`/`parent_links`/`scout_history` (these don't cascade from `profiles`), then
+  deletes the real `auth.users` row via the Admin API — which cascades to `profiles` and everything that
+  already cascades from it (`posts`/`post_likes`/`post_reports`/`blocks`/`follows`/`messages`/
+  `hidden_conversations`/`push_subscriptions`). A banned/deleted account's actual login credential is now
+  really gone/locked, not just hidden from the app. One known residual gap: an already-active session's
+  access token isn't force-invalidated, so a just-banned user could keep working until that token's natural
+  expiry (short-lived, but not instant) — the ban still blocks any *new* session from that point on.
 - **⚠️ RLS in this project is row-level, not column-level — don't assume "you can update your own row" also
   means "only the columns the UI exposes."** `profiles_self` (an undocumented base policy, see the file-level
   warning above) grants a broad self-row UPDATE on `profiles`, which — with no column-aware guard — would let
@@ -516,11 +539,11 @@ though the backend allowed it. If you add another place that surfaces a Message 
 - **Non-mechanical Pro/Elite features.** Only Scout's daily limit is actually gated by `profiles.plan`
   today. Marketing bullets like "full verified passport" or "priority visibility" aren't backed by any
   distinct mechanic anywhere in the app — gating those needs a product decision on what they mean first.
-- **`coaches`/`agents`** have RLS enabled with zero policies (fully locked, even to their own owner) since
-  nothing signs anyone up with those roles yet.
+- **`coaches`/`agents` now have real RLS (migration 027)** — owner-only (`id = auth.uid()`), same simple
+  shape as `push_subscriptions`. Still unused by the app today (every occupation's extra fields live in
+  `athletes` — see `ProfileEditor` — so nothing actually writes to these two tables yet), but they're no
+  longer fully locked the moment something does.
 - **Deeper moderation** (a real review queue, automated detection) beyond report/block/admin-delete.
-- **Ban/delete don't reach `auth.users`** (see migration 019 above) — a banned or deleted account's login
-  credential still exists in Supabase Auth until an Admin-API-backed serverless endpoint is built.
 - Production monitoring/alerting (e.g. Sentry) — nothing wired up yet.
 - **Push notifications are fully wired (migration 026)** — `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
   `VAPID_SUBJECT`, and `SUPABASE_WEBHOOK_SECRET` are set as Vercel env vars, and the two triggers that call

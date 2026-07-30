@@ -3235,8 +3235,22 @@ function AdminPanel({ onBack }) {
     try { await sb.from("profiles").update({ plan: val }).eq("id", id); loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin set-plan error:", e); }
   }
+  // Ban/delete need the real Supabase Admin API (service role key,
+  // server-only), not just a profiles/table update — see
+  // api/admin-user-action.js and migration 027.
+  async function callAdminUserAction(action, targetId) {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch("/api/admin-user-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + (session && session.access_token) },
+      body: JSON.stringify({ action, targetId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data && data.error) || "Action failed");
+    return data;
+  }
   async function setUserBanned(id, val) {
-    try { const { error } = await sb.from("profiles").update({ is_banned: val }).eq("id", id); if (error) throw error; loadUsers(userQuery); }
+    try { await callAdminUserAction(val ? "ban" : "unban", id); loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin ban error:", e); alert(t("admin_ban_user_err")); }
   }
   async function setUserVerifiedTier(id, tier) {
@@ -3246,8 +3260,7 @@ function AdminPanel({ onBack }) {
   async function deleteUser(id) {
     if (!window.confirm(t("admin_delete_user_confirm"))) return;
     try {
-      const { error } = await sb.rpc("admin_delete_profile", { p_target: id });
-      if (error) throw error;
+      await callAdminUserAction("delete", id);
       loadUsers(userQuery); loadStats();
     } catch (e) { console.error("GOLSZ admin delete user error:", e); alert(t("admin_delete_user_err")); }
   }
