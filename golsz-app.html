@@ -57,6 +57,7 @@ const ChevronUp = svg('<path d="m18 15-6-6-6 6"/>');
 const Send = svg('<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>');
 const Heart = svg('<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>');
 const Bell = svg('<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>');
+const Camera = svg('<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>');
 const SlidersHorizontal = svg('<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>');
 const Flame = svg('<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5"/>');
 const Trophy = svg('<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>');
@@ -273,6 +274,9 @@ const I18N = {
     passport_finish_bold: "Finish building your profile",
     passport_finish_rest: " — add your sport, position and stats so coaches and Scout can find you.",
     passport_member: "GOLSZ MEMBER", passport_sport: "SPORT", passport_position: "POSITION", passport_club: "CLUB",
+    passport_photo_tip: "Tip: use a sports photo — action shot, team photo, or in uniform.",
+    passport_photo_type_err: "Please choose an image file.", passport_photo_size_err: "Images must be under 8MB.",
+    passport_photo_err: "Couldn't upload your photo — try again.",
     passport_passport_no: "PASSPORT NO.", passport_height: "HEIGHT", passport_grad: "GRAD", passport_gpa: "GPA",
     passport_weight: "WEIGHT", passport_status: "STATUS", passport_bio_title: "SCOUTING BIO",
     passport_license: "LICENSE", passport_looking_for: "LOOKING FOR PLAYERS",
@@ -438,6 +442,9 @@ const I18N = {
     passport_finish_bold: "Terminez votre profil",
     passport_finish_rest: " — ajoutez votre sport, poste et statistiques pour que les entraîneurs et Scout puissent vous trouver.",
     passport_member: "MEMBRE GOLSZ", passport_sport: "SPORT", passport_position: "POSTE", passport_club: "CLUB",
+    passport_photo_tip: "Astuce : utilisez une photo de sport — action, équipe, ou en tenue.",
+    passport_photo_type_err: "Veuillez choisir un fichier image.", passport_photo_size_err: "Les images doivent faire moins de 8 Mo.",
+    passport_photo_err: "Impossible d'envoyer votre photo — réessayez.",
     passport_passport_no: "N° PASSEPORT", passport_height: "TAILLE", passport_grad: "DIPLÔME", passport_gpa: "GPA",
     passport_weight: "POIDS", passport_status: "STATUT", passport_bio_title: "BIO DE RECRUTEMENT",
     passport_license: "LICENCE", passport_looking_for: "RECHERCHE DE JOUEURS",
@@ -603,6 +610,9 @@ const I18N = {
     passport_finish_bold: "Termina de crear tu perfil",
     passport_finish_rest: " — añade tu deporte, posición y estadísticas para que los entrenadores y Scout puedan encontrarte.",
     passport_member: "MIEMBRO DE GOLSZ", passport_sport: "DEPORTE", passport_position: "POSICIÓN", passport_club: "CLUB",
+    passport_photo_tip: "Consejo: usa una foto deportiva — en acción, con el equipo, o con el uniforme.",
+    passport_photo_type_err: "Elige un archivo de imagen.", passport_photo_size_err: "Las imágenes deben pesar menos de 8MB.",
+    passport_photo_err: "No se pudo subir tu foto — inténtalo de nuevo.",
     passport_passport_no: "N.º DE PASAPORTE", passport_height: "ALTURA", passport_grad: "GRADUACIÓN", passport_gpa: "GPA",
     passport_weight: "PESO", passport_status: "ESTADO", passport_bio_title: "BIOGRAFÍA DEPORTIVA",
     passport_license: "LICENCIA", passport_looking_for: "BUSCANDO JUGADORES",
@@ -768,6 +778,9 @@ const I18N = {
     passport_finish_bold: "Ολοκληρώστε το προφίλ σας",
     passport_finish_rest: " — προσθέστε άθλημα, θέση και στατιστικά ώστε προπονητές και το Scout να σας βρουν.",
     passport_member: "ΜΕΛΟΣ GOLSZ", passport_sport: "ΑΘΛΗΜΑ", passport_position: "ΘΕΣΗ", passport_club: "ΣΥΛΛΟΓΟΣ",
+    passport_photo_tip: "Συμβουλή: χρησιμοποιήστε αθλητική φωτογραφία — σε δράση, με την ομάδα, ή με τη φόρμα.",
+    passport_photo_type_err: "Επιλέξτε ένα αρχείο εικόνας.", passport_photo_size_err: "Οι εικόνες πρέπει να είναι κάτω από 8MB.",
+    passport_photo_err: "Δεν ήταν δυνατή η μεταφόρτωση της φωτογραφίας — δοκιμάστε ξανά.",
     passport_passport_no: "ΑΡ. ΔΙΑΒΑΤΗΡΙΟΥ", passport_height: "ΥΨΟΣ", passport_grad: "ΑΠΟΦΟΙΤΗΣΗ", passport_gpa: "GPA",
     passport_weight: "ΒΑΡΟΣ", passport_status: "ΚΑΤΑΣΤΑΣΗ", passport_bio_title: "ΒΙΟΓΡΑΦΙΚΟ ΣΚΑΟΥΤΙΝΓΚ",
     passport_license: "ΑΔΕΙΑ", passport_looking_for: "ΑΝΑΖΗΤΗΣΗ ΠΑΙΚΤΩΝ",
@@ -2627,6 +2640,7 @@ function toPassport(profile, ath, uid, t) {
   return {
     name, occupation: (profile && profile.occupation) || "",
     verifiedTier: (profile && profile.verified_tier) || "none",
+    avatarUrl: (profile && profile.avatar_url) || null,
     handle: "@" + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, ""),
     id: `GLS·${(country ? country.slice(0, 2) : "XX").toUpperCase()}·${dash(ath && ath.grad_year)}·${shortId}`,
     initials: initials(name), nat: `${flagFor(country)} ${dash(country)}`,
@@ -2838,9 +2852,41 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const [followedByThem, setFollowedByThem] = useState(false);
   const [followers, setFollowers] = useState(null);
   const [followingList, setFollowingList] = useState(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarErr, setAvatarErr] = useState("");
   const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo immediately
   const real = !!uid;
   const viewingOther = !!(viewUserId && uid && viewUserId !== uid);
+
+  // Same validate-then-upload-as-ArrayBuffer pattern Feed's post-image
+  // upload already uses (raw File uploads can arrive empty on some
+  // mobile browsers) — just a different bucket (avatars vs post-images)
+  // and it writes straight to profiles.avatar_url instead of a post row.
+  function pickAvatar(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file || !sb || !uid) return;
+    if (!file.type.startsWith("image/")) { setAvatarErr(t("passport_photo_type_err")); return; }
+    if (file.size > 8 * 1024 * 1024) { setAvatarErr(t("passport_photo_size_err")); return; }
+    setAvatarErr("");
+    (async () => {
+      setAvatarBusy(true);
+      try {
+        const ext = (file.name.split(".").pop() || "jpg").toLowerCase().slice(0, 5);
+        const path = `${uid}/${Date.now()}.${ext}`;
+        const bytes = await file.arrayBuffer();
+        const { error: upErr } = await sb.storage.from("avatars").upload(path, bytes, { contentType: file.type || "image/jpeg" });
+        if (upErr) throw upErr;
+        const avatarUrl = sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+        const { error } = await sb.from("profiles").update({ avatar_url: avatarUrl }).eq("id", uid);
+        if (error) throw error;
+        setProfile((p) => (p ? { ...p, avatar_url: avatarUrl } : p));
+      } catch (err) {
+        console.error("GOLSZ avatar upload error:", err);
+        setAvatarErr((err && err.message) || t("passport_photo_err"));
+      } finally { setAvatarBusy(false); }
+    })();
+  }
 
   async function load() {
     if (!sb) return;
@@ -2855,18 +2901,18 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         // viewed person's name comes from the public_profile_names view —
         // same pattern used in Feed/Discover/Messages.
         const [{ data: nameRow }, { data: ath }, { data: myFollow }, { data: theirFollow }] = await Promise.all([
-          sb.from("public_profile_names").select("full_name, occupation, verified_tier").eq("id", viewUserId).maybeSingle(),
+          sb.from("public_profile_names").select("full_name, occupation, verified_tier, avatar_url").eq("id", viewUserId).maybeSingle(),
           sb.from("athletes").select("*").eq("id", viewUserId).maybeSingle(),
           sb.from("follows").select("followed_id").eq("follower_id", user.id).eq("followed_id", viewUserId).maybeSingle(),
           sb.from("follows").select("follower_id").eq("follower_id", viewUserId).eq("followed_id", user.id).maybeSingle(),
         ]);
-        setProfile(nameRow ? { full_name: nameRow.full_name, occupation: nameRow.occupation, verified_tier: nameRow.verified_tier } : null);
+        setProfile(nameRow ? { full_name: nameRow.full_name, occupation: nameRow.occupation, verified_tier: nameRow.verified_tier, avatar_url: nameRow.avatar_url } : null);
         setAthlete(ath || null);
         setFollowing(!!myFollow);
         setFollowedByThem(!!theirFollow);
       } else {
         const [{ data: prof }, { data: ath }] = await Promise.all([
-          sb.from("profiles").select("full_name, is_admin, occupation, verified_tier, plan").eq("id", user.id).single(),
+          sb.from("profiles").select("full_name, is_admin, occupation, verified_tier, plan, avatar_url").eq("id", user.id).single(),
           sb.from("athletes").select("*").eq("id", user.id).single(),
         ]);
         setProfile(prof || null);
@@ -3015,12 +3061,36 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
 
         <div style={{ display: "flex", gap: 14, padding: 16 }}>
           <div>
-            <div style={{
-              width: 84, height: 100, borderRadius: 10, background: `linear-gradient(135deg, ${C.turf}, ${C.line2})`,
-              border: `1px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "'Space Mono', monospace", fontWeight: 800, fontSize: 34, color: C.lime,
-            }}>{p.initials}</div>
+            <div style={{ position: "relative", width: 84, height: 100 }}>
+              <div style={{
+                width: 84, height: 100, borderRadius: 10,
+                background: p.avatarUrl ? undefined : `linear-gradient(135deg, ${C.turf}, ${C.line2})`,
+                border: `1px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center",
+                overflow: "hidden",
+                fontFamily: "'Space Mono', monospace", fontWeight: 800, fontSize: 34, color: C.lime,
+              }}>
+                {p.avatarUrl ? (
+                  <img src={p.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : p.initials}
+              </div>
+              {!viewingOther && real && (
+                <label style={{
+                  position: "absolute", bottom: -6, right: -6, width: 26, height: 26, borderRadius: 99,
+                  background: C.lime, border: `2px solid ${C.pitch}`, display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: avatarBusy ? "default" : "pointer", opacity: avatarBusy ? 0.6 : 1,
+                }}>
+                  <Camera size={13} color={C.ink} />
+                  <input type="file" accept="image/*" onChange={pickAvatar} disabled={avatarBusy} style={{ display: "none" }} />
+                </label>
+              )}
+            </div>
             <div style={{ textAlign: "center", fontSize: 8.5, color: C.slate, marginTop: 5, fontFamily: "'Space Mono', monospace" }}>{real ? t("passport_member") : "VERIFIED PHOTO"}</div>
+            {!viewingOther && real && (
+              <div style={{ fontSize: 9, color: C.slate, marginTop: 6, maxWidth: 84, textAlign: "center", lineHeight: 1.3 }}>{t("passport_photo_tip")}</div>
+            )}
+            {!viewingOther && avatarErr && (
+              <div style={{ fontSize: 9, color: C.amber, marginTop: 4, maxWidth: 84, textAlign: "center", lineHeight: 1.3 }}>{avatarErr}</div>
+            )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>

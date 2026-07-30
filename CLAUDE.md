@@ -388,6 +388,20 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   full post (headline/body/image/likes/timestamp) in a bottom-sheet, same modal chrome as `ProfileEditor`.
 - No new database objects — this only reads a table that was already fully public-read for Feed.
 
+### Profile photo upload (migration 029)
+
+- Same shape as post-images (migrations 016/017): its own Storage bucket (`avatars`, public read, owner-only
+  write — `(storage.foldername(name))[1] = auth.uid()::text`), size/type limits baked into the bucket from
+  the start (8MB, common image MIME types) instead of a follow-up hardening migration.
+  `profiles.avatar_url` holds the public URL; `Passport`'s `pickAvatar()` (`golsz-app.html`) uploads via the
+  exact same validate-then-upload-as-`ArrayBuffer` pattern Feed's post-image compose already uses (raw
+  `File` uploads can arrive empty on some mobile browsers).
+- `avatar_url` is on `public_profile_names` (same reasoning as `occupation`/`verified_tier`) so viewing
+  someone *else's* Passport shows their photo too, not just your own. It's a normal self-editable profile
+  field — not in `protect_profile_columns()`'s protected set, same bucket as `full_name`.
+- Upload affordance (small camera-icon button overlaid on the initials/photo box, plus a short "use a sports
+  photo, not a casual selfie" tip) only shows on your own Passport, never `viewingOther`.
+
 ### Admin Panel "Analytics" tab (migration 028)
 
 - Replaced the old standalone "Events" tab — event management (create/block/delete) didn't go away, it moved
