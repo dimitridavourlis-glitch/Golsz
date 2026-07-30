@@ -1281,5 +1281,43 @@ end;
 $$;
 
 -- ============================================================
+-- 26) ADDITIVE — push notification triggers (messages/follows -> api/send-push)
+-- See supabase-migration-026-push-webhook-triggers.sql for full context.
+-- ============================================================
+
+create extension if not exists pg_net schema extensions;
+
+create or replace function notify_send_push()
+returns trigger language plpgsql security definer set search_path to 'public' as $$
+begin
+  perform net.http_post(
+    url := 'https://golsz.vercel.app/api/send-push',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-webhook-secret', '2209b4e6446eab5feeed1a7817fad4797e8278cc2452dacf023738485d07fbb5'
+    ),
+    body := jsonb_build_object(
+      'type', TG_OP,
+      'table', TG_TABLE_NAME,
+      'schema', TG_TABLE_SCHEMA,
+      'record', to_jsonb(NEW),
+      'old_record', null
+    )
+  );
+  return NEW;
+end;
+$$;
+
+drop trigger if exists notify_new_message on public.messages;
+create trigger notify_new_message
+  after insert on public.messages
+  for each row execute function notify_send_push();
+
+drop trigger if exists notify_new_follower on public.follows;
+create trigger notify_new_follower
+  after insert on public.follows
+  for each row execute function notify_send_push();
+
+-- ============================================================
 -- Done.
 -- ============================================================

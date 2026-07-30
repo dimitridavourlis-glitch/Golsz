@@ -180,8 +180,10 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   not realtime/pushed.
 - **Backend config is one block near the bottom of the file**: `SUPABASE_URL` / `SUPABASE_ANON_KEY` are set
   to the live project; `SCOUT_ENDPOINT` is `"/api/scout"` (relative — works on any Vercel deploy without
-  hardcoding a domain); `STRIPE_LINKS` is still blank pending real Stripe Payment Links (see "Current
-  state"). `sb` (the Supabase client) is `null` whenever `SUPABASE_URL`/`SUPABASE_ANON_KEY` are blank, and
+  hardcoding a domain); `STRIPE_LINKS` holds real (currently sandbox/test-mode) Stripe Payment Link URLs for
+  Pro/Elite — swap these to Live-mode links (and rotate `STRIPE_WEBHOOK_SECRET` to the Live webhook's signing
+  secret) before accepting real payments. `sb` (the Supabase client) is `null` whenever
+  `SUPABASE_URL`/`SUPABASE_ANON_KEY` are blank, and
   code throughout checks `if (sb)` before touching auth — preserve that guard pattern rather than assuming
   `sb` exists.
 - **Scout fetch has a fallback**: if `SCOUT_ENDPOINT` is unset, `Scout()`'s `send()` calls
@@ -324,18 +326,26 @@ There is no build/lint/test tooling in this repo. Relevant commands:
 - Real OS-level push notifications (phone lock screen / laptop notification center), not an in-app-only
   bell. Two moving parts: the client (in `golsz-app.html`) subscribes the browser via the Push API and
   stores the subscription in `push_subscriptions` (migration 014); this function is what actually sends.
-- **Not triggered by a client request.** It's called by two Supabase Database Webhooks you configure by
-  hand in the Dashboard (Database → Webhooks): one on `messages` INSERT, one on `follows` INSERT. Supabase
-  POSTs `{ type, table, record, old_record }`; this reads who to notify from `record` and looks up their
-  `push_subscriptions` rows with the service role key.
+- **Not triggered by a client request.** It's called by two Postgres triggers (migration 026,
+  `notify_new_message` on `messages` and `notify_new_follower` on `follows`, both `AFTER INSERT`), sharing one
+  trigger function (`notify_send_push()`) that calls `net.http_post()` (the `pg_net` extension) to POST
+  `{ type, table, schema, record, old_record }` at this endpoint — this reads who to notify from `record` and
+  looks up their `push_subscriptions` rows with the service role key. Older docs/UIs call this pattern
+  "Database Webhooks"; some Supabase dashboard versions expose a wizard for it under Database → Webhooks,
+  others only show Database → Triggers and have no such wizard — either way it's the same underlying
+  mechanism, and migration 026 sets it up directly in SQL so it doesn't depend on which UI your project has.
+  `net.http_post()` is async (queued by `pg_net`'s background worker, not awaited inline), so this doesn't add
+  latency to a real message/follow insert.
 - **Uses the `web-push` npm package** (the one deliberate exception to the "no npm dependency" pattern
   `api/scout.js`/`api/stripe-webhook.js` follow) — hand-rolling VAPID JWT signing + RFC 8291 payload
   encryption (ECDH/HKDF/AES-128-GCM) is real cryptography with no live device to test failures against; a
   maintained library is the safer call here. `package.json` at the repo root pulls it in; Vercel installs it
   automatically at deploy time, same as any Node serverless project.
-- Requires a shared secret (`SUPABASE_WEBHOOK_SECRET`) checked against the `x-webhook-secret` header — set
-  that same value as a custom header on both Database Webhooks in the Supabase Dashboard, so this endpoint
-  can reject anything that isn't actually Supabase.
+- Requires a shared secret (`SUPABASE_WEBHOOK_SECRET`) checked against the `x-webhook-secret` header — the
+  same value is embedded as a literal string inside `notify_send_push()`'s function body (a Postgres trigger
+  has no way to read a Vercel env var at runtime, so this is unavoidable, and it's the same trade-off the
+  old Dashboard-generated Webhook UI had). **If you ever rotate `SUPABASE_WEBHOOK_SECRET` in Vercel, re-run
+  migration 026 with the new value too** — `create or replace function` makes that safe to redo any time.
 - `VAPID_PUBLIC_KEY` is duplicated in `golsz-app.html` (client-safe, it's public by design) and in Vercel's
   env vars (server needs it too, to pair with `VAPID_PRIVATE_KEY` when signing). If you ever regenerate the
   VAPID keypair (`npx web-push generate-vapid-keys`), update both places or push sends will fail silently.
@@ -490,9 +500,19 @@ though the backend allowed it. If you add another place that surfaces a Message 
   COPPA/GDPR-K parental consent. `terms.html` also still contains a placeholder line stating real
   moderation/content terms "will be published before real accounts go live." Both need a lawyer's pass
   before this is genuinely launch-ready with real minors as users.
-- **Stripe Payment Links themselves.** `STRIPE_LINKS` in `golsz-app.html` is still blank — the webhook and
-  checkout attribution are built, but the actual Pro/Elite Payment Links need to be created in the Stripe
-  Dashboard and pasted in.
+- **Stripe is still in Sandbox/test mode.** `STRIPE_LINKS` holds real test-mode Payment Links and the webhook
+  is registered against the sandbox, so checkout works end-to-end — but no real money moves yet. Before
+  accepting real payments: create Live-mode Payment Links, register a Live webhook endpoint, and rotate
+  `STRIPE_WEBHOOK_SECRET` to that webhook's signing secret.
+- **`golsz.com`'s DNS still points at a domain-parking page, not Vercel** — the app is fully deployed and
+  working at `https://golsz.vercel.app`, but the real custom domain won't serve it until its DNS/nameserver
+  configuration (currently GoDaddy) is fixed to point at Vercel. Nothing will be reachable at the real domain
+  — including Stripe/Supabase webhooks registered against it — until this is resolved.
+- **Email deliverability is on Resend's sandbox sender (`onboarding@resend.dev`)** — Supabase's custom SMTP
+  is configured and working, but the sandbox sender can only deliver to the email address on the Resend
+  account itself, not real users. `golsz.com` is mid-verification in Resend (DNS records added via a
+  GoDaddy integration, propagation pending as of this writing) — once verified, update Supabase's SMTP
+  sender to a real `@golsz.com` address so confirmation emails can reach anyone, not just the account owner.
 - **Non-mechanical Pro/Elite features.** Only Scout's daily limit is actually gated by `profiles.plan`
   today. Marketing bullets like "full verified passport" or "priority visibility" aren't backed by any
   distinct mechanic anywhere in the app — gating those needs a product decision on what they mean first.
@@ -502,8 +522,7 @@ though the backend allowed it. If you add another place that surfaces a Message 
 - **Ban/delete don't reach `auth.users`** (see migration 019 above) — a banned or deleted account's login
   credential still exists in Supabase Auth until an Admin-API-backed serverless endpoint is built.
 - Production monitoring/alerting (e.g. Sentry) — nothing wired up yet.
-- **Push notifications need one-time manual setup** before they'll actually fire: `VAPID_PUBLIC_KEY`,
-  `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, and `SUPABASE_WEBHOOK_SECRET` set as Vercel env vars, plus two
-  Database Webhooks created by hand in the Supabase Dashboard (see `api/send-push.js` above). The
-  client-side subscribe/unsubscribe UI (`NotificationBell` in `golsz-app.html`) works regardless, but
-  nothing actually gets sent until that server-side wiring is done.
+- **Push notifications are fully wired (migration 026)** — `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
+  `VAPID_SUBJECT`, and `SUPABASE_WEBHOOK_SECRET` are set as Vercel env vars, and the two triggers that call
+  `api/send-push.js` (see above) are created directly in SQL rather than the Dashboard Webhooks wizard, since
+  not every Supabase project's dashboard still shows that wizard.
