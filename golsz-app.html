@@ -217,6 +217,11 @@ const I18N = {
     notif_title_on: "Notifications on — tap to turn off", notif_title_off: "Turn on notifications for messages & new followers",
     settings_notifications: "NOTIFICATIONS", settings_notif_on: "On", settings_notif_off: "Off",
     settings_account: "ACCOUNT", settings_change_password: "Change password", settings_cancel: "Cancel",
+    settings_change_email: "Change email", settings_current_email: "Current: ", settings_new_email_ph: "New email address",
+    settings_update_email_btn: "Update email", settings_email_invalid: "Enter a valid email address.",
+    settings_email_same: "That's already your current email.",
+    settings_email_sent: "Check {email} for a confirmation link to finish the change.",
+    settings_email_err: "Couldn't update email.",
     settings_plan: "PLAN", settings_plan_current: "Current", settings_plan_switch: "Choose",
     settings_plan_checkout_unavailable: "Checkout isn't set up yet — check back soon.",
     settings_plan_downgrade_note: "Switched to Starter. This won't cancel an existing paid subscription — use the receipt email Stripe sent you to manage or cancel billing.",
@@ -386,6 +391,11 @@ const I18N = {
     notif_title_on: "Notifications activées — touchez pour désactiver", notif_title_off: "Activer les notifications pour les messages et nouveaux abonnés",
     settings_notifications: "NOTIFICATIONS", settings_notif_on: "Activées", settings_notif_off: "Désactivées",
     settings_account: "COMPTE", settings_change_password: "Changer le mot de passe", settings_cancel: "Annuler",
+    settings_change_email: "Changer l'e-mail", settings_current_email: "Actuel : ", settings_new_email_ph: "Nouvelle adresse e-mail",
+    settings_update_email_btn: "Mettre à jour l'e-mail", settings_email_invalid: "Entrez une adresse e-mail valide.",
+    settings_email_same: "C'est déjà votre e-mail actuel.",
+    settings_email_sent: "Consultez {email} pour un lien de confirmation afin de finaliser le changement.",
+    settings_email_err: "Impossible de mettre à jour l'e-mail.",
     settings_plan: "FORMULE", settings_plan_current: "Actuelle", settings_plan_switch: "Choisir",
     settings_plan_checkout_unavailable: "Le paiement n'est pas encore configuré — revenez bientôt.",
     settings_plan_downgrade_note: "Passé à Starter. Cela n'annule pas un abonnement payant existant — utilisez l'e-mail de reçu envoyé par Stripe pour gérer ou annuler la facturation.",
@@ -555,6 +565,11 @@ const I18N = {
     notif_title_on: "Notificaciones activadas — toca para desactivar", notif_title_off: "Activa las notificaciones de mensajes y nuevos seguidores",
     settings_notifications: "NOTIFICACIONES", settings_notif_on: "Activadas", settings_notif_off: "Desactivadas",
     settings_account: "CUENTA", settings_change_password: "Cambiar contraseña", settings_cancel: "Cancelar",
+    settings_change_email: "Cambiar correo", settings_current_email: "Actual: ", settings_new_email_ph: "Nueva dirección de correo",
+    settings_update_email_btn: "Actualizar correo", settings_email_invalid: "Introduce una dirección de correo válida.",
+    settings_email_same: "Ese ya es tu correo actual.",
+    settings_email_sent: "Revisa {email} para un enlace de confirmación y completar el cambio.",
+    settings_email_err: "No se pudo actualizar el correo.",
     settings_plan: "PLAN", settings_plan_current: "Actual", settings_plan_switch: "Elegir",
     settings_plan_checkout_unavailable: "El pago aún no está configurado — vuelve pronto.",
     settings_plan_downgrade_note: "Cambiado a Starter. Esto no cancela una suscripción de pago existente — usa el correo del recibo de Stripe para gestionar o cancelar la facturación.",
@@ -724,6 +739,11 @@ const I18N = {
     notif_title_on: "Ειδοποιήσεις ενεργές — πατήστε για απενεργοποίηση", notif_title_off: "Ενεργοποιήστε ειδοποιήσεις για μηνύματα & νέους ακόλουθους",
     settings_notifications: "ΕΙΔΟΠΟΙΗΣΕΙΣ", settings_notif_on: "Ενεργές", settings_notif_off: "Ανενεργές",
     settings_account: "ΛΟΓΑΡΙΑΣΜΟΣ", settings_change_password: "Αλλαγή κωδικού", settings_cancel: "Ακύρωση",
+    settings_change_email: "Αλλαγή email", settings_current_email: "Τρέχον: ", settings_new_email_ph: "Νέα διεύθυνση email",
+    settings_update_email_btn: "Ενημέρωση email", settings_email_invalid: "Εισαγάγετε έγκυρη διεύθυνση email.",
+    settings_email_same: "Αυτό είναι ήδη το τρέχον email σας.",
+    settings_email_sent: "Ελέγξτε το {email} για σύνδεσμο επιβεβαίωσης για να ολοκληρώσετε την αλλαγή.",
+    settings_email_err: "Δεν ήταν δυνατή η ενημέρωση του email.",
     settings_plan: "ΠΑΚΕΤΟ", settings_plan_current: "Τρέχον", settings_plan_switch: "Επιλογή",
     settings_plan_checkout_unavailable: "Η πληρωμή δεν έχει ρυθμιστεί ακόμα — ελέγξτε ξανά σύντομα.",
     settings_plan_downgrade_note: "Αλλάξατε σε Starter. Αυτό δεν ακυρώνει τυχόν υπάρχουσα συνδρομή — χρησιμοποιήστε το email απόδειξης από το Stripe για να διαχειριστείτε ή να ακυρώσετε τη χρέωση.",
@@ -1018,6 +1038,12 @@ function SettingsButton() {
   const [pwBusy, setPwBusy] = useState(false);
   const [pwErr, setPwErr] = useState("");
   const [pwDone, setPwDone] = useState(false);
+  const [currentEmail, setCurrentEmail] = useState("");
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailErr, setEmailErr] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
 
   // Split from the push-status effect below (which bails out entirely when
   // pushSupported() is false) since uid/plan need to load regardless of
@@ -1029,6 +1055,7 @@ function SettingsButton() {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
         setUid(user.id);
+        setCurrentEmail(user.email || "");
         const { data: prof } = await sb.from("profiles").select("plan").eq("id", user.id).single();
         if (prof && prof.plan) setCurrentPlan(prof.plan);
       } catch (e) { console.error("GOLSZ settings profile error:", e); }
@@ -1105,6 +1132,27 @@ function SettingsButton() {
       console.error("GOLSZ change password error:", e);
       setPwErr((e && e.message) || t("reset_pw_err"));
     } finally { setPwBusy(false); }
+  }
+
+  // Supabase requires confirming an email change (a link sent to the NEW
+  // address) before it actually takes effect — updateUser() succeeding
+  // here just means the request was accepted, not that the email changed
+  // yet, so the success state points them at their inbox rather than
+  // claiming it's done.
+  async function changeEmail() {
+    if (!sb || emailBusy) return;
+    const trimmed = newEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setEmailErr(t("settings_email_invalid")); return; }
+    if (trimmed.toLowerCase() === currentEmail.toLowerCase()) { setEmailErr(t("settings_email_same")); return; }
+    setEmailBusy(true); setEmailErr("");
+    try {
+      const { error } = await sb.auth.updateUser({ email: trimmed });
+      if (error) throw error;
+      setEmailSent(true);
+    } catch (e) {
+      console.error("GOLSZ change email error:", e);
+      setEmailErr((e && e.message) || t("settings_email_err"));
+    } finally { setEmailBusy(false); }
   }
 
   return (
@@ -1214,6 +1262,37 @@ function SettingsButton() {
                     )}
                   </div>
                 )}
+                <div style={{ marginTop: 8 }}>
+                  {!emailOpen ? (
+                    <button onClick={() => { setEmailOpen(true); setEmailSent(false); setEmailErr(""); setNewEmail(""); }} style={{
+                      width: "100%", textAlign: "left", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12,
+                      padding: "12px 14px", color: C.chalk, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                    }}>{t("settings_change_email")}</button>
+                  ) : (
+                    <div style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, padding: 14 }}>
+                      {emailSent ? (
+                        <div style={{ fontSize: 13, color: C.lime, fontWeight: 700, lineHeight: 1.4 }}>{t("settings_email_sent").replace("{email}", newEmail.trim())}</div>
+                      ) : (
+                        <>
+                          {currentEmail && <div style={{ fontSize: 11.5, color: C.slate, marginBottom: 8 }}>{t("settings_current_email")}{currentEmail}</div>}
+                          <input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} type="email" placeholder={t("settings_new_email_ph")}
+                            style={{ width: "100%", background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
+                          {emailErr && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8 }}>{emailErr}</div>}
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={changeEmail} disabled={emailBusy} style={{
+                              flex: 1, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px",
+                              fontWeight: 800, fontSize: 12.5, cursor: emailBusy ? "default" : "pointer", fontFamily: "inherit", opacity: emailBusy ? 0.6 : 1,
+                            }}>{emailBusy ? t("events_saving") : t("settings_update_email_btn")}</button>
+                            <button onClick={() => { setEmailOpen(false); setNewEmail(""); setEmailErr(""); }} style={{
+                              background: "transparent", color: C.slate, border: `1px solid ${C.line2}`, borderRadius: 9,
+                              padding: "9px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                            }}>{t("settings_cancel")}</button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_language")}</div>
