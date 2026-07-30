@@ -2710,11 +2710,18 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: "18px 18px calc(18px + env(safe-area-inset-bottom, 0px))", boxSizing: "border-box" }} className="noscroll">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: locked ? 4 : 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: locked ? 4 : 16, gap: 8 }}>
           <div style={{ fontWeight: 800, fontSize: 16 }}>{t("editor_title")}</div>
-          {!locked && <button onClick={onClose} style={iconBtn(C.chalk)}><X size={18} /></button>}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <button onClick={save} disabled={busy} style={{
+              background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "7px 14px",
+              fontWeight: 800, fontSize: 12.5, fontFamily: "inherit", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
+            }}>{busy ? t("editor_saving") : t("editor_save")}</button>
+            {!locked && <button onClick={onClose} style={iconBtn(C.chalk)}><X size={18} /></button>}
+          </div>
         </div>
         {locked && <div style={{ fontSize: 12, color: C.lime, marginBottom: 14 }}>{t("editor_locked_notice")}</div>}
+        {err && <div style={{ color: C.amber, fontSize: 12, marginBottom: 14 }}>{err}</div>}
 
         {group(t("editor_name_label"), <input style={field} value={form.full_name || ""} onChange={set("full_name")} placeholder={t("editor_name_ph")} />)}
 
@@ -2823,13 +2830,6 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
         {group(t("editor_bio_label"), (
           <textarea style={{ ...field, resize: "vertical", minHeight: 80 }} maxLength={600} value={form.bio || ""} onChange={set("bio")} placeholder={t("editor_bio_ph")} />
         ))}
-
-        {err && <div style={{ color: C.amber, fontSize: 12, marginBottom: 10 }}>{err}</div>}
-        <button onClick={save} disabled={busy} style={{
-          width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12,
-          padding: "13px", fontWeight: 800, fontSize: 15, fontFamily: "inherit",
-          cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
-        }}>{busy ? t("editor_saving") : t("editor_save")}</button>
       </div>
     </div>
   );
