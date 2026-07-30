@@ -87,8 +87,16 @@ async function searchPlayers(input) {
 // interpolated into the system prompt sent to the model.
 const LANG_NAMES = { en: "English", fr: "French", es: "Spanish", el: "Greek" };
 
-function cors(res) {
-  res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN || "*");
+// Defaults cover both real origins this app is actually served from today
+// (golsz.com once its DNS is fixed, golsz.vercel.app in the meantime) —
+// a single hardcoded origin would risk breaking the app's current live
+// traffic, which is still on the .vercel.app domain. Override/extend via
+// a comma-separated ALLOWED_ORIGIN env var if needed.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGIN || "https://golsz.com,https://golsz.vercel.app")
+  .split(",").map((s) => s.trim()).filter(Boolean);
+function cors(req, res) {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 }
@@ -137,7 +145,7 @@ async function meter(userId) {
 }
 
 export default async function handler(req, res) {
-  cors(res);
+  cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
