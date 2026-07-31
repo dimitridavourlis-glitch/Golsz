@@ -5260,7 +5260,7 @@ function Auth({ onDone, paidReturn }) {
     : t("auth_continue_payment") + "$" + selected.price + t("auth_per_month");
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 18px", background: "radial-gradient(1100px 560px at 50% -12%, " + C.turf + ", " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "calc(28px + env(safe-area-inset-top, 0px)) 18px 28px", background: "radial-gradient(1100px 560px at 50% -12%, " + C.turf + ", " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
       <style>{CSS}</style>
       <div style={{ width: "100%", maxWidth: (isSignup && !forgotMode && isDesktop) ? 920 : 430 }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
@@ -5440,7 +5440,7 @@ function ResetPassword({ onDone }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 18px", background: "radial-gradient(1100px 560px at 50% -12%, " + C.turf + ", " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "calc(28px + env(safe-area-inset-top, 0px)) 18px 28px", background: "radial-gradient(1100px 560px at 50% -12%, " + C.turf + ", " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
       <style>{CSS}</style>
       <div style={{ width: "100%", maxWidth: 430 }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
@@ -5476,7 +5476,7 @@ function ResetPassword({ onDone }) {
 function BannedScreen({ onSignOut }) {
   const { t } = useLang();
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 18px", background: "radial-gradient(1100px 560px at 50% -12%, " + C.turf + ", " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "calc(28px + env(safe-area-inset-top, 0px)) 18px 28px", background: "radial-gradient(1100px 560px at 50% -12%, " + C.turf + ", " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
       <style>{CSS}</style>
       <div style={{ width: "100%", maxWidth: 430 }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
