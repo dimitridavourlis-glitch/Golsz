@@ -2697,7 +2697,7 @@ function Highlights({ viewUserId }) {
    ProfileEditor's modal elsewhere in this file. */
 function PostsGrid({ viewUserId }) {
   const { t } = useLang();
-  const [posts, setPosts] = useState(null);
+  const [posts, setPosts] = useState([]);
   const [openPost, setOpenPost] = useState(null);
 
   useEffect(() => {
@@ -2717,8 +2717,6 @@ function PostsGrid({ viewUserId }) {
       } catch (e) { console.error("GOLSZ posts grid load error:", e); setPosts([]); }
     })();
   }, [viewUserId]);
-
-  if (posts === null) return null;
 
   return (
     <div style={{ ...card }}>
@@ -2751,8 +2749,8 @@ function PostsGrid({ viewUserId }) {
       )}
 
       {openPost && (
-        <div onClick={() => setOpenPost(null)} style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-          <div onClick={(e) => e.stopPropagation()} className="noscroll" style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: 18, boxSizing: "border-box" }}>
+        <div onClick={() => setOpenPost(null)} style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 18, boxSizing: "border-box" }}>
+          <div onClick={(e) => e.stopPropagation()} className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button onClick={() => setOpenPost(null)} style={iconBtn(C.chalk)}><X size={18} /></button>
             </div>
