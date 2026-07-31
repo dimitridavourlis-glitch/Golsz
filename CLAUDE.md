@@ -411,18 +411,29 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   Safari/PWAs (tabs get killed, phones lock), so accumulating minutes while visibly open is the practical
   substitute. This also means: **usage is only measured from when this shipped onward** — there's no
   historical backfill, so Admin Panel numbers start at zero and grow as real usage happens.
-- Same privacy shape as `messages`/`scout_history` (migration 028): `daily_activity` has **no `authenticated`
-  read/write policy at all**. The only write path is `record_activity_ping(p_minutes)`, `security definer`,
-  always using `auth.uid()` (a user can only ever increment their own count, and it's a no-op if
-  `auth.uid()` is null). The only read path is `admin_analytics_counts()` (migration 028's RPC, extended
-  here), which now also returns pre-aggregated `activity_minutes_*`/`activity_users_*` for 7/30/365-day
-  windows — never a raw per-user-per-day row, so an admin can see "how engaged people are on average" but
-  never "exactly when did this specific person use the app."
+- `daily_activity` has **no `authenticated` write policy at all** — the only write path is
+  `record_activity_ping(p_minutes)`, `security definer`, always using `auth.uid()` (a user can only ever
+  increment their own count, and it's a no-op if `auth.uid()` is null). Admin reads: see migration 032 below.
 - Admin Panel → Analytics → new "Time on app" card computes **average hours per *active* user**, not per
   total signup (`avgHours()` in `golsz-app.html`, right above `AdminPanel`) — someone who never opened the
   app in a given window doesn't drag the average toward zero and mask how engaged actual users are. Each of
   the three numbers (week/month/year) also shows the active-user count it's averaged over, so the figure is
-  legible rather than a bare number.
+  legible rather than a bare number. This aggregate comes from `admin_analytics_counts()` (migration 028's
+  RPC, extended here) — pre-aggregated `activity_minutes_*`/`activity_users_*` for 7/30/365-day windows.
+
+### Per-user daily activity (migration 032)
+
+- Migration 031 initially kept `daily_activity` admin-visible only in aggregate, mirroring how `messages`/
+  `scout_history` stay hidden row-by-row. This migration adds a direct `daily_activity_admin_read` policy
+  (`is_admin()`, same shape as `profiles_admin_read`) so admins can see a specific person's actual daily
+  numbers — unlike DMs or Scout conversations, a row here is just "N minutes active on this date," no more
+  sensitive than the plan/ban-status/joined-date fields already shown per user in the Users tab.
+- Admin Panel → Users → each row now has a clock-icon (`History`) toggle (`toggleUserActivity(userId)` in
+  `AdminPanel`) that fetches that one user's last 30 days from `daily_activity` on demand — not for the
+  whole visible list, so opening the Users tab with 100 rows doesn't fire 100 activity queries. Shows a
+  14-day `Bars` sparkline (the most recent half of the 30-day fetch) plus accurate today/7-day/30-day totals
+  computed from the full 30-day window (the 30-day fetch exists specifically so "last 30d" is a real
+  30-day sum, not just whatever the 14-day sparkline happens to cover).
 
 ### Content-Security-Policy header (`vercel.json`)
 

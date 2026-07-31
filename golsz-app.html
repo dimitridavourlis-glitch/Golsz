@@ -322,6 +322,8 @@ const I18N = {
     admin_scout_conversations: "SCOUT CHATS", admin_scout_users: "SCOUT USERS", admin_messages_total: "MESSAGES",
     admin_messages_7d: "MESSAGES 7D", admin_push_subscribers: "PUSH SUBS", admin_top_followed: "TOP FOLLOWED",
     admin_time_on_app: "TIME ON APP", admin_avg_hrs_week: "AVG HRS/WEEK", admin_avg_hrs_month: "AVG HRS/MONTH", admin_avg_hrs_year: "AVG HRS/YEAR", admin_active_users: "active users",
+    admin_view_activity: "View daily activity", admin_activity_err: "Couldn't load activity.",
+    admin_activity_today: "Today:", admin_activity_7d: "Last 7d:", admin_activity_30d: "Last 30d:",
     admin_no_data: "No data yet.", admin_manage_events: "Manage events", admin_analytics_err: "Couldn't load analytics.",
     banned_title: "Account suspended", banned_message: "Your GOLSZ account has been suspended. If you think this is a mistake, contact support.",
     scout_header: "AI SCOUT", scout_fields_on_file: "FIELDS ON FILE", scout_live_agent: "LIVE AGENT",
@@ -496,6 +498,8 @@ const I18N = {
     admin_scout_conversations: "CONVERSATIONS SCOUT", admin_scout_users: "UTILISATEURS SCOUT", admin_messages_total: "MESSAGES",
     admin_messages_7d: "MESSAGES 7J", admin_push_subscribers: "ABONNÉS PUSH", admin_top_followed: "PLUS SUIVIS",
     admin_time_on_app: "TEMPS SUR L'APPLI", admin_avg_hrs_week: "MOY. H/SEMAINE", admin_avg_hrs_month: "MOY. H/MOIS", admin_avg_hrs_year: "MOY. H/AN", admin_active_users: "utilisateurs actifs",
+    admin_view_activity: "Voir l'activité quotidienne", admin_activity_err: "Impossible de charger l'activité.",
+    admin_activity_today: "Aujourd'hui :", admin_activity_7d: "7 derniers jours :", admin_activity_30d: "30 derniers jours :",
     admin_no_data: "Aucune donnée pour l'instant.", admin_manage_events: "Gérer les événements", admin_analytics_err: "Impossible de charger les statistiques.",
     banned_title: "Compte suspendu", banned_message: "Votre compte GOLSZ a été suspendu. Si vous pensez qu'il s'agit d'une erreur, contactez le support.",
     admin_add_event: "AJOUTER UN ÉVÉNEMENT", admin_title_ph: "Titre", admin_location_ph: "Lieu", admin_level_ph: "Niveau",
@@ -672,6 +676,8 @@ const I18N = {
     admin_scout_conversations: "CHATS DE SCOUT", admin_scout_users: "USUARIOS DE SCOUT", admin_messages_total: "MENSAJES",
     admin_messages_7d: "MENSAJES 7D", admin_push_subscribers: "SUSCRIPTORES PUSH", admin_top_followed: "MÁS SEGUIDOS",
     admin_time_on_app: "TIEMPO EN LA APP", admin_avg_hrs_week: "PROM. H/SEMANA", admin_avg_hrs_month: "PROM. H/MES", admin_avg_hrs_year: "PROM. H/AÑO", admin_active_users: "usuarios activos",
+    admin_view_activity: "Ver actividad diaria", admin_activity_err: "No se pudo cargar la actividad.",
+    admin_activity_today: "Hoy:", admin_activity_7d: "Últimos 7 días:", admin_activity_30d: "Últimos 30 días:",
     admin_no_data: "Aún no hay datos.", admin_manage_events: "Gestionar eventos", admin_analytics_err: "No se pudieron cargar las estadísticas.",
     banned_title: "Cuenta suspendida", banned_message: "Tu cuenta de GOLSZ ha sido suspendida. Si crees que esto es un error, contacta con soporte.",
     admin_add_event: "AÑADIR EVENTO", admin_title_ph: "Título", admin_location_ph: "Ubicación", admin_level_ph: "Nivel",
@@ -848,6 +854,8 @@ const I18N = {
     admin_scout_conversations: "ΣΥΝΟΜΙΛΙΕΣ SCOUT", admin_scout_users: "ΧΡΗΣΤΕΣ SCOUT", admin_messages_total: "ΜΗΝΥΜΑΤΑ",
     admin_messages_7d: "ΜΗΝΥΜΑΤΑ 7Η", admin_push_subscribers: "ΣΥΝΔΡΟΜΗΤΕΣ PUSH", admin_top_followed: "ΔΗΜΟΦΙΛΕΣΤΕΡΟΙ",
     admin_time_on_app: "ΧΡΟΝΟΣ ΣΤΗΝ ΕΦΑΡΜΟΓΗ", admin_avg_hrs_week: "ΜΕΣ. ΩΡΕΣ/ΕΒΔ", admin_avg_hrs_month: "ΜΕΣ. ΩΡΕΣ/ΜΗΝΑ", admin_avg_hrs_year: "ΜΕΣ. ΩΡΕΣ/ΕΤΟΣ", admin_active_users: "ενεργοί χρήστες",
+    admin_view_activity: "Προβολή ημερήσιας δραστηριότητας", admin_activity_err: "Δεν ήταν δυνατή η φόρτωση δραστηριότητας.",
+    admin_activity_today: "Σήμερα:", admin_activity_7d: "Τελ. 7 ημέρες:", admin_activity_30d: "Τελ. 30 ημέρες:",
     admin_no_data: "Δεν υπάρχουν δεδομένα ακόμα.", admin_manage_events: "Διαχείριση εκδηλώσεων", admin_analytics_err: "Δεν ήταν δυνατή η φόρτωση των στατιστικών.",
     banned_title: "Ο λογαριασμός ανεστάλη", banned_message: "Ο λογαριασμός σας στο GOLSZ έχει ανασταλεί. Αν πιστεύετε ότι πρόκειται για λάθος, επικοινωνήστε με την υποστήριξη.",
     admin_add_event: "ΠΡΟΣΘΗΚΗ ΕΚΔΗΛΩΣΗΣ", admin_title_ph: "Τίτλος", admin_location_ph: "Τοποθεσία", admin_level_ph: "Επίπεδο",
@@ -3572,6 +3580,8 @@ function AdminPanel({ onBack }) {
   const [analytics, setAnalytics] = useState(null);
   const [showEventsManager, setShowEventsManager] = useState(false);
   const [auditLog, setAuditLog] = useState(null);
+  const [expandedActivityId, setExpandedActivityId] = useState(null);
+  const [userActivity, setUserActivity] = useState({}); // userId -> { perDay: [{label, value}], today, week, month }
 
   async function loadStats() {
     try {
@@ -3633,6 +3643,46 @@ function AdminPanel({ onBack }) {
       setUsers(data || []);
     } catch (e) { console.error("GOLSZ admin users error:", e); setUsers([]); }
   }
+
+  // daily_activity_admin_read (migration 032) lets admins read this table
+  // directly — unlike messages/scout_history, a row here is just "N
+  // minutes active on this date," no more sensitive than the plan/ban/
+  // joined-date fields already shown per user above. Fetched on demand
+  // (per user, on expand) rather than for the whole list, so opening the
+  // Users tab with 100 rows doesn't fire 100 activity queries.
+  async function toggleUserActivity(userId) {
+    if (expandedActivityId === userId) { setExpandedActivityId(null); return; }
+    setExpandedActivityId(userId);
+    if (userActivity[userId]) return; // already loaded
+    try {
+      // Fetch a real 30-day window so "month" below is an actual 30-day
+      // sum, not just whatever the sparkline happens to show — the
+      // sparkline only renders the most recent 14 of those 30 days.
+      const since = new Date(); since.setDate(since.getDate() - 29);
+      const sinceIso = since.toISOString().slice(0, 10);
+      const { data, error } = await sb.from("daily_activity").select("activity_date, minutes").eq("user_id", userId).gte("activity_date", sinceIso).order("activity_date", { ascending: true });
+      if (error) throw error;
+      const byDate = new Map((data || []).map((r) => [r.activity_date, r.minutes]));
+      const last30Days = Array.from({ length: 30 }, (_, i) => {
+        const d = new Date(); d.setDate(d.getDate() - (29 - i));
+        return d.toISOString().slice(0, 10);
+      });
+      const last14Days = last30Days.slice(16);
+      const perDay = last14Days.map((d) => ({ label: d.slice(5), value: Math.round(((byDate.get(d) || 0) / 60) * 10) / 10 }));
+      const todayIso = last30Days[29];
+      const weekAgoIso = last30Days[23]; // last30Days[23..29] = trailing 7 days incl. today
+      const todayMin = byDate.get(todayIso) || 0;
+      let weekMin = 0, monthMin = 0;
+      last30Days.forEach((d) => { const m = byDate.get(d) || 0; monthMin += m; if (d >= weekAgoIso) weekMin += m; });
+      setUserActivity((prev) => ({ ...prev, [userId]: {
+        perDay,
+        today: Math.round((todayMin / 60) * 10) / 10,
+        week: Math.round((weekMin / 60) * 10) / 10,
+        month: Math.round((monthMin / 60) * 10) / 10,
+      } }));
+    } catch (e) { console.error("GOLSZ admin user activity error:", e); setUserActivity((prev) => ({ ...prev, [userId]: false })); }
+  }
+
   async function setUserAdmin(id, val) {
     try { await sb.from("profiles").update({ is_admin: val }).eq("id", id); logAdmin(val ? "make_admin" : "revoke_admin", id); loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin set-admin error:", e); }
@@ -3979,7 +4029,29 @@ function AdminPanel({ onBack }) {
                     background: "transparent", color: C.amber, border: `1px solid ${C.amberBorder}`,
                   }}><Trash2 size={13} /></button>
                 )}
+                <button onClick={() => toggleUserActivity(u.id)} title={t("admin_view_activity")} style={{
+                  display: "flex", alignItems: "center", padding: "5px 7px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
+                  background: expandedActivityId === u.id ? "#C8F1351a" : "transparent", color: expandedActivityId === u.id ? C.lime : C.slate,
+                  border: `1px solid ${expandedActivityId === u.id ? C.lime : C.line2}`,
+                }}><History size={13} /></button>
               </div>
+
+              {expandedActivityId === u.id && (
+                <div style={{ width: "100%", marginTop: 4, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
+                  {!userActivity[u.id] && userActivity[u.id] !== false && <div style={{ fontSize: 11.5, color: C.slate }}>{t("loading")}</div>}
+                  {userActivity[u.id] === false && <div style={{ fontSize: 11.5, color: C.slate }}>{t("admin_activity_err")}</div>}
+                  {userActivity[u.id] && (
+                    <>
+                      <Bars data={userActivity[u.id].perDay} color={C.lime} />
+                      <div style={{ display: "flex", gap: 14, marginTop: 8, fontSize: 10.5, color: C.slate }}>
+                        <span>{t("admin_activity_today")} <b style={{ color: C.chalk }}>{userActivity[u.id].today}h</b></span>
+                        <span>{t("admin_activity_7d")} <b style={{ color: C.chalk }}>{userActivity[u.id].week}h</b></span>
+                        <span>{t("admin_activity_30d")} <b style={{ color: C.chalk }}>{userActivity[u.id].month}h</b></span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

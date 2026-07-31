@@ -1515,5 +1515,15 @@ $$;
 grant execute on function admin_analytics_counts() to authenticated;
 
 -- ============================================================
+-- 32) ADDITIVE — admin can view a specific user's daily activity
+-- See supabase-migration-032-admin-view-user-activity.sql for full context.
+-- ============================================================
+
+drop policy if exists daily_activity_admin_read on daily_activity;
+create policy daily_activity_admin_read on daily_activity for select using (
+  is_admin()
+);
+
+-- ============================================================
 -- Done.
 -- ============================================================
