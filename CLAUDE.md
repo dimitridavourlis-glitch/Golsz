@@ -401,19 +401,39 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   last 100 rows plus admin names (via `public_profile_names`) and renders them as simple cards (admin name,
   action, JSON detail, target id, time-ago). No new charting/UI dependency, same style as the other tabs.
 
-### Content moderation (`api/moderate.js`, `moderateText()`)
+### Content moderation (`api/moderate.js`, `moderateContent()`, migration 033)
 
-- GOLSZ includes minors as users, so user-generated text gets a defense-in-depth safety check before it can
-  reach anyone else or get saved: Feed posts (headline+body), DMs, Passport bio, highlight titles, and
-  anything typed into Scout. `moderateText(text)` (`golsz-app.html`, right after `timeAgo()`) posts to
-  `api/moderate.js`, which asks a small/fast Claude model (`MODERATION_MODEL`, defaults to
-  `claude-haiku-4-5-20251001`) to classify the text as flagged or not — a real classifier rather than a
-  keyword blocklist, since blunt or creative phrasing trivially defeats keyword lists. On `flagged: true`,
-  the call site shows `moderation_blocked` inline and does **not** save/send the content (the input stays in
-  place so the person can edit and retry) — see `createPost()`, `Messages.send()`, `ProfileEditor.save()`,
+- GOLSZ includes minors as users, many linked to a parent account, so user-generated text gets a
+  defense-in-depth safety check before it can reach anyone else or get saved: Feed posts (headline+body),
+  DMs, Passport bio, highlight titles, and anything typed into Scout. `moderateContent({ text, contentType,
+  mediaDescription, recipientId, surface })` (`golsz-app.html`, right after `timeAgo()`) posts to
+  `api/moderate.js`, which runs a detailed classifier system prompt (a small/fast Claude model,
+  `MODERATION_MODEL`, defaults to `claude-haiku-4-5-20251001`) — a real classifier rather than a keyword
+  blocklist, since blunt or creative phrasing trivially defeats keyword lists.
+- **Three-way decision, not just yes/no**: `allow` (publish/send immediately, no record kept), `review`
+  (flagged as risky/uncertain — see below), `block` (rejected). Only `block` actually stops the content —
+  the call site shows `moderation_blocked` inline and does not save/send it (input stays in place so the
+  person can edit and retry). See `createPost()`, `Messages.send()`, `ProfileEditor.save()`,
   `Highlights.addHighlight()`, and `Scout.send()`.
+- **`review` still publishes/sends immediately.** This was a deliberate product decision, not a shortcut:
+  actually holding a DM or a Scout reply until an admin happens to check a queue would make real-time
+  messaging unusable — there's no reliable "someone's watching the queue right now" guarantee on a small
+  team. Instead, `review` (and `block`) decisions get logged to `moderation_queue` (migration 033) for
+  human follow-up after the fact, visible in the Admin Panel's new "Moderation" tab
+  (`loadModerationQueue()`/`resolveModerationItem()` in `AdminPanel`) — same pattern as the existing
+  Reports tab (content exists; an admin reviews/dismisses it, doesn't gate its existence). `block` gets
+  logged too, since for `block` the content was never saved anywhere else — `moderation_queue` is the only
+  record of what was rejected and why.
+- **Author/recipient minor-status and verification are resolved server-side, never trusted from the
+  client.** `api/moderate.js` looks up the real caller's (and, for DMs, the recipient's) `profiles.occupation
+  /is_minor/verified_tier` directly via the service key before ever calling the classifier — a client that
+  could just claim "I'm not a minor" or "I'm verified" would trivially defeat the minor-safety rules
+  otherwise. `occupation` (Player/Coach/Scout/Agent/Physio/Other) gets mapped to the classifier's closed
+  role enum (athlete/coach/scout/agent/...); Physio/Other have no honest equivalent and are left `null`
+  (unknown) rather than guessed — the classifier's own prompt says to resolve unknowns toward the stricter
+  outcome, which is the right behavior for an unmapped role too.
 - **Fails open on error** (network hiccup, Anthropic API down, malformed classifier response all return
-  `{ flagged: false }` rather than blocking) — same trade-off as `profileComplete`'s fail-open check
+  `{ decision: "allow" }` rather than blocking) — same trade-off as `profileComplete`'s fail-open check
   elsewhere in this file: a moderation-service hiccup shouldn't lock someone out of posting/messaging
   entirely. This is a layer on top of the existing report/block moderation tools, not the only safeguard.
 - `api/moderate.js` requires a real signed-in user (same `getUserId()` pattern as `api/scout.js`) so it
@@ -425,7 +445,12 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   matching-but-currently-unused `SYS` constant in `golsz-app.html` — see the note under `api/scout.js` below
   about why that client copy doesn't actually control anything) now explicitly instructs it to stay on
   sports/recruiting topics and refuse 18+/sexual content regardless of framing (roleplay, "hypothetically,"
-  etc.), on top of the pre-send `moderateText()` check on the user's own message.
+  etc.), on top of the pre-send `moderateContent()` check on the user's own message. Scout has no human
+  recipient, so it's classified as `content_type: "direct_message"` with `recipient: null` — the closest
+  honest fit in the classifier's schema, which doesn't have a dedicated AI-chat category.
+- `moderation_queue` has the same trust shape as `admin_action_log` (migration 030): **no `authenticated`
+  write policy at all** — the only write path is `api/moderate.js` itself via the service key, the only
+  update path is `resolve_moderation_item()` (`security definer`, admin-gated). Reads are admin-only.
 
 ### Time-on-app tracking (migration 031)
 

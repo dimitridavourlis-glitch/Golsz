@@ -299,7 +299,8 @@ const I18N = {
     blocked_title: "Blocked accounts", blocked_empty: "You haven't blocked anyone.", blocked_unblock: "Unblock",
     admin_checking: "Checking access…", admin_only: "Admins only.", admin_title: "Admin panel",
     admin_stat_users: "USERS", admin_stat_posts: "POSTS", admin_stat_events: "EVENTS", admin_stat_pending: "PENDING",
-    admin_tab_reports: "Reports", admin_tab_users: "Users", admin_tab_analytics: "Analytics", admin_tab_audit: "Audit log",
+    admin_tab_reports: "Reports", admin_tab_users: "Users", admin_tab_analytics: "Analytics", admin_tab_audit: "Audit log", admin_tab_moderation: "Moderation",
+    admin_no_moderation_items: "Nothing flagged yet.", admin_minor_safety: "MINOR SAFETY", admin_confidence: "confidence",
     admin_no_reports: "No reports yet.", admin_reported_by: "Reported by ", admin_post_removed: "Post already removed.",
     admin_no_audit_log: "No admin actions logged yet.", admin_audit_target: "Target: ", admin_unknown_admin: "Unknown admin",
     admin_delete_post: "Delete post", admin_dismiss: "Dismiss", admin_resolved: "Resolved",
@@ -478,7 +479,8 @@ const I18N = {
     blocked_title: "Comptes bloqués", blocked_empty: "Vous n'avez bloqué personne.", blocked_unblock: "Débloquer",
     admin_checking: "Vérification de l'accès…", admin_only: "Réservé aux administrateurs.", admin_title: "Panneau d'administration",
     admin_stat_users: "UTILISATEURS", admin_stat_posts: "PUBLICATIONS", admin_stat_events: "ÉVÉNEMENTS", admin_stat_pending: "EN ATTENTE",
-    admin_tab_reports: "Signalements", admin_tab_users: "Utilisateurs", admin_tab_analytics: "Analytique", admin_tab_audit: "Journal d'audit",
+    admin_tab_reports: "Signalements", admin_tab_users: "Utilisateurs", admin_tab_analytics: "Analytique", admin_tab_audit: "Journal d'audit", admin_tab_moderation: "Modération",
+    admin_no_moderation_items: "Rien de signalé pour l'instant.", admin_minor_safety: "SÉCURITÉ MINEUR", admin_confidence: "confiance",
     admin_no_reports: "Aucun signalement pour l'instant.", admin_reported_by: "Signalé par ", admin_post_removed: "Publication déjà supprimée.",
     admin_no_audit_log: "Aucune action admin enregistrée pour l'instant.", admin_audit_target: "Cible : ", admin_unknown_admin: "Admin inconnu",
     admin_delete_post: "Supprimer la publication", admin_dismiss: "Ignorer", admin_resolved: "Résolu",
@@ -657,7 +659,8 @@ const I18N = {
     blocked_title: "Cuentas bloqueadas", blocked_empty: "No has bloqueado a nadie.", blocked_unblock: "Desbloquear",
     admin_checking: "Comprobando acceso…", admin_only: "Solo administradores.", admin_title: "Panel de administración",
     admin_stat_users: "USUARIOS", admin_stat_posts: "PUBLICACIONES", admin_stat_events: "EVENTOS", admin_stat_pending: "PENDIENTES",
-    admin_tab_reports: "Reportes", admin_tab_users: "Usuarios", admin_tab_analytics: "Analítica", admin_tab_audit: "Registro de auditoría",
+    admin_tab_reports: "Reportes", admin_tab_users: "Usuarios", admin_tab_analytics: "Analítica", admin_tab_audit: "Registro de auditoría", admin_tab_moderation: "Moderación",
+    admin_no_moderation_items: "Nada marcado todavía.", admin_minor_safety: "SEGURIDAD MENOR", admin_confidence: "confianza",
     admin_no_reports: "Aún no hay reportes.", admin_reported_by: "Reportado por ", admin_post_removed: "Publicación ya eliminada.",
     admin_no_audit_log: "Aún no hay acciones de administrador registradas.", admin_audit_target: "Objetivo: ", admin_unknown_admin: "Admin desconocido",
     admin_delete_post: "Eliminar publicación", admin_dismiss: "Descartar", admin_resolved: "Resuelto",
@@ -836,7 +839,8 @@ const I18N = {
     blocked_title: "Αποκλεισμένοι λογαριασμοί", blocked_empty: "Δεν έχετε αποκλείσει κανέναν.", blocked_unblock: "Άρση αποκλεισμού",
     admin_checking: "Έλεγχος πρόσβασης…", admin_only: "Μόνο για διαχειριστές.", admin_title: "Πίνακας διαχείρισης",
     admin_stat_users: "ΧΡΗΣΤΕΣ", admin_stat_posts: "ΑΝΑΡΤΗΣΕΙΣ", admin_stat_events: "ΕΚΔΗΛΩΣΕΙΣ", admin_stat_pending: "ΕΚΚΡΕΜΗ",
-    admin_tab_reports: "Αναφορές", admin_tab_users: "Χρήστες", admin_tab_analytics: "Αναλυτικά", admin_tab_audit: "Αρχείο καταγραφής",
+    admin_tab_reports: "Αναφορές", admin_tab_users: "Χρήστες", admin_tab_analytics: "Αναλυτικά", admin_tab_audit: "Αρχείο καταγραφής", admin_tab_moderation: "Συντονισμός",
+    admin_no_moderation_items: "Τίποτα επισημασμένο ακόμα.", admin_minor_safety: "ΑΣΦΑΛΕΙΑ ΑΝΗΛΙΚΩΝ", admin_confidence: "βεβαιότητα",
     admin_no_reports: "Δεν υπάρχουν αναφορές ακόμα.", admin_reported_by: "Αναφέρθηκε από ", admin_post_removed: "Η ανάρτηση έχει ήδη αφαιρεθεί.",
     admin_no_audit_log: "Δεν έχουν καταγραφεί ενέργειες διαχειριστή ακόμα.", admin_audit_target: "Στόχος: ", admin_unknown_admin: "Άγνωστος διαχειριστής",
     admin_delete_post: "Διαγραφή ανάρτησης", admin_dismiss: "Απόρριψη", admin_resolved: "Επιλύθηκε",
@@ -1346,25 +1350,33 @@ function timeAgo(iso) {
 
 // Best-effort content check before user-generated text reaches other
 // people (posts, messages), gets saved to a public profile, or is sent
-// to Scout — a small server-side classifier (api/moderate.js) rather
-// than a keyword list, since blunt/creative phrasing easily defeats
-// keyword filters. Fails open (allows the content through) on any
-// network/server error — a moderation-service hiccup shouldn't block
-// someone from posting or messaging entirely. This is a defense-in-depth
-// layer on top of the existing report/block moderation tools, not the
-// only line of defense.
-async function moderateText(text) {
-  if (!text || !text.trim() || !sb) return { flagged: false };
+// to Scout — a real classifier (api/moderate.js) rather than a keyword
+// list, since blunt/creative phrasing easily defeats keyword filters.
+// Only "block" actually stops the content — "review" still lets it
+// through immediately (see CLAUDE.md: holding real-time DMs/Scout
+// replies on an admin checking a queue would make messaging unusable)
+// but gets logged server-side for human follow-up. Fails open (returns
+// "allow") on any network/server error — a moderation-service hiccup
+// shouldn't block someone from posting or messaging entirely. This is a
+// defense-in-depth layer on top of the existing report/block tools, not
+// the only line of defense.
+//
+// contentType/surface come from a fixed set per call site, not user
+// input. recipientId is just an id — the server resolves the real
+// minor/verified status itself from the database rather than trusting
+// anything the client claims about who's a minor (see api/moderate.js).
+async function moderateContent({ text, contentType, mediaDescription, recipientId, surface }) {
+  if (!text || !text.trim() || !sb) return { decision: "allow" };
   try {
     const { data: { session } } = await sb.auth.getSession();
     const res = await fetch("/api/moderate", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + (session && session.access_token) },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, contentType, mediaDescription: mediaDescription || null, recipientId: recipientId || null, surface }),
     });
-    if (!res.ok) return { flagged: false };
+    if (!res.ok) return { decision: "allow" };
     return await res.json();
-  } catch (e) { console.error("GOLSZ moderation check error:", e); return { flagged: false }; }
+  } catch (e) { console.error("GOLSZ moderation check error:", e); return { decision: "allow" }; }
 }
 /* A lightweight heuristic, not a real date parser — good enough to gate
    "save this message as an opportunity" on whether it actually mentions a
@@ -1600,8 +1612,8 @@ function Feed({ onMessage, onViewProfile }) {
     if (!sb || !uid || (!composeHeadline.trim() && !composeImageFile) || composeBusy) return;
     setComposeBusy(true); setComposeErr("");
     try {
-      const { flagged } = await moderateText(`${composeHeadline}\n${composeBody}`);
-      if (flagged) { setComposeErr(t("moderation_blocked")); setComposeBusy(false); return; }
+      const { decision } = await moderateContent({ text: `${composeHeadline}\n${composeBody}`, contentType: "post", surface: "public_feed" });
+      if (decision === "block") { setComposeErr(t("moderation_blocked")); setComposeBusy(false); return; }
       let imageUrl = null;
       if (composeImageFile) {
         const ext = (composeImageFile.name.split(".").pop() || "jpg").toLowerCase().slice(0, 5);
@@ -2348,8 +2360,8 @@ function Messages({ thread, setThread }) {
     setBusy(true); setErr("");
     const body = text.trim().slice(0, 2000);
     try {
-      const { flagged } = await moderateText(body);
-      if (flagged) { setErr(t("moderation_blocked")); setBusy(false); return; }
+      const { decision } = await moderateContent({ text: body, contentType: "direct_message", surface: "private_thread", recipientId: thread });
+      if (decision === "block") { setErr(t("moderation_blocked")); setBusy(false); return; }
       const { error } = await sb.from("messages").insert({ sender_id: uid, recipient_id: thread, body });
       if (error) throw error;
       setText("");
@@ -2669,8 +2681,8 @@ function Highlights({ viewUserId }) {
         parsed = new URL(url.trim());
         if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("bad protocol");
       } catch { throw new Error(t("highlights_invalid_url")); }
-      const { flagged } = await moderateText(title);
-      if (flagged) throw new Error(t("moderation_blocked"));
+      const { decision } = await moderateContent({ text: title, contentType: "media_caption", surface: "profile" });
+      if (decision === "block") throw new Error(t("moderation_blocked"));
       const entry = {
         id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
         title: title.trim(), url: parsed.toString(),
@@ -2872,8 +2884,8 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
     if (!isPlayer && !(form.club_name || "").trim()) { setErr(t("editor_team_required")); return; }
     setBusy(true); setErr("");
     try {
-      const { flagged } = await moderateText(form.bio || "");
-      if (flagged) { setErr(t("moderation_blocked")); setBusy(false); return; }
+      const { decision } = await moderateContent({ text: form.bio || "", contentType: "profile_field", surface: "profile" });
+      if (decision === "block") { setErr(t("moderation_blocked")); setBusy(false); return; }
       const { data: { user } } = await sb.auth.getUser();
       if (!user) throw new Error("Not signed in.");
       const { error: e1 } = await sb.from("profiles").update({ full_name: name, occupation: form.occupation || null }).eq("id", user.id);
@@ -3615,6 +3627,7 @@ function AdminPanel({ onBack }) {
   const [analytics, setAnalytics] = useState(null);
   const [showEventsManager, setShowEventsManager] = useState(false);
   const [auditLog, setAuditLog] = useState(null);
+  const [moderationQueue, setModerationQueue] = useState(null);
   const [expandedActivityId, setExpandedActivityId] = useState(null);
   const [userActivity, setUserActivity] = useState({}); // userId -> { perDay: [{label, value}], today, week, month }
 
@@ -3801,6 +3814,33 @@ function AdminPanel({ onBack }) {
     } catch (e) { console.error("GOLSZ admin audit log error:", e); setAuditLog([]); }
   }
 
+  // moderation_queue only ever holds "review"/"block" decisions from
+  // api/moderate.js (migration 033) — "allow" needs no record. Shows
+  // unresolved items first so the ones needing attention aren't buried
+  // under old, already-handled ones.
+  async function loadModerationQueue() {
+    try {
+      const { data, error } = await sb.from("moderation_queue")
+        .select("id, author_id, content_type, text, surface, decision, primary_reason_code, reason_codes, confidence, minor_safety_triggered, rationale, created_at, resolved_at")
+        .order("resolved_at", { ascending: true, nullsFirst: true })
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      const authorIds = [...new Set((data || []).map((r) => r.author_id).filter(Boolean))];
+      const { data: names } = authorIds.length ? await sb.from("public_profile_names").select("id, full_name").in("id", authorIds) : { data: [] };
+      const nameById = Object.fromEntries((names || []).map((n) => [n.id, n.full_name]));
+      setModerationQueue((data || []).map((r) => ({ ...r, authorName: nameById[r.author_id] || t("admin_unknown_admin") })));
+    } catch (e) { console.error("GOLSZ admin moderation queue error:", e); setModerationQueue([]); }
+  }
+  async function resolveModerationItem(id) {
+    try {
+      const { error } = await sb.rpc("resolve_moderation_item", { p_id: id });
+      if (error) throw error;
+      logAdmin("resolve_moderation_item", id);
+      loadModerationQueue();
+    } catch (e) { console.error("GOLSZ admin resolve moderation error:", e); }
+  }
+
   // Everything here is either already admin-readable directly
   // (profiles/posts/follows all have an admin-or-public select policy)
   // or comes from admin_analytics_counts() (migration 028) — a
@@ -3926,7 +3966,7 @@ function AdminPanel({ onBack }) {
         const { data: prof } = await sb.from("profiles").select("is_admin").eq("id", user.id).single();
         const ok = !!(prof && prof.is_admin);
         setAuthorized(ok);
-        if (ok) { loadStats(); loadReports(); loadUsers(); loadEvents(); loadAnalytics(); loadAuditLog(); }
+        if (ok) { loadStats(); loadReports(); loadUsers(); loadEvents(); loadAnalytics(); loadAuditLog(); loadModerationQueue(); }
       } catch (e) { console.error("GOLSZ admin auth-check error:", e); setAuthorized(false); }
     })();
   }, []);
@@ -3965,11 +4005,12 @@ function AdminPanel({ onBack }) {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 4, background: C.turf, borderRadius: 11, padding: 4, marginBottom: 14 }}>
+      <div style={{ display: "flex", gap: 4, background: C.turf, borderRadius: 11, padding: 4, marginBottom: 14, overflowX: "auto" }} className="noscroll">
         {tabBtn("reports", t("admin_tab_reports"))}
         {tabBtn("users", t("admin_tab_users"))}
         {tabBtn("analytics", t("admin_tab_analytics"))}
         {tabBtn("audit", t("admin_tab_audit"))}
+        {tabBtn("moderation", t("admin_tab_moderation"))}
       </div>
 
       {tab === "reports" && (
@@ -4285,6 +4326,37 @@ function AdminPanel({ onBack }) {
           ))}
         </div>
       )}
+
+      {tab === "moderation" && (
+        <div>
+          {moderationQueue === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+          {moderationQueue && moderationQueue.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_moderation_items")}</div>}
+          {moderationQueue && moderationQueue.map((m) => {
+            const isBlock = m.decision === "block";
+            const dColor = isBlock ? C.amber : C.lime;
+            const dBorder = isBlock ? C.amberBorder : C.limeBorder;
+            return (
+              <div key={m.id} style={{ ...card, opacity: m.resolved_at ? 0.5 : 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10.5, color: C.slate, marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: dColor, border: `1px solid ${dBorder}`, borderRadius: 999, padding: "2px 8px" }}>{m.decision.toUpperCase()}</span>
+                    {m.minor_safety_triggered && <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 999, padding: "2px 8px" }}>{t("admin_minor_safety")}</span>}
+                    <span>{m.authorName} · {m.content_type}</span>
+                  </div>
+                  <span>{timeAgo(m.created_at)}</span>
+                </div>
+                {m.text && <div style={{ fontSize: 13, marginBottom: 6, whiteSpace: "pre-wrap" }}>{m.text}</div>}
+                <div style={{ fontSize: 11, color: C.slate, marginBottom: m.resolved_at ? 0 : 8 }}>
+                  <b>{m.primary_reason_code}</b>{m.rationale ? ` — ${m.rationale}` : ""} · {t("admin_confidence")} {Math.round((m.confidence || 0) * 100)}%
+                </div>
+                {!m.resolved_at && (
+                  <button onClick={() => resolveModerationItem(m.id)} style={{ ...iconBtn(C.slate), fontSize: 11.5 }}>{t("admin_dismiss")}</button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -4527,8 +4599,11 @@ function Scout() {
     // never clear the input, appear as a sent bubble, or reach Scout's own
     // conversation history at all, same as Feed/Messages/Passport below.
     if (content) {
-      const { flagged } = await moderateText(content);
-      if (flagged) { setModErr(t("moderation_blocked")); return; }
+      // No human recipient here (recipientId omitted) — Scout is a
+      // private 1:1 exchange with an AI, which "direct_message" fits
+      // more honestly than any of the other content types.
+      const { decision } = await moderateContent({ text: content, contentType: "direct_message", surface: "private_thread" });
+      if (decision === "block") { setModErr(t("moderation_blocked")); return; }
     }
     setInput("");
     const attached = photo; setPhoto(null);
