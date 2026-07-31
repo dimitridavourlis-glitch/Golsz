@@ -529,6 +529,22 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   was rejected, rather than a real error it could learn from. Real signups never touch this path since the
   field stays empty for anyone actually looking at the form.
 
+### Logo mark (`assets/logo-mark.png`)
+
+- The founder supplied the real brand mark as a JPEG (`assets/golsz.jpeg`, white background, full lockup
+  with the "GOLSZ" wordmark and tagline baked in). `assets/logo-mark.png` is a processed derivative — cropped
+  to just the circular icon (Python/Pillow: found the icon's row/column bounding box by scanning for non-
+  white content, cropped with a small pad), background made transparent (alpha derived from distance-from-
+  white per pixel, not a hard threshold, so anti-aliased edges stay smooth), and recolored so every opaque
+  pixel is exactly `#C8F135` (this app's primary lime) regardless of the JPEG's original compression-shifted
+  color. `golsz.jpeg` itself is kept as the source, not deployed-and-referenced anywhere.
+- Shown two places: above the "GOLSZ." wordmark on the Auth screen (`Auth`, `golsz-app.html`), and next to
+  the wordmark in both in-app headers (`GolszApp`'s desktop sidebar and mobile top bar) — not on
+  `ResetPassword`/`BannedScreen`, which still show text-only, matching what was actually asked for.
+- Only the dark-theme lime (`#C8F135`) is baked into the PNG — if the light theme (`--lime: #6B9C1F`, see
+  the CSS variables) should ever show a different-colored mark, this flat PNG can't adapt the way a
+  currentColor-based inline SVG could; revisit if that distinction ever actually matters in practice.
+
 ### Stored-URL XSS guard (`safeHref()`) and the root `ErrorBoundary`
 
 Both found during a full app audit (browser crash-testing plus a systematic pass over `golsz-app.html`/`api/`).
