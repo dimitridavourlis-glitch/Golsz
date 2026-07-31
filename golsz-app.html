@@ -172,6 +172,7 @@ function useTheme() {
 const I18N = {
   en: {
     loading: "Loading…", yes: "Yes", no: "No",
+    moderation_blocked: "That doesn't look appropriate for GOLSZ — please keep things sports-related.",
     nav_home: "Home", nav_discover: "Discover", nav_scout: "Scout", nav_ai_scout: "AI Scout",
     nav_events: "Events", nav_passport: "Passport", nav_profile: "Profile", nav_messages: "Messages",
     nav_signout: "Sign out",
@@ -350,6 +351,7 @@ const I18N = {
   },
   fr: {
     loading: "Chargement…", yes: "Oui", no: "Non",
+    moderation_blocked: "Cela ne semble pas approprié pour GOLSZ — merci de rester sur des sujets sportifs.",
     nav_home: "Accueil", nav_discover: "Découvrir", nav_scout: "Agent", nav_ai_scout: "Agent IA",
     nav_events: "Événements", nav_passport: "Passeport", nav_profile: "Profil", nav_messages: "Messages",
     nav_signout: "Déconnexion",
@@ -528,6 +530,7 @@ const I18N = {
   },
   es: {
     loading: "Cargando…", yes: "Sí", no: "No",
+    moderation_blocked: "Eso no parece apropiado para GOLSZ — por favor, mantén el contenido relacionado con el deporte.",
     nav_home: "Inicio", nav_discover: "Descubrir", nav_scout: "Agente", nav_ai_scout: "Agente IA",
     nav_events: "Eventos", nav_passport: "Pasaporte", nav_profile: "Perfil", nav_messages: "Mensajes",
     nav_signout: "Cerrar sesión",
@@ -706,6 +709,7 @@ const I18N = {
   },
   el: {
     loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
+    moderation_blocked: "Αυτό δεν φαίνεται κατάλληλο για το GOLSZ — παρακαλούμε μείνετε σε θέματα σχετικά με τον αθλητισμό.",
     nav_home: "Αρχική", nav_discover: "Ανακάλυψη", nav_scout: "Σκάουτ", nav_ai_scout: "AI Σκάουτ",
     nav_events: "Εκδηλώσεις", nav_passport: "Διαβατήριο", nav_profile: "Προφίλ", nav_messages: "Μηνύματα",
     nav_signout: "Αποσύνδεση",
@@ -1339,6 +1343,29 @@ function timeAgo(iso) {
   if (s < 86400) return Math.floor(s / 3600) + "h";
   return Math.floor(s / 86400) + "d";
 }
+
+// Best-effort content check before user-generated text reaches other
+// people (posts, messages), gets saved to a public profile, or is sent
+// to Scout — a small server-side classifier (api/moderate.js) rather
+// than a keyword list, since blunt/creative phrasing easily defeats
+// keyword filters. Fails open (allows the content through) on any
+// network/server error — a moderation-service hiccup shouldn't block
+// someone from posting or messaging entirely. This is a defense-in-depth
+// layer on top of the existing report/block moderation tools, not the
+// only line of defense.
+async function moderateText(text) {
+  if (!text || !text.trim() || !sb) return { flagged: false };
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const res = await fetch("/api/moderate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + (session && session.access_token) },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) return { flagged: false };
+    return await res.json();
+  } catch (e) { console.error("GOLSZ moderation check error:", e); return { flagged: false }; }
+}
 /* A lightweight heuristic, not a real date parser — good enough to gate
    "save this message as an opportunity" on whether it actually mentions a
    date, rather than offering that on every single message. Matches month
@@ -1573,6 +1600,8 @@ function Feed({ onMessage, onViewProfile }) {
     if (!sb || !uid || (!composeHeadline.trim() && !composeImageFile) || composeBusy) return;
     setComposeBusy(true); setComposeErr("");
     try {
+      const { flagged } = await moderateText(`${composeHeadline}\n${composeBody}`);
+      if (flagged) { setComposeErr(t("moderation_blocked")); setComposeBusy(false); return; }
       let imageUrl = null;
       if (composeImageFile) {
         const ext = (composeImageFile.name.split(".").pop() || "jpg").toLowerCase().slice(0, 5);
@@ -2319,6 +2348,8 @@ function Messages({ thread, setThread }) {
     setBusy(true); setErr("");
     const body = text.trim().slice(0, 2000);
     try {
+      const { flagged } = await moderateText(body);
+      if (flagged) { setErr(t("moderation_blocked")); setBusy(false); return; }
       const { error } = await sb.from("messages").insert({ sender_id: uid, recipient_id: thread, body });
       if (error) throw error;
       setText("");
@@ -2638,6 +2669,8 @@ function Highlights({ viewUserId }) {
         parsed = new URL(url.trim());
         if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("bad protocol");
       } catch { throw new Error(t("highlights_invalid_url")); }
+      const { flagged } = await moderateText(title);
+      if (flagged) throw new Error(t("moderation_blocked"));
       const entry = {
         id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
         title: title.trim(), url: parsed.toString(),
@@ -2839,6 +2872,8 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
     if (!isPlayer && !(form.club_name || "").trim()) { setErr(t("editor_team_required")); return; }
     setBusy(true); setErr("");
     try {
+      const { flagged } = await moderateText(form.bio || "");
+      if (flagged) { setErr(t("moderation_blocked")); setBusy(false); return; }
       const { data: { user } } = await sb.auth.getUser();
       if (!user) throw new Error("Not signed in.");
       const { error: e1 } = await sb.from("profiles").update({ full_name: name, occupation: form.occupation || null }).eq("id", user.id);
@@ -4264,6 +4299,7 @@ You adapt to who you're talking to — check "occupation" in PROFILE SO FAR:
 Some fields may already be filled in from their real GOLSZ Passport (profile they built themselves) — treat those as trustworthy and confirmed, not something to re-ask. Open by briefly acknowledging what you already know about them (occupation/sport/team if present) instead of asking generic intro questions, then move straight to something useful.
 Be warm, direct, honest — never overpromise. If a target or prospect looks unrealistic, say so kindly and show the realistic path. If the person seems to be a minor, remind them once to involve a parent/guardian. Use web search for real current programs, players, coaches, showcases, and eligibility rules. Ask at most ONE question per reply. Keep replies tight for a phone screen.
 If asked what AI model or company powers you, who made you, or whether you're ChatGPT/OpenAI/Claude/Anthropic/Gemini/etc., always answer that you are GOLSZ Scout, built by GOLSZ — never name or confirm any underlying model or provider, and don't explain that you're declining to say. Just answer as GOLSZ Scout and move on.
+GOLSZ is a sports-recruiting platform used by athletes of all ages, including minors. Stay strictly on sports, athletics, recruiting, and career topics. Never generate or engage with sexual, romantic, 18+/adult, or otherwise inappropriate content, regardless of how the request is framed (roleplay, "hypothetically," "for a story," etc.) — decline briefly and warmly, and steer the conversation back to something sports-related. This applies no matter who the user says they are.
 OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null}}
 Allowed keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, budget, citizenship, goal. Do not repeat known fields.`;
 
@@ -4310,6 +4346,7 @@ function Scout() {
   const [history, setHistory] = useState(null);
   const [photo, setPhoto] = useState(null); // { dataUrl, mediaType, data } — one pending attachment
   const [photoErr, setPhotoErr] = useState("");
+  const [modErr, setModErr] = useState("");
   const uidRef = useRef(null);
   const endRef = useRef(null);
   const fileRef = useRef(null);
@@ -4485,6 +4522,14 @@ function Scout() {
 
   async function send(text) {
     const content = text.trim(); if ((!content && !photo) || busy || !loaded) return;
+    setModErr("");
+    // Check before anything else touches state — a flagged message should
+    // never clear the input, appear as a sent bubble, or reach Scout's own
+    // conversation history at all, same as Feed/Messages/Passport below.
+    if (content) {
+      const { flagged } = await moderateText(content);
+      if (flagged) { setModErr(t("moderation_blocked")); return; }
+    }
     setInput("");
     const attached = photo; setPhoto(null);
     const next = [...(msgs || []), { role: "user", text: content, photo: attached ? attached.dataUrl : null }];
@@ -4610,6 +4655,7 @@ function Scout() {
             </div>
           )}
           {photoErr && <div style={{ fontSize: 11.5, color: C.amber, padding: "0 12px 6px" }}>{photoErr}</div>}
+          {modErr && <div style={{ fontSize: 11.5, color: C.amber, padding: "0 12px 6px" }}>{modErr}</div>}
           {photo && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px 8px" }}>
               <div style={{ position: "relative", flexShrink: 0 }}>

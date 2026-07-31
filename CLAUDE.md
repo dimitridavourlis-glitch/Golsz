@@ -401,6 +401,32 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   last 100 rows plus admin names (via `public_profile_names`) and renders them as simple cards (admin name,
   action, JSON detail, target id, time-ago). No new charting/UI dependency, same style as the other tabs.
 
+### Content moderation (`api/moderate.js`, `moderateText()`)
+
+- GOLSZ includes minors as users, so user-generated text gets a defense-in-depth safety check before it can
+  reach anyone else or get saved: Feed posts (headline+body), DMs, Passport bio, highlight titles, and
+  anything typed into Scout. `moderateText(text)` (`golsz-app.html`, right after `timeAgo()`) posts to
+  `api/moderate.js`, which asks a small/fast Claude model (`MODERATION_MODEL`, defaults to
+  `claude-haiku-4-5-20251001`) to classify the text as flagged or not — a real classifier rather than a
+  keyword blocklist, since blunt or creative phrasing trivially defeats keyword lists. On `flagged: true`,
+  the call site shows `moderation_blocked` inline and does **not** save/send the content (the input stays in
+  place so the person can edit and retry) — see `createPost()`, `Messages.send()`, `ProfileEditor.save()`,
+  `Highlights.addHighlight()`, and `Scout.send()`.
+- **Fails open on error** (network hiccup, Anthropic API down, malformed classifier response all return
+  `{ flagged: false }` rather than blocking) — same trade-off as `profileComplete`'s fail-open check
+  elsewhere in this file: a moderation-service hiccup shouldn't lock someone out of posting/messaging
+  entirely. This is a layer on top of the existing report/block moderation tools, not the only safeguard.
+- `api/moderate.js` requires a real signed-in user (same `getUserId()` pattern as `api/scout.js`) so it
+  can't be hit as a free-standing endpoint to run up the Anthropic bill — every real call site already
+  requires being signed in anyway.
+- Only text is checked — **uploaded images (Feed post photos, avatars) are not moderated** by this. That
+  would need a separate vision-based check and is a known gap, not an oversight.
+- Scout gets a second, independent layer: its own system prompt (`SYSTEM_PROMPT` in `api/scout.js`, and the
+  matching-but-currently-unused `SYS` constant in `golsz-app.html` — see the note under `api/scout.js` below
+  about why that client copy doesn't actually control anything) now explicitly instructs it to stay on
+  sports/recruiting topics and refuse 18+/sexual content regardless of framing (roleplay, "hypothetically,"
+  etc.), on top of the pre-send `moderateText()` check on the user's own message.
+
 ### Time-on-app tracking (migration 031)
 
 - No session-duration data existed anywhere before this — `daily_activity` (`user_id`, `activity_date`,
