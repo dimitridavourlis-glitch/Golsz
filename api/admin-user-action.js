@@ -18,6 +18,8 @@
 //   SUPABASE_SERVICE_KEY      service role key (server-only; never ship to the browser)
 // ============================================================
 
+import webpush from "web-push";
+
 // Defaults cover both real origins this app is actually served from today
 // (golsz.com once its DNS is fixed, golsz.vercel.app in the meantime) —
 // a single hardcoded origin would risk breaking the app's current live
@@ -78,6 +80,46 @@ async function logAdminAction(supaUrl, serviceKey, adminId, action, targetId, de
   } catch (e) { console.error("GOLSZ admin audit log error:", e); }
 }
 
+// Real-time security alert — pushes straight to every admin's device the
+// moment someone (signed in, but not an admin) tries to hit this
+// privileged endpoint. Reuses the exact same Web Push machinery as
+// api/send-push.js (VAPID keys, push_subscriptions), just triggered from
+// here instead of from a Supabase Database Webhook, since "a non-admin
+// was rejected" isn't a table INSERT anything can hook a webhook to —
+// it only ever happens inside this function's own logic. Awaited (not
+// fire-and-forget) so Vercel doesn't tear the function down before the
+// push actually goes out; wrapped in try/catch so a push failure can
+// never block the real 403 response this always still returns.
+async function alertAdmins(supaUrl, serviceKey, title, body) {
+  try {
+    const vapidPublic = process.env.VAPID_PUBLIC_KEY;
+    const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
+    const vapidSubject = process.env.VAPID_SUBJECT;
+    if (!vapidPublic || !vapidPrivate || !vapidSubject) return; // push not configured on this deploy
+
+    const adminsRes = await fetch(`${supaUrl}/rest/v1/profiles?is_admin=eq.true&select=id`, {
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+    });
+    const admins = await adminsRes.json();
+    const adminIds = (Array.isArray(admins) ? admins : []).map((a) => a.id);
+    if (!adminIds.length) return;
+
+    const subsRes = await fetch(`${supaUrl}/rest/v1/push_subscriptions?user_id=in.(${adminIds.join(",")})&select=endpoint,p256dh,auth`, {
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+    });
+    const subs = await subsRes.json();
+    if (!Array.isArray(subs) || !subs.length) return;
+
+    webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
+    const payload = JSON.stringify({ title, body, url: "/golsz-app.html?page=admin" });
+    await Promise.allSettled(
+      subs.map((s) => webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload))
+    );
+  } catch (e) {
+    console.error("GOLSZ security alert push error:", e);
+  }
+}
+
 export default async function handler(req, res) {
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -89,7 +131,10 @@ export default async function handler(req, res) {
 
   const callerId = await getUserId(req.headers.authorization, supaUrl, serviceKey);
   if (!callerId) return res.status(401).json({ error: "Sign in required." });
-  if (!(await isAdmin(supaUrl, serviceKey, callerId))) return res.status(403).json({ error: "Admins only." });
+  if (!(await isAdmin(supaUrl, serviceKey, callerId))) {
+    await alertAdmins(supaUrl, serviceKey, "Security alert", "A signed-in user attempted an admin action without permission.");
+    return res.status(403).json({ error: "Admins only." });
+  }
 
   const { action, targetId } = req.body || {};
   // targetId gets embedded directly into an Admin API URL path and a

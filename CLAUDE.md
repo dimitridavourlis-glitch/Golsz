@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-GOLSZ — "the LinkedIn for sport" / AI sports-recruiting agent, pre-launch, Montreal-based. The repo is two
+GOLSZ — "the LinkedIn for sport" / AI sports-recruiting agent, pre-launch, Nicosia (Cyprus)-based. The repo is two
 things glued together, not one app:
 
 1. **A static marketing site** — `index.html`, `contact.html`, `terms.html`, `css/styles.css`, `js/main.js`,
@@ -385,6 +385,32 @@ There is no build/lint/test tooling in this repo. Relevant commands:
 - Client calls this via `fetch("/api/admin-user-action", ...)` with a real `Authorization: Bearer` header
   (`AdminPanel`'s `callAdminUserAction()` in `golsz-app.html`) — not `sb.rpc()`, since there's no RPC to call
   anymore for these two actions.
+
+### Real-time security alerts (`alertAdmins()` in `api/admin-user-action.js` and `api/moderate.js`)
+
+- The founder asked for an immediate alert "if ever there is a hack or a security breach" rather than only
+  finding out by opening the Admin Panel later. `alertAdmins(supaUrl, serviceKey, title, body)` — duplicated
+  into both files, matching this codebase's existing per-file-helper convention rather than a shared module
+  — pushes a real Web Push notification (same VAPID keys/`push_subscriptions` machinery as
+  `api/send-push.js`) to every admin's registered device the moment either of these fires:
+  1. **`api/admin-user-action.js`** — a signed-in but non-admin caller gets rejected (403) trying to
+     ban/unban/delete a user. This is the clearest signal this endpoint can produce of someone actually
+     probing for unauthorized admin access, as opposed to a normal user simply never hitting this endpoint.
+  2. **`api/moderate.js`** — the classifier returns `minor_safety_triggered: true` on a `review`/`block`
+     decision. Arguably the single most urgent thing this app can detect given who uses it, so it gets a
+     push immediately rather than only showing up passively next time someone opens the Moderation tab.
+- Triggered from inside these functions' own logic, not a Supabase Database Webhook — "a caller was
+  rejected" or "the classifier flagged this" aren't row `INSERT`s on any table a webhook could hook into,
+  they only ever happen inside this code. Awaited (not fire-and-forget) so Vercel doesn't tear the function
+  down mid-send; wrapped in `try/catch` so a push failure can never block the real 401/403/200 response the
+  endpoint always still returns regardless of whether the alert itself succeeds.
+- **Honest scope, not full intrusion detection.** This does not (and structurally cannot, without a lot more
+  work) catch: raw RLS-rejected REST calls made directly against Supabase bypassing these two endpoints
+  entirely (those never reach this code at all — see the audit's live RLS testing elsewhere in this file),
+  repeated failed login attempts (Supabase Auth's own login attempts aren't exposed to this app's tables),
+  or a compromised admin account behaving suspiciously but still passing the `is_admin()` check. It's a
+  real, working alert for the two concrete signals above — not a general security monitoring system. No
+  production error/performance monitoring (Sentry etc.) exists either — see the known-gaps list below.
 
 ### Admin action audit log (migration 030)
 
@@ -787,7 +813,11 @@ though the backend allowed it. If you add another place that surfaces a Message 
 - **Legal review.** The parent-verification flow is mutual in-app consent, not identity-verified
   COPPA/GDPR-K parental consent. `terms.html` also still contains a placeholder line stating real
   moderation/content terms "will be published before real accounts go live." Both need a lawyer's pass
-  before this is genuinely launch-ready with real minors as users.
+  before this is genuinely launch-ready with real minors as users. `terms.html`'s governing-law clause was
+  also updated to "the laws of the Republic of Cyprus" (from Québec/Canada) to match the company's real
+  location — that's a substantive legal change made on the founder's direct instruction to update location
+  references everywhere, not something a lawyer has actually reviewed; flag this specifically when the
+  legal pass happens.
 - **Stripe is still in Sandbox/test mode.** `STRIPE_LINKS` holds real test-mode Payment Links and the webhook
   is registered against the sandbox, so checkout works end-to-end — but no real money moves yet. Before
   accepting real payments: create Live-mode Payment Links, register a Live webhook endpoint, and rotate
@@ -796,11 +826,16 @@ though the backend allowed it. If you add another place that surfaces a Message 
   working at `https://golsz.vercel.app`, but the real custom domain won't serve it until its DNS/nameserver
   configuration (currently GoDaddy) is fixed to point at Vercel. Nothing will be reachable at the real domain
   — including Stripe/Supabase webhooks registered against it — until this is resolved.
-- **Email deliverability is on Resend's sandbox sender (`onboarding@resend.dev`)** — Supabase's custom SMTP
-  is configured and working, but the sandbox sender can only deliver to the email address on the Resend
-  account itself, not real users. `golsz.com` is mid-verification in Resend (DNS records added via a
-  GoDaddy integration, propagation pending as of this writing) — once verified, update Supabase's SMTP
-  sender to a real `@golsz.com` address so confirmation emails can reach anyone, not just the account owner.
+- **Email deliverability is resolved** — Resend's `golsz.com` domain verification completed and Supabase's
+  SMTP sender now sends from a real `@golsz.com` address, confirmed working by the founder. (Note this is
+  independent of `golsz.com`'s web-hosting DNS above — domain email records and the domain's nameserver/A
+  records are separate DNS concerns; email can work while the site itself is still parked, as it is here.)
+- **`contact.html`'s waitlist form has the same problem the home page's did.** The home page's non-
+  functional waitlist section (fake "you're on the list" message, nothing ever actually saved — found
+  during a home-page rewrite) was removed at the founder's request, but "Join the waitlist" buttons
+  elsewhere on the home page (the three journey sections, the footer) still link to `contact.html`, whose
+  waitlist form uses the exact same client-only fake-success `data-waitlist-form` handling in `js/main.js`.
+  Flagged, not yet fixed — needs a decision (wire it to a real backend, or remove it there too).
 - **Non-mechanical Pro/Elite features.** Only Scout's daily limit is actually gated by `profiles.plan`
   today. Marketing bullets like "full verified passport" or "priority visibility" aren't backed by any
   distinct mechanic anywhere in the app — gating those needs a product decision on what they mean first.

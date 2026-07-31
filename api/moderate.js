@@ -37,6 +37,8 @@
 //   SUPABASE_SERVICE_KEY     service role key (server-only; never ship to the browser)
 // ============================================================
 
+import webpush from "web-push";
+
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
 const MODERATION_SYSTEM_PROMPT = `You are the content moderation classifier for GOLSZ, a sports recruiting and professional networking platform used by athletes, coaches, clubs, scouts, and agents. A significant share of athlete accounts belong to minors under 18, many of them linked to a parent or guardian account.
@@ -272,6 +274,42 @@ async function logModerationItem(supaUrl, serviceKey, authorId, input, result) {
   } catch (e) { console.error("GOLSZ moderation queue log error:", e); }
 }
 
+// Real-time security alert for the single most urgent thing this
+// classifier can detect — a minor-safety rule actually firing. Same
+// Web Push mechanism (and the same reasoning for why it's triggered
+// from here rather than a Database Webhook) as api/admin-user-action.js's
+// alertAdmins() — duplicated rather than shared, matching this codebase's
+// existing pattern of small per-file helpers instead of a shared module.
+async function alertAdmins(supaUrl, serviceKey, title, body) {
+  try {
+    const vapidPublic = process.env.VAPID_PUBLIC_KEY;
+    const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
+    const vapidSubject = process.env.VAPID_SUBJECT;
+    if (!vapidPublic || !vapidPrivate || !vapidSubject) return;
+
+    const adminsRes = await fetch(`${supaUrl}/rest/v1/profiles?is_admin=eq.true&select=id`, {
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+    });
+    const admins = await adminsRes.json();
+    const adminIds = (Array.isArray(admins) ? admins : []).map((a) => a.id);
+    if (!adminIds.length) return;
+
+    const subsRes = await fetch(`${supaUrl}/rest/v1/push_subscriptions?user_id=in.(${adminIds.join(",")})&select=endpoint,p256dh,auth`, {
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+    });
+    const subs = await subsRes.json();
+    if (!Array.isArray(subs) || !subs.length) return;
+
+    webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
+    const payload = JSON.stringify({ title, body, url: "/golsz-app.html?page=admin" });
+    await Promise.allSettled(
+      subs.map((s) => webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload))
+    );
+  } catch (e) {
+    console.error("GOLSZ security alert push error:", e);
+  }
+}
+
 export default async function handler(req, res) {
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -356,6 +394,9 @@ export default async function handler(req, res) {
 
     if (result.decision !== "allow" && supaUrl && serviceKey) {
       await logModerationItem(supaUrl, serviceKey, userId, classifierInput, result);
+      if (result.minor_safety_triggered) {
+        await alertAdmins(supaUrl, serviceKey, "Security alert", "A minor-safety rule was just triggered — check the Moderation tab.");
+      }
     }
 
     return res.status(200).json(result);
