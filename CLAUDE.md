@@ -320,6 +320,14 @@ There is no build/lint/test tooling in this repo. Relevant commands:
 - Register the deployed URL in the Stripe Dashboard (Developers → Webhooks), subscribed to
   `checkout.session.completed` and `customer.subscription.deleted`; the signing secret it gives you is
   `STRIPE_WEBHOOK_SECRET`.
+- **`client_reference_id` (→ `profileId`) is validated as a real UUID (`UUID_RE`) before being interpolated
+  into a PostgREST filter string.** Found during a full app audit: this value is whatever query param
+  someone puts on the Payment Link URL when they start checkout — this app's own redirect always appends a
+  real UUID, but anyone can open that same Payment Link by hand with an arbitrary value there. Without the
+  UUID check, a crafted value (e.g. containing a URL-encoded `&` to smuggle in an extra filter clause) could
+  have targeted a different row's `plan`/`stripe_customer_id` than the one actually paying. `customerId`
+  isn't given the same treatment — it's Stripe's own generated `cus_...` id, not something the person
+  initiating checkout can set directly, so it doesn't carry the same risk.
 
 ### `api/send-push.js` (Vercel serverless function)
 
@@ -514,6 +522,31 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   was rejected, rather than a real error it could learn from. Real signups never touch this path since the
   field stays empty for anyone actually looking at the form.
 
+### Stored-URL XSS guard (`safeHref()`) and the root `ErrorBoundary`
+
+Both found during a full app audit (browser crash-testing plus a systematic pass over `golsz-app.html`/`api/`).
+
+- **Real, exploitable stored XSS, now fixed.** `Highlights.addHighlight()` validates a highlight's URL is
+  http(s) client-side before inserting — but that's the app's own UI, not a real barrier. `posts_write`
+  (RLS) only ever checked `author_id = auth.uid()`, and the owner-update policy on `athletes` (predates this
+  schema file, not fully re-documented here) is the same shape — neither constrained the actual field
+  content. Any signed-in user could bypass the client entirely with a direct REST call — e.g.
+  `POST /posts { kind: 'clip', body: 'javascript:...' }` — and it would later render as a real, clickable
+  `<a href>` in Feed, the post-detail viewer, and the Highlights list, for every user who saw it, not just
+  the person who posted it. `safeHref(url)` (`golsz-app.html`, right after `initials()`) is a render-time
+  guard — only renders as a real link if the value is actually `http(s)://...`, otherwise falls back to
+  plain text — applied at all four render sites regardless of how the stored value got there. Migration 034
+  additionally adds a `posts_clip_body_is_http` CHECK constraint so a bad row can't even be inserted for
+  `posts` in the first place; `athletes.highlights` (a jsonb array) isn't given an equivalent DB-level
+  constraint — validating every array element needs a trigger, not a plain CHECK — but the render-time guard
+  already neutralizes the actual rendering risk there too.
+- **No React error boundary existed at all** — a single component throwing during render (a bad API
+  response shape, an unexpected null, etc.) unmounted the entire tree, leaving a blank screen with no
+  recovery short of the person thinking to reload manually. The root render is now wrapped in an
+  `ErrorBoundary` class component (right before the final `ReactDOM.createRoot(...).render(...)` call) that
+  shows a "Something went wrong — Reload" screen instead. It only logs to the console — no error-tracking
+  service (Sentry etc.) is wired up, see the known-gaps list below.
+
 ### `PostsGrid` — Instagram-style posts grid on the Passport
 
 - Same `viewUserId` convention as `Highlights` right above it in `golsz-app.html` (`null` = own profile) —
@@ -704,6 +737,11 @@ meant someone who follows you but you haven't followed back had no way to see th
 though the backend allowed it. If you add another place that surfaces a Message button, gate it the same way.
 
 **Not yet built / known gaps:**
+- **`api/moderate.js` has no rate limit of its own** — it requires being signed in (same as every real call
+  site), but unlike `api/scout.js` (real per-plan daily caps via `increment_scout_usage`), nothing stops a
+  signed-in account from scripting direct repeated calls to it outside the app's UI to run up the Anthropic
+  bill. Found during a full app audit; flagged rather than fixed in the same pass since it needs a product
+  decision (a flat per-user daily cap? shared with Scout's existing metering?) rather than an obvious default.
 - **No 2FA/MFA and no granular admin roles.** A security audit this session identified both as real gaps —
   every admin has the exact same full `is_admin` flag (no reduced-scope roles), and there's no second factor
   on login for anyone, admin or not. Deliberately deferred (not forgotten) in favor of shipping CSP, the

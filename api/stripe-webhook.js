@@ -49,6 +49,17 @@ function verifyStripeSignature(rawBody, sigHeader, secret) {
   }
 }
 
+// client_reference_id is set by whoever initiates checkout — this app's
+// own Payment Link redirect always appends a real profile UUID, but
+// anyone can open that same Payment Link URL by hand with an arbitrary
+// value in that query param. Interpolating it unchecked into a PostgREST
+// filter string (id=eq.${profileId}) would let a crafted value inject
+// extra filter clauses (e.g. a URL-encoded "&" introducing an "or"
+// condition) targeting a different row than intended. Requiring a real
+// UUID shape first closes that off, same pattern as the UUID check in
+// api/admin-user-action.js.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function patchProfile(supaUrl, serviceKey, filterQuery, body) {
   await fetch(`${supaUrl}/rest/v1/profiles?${filterQuery}`, {
     method: "PATCH",
@@ -86,7 +97,7 @@ export default async function handler(req, res) {
       const customerId = session.customer;
       const amount = session.amount_total || 0;
       const plan = amount >= 7900 ? "elite" : amount >= 2900 ? "pro" : null;
-      if (profileId && plan) {
+      if (profileId && UUID_RE.test(profileId) && plan) {
         await patchProfile(supaUrl, serviceKey, `id=eq.${profileId}`, { plan, stripe_customer_id: customerId || null });
       }
     } else if (event.type === "customer.subscription.deleted") {

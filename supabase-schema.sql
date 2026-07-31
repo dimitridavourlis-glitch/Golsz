@@ -1569,5 +1569,15 @@ $$;
 grant execute on function resolve_moderation_item(uuid) to authenticated;
 
 -- ============================================================
+-- 34) ADDITIVE — constrain clip-post URLs at the database level
+-- See supabase-migration-034-clip-post-url-check.sql for full context.
+-- ============================================================
+
+alter table posts drop constraint if exists posts_clip_body_is_http;
+alter table posts add constraint posts_clip_body_is_http check (
+  kind <> 'clip' or body is null or body ~* '^https?://'
+);
+
+-- ============================================================
 -- Done.
 -- ============================================================

@@ -1341,6 +1341,18 @@ function SettingsButton() {
 function initials(name) {
   return (name || "").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
 }
+// Render-time guard for any stored URL used as a real <a href> (clip post
+// links, saved highlights). Client-side checks at write time (e.g.
+// Highlights.addHighlight()) only stop the app's own UI — RLS write
+// policies here (posts_write, athletes' owner-update policy) only check
+// author_id, not the actual field contents, so a signed-in user can
+// still insert a raw "javascript:" URL via a direct API call, bypassing
+// any client-side validation entirely. Re-checking the scheme right
+// before rendering closes that gap regardless of how the value got
+// stored, instead of just trusting it was validated on the way in.
+function safeHref(url) {
+  return typeof url === "string" && /^https?:\/\//i.test(url) ? url : null;
+}
 function timeAgo(iso) {
   const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
   if (s < 3600) return Math.max(1, Math.floor(s / 60)) + "m";
@@ -1806,8 +1818,8 @@ function Feed({ onMessage, onViewProfile }) {
             )}
           </div>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{p.head}</div>
-          {p.kind === "clip" && p.body ? (
-            <a href={p.body} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13.5, color: C.lime, lineHeight: 1.5, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}>
+          {p.kind === "clip" && p.body && safeHref(p.body) ? (
+            <a href={safeHref(p.body)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13.5, color: C.lime, lineHeight: 1.5, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}>
               <Video size={13} /> {t("highlights_watch")}
             </a>
           ) : (
@@ -2717,8 +2729,8 @@ function Highlights({ viewUserId }) {
       {items.map((m, i) => (
         <div key={m.id || i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: i < items.length - 1 ? `1px solid ${C.line}` : "none" }}>
           <div style={{ width: 6, height: 6, borderRadius: 99, background: C.lime, flexShrink: 0 }} />
-          {m.url ? (
-            <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, flex: 1, color: C.chalk, textDecoration: "none" }}>{m.title}</a>
+          {m.url && safeHref(m.url) ? (
+            <a href={safeHref(m.url)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, flex: 1, color: C.chalk, textDecoration: "none" }}>{m.title}</a>
           ) : (
             <span style={{ fontSize: 13, flex: 1 }}>{m.title}</span>
           )}
@@ -2812,8 +2824,8 @@ function PostsGrid({ viewUserId }) {
               <button onClick={() => setOpenPost(null)} style={iconBtn(C.chalk)}><X size={18} /></button>
             </div>
             {openPost.headline && <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{openPost.headline}</div>}
-            {openPost.kind === "clip" && openPost.body ? (
-              <a href={openPost.body} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13.5, color: C.lime, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}>
+            {openPost.kind === "clip" && openPost.body && safeHref(openPost.body) ? (
+              <a href={safeHref(openPost.body)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13.5, color: C.lime, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}>
                 <Video size={13} /> {t("highlights_watch")}
               </a>
             ) : (
@@ -5528,7 +5540,36 @@ function Root() {
 }
 
 
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(LangProvider, null, React.createElement(Root)));
+// Without this, any single component throwing during render (a bad
+// API response shape, an unexpected null, etc.) unmounts the entire
+// React tree — the whole app goes blank with nothing on screen and no
+// way back except an actual page reload the person has to think to
+// do themselves. This catches that at the root and offers a reload
+// button instead of a silent blank screen. No error-tracking service
+// (e.g. Sentry) is wired up yet — see CLAUDE.md's known gaps — so this
+// only logs to the console, it doesn't report anywhere.
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error("GOLSZ uncaught render error:", error, info); }
+  render() {
+    if (this.state.error) {
+      return React.createElement("div", {
+        style: { minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: 24, background: "#0B0F0C", color: "#F5F7F5", fontFamily: "'Archivo', system-ui, sans-serif", textAlign: "center" },
+      },
+        React.createElement("div", { style: { fontSize: 17, fontWeight: 800 } }, "Something went wrong."),
+        React.createElement("div", { style: { fontSize: 13.5, color: "#9AA39C", maxWidth: 320 } }, "GOLSZ hit an unexpected error. Reloading usually fixes it."),
+        React.createElement("button", {
+          onClick: () => window.location.reload(),
+          style: { background: "#C8F135", color: "#0B0F0C", border: "none", borderRadius: 12, padding: "12px 22px", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" },
+        }, "Reload"),
+      );
+    }
+    return this.props.children;
+  }
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(ErrorBoundary, null, React.createElement(LangProvider, null, React.createElement(Root))));
 </script>
 </body>
 </html>
