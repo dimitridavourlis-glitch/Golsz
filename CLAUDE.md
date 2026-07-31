@@ -451,8 +451,15 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   elsewhere in this file: a moderation-service hiccup shouldn't lock someone out of posting/messaging
   entirely. This is a layer on top of the existing report/block moderation tools, not the only safeguard.
 - `api/moderate.js` requires a real signed-in user (same `getUserId()` pattern as `api/scout.js`) so it
-  can't be hit as a free-standing endpoint to run up the Anthropic bill — every real call site already
-  requires being signed in anyway.
+  can't be hit as a free-standing endpoint by someone with no account at all.
+- **Rate limited per user, per day** (migration 035) — `MODERATION_DAILY_LIMIT`, defaults to 300 — same
+  shape as Scout's metering: `increment_moderation_usage(p_user)` is a `security definer` RPC granted only
+  to `service_role` (never `authenticated`, so a client can't call it directly with someone else's id to
+  falsely max out their count), incrementing a per-user-per-day counter in `moderation_check_usage`.
+  Checked *before* the paid Anthropic call happens — once over the limit, `api/moderate.js` returns 429
+  without ever calling the classifier, so the limit actually bounds cost, not just request count. Admins
+  are exempt, matching Scout. Found missing during a full app audit — being signed in alone didn't stop a
+  scripted account from calling this directly, outside the app's UI, to run up the bill.
 - Only text is checked — **uploaded images (Feed post photos, avatars) are not moderated** by this. That
   would need a separate vision-based check and is a known gap, not an oversight.
 - Scout gets a second, independent layer: its own system prompt (`SYSTEM_PROMPT` in `api/scout.js`, and the
@@ -737,11 +744,6 @@ meant someone who follows you but you haven't followed back had no way to see th
 though the backend allowed it. If you add another place that surfaces a Message button, gate it the same way.
 
 **Not yet built / known gaps:**
-- **`api/moderate.js` has no rate limit of its own** — it requires being signed in (same as every real call
-  site), but unlike `api/scout.js` (real per-plan daily caps via `increment_scout_usage`), nothing stops a
-  signed-in account from scripting direct repeated calls to it outside the app's UI to run up the Anthropic
-  bill. Found during a full app audit; flagged rather than fixed in the same pass since it needs a product
-  decision (a flat per-user daily cap? shared with Scout's existing metering?) rather than an obvious default.
 - **No 2FA/MFA and no granular admin roles.** A security audit this session identified both as real gaps —
   every admin has the exact same full `is_admin` flag (no reduced-scope roles), and there's no second factor
   on login for anyone, admin or not. Deliberately deferred (not forgotten) in favor of shipping CSP, the

@@ -1579,5 +1579,33 @@ alter table posts add constraint posts_clip_body_is_http check (
 );
 
 -- ============================================================
+-- 35) ADDITIVE — rate limit api/moderate.js
+-- See supabase-migration-035-moderation-rate-limit.sql for full context.
+-- ============================================================
+
+create table if not exists moderation_check_usage (
+  user_id uuid not null references profiles(id) on delete cascade,
+  usage_date date not null default current_date,
+  calls int not null default 0,
+  primary key (user_id, usage_date)
+);
+
+alter table moderation_check_usage enable row level security;
+
+create or replace function increment_moderation_usage(p_user uuid)
+returns int language plpgsql security definer set search_path to 'public' as $$
+declare v int;
+begin
+  insert into moderation_check_usage (user_id, usage_date, calls)
+  values (p_user, current_date, 1)
+  on conflict (user_id, usage_date) do update set calls = moderation_check_usage.calls + 1
+  returning calls into v;
+  return v;
+end $$;
+
+revoke all on function increment_moderation_usage(uuid) from public, authenticated, anon;
+grant execute on function increment_moderation_usage(uuid) to service_role;
+
+-- ============================================================
 -- Done.
 -- ============================================================

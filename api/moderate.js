@@ -208,7 +208,7 @@ function mapRole(occupation) {
 async function getProfileContext(supaUrl, serviceKey, userId) {
   if (!userId) return null;
   try {
-    const r = await fetch(`${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=occupation,is_minor,verified_tier`, {
+    const r = await fetch(`${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=occupation,is_minor,verified_tier,is_admin`, {
       headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
     });
     const rows = await r.json();
@@ -218,9 +218,32 @@ async function getProfileContext(supaUrl, serviceKey, userId) {
       role: mapRole(row.occupation),
       is_minor: !!row.is_minor,
       verified: row.verified_tier === "pro" || row.verified_tier === "elite",
+      is_admin: !!row.is_admin,
     };
   } catch {
     return null;
+  }
+}
+
+// Same shape as api/scout.js's increment_scout_usage — a security
+// definer RPC granted only to service_role (never `authenticated`), so
+// a client can't call it directly with someone else's user id to grief
+// their daily count. Returns today's running total for this user,
+// including the call this request is making.
+async function incrementModerationUsage(supaUrl, serviceKey, userId) {
+  try {
+    const r = await fetch(`${supaUrl}/rest/v1/rpc/increment_moderation_usage`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_user: userId }),
+    });
+    const v = await r.json();
+    return Number(v) || 0;
+  } catch {
+    // fail open on the limiter itself — a hiccup here shouldn't block a
+    // real moderation check any more than a hiccup in the classifier
+    // itself should (see the outer catch below)
+    return 0;
   }
 }
 
@@ -271,10 +294,23 @@ export default async function handler(req, res) {
     if (!userId) return res.status(401).json({ error: "Sign in required." });
   }
 
-  let author = { role: null, is_minor: false, verified: false };
+  let author = { role: null, is_minor: false, verified: false, is_admin: false };
   if (supaUrl && serviceKey && userId) {
     const ctx = await getProfileContext(supaUrl, serviceKey, userId);
     if (ctx) author = ctx;
+  }
+
+  // Unlike Scout (which has real per-plan daily caps), this endpoint
+  // previously had no rate limit beyond "must be signed in" — found
+  // during a full app audit as a cost-abuse vector: anyone signed in
+  // could script direct calls to it outside the app's UI. Admins are
+  // exempt, same as Scout's metering.
+  if (supaUrl && serviceKey && userId && !author.is_admin) {
+    const calls = await incrementModerationUsage(supaUrl, serviceKey, userId);
+    const limit = Number(process.env.MODERATION_DAILY_LIMIT || 300);
+    if (calls > limit) {
+      return res.status(429).json({ error: "Daily moderation check limit reached." });
+    }
   }
 
   let recipient = null;
