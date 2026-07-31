@@ -136,6 +136,7 @@ Discourse:
 - Betting solicitation, match-fixing, or spot-fixing approaches
 - Spam, bulk unsolicited commercial messaging, malware or phishing links
 - Content promoting self-harm, disordered eating, or extreme weight manipulation
+- Profanity, vulgar, or obscene language (swear words), even when not directed at anyone and even inside otherwise-fine competitive banter or trash talk — this platform is used by minors, so blunt/informal language is fine but actual swear words are not
 
 # Output
 
@@ -150,7 +151,7 @@ Return only this JSON object, with no prose, no markdown, and no code fences:
   "rationale": string
 }
 
-Reason codes are drawn from: MINOR_CONTACT_SOLICITATION, MINOR_OFFPLATFORM, MINOR_SECRECY, MINOR_APPEARANCE, MINOR_MEDIA_REQUEST, MINOR_ISOLATION, MINOR_BODY_TARGETS, MINOR_PRIVATE_INDUCEMENT, MINOR_ADULT_DM_UNSUPERVISED, SEXUAL_CONTENT, HARASSMENT, HATE, DOXXING, IMPERSONATION, RECRUITING_FRAUD, PED, BETTING, SPAM, SELF_HARM, UNVERIFIED_AUTHORITY, COMPENSATION_MENTION, MEDICAL_ADVICE, CONTEXT_INSUFFICIENT, CLEAN.
+Reason codes are drawn from: MINOR_CONTACT_SOLICITATION, MINOR_OFFPLATFORM, MINOR_SECRECY, MINOR_APPEARANCE, MINOR_MEDIA_REQUEST, MINOR_ISOLATION, MINOR_BODY_TARGETS, MINOR_PRIVATE_INDUCEMENT, MINOR_ADULT_DM_UNSUPERVISED, SEXUAL_CONTENT, HARASSMENT, HATE, DOXXING, IMPERSONATION, RECRUITING_FRAUD, PED, BETTING, SPAM, SELF_HARM, PROFANITY, UNVERIFIED_AUTHORITY, COMPENSATION_MENTION, MEDICAL_ADVICE, CONTEXT_INSUFFICIENT, CLEAN.
 
 \`confidence\` is 0.0 to 1.0 for the decision as a whole. \`rationale\` is one sentence, under 30 words, written for a human moderator. It must not quote the content back. For "allow", use "CLEAN" as the primary reason code and an empty rationale string.
 

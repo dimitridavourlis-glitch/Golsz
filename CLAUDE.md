@@ -410,6 +410,12 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   `api/moderate.js`, which runs a detailed classifier system prompt (a small/fast Claude model,
   `MODERATION_MODEL`, defaults to `claude-haiku-4-5-20251001`) — a real classifier rather than a keyword
   blocklist, since blunt or creative phrasing trivially defeats keyword lists.
+- **The BLOCK list includes plain profanity** (`PROFANITY` reason code) — deliberately stricter than a pure
+  safety classifier would be, since GOLSZ is used by minors. This was added on top of a much more detailed
+  trust-and-safety prompt supplied directly by the founder (minor-safety rules, reason codes, confidence,
+  rationale) after testing showed a bare swear word with no sexual/harassing content correctly fell through
+  every other BLOCK/REVIEW category and got allowed — that's expected behavior for a safety-only classifier,
+  it just wasn't the actual policy wanted here, so the rule was added explicitly rather than left implicit.
 - **Three-way decision, not just yes/no**: `allow` (publish/send immediately, no record kept), `review`
   (flagged as risky/uncertain — see below), `block` (rejected). Only `block` actually stops the content —
   the call site shows `moderation_blocked` inline and does not save/send it (input stays in place so the
