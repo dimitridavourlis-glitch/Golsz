@@ -3308,7 +3308,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
               <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05, fontStretch: "expanded" }}>{p.name}</div>
-              {p.occupation && p.occupation !== "Player" && p.verifiedTier !== "none" && (
+              {p.verifiedTier !== "none" && (
                 <span title={p.verifiedTier === "elite" ? t("passport_verified_elite_tooltip") : t("passport_verified_tooltip")} style={{ display: "inline-flex", flexShrink: 0 }}>
                   <BadgeCheck size={17} color={C.pitch} fill={p.verifiedTier === "elite" ? C.elite : C.lime} strokeWidth={2.5} />
                 </span>
@@ -4078,6 +4078,16 @@ function AdminPanel({ onBack }) {
                       {u.verified_tier === "elite" ? ` · ${t("admin_tier_elite")}` : u.verified_tier === "pro" ? "" : ` · ${t("admin_unverified")}`}
                     </span>
                   )}
+                  {(!u.occupation || u.occupation === "Player") && u.verified_tier && u.verified_tier !== "none" && (
+                    <span style={{
+                      fontSize: 9, display: "inline-flex", alignItems: "center", gap: 3,
+                      color: u.verified_tier === "elite" ? C.elite : C.lime,
+                      border: `1px solid ${u.verified_tier === "elite" ? C.eliteBorder : C.limeBorder}`,
+                      borderRadius: 5, padding: "1px 5px",
+                    }}>
+                      <BadgeCheck size={10} /> {u.verified_tier === "elite" ? t("admin_tier_elite") : t("admin_tier_pro")}
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{t("admin_joined")}{timeAgo(u.created_at)}{t("admin_ago")}</div>
               </div>
@@ -4085,22 +4095,20 @@ function AdminPanel({ onBack }) {
                 <select value={u.plan} onChange={(e) => setUserPlan(u.id, e.target.value)} style={{ ...field, padding: "5px 7px", fontSize: 11.5 }}>
                   <option value="starter">starter</option><option value="pro">pro</option><option value="elite">elite</option>
                 </select>
-                {u.occupation && u.occupation !== "Player" && (
-                  <div style={{ display: "flex", gap: 4 }}>
-                    {["none", "pro", "elite"].map((tier) => {
-                      const active = (u.verified_tier || "none") === tier;
-                      const tierColor = tier === "elite" ? C.elite : tier === "pro" ? C.lime : C.slate;
-                      const tierBg = tier === "elite" ? "#4A9EFF1a" : tier === "pro" ? "#C8F1351a" : "transparent";
-                      return (
-                        <button key={tier} onClick={() => setUserVerifiedTier(u.id, tier)} style={{
-                          fontSize: 10, fontWeight: 700, padding: "5px 8px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                          background: active ? tierBg : "transparent", color: active ? tierColor : C.slate,
-                          border: `1px solid ${active ? tierColor : C.line2}`,
-                        }}>{t(tier === "none" ? "admin_tier_none" : tier === "pro" ? "admin_tier_pro" : "admin_tier_elite")}</button>
-                      );
-                    })}
-                  </div>
-                )}
+                <div style={{ display: "flex", gap: 4 }}>
+                  {["none", "pro", "elite"].map((tier) => {
+                    const active = (u.verified_tier || "none") === tier;
+                    const tierColor = tier === "elite" ? C.elite : tier === "pro" ? C.lime : C.slate;
+                    const tierBg = tier === "elite" ? "#4A9EFF1a" : tier === "pro" ? "#C8F1351a" : "transparent";
+                    return (
+                      <button key={tier} onClick={() => setUserVerifiedTier(u.id, tier)} style={{
+                        fontSize: 10, fontWeight: 700, padding: "5px 8px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
+                        background: active ? tierBg : "transparent", color: active ? tierColor : C.slate,
+                        border: `1px solid ${active ? tierColor : C.line2}`,
+                      }}>{t(tier === "none" ? "admin_tier_none" : tier === "pro" ? "admin_tier_pro" : "admin_tier_elite")}</button>
+                    );
+                  })}
+                </div>
                 <button onClick={() => setUserAdmin(u.id, !u.is_admin)} style={{
                   fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
                   background: u.is_admin ? "#C8F1351a" : "transparent", color: u.is_admin ? C.lime : C.slate, border: `1px solid ${u.is_admin ? C.lime : C.line2}`,

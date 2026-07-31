@@ -578,6 +578,26 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
 - Upload affordance (small camera-icon button overlaid on the initials/photo box, plus a short "use a sports
   photo, not a casual selfie" tip) only shows on your own Passport, never `viewingOther`.
 
+### Verified badge available for every occupation, including Player
+
+- The verified-tier system (migration 025) was originally scoped to non-Player occupations only (Coach/
+  Scout/Agent/Physio/Other) — the idea being that only those accounts make a professional claim worth
+  verifying, while a Player is just an athlete describing themselves. The Admin Panel's Users tab tier
+  buttons, and the checkmark badge next to a name on the Passport (`golsz-app.html`, both previously gated
+  on `p.occupation !== "Player"`), have both been unlocked for every user regardless of occupation.
+- `setUserVerifiedTier(id, tier)` already only ever updated `profiles.verified_tier` — it never touched
+  `plan` (the paid subscription tier), so "verify someone without changing their payment plan" was already
+  true architecturally; the actual gap was that the button (and the badge it controls) were invisible for
+  Player accounts, not that verifying someone had a plan side effect.
+- The Users-tab list now shows a small "✓ Pro/Elite" pill for verified Player accounts (next to their name),
+  separate from the existing occupation+verification pill shown for non-Players — so an admin can see
+  verification status for everyone at a glance, not just recruiters/scouts/agents.
+- The "unverified" warning banner shown to viewers of an unverified profile (`passport_unverified_warning`,
+  still gated to non-Player occupations) was deliberately left alone — that's a distinct concern (warning
+  a viewer that an occupation *claim* like "I'm a licensed agent" hasn't been verified), not the verified
+  badge itself, and doesn't read sensibly for a Player ("this account says it's a Player" isn't a claim
+  needing verification the same way).
+
 ### Admin Panel "Analytics" tab (migration 028)
 
 - Replaced the old standalone "Events" tab — event management (create/block/delete) didn't go away, it moved
