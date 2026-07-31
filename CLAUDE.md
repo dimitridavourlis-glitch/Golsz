@@ -808,7 +808,6 @@ though the backend allowed it. If you add another place that surfaces a Message 
   shape as `push_subscriptions`. Still unused by the app today (every occupation's extra fields live in
   `athletes` — see `ProfileEditor` — so nothing actually writes to these two tables yet), but they're no
   longer fully locked the moment something does.
-- **Deeper moderation** (a real review queue, automated detection) beyond report/block/admin-delete.
 - Production monitoring/alerting (e.g. Sentry) — nothing wired up yet.
 - **Push notifications are fully wired (migration 026)** — `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
   `VAPID_SUBJECT`, and `SUPABASE_WEBHOOK_SECRET` are set as Vercel env vars, and the two triggers that call
