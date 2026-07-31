@@ -401,6 +401,29 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   last 100 rows plus admin names (via `public_profile_names`) and renders them as simple cards (admin name,
   action, JSON detail, target id, time-ago). No new charting/UI dependency, same style as the other tabs.
 
+### Time-on-app tracking (migration 031)
+
+- No session-duration data existed anywhere before this — `daily_activity` (`user_id`, `activity_date`,
+  `minutes`, one row per user per day) fills that gap with a lightweight heartbeat instead of a real session
+  log. `GolszApp` (`golsz-app.html`) runs a `setInterval` every 60s, and if `document.visibilityState ===
+  "visible"` it calls `record_activity_ping()`, which increments today's row for that user by 1 minute. No
+  precise session start/stop is tracked — a real "session ended" event doesn't exist reliably on mobile
+  Safari/PWAs (tabs get killed, phones lock), so accumulating minutes while visibly open is the practical
+  substitute. This also means: **usage is only measured from when this shipped onward** — there's no
+  historical backfill, so Admin Panel numbers start at zero and grow as real usage happens.
+- Same privacy shape as `messages`/`scout_history` (migration 028): `daily_activity` has **no `authenticated`
+  read/write policy at all**. The only write path is `record_activity_ping(p_minutes)`, `security definer`,
+  always using `auth.uid()` (a user can only ever increment their own count, and it's a no-op if
+  `auth.uid()` is null). The only read path is `admin_analytics_counts()` (migration 028's RPC, extended
+  here), which now also returns pre-aggregated `activity_minutes_*`/`activity_users_*` for 7/30/365-day
+  windows — never a raw per-user-per-day row, so an admin can see "how engaged people are on average" but
+  never "exactly when did this specific person use the app."
+- Admin Panel → Analytics → new "Time on app" card computes **average hours per *active* user**, not per
+  total signup (`avgHours()` in `golsz-app.html`, right above `AdminPanel`) — someone who never opened the
+  app in a given window doesn't drag the average toward zero and mask how engaged actual users are. Each of
+  the three numbers (week/month/year) also shows the active-user count it's averaged over, so the figure is
+  legible rather than a bare number.
+
 ### Content-Security-Policy header (`vercel.json`)
 
 - Static response headers (CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) applied via

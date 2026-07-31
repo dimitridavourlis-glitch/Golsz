@@ -321,6 +321,7 @@ const I18N = {
     admin_not_set: "Not set", admin_gender_male: "Male", admin_gender_female: "Female",
     admin_scout_conversations: "SCOUT CHATS", admin_scout_users: "SCOUT USERS", admin_messages_total: "MESSAGES",
     admin_messages_7d: "MESSAGES 7D", admin_push_subscribers: "PUSH SUBS", admin_top_followed: "TOP FOLLOWED",
+    admin_time_on_app: "TIME ON APP", admin_avg_hrs_week: "AVG HRS/WEEK", admin_avg_hrs_month: "AVG HRS/MONTH", admin_avg_hrs_year: "AVG HRS/YEAR", admin_active_users: "active users",
     admin_no_data: "No data yet.", admin_manage_events: "Manage events", admin_analytics_err: "Couldn't load analytics.",
     banned_title: "Account suspended", banned_message: "Your GOLSZ account has been suspended. If you think this is a mistake, contact support.",
     scout_header: "AI SCOUT", scout_fields_on_file: "FIELDS ON FILE", scout_live_agent: "LIVE AGENT",
@@ -494,6 +495,7 @@ const I18N = {
     admin_not_set: "Non défini", admin_gender_male: "Homme", admin_gender_female: "Femme",
     admin_scout_conversations: "CONVERSATIONS SCOUT", admin_scout_users: "UTILISATEURS SCOUT", admin_messages_total: "MESSAGES",
     admin_messages_7d: "MESSAGES 7J", admin_push_subscribers: "ABONNÉS PUSH", admin_top_followed: "PLUS SUIVIS",
+    admin_time_on_app: "TEMPS SUR L'APPLI", admin_avg_hrs_week: "MOY. H/SEMAINE", admin_avg_hrs_month: "MOY. H/MOIS", admin_avg_hrs_year: "MOY. H/AN", admin_active_users: "utilisateurs actifs",
     admin_no_data: "Aucune donnée pour l'instant.", admin_manage_events: "Gérer les événements", admin_analytics_err: "Impossible de charger les statistiques.",
     banned_title: "Compte suspendu", banned_message: "Votre compte GOLSZ a été suspendu. Si vous pensez qu'il s'agit d'une erreur, contactez le support.",
     admin_add_event: "AJOUTER UN ÉVÉNEMENT", admin_title_ph: "Titre", admin_location_ph: "Lieu", admin_level_ph: "Niveau",
@@ -669,6 +671,7 @@ const I18N = {
     admin_not_set: "No definido", admin_gender_male: "Masculino", admin_gender_female: "Femenino",
     admin_scout_conversations: "CHATS DE SCOUT", admin_scout_users: "USUARIOS DE SCOUT", admin_messages_total: "MENSAJES",
     admin_messages_7d: "MENSAJES 7D", admin_push_subscribers: "SUSCRIPTORES PUSH", admin_top_followed: "MÁS SEGUIDOS",
+    admin_time_on_app: "TIEMPO EN LA APP", admin_avg_hrs_week: "PROM. H/SEMANA", admin_avg_hrs_month: "PROM. H/MES", admin_avg_hrs_year: "PROM. H/AÑO", admin_active_users: "usuarios activos",
     admin_no_data: "Aún no hay datos.", admin_manage_events: "Gestionar eventos", admin_analytics_err: "No se pudieron cargar las estadísticas.",
     banned_title: "Cuenta suspendida", banned_message: "Tu cuenta de GOLSZ ha sido suspendida. Si crees que esto es un error, contacta con soporte.",
     admin_add_event: "AÑADIR EVENTO", admin_title_ph: "Título", admin_location_ph: "Ubicación", admin_level_ph: "Nivel",
@@ -844,6 +847,7 @@ const I18N = {
     admin_not_set: "Δεν έχει οριστεί", admin_gender_male: "Άνδρας", admin_gender_female: "Γυναίκα",
     admin_scout_conversations: "ΣΥΝΟΜΙΛΙΕΣ SCOUT", admin_scout_users: "ΧΡΗΣΤΕΣ SCOUT", admin_messages_total: "ΜΗΝΥΜΑΤΑ",
     admin_messages_7d: "ΜΗΝΥΜΑΤΑ 7Η", admin_push_subscribers: "ΣΥΝΔΡΟΜΗΤΕΣ PUSH", admin_top_followed: "ΔΗΜΟΦΙΛΕΣΤΕΡΟΙ",
+    admin_time_on_app: "ΧΡΟΝΟΣ ΣΤΗΝ ΕΦΑΡΜΟΓΗ", admin_avg_hrs_week: "ΜΕΣ. ΩΡΕΣ/ΕΒΔ", admin_avg_hrs_month: "ΜΕΣ. ΩΡΕΣ/ΜΗΝΑ", admin_avg_hrs_year: "ΜΕΣ. ΩΡΕΣ/ΕΤΟΣ", admin_active_users: "ενεργοί χρήστες",
     admin_no_data: "Δεν υπάρχουν δεδομένα ακόμα.", admin_manage_events: "Διαχείριση εκδηλώσεων", admin_analytics_err: "Δεν ήταν δυνατή η φόρτωση των στατιστικών.",
     banned_title: "Ο λογαριασμός ανεστάλη", banned_message: "Ο λογαριασμός σας στο GOLSZ έχει ανασταλεί. Αν πιστεύετε ότι πρόκειται για λάθος, επικοινωνήστε με την υποστήριξη.",
     admin_add_event: "ΠΡΟΣΘΗΚΗ ΕΚΔΗΛΩΣΗΣ", admin_title_ph: "Τίτλος", admin_location_ph: "Τοποθεσία", admin_level_ph: "Επίπεδο",
@@ -3535,6 +3539,17 @@ function BreakdownBar({ label, count, total, color }) {
   );
 }
 
+/* Average hours per active user over a window — minutes/60 divided by
+   how many distinct users actually had any activity in that window (not
+   total signups), so someone who never opened the app doesn't drag the
+   number toward zero. See migration 031 / admin_analytics_counts(). */
+function avgHours(counts, minutesKey, usersKey) {
+  if (!counts) return 0;
+  const users = counts[usersKey] || 0;
+  if (!users) return 0;
+  return Math.round(((counts[minutesKey] || 0) / 60 / users) * 10) / 10;
+}
+
 /* ============ ADMIN PANEL ============
    Gated entirely by server-side RLS (is_admin(), migration 009) — every
    query and mutation here only succeeds if the signed-in user's own
@@ -3803,6 +3818,15 @@ function AdminPanel({ onBack }) {
         scoutConversations: (counts && counts.scout_conversations_total) || 0,
         scoutUsers: (counts && counts.scout_users_total) || 0,
         pushSubscribers: (counts && counts.push_subscribers_total) || 0,
+        // Avg hours per active user, not per total signups — someone who
+        // never opened the app in a given window shouldn't drag the
+        // average toward zero and hide how engaged actual users are.
+        avgHoursWeek: avgHours(counts, "activity_minutes_7d", "activity_users_7d"),
+        avgHoursMonth: avgHours(counts, "activity_minutes_30d", "activity_users_30d"),
+        avgHoursYear: avgHours(counts, "activity_minutes_365d", "activity_users_365d"),
+        activeUsersWeek: (counts && counts.activity_users_7d) || 0,
+        activeUsersMonth: (counts && counts.activity_users_30d) || 0,
+        activeUsersYear: (counts && counts.activity_users_365d) || 0,
       });
     } catch (e) { console.error("GOLSZ admin analytics error:", e); setAnalytics(false); }
   }
@@ -4041,6 +4065,23 @@ function AdminPanel({ onBack }) {
                 <BreakdownBar label={t("admin_tier_none")} count={analytics.tierCounts.none} total={analytics.totalUsers} color={C.amber} />
                 <BreakdownBar label={t("admin_tier_pro")} count={analytics.tierCounts.pro} total={analytics.totalUsers} color={C.lime} />
                 <BreakdownBar label={t("admin_tier_elite")} count={analytics.tierCounts.elite} total={analytics.totalUsers} color={C.elite} />
+              </div>
+
+              <div style={{ ...card }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_time_on_app")}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                  {[
+                    [t("admin_avg_hrs_week"), analytics.avgHoursWeek, analytics.activeUsersWeek],
+                    [t("admin_avg_hrs_month"), analytics.avgHoursMonth, analytics.activeUsersMonth],
+                    [t("admin_avg_hrs_year"), analytics.avgHoursYear, analytics.activeUsersYear],
+                  ].map(([label, hrs, activeUsers]) => (
+                    <div key={label} style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{hrs}h</div>
+                      <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700, marginBottom: 2 }}>{label}</div>
+                      <div style={{ fontSize: 9.5, color: C.slate }}>{activeUsers} {t("admin_active_users")}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
@@ -4605,6 +4646,22 @@ function GolszApp({ onSignOut, startOnboarding }) {
       } catch (e) { console.error("GOLSZ unread check error:", e); }
     })();
   }, [page]);
+
+  // Time-on-app tracking (migration 031, admin-only aggregate view under
+  // Analytics → Time on app). Rather than a precise session start/stop
+  // (unreliable — tabs get killed, phones lock, there's no reliable
+  // "unload" event on mobile Safari/PWAs), this just pings once a minute
+  // while the tab is actually visible, and the server accumulates a
+  // per-day minute count. GolszApp only mounts once signed in, so this
+  // effect's cleanup naturally stops the pings on sign-out.
+  useEffect(() => {
+    if (!sb) return;
+    const id = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      sb.rpc("record_activity_ping", { p_minutes: 1 }).then(({ error }) => { if (error) console.error("GOLSZ activity ping error:", error); });
+    }, 60000);
+    return () => clearInterval(id);
+  }, []);
 
   if (isDesktop) {
     return (
