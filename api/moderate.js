@@ -165,6 +165,18 @@ const VALID_CONTENT_TYPES = ["post", "comment", "direct_message", "profile_field
 const VALID_SURFACES = ["public_feed", "profile", "private_thread", "parent_linked_thread"];
 const VALID_DECISIONS = ["allow", "review", "block"];
 
+// body.recipientId is client-supplied (golsz-app.html's Messages passes
+// `thread`, a real profile uuid, but this endpoint is reachable directly by
+// anyone signed in, not just through the app UI) and gets interpolated into
+// a PostgREST filter string in getProfileContext() below. Same
+// filter-injection shape already closed off in api/stripe-webhook.js and
+// api/admin-user-action.js (see their UUID_RE) — requiring a real UUID shape
+// first stops a crafted value from widening/rerouting that filter to resolve
+// a *different* profile's minor/verified status than the one actually
+// intended, which would undermine the minor-safety rule this whole endpoint
+// exists to enforce.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGIN || "https://golsz.com,https://golsz.vercel.app")
   .split(",").map((s) => s.trim()).filter(Boolean);
 function cors(req, res) {
@@ -368,7 +380,7 @@ export default async function handler(req, res) {
   }
 
   let recipient = null;
-  if (supaUrl && serviceKey && body.recipientId) {
+  if (supaUrl && serviceKey && body.recipientId && typeof body.recipientId === "string" && UUID_RE.test(body.recipientId)) {
     const ctx = await getProfileContext(supaUrl, serviceKey, body.recipientId);
     if (ctx) recipient = { role: ctx.role, is_minor: ctx.is_minor };
   }

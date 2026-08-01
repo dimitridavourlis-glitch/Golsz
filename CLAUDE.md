@@ -765,6 +765,48 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
   plain `<div>`s sized by percentage, no charting library, consistent with this project's zero-extra-
   dependency client (same spirit as the hand-rolled `svg()` icon helper).
 
+### Security audit — `public_profile_names` privacy leak + `api/moderate.js` filter injection (migration 038)
+
+- **Real, live, confirmed-via-curl finding, now fixed:** `public_profile_names` (the view every cross-user
+  name lookup in the app uses — Feed authors, Discover, Messages, Passport, follower lists) was a plain
+  `select id, full_name, occupation, verified_tier, avatar_url from profiles` with no `where` clause, granted
+  to `anon`. Postgres views run as their owner by default (no `security_invoker`), which bypasses the
+  underlying table's RLS entirely — so unlike every other read path in this app (`profiles_read`,
+  `athletes_read`, Discover), this view was never subject to `is_restricted_minor()`'s gating. Combined with
+  the `anon` grant, **any completely unauthenticated request could read every real user's full name,
+  occupation, verification tier, and avatar photo URL — including a restricted minor**, whose whole point is
+  to be invisible outside their own session and their linked parent's. Confirmed live: a plain curl with the
+  public anon key against the base `profiles` table correctly returned `[]`, but the same curl against
+  `public_profile_names` returned every row with real names attached. Fixed by adding the exact
+  `not is_restricted_minor(id) or id = auth.uid() or is_parent_of(id) or is_admin()` shape already used
+  elsewhere in this schema to the view itself, and dropping the `anon` grant entirely (every real call site in
+  `golsz-app.html` only ever queries this view from inside the authenticated app — no logged-out screen needs
+  it; `api/send-push.js`'s usage is via the service-role key and is unaffected either way).
+- **Real finding, now fixed:** `api/moderate.js`'s `body.recipientId` (client-supplied — this endpoint is a
+  plain HTTP route reachable by anyone signed in, not only through the app's own UI) was interpolated
+  unchecked into a PostgREST filter string inside `getProfileContext()`, the same filter-injection shape
+  already identified and closed with a `UUID_RE` check in `api/stripe-webhook.js` and
+  `api/admin-user-action.js` — but that treatment was never applied here. A crafted `recipientId` could widen
+  or reroute that filter to resolve a *different* profile's minor/verified status than the one actually
+  intended, undermining the minor-safety rule this whole endpoint exists to enforce. Fixed with the same
+  `UUID_RE` check used in the other two files.
+- Also reviewed and confirmed still solid (no changes needed): all 15 tables have RLS enabled (the naive
+  `grep` for `enable row level security` under-counts due to this file's multi-space alignment — re-verified
+  with a whitespace-tolerant regex); `protect_profile_columns()`/`protect_event_columns()` triggers (migration
+  023) still correctly block self-privilege-escalation via `profiles_self`'s broad self-UPDATE policy;
+  `increment_scout_usage`/`increment_moderation_usage` are both `service_role`-only (revoked from
+  `authenticated`), so neither can be called directly by a client to grief another user's daily count;
+  `message_requests`/`can_message`/`ensure_message_request`/`respond_to_message_request` (migration 037) all
+  correctly scope to `auth.uid()`, never trusting a client-supplied identity; the Stripe webhook's signature
+  verification is timing-safe and replay-guarded; `npm audit` reports zero dependency vulnerabilities.
+- **Flagged, not fixed — a judgment call, not an oversight:** `log_client_error` is granted to both `anon` and
+  `authenticated` with no rate limit at all, unlike every other metered endpoint in this app. This was a
+  deliberate, already-documented tradeoff (crashes can happen pre-login, so anon needs to be able to log them;
+  low abuse risk at pre-launch scale) rather than a bug — but it does mean a scripted flood could fill
+  `error_log` and bury real errors under noise in the Admin Panel's Errors tab. Worth adding a coarse rate
+  limit (per-IP or similar) before or shortly after real public launch, once there's actual traffic to weigh
+  the cost against.
+
 ### `supabase-schema.sql`
 
 **Read the warning at the top of this repo's README section above before touching this file** — it's a
