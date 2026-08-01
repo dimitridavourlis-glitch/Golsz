@@ -579,10 +579,18 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   before deciding whether to keep talking to them, at the founder's explicit request. Reuses the exact same
   `viewProfile(id)`/`onViewProfile` prop pattern already wired through `Feed`, `Discover`, and
   `FollowListCard`; `Messages` just gained the same `onViewProfile` prop, passed down from `GolszApp` as
-  `onViewProfile={viewProfile}` at both render call sites (desktop and mobile). Same known quirk as every
-  other entry point into this pattern: "Back" from the Passport lands on `page="profile"` (the viewer's own
-  profile), not back on the thread — `viewProfileId` clears but `page` itself never changes. Not a new
-  inconsistency, just the pre-existing behavior of this navigation pattern everywhere it's used.
+  `onViewProfile={viewProfile}` at both render call sites (desktop and mobile).
+- **Profile-view return stack** (`GolszApp`'s `profileStack` state, `golsz-app.html`): fixes the above so
+  "Back" out of a viewed Passport actually returns you to wherever you came from — a chat thread, Feed,
+  Discover, or a nested profile-within-a-profile — instead of always landing on your own profile. Every call
+  to `viewProfile(id)` pushes a `{ page, viewProfileId }` snapshot of *where you were* onto `profileStack`
+  before switching to `page="profile"`; `backFromProfile()` (now what both `Passport` render sites pass as
+  `onBack`) pops the top snapshot and restores it. This stacks correctly for nested cases too — e.g. open
+  someone's passport, tap into their followers list to view a different profile, back once returns to the
+  first profile, back again returns to whatever page you started from (the thread/Feed/Discover stays intact
+  the whole time since nothing clears `thread` while merely viewing a profile). `go(id)` (direct nav-bar
+  taps) and `openThread(id)` (opening a conversation) both reset `profileStack` to `[]`, so a stray leftover
+  "back" target can never survive a real, intentional navigation elsewhere.
 
 ### Time-on-app tracking (migration 031)
 

@@ -5011,6 +5011,11 @@ function GolszApp({ onSignOut, startOnboarding }) {
   const [hasUnreadMsgs, setHasUnreadMsgs] = useState(false);
   const [onboarding, setOnboarding] = useState(!!startOnboarding);
   const [viewProfileId, setViewProfileId] = useState(null);
+  // Stack of { page, viewProfileId } snapshots to restore on "back" out of a
+  // viewed profile — e.g. opening a passport from a chat thread's header and
+  // pressing back should land back in that same thread, not on your own
+  // profile. Pushed in viewProfile(), popped in the Passport onBack handlers.
+  const [profileStack, setProfileStack] = useState([]);
   // null = still checking, true/false once we know. Gates the rest of the
   // app behind finishing the Passport (see the "must complete profile"
   // effect below) — until athletes.sport is set, a brand-new (or
@@ -5054,9 +5059,23 @@ function GolszApp({ onSignOut, startOnboarding }) {
     { id: "profile", icon: User, label: t("nav_profile") },
   ];
 
-  const go = (id) => { if (mustFinishProfile && id !== "profile") return; setPage(id); if (id !== "messages") setThread(null); setViewProfileId(null); };
-  const openThread = (id) => { if (mustFinishProfile) return; setThread(id); setPage("messages"); };
-  const viewProfile = (id) => { if (mustFinishProfile) return; setViewProfileId(id); setPage("profile"); };
+  const go = (id) => { if (mustFinishProfile && id !== "profile") return; setPage(id); if (id !== "messages") setThread(null); setViewProfileId(null); setProfileStack([]); };
+  const openThread = (id) => { if (mustFinishProfile) return; setThread(id); setPage("messages"); setProfileStack([]); };
+  const viewProfile = (id) => {
+    if (mustFinishProfile) return;
+    setProfileStack((s) => [...s, { page, viewProfileId }]);
+    setViewProfileId(id);
+    setPage("profile");
+  };
+  const backFromProfile = () => {
+    setProfileStack((s) => {
+      if (s.length === 0) { setViewProfileId(null); return s; }
+      const prev = s[s.length - 1];
+      setViewProfileId(prev.viewProfileId);
+      setPage(prev.page);
+      return s.slice(0, -1);
+    });
+  };
 
   useEffect(() => {
     if (!sb) return;
@@ -5135,7 +5154,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
             {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
             {page === "scout" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout /></div>}
             {page === "events" && <Events />}
-            {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={() => setViewProfileId(null)} onMessage={openThread} onViewProfile={viewProfile} />}
+            {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} />}
             {page === "messages" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Messages thread={thread} setThread={setThread} onViewProfile={viewProfile} /></div>}
             {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
           </div>
@@ -5170,7 +5189,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "scout" && <Scout />}
         {page === "events" && <Events />}
-        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={() => setViewProfileId(null)} onMessage={openThread} onViewProfile={viewProfile} />}
+        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "messages" && <Messages thread={thread} setThread={setThread} onViewProfile={viewProfile} />}
         {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
       </main>
