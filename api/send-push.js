@@ -42,6 +42,22 @@ async function supaDelete(supaUrl, serviceKey, path) {
   });
 }
 
+// See api/scout.js for the full rationale — writes a real failure to
+// error_log (migration 036) so it surfaces in the Admin Panel's
+// "Errors" tab. Self-contained, duplicated per file on purpose.
+async function logError(source, message, detail) {
+  try {
+    const supaUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!supaUrl || !serviceKey) return;
+    await fetch(`${supaUrl}/rest/v1/error_log`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ source, message: String(message).slice(0, 2000), detail: detail || null }),
+    });
+  } catch (e) { console.error("GOLSZ error-log write failed:", e); }
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -64,39 +80,44 @@ export default async function handler(req, res) {
 
   let targetUserId = null, title = "GOLSZ", body = "", url = "/golsz-app.html";
 
-  if (table === "messages") {
-    targetUserId = record.recipient_id;
-    const [sender] = await supaSelect(supaUrl, serviceKey, `public_profile_names?id=eq.${record.sender_id}&select=full_name`);
-    title = "New message";
-    body = `${(sender && sender.full_name) || "Someone"}: ${String(record.body || "").slice(0, 120)}`;
-    url = "/golsz-app.html?page=messages";
-  } else if (table === "follows") {
-    targetUserId = record.followed_id;
-    const [follower] = await supaSelect(supaUrl, serviceKey, `public_profile_names?id=eq.${record.follower_id}&select=full_name`);
-    title = "New follower";
-    body = `${(follower && follower.full_name) || "Someone"} started following you`;
-    url = "/golsz-app.html?page=profile";
-  } else {
-    return res.status(200).json({ skipped: true });
+  try {
+    if (table === "messages") {
+      targetUserId = record.recipient_id;
+      const [sender] = await supaSelect(supaUrl, serviceKey, `public_profile_names?id=eq.${record.sender_id}&select=full_name`);
+      title = "New message";
+      body = `${(sender && sender.full_name) || "Someone"}: ${String(record.body || "").slice(0, 120)}`;
+      url = "/golsz-app.html?page=messages";
+    } else if (table === "follows") {
+      targetUserId = record.followed_id;
+      const [follower] = await supaSelect(supaUrl, serviceKey, `public_profile_names?id=eq.${record.follower_id}&select=full_name`);
+      title = "New follower";
+      body = `${(follower && follower.full_name) || "Someone"} started following you`;
+      url = "/golsz-app.html?page=profile";
+    } else {
+      return res.status(200).json({ skipped: true });
+    }
+
+    if (!targetUserId) return res.status(200).json({ skipped: true });
+
+    const subs = await supaSelect(supaUrl, serviceKey, `push_subscriptions?user_id=eq.${targetUserId}&select=id,endpoint,p256dh,auth`);
+    const payload = JSON.stringify({ title, body, url });
+
+    const results = await Promise.allSettled(
+      subs.map((s) =>
+        webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)
+          .catch(async (e) => {
+            if (e && (e.statusCode === 404 || e.statusCode === 410)) {
+              // subscription is gone (uninstalled, permission revoked, etc.) — clean it up
+              await supaDelete(supaUrl, serviceKey, `push_subscriptions?id=eq.${s.id}`);
+            }
+            throw e;
+          })
+      )
+    );
+
+    return res.status(200).json({ sent: results.filter((r) => r.status === "fulfilled").length, total: subs.length });
+  } catch (e) {
+    await logError("api/send-push.js", "Push send handling failed", { detail: String(e), table });
+    return res.status(500).json({ error: "Push send handling failed", detail: String(e) });
   }
-
-  if (!targetUserId) return res.status(200).json({ skipped: true });
-
-  const subs = await supaSelect(supaUrl, serviceKey, `push_subscriptions?user_id=eq.${targetUserId}&select=id,endpoint,p256dh,auth`);
-  const payload = JSON.stringify({ title, body, url });
-
-  const results = await Promise.allSettled(
-    subs.map((s) =>
-      webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)
-        .catch(async (e) => {
-          if (e && (e.statusCode === 404 || e.statusCode === 410)) {
-            // subscription is gone (uninstalled, permission revoked, etc.) — clean it up
-            await supaDelete(supaUrl, serviceKey, `push_subscriptions?id=eq.${s.id}`);
-          }
-          throw e;
-        })
-    )
-  );
-
-  return res.status(200).json({ sent: results.filter((r) => r.status === "fulfilled").length, total: subs.length });
 }

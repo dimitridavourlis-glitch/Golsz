@@ -27,6 +27,22 @@ export const config = { api: { bodyParser: false } };
 
 import crypto from "crypto";
 
+// See api/scout.js for the full rationale — writes a real failure to
+// error_log (migration 036) so it surfaces in the Admin Panel's
+// "Errors" tab. Self-contained, duplicated per file on purpose.
+async function logError(source, message, detail) {
+  try {
+    const supaUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!supaUrl || !serviceKey) return;
+    await fetch(`${supaUrl}/rest/v1/error_log`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ source, message: String(message).slice(0, 2000), detail: detail || null }),
+    });
+  } catch (e) { console.error("GOLSZ error-log write failed:", e); }
+}
+
 async function readRawBody(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
@@ -109,6 +125,7 @@ export default async function handler(req, res) {
     // other event types are ignored — Stripe expects a 200 regardless
     return res.status(200).json({ received: true });
   } catch (e) {
+    await logError("api/stripe-webhook.js", "Webhook handling failed", { detail: String(e), eventType: event && event.type });
     return res.status(500).json({ error: "Webhook handling failed", detail: String(e) });
   }
 }

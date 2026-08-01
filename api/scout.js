@@ -17,6 +17,25 @@
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
+// Writes a real server-side failure to error_log (migration 036) so it
+// shows up in the Admin Panel's "Errors" tab instead of only ever
+// existing in Vercel's own function logs. Self-contained (reads its own
+// env vars) so it can be dropped into any api/*.js file without needing
+// caller-scope variables threaded through. Never lets a logging failure
+// mask the real error response this is called alongside.
+async function logError(source, message, detail) {
+  try {
+    const supaUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!supaUrl || !serviceKey) return;
+    await fetch(`${supaUrl}/rest/v1/error_log`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ source, message: String(message).slice(0, 2000), detail: detail || null }),
+    });
+  } catch (e) { console.error("GOLSZ error-log write failed:", e); }
+}
+
 const SYSTEM_PROMPT = `You are GOLSZ Scout, an AI sports agent. Tagline: "Every Goal Has a Path."
 You adapt to who you're talking to — check "occupation" in PROFILE SO FAR:
 - Player, or occupation missing/unset (default): the personal agent for ONE athlete — learn who they are (age, sport, position, location, club/level, grad year, academics, budget, citizenship, goal), build a career roadmap, suggest realistic target programs (reach/match/safety, honest), and draft coach outreach emails on request (draft-only; the athlete sends them).
@@ -247,6 +266,7 @@ export default async function handler(req, res) {
     }
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
+    await logError("api/scout.js", "Upstream model call failed", { detail: String(e) });
     return res.status(502).json({ error: "Upstream model call failed", detail: String(e) });
   }
 }

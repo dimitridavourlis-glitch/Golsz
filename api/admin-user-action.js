@@ -80,6 +80,22 @@ async function logAdminAction(supaUrl, serviceKey, adminId, action, targetId, de
   } catch (e) { console.error("GOLSZ admin audit log error:", e); }
 }
 
+// See api/scout.js for the full rationale — writes a real failure to
+// error_log (migration 036) so it surfaces in the Admin Panel's
+// "Errors" tab. Self-contained, duplicated per file on purpose.
+async function logError(source, message, detail) {
+  try {
+    const supaUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!supaUrl || !serviceKey) return;
+    await fetch(`${supaUrl}/rest/v1/error_log`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ source, message: String(message).slice(0, 2000), detail: detail || null }),
+    });
+  } catch (e) { console.error("GOLSZ error-log write failed:", e); }
+}
+
 // Real-time security alert — pushes straight to every admin's device the
 // moment someone (signed in, but not an admin) tries to hit this
 // privileged endpoint. Reuses the exact same Web Push machinery as
@@ -188,6 +204,7 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: "Unknown action" });
   } catch (e) {
+    await logError("api/admin-user-action.js", "Action failed", { detail: String(e), action, targetId });
     return res.status(500).json({ error: "Action failed", detail: String(e) });
   }
 }

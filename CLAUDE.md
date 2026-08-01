@@ -409,8 +409,39 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   entirely (those never reach this code at all — see the audit's live RLS testing elsewhere in this file),
   repeated failed login attempts (Supabase Auth's own login attempts aren't exposed to this app's tables),
   or a compromised admin account behaving suspiciously but still passing the `is_admin()` check. It's a
-  real, working alert for the two concrete signals above — not a general security monitoring system. No
-  production error/performance monitoring (Sentry etc.) exists either — see the known-gaps list below.
+  real, working alert for the two concrete signals above — not a general security monitoring system. General
+  application error visibility (not just these two security signals) is covered separately below.
+
+### Application error log (migration 036, "Errors" tab)
+
+- A lightweight, self-hosted stand-in for a third-party error tracker (Sentry etc.) — asked for right after
+  the security alerts above, but broader: this is about the app just *breaking*, not a security signal.
+  `error_log` (`source`, `message`, `detail jsonb`, `url`, `user_id`, `created_at`, `resolved_at`) captures
+  two kinds of failures:
+  1. **Client-side** — `golsz-app.html` registers global `window.addEventListener("error", ...)` and
+     `("unhandledrejection", ...)` handlers (right after `sb` is defined, so they're active app-wide
+     regardless of which screen is showing) that call `log_client_error(p_message, p_detail, p_url)`, a
+     `security definer` RPC granted to **both** `anon` and `authenticated` — a crash can happen before
+     someone's even signed in (e.g. on the signup screen), so restricting this to authenticated-only would
+     silently lose exactly the crashes happening at the most fragile point (first-time visitors). Always
+     stamps `user_id` from `auth.uid()` itself (null for anon), never trusts anything the client claims.
+  2. **Server-side** — every `api/*.js` file (`scout.js`, `stripe-webhook.js`, `send-push.js`,
+     `admin-user-action.js`, `moderate.js`) has its own small `logError(source, message, detail)` helper
+     (duplicated per file, same convention as `alertAdmins()` above) called from its existing catch-all
+     failure path, writing via the service role. `moderate.js`'s call sits in its fail-open catch block —
+     that path deliberately still returns `{ decision: "allow" }` to the caller (see the moderation section
+     above), but the underlying failure (e.g. Anthropic's API being down) is still worth an admin knowing
+     about even though it doesn't block the user-facing action.
+  3. Surfaced in a new 6th Admin Panel tab, "Errors" (`loadErrorLog()`/`resolveErrorLogItem()` in
+     `AdminPanel`) — same list-with-dismiss pattern as the Moderation and Audit Log tabs.
+- **Known trade-off, not an oversight:** `log_client_error` being open to `anon` means a bad actor could
+  spam junk rows into `error_log` (no rate limiting on it, unlike `api/moderate.js`'s
+  `increment_moderation_usage`). Accepted for now given this is an internal debugging tool at pre-launch
+  scale, not hardened against abuse — revisit if it's ever actually exploited.
+- **Passive, not push-alerted.** Unlike the two security signals above, entries here don't trigger a push
+  notification — they're meant to be checked in the Errors tab, not paged for immediately. If genuinely
+  urgent failure classes (e.g. every Stripe webhook failing) turn out to need immediate paging too, that's
+  a reasonable follow-up, not something this migration does today.
 
 ### Admin action audit log (migration 030)
 

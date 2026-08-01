@@ -274,6 +274,22 @@ async function logModerationItem(supaUrl, serviceKey, authorId, input, result) {
   } catch (e) { console.error("GOLSZ moderation queue log error:", e); }
 }
 
+// See api/scout.js for the full rationale — writes a real failure to
+// error_log (migration 036) so it surfaces in the Admin Panel's
+// "Errors" tab. Self-contained, duplicated per file on purpose.
+async function logError(source, message, detail) {
+  try {
+    const supaUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!supaUrl || !serviceKey) return;
+    await fetch(`${supaUrl}/rest/v1/error_log`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ source, message: String(message).slice(0, 2000), detail: detail || null }),
+    });
+  } catch (e) { console.error("GOLSZ error-log write failed:", e); }
+}
+
 // Real-time security alert for the single most urgent thing this
 // classifier can detect — a minor-safety rule actually firing. Same
 // Web Push mechanism (and the same reasoning for why it's triggered
@@ -406,6 +422,7 @@ export default async function handler(req, res) {
     // from posting/messaging entirely. This is defense-in-depth on top
     // of the existing report/block tools, not the only safeguard.
     console.error("GOLSZ moderation error:", e);
+    await logError("api/moderate.js", "Moderation check failed (failed open)", { detail: String(e) });
     return res.status(200).json({ decision: "allow", primary_reason_code: "CLEAN" });
   }
 }
