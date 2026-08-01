@@ -5114,7 +5114,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         <aside style={{ width: 232, flexShrink: 0, borderRight: `1px solid ${C.line}`, display: "flex", flexDirection: "column", padding: "22px 14px", position: "sticky", top: 0, height: "100vh" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 10px", marginBottom: 26 }}>
             <a href="index.html" style={{ display: "flex", alignItems: "center", gap: 7, fontWeight: 900, fontSize: 22, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none" }}>
-              <img src="/assets/logo-mark.png" alt="" style={{ width: 24, height: 24 }} />
+              <img src="/assets/logo-mark.png" alt="" className="logo-mark" style={{ width: 24, height: 24 }} />
               GOLSZ<span style={{ color: C.lime }}>.</span>
             </a>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -5170,7 +5170,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
       {/* top bar */}
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(12px + env(safe-area-inset-top, 0px)) 16px 10px", borderBottom: `1px solid ${C.line}`, flexShrink: 0 }}>
         <a href="index.html" style={{ display: "flex", alignItems: "center", gap: 7, fontWeight: 900, fontSize: 24, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none" }}>
-          <img src="/assets/logo-mark.png" alt="" style={{ width: 26, height: 26 }} />
+          <img src="/assets/logo-mark.png" alt="" className="logo-mark" style={{ width: 26, height: 26 }} />
           GOLSZ<span style={{ color: C.lime }}>.</span>
         </a>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -5274,6 +5274,12 @@ const CSS = `
   @media (prefers-reduced-motion: reduce){ .msg,.running span{ animation:none } }
   textarea::placeholder, input::placeholder { color: ${C.slate}; }
   button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid ${C.lime}; outline-offset: 2px; }
+  /* logo-mark.png is baked at the dark-theme lime (#C8F135), which reads
+     fine on a near-black background but washes out against the light
+     theme's near-white one — darken/saturate it under data-theme="light"
+     so it stays legible, mirroring how --lime itself darkens for that
+     theme (see the CSS custom properties above). */
+  html[data-theme="light"] img.logo-mark { filter: brightness(0.55) saturate(1.3); }
   @media (min-width: 900px) {
     .discover-grid { grid-template-columns: repeat(3, 1fr) !important; }
     .pricing-grid { grid-template-columns: repeat(3, 1fr) !important; }
@@ -5523,7 +5529,7 @@ function Auth({ onDone, paidReturn }) {
       <style>{CSS}</style>
       <div style={{ width: "100%", maxWidth: (isSignup && !forgotMode && isDesktop) ? 920 : 430 }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <img src="/assets/logo-mark.png" alt="" style={{ width: 56, height: 56, marginBottom: 8 }} />
+          <img src="/assets/logo-mark.png" alt="" className="logo-mark" style={{ width: 56, height: 56, marginBottom: 8 }} />
           <div style={{ fontWeight: 900, fontSize: 40, letterSpacing: "0.03em", fontStretch: "expanded" }}>GOLSZ<span style={{ color: C.lime }}>.</span></div>
           <div style={{ fontSize: 10, letterSpacing: "0.3em", color: C.slate, fontWeight: 700, marginTop: 4 }}>{t("auth_tagline")}</div>
         </div>
