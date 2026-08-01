@@ -173,11 +173,12 @@ There is no build/lint/test tooling in this repo. Relevant commands:
 - **Follows** (migration 006): `follows(follower_id, followed_id)`, public read, insert/delete restricted to
   `follower_id = auth.uid()`. Feed and Discover both maintain their own `following` state/`toggleFollow()` —
   not shared, each fetches independently.
-- **Messages** (migration 007): real DMs, gated by `can_message()` — two profiles can message only if one
-  follows the other (either direction) and neither has blocked the other; restricted minors (see below)
-  can't send or receive DMs either. `messages_delete` lets a sender unsend their own messages. The header's
-  unread-message dot reflects a real `read_at is null` count now, refetched on every `page` change — it is
-  not realtime/pushed.
+- **Messages** (migration 007, request model replaced in migration 037): real DMs, gated by `can_message()`
+  — originally required a follow relationship, now an Instagram-style request/accept flow instead (see the
+  dedicated section below); neither has blocked the other; restricted minors (see below) can't send or
+  receive DMs either. `messages_delete` lets a sender unsend their own messages. The header's unread-message
+  dot reflects a real `read_at is null` count now, refetched on every `page` change — it is not
+  realtime/pushed.
 - **Backend config is one block near the bottom of the file**: `SUPABASE_URL` / `SUPABASE_ANON_KEY` are set
   to the live project; `SCOUT_ENDPOINT` is `"/api/scout"` (relative — works on any Vercel deploy without
   hardcoding a domain); `STRIPE_LINKS` holds real (currently sandbox/test-mode) Stripe Payment Link URLs for
@@ -530,6 +531,49 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   write policy at all** — the only write path is `api/moderate.js` itself via the service key, the only
   update path is `resolve_moderation_item()` (`security definer`, admin-gated). Reads are admin-only.
 
+### Instagram-style message requests (migration 037)
+
+- Replaces the original follow-gated messaging model (migration 007: could only message someone you followed
+  or who followed you) with a request/accept flow, at the founder's explicit request to match Instagram's
+  actual behavior. `message_requests` (`sender_id`, `recipient_id`, `status`) tracks exactly one thing per
+  pair: has the recipient accepted messages from that specific sender. No `authenticated` insert/update
+  policy on it at all — the only ways a row changes are two `security definer` RPCs:
+  - `ensure_message_request(p_recipient)` — called by the client (`Messages.send()` in `golsz-app.html`)
+    right before every message send; idempotent (a second call for the same pair is a no-op), always stamps
+    `sender_id` as `auth.uid()` itself. This is what actually gates the system: `can_message()` requires a
+    `message_requests` row to already exist, so skipping this call means the subsequent `messages` insert
+    gets rejected by RLS — there's no way to bypass the request flow by writing to `messages` directly.
+  - `respond_to_message_request(p_sender, p_accept)` — only ever updates a row where `recipient_id =
+    auth.uid()`; `p_sender` just selects *which* pending request, it can never be used to accept/decline on
+    someone else's behalf.
+  - `can_message(a, b)` (same name/signature as migration 007, so `messages_write`'s RLS text needed zero
+    changes) now returns true when: not blocked, AND (`a` originally requested `b` — status pending or
+    accepted, so the original requester can keep sending while waiting, matching real Instagram — OR `b`
+    originally requested `a` and `a` has accepted it, so once accepted either side can message freely).
+- Client (`Messages` in `golsz-app.html`): `loadConversations()` also fetches `message_requests` and tags
+  each conversation `isPendingReceived` (someone else messaged me first, I haven't decided yet) — those
+  float to the top of the list with a "MESSAGE REQUEST" badge and inline Accept/Decline buttons, no separate
+  screen needed. `loadThread()` derives `threadReqStatus` (`'pending_received' | 'pending_sent' | 'accepted'
+  | null`): opening a still-pending-received thread replaces the text input with an Accept/Decline banner
+  instead of letting you type (matching the founder's explicit ask that the recipient has to confirm before
+  a conversation continues); a still-pending-sent thread shows a small "waiting for them to accept" hint but
+  the input stays enabled, since the original requester can keep messaging while waiting. Declining reuses
+  the existing `hideConversation()`/`hidden_conversations` mechanism — `can_message()` already stops that
+  sender from reaching this person again once declined, so there's nothing left to reveal by un-hiding it.
+- **The content moderation classifier (migration 033) is completely unaffected and still runs on every
+  message regardless of request state** — `moderateContent()` is called in `send()` before
+  `ensure_message_request`/the actual insert, exactly as it already was. Its own minor-safety rules (adult-
+  to-minor DMs outside a parent-linked thread are at minimum "review", off-platform/secrecy/contact-
+  solicitation attempts are blocked, etc.) apply identically whether this is someone's first-ever message to
+  a stranger or message #500 in a long-running accepted conversation — nothing about the request/accept
+  system weakens or bypasses it.
+- **Known, considered trade-off, not an oversight:** this genuinely does expand who can send a *first*
+  message to anyone, including an approved (non-restricted) minor — previously that required an existing
+  follow relationship first; now it requires only an explicit accept from the minor themselves, backed by
+  the moderation classifier's minor-safety rules on the message content itself. Unapproved minors are
+  unaffected either way — `is_restricted_minor()` still blocks them from sending or receiving *any* message
+  at all (see migration 005), request or otherwise, completely independent of this change.
+
 ### Time-on-app tracking (migration 031)
 
 - No session-duration data existed anywhere before this — `daily_activity` (`user_id`, `activity_date`,
@@ -824,17 +868,17 @@ there is no fake-content fallback anywhere in the app anymore); a working hosted
 protected server-side, free-tier metering (now correctly enum-safe, see `api/scout.js` above), and real
 transcript persistence; parent verification (request/approve, RLS-enforced, not just UI); minor safety
 (restricted posting/Discover/DM visibility until a parent approves); Feed post creation with report/block
-moderation; follows (migration 006); real DMs gated by follow relationship (migration 007) with live delivery
-via Realtime (migration 015 — an open thread updates the moment a reply arrives, no manual refresh); a fully
-editable Passport with onboarding auto-opened right after signup (migration 008); real Web Push notifications
-for new messages and new followers (migration 014, `api/send-push.js`).
+moderation; follows (migration 006); real DMs with an Instagram-style request/accept flow (migration 007,
+overhauled in 037) with live delivery via Realtime (migration 015 — an open thread updates the moment a
+reply arrives, no manual refresh); a fully editable Passport with onboarding auto-opened right after signup
+(migration 008); real Web Push notifications for new messages and new followers (migration 014,
+`api/send-push.js`).
 
-**Message-button visibility matches `can_message()` exactly.** `can_message(a, b)` allows messaging when
-either profile follows the other, not just when the current viewer is the follower. Feed/Discover/Passport
-each track both `following` (who I follow) and `followedBy`/`followedByThem` (who follows me) and show the
-Message button on `following || followedBy` — showing it only for `following` (an earlier version of this)
-meant someone who follows you but you haven't followed back had no way to see they *could* message you, even
-though the backend allowed it. If you add another place that surfaces a Message button, gate it the same way.
+**The Message button shows for everyone now, not just people you follow.** Migration 037 replaced the
+follow-based messaging gate with a request/accept model (see the dedicated section below), so
+Feed/Discover/Passport's Message buttons no longer gate on `following`/`followedBy` at all — same
+`p.id !== uid` (don't show it on your own content) check as before, just without the follow requirement. If
+you add another place that surfaces a Message button, it doesn't need any follow-status check either.
 
 **Not yet built / known gaps:**
 - **No 2FA/MFA and no granular admin roles.** A security audit this session identified both as real gaps —

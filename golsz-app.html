@@ -245,6 +245,9 @@ const I18N = {
     messages_no_match: "No conversations match that search.",
     messages_say_hello_pre: "Say hello — you can message ", messages_say_hello_post: " because you follow each other.",
     messages_placeholder: "Message…", messages_delete_conv: "Delete conversation", messages_delete_msg: "Delete message",
+    messages_new_request: "MESSAGE REQUEST", messages_accept: "Accept", messages_decline: "Decline",
+    messages_request_banner_pre: "", messages_request_banner_post: " wants to send you a message. Accepting lets you both message freely — declining won't notify them.",
+    messages_request_pending_hint: "Message request sent — they'll need to accept before this shows up in their main inbox.",
     messages_save_to_events: "Save to my events",
     messages_cant_send: "Couldn't send — you can only message profiles you follow or who follow you.",
     messages_opportunity_from: "Opportunity from ",
@@ -426,6 +429,9 @@ const I18N = {
     messages_no_match: "Aucune conversation ne correspond à cette recherche.",
     messages_say_hello_pre: "Dites bonjour — vous pouvez écrire à ", messages_say_hello_post: " car vous vous suivez mutuellement.",
     messages_placeholder: "Message…", messages_delete_conv: "Supprimer la conversation", messages_delete_msg: "Supprimer le message",
+    messages_new_request: "DEMANDE DE MESSAGE", messages_accept: "Accepter", messages_decline: "Refuser",
+    messages_request_banner_pre: "", messages_request_banner_post: " souhaite vous envoyer un message. Accepter vous permettra de vous écrire librement tous les deux — refuser ne l'avertira pas.",
+    messages_request_pending_hint: "Demande de message envoyée — elle doit être acceptée avant d'apparaître dans sa boîte de réception principale.",
     messages_save_to_events: "Enregistrer dans mes événements",
     messages_cant_send: "Envoi impossible — vous ne pouvez écrire qu'aux profils que vous suivez ou qui vous suivent.",
     messages_opportunity_from: "Opportunité de ",
@@ -607,6 +613,9 @@ const I18N = {
     messages_no_match: "Ninguna conversación coincide con esa búsqueda.",
     messages_say_hello_pre: "Saluda — puedes escribirle a ", messages_say_hello_post: " porque se siguen mutuamente.",
     messages_placeholder: "Mensaje…", messages_delete_conv: "Eliminar conversación", messages_delete_msg: "Eliminar mensaje",
+    messages_new_request: "SOLICITUD DE MENSAJE", messages_accept: "Aceptar", messages_decline: "Rechazar",
+    messages_request_banner_pre: "", messages_request_banner_post: " quiere enviarte un mensaje. Aceptar permite que ambos se escriban libremente — rechazar no se lo notificará.",
+    messages_request_pending_hint: "Solicitud de mensaje enviada — deberá aceptarla antes de que aparezca en su bandeja principal.",
     messages_save_to_events: "Guardar en mis eventos",
     messages_cant_send: "No se pudo enviar — solo puedes escribir a perfiles que sigues o que te siguen.",
     messages_opportunity_from: "Oportunidad de ",
@@ -788,6 +797,9 @@ const I18N = {
     messages_no_match: "Καμία συνομιλία δεν ταιριάζει με αυτή την αναζήτηση.",
     messages_say_hello_pre: "Πείτε γεια — μπορείτε να στείλετε μήνυμα στον/στην ", messages_say_hello_post: " επειδή αλληλοακολουθείστε.",
     messages_placeholder: "Μήνυμα…", messages_delete_conv: "Διαγραφή συνομιλίας", messages_delete_msg: "Διαγραφή μηνύματος",
+    messages_new_request: "ΑΙΤΗΜΑ ΜΗΝΥΜΑΤΟΣ", messages_accept: "Αποδοχή", messages_decline: "Απόρριψη",
+    messages_request_banner_pre: "Ο/Η ", messages_request_banner_post: " θέλει να σας στείλει μήνυμα. Η αποδοχή επιτρέπει και στους δύο να επικοινωνείτε ελεύθερα — η απόρριψη δεν θα τον/την ειδοποιήσει.",
+    messages_request_pending_hint: "Το αίτημα μηνύματος στάλθηκε — πρέπει να γίνει αποδοχή πριν εμφανιστεί στα κύρια μηνύματά του/της.",
     messages_save_to_events: "Αποθήκευση στις εκδηλώσεις μου",
     messages_cant_send: "Δεν ήταν δυνατή η αποστολή — μπορείτε να στείλετε μήνυμα μόνο σε προφίλ που ακολουθείτε ή που σας ακολουθούν.",
     messages_opportunity_from: "Ευκαιρία από ",
@@ -1848,7 +1860,7 @@ function Feed({ onMessage, onViewProfile }) {
                 <Users size={15} fill={following[p.authorId] ? C.lime : "none"} /> {following[p.authorId] ? t("action_following") : t("action_follow")}
               </button>
             )}
-            {p.postId && uid && p.authorId && p.authorId !== uid && (following[p.authorId] || followedBy[p.authorId]) && (
+            {p.postId && uid && p.authorId && p.authorId !== uid && (
               <button onClick={() => onMessage && onMessage(p.authorId)} style={iconBtn(C.slate)}>
                 <MessageSquare size={15} />
               </button>
@@ -2019,7 +2031,7 @@ function Discover({ onMessage, onViewProfile }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, gap: 6 }}>
               <span style={{ fontSize: 11, color: C.lime }}>{p.sport}</span>
               <div style={{ display: "flex", gap: 6 }}>
-                {p.id && uid && p.id !== uid && (following[p.id] || followedBy[p.id]) && (
+                {p.id && uid && p.id !== uid && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onMessage && onMessage(p.id); }}
                     style={{
@@ -2252,11 +2264,14 @@ function Tag({ children, warn }) {
 }
 
 /* ============ MESSAGES ============ */
-/* Real DMs: two profiles can message each other once one follows the
-   other (either direction) — enforced server-side by can_message() in
-   supabase-migration-007-messages.sql, not just hidden in the UI.
-   `thread` is a real profile uuid (string) once a conversation is open,
-   or null for the list view — always real data, no demo fallback. */
+/* Real DMs, Instagram-style (migration 037): anyone can message anyone
+   (no follow relationship required) — but the very first message
+   between two people creates a "request" the recipient must explicitly
+   accept before it's a normal, freely-flowing conversation. Enforced
+   server-side by can_message()/message_requests, not just hidden in
+   the UI. `thread` is a real profile uuid (string) once a conversation
+   is open, or null for the list view — always real data, no demo
+   fallback. */
 function Messages({ thread, setThread }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
@@ -2268,6 +2283,7 @@ function Messages({ thread, setThread }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [savingEvent, setSavingEvent] = useState(null);
+  const [threadReqStatus, setThreadReqStatus] = useState(null); // 'pending_sent' | 'pending_received' | 'accepted' | null
   const threadRef = useRef(thread);
   useEffect(() => { threadRef.current = thread; }, [thread]);
 
@@ -2302,13 +2318,24 @@ function Messages({ thread, setThread }) {
   async function loadConversations() {
     if (!sb || !uid) return;
     try {
-      const { data, error } = await sb
-        .from("messages")
-        .select("id, sender_id, recipient_id, body, created_at, read_at")
-        .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
-        .order("created_at", { ascending: false })
-        .limit(300);
+      // message_requests (migration 037) — one row per (sender, recipient)
+      // pair, tracking whether the recipient has accepted messages from
+      // that specific sender yet. Fetched alongside messages so each
+      // conversation can be tagged as needing my decision ("request"),
+      // still waiting on them, or already a normal open conversation.
+      const [{ data, error }, { data: reqs }] = await Promise.all([
+        sb.from("messages").select("id, sender_id, recipient_id, body, created_at, read_at")
+          .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
+          .order("created_at", { ascending: false })
+          .limit(300),
+        sb.from("message_requests").select("sender_id, recipient_id, status").or(`sender_id.eq.${uid},recipient_id.eq.${uid}`),
+      ]);
       if (error) throw error;
+      const reqByCounterpart = new Map();
+      for (const r of reqs || []) {
+        const other = r.sender_id === uid ? r.recipient_id : r.sender_id;
+        reqByCounterpart.set(other, { status: r.status, iSent: r.sender_id === uid });
+      }
       const byCounterpart = new Map();
       for (const m of data || []) {
         const other = m.sender_id === uid ? m.recipient_id : m.sender_id;
@@ -2329,11 +2356,17 @@ function Messages({ thread, setThread }) {
         const { data: ppl } = await sb.from("public_profile_names").select("id, full_name").in("id", ids);
         names = Object.fromEntries((ppl || []).map((p) => [p.id, p.full_name]));
       }
-      setConversations(ids.map((id) => {
+      const list = ids.map((id) => {
         const { last, unread } = byCounterpart.get(id);
         const name = names[id] || "GOLSZ User";
-        return { id, who: name, init: initials(name), last: last.body, ago: timeAgo(last.created_at), unread: unread > 0 };
-      }));
+        const req = reqByCounterpart.get(id);
+        const isPendingReceived = !!(req && req.status === "pending" && !req.iSent);
+        return { id, who: name, init: initials(name), last: last.body, ago: timeAgo(last.created_at), unread: unread > 0, isPendingReceived };
+      });
+      // requests needing my decision float to the top, same as Instagram's
+      // separate Requests inbox, just without a second screen to build.
+      list.sort((a, b) => (b.isPendingReceived ? 1 : 0) - (a.isPendingReceived ? 1 : 0));
+      setConversations(list);
     } catch (e) { console.error("GOLSZ messages load error:", e); setConversations([]); }
   }
   useEffect(() => { if (uid) loadConversations(); }, [uid]);
@@ -2350,18 +2383,48 @@ function Messages({ thread, setThread }) {
     }
   }
 
+  // Only the real recipient (auth.uid() inside the RPC) can ever accept
+  // or decline a request addressed to them — otherId here just selects
+  // which pending request, it can't be used to approve one on someone
+  // else's behalf. Declining just hides the thread the same way deleting
+  // a conversation already does — can_message() already stops that
+  // sender from reaching this person again once declined, so there's
+  // nothing left to reveal by bringing it back.
+  async function respondToRequest(otherId, accept) {
+    if (!sb || !uid) return;
+    try {
+      const { error } = await sb.rpc("respond_to_message_request", { p_sender: otherId, p_accept: accept });
+      if (error) throw error;
+      if (accept) {
+        loadConversations();
+        if (thread === otherId) loadThread(otherId);
+      } else {
+        hideConversation(otherId);
+      }
+    } catch (e) { console.error("GOLSZ respond to message request error:", e); }
+  }
+
   async function loadThread(otherId) {
     if (!sb || !uid || !otherId) return;
     try {
-      const [{ data: ppl }, { data: msgs, error }] = await Promise.all([
+      const [{ data: ppl }, { data: msgs, error }, { data: reqRow }] = await Promise.all([
         sb.from("public_profile_names").select("id, full_name").eq("id", otherId).maybeSingle(),
         sb.from("messages").select("id, sender_id, recipient_id, body, created_at, read_at")
           .or(`and(sender_id.eq.${uid},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${uid})`)
           .order("created_at", { ascending: true }),
+        sb.from("message_requests").select("sender_id, status")
+          .or(`and(sender_id.eq.${uid},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${uid})`)
+          .maybeSingle(),
       ]);
       if (error) throw error;
       setCounterpart({ id: otherId, name: (ppl && ppl.full_name) || "GOLSZ User" });
       setThreadMsgs(msgs || []);
+      setThreadReqStatus(
+        !reqRow ? null
+        : reqRow.status !== "pending" ? "accepted"
+        : reqRow.sender_id === otherId ? "pending_received"
+        : "pending_sent"
+      );
       const unreadIds = (msgs || []).filter((m) => m.recipient_id === uid && !m.read_at).map((m) => m.id);
       if (unreadIds.length) {
         await sb.from("messages").update({ read_at: new Date().toISOString() }).in("id", unreadIds);
@@ -2378,6 +2441,12 @@ function Messages({ thread, setThread }) {
     try {
       const { decision } = await moderateContent({ text: body, contentType: "direct_message", surface: "private_thread", recipientId: thread });
       if (decision === "block") { setErr(t("moderation_blocked")); setBusy(false); return; }
+      // Idempotent (migration 037) — no-ops if a request already exists in
+      // either direction. Required before the very first message to
+      // someone new; messages_write's RLS rejects the insert below
+      // without it, since can_message() now checks for this row instead
+      // of a follow relationship.
+      await sb.rpc("ensure_message_request", { p_recipient: thread });
       const { error } = await sb.from("messages").insert({ sender_id: uid, recipient_id: thread, body });
       if (error) throw error;
       setText("");
@@ -2447,18 +2516,41 @@ function Messages({ thread, setThread }) {
           />
         )}
         {err && <div style={{ padding: "0 12px 8px", color: C.amber, fontSize: 11.5 }}>{err}</div>}
-        <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${C.line}` }}>
-          <input value={text} onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") send(); }}
-            placeholder={t("messages_placeholder")} style={{
-            flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10,
-            color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none",
-          }} />
-          <button onClick={send} disabled={busy || !text.trim()} style={{
-            background: C.lime, border: "none", borderRadius: 10, width: 44, color: C.ink,
-            cursor: busy || !text.trim() ? "default" : "pointer", opacity: busy || !text.trim() ? 0.5 : 1,
-          }}><Send size={16} /></button>
-        </div>
+        {threadReqStatus === "pending_received" ? (
+          <div style={{ padding: "12px", borderTop: `1px solid ${C.line}` }}>
+            <div style={{ fontSize: 12.5, color: C.slate, marginBottom: 10, textAlign: "center" }}>
+              {t("messages_request_banner_pre")}{name}{t("messages_request_banner_post")}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => respondToRequest(thread, false)} style={{
+                flex: 1, background: "transparent", border: `1px solid ${C.line2}`, borderRadius: 10,
+                color: C.chalk, padding: "10px 0", fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+              }}>{t("messages_decline")}</button>
+              <button onClick={() => respondToRequest(thread, true)} style={{
+                flex: 1, background: C.lime, border: "none", borderRadius: 10,
+                color: C.ink, padding: "10px 0", fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+              }}>{t("messages_accept")}</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {threadReqStatus === "pending_sent" && (
+              <div style={{ padding: "0 12px 8px", color: C.slate, fontSize: 11.5, textAlign: "center" }}>{t("messages_request_pending_hint")}</div>
+            )}
+            <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${C.line}` }}>
+              <input value={text} onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") send(); }}
+                placeholder={t("messages_placeholder")} style={{
+                flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10,
+                color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none",
+              }} />
+              <button onClick={send} disabled={busy || !text.trim()} style={{
+                background: C.lime, border: "none", borderRadius: 10, width: 44, color: C.ink,
+                cursor: busy || !text.trim() ? "default" : "pointer", opacity: busy || !text.trim() ? 0.5 : 1,
+              }}><Send size={16} /></button>
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -2494,30 +2586,48 @@ function Messages({ thread, setThread }) {
       )}
       {visibleConversations && visibleConversations.map((conv) => (
         <div key={conv.id} style={{
-          ...card, display: "flex", gap: 11, alignItems: "center",
-          border: `1px solid ${conv.unread ? C.line2 : C.line}`,
+          ...card, display: "flex", flexDirection: "column", gap: 8,
+          border: `1px solid ${conv.isPendingReceived ? C.limeBorder : conv.unread ? C.line2 : C.line}`,
         }}>
-          <button onClick={() => setThread(conv.id)} style={{
-            display: "flex", gap: 11, alignItems: "center", flex: 1, minWidth: 0,
-            textAlign: "left", cursor: "pointer", background: "none", border: "none", padding: 0, fontFamily: "inherit",
-          }}>
-            <Avatar init={conv.init} ring={conv.v ? C.lime : C.line2} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: C.msgName }}>{conv.who}</span>
-                {conv.v && <BadgeCheck size={13} color={C.lime} />}
-                {conv.unread && <span style={{ width: 8, height: 8, borderRadius: 99, background: C.lime, flexShrink: 0, marginLeft: 4 }} />}
-                <span style={{ marginLeft: "auto", fontSize: 10.5, color: C.slate }}>{conv.ago}</span>
+          <div style={{ display: "flex", gap: 11, alignItems: "center" }}>
+            <button onClick={() => setThread(conv.id)} style={{
+              display: "flex", gap: 11, alignItems: "center", flex: 1, minWidth: 0,
+              textAlign: "left", cursor: "pointer", background: "none", border: "none", padding: 0, fontFamily: "inherit",
+            }}>
+              <Avatar init={conv.init} ring={conv.v ? C.lime : C.line2} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: C.msgName }}>{conv.who}</span>
+                  {conv.v && <BadgeCheck size={13} color={C.lime} />}
+                  {conv.unread && <span style={{ width: 8, height: 8, borderRadius: 99, background: C.lime, flexShrink: 0, marginLeft: 4 }} />}
+                  <span style={{ marginLeft: "auto", fontSize: 10.5, color: C.slate }}>{conv.ago}</span>
+                </div>
+                {conv.isPendingReceived ? (
+                  <div style={{ fontSize: 10.5, color: C.lime, fontWeight: 700, marginBottom: 3 }}>{t("messages_new_request")}</div>
+                ) : conv.role && <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 3 }}>{conv.role}</div>}
+                <div style={{ fontSize: 12.5, color: conv.unread ? C.chalk : C.slate, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: conv.unread ? 600 : 400 }}>
+                  {conv.last}
+                </div>
               </div>
-              {conv.role && <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 3 }}>{conv.role}</div>}
-              <div style={{ fontSize: 12.5, color: conv.unread ? C.chalk : C.slate, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: conv.unread ? 600 : 400 }}>
-                {conv.last}
-              </div>
+            </button>
+            {!conv.isPendingReceived && (
+              <button onClick={() => hideConversation(conv.id)} title={t("messages_delete_conv")} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0, display: "flex" }}>
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+          {conv.isPendingReceived && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => respondToRequest(conv.id, false)} style={{
+                flex: 1, background: "transparent", border: `1px solid ${C.line2}`, borderRadius: 8,
+                color: C.chalk, padding: "7px 0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+              }}>{t("messages_decline")}</button>
+              <button onClick={() => respondToRequest(conv.id, true)} style={{
+                flex: 1, background: C.lime, border: "none", borderRadius: 8,
+                color: C.ink, padding: "7px 0", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+              }}>{t("messages_accept")}</button>
             </div>
-          </button>
-          <button onClick={() => hideConversation(conv.id)} title={t("messages_delete_conv")} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0, display: "flex" }}>
-            <Trash2 size={16} />
-          </button>
+          )}
         </div>
       ))}
     </div>
@@ -3225,7 +3335,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           }}>
             <Users size={15} fill={following ? C.lime : "none"} /> {following ? t("passport_following") : t("passport_follow")}
           </button>
-          {(following || followedByThem) && onMessage && (
+          {onMessage && (
             <button onClick={() => onMessage(viewUserId)} style={{
               flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
               padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
