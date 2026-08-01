@@ -694,6 +694,13 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
   field — not in `protect_profile_columns()`'s protected set, same bucket as `full_name`.
 - Upload affordance (small camera-icon button overlaid on the initials/photo box, plus a short "use a sports
   photo, not a casual selfie" tip) only shows on your own Passport, never `viewingOther`.
+- **Removable back to initials** — `removeAvatar()` (`golsz-app.html`, right after `pickAvatar()`) just sets
+  `avatar_url` back to `null`; the Passport avatar box already falls back to showing initials whenever
+  `avatarUrl` is falsy, so no separate "no photo" UI state needed. Shown as a small amber X button (top-right
+  of the avatar box, opposite the lime camera button) only when a photo is actually set. Doesn't delete the
+  file out of the `avatars` bucket — harmless, since it's keyed under that user's own folder and never
+  linked from anywhere once the column is cleared, and a future re-upload always writes a fresh
+  timestamped filename regardless. No migration needed — `avatar_url` was already nullable.
 
 ### Verified badge available for every occupation, including Player
 

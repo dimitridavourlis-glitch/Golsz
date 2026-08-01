@@ -285,6 +285,7 @@ const I18N = {
     passport_finish_rest: " — add your sport, position and stats so coaches and Scout can find you.",
     passport_member: "GOLSZ MEMBER", passport_sport: "SPORT", passport_position: "POSITION", passport_club: "CLUB",
     passport_photo_tip: "Tip: use a sports photo — action shot, team photo, or in uniform.",
+    passport_photo_remove: "Remove photo",
     passport_photo_type_err: "Please choose an image file.", passport_photo_size_err: "Images must be under 8MB.",
     passport_photo_err: "Couldn't upload your photo — try again.",
     passport_passport_no: "PASSPORT NO.", passport_height: "HEIGHT", passport_grad: "GRAD", passport_gpa: "GPA",
@@ -469,6 +470,7 @@ const I18N = {
     passport_finish_rest: " — ajoutez votre sport, poste et statistiques pour que les entraîneurs et Scout puissent vous trouver.",
     passport_member: "MEMBRE GOLSZ", passport_sport: "SPORT", passport_position: "POSTE", passport_club: "CLUB",
     passport_photo_tip: "Astuce : utilisez une photo de sport — action, équipe, ou en tenue.",
+    passport_photo_remove: "Supprimer la photo",
     passport_photo_type_err: "Veuillez choisir un fichier image.", passport_photo_size_err: "Les images doivent faire moins de 8 Mo.",
     passport_photo_err: "Impossible d'envoyer votre photo — réessayez.",
     passport_passport_no: "N° PASSEPORT", passport_height: "TAILLE", passport_grad: "DIPLÔME", passport_gpa: "GPA",
@@ -653,6 +655,7 @@ const I18N = {
     passport_finish_rest: " — añade tu deporte, posición y estadísticas para que los entrenadores y Scout puedan encontrarte.",
     passport_member: "MIEMBRO DE GOLSZ", passport_sport: "DEPORTE", passport_position: "POSICIÓN", passport_club: "CLUB",
     passport_photo_tip: "Consejo: usa una foto deportiva — en acción, con el equipo, o con el uniforme.",
+    passport_photo_remove: "Eliminar foto",
     passport_photo_type_err: "Elige un archivo de imagen.", passport_photo_size_err: "Las imágenes deben pesar menos de 8MB.",
     passport_photo_err: "No se pudo subir tu foto — inténtalo de nuevo.",
     passport_passport_no: "N.º DE PASAPORTE", passport_height: "ALTURA", passport_grad: "GRADUACIÓN", passport_gpa: "GPA",
@@ -837,6 +840,7 @@ const I18N = {
     passport_finish_rest: " — προσθέστε άθλημα, θέση και στατιστικά ώστε προπονητές και το Scout να σας βρουν.",
     passport_member: "ΜΕΛΟΣ GOLSZ", passport_sport: "ΑΘΛΗΜΑ", passport_position: "ΘΕΣΗ", passport_club: "ΣΥΛΛΟΓΟΣ",
     passport_photo_tip: "Συμβουλή: χρησιμοποιήστε αθλητική φωτογραφία — σε δράση, με την ομάδα, ή με τη φόρμα.",
+    passport_photo_remove: "Αφαίρεση φωτογραφίας",
     passport_photo_type_err: "Επιλέξτε ένα αρχείο εικόνας.", passport_photo_size_err: "Οι εικόνες πρέπει να είναι κάτω από 8MB.",
     passport_photo_err: "Δεν ήταν δυνατή η μεταφόρτωση της φωτογραφίας — δοκιμάστε ξανά.",
     passport_passport_no: "ΑΡ. ΔΙΑΒΑΤΗΡΙΟΥ", passport_height: "ΥΨΟΣ", passport_grad: "ΑΠΟΦΟΙΤΗΣΗ", passport_gpa: "GPA",
@@ -3215,6 +3219,25 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     })();
   }
 
+  // Just clears profiles.avatar_url back to null — doesn't delete the
+  // file out of the avatars Storage bucket (harmless: it's keyed under
+  // this user's own folder, never linked from anywhere once the column
+  // is cleared, and re-uploading always writes a fresh timestamped
+  // filename anyway, so nothing stale can ever be shown by accident).
+  // Passport already falls back to initials whenever avatarUrl is falsy.
+  async function removeAvatar() {
+    if (!sb || !uid || avatarBusy) return;
+    setAvatarBusy(true); setAvatarErr("");
+    try {
+      const { error } = await sb.from("profiles").update({ avatar_url: null }).eq("id", uid);
+      if (error) throw error;
+      setProfile((p) => (p ? { ...p, avatar_url: null } : p));
+    } catch (err) {
+      console.error("GOLSZ avatar remove error:", err);
+      setAvatarErr((err && err.message) || t("passport_photo_err"));
+    } finally { setAvatarBusy(false); }
+  }
+
   async function load() {
     if (!sb) return;
     try {
@@ -3409,6 +3432,15 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
                   <Camera size={13} color={C.ink} />
                   <input type="file" accept="image/*" onChange={pickAvatar} disabled={avatarBusy} style={{ display: "none" }} />
                 </label>
+              )}
+              {!viewingOther && real && p.avatarUrl && (
+                <button onClick={removeAvatar} disabled={avatarBusy} title={t("passport_photo_remove")} style={{
+                  position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: 99, padding: 0,
+                  background: C.pitch, border: `2px solid ${C.amber}`, display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: avatarBusy ? "default" : "pointer", opacity: avatarBusy ? 0.6 : 1,
+                }}>
+                  <X size={12} color={C.amber} />
+                </button>
               )}
             </div>
             <div style={{ textAlign: "center", fontSize: 8.5, color: C.slate, marginTop: 5, fontFamily: "'Space Mono', monospace" }}>{real ? t("passport_member") : "VERIFIED PHOTO"}</div>
