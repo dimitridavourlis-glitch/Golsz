@@ -573,6 +573,16 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   the moderation classifier's minor-safety rules on the message content itself. Unapproved minors are
   unaffected either way — `is_restricted_minor()` still blocks them from sending or receiving *any* message
   at all (see migration 005), request or otherwise, completely independent of this change.
+- **View passport from a chat thread** (no migration — pure client change): the thread header's
+  avatar+name is now a `<button onClick={() => onViewProfile(thread)}>` instead of static text, so tapping
+  it while in a conversation navigates to that person's Passport — letting the recipient look the sender up
+  before deciding whether to keep talking to them, at the founder's explicit request. Reuses the exact same
+  `viewProfile(id)`/`onViewProfile` prop pattern already wired through `Feed`, `Discover`, and
+  `FollowListCard`; `Messages` just gained the same `onViewProfile` prop, passed down from `GolszApp` as
+  `onViewProfile={viewProfile}` at both render call sites (desktop and mobile). Same known quirk as every
+  other entry point into this pattern: "Back" from the Passport lands on `page="profile"` (the viewer's own
+  profile), not back on the thread — `viewProfileId` clears but `page` itself never changes. Not a new
+  inconsistency, just the pre-existing behavior of this navigation pattern everywhere it's used.
 
 ### Time-on-app tracking (migration 031)
 

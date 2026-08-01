@@ -245,6 +245,7 @@ const I18N = {
     messages_no_match: "No conversations match that search.",
     messages_say_hello_pre: "Say hello — you can message ", messages_say_hello_post: " because you follow each other.",
     messages_placeholder: "Message…", messages_delete_conv: "Delete conversation", messages_delete_msg: "Delete message",
+    messages_view_passport: "View passport",
     messages_new_request: "MESSAGE REQUEST", messages_accept: "Accept", messages_decline: "Decline",
     messages_request_banner_pre: "", messages_request_banner_post: " wants to send you a message. Accepting lets you both message freely — declining won't notify them.",
     messages_request_pending_hint: "Message request sent — they'll need to accept before this shows up in their main inbox.",
@@ -430,6 +431,7 @@ const I18N = {
     messages_no_match: "Aucune conversation ne correspond à cette recherche.",
     messages_say_hello_pre: "Dites bonjour — vous pouvez écrire à ", messages_say_hello_post: " car vous vous suivez mutuellement.",
     messages_placeholder: "Message…", messages_delete_conv: "Supprimer la conversation", messages_delete_msg: "Supprimer le message",
+    messages_view_passport: "Voir le passeport",
     messages_new_request: "DEMANDE DE MESSAGE", messages_accept: "Accepter", messages_decline: "Refuser",
     messages_request_banner_pre: "", messages_request_banner_post: " souhaite vous envoyer un message. Accepter vous permettra de vous écrire librement tous les deux — refuser ne l'avertira pas.",
     messages_request_pending_hint: "Demande de message envoyée — elle doit être acceptée avant d'apparaître dans sa boîte de réception principale.",
@@ -615,6 +617,7 @@ const I18N = {
     messages_no_match: "Ninguna conversación coincide con esa búsqueda.",
     messages_say_hello_pre: "Saluda — puedes escribirle a ", messages_say_hello_post: " porque se siguen mutuamente.",
     messages_placeholder: "Mensaje…", messages_delete_conv: "Eliminar conversación", messages_delete_msg: "Eliminar mensaje",
+    messages_view_passport: "Ver pasaporte",
     messages_new_request: "SOLICITUD DE MENSAJE", messages_accept: "Aceptar", messages_decline: "Rechazar",
     messages_request_banner_pre: "", messages_request_banner_post: " quiere enviarte un mensaje. Aceptar permite que ambos se escriban libremente — rechazar no se lo notificará.",
     messages_request_pending_hint: "Solicitud de mensaje enviada — deberá aceptarla antes de que aparezca en su bandeja principal.",
@@ -800,6 +803,7 @@ const I18N = {
     messages_no_match: "Καμία συνομιλία δεν ταιριάζει με αυτή την αναζήτηση.",
     messages_say_hello_pre: "Πείτε γεια — μπορείτε να στείλετε μήνυμα στον/στην ", messages_say_hello_post: " επειδή αλληλοακολουθείστε.",
     messages_placeholder: "Μήνυμα…", messages_delete_conv: "Διαγραφή συνομιλίας", messages_delete_msg: "Διαγραφή μηνύματος",
+    messages_view_passport: "Προβολή διαβατηρίου",
     messages_new_request: "ΑΙΤΗΜΑ ΜΗΝΥΜΑΤΟΣ", messages_accept: "Αποδοχή", messages_decline: "Απόρριψη",
     messages_request_banner_pre: "Ο/Η ", messages_request_banner_post: " θέλει να σας στείλει μήνυμα. Η αποδοχή επιτρέπει και στους δύο να επικοινωνείτε ελεύθερα — η απόρριψη δεν θα τον/την ειδοποιήσει.",
     messages_request_pending_hint: "Το αίτημα μηνύματος στάλθηκε — πρέπει να γίνει αποδοχή πριν εμφανιστεί στα κύρια μηνύματά του/της.",
@@ -2276,7 +2280,7 @@ function Tag({ children, warn }) {
    the UI. `thread` is a real profile uuid (string) once a conversation
    is open, or null for the list view — always real data, no demo
    fallback. */
-function Messages({ thread, setThread }) {
+function Messages({ thread, setThread, onViewProfile }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [conversations, setConversations] = useState(null);
@@ -2480,8 +2484,14 @@ function Messages({ thread, setThread }) {
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: `1px solid ${C.line}` }}>
           <button onClick={() => setThread(null)} style={iconBtn(C.chalk)}><ChevronLeft size={20} /></button>
-          <Avatar init={initials(name)} size={36} />
-          <div style={{ fontWeight: 700, fontSize: 14, color: C.msgName }}>{name}</div>
+          <button
+            onClick={() => onViewProfile && onViewProfile(thread)}
+            title={t("messages_view_passport")}
+            style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", padding: 0, cursor: onViewProfile ? "pointer" : "default", fontFamily: "inherit" }}
+          >
+            <Avatar init={initials(name)} size={36} />
+            <div style={{ fontWeight: 700, fontSize: 14, color: C.msgName }}>{name}</div>
+          </button>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: 14 }}>
           {threadMsgs.length === 0 && (
@@ -5126,7 +5136,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
             {page === "scout" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout /></div>}
             {page === "events" && <Events />}
             {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={() => setViewProfileId(null)} onMessage={openThread} onViewProfile={viewProfile} />}
-            {page === "messages" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Messages thread={thread} setThread={setThread} /></div>}
+            {page === "messages" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Messages thread={thread} setThread={setThread} onViewProfile={viewProfile} /></div>}
             {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
           </div>
         </main>
@@ -5161,7 +5171,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         {page === "scout" && <Scout />}
         {page === "events" && <Events />}
         {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={() => setViewProfileId(null)} onMessage={openThread} onViewProfile={viewProfile} />}
-        {page === "messages" && <Messages thread={thread} setThread={setThread} />}
+        {page === "messages" && <Messages thread={thread} setThread={setThread} onViewProfile={viewProfile} />}
         {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
       </main>
 
