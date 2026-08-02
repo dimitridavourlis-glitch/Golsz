@@ -257,6 +257,31 @@ export default async function handler(req, res) {
       // cache minimum. Remove once confirmed via `vercel logs`.
       console.log("GOLSZ scout usage check:", JSON.stringify(data.usage));
 
+      // TEMPORARY — side-by-side check of whether disabling `thinking`
+      // changed Scout's actual answer. Fires one extra, identical call with
+      // `thinking` omitted (default adaptive) purely to log it; the real
+      // response returned below is unaffected. Remove once compared.
+      if (turn === 0) {
+        try {
+          const cmp = await fetch(ANTHROPIC_URL, {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
+            body: JSON.stringify({
+              model: process.env.SCOUT_MODEL || "claude-sonnet-5",
+              max_tokens: 4096,
+              system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+              messages: conversation,
+              tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL],
+            }),
+          });
+          const cmpData = await cmp.json();
+          const cmpText = (cmpData.content || []).find((b) => b.type === "text");
+          console.log("GOLSZ thinking-compare (default/adaptive):", JSON.stringify({ usage: cmpData.usage, reply: cmpText ? cmpText.text : null }));
+        } catch (e) {
+          console.log("GOLSZ thinking-compare failed:", String(e));
+        }
+      }
+
       const searchCalls = (data.content || []).filter((b) => b.type === "tool_use" && b.name === "search_golsz_players");
       if (data.stop_reason !== "tool_use" || !searchCalls.length) break;
 
