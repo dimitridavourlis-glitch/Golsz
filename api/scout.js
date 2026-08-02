@@ -183,9 +183,12 @@ async function classifyIntent(key, conversation) {
 
 // Categories confirmed (against real traffic) to need no tool and no
 // multi-step reasoning — safe to answer for real on the cheaper model.
+// off_topic joined this list after real traffic showed it was the single
+// largest category and the least optimized — declining and redirecting a
+// non-sports message doesn't need Sonnet-level reasoning either.
 // Everything else (career_advice, scouting_analysis, web_lookup, db_lookup,
 // low confidence, or a classifier failure) keeps going to Sonnet.
-const HAIKU_INTENTS = new Set(["simple_knowledge", "player_comparison", "agent_workflow", "profile_assist"]);
+const HAIKU_INTENTS = new Set(["simple_knowledge", "player_comparison", "agent_workflow", "profile_assist", "off_topic"]);
 const HAIKU_CONFIDENCE_THRESHOLD = 0.7;
 
 function shouldRouteToHaiku(classification) {
@@ -308,6 +311,14 @@ export default async function handler(req, res) {
 
   try {
     // ---- Haiku path: low-stakes, no-tool-needed intents, answered for real ----
+    // Tools are included here (even though the classifier says none should be
+    // needed) purely so the cached block matches the Sonnet path's ~4,287
+    // tokens — real traffic showed that dropping tools shrank the cacheable
+    // system prompt below Haiku's 4,096-token cache minimum, so every Haiku
+    // call was silently paying full price with no cache benefit at all.
+    // If Haiku unexpectedly asks for a tool anyway (a classifier miss), that
+    // response is discarded and the request falls through to the Sonnet
+    // path below instead of trying to run a second tool loop here.
     if (shouldRouteToHaiku(classification)) {
       const r = await fetch(ANTHROPIC_URL, {
         method: "POST",
@@ -317,12 +328,15 @@ export default async function handler(req, res) {
           max_tokens: 4096,
           system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
           messages: conversation,
+          tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL],
         }),
       });
       const data = await r.json();
-      if (!r.ok) return res.status(r.status).json(data);
-      console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
-      return res.status(200).json(data);
+      if (r.ok && data.stop_reason !== "tool_use") {
+        console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
+        return res.status(200).json(data);
+      }
+      console.log(r.ok ? "GOLSZ haiku escalated to sonnet (wanted a tool)" : "GOLSZ haiku call failed, escalating to sonnet:", JSON.stringify(data));
     }
 
     // ---- Sonnet path (model / prompt / tools owned here, not the client) ----
