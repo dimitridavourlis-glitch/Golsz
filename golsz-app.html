@@ -331,6 +331,7 @@ const I18N = {
     admin_messages_7d: "MESSAGES 7D", admin_push_subscribers: "PUSH SUBS", admin_top_followed: "TOP FOLLOWED",
     admin_ai_model_mix: "AI MODEL USAGE", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Database (no AI call)",
     admin_scout_cost_month: "SCOUT AI COST (MONTH)", admin_scout_avg_cost_msg: "AVG COST / MESSAGE (MONTH)",
+    admin_view_overview: "Overview", admin_view_community: "Community", admin_view_scout_ai: "Scout AI",
     admin_time_on_app: "TIME ON APP", admin_avg_hrs_week: "AVG HRS/WEEK", admin_avg_hrs_month: "AVG HRS/MONTH", admin_avg_hrs_year: "AVG HRS/YEAR", admin_active_users: "active users",
     admin_view_activity: "View daily activity", admin_activity_err: "Couldn't load activity.",
     admin_activity_today: "Today:", admin_activity_7d: "Last 7d:", admin_activity_30d: "Last 30d:",
@@ -517,6 +518,7 @@ const I18N = {
     admin_messages_7d: "MESSAGES 7J", admin_push_subscribers: "ABONNÉS PUSH", admin_top_followed: "PLUS SUIVIS",
     admin_ai_model_mix: "UTILISATION DU MODÈLE IA", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Base de données (sans appel IA)",
     admin_scout_cost_month: "COÛT IA SCOUT (MOIS)", admin_scout_avg_cost_msg: "COÛT MOYEN / MESSAGE (MOIS)",
+    admin_view_overview: "Aperçu", admin_view_community: "Communauté", admin_view_scout_ai: "IA Scout",
     admin_time_on_app: "TEMPS SUR L'APPLI", admin_avg_hrs_week: "MOY. H/SEMAINE", admin_avg_hrs_month: "MOY. H/MOIS", admin_avg_hrs_year: "MOY. H/AN", admin_active_users: "utilisateurs actifs",
     admin_view_activity: "Voir l'activité quotidienne", admin_activity_err: "Impossible de charger l'activité.",
     admin_activity_today: "Aujourd'hui :", admin_activity_7d: "7 derniers jours :", admin_activity_30d: "30 derniers jours :",
@@ -705,6 +707,7 @@ const I18N = {
     admin_messages_7d: "MENSAJES 7D", admin_push_subscribers: "SUSCRIPTORES PUSH", admin_top_followed: "MÁS SEGUIDOS",
     admin_ai_model_mix: "USO DE MODELO IA", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Base de datos (sin llamada IA)",
     admin_scout_cost_month: "COSTO IA SCOUT (MES)", admin_scout_avg_cost_msg: "COSTO PROMEDIO / MENSAJE (MES)",
+    admin_view_overview: "Resumen", admin_view_community: "Comunidad", admin_view_scout_ai: "IA Scout",
     admin_time_on_app: "TIEMPO EN LA APP", admin_avg_hrs_week: "PROM. H/SEMANA", admin_avg_hrs_month: "PROM. H/MES", admin_avg_hrs_year: "PROM. H/AÑO", admin_active_users: "usuarios activos",
     admin_view_activity: "Ver actividad diaria", admin_activity_err: "No se pudo cargar la actividad.",
     admin_activity_today: "Hoy:", admin_activity_7d: "Últimos 7 días:", admin_activity_30d: "Últimos 30 días:",
@@ -893,6 +896,7 @@ const I18N = {
     admin_messages_7d: "ΜΗΝΥΜΑΤΑ 7Η", admin_push_subscribers: "ΣΥΝΔΡΟΜΗΤΕΣ PUSH", admin_top_followed: "ΔΗΜΟΦΙΛΕΣΤΕΡΟΙ",
     admin_ai_model_mix: "ΧΡΗΣΗ ΜΟΝΤΕΛΟΥ AI", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Βάση δεδομένων (χωρίς κλήση AI)",
     admin_scout_cost_month: "ΚΟΣΤΟΣ AI SCOUT (ΜΗΝΑΣ)", admin_scout_avg_cost_msg: "ΜΕΣΟ ΚΟΣΤΟΣ / ΜΗΝΥΜΑ (ΜΗΝΑΣ)",
+    admin_view_overview: "Επισκόπηση", admin_view_community: "Κοινότητα", admin_view_scout_ai: "AI Scout",
     admin_time_on_app: "ΧΡΟΝΟΣ ΣΤΗΝ ΕΦΑΡΜΟΓΗ", admin_avg_hrs_week: "ΜΕΣ. ΩΡΕΣ/ΕΒΔ", admin_avg_hrs_month: "ΜΕΣ. ΩΡΕΣ/ΜΗΝΑ", admin_avg_hrs_year: "ΜΕΣ. ΩΡΕΣ/ΕΤΟΣ", admin_active_users: "ενεργοί χρήστες",
     admin_view_activity: "Προβολή ημερήσιας δραστηριότητας", admin_activity_err: "Δεν ήταν δυνατή η φόρτωση δραστηριότητας.",
     admin_activity_today: "Σήμερα:", admin_activity_7d: "Τελ. 7 ημέρες:", admin_activity_30d: "Τελ. 30 ημέρες:",
@@ -3801,6 +3805,7 @@ function AdminPanel({ onBack }) {
   const [evLoc, setEvLoc] = useState(""); const [evLevel, setEvLevel] = useState("");
   const [evDate, setEvDate] = useState(""); const [evSpots, setEvSpots] = useState("");
   const [analytics, setAnalytics] = useState(null);
+  const [analyticsView, setAnalyticsView] = useState("overview"); // "overview" | "community" | "scoutai" — sub-nav within the Analytics tab, see below
   const [showEventsManager, setShowEventsManager] = useState(false);
   const [auditLog, setAuditLog] = useState(null);
   const [moderationQueue, setModerationQueue] = useState(null);
@@ -4370,148 +4375,175 @@ function AdminPanel({ onBack }) {
           {analytics === false && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_analytics_err")}</div>}
           {analytics && (
             <>
-              <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, margin: "2px 0 8px" }}>{t("admin_overview")}</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
-                {[
-                  [t("admin_signups_today"), analytics.signupsToday],
-                  [t("admin_signups_week"), analytics.signupsWeek],
-                  [t("admin_total_follows"), analytics.totalFollows],
-                  [t("admin_verified_count"), analytics.verifiedCount],
-                  [t("admin_banned_count"), analytics.bannedCount],
-                  [t("admin_mrr_estimate"), "$" + analytics.mrrEstimate],
-                ].map(([label, v]) => (
-                  <div key={label} style={{ ...card, margin: 0, padding: "10px 8px", textAlign: "center" }}>
-                    <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{v}</div>
-                    <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{label}</div>
+              {/* Sub-nav: the Analytics tab used to be ~13 cards stacked in one
+                  scroll, which is exactly what made the panel feel messy — this
+                  groups them into three findable views instead of removing any
+                  of them. Manage events stays outside this nav (below, always
+                  visible) since it's a tool, not an analytics view. */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                {[["overview", t("admin_view_overview")], ["community", t("admin_view_community")], ["scoutai", t("admin_view_scout_ai")]].map(([id, label]) => (
+                  <button key={id} onClick={() => setAnalyticsView(id)} style={{
+                    flex: 1, padding: "8px 0", borderRadius: 9, cursor: "pointer", fontFamily: "inherit",
+                    fontSize: 11.5, fontWeight: 700, border: `1px solid ${analyticsView === id ? C.lime : C.line2}`,
+                    background: analyticsView === id ? C.lime : "transparent", color: analyticsView === id ? C.ink : C.slate,
+                  }}>{label}</button>
+                ))}
+              </div>
+
+              {analyticsView === "overview" && (
+                <>
+                  <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, margin: "2px 0 8px" }}>{t("admin_overview")}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
+                    {[
+                      [t("admin_signups_today"), analytics.signupsToday],
+                      [t("admin_signups_week"), analytics.signupsWeek],
+                      [t("admin_total_follows"), analytics.totalFollows],
+                      [t("admin_verified_count"), analytics.verifiedCount],
+                      [t("admin_banned_count"), analytics.bannedCount],
+                      [t("admin_mrr_estimate"), "$" + analytics.mrrEstimate],
+                    ].map(([label, v]) => (
+                      <div key={label} style={{ ...card, margin: 0, padding: "10px 8px", textAlign: "center" }}>
+                        <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{v}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{label}</div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-                <div style={{ ...card, margin: 0 }}>
-                  <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_signups_14d")}</div>
-                  <Bars data={analytics.signupsPerDay} color={C.lime} />
-                </div>
-                <div style={{ ...card, margin: 0 }}>
-                  <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_posts_14d")}</div>
-                  <Bars data={analytics.postsPerDay} color={C.elite} />
-                </div>
-              </div>
-
-              <div style={{ ...card }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_plan_mix")}</div>
-                <BreakdownBar label="Starter" count={analytics.planCounts.starter} total={analytics.totalUsers} color={C.slate} />
-                <BreakdownBar label="Pro" count={analytics.planCounts.pro} total={analytics.totalUsers} color={C.lime} />
-                <BreakdownBar label="Elite" count={analytics.planCounts.elite} total={analytics.totalUsers} color={C.elite} />
-              </div>
-
-              <div style={{ ...card }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_occupation_mix")}</div>
-                {Object.entries(analytics.occCounts).map(([occ, count]) => (
-                  <BreakdownBar key={occ} label={occ} count={count} total={analytics.totalUsers} color={C.lime} />
-                ))}
-              </div>
-
-              <div style={{ ...card }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_sport_mix")}</div>
-                {Object.entries(analytics.sportCounts).map(([sport, count]) => (
-                  <BreakdownBar key={sport} label={sport} count={count} total={analytics.totalAthletes} color={C.lime} />
-                ))}
-                {analytics.sportUnset > 0 && (
-                  <BreakdownBar label={analytics.notSetLabel} count={analytics.sportUnset} total={analytics.totalAthletes} color={C.slate} />
-                )}
-              </div>
-
-              <div style={{ ...card }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_gender_mix")}</div>
-                <BreakdownBar label={t("admin_gender_male")} count={analytics.genderCounts.Male} total={analytics.totalAthletes} color={C.lime} />
-                <BreakdownBar label={t("admin_gender_female")} count={analytics.genderCounts.Female} total={analytics.totalAthletes} color={C.elite} />
-                {analytics.genderUnset > 0 && (
-                  <BreakdownBar label={analytics.notSetLabel} count={analytics.genderUnset} total={analytics.totalAthletes} color={C.slate} />
-                )}
-              </div>
-
-              <div style={{ ...card }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_top_countries")}</div>
-                {analytics.topCountries.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("admin_no_data")}</div>}
-                {analytics.topCountries.map((c) => (
-                  <BreakdownBar key={c.country} label={c.country} count={c.count} total={analytics.totalAthletes} color={C.lime} />
-                ))}
-              </div>
-
-              <div style={{ ...card }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_verification_mix")}</div>
-                <BreakdownBar label={t("admin_tier_none")} count={analytics.tierCounts.none} total={analytics.totalUsers} color={C.amber} />
-                <BreakdownBar label={t("admin_tier_pro")} count={analytics.tierCounts.pro} total={analytics.totalUsers} color={C.lime} />
-                <BreakdownBar label={t("admin_tier_elite")} count={analytics.tierCounts.elite} total={analytics.totalUsers} color={C.elite} />
-              </div>
-
-              <div style={{ ...card }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_time_on_app")}</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  {[
-                    [t("admin_avg_hrs_week"), analytics.avgHoursWeek, analytics.activeUsersWeek],
-                    [t("admin_avg_hrs_month"), analytics.avgHoursMonth, analytics.activeUsersMonth],
-                    [t("admin_avg_hrs_year"), analytics.avgHoursYear, analytics.activeUsersYear],
-                  ].map(([label, hrs, activeUsers]) => (
-                    <div key={label} style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{hrs}h</div>
-                      <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700, marginBottom: 2 }}>{label}</div>
-                      <div style={{ fontSize: 9.5, color: C.slate }}>{activeUsers} {t("admin_active_users")}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+                    <div style={{ ...card, margin: 0 }}>
+                      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_signups_14d")}</div>
+                      <Bars data={analytics.signupsPerDay} color={C.lime} />
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
-                {[
-                  [t("admin_scout_conversations"), analytics.scoutConversations],
-                  [t("admin_scout_users"), analytics.scoutUsers],
-                  [t("admin_messages_total"), analytics.messagesTotal],
-                  [t("admin_messages_7d"), analytics.messages7d],
-                  [t("admin_push_subscribers"), analytics.pushSubscribers],
-                ].map(([label, v]) => (
-                  <div key={label} style={{ ...card, margin: 0, padding: "10px 8px", textAlign: "center" }}>
-                    <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{v}</div>
-                    <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{label}</div>
+                    <div style={{ ...card, margin: 0 }}>
+                      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_posts_14d")}</div>
+                      <Bars data={analytics.postsPerDay} color={C.elite} />
+                    </div>
                   </div>
-                ))}
-              </div>
 
-              <div style={{ ...card }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_ai_model_mix")}</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: analytics.modelMix.total > 0 ? 14 : 0 }}>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>${analytics.scoutCostMonth.toFixed(2)}</div>
-                    <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_scout_cost_month")}</div>
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_top_followed")}</div>
+                    {analytics.topFollowed.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("admin_no_data")}</div>}
+                    {analytics.topFollowed.map((u, i) => (
+                      <div key={u.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: i < analytics.topFollowed.length - 1 ? `1px solid ${C.line}` : "none", fontSize: 13 }}>
+                        <span>{i + 1}. {u.name}</span>
+                        <span style={{ color: C.slate, fontFamily: "'Space Mono', monospace" }}>{u.count}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>${analytics.scoutAvgCostPerMessage.toFixed(4)}</div>
-                    <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_scout_avg_cost_msg")}</div>
-                  </div>
-                </div>
-                {analytics.modelMix.total === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("admin_no_data")}</div>}
-                {analytics.modelMix.total > 0 && (
-                  <>
-                    <BreakdownBar label={t("admin_model_haiku")} count={analytics.modelMix.haiku} total={analytics.modelMix.total} color={C.lime} />
-                    <BreakdownBar label={t("admin_model_sonnet")} count={analytics.modelMix.sonnet} total={analytics.modelMix.total} color={C.elite} />
-                    <BreakdownBar label={t("admin_model_database")} count={analytics.modelMix.database} total={analytics.modelMix.total} color={C.slate} />
-                  </>
-                )}
-              </div>
+                </>
+              )}
 
-              <div style={{ ...card }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_top_followed")}</div>
-                {analytics.topFollowed.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("admin_no_data")}</div>}
-                {analytics.topFollowed.map((u, i) => (
-                  <div key={u.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: i < analytics.topFollowed.length - 1 ? `1px solid ${C.line}` : "none", fontSize: 13 }}>
-                    <span>{i + 1}. {u.name}</span>
-                    <span style={{ color: C.slate, fontFamily: "'Space Mono', monospace" }}>{u.count}</span>
+              {analyticsView === "community" && (
+                <>
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_plan_mix")}</div>
+                    <BreakdownBar label="Starter" count={analytics.planCounts.starter} total={analytics.totalUsers} color={C.slate} />
+                    <BreakdownBar label="Pro" count={analytics.planCounts.pro} total={analytics.totalUsers} color={C.lime} />
+                    <BreakdownBar label="Elite" count={analytics.planCounts.elite} total={analytics.totalUsers} color={C.elite} />
                   </div>
-                ))}
-              </div>
 
-              <button onClick={() => setShowEventsManager((s) => !s)} style={{ ...iconBtn(C.chalk), width: "100%", justifyContent: "center", marginBottom: showEventsManager ? 10 : 0 }}>
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_occupation_mix")}</div>
+                    {Object.entries(analytics.occCounts).map(([occ, count]) => (
+                      <BreakdownBar key={occ} label={occ} count={count} total={analytics.totalUsers} color={C.lime} />
+                    ))}
+                  </div>
+
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_sport_mix")}</div>
+                    {Object.entries(analytics.sportCounts).map(([sport, count]) => (
+                      <BreakdownBar key={sport} label={sport} count={count} total={analytics.totalAthletes} color={C.lime} />
+                    ))}
+                    {analytics.sportUnset > 0 && (
+                      <BreakdownBar label={analytics.notSetLabel} count={analytics.sportUnset} total={analytics.totalAthletes} color={C.slate} />
+                    )}
+                  </div>
+
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_gender_mix")}</div>
+                    <BreakdownBar label={t("admin_gender_male")} count={analytics.genderCounts.Male} total={analytics.totalAthletes} color={C.lime} />
+                    <BreakdownBar label={t("admin_gender_female")} count={analytics.genderCounts.Female} total={analytics.totalAthletes} color={C.elite} />
+                    {analytics.genderUnset > 0 && (
+                      <BreakdownBar label={analytics.notSetLabel} count={analytics.genderUnset} total={analytics.totalAthletes} color={C.slate} />
+                    )}
+                  </div>
+
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_top_countries")}</div>
+                    {analytics.topCountries.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("admin_no_data")}</div>}
+                    {analytics.topCountries.map((c) => (
+                      <BreakdownBar key={c.country} label={c.country} count={c.count} total={analytics.totalAthletes} color={C.lime} />
+                    ))}
+                  </div>
+
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_verification_mix")}</div>
+                    <BreakdownBar label={t("admin_tier_none")} count={analytics.tierCounts.none} total={analytics.totalUsers} color={C.amber} />
+                    <BreakdownBar label={t("admin_tier_pro")} count={analytics.tierCounts.pro} total={analytics.totalUsers} color={C.lime} />
+                    <BreakdownBar label={t("admin_tier_elite")} count={analytics.tierCounts.elite} total={analytics.totalUsers} color={C.elite} />
+                  </div>
+
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_time_on_app")}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                      {[
+                        [t("admin_avg_hrs_week"), analytics.avgHoursWeek, analytics.activeUsersWeek],
+                        [t("admin_avg_hrs_month"), analytics.avgHoursMonth, analytics.activeUsersMonth],
+                        [t("admin_avg_hrs_year"), analytics.avgHoursYear, analytics.activeUsersYear],
+                      ].map(([label, hrs, activeUsers]) => (
+                        <div key={label} style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{hrs}h</div>
+                          <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700, marginBottom: 2 }}>{label}</div>
+                          <div style={{ fontSize: 9.5, color: C.slate }}>{activeUsers} {t("admin_active_users")}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {analyticsView === "scoutai" && (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
+                    {[
+                      [t("admin_scout_conversations"), analytics.scoutConversations],
+                      [t("admin_scout_users"), analytics.scoutUsers],
+                      [t("admin_messages_total"), analytics.messagesTotal],
+                      [t("admin_messages_7d"), analytics.messages7d],
+                      [t("admin_push_subscribers"), analytics.pushSubscribers],
+                    ].map(([label, v]) => (
+                      <div key={label} style={{ ...card, margin: 0, padding: "10px 8px", textAlign: "center" }}>
+                        <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{v}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_ai_model_mix")}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: analytics.modelMix.total > 0 ? 14 : 0 }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>${analytics.scoutCostMonth.toFixed(2)}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_scout_cost_month")}</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>${analytics.scoutAvgCostPerMessage.toFixed(4)}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_scout_avg_cost_msg")}</div>
+                      </div>
+                    </div>
+                    {analytics.modelMix.total === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("admin_no_data")}</div>}
+                    {analytics.modelMix.total > 0 && (
+                      <>
+                        <BreakdownBar label={t("admin_model_haiku")} count={analytics.modelMix.haiku} total={analytics.modelMix.total} color={C.lime} />
+                        <BreakdownBar label={t("admin_model_sonnet")} count={analytics.modelMix.sonnet} total={analytics.modelMix.total} color={C.elite} />
+                        <BreakdownBar label={t("admin_model_database")} count={analytics.modelMix.database} total={analytics.modelMix.total} color={C.slate} />
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <button onClick={() => setShowEventsManager((s) => !s)} style={{ ...iconBtn(C.chalk), width: "100%", justifyContent: "center", marginTop: 4, marginBottom: showEventsManager ? 10 : 0 }}>
                 {showEventsManager ? "▴" : "▾"} {t("admin_manage_events")}
               </button>
 
