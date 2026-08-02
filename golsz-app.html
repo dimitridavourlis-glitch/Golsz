@@ -329,6 +329,7 @@ const I18N = {
     admin_not_set: "Not set", admin_gender_male: "Male", admin_gender_female: "Female",
     admin_scout_conversations: "SCOUT CHATS", admin_scout_users: "SCOUT USERS", admin_messages_total: "MESSAGES",
     admin_messages_7d: "MESSAGES 7D", admin_push_subscribers: "PUSH SUBS", admin_top_followed: "TOP FOLLOWED",
+    admin_ai_model_mix: "AI MODEL USAGE", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Database (no AI call)",
     admin_time_on_app: "TIME ON APP", admin_avg_hrs_week: "AVG HRS/WEEK", admin_avg_hrs_month: "AVG HRS/MONTH", admin_avg_hrs_year: "AVG HRS/YEAR", admin_active_users: "active users",
     admin_view_activity: "View daily activity", admin_activity_err: "Couldn't load activity.",
     admin_activity_today: "Today:", admin_activity_7d: "Last 7d:", admin_activity_30d: "Last 30d:",
@@ -513,6 +514,7 @@ const I18N = {
     admin_not_set: "Non défini", admin_gender_male: "Homme", admin_gender_female: "Femme",
     admin_scout_conversations: "CONVERSATIONS SCOUT", admin_scout_users: "UTILISATEURS SCOUT", admin_messages_total: "MESSAGES",
     admin_messages_7d: "MESSAGES 7J", admin_push_subscribers: "ABONNÉS PUSH", admin_top_followed: "PLUS SUIVIS",
+    admin_ai_model_mix: "UTILISATION DU MODÈLE IA", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Base de données (sans appel IA)",
     admin_time_on_app: "TEMPS SUR L'APPLI", admin_avg_hrs_week: "MOY. H/SEMAINE", admin_avg_hrs_month: "MOY. H/MOIS", admin_avg_hrs_year: "MOY. H/AN", admin_active_users: "utilisateurs actifs",
     admin_view_activity: "Voir l'activité quotidienne", admin_activity_err: "Impossible de charger l'activité.",
     admin_activity_today: "Aujourd'hui :", admin_activity_7d: "7 derniers jours :", admin_activity_30d: "30 derniers jours :",
@@ -699,6 +701,7 @@ const I18N = {
     admin_not_set: "No definido", admin_gender_male: "Masculino", admin_gender_female: "Femenino",
     admin_scout_conversations: "CHATS DE SCOUT", admin_scout_users: "USUARIOS DE SCOUT", admin_messages_total: "MENSAJES",
     admin_messages_7d: "MENSAJES 7D", admin_push_subscribers: "SUSCRIPTORES PUSH", admin_top_followed: "MÁS SEGUIDOS",
+    admin_ai_model_mix: "USO DE MODELO IA", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Base de datos (sin llamada IA)",
     admin_time_on_app: "TIEMPO EN LA APP", admin_avg_hrs_week: "PROM. H/SEMANA", admin_avg_hrs_month: "PROM. H/MES", admin_avg_hrs_year: "PROM. H/AÑO", admin_active_users: "usuarios activos",
     admin_view_activity: "Ver actividad diaria", admin_activity_err: "No se pudo cargar la actividad.",
     admin_activity_today: "Hoy:", admin_activity_7d: "Últimos 7 días:", admin_activity_30d: "Últimos 30 días:",
@@ -885,6 +888,7 @@ const I18N = {
     admin_not_set: "Δεν έχει οριστεί", admin_gender_male: "Άνδρας", admin_gender_female: "Γυναίκα",
     admin_scout_conversations: "ΣΥΝΟΜΙΛΙΕΣ SCOUT", admin_scout_users: "ΧΡΗΣΤΕΣ SCOUT", admin_messages_total: "ΜΗΝΥΜΑΤΑ",
     admin_messages_7d: "ΜΗΝΥΜΑΤΑ 7Η", admin_push_subscribers: "ΣΥΝΔΡΟΜΗΤΕΣ PUSH", admin_top_followed: "ΔΗΜΟΦΙΛΕΣΤΕΡΟΙ",
+    admin_ai_model_mix: "ΧΡΗΣΗ ΜΟΝΤΕΛΟΥ AI", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Βάση δεδομένων (χωρίς κλήση AI)",
     admin_time_on_app: "ΧΡΟΝΟΣ ΣΤΗΝ ΕΦΑΡΜΟΓΗ", admin_avg_hrs_week: "ΜΕΣ. ΩΡΕΣ/ΕΒΔ", admin_avg_hrs_month: "ΜΕΣ. ΩΡΕΣ/ΜΗΝΑ", admin_avg_hrs_year: "ΜΕΣ. ΩΡΕΣ/ΕΤΟΣ", admin_active_users: "ενεργοί χρήστες",
     admin_view_activity: "Προβολή ημερήσιας δραστηριότητας", admin_activity_err: "Δεν ήταν δυνατή η φόρτωση δραστηριότητας.",
     admin_activity_today: "Σήμερα:", admin_activity_7d: "Τελ. 7 ημέρες:", admin_activity_30d: "Τελ. 30 ημέρες:",
@@ -4046,12 +4050,17 @@ function AdminPanel({ onBack }) {
   // would need real SQL aggregation if the user base grows a lot.
   async function loadAnalytics() {
     try {
-      const [{ data: profRows }, { data: postRows }, { data: followRows }, { data: athleteRows }, { data: counts, error: countsErr }] = await Promise.all([
+      const [{ data: profRows }, { data: postRows }, { data: followRows }, { data: athleteRows }, { data: counts, error: countsErr }, { data: modelMix }] = await Promise.all([
         sb.from("profiles").select("plan, occupation, verified_tier, is_banned, is_minor, created_at").order("created_at", { ascending: false }).limit(2000),
         sb.from("posts").select("id, created_at").order("created_at", { ascending: false }).limit(2000),
         sb.from("follows").select("follower_id, followed_id").limit(2000),
         sb.from("athletes").select("sport, gender, country").limit(2000),
         sb.rpc("admin_analytics_counts"),
+        // migration 039 — real counts of which model actually answered each
+        // Scout question (haiku/sonnet/database), logged from api/scout.js
+        // on every reply. `database` stays 0 until DB-first search (clubs/
+        // coaches/opportunities) replaces some of Sonnet's tool-use calls.
+        sb.rpc("admin_scout_model_mix"),
       ]);
       if (countsErr) throw countsErr;
 
@@ -4138,6 +4147,12 @@ function AdminPanel({ onBack }) {
         scoutConversations: (counts && counts.scout_conversations_total) || 0,
         scoutUsers: (counts && counts.scout_users_total) || 0,
         pushSubscribers: (counts && counts.push_subscribers_total) || 0,
+        modelMix: {
+          total: (modelMix && modelMix.total) || 0,
+          haiku: (modelMix && modelMix.haiku) || 0,
+          sonnet: (modelMix && modelMix.sonnet) || 0,
+          database: (modelMix && modelMix.database) || 0,
+        },
         // Avg hours per active user, not per total signups — someone who
         // never opened the app in a given window shouldn't drag the
         // average toward zero and hide how engaged actual users are.
@@ -4449,6 +4464,18 @@ function AdminPanel({ onBack }) {
                     <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{label}</div>
                   </div>
                 ))}
+              </div>
+
+              <div style={{ ...card }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_ai_model_mix")}</div>
+                {analytics.modelMix.total === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("admin_no_data")}</div>}
+                {analytics.modelMix.total > 0 && (
+                  <>
+                    <BreakdownBar label={t("admin_model_haiku")} count={analytics.modelMix.haiku} total={analytics.modelMix.total} color={C.lime} />
+                    <BreakdownBar label={t("admin_model_sonnet")} count={analytics.modelMix.sonnet} total={analytics.modelMix.total} color={C.elite} />
+                    <BreakdownBar label={t("admin_model_database")} count={analytics.modelMix.database} total={analytics.modelMix.total} color={C.slate} />
+                  </>
+                )}
               </div>
 
               <div style={{ ...card }}>

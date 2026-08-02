@@ -50,6 +50,29 @@ async function logError(source, message, detail) {
   } catch (e) { console.error("GOLSZ error-log write failed:", e); }
 }
 
+// Writes one row to scout_routing_log (migration 039) per real reply —
+// which model actually answered (haiku/sonnet/database), plus the
+// classifier's intent/confidence for that call. Never the question or
+// answer text itself. Powers the Admin Panel's "AI Model Usage" card
+// (admin_scout_model_mix()). Self-contained and best-effort, same as
+// logError — a logging failure must never affect the real response.
+async function logRouting(answeredBy, classification) {
+  try {
+    const supaUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!supaUrl || !serviceKey) return;
+    await fetch(`${supaUrl}/rest/v1/scout_routing_log`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({
+        answered_by: answeredBy,
+        intent: (classification && classification.intent) || null,
+        confidence: (classification && typeof classification.confidence === "number") ? classification.confidence : null,
+      }),
+    });
+  } catch (e) { console.error("GOLSZ routing-log write failed:", e); }
+}
+
 const SYSTEM_PROMPT = `You are GOLSZ Scout, an AI sports agent. Tagline: "Every Goal Has a Path."
 You adapt to who you're talking to — check "occupation" in PROFILE SO FAR:
 - Player, or occupation missing/unset (default): the personal agent for ONE athlete — learn who they are (age, sport, position, location, club/level, grad year, academics, budget, citizenship, goal), build a career roadmap, suggest realistic target programs (reach/match/safety, honest), and draft coach outreach emails on request (draft-only; the athlete sends them).
@@ -348,6 +371,7 @@ export default async function handler(req, res) {
       const data = await r.json();
       if (r.ok && data.stop_reason !== "tool_use") {
         console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
+        await logRouting("haiku", classification);
         return res.status(200).json(data);
       }
       console.log(r.ok ? "GOLSZ haiku escalated to sonnet (wanted a tool)" : "GOLSZ haiku call failed, escalating to sonnet:", JSON.stringify(data));
@@ -426,6 +450,7 @@ export default async function handler(req, res) {
       data = await r.json();
       if (!r.ok) return res.status(r.status).json(data);
     }
+    await logRouting("sonnet", classification);
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
     await logError("api/scout.js", "Upstream model call failed", { detail: String(e) });

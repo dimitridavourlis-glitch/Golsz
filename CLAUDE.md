@@ -807,6 +807,29 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
   limit (per-IP or similar) before or shortly after real public launch, once there's actual traffic to weigh
   the cost against.
 
+### Scout AI routing + "AI Model Usage" analytics (migration 039)
+
+- `api/scout.js` classifies every Scout message (cheap Haiku call, taxonomy in `CLASSIFIER_SYSTEM`) and routes
+  low-stakes, no-tool-needed intents (`simple_knowledge`, `player_comparison`, `agent_workflow`,
+  `profile_assist`, `off_topic`) to a real Haiku reply instead of Sonnet; everything else (`career_advice`,
+  `scouting_analysis`, `web_lookup`, `db_lookup`, low confidence, or a classifier failure/timeout) falls
+  through to the original Sonnet + tool-loop path unchanged. Classification is capped at a 3.5s timeout
+  (`withTimeout`) so a stuck classifier call can never block the real answer — it just falls through to Sonnet.
+  If Haiku unexpectedly wants a tool despite being routed there, that response is discarded and the request
+  escalates to Sonnet rather than returning a broken `tool_use` response with no tool-handling behind it.
+- `scout_routing_log` records which model actually answered each real reply (`haiku`/`sonnet`/`database` —
+  the last one is a placeholder that stays at 0 until DB-first club/coach/opportunity search, still unbuilt,
+  replaces some of Sonnet's tool-use calls with a direct query and no LLM at all), plus the classifier's
+  intent/confidence. **Deliberately never stores the question or answer text** — same "never expose real
+  conversation content" boundary as `scout_history`/`messages` — so it's safe to read in aggregate. The only
+  read path is `admin_scout_model_mix()` (`security definer`, `is_admin()`-gated, same pattern as
+  `admin_analytics_counts()`), which the Admin Panel's Analytics tab uses for a new "AI Model Usage"
+  `BreakdownBar` card (haiku/sonnet/database as a percentage of total real replies).
+- The Haiku path deliberately still declares the same `tools` (`web_search` + `search_golsz_players`) even
+  though those low-stakes intents shouldn't need them — dropping tools shrank the cacheable system-prompt
+  block below Haiku 4.5's 4,096-token cache minimum (confirmed against real production traffic: every Haiku
+  call was silently paying full input price with zero cache benefit until this was added back).
+
 ### Scout double-reply fix — `sendingRef` re-entrancy guard
 
 - **Real bug, not a formatting issue:** users reported Scout sometimes answering with two replies back-to-back
@@ -818,10 +841,17 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
 - Fixed with `sendingRef` (a plain `useRef(false)`, not state) checked and set to `true` synchronously at the
   very top of `send()`, before the moderation-check await — refs update immediately, not on the next render,
   so a second call arriving mid-request is blocked regardless of network timing. Reset in the outer `finally`.
-  `busy` (the typing-indicator/disabled-button state) is unchanged; this only closes the re-entrancy window.
 - Verified with a mock harness reproducing the exact race (two `.click()` calls fired synchronously, a mocked
   network delay simulating the moderation-check round-trip): the pre-fix shape produced 2 API calls and 2
   duplicate user/assistant bubbles; the fixed shape produced exactly 1 of each.
+- **Follow-up (separate bug, opposite symptom):** users then reported needing to press send *multiple times*
+  before anything seemed to happen. Cause: `setBusy(true)` — which drives the send button's `disabled` state —
+  still didn't run until after `moderateContent()`'s await resolved, same gap as above. A real first press
+  left the button looking completely normal for the whole moderation round-trip, so it looked unresponsive
+  and got pressed again (the re-entrancy guard silently swallowed those extra presses, but with no visible
+  feedback either way). Fixed by moving `setBusy(true)` to fire immediately alongside `sendingRef.current =
+  true`, before the moderation await — the two finally blocks were consolidated into one so `busy` resets
+  correctly on every exit path, including a moderation block.
 
 ### `supabase-schema.sql`
 
