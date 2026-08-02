@@ -4837,6 +4837,13 @@ function Scout() {
     // finishes — reset in the `finally` below.
     sendingRef.current = true;
     setModErr("");
+    // Set immediately, not after moderateContent() resolves below — the
+    // send button's disabled state reads `busy`, so leaving it false during
+    // that network round-trip meant a real click looked completely
+    // unhandled (button still enabled, nothing on screen yet), which is
+    // exactly what made pressing send again — sometimes a few times —
+    // feel necessary even though the first press was already in flight.
+    setBusy(true);
     try {
     // Check before anything else touches state — a flagged message should
     // never clear the input, appear as a sent bubble, or reach Scout's own
@@ -4851,7 +4858,7 @@ function Scout() {
     setInput("");
     const attached = photo; setPhoto(null);
     const next = [...(msgs || []), { role: "user", text: content, photo: attached ? attached.dataUrl : null }];
-    setMsgs(next); setBusy(true);
+    setMsgs(next);
     logTurn("user", content || "[photo]");
     try {
       const api = next.map((m) => ({ role: m.role, content: m.text }));
@@ -4894,8 +4901,8 @@ function Scout() {
     } catch (e) {
       const msg = e && e.code === "SCOUT_HTTP_ERROR" ? e.message : t("scout_connection_dropped");
       setMsgs((m) => [...m, { role: "assistant", text: msg }]);
-    } finally { setBusy(false); }
-    } finally { sendingRef.current = false; }
+    }
+    } finally { setBusy(false); sendingRef.current = false; }
   }
 
   const known = Object.keys(profile).filter((k) => profile[k]);
