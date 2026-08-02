@@ -119,9 +119,9 @@ Intents:
 - player_comparison: comparing two or more players
 - scouting_analysis: judging a prospect's fit, potential, or readiness
 - agent_workflow: drafting an outreach message to a club, coach, or agent
-- web_lookup: needs real-time or external info not available on GOLSZ (specific current programs, news, rankings)
+- web_lookup: needs real-time or external info not available on GOLSZ (specific current programs, news, rankings, rule/eligibility changes) — words like "current," "new," "this year," or "changed" are a strong signal this belongs here, not in simple_knowledge
 - off_topic: not sports, recruiting, or career related
-needs_tool is true only if answering well requires search_golsz_players or web_search.`;
+needs_tool is true whenever the intent is web_lookup or db_lookup, or answering well otherwise requires search_golsz_players or web_search.`;
 
 function latestUserText(conversation) {
   const last = [...conversation].reverse().find((m) => m.role === "user");
@@ -152,8 +152,11 @@ async function classifyIntent(key, conversation) {
     if (!r.ok) return { error: data };
     const block = (data.content || []).find((b) => b.type === "text");
     if (!block) return null;
+    // Haiku wraps its JSON in a ```json fence despite being told not to
+    // (confirmed against real production traffic) — strip it before parsing.
+    const cleaned = block.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
     let parsed;
-    try { parsed = JSON.parse(block.text); } catch { return { raw: block.text }; }
+    try { parsed = JSON.parse(cleaned); } catch { return { raw: block.text }; }
     return { ...parsed, usage: data.usage };
   } catch (e) {
     return { error: String(e) };
