@@ -232,7 +232,20 @@ export default async function handler(req, res) {
           // object, a truncated reply also breaks the JSON.parse on the
           // client and falls back to showing the raw truncated blob.
           max_tokens: 4096,
-          system: systemPrompt,
+          // Sonnet 5 runs adaptive thinking by default when this is omitted —
+          // real, billed output tokens for a task (conversational advice +
+          // one JSON reply) that doesn't need visible step-by-step reasoning.
+          // Disabling it is a pure cost cut, no quality change for this use case.
+          thinking: { type: "disabled" },
+          // Cached: this system prompt + the tools below are identical for
+          // every user on the same language, so this is the one part of
+          // every Scout call worth caching — repeat requests read it at
+          // ~10% of the price instead of paying full input rate every time.
+          // (Whether it actually clears Sonnet 5's 1024-token cache minimum
+          // depends on the exact prompt length — check
+          // response.usage.cache_read_input_tokens in production to confirm
+          // it's landing, not just trust that adding this marker worked.)
+          system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
           messages: conversation,
           tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL],
         }),
@@ -259,7 +272,13 @@ export default async function handler(req, res) {
       const r = await fetch(ANTHROPIC_URL, {
         method: "POST",
         headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-        body: JSON.stringify({ model: process.env.SCOUT_MODEL || "claude-sonnet-5", max_tokens: 4096, system: systemPrompt, messages: conversation }),
+        body: JSON.stringify({
+          model: process.env.SCOUT_MODEL || "claude-sonnet-5",
+          max_tokens: 4096,
+          thinking: { type: "disabled" },
+          system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+          messages: conversation,
+        }),
       });
       data = await r.json();
       if (!r.ok) return res.status(r.status).json(data);
