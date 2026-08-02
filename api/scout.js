@@ -252,6 +252,10 @@ export default async function handler(req, res) {
       });
       data = await r.json();
       if (!r.ok) return res.status(r.status).json(data);
+      // TEMPORARY — confirming whether the system-prompt cache_control
+      // added to cut Scout's cost actually clears Sonnet 5's 1024-token
+      // cache minimum. Remove once confirmed via `vercel logs`.
+      console.log("GOLSZ scout usage check:", JSON.stringify(data.usage));
 
       const searchCalls = (data.content || []).filter((b) => b.type === "tool_use" && b.name === "search_golsz_players");
       if (data.stop_reason !== "tool_use" || !searchCalls.length) break;
