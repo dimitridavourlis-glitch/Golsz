@@ -181,6 +181,17 @@ async function classifyIntent(key, conversation) {
   }
 }
 
+// Guarantees the real answer is never held hostage by a slow or hung
+// classifier call — if it hasn't resolved within `ms`, treat it as absent
+// (classification = null) and let the routing logic's own safe default
+// (Sonnet) take over, same as any other classifier failure.
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
 // Categories confirmed (against real traffic) to need no tool and no
 // multi-step reasoning — safe to answer for real on the cheaper model.
 // off_topic joined this list after real traffic showed it was the single
@@ -306,7 +317,10 @@ export default async function handler(req, res) {
 
   // ---- route (classify first, then decide which model actually answers) ----
   const conversation = messages.slice();
-  const classification = await classifyIntent(key, conversation);
+  // 3.5s cap — a real user question must never wait on a stuck classifier.
+  // If it times out, classification is null and shouldRouteToHaiku(null)
+  // safely falls through to the proven Sonnet path below.
+  const classification = await withTimeout(classifyIntent(key, conversation), 3500);
   console.log("GOLSZ scout routing:", JSON.stringify(classification));
 
   try {
