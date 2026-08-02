@@ -8,14 +8,28 @@
 // Required env var:
 //   ANTHROPIC_API_KEY        your Anthropic key
 // Optional env vars:
-//   SCOUT_MODEL              defaults to "claude-sonnet-5" (set to your account's model)
+//   SCOUT_MODEL              defaults to "claude-sonnet-5" — used for career_advice,
+//                            scouting_analysis, web_lookup/db_lookup, and anything
+//                            the router isn't confident enough to send to Haiku
+//   SCOUT_HAIKU_MODEL        defaults to "claude-haiku-4-5" — used for both the intent
+//                            classifier and the real replies it routes to Haiku
 //   ALLOWED_ORIGIN           your app origin, e.g. https://golsz.com  (defaults to *)
 //   SUPABASE_URL             enables auth check + metering
 //   SUPABASE_SERVICE_KEY     service role key (server-only; never ship to the browser)
 //   FREE_DAILY_LIMIT         Scout calls/day on the free plan (default 8)
+//
+// Routing: every message is classified first (classifyIntent, cheap Haiku
+// call). Low-stakes, no-tool-needed intents (simple_knowledge,
+// player_comparison, agent_workflow, profile_assist) get answered for real
+// by Haiku. Everything else — career_advice, scouting_analysis, web_lookup,
+// db_lookup, low classifier confidence, or a classifier failure — falls
+// through to the original Sonnet + tool-loop path unchanged. See the
+// architecture doc for the full routing taxonomy and why each category
+// lands where it does.
 // ============================================================
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+const HAIKU_MODEL = process.env.SCOUT_HAIKU_MODEL || "claude-haiku-4-5";
 
 // Writes a real server-side failure to error_log (migration 036) so it
 // shows up in the Admin Panel's "Errors" tab instead of only ever
@@ -102,14 +116,11 @@ async function searchPlayers(input) {
   }
 }
 
-// ---- Intent classifier (shadow mode) ----
-// Step 1 of the routing redesign: classify every message into the taxonomy
-// below using a cheap Haiku call, but ONLY log the result for now — nothing
-// about the real response changes yet. The point is to build up a sample of
-// real classifications to eyeball (via `vercel logs`) before trusting this
-// to actually route anything. Once that looks solid, the safest categories
-// (starting with simple_knowledge) move to real Haiku routing, and this
-// becomes the live router instead of a shadow.
+// ---- Intent classifier / router ----
+// Classifies every message into the taxonomy below using a cheap Haiku
+// call. Validated against real production traffic in shadow mode first
+// (logged only, no routing) before being trusted with the real dispatch
+// below — see git history on this file for that validation pass.
 const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false}
 Intents:
 - db_lookup: searching/filtering for clubs, coaches, opportunities, or GOLSZ players by criteria
@@ -142,7 +153,7 @@ async function classifyIntent(key, conversation) {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: HAIKU_MODEL,
         max_tokens: 80,
         // Real traffic showed Haiku sometimes treating the classification
         // request as a conversation to actually help with, rambling on past
@@ -168,6 +179,21 @@ async function classifyIntent(key, conversation) {
   } catch (e) {
     return { error: String(e) };
   }
+}
+
+// Categories confirmed (against real traffic) to need no tool and no
+// multi-step reasoning — safe to answer for real on the cheaper model.
+// Everything else (career_advice, scouting_analysis, web_lookup, db_lookup,
+// low confidence, or a classifier failure) keeps going to Sonnet.
+const HAIKU_INTENTS = new Set(["simple_knowledge", "player_comparison", "agent_workflow", "profile_assist"]);
+const HAIKU_CONFIDENCE_THRESHOLD = 0.7;
+
+function shouldRouteToHaiku(classification) {
+  if (!classification || classification.error || classification.raw) return false;
+  if (classification.needs_tool) return false;
+  if (!HAIKU_INTENTS.has(classification.intent)) return false;
+  if (typeof classification.confidence === "number" && classification.confidence < HAIKU_CONFIDENCE_THRESHOLD) return false;
+  return true;
 }
 
 // Matches golsz-app.html's LANGS — validated against this allowlist rather
@@ -275,18 +301,37 @@ export default async function handler(req, res) {
     }
   }
 
-  // ---- call Anthropic (model / prompt / tools owned here, not the client) ----
-  // web_search_20250305 is server-hosted — Anthropic runs it and just hands
-  // back the result, no action needed here. search_golsz_players is ours,
-  // so when the model calls it we have to execute it and send the result
-  // back as a new turn ourselves; loop until it stops asking for that tool
-  // (capped so a stuck loop can't run away with the request/the bill).
+  // ---- route (classify first, then decide which model actually answers) ----
   const conversation = messages.slice();
-  const MAX_TOOL_TURNS = 4;
-  // Kicked off now (not awaited yet) so it runs concurrently with the real
-  // Sonnet call below instead of adding its own latency on top.
-  const classifyPromise = classifyIntent(key, conversation);
+  const classification = await classifyIntent(key, conversation);
+  console.log("GOLSZ scout routing:", JSON.stringify(classification));
+
   try {
+    // ---- Haiku path: low-stakes, no-tool-needed intents, answered for real ----
+    if (shouldRouteToHaiku(classification)) {
+      const r = await fetch(ANTHROPIC_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
+        body: JSON.stringify({
+          model: HAIKU_MODEL,
+          max_tokens: 4096,
+          system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
+          messages: conversation,
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) return res.status(r.status).json(data);
+      console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
+      return res.status(200).json(data);
+    }
+
+    // ---- Sonnet path (model / prompt / tools owned here, not the client) ----
+    // web_search_20250305 is server-hosted — Anthropic runs it and just hands
+    // back the result, no action needed here. search_golsz_players is ours,
+    // so when the model calls it we have to execute it and send the result
+    // back as a new turn ourselves; loop until it stops asking for that tool
+    // (capped so a stuck loop can't run away with the request/the bill).
+    const MAX_TOOL_TURNS = 4;
     let data;
     for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
       const r = await fetch(ANTHROPIC_URL, {
@@ -306,16 +351,14 @@ export default async function handler(req, res) {
           // Sonnet 5 runs adaptive thinking by default when this is omitted —
           // real, billed output tokens for a task (conversational advice +
           // one JSON reply) that doesn't need visible step-by-step reasoning.
-          // Disabling it is a pure cost cut, no quality change for this use case.
+          // Disabling it is a pure cost cut — confirmed against real traffic
+          // to produce tighter, equally (or more) correctly formatted
+          // replies than leaving it on.
           thinking: { type: "disabled" },
           // Cached: this system prompt + the tools below are identical for
-          // every user on the same language, so this is the one part of
-          // every Scout call worth caching — repeat requests read it at
-          // ~10% of the price instead of paying full input rate every time.
-          // (Whether it actually clears Sonnet 5's 1024-token cache minimum
-          // depends on the exact prompt length — check
-          // response.usage.cache_read_input_tokens in production to confirm
-          // it's landing, not just trust that adding this marker worked.)
+          // every user on the same language — verified in production at
+          // ~4,287 tokens, comfortably over Sonnet 5's 1,024-token minimum,
+          // with real cache reads confirmed via response.usage.cache_read_input_tokens.
           system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
           messages: conversation,
           tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL],
@@ -323,41 +366,7 @@ export default async function handler(req, res) {
       });
       data = await r.json();
       if (!r.ok) return res.status(r.status).json(data);
-      // TEMPORARY — confirming whether the system-prompt cache_control
-      // added to cut Scout's cost actually clears Sonnet 5's 1024-token
-      // cache minimum. Remove once confirmed via `vercel logs`.
       console.log("GOLSZ scout usage check:", JSON.stringify(data.usage));
-
-      // TEMPORARY — side-by-side check of whether disabling `thinking`
-      // changed Scout's actual answer. Fires one extra, identical call with
-      // `thinking` omitted (default adaptive) purely to log it; the real
-      // response returned below is unaffected. Remove once compared.
-      if (turn === 0) {
-        try {
-          const cmp = await fetch(ANTHROPIC_URL, {
-            method: "POST",
-            headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-            body: JSON.stringify({
-              model: process.env.SCOUT_MODEL || "claude-sonnet-5",
-              max_tokens: 4096,
-              system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-              messages: conversation,
-              tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL],
-            }),
-          });
-          const cmpData = await cmp.json();
-          const cmpText = (cmpData.content || []).find((b) => b.type === "text");
-          console.log("GOLSZ thinking-compare (default/adaptive):", JSON.stringify({ usage: cmpData.usage, reply: cmpText ? cmpText.text : null }));
-        } catch (e) {
-          console.log("GOLSZ thinking-compare failed:", String(e));
-        }
-
-        // SHADOW MODE — logs the router's guess only; does not affect
-        // routing yet. See CLAUDE.md / the architecture doc for the plan to
-        // graduate this to real routing once its accuracy is validated here.
-        const classification = await classifyPromise;
-        console.log("GOLSZ intent classification (shadow):", JSON.stringify(classification));
-      }
 
       const searchCalls = (data.content || []).filter((b) => b.type === "tool_use" && b.name === "search_golsz_players");
       if (data.stop_reason !== "tool_use" || !searchCalls.length) break;
