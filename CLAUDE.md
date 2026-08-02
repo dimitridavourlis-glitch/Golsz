@@ -807,6 +807,22 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
   limit (per-IP or similar) before or shortly after real public launch, once there's actual traffic to weigh
   the cost against.
 
+### Scout double-reply fix — `sendingRef` re-entrancy guard
+
+- **Real bug, not a formatting issue:** users reported Scout sometimes answering with two replies back-to-back
+  for one question. Root cause: `Scout.send()` in `golsz-app.html` only guarded re-entrancy with the `busy`
+  React state, but `setBusy(true)` didn't happen until *after* `await moderateContent(...)` — a real network
+  round-trip. A fast double-click/double-Enter within that window fired `send()` twice; both calls read
+  `busy` as still `false` (React hadn't re-rendered yet) and both went on to hit Scout's API independently,
+  producing two separate user bubbles and two separate assistant replies.
+- Fixed with `sendingRef` (a plain `useRef(false)`, not state) checked and set to `true` synchronously at the
+  very top of `send()`, before the moderation-check await — refs update immediately, not on the next render,
+  so a second call arriving mid-request is blocked regardless of network timing. Reset in the outer `finally`.
+  `busy` (the typing-indicator/disabled-button state) is unchanged; this only closes the re-entrancy window.
+- Verified with a mock harness reproducing the exact race (two `.click()` calls fired synchronously, a mocked
+  network delay simulating the moderation-check round-trip): the pre-fix shape produced 2 API calls and 2
+  duplicate user/assistant bubbles; the fixed shape produced exactly 1 of each.
+
 ### `supabase-schema.sql`
 
 **Read the warning at the top of this repo's README section above before touching this file** — it's a

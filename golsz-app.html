@@ -4653,6 +4653,7 @@ function Scout() {
   const endRef = useRef(null);
   const fileRef = useRef(null);
   const baseProfileRef = useRef({});
+  const sendingRef = useRef(false);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
 
   // Seed Scout's working profile from the athlete's real Passport data (so
@@ -4823,8 +4824,20 @@ function Scout() {
   function clearPhoto() { setPhoto(null); setPhotoErr(""); }
 
   async function send(text) {
-    const content = text.trim(); if ((!content && !photo) || busy || !loaded) return;
+    const content = text.trim(); if ((!content && !photo) || busy || !loaded || sendingRef.current) return;
+    // `busy` (React state) doesn't actually block a second call until a
+    // re-render lands — and moderateContent() below awaits a real network
+    // round-trip before busy ever gets set, leaving a real window where a
+    // fast double-click/double-Enter fires send() twice, each one passing
+    // the `busy` check above and going on to hit Scout's API separately.
+    // That's what "answers back to back" actually was: two full replies to
+    // one real question, not a formatting bug. sendingRef is a plain ref,
+    // so setting it here takes effect immediately (not batched like state),
+    // closing that window for any call that arrives before the first one
+    // finishes — reset in the `finally` below.
+    sendingRef.current = true;
     setModErr("");
+    try {
     // Check before anything else touches state — a flagged message should
     // never clear the input, appear as a sent bubble, or reach Scout's own
     // conversation history at all, same as Feed/Messages/Passport below.
@@ -4882,6 +4895,7 @@ function Scout() {
       const msg = e && e.code === "SCOUT_HTTP_ERROR" ? e.message : t("scout_connection_dropped");
       setMsgs((m) => [...m, { role: "assistant", text: msg }]);
     } finally { setBusy(false); }
+    } finally { sendingRef.current = false; }
   }
 
   const known = Object.keys(profile).filter((k) => profile[k]);
