@@ -102,6 +102,64 @@ async function searchPlayers(input) {
   }
 }
 
+// ---- Intent classifier (shadow mode) ----
+// Step 1 of the routing redesign: classify every message into the taxonomy
+// below using a cheap Haiku call, but ONLY log the result for now — nothing
+// about the real response changes yet. The point is to build up a sample of
+// real classifications to eyeball (via `vercel logs`) before trusting this
+// to actually route anything. Once that looks solid, the safest categories
+// (starting with simple_knowledge) move to real Haiku routing, and this
+// becomes the live router instead of a shadow.
+const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false}
+Intents:
+- db_lookup: searching/filtering for clubs, coaches, opportunities, or GOLSZ players by criteria
+- simple_knowledge: football rules, terms, or general explainers with no personalization needed
+- profile_assist: help completing, improving, or formatting their own profile
+- career_advice: personalized next-step, roadmap, or target-program guidance
+- player_comparison: comparing two or more players
+- scouting_analysis: judging a prospect's fit, potential, or readiness
+- agent_workflow: drafting an outreach message to a club, coach, or agent
+- web_lookup: needs real-time or external info not available on GOLSZ (specific current programs, news, rankings)
+- off_topic: not sports, recruiting, or career related
+needs_tool is true only if answering well requires search_golsz_players or web_search.`;
+
+function latestUserText(conversation) {
+  const last = [...conversation].reverse().find((m) => m.role === "user");
+  if (!last) return "";
+  if (typeof last.content === "string") return last.content;
+  if (Array.isArray(last.content)) {
+    const textBlock = last.content.find((b) => b.type === "text");
+    return textBlock ? textBlock.text : "";
+  }
+  return "";
+}
+
+async function classifyIntent(key, conversation) {
+  const text = latestUserText(conversation);
+  if (!text) return null;
+  try {
+    const r = await fetch(ANTHROPIC_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5",
+        max_tokens: 60,
+        system: [{ type: "text", text: CLASSIFIER_SYSTEM, cache_control: { type: "ephemeral" } }],
+        messages: [{ role: "user", content: text.slice(0, 2000) }],
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) return { error: data };
+    const block = (data.content || []).find((b) => b.type === "text");
+    if (!block) return null;
+    let parsed;
+    try { parsed = JSON.parse(block.text); } catch { return { raw: block.text }; }
+    return { ...parsed, usage: data.usage };
+  } catch (e) {
+    return { error: String(e) };
+  }
+}
+
 // Matches golsz-app.html's LANGS — validated against this allowlist rather
 // than trusting the client's lang string directly, since it gets
 // interpolated into the system prompt sent to the model.
@@ -215,6 +273,9 @@ export default async function handler(req, res) {
   // (capped so a stuck loop can't run away with the request/the bill).
   const conversation = messages.slice();
   const MAX_TOOL_TURNS = 4;
+  // Kicked off now (not awaited yet) so it runs concurrently with the real
+  // Sonnet call below instead of adding its own latency on top.
+  const classifyPromise = classifyIntent(key, conversation);
   try {
     let data;
     for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
@@ -280,6 +341,12 @@ export default async function handler(req, res) {
         } catch (e) {
           console.log("GOLSZ thinking-compare failed:", String(e));
         }
+
+        // SHADOW MODE — logs the router's guess only; does not affect
+        // routing yet. See CLAUDE.md / the architecture doc for the plan to
+        // graduate this to real routing once its accuracy is validated here.
+        const classification = await classifyPromise;
+        console.log("GOLSZ intent classification (shadow):", JSON.stringify(classification));
       }
 
       const searchCalls = (data.content || []).filter((b) => b.type === "tool_use" && b.name === "search_golsz_players");
