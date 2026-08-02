@@ -143,7 +143,14 @@ async function classifyIntent(key, conversation) {
       headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
         model: "claude-haiku-4-5",
-        max_tokens: 60,
+        max_tokens: 80,
+        // Real traffic showed Haiku sometimes treating the classification
+        // request as a conversation to actually help with, rambling on past
+        // the JSON (e.g. "...}```\n\nI can help you draft that email...").
+        // The schema is always a flat, single-level object — exactly one
+        // closing brace — so stopping generation right there is a hard
+        // guarantee against trailing chatter, not just a prompt request.
+        stop_sequences: ["}"],
         system: [{ type: "text", text: CLASSIFIER_SYSTEM, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: text.slice(0, 2000) }],
       }),
@@ -152,9 +159,9 @@ async function classifyIntent(key, conversation) {
     if (!r.ok) return { error: data };
     const block = (data.content || []).find((b) => b.type === "text");
     if (!block) return null;
-    // Haiku wraps its JSON in a ```json fence despite being told not to
-    // (confirmed against real production traffic) — strip it before parsing.
-    const cleaned = block.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+    // Also strip a leading ```json fence — the stop_sequence prevents
+    // trailing garbage, but Haiku still sometimes opens with a fence.
+    const cleaned = block.text.trim().replace(/^```(?:json)?\s*/i, "") + "}";
     let parsed;
     try { parsed = JSON.parse(cleaned); } catch { return { raw: block.text }; }
     return { ...parsed, usage: data.usage };
