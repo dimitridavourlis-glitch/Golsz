@@ -31,6 +31,33 @@
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const HAIKU_MODEL = process.env.SCOUT_HAIKU_MODEL || "claude-haiku-4-5";
 
+// $ per 1M tokens (standard, non-intro pricing) — used only to estimate a
+// real dollar cost per reply for scout_routing_log / the Admin Panel's
+// monthly cost cards. An estimate, not a bill: Anthropic's own invoice is
+// always the source of truth, but this tracks closely since it uses the
+// same real usage numbers (input/output/cache tokens) the API returns.
+const PRICING = {
+  "claude-sonnet-5": { input: 3, output: 15 },
+  "claude-haiku-4-5": { input: 1, output: 5 },
+};
+
+function estimateCost(model, usage) {
+  if (!usage) return null;
+  const price = PRICING[model] || PRICING["claude-sonnet-5"];
+  const uncachedInput = usage.input_tokens || 0;
+  const cacheRead = usage.cache_read_input_tokens || 0;
+  const cacheWrite = usage.cache_creation_input_tokens || 0;
+  const output = usage.output_tokens || 0;
+  // Cache reads cost ~10% of input price; cache writes (5-minute ephemeral,
+  // the only kind this file uses) cost ~1.25x input price — see CLAUDE.md.
+  return (
+    (uncachedInput * price.input) / 1e6 +
+    (cacheRead * price.input * 0.1) / 1e6 +
+    (cacheWrite * price.input * 1.25) / 1e6 +
+    (output * price.output) / 1e6
+  );
+}
+
 // Writes a real server-side failure to error_log (migration 036) so it
 // shows up in the Admin Panel's "Errors" tab instead of only ever
 // existing in Vercel's own function logs. Self-contained (reads its own
@@ -50,13 +77,15 @@ async function logError(source, message, detail) {
   } catch (e) { console.error("GOLSZ error-log write failed:", e); }
 }
 
-// Writes one row to scout_routing_log (migration 039) per real reply —
-// which model actually answered (haiku/sonnet/database), plus the
-// classifier's intent/confidence for that call. Never the question or
-// answer text itself. Powers the Admin Panel's "AI Model Usage" card
-// (admin_scout_model_mix()). Self-contained and best-effort, same as
+// Writes one row to scout_routing_log (migrations 039 + 040) per real
+// reply — which model actually answered (haiku/sonnet/database), the
+// classifier's intent/confidence, real token usage, and an estimated
+// dollar cost for that one reply. Never the question or answer text
+// itself. Powers the Admin Panel's "AI Model Usage" card
+// (admin_scout_model_mix()) and monthly cost cards
+// (admin_scout_cost_summary()). Self-contained and best-effort, same as
 // logError — a logging failure must never affect the real response.
-async function logRouting(answeredBy, classification) {
+async function logRouting(answeredBy, classification, model, usage) {
   try {
     const supaUrl = process.env.SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_KEY;
@@ -68,6 +97,11 @@ async function logRouting(answeredBy, classification) {
         answered_by: answeredBy,
         intent: (classification && classification.intent) || null,
         confidence: (classification && typeof classification.confidence === "number") ? classification.confidence : null,
+        input_tokens: (usage && usage.input_tokens) || null,
+        cache_read_input_tokens: (usage && usage.cache_read_input_tokens) || null,
+        cache_creation_input_tokens: (usage && usage.cache_creation_input_tokens) || null,
+        output_tokens: (usage && usage.output_tokens) || null,
+        estimated_cost_usd: estimateCost(model, usage),
       }),
     });
   } catch (e) { console.error("GOLSZ routing-log write failed:", e); }
@@ -371,7 +405,7 @@ export default async function handler(req, res) {
       const data = await r.json();
       if (r.ok && data.stop_reason !== "tool_use") {
         console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
-        await logRouting("haiku", classification);
+        await logRouting("haiku", classification, HAIKU_MODEL, data.usage);
         return res.status(200).json(data);
       }
       console.log(r.ok ? "GOLSZ haiku escalated to sonnet (wanted a tool)" : "GOLSZ haiku call failed, escalating to sonnet:", JSON.stringify(data));
@@ -450,7 +484,7 @@ export default async function handler(req, res) {
       data = await r.json();
       if (!r.ok) return res.status(r.status).json(data);
     }
-    await logRouting("sonnet", classification);
+    await logRouting("sonnet", classification, process.env.SCOUT_MODEL || "claude-sonnet-5", data.usage);
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
     await logError("api/scout.js", "Upstream model call failed", { detail: String(e) });

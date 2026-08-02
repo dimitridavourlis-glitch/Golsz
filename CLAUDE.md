@@ -807,7 +807,7 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
   limit (per-IP or similar) before or shortly after real public launch, once there's actual traffic to weigh
   the cost against.
 
-### Scout AI routing + "AI Model Usage" analytics (migration 039)
+### Scout AI routing + "AI Model Usage"/cost analytics (migrations 039-040)
 
 - `api/scout.js` classifies every Scout message (cheap Haiku call, taxonomy in `CLASSIFIER_SYSTEM`) and routes
   low-stakes, no-tool-needed intents (`simple_knowledge`, `player_comparison`, `agent_workflow`,
@@ -829,6 +829,14 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
   though those low-stakes intents shouldn't need them — dropping tools shrank the cacheable system-prompt
   block below Haiku 4.5's 4,096-token cache minimum (confirmed against real production traffic: every Haiku
   call was silently paying full input price with zero cache benefit until this was added back).
+- Migration 040 extends `scout_routing_log` with real per-reply token counts and `estimated_cost_usd`,
+  computed server-side in `api/scout.js` (`estimateCost()`) from Anthropic's own `usage` numbers using the
+  same pricing math verified against real production traffic this session (per-1M input/output rates, cache
+  reads at ~10% of input price, cache writes at ~1.25x). This is an estimate for planning/budgeting, not a
+  bill — Anthropic's own invoice is always the source of truth. `admin_scout_cost_summary()` (same
+  `security definer`/`is_admin()` pattern) aggregates this calendar month's total cost, average cost per
+  message, and message count, shown on the Analytics tab's "AI Model Usage" card alongside the haiku/sonnet/
+  database breakdown.
 
 ### Scout double-reply fix — `sendingRef` re-entrancy guard
 
