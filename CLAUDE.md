@@ -807,7 +807,7 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
   limit (per-IP or similar) before or shortly after real public launch, once there's actual traffic to weigh
   the cost against.
 
-### Scout AI routing + "AI Model Usage"/cost analytics (migrations 039-041)
+### Scout AI routing + "AI Model Usage"/cost analytics (migrations 039-042)
 
 - `api/scout.js` classifies every Scout message (cheap Haiku call, taxonomy in `CLASSIFIER_SYSTEM`) and routes
   low-stakes, no-tool-needed intents (`simple_knowledge`, `player_comparison`, `agent_workflow`,
@@ -838,16 +838,21 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
   message, and message count, shown on the Analytics tab's "AI Model Usage" card alongside the haiku/sonnet/
   database breakdown.
 - Migration 041 makes the `database` bucket real: `scout_faq` holds pre-written answers to common athlete
-  questions, and `api/scout.js` checks every incoming message against it (`matchFaq()`, via
-  `match_scout_faq()`) **before** calling the classifier or any model — a match returns the stored answer
-  directly, logged as `answered_by='database'` with `estimated_cost_usd: 0`, genuinely $0 AI cost. Matching
-  is Postgres trigram similarity (`pg_trgm`, `similarity(question, p_question) > 0.30`) — free, no embeddings
-  model — which catches close rephrasings of a stored question but **not** a question meaning the same thing
-  in very different words; real semantic matching would need embeddings, a deliberate future upgrade, not an
-  oversight. `lang` scopes a match to the athlete's own language (a French question only ever matches a
-  French-language row) and `sport` optionally narrows it (`null` = applies to every sport). Deliberately
-  conservative floor (0.30) — a wrong "free" answer that misses the actual question is worse than paying for
-  a real one.
+  questions (seeded via migration 042, ~106 entries from a general + per-sport recruiting/development FAQ).
+  Matching is **not** the trigram (`pg_trgm`/`match_scout_faq()`) approach 041 originally shipped with — real
+  requirement was matching by meaning ("even if they don't write the question exactly the same... but it is
+  the same context"), which plain text similarity can't do (a paraphrase like "how does a player get scouted
+  onto an academy team" shares almost no trigrams with a stored "What is MLS NEXT?" despite meaning the same
+  thing). Superseded same day: the classifier call `api/scout.js` already makes on every message
+  (`classifyIntent()`) is handed the full FAQ id/question list (`getFaqList()`, cached in memory per language,
+  5-minute TTL) via `buildClassifierSystem()`, and asked to return a `faq_id` if the message means the same
+  thing as a listed question — genuine language understanding, not string matching, and it costs only the
+  extra (cached) prompt tokens on a call that was happening anyway, not a second API call. A match returns the
+  stored answer directly, logged as `answered_by='database'` with `estimated_cost_usd: 0`. The classifier is
+  told explicitly to prefer `null` over guessing — a missed match just costs a normal answer; a wrong match
+  serves the wrong information as if it were the real answer. `match_scout_faq()`/the trigram index from 041
+  are left in place (harmless) but are no longer called by the app. `lang` still scopes the FAQ list fetched
+  per request to the athlete's own language.
 
 ### Scout double-reply fix — `sendingRef` re-entrancy guard
 

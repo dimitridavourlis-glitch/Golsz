@@ -178,7 +178,7 @@ async function searchPlayers(input) {
 // call. Validated against real production traffic in shadow mode first
 // (logged only, no routing) before being trusted with the real dispatch
 // below — see git history on this file for that validation pass.
-const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false}
+const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent, and separately check it against the FAQ list appended below. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false,"faq_id":null-or-a-number}
 Intents:
 - db_lookup: searching/filtering for clubs, coaches, opportunities, or GOLSZ players by criteria
 - simple_knowledge: football rules, terms, or general explainers with no personalization needed
@@ -191,6 +191,22 @@ Intents:
 - off_topic: not sports, recruiting, or career related
 needs_tool is true whenever the intent is web_lookup or db_lookup, or answering well otherwise requires search_golsz_players or web_search.`;
 
+// Appends the FAQ list to the classifier prompt and asks it to match by
+// MEANING, not wording — a paraphrase or a completely different way of
+// asking the same underlying question should still match. This runs on
+// every classification call anyway, so checking FAQ fit costs only the
+// extra (cached) prompt tokens below, not a second API call. Deliberately
+// conservative: told to prefer null over guessing, since a missed match
+// just costs a normal answer, but a wrong match serves the wrong
+// information as if it were the real answer to what was actually asked.
+function buildClassifierSystem(faqList) {
+  if (!faqList || !faqList.length) {
+    return CLASSIFIER_SYSTEM + `\n\nNo FAQ entries are configured yet — always set "faq_id": null.`;
+  }
+  const list = faqList.map((f) => `${f.id}: ${f.question}`).join("\n");
+  return CLASSIFIER_SYSTEM + `\n\nFAQ_ID MATCHING: Set "faq_id" to the id of a listed FAQ only if the user's message is genuinely asking the same underlying question, even if worded completely differently (a paraphrase, or an unrelated-looking real-world phrasing of the same question, both count). Leave it null if the user adds their own specific details, wants a personalized comparison, or wants next-step advice beyond what the FAQ answer covers — even if it's topically related. When unsure, prefer null.\n\nFAQ list (id: question):\n${list}`;
+}
+
 function latestUserText(conversation) {
   const last = [...conversation].reverse().find((m) => m.role === "user");
   if (!last) return "";
@@ -202,7 +218,7 @@ function latestUserText(conversation) {
   return "";
 }
 
-async function classifyIntent(key, conversation) {
+async function classifyIntent(key, conversation, faqList) {
   const text = latestUserText(conversation);
   if (!text) return null;
   try {
@@ -211,7 +227,7 @@ async function classifyIntent(key, conversation) {
       headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
         model: HAIKU_MODEL,
-        max_tokens: 80,
+        max_tokens: 100,
         // Real traffic showed Haiku sometimes treating the classification
         // request as a conversation to actually help with, rambling on past
         // the JSON (e.g. "...}```\n\nI can help you draft that email...").
@@ -219,7 +235,7 @@ async function classifyIntent(key, conversation) {
         // closing brace — so stopping generation right there is a hard
         // guarantee against trailing chatter, not just a prompt request.
         stop_sequences: ["}"],
-        system: [{ type: "text", text: CLASSIFIER_SYSTEM, cache_control: { type: "ephemeral" } }],
+        system: [{ type: "text", text: buildClassifierSystem(faqList), cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: text.slice(0, 2000) }],
       }),
     });
@@ -267,28 +283,37 @@ function shouldRouteToHaiku(classification) {
   return true;
 }
 
-// The real $0-AI-cost path (migration 041): checks the user's latest
-// message against scout_faq — pre-written answers to the most common
-// questions athletes ask — using Postgres trigram similarity (pg_trgm,
-// no embeddings model, no extra API). Catches close rephrasings well;
-// won't catch a question that means the same thing in very different
-// words — that needs real semantic (embeddings) matching, a separate
-// future upgrade. Returns the matched row or null; never throws.
-async function matchFaq(question, lang) {
+// The real $0-AI-cost path (migration 041): scout_faq holds pre-written
+// answers to the most common questions athletes ask. Rather than a
+// separate text-similarity lookup (which only catches close rephrasings
+// of a stored question, not a genuinely different way of asking the same
+// thing), the classifier call above is handed this list directly and
+// asked to match by MEANING — real language understanding instead of
+// string matching. This just caches the list itself (id/question/answer,
+// per language) in memory for a few minutes so every request isn't a
+// fresh DB round trip; the actual matching decision happens inside
+// classifyIntent()/buildClassifierSystem() above.
+const faqCacheByLang = {};
+const FAQ_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function getFaqList(lang) {
+  const now = Date.now();
+  const cached = faqCacheByLang[lang];
+  if (cached && now - cached.at < FAQ_CACHE_TTL_MS) return cached.list;
   const supaUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
-  if (!supaUrl || !serviceKey || !question) return null;
+  if (!supaUrl || !serviceKey) return (cached && cached.list) || [];
   try {
-    const r = await fetch(`${supaUrl}/rest/v1/rpc/match_scout_faq`, {
-      method: "POST",
-      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ p_question: question, p_lang: lang || "en" }),
+    const r = await fetch(`${supaUrl}/rest/v1/scout_faq?select=id,question,answer&lang=eq.${encodeURIComponent(lang)}`, {
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
     });
-    if (!r.ok) return null;
+    if (!r.ok) return (cached && cached.list) || [];
     const rows = await r.json();
-    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+    const list = Array.isArray(rows) ? rows : [];
+    faqCacheByLang[lang] = { list, at: now };
+    return list;
   } catch (e) {
-    return null;
+    return (cached && cached.list) || [];
   }
 }
 
@@ -397,28 +422,33 @@ export default async function handler(req, res) {
     }
   }
 
-  // ---- route (FAQ match first, then classify, then decide the model) ----
+  // ---- route (classify — with the FAQ list embedded — then decide the model) ----
   const conversation = messages.slice();
   const faqLang = LANG_NAMES[body && body.lang] ? body.lang : "en";
 
   try {
-    // ---- Database path: a real $0-AI-cost answer, tried before any model call ----
-    const faqMatch = await matchFaq(latestUserText(conversation), faqLang);
+    const faqList = await getFaqList(faqLang);
+    // 3.5s cap — a real user question must never wait on a stuck classifier.
+    // If it times out, classification is null and shouldRouteToHaiku(null)
+    // safely falls through to the proven Sonnet path below.
+    const classification = await withTimeout(classifyIntent(key, conversation, faqList), 3500);
+    console.log("GOLSZ scout routing:", JSON.stringify(classification));
+
+    // ---- Database path: a real $0-AI-cost answer, matched by MEANING (not
+    // exact wording) inside the classification call above, before any real
+    // answering model runs. ----
+    const faqMatch = classification && classification.faq_id != null
+      ? faqList.find((f) => f.id === classification.faq_id)
+      : null;
     if (faqMatch) {
-      console.log("GOLSZ scout FAQ match:", JSON.stringify({ question: faqMatch.question, similarity: faqMatch.similarity }));
+      console.log("GOLSZ scout FAQ match:", JSON.stringify({ id: faqMatch.id, question: faqMatch.question }));
       const payload = {
         content: [{ type: "text", text: JSON.stringify({ reply: faqMatch.answer, profile_updates: null }) }],
         stop_reason: "end_turn",
       };
-      await logRouting("database", null, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 });
+      await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 });
       return res.status(200).json(payload);
     }
-
-    // 3.5s cap — a real user question must never wait on a stuck classifier.
-    // If it times out, classification is null and shouldRouteToHaiku(null)
-    // safely falls through to the proven Sonnet path below.
-    const classification = await withTimeout(classifyIntent(key, conversation), 3500);
-    console.log("GOLSZ scout routing:", JSON.stringify(classification));
 
     // ---- Haiku path: low-stakes, no-tool-needed intents, answered for real ----
     // Tools are included here (even though the classifier says none should be
