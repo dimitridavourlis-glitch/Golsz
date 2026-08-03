@@ -240,6 +240,7 @@ EXAMPLES (message -> correct classification):
 "Given my profile, what should my next 3 months look like?" -> {"intent":"career_advice","confidence":0.85,"needs_tool":false,"faq_id":null} (references their own specific profile — too personalized for a stored FAQ answer)
 "Who's the better prospect, me or the kid who plays my position on my team?" -> {"intent":"player_comparison","confidence":0.85,"needs_tool":false,"faq_id":null}
 "Can you draft an email to Coach Smith about my interest in the program?" -> {"intent":"agent_workflow","confidence":0.9,"needs_tool":false,"faq_id":null}
+"I've got Cyprus First Division academy experience, an agent, and an EU passport coming — how do I keep moving up and jump to a German or Greek club instead of getting stuck behind cheaper foreign signings?" -> {"intent":"career_advice","confidence":0.88,"needs_tool":false,"faq_id":null} (REAL production miss: this got matched to the generic "what does the path to pro look like" FAQ despite being intent:"career_advice" — a wrong, generic answer that ignored the athlete's actual situation and left them confused. faq_id must always be null whenever intent isn't simple_knowledge, full stop — no exceptions for surface-level topic overlap.)
 "How does a player actually get scouted onto one of those elite academy teams?" -> if the FAQ list below (provided fresh with every request — never rely on a memorized id) contains an entry meaning the same thing (e.g. explaining a youth development platform's entry process), set faq_id to THAT entry's real id from the list, even though this wording shares almost no words with it — match by meaning, never by memorized wording or a guessed id number.
 "Is it bad for my kid to play more than one sport instead of focusing on one?" -> same principle: if the current FAQ list has an entry about single-sport specialization vs. multi-sport play, match it despite the very different phrasing here. Always re-check the actual list provided in this request; never assume an id from a past conversation or example.
 "What's my profile missing that I should fill in?" -> {"intent":"profile_assist","confidence":0.9,"needs_tool":false,"faq_id":null} (about their own specific profile, not a general question — never faq_id even if topically close to a stored FAQ)
@@ -355,6 +356,29 @@ function shouldRouteToHaiku(classification) {
   if (classification.needs_tool) return false;
   if (!HAIKU_INTENTS.has(classification.intent)) return false;
   if (typeof classification.confidence === "number" && classification.confidence < HAIKU_CONFIDENCE_THRESHOLD) return false;
+  return true;
+}
+
+// Real production traffic caught the classifier setting BOTH
+// intent: "career_advice" (correctly recognizing a personalized question —
+// specific club/league/attributes, wanting Germany/Greece specifically)
+// AND a faq_id, serving a generic canned answer that had nothing to do
+// with the athlete's actual situation. The prompt already said not to do
+// this ("leave null if the user adds their own specific details") but a
+// soft instruction isn't a guarantee — this is the hard, code-level one.
+// faq_id is only ever trusted for simple_knowledge — a genuinely generic,
+// non-personalized question is the only shape a static FAQ answer can
+// honestly stand in for. Every other intent (career_advice,
+// scouting_analysis, player_comparison, etc.) always gets a real answer,
+// no matter what faq_id the classifier returns.
+const FAQ_ELIGIBLE_INTENTS = new Set(["simple_knowledge"]);
+const FAQ_CONFIDENCE_THRESHOLD = 0.85;
+
+function shouldUseFaqMatch(classification) {
+  if (!classification || classification.error || classification.raw) return false;
+  if (classification.faq_id == null) return false;
+  if (!FAQ_ELIGIBLE_INTENTS.has(classification.intent)) return false;
+  if (typeof classification.confidence === "number" && classification.confidence < FAQ_CONFIDENCE_THRESHOLD) return false;
   return true;
 }
 
@@ -512,7 +536,7 @@ export default async function handler(req, res) {
     // ---- Database path: a real $0-AI-cost answer, matched by MEANING (not
     // exact wording) inside the classification call above, before any real
     // answering model runs. ----
-    const faqMatch = classification && classification.faq_id != null
+    const faqMatch = shouldUseFaqMatch(classification)
       ? faqList.find((f) => f.id === classification.faq_id)
       : null;
     if (faqMatch) {
