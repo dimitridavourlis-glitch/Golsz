@@ -807,7 +807,7 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
   limit (per-IP or similar) before or shortly after real public launch, once there's actual traffic to weigh
   the cost against.
 
-### Scout AI routing + "AI Model Usage"/cost analytics (migrations 039-042)
+### Scout AI routing + "AI Model Usage"/cost analytics (migrations 039-043)
 
 - `api/scout.js` classifies every Scout message (cheap Haiku call, taxonomy in `CLASSIFIER_SYSTEM`) and routes
   low-stakes, no-tool-needed intents (`simple_knowledge`, `player_comparison`, `agent_workflow`,
@@ -853,6 +853,18 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
   serves the wrong information as if it were the real answer. `match_scout_faq()`/the trigram index from 041
   are left in place (harmless) but are no longer called by the app. `lang` still scopes the FAQ list fetched
   per request to the athlete's own language.
+- Migration 043 adds `scout_faq_misses` and the Analytics tab's 4th sub-nav pill, "Common Questions" — real
+  questions Scout couldn't match to `scout_faq`, so the FAQ list can grow from actual gaps over the next 1-6
+  months instead of guessing (more real matches = more `database`-bucket traffic = lower monthly AI cost).
+  **A deliberate, narrow exception** to this app's otherwise-consistent rule that admins never see real
+  Scout/DM conversation content (`scout_history`/`messages` have no admin-read policy;
+  `scout_routing_log` stores routing metadata only, never question/answer text — see migration 038's privacy
+  audit): `logFaqMiss()` in `api/scout.js` only writes a row when a message did NOT match any FAQ (`faq_id`
+  was null) AND its intent is one that could plausibly become a static FAQ answer
+  (`simple_knowledge`/`career_advice`/`scouting_analysis`/`player_comparison` — never `off_topic`,
+  `profile_assist`, `agent_workflow`, or `db_lookup`, which are personal, action-oriented, or not
+  FAQ-shaped). No `user_id` or any identifying column is stored at all, and the question is truncated to 500
+  characters. The Admin Panel reads it directly (`sb.from("scout_faq_misses")`), same pattern as `error_log`.
 
 ### Scout double-reply fix — `sendingRef` re-entrancy guard
 

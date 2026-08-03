@@ -107,6 +107,32 @@ async function logRouting(answeredBy, classification, model, usage) {
   } catch (e) { console.error("GOLSZ routing-log write failed:", e); }
 }
 
+// Feeds the Admin Panel's "Commonly Asked Questions" view (migration
+// 043) — real gaps in scout_faq worth filling over the next 1-6 months
+// to grow the $0-cost "database" share of traffic. Deliberately narrow
+// on purpose: only called for a genuine FAQ miss (faq_id was null) on
+// an intent that could plausibly become a static FAQ answer — never
+// for off_topic, profile_assist, agent_workflow, or db_lookup, which
+// are personal, action-oriented, or not FAQ-shaped. No user_id or any
+// identifying field is ever stored. Best-effort, same as logError.
+const FAQ_CANDIDATE_INTENTS = new Set(["simple_knowledge", "career_advice", "scouting_analysis", "player_comparison"]);
+
+async function logFaqMiss(classification, question) {
+  if (!classification || !question) return;
+  if (classification.faq_id != null) return; // it matched something — not a gap
+  if (!FAQ_CANDIDATE_INTENTS.has(classification.intent)) return;
+  try {
+    const supaUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!supaUrl || !serviceKey) return;
+    await fetch(`${supaUrl}/rest/v1/scout_faq_misses`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ intent: classification.intent, question: String(question).slice(0, 500) }),
+    });
+  } catch (e) { console.error("GOLSZ faq-miss log write failed:", e); }
+}
+
 const SYSTEM_PROMPT = `You are GOLSZ Scout, an AI sports agent. Tagline: "Every Goal Has a Path."
 You adapt to who you're talking to — check "occupation" in PROFILE SO FAR:
 - Player, or occupation missing/unset (default): the personal agent for ONE athlete — learn who they are (age, sport, position, location, club/level, grad year, academics, budget, citizenship, goal), build a career roadmap, suggest realistic target programs (reach/match/safety, honest), and draft coach outreach emails on request (draft-only; the athlete sends them).
@@ -449,6 +475,7 @@ export default async function handler(req, res) {
       await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 });
       return res.status(200).json(payload);
     }
+    await logFaqMiss(classification, latestUserText(conversation));
 
     // ---- Haiku path: low-stakes, no-tool-needed intents, answered for real ----
     // Tools are included here (even though the classifier says none should be

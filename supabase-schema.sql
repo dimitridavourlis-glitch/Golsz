@@ -1921,5 +1921,26 @@ $$;
 grant execute on function match_scout_faq(text, text, text) to service_role, authenticated;
 
 -- ============================================================
+-- 043 — Scout FAQ misses: what to add to scout_faq next
+-- Powers the "Commonly Asked Questions" view under Analytics -> Scout
+-- AI, so scout_faq can grow based on real gaps. Deliberately narrow:
+-- only logged when a message did NOT match an existing FAQ, only for
+-- FAQ-shaped intents (simple_knowledge, career_advice,
+-- scouting_analysis, player_comparison — never off_topic,
+-- profile_assist, agent_workflow, db_lookup), no user_id or any
+-- identifying column, question truncated to 500 characters.
+-- ============================================================
+
+create table if not exists scout_faq_misses (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  intent text,
+  question text not null
+);
+
+alter table scout_faq_misses enable row level security;
+create policy scout_faq_misses_admin_read on scout_faq_misses for select using (is_admin());
+
+-- ============================================================
 -- Done.
 -- ============================================================

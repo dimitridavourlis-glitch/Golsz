@@ -332,6 +332,7 @@ const I18N = {
     admin_ai_model_mix: "AI MODEL USAGE", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Database (no AI call)",
     admin_scout_cost_month: "SCOUT AI COST (MONTH)", admin_scout_avg_cost_msg: "AVG COST / MESSAGE (MONTH)",
     admin_view_overview: "Overview", admin_view_community: "Community", admin_view_scout_ai: "Scout AI",
+    admin_view_common_qs: "Common Questions", admin_common_qs_hint: "Real questions Scout couldn't match to an existing FAQ answer — add the recurring ones to scout_faq to keep lowering the monthly AI cost.", admin_no_faq_misses: "No unmatched questions logged yet.",
     admin_time_on_app: "TIME ON APP", admin_avg_hrs_week: "AVG HRS/WEEK", admin_avg_hrs_month: "AVG HRS/MONTH", admin_avg_hrs_year: "AVG HRS/YEAR", admin_active_users: "active users",
     admin_view_activity: "View daily activity", admin_activity_err: "Couldn't load activity.",
     admin_activity_today: "Today:", admin_activity_7d: "Last 7d:", admin_activity_30d: "Last 30d:",
@@ -519,6 +520,7 @@ const I18N = {
     admin_ai_model_mix: "UTILISATION DU MODÈLE IA", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Base de données (sans appel IA)",
     admin_scout_cost_month: "COÛT IA SCOUT (MOIS)", admin_scout_avg_cost_msg: "COÛT MOYEN / MESSAGE (MOIS)",
     admin_view_overview: "Aperçu", admin_view_community: "Communauté", admin_view_scout_ai: "IA Scout",
+    admin_view_common_qs: "Questions fréquentes", admin_common_qs_hint: "Questions réelles que Scout n'a pas pu associer à une réponse FAQ existante — ajoutez celles qui reviennent souvent à scout_faq pour continuer à réduire le coût mensuel de l'IA.", admin_no_faq_misses: "Aucune question non associée enregistrée pour l'instant.",
     admin_time_on_app: "TEMPS SUR L'APPLI", admin_avg_hrs_week: "MOY. H/SEMAINE", admin_avg_hrs_month: "MOY. H/MOIS", admin_avg_hrs_year: "MOY. H/AN", admin_active_users: "utilisateurs actifs",
     admin_view_activity: "Voir l'activité quotidienne", admin_activity_err: "Impossible de charger l'activité.",
     admin_activity_today: "Aujourd'hui :", admin_activity_7d: "7 derniers jours :", admin_activity_30d: "30 derniers jours :",
@@ -708,6 +710,7 @@ const I18N = {
     admin_ai_model_mix: "USO DE MODELO IA", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Base de datos (sin llamada IA)",
     admin_scout_cost_month: "COSTO IA SCOUT (MES)", admin_scout_avg_cost_msg: "COSTO PROMEDIO / MENSAJE (MES)",
     admin_view_overview: "Resumen", admin_view_community: "Comunidad", admin_view_scout_ai: "IA Scout",
+    admin_view_common_qs: "Preguntas frecuentes", admin_common_qs_hint: "Preguntas reales que Scout no pudo asociar a una respuesta de la FAQ — añade las que se repitan a scout_faq para seguir reduciendo el costo mensual de IA.", admin_no_faq_misses: "Aún no hay preguntas sin coincidencia registradas.",
     admin_time_on_app: "TIEMPO EN LA APP", admin_avg_hrs_week: "PROM. H/SEMANA", admin_avg_hrs_month: "PROM. H/MES", admin_avg_hrs_year: "PROM. H/AÑO", admin_active_users: "usuarios activos",
     admin_view_activity: "Ver actividad diaria", admin_activity_err: "No se pudo cargar la actividad.",
     admin_activity_today: "Hoy:", admin_activity_7d: "Últimos 7 días:", admin_activity_30d: "Últimos 30 días:",
@@ -897,6 +900,7 @@ const I18N = {
     admin_ai_model_mix: "ΧΡΗΣΗ ΜΟΝΤΕΛΟΥ AI", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Βάση δεδομένων (χωρίς κλήση AI)",
     admin_scout_cost_month: "ΚΟΣΤΟΣ AI SCOUT (ΜΗΝΑΣ)", admin_scout_avg_cost_msg: "ΜΕΣΟ ΚΟΣΤΟΣ / ΜΗΝΥΜΑ (ΜΗΝΑΣ)",
     admin_view_overview: "Επισκόπηση", admin_view_community: "Κοινότητα", admin_view_scout_ai: "AI Scout",
+    admin_view_common_qs: "Συχνές ερωτήσεις", admin_common_qs_hint: "Πραγματικές ερωτήσεις που το Scout δεν μπόρεσε να αντιστοιχίσει σε υπάρχουσα απάντηση FAQ — πρόσθεσε τις πιο συχνές στο scout_faq για να συνεχίσεις να μειώνεις το μηνιαίο κόστος AI.", admin_no_faq_misses: "Δεν έχουν καταγραφεί ακόμη μη αντιστοιχισμένες ερωτήσεις.",
     admin_time_on_app: "ΧΡΟΝΟΣ ΣΤΗΝ ΕΦΑΡΜΟΓΗ", admin_avg_hrs_week: "ΜΕΣ. ΩΡΕΣ/ΕΒΔ", admin_avg_hrs_month: "ΜΕΣ. ΩΡΕΣ/ΜΗΝΑ", admin_avg_hrs_year: "ΜΕΣ. ΩΡΕΣ/ΕΤΟΣ", admin_active_users: "ενεργοί χρήστες",
     admin_view_activity: "Προβολή ημερήσιας δραστηριότητας", admin_activity_err: "Δεν ήταν δυνατή η φόρτωση δραστηριότητας.",
     admin_activity_today: "Σήμερα:", admin_activity_7d: "Τελ. 7 ημέρες:", admin_activity_30d: "Τελ. 30 ημέρες:",
@@ -3810,6 +3814,7 @@ function AdminPanel({ onBack }) {
   const [auditLog, setAuditLog] = useState(null);
   const [moderationQueue, setModerationQueue] = useState(null);
   const [errorLog, setErrorLog] = useState(null);
+  const [faqMisses, setFaqMisses] = useState(null);
   const [expandedActivityId, setExpandedActivityId] = useState(null);
   const [userActivity, setUserActivity] = useState({}); // userId -> { perDay: [{label, value}], today, week, month }
 
@@ -4040,6 +4045,21 @@ function AdminPanel({ onBack }) {
       setErrorLog(data || []);
     } catch (e) { console.error("GOLSZ admin error log error:", e); setErrorLog([]); }
   }
+  // scout_faq_misses (migration 043) — real questions Scout couldn't
+  // match to an existing FAQ, narrowly scoped (see the migration's
+  // comments): no user_id, only FAQ-shaped intents, only genuine misses.
+  // Powers "Commonly Asked Questions" so scout_faq (041/042) can grow
+  // from real gaps over the next 1-6 months instead of guessing.
+  async function loadFaqMisses() {
+    try {
+      const { data, error } = await sb.from("scout_faq_misses")
+        .select("id, intent, question, created_at")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      setFaqMisses(data || []);
+    } catch (e) { console.error("GOLSZ admin faq-misses error:", e); setFaqMisses([]); }
+  }
   async function resolveErrorLogItem(id) {
     try {
       const { error } = await sb.rpc("resolve_error_log_item", { p_id: id });
@@ -4193,7 +4213,7 @@ function AdminPanel({ onBack }) {
         const { data: prof } = await sb.from("profiles").select("is_admin").eq("id", user.id).single();
         const ok = !!(prof && prof.is_admin);
         setAuthorized(ok);
-        if (ok) { loadStats(); loadReports(); loadUsers(); loadEvents(); loadAnalytics(); loadAuditLog(); loadModerationQueue(); loadErrorLog(); }
+        if (ok) { loadStats(); loadReports(); loadUsers(); loadEvents(); loadAnalytics(); loadAuditLog(); loadModerationQueue(); loadErrorLog(); loadFaqMisses(); }
       } catch (e) { console.error("GOLSZ admin auth-check error:", e); setAuthorized(false); }
     })();
   }, []);
@@ -4377,11 +4397,11 @@ function AdminPanel({ onBack }) {
             <>
               {/* Sub-nav: the Analytics tab used to be ~13 cards stacked in one
                   scroll, which is exactly what made the panel feel messy — this
-                  groups them into three findable views instead of removing any
-                  of them. Manage events stays outside this nav (below, always
+                  groups them into findable views instead of removing any of
+                  them. Manage events stays outside this nav (below, always
                   visible) since it's a tool, not an analytics view. */}
               <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-                {[["overview", t("admin_view_overview")], ["community", t("admin_view_community")], ["scoutai", t("admin_view_scout_ai")]].map(([id, label]) => (
+                {[["overview", t("admin_view_overview")], ["community", t("admin_view_community")], ["scoutai", t("admin_view_scout_ai")], ["commonqs", t("admin_view_common_qs")]].map(([id, label]) => (
                   <button key={id} onClick={() => setAnalyticsView(id)} style={{
                     flex: 1, padding: "8px 0", borderRadius: 9, cursor: "pointer", fontFamily: "inherit",
                     fontSize: 11.5, fontWeight: 700, border: `1px solid ${analyticsView === id ? C.lime : C.line2}`,
@@ -4540,6 +4560,25 @@ function AdminPanel({ onBack }) {
                       </>
                     )}
                   </div>
+                </>
+              )}
+
+              {analyticsView === "commonqs" && (
+                <>
+                  <div style={{ fontSize: 12, color: C.slate, lineHeight: 1.5, margin: "2px 2px 12px" }}>{t("admin_common_qs_hint")}</div>
+                  {faqMisses === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+                  {faqMisses && faqMisses.length === 0 && (
+                    <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_faq_misses")}</div>
+                  )}
+                  {faqMisses && faqMisses.map((f) => (
+                    <div key={f.id} style={{ ...card }}>
+                      <div style={{ fontSize: 13.5, marginBottom: 6 }}>{f.question}</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>
+                        <span>{f.intent}</span>
+                        <span>{timeAgo(f.created_at)} {t("admin_ago")}</span>
+                      </div>
+                    </div>
+                  ))}
                 </>
               )}
 
