@@ -4167,7 +4167,10 @@ function AdminPanel({ onBack }) {
         totalFollows: (followRows || []).length,
         verifiedCount: tierCounts.pro + tierCounts.elite,
         bannedCount,
-        mrrEstimate: planCounts.pro * 29 + planCounts.elite * 79,
+        // Starter is a paid tier now ($5.99/mo, no longer free), so it counts
+        // toward MRR too — this used to only count pro/elite from when
+        // Starter was a free loss-leader. Prices: $5.99 / $14.99 / $29.99.
+        mrrEstimate: Math.round((planCounts.starter * 5.99 + planCounts.pro * 14.99 + planCounts.elite * 29.99) * 100) / 100,
         signupsPerDay: bucketByDay(profiles),
         postsPerDay: bucketByDay(postRows),
         planCounts, occCounts, tierCounts,
@@ -4420,7 +4423,7 @@ function AdminPanel({ onBack }) {
                       [t("admin_total_follows"), analytics.totalFollows],
                       [t("admin_verified_count"), analytics.verifiedCount],
                       [t("admin_banned_count"), analytics.bannedCount],
-                      [t("admin_mrr_estimate"), "$" + analytics.mrrEstimate],
+                      [t("admin_mrr_estimate"), "$" + analytics.mrrEstimate.toFixed(2)],
                     ].map(([label, v]) => (
                       <div key={label} style={{ ...card, margin: 0, padding: "10px 8px", textAlign: "center" }}>
                         <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{v}</div>
