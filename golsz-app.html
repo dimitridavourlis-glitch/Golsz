@@ -4724,6 +4724,13 @@ function Scout() {
   const [profile, setProfile] = useState({});
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  // Separate from `busy`: `busy` drives the in-chat "thinking" bubble, which
+  // should only appear once the user's own message bubble is already in
+  // `msgs` (right after moderation passes) — not before, or the thinking
+  // bubble visibly renders ahead of the question that triggered it. `pending`
+  // exists purely to disable the send button/input the instant a send starts,
+  // independent of when the chat log itself updates. See send()'s comments.
+  const [pending, setPending] = useState(false);
   const [conversationId, setConversationId] = useState(() => newScoutConvId());
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState(null);
@@ -4905,12 +4912,12 @@ function Scout() {
   function clearPhoto() { setPhoto(null); setPhotoErr(""); }
 
   async function send(text) {
-    const content = text.trim(); if ((!content && !photo) || busy || !loaded || sendingRef.current) return;
-    // `busy` (React state) doesn't actually block a second call until a
-    // re-render lands — and moderateContent() below awaits a real network
-    // round-trip before busy ever gets set, leaving a real window where a
-    // fast double-click/double-Enter fires send() twice, each one passing
-    // the `busy` check above and going on to hit Scout's API separately.
+    const content = text.trim(); if ((!content && !photo) || pending || !loaded || sendingRef.current) return;
+    // React state (pending/busy) doesn't actually block a second call until
+    // a re-render lands — and moderateContent() below awaits a real network
+    // round-trip before either one ever gets set, leaving a real window
+    // where a fast double-click/double-Enter fires send() twice, each one
+    // passing the check above and going on to hit Scout's API separately.
     // That's what "answers back to back" actually was: two full replies to
     // one real question, not a formatting bug. sendingRef is a plain ref,
     // so setting it here takes effect immediately (not batched like state),
@@ -4918,13 +4925,14 @@ function Scout() {
     // finishes — reset in the `finally` below.
     sendingRef.current = true;
     setModErr("");
-    // Set immediately, not after moderateContent() resolves below — the
-    // send button's disabled state reads `busy`, so leaving it false during
-    // that network round-trip meant a real click looked completely
-    // unhandled (button still enabled, nothing on screen yet), which is
-    // exactly what made pressing send again — sometimes a few times —
-    // feel necessary even though the first press was already in flight.
-    setBusy(true);
+    // Disables the button/input the instant a real send starts — separate
+    // from `busy` (see its declaration above) specifically so this doesn't
+    // wait on moderateContent()'s network round-trip below. Without this,
+    // a real click looked completely unhandled during that gap (button
+    // still enabled, nothing on screen yet), which is what made pressing
+    // send again — sometimes a few times — feel necessary even though the
+    // first press was already in flight.
+    setPending(true);
     try {
     // Check before anything else touches state — a flagged message should
     // never clear the input, appear as a sent bubble, or reach Scout's own
@@ -4939,7 +4947,12 @@ function Scout() {
     setInput("");
     const attached = photo; setPhoto(null);
     const next = [...(msgs || []), { role: "user", text: content, photo: attached ? attached.dataUrl : null }];
+    // Set together, in the same render, so the user's own bubble and the
+    // "thinking" bubble appear in the same update — never the thinking
+    // bubble alone first (that was the bug: busy used to flip true back
+    // where `pending` now does, before this message existed in `msgs`).
     setMsgs(next);
+    setBusy(true);
     logTurn("user", content || "[photo]");
     try {
       const api = next.map((m) => ({ role: m.role, content: m.text }));
@@ -4983,7 +4996,7 @@ function Scout() {
       const msg = e && e.code === "SCOUT_HTTP_ERROR" ? e.message : t("scout_connection_dropped");
       setMsgs((m) => [...m, { role: "assistant", text: msg }]);
     }
-    } finally { setBusy(false); sendingRef.current = false; }
+    } finally { setBusy(false); setPending(false); sendingRef.current = false; }
   }
 
   const known = Object.keys(profile).filter((k) => profile[k]);
@@ -5032,7 +5045,7 @@ function Scout() {
               {m.text && <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>}
             </div>
           ))}
-          {loaded && !busy && msgs && msgs.length <= 1 && (
+          {loaded && !pending && msgs && msgs.length <= 1 && (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 6 }}>
               {CHIPS.map((q, i) => {
                 const Icon = CHIP_ICONS[i];
@@ -5058,7 +5071,7 @@ function Scout() {
         <>
           {msgs && msgs.length > 1 && (
             <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "6px 12px", scrollbarWidth: "none" }} className="noscroll">
-              {CHIPS.map((q) => <button key={q} onClick={() => send(q)} disabled={busy || !loaded} style={{ flex: "0 0 auto", background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 999, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>{q}</button>)}
+              {CHIPS.map((q) => <button key={q} onClick={() => send(q)} disabled={pending || !loaded} style={{ flex: "0 0 auto", background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 999, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>{q}</button>)}
             </div>
           )}
           {photoErr && <div style={{ fontSize: 11.5, color: C.amber, padding: "0 12px 6px" }}>{photoErr}</div>}
@@ -5076,14 +5089,14 @@ function Scout() {
           )}
           <div style={{ display: "flex", gap: 8, padding: "10px 12px 14px", borderTop: `1px solid ${C.line}` }}>
             <input ref={fileRef} type="file" accept="image/*" onChange={onPhotoChange} style={{ display: "none" }} />
-            <button onClick={pickPhoto} disabled={busy || !loaded} title={t("scout_attach_photo")}
-              style={{ flexShrink: 0, background: "none", border: `1px solid ${C.line2}`, borderRadius: 12, width: 46, color: C.lime, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: busy || !loaded ? 0.4 : 1 }}>
+            <button onClick={pickPhoto} disabled={pending || !loaded} title={t("scout_attach_photo")}
+              style={{ flexShrink: 0, background: "none", border: `1px solid ${C.line2}`, borderRadius: 12, width: 46, color: C.lime, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: pending || !loaded ? 0.4 : 1 }}>
               <Plus size={19} />
             </button>
             <textarea rows={1} value={input} placeholder={t("scout_input_ph")} onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
               style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, color: C.chalk, padding: "11px 13px", fontSize: 14, fontFamily: "inherit", resize: "none", outline: "none" }} />
-            <button onClick={() => send(input)} disabled={busy || !loaded || (!input.trim() && !photo)} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 12, width: 46, cursor: "pointer", opacity: busy || !loaded || (!input.trim() && !photo) ? 0.4 : 1 }}><Send size={17} /></button>
+            <button onClick={() => send(input)} disabled={pending || !loaded || (!input.trim() && !photo)} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 12, width: 46, cursor: "pointer", opacity: pending || !loaded || (!input.trim() && !photo) ? 0.4 : 1 }}><Send size={17} /></button>
           </div>
         </>
       )}
