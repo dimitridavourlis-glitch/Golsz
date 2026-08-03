@@ -267,6 +267,31 @@ function shouldRouteToHaiku(classification) {
   return true;
 }
 
+// The real $0-AI-cost path (migration 041): checks the user's latest
+// message against scout_faq — pre-written answers to the most common
+// questions athletes ask — using Postgres trigram similarity (pg_trgm,
+// no embeddings model, no extra API). Catches close rephrasings well;
+// won't catch a question that means the same thing in very different
+// words — that needs real semantic (embeddings) matching, a separate
+// future upgrade. Returns the matched row or null; never throws.
+async function matchFaq(question, lang) {
+  const supaUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supaUrl || !serviceKey || !question) return null;
+  try {
+    const r = await fetch(`${supaUrl}/rest/v1/rpc/match_scout_faq`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_question: question, p_lang: lang || "en" }),
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // Matches golsz-app.html's LANGS — validated against this allowlist rather
 // than trusting the client's lang string directly, since it gets
 // interpolated into the system prompt sent to the model.
@@ -372,15 +397,29 @@ export default async function handler(req, res) {
     }
   }
 
-  // ---- route (classify first, then decide which model actually answers) ----
+  // ---- route (FAQ match first, then classify, then decide the model) ----
   const conversation = messages.slice();
-  // 3.5s cap — a real user question must never wait on a stuck classifier.
-  // If it times out, classification is null and shouldRouteToHaiku(null)
-  // safely falls through to the proven Sonnet path below.
-  const classification = await withTimeout(classifyIntent(key, conversation), 3500);
-  console.log("GOLSZ scout routing:", JSON.stringify(classification));
+  const faqLang = LANG_NAMES[body && body.lang] ? body.lang : "en";
 
   try {
+    // ---- Database path: a real $0-AI-cost answer, tried before any model call ----
+    const faqMatch = await matchFaq(latestUserText(conversation), faqLang);
+    if (faqMatch) {
+      console.log("GOLSZ scout FAQ match:", JSON.stringify({ question: faqMatch.question, similarity: faqMatch.similarity }));
+      const payload = {
+        content: [{ type: "text", text: JSON.stringify({ reply: faqMatch.answer, profile_updates: null }) }],
+        stop_reason: "end_turn",
+      };
+      await logRouting("database", null, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 });
+      return res.status(200).json(payload);
+    }
+
+    // 3.5s cap — a real user question must never wait on a stuck classifier.
+    // If it times out, classification is null and shouldRouteToHaiku(null)
+    // safely falls through to the proven Sonnet path below.
+    const classification = await withTimeout(classifyIntent(key, conversation), 3500);
+    console.log("GOLSZ scout routing:", JSON.stringify(classification));
+
     // ---- Haiku path: low-stakes, no-tool-needed intents, answered for real ----
     // Tools are included here (even though the classifier says none should be
     // needed) purely so the cached block matches the Sonnet path's ~4,287

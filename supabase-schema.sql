@@ -1877,5 +1877,49 @@ $$;
 grant execute on function admin_scout_cost_summary() to authenticated;
 
 -- ============================================================
+-- 041 — Scout FAQ: a real $0-AI-cost answer path
+-- scout_faq holds pre-written answers to the most common questions
+-- athletes ask across sports. api/scout.js checks every incoming Scout
+-- message against it BEFORE calling any model — a match is served
+-- directly, logged as answered_by='database' with $0 cost, and never
+-- touches Haiku or Sonnet. Matching uses Postgres trigram similarity
+-- (pg_trgm) — free, no embeddings model — which catches close
+-- rephrasings well but not a question meaning the same thing in very
+-- different words; real semantic matching would need embeddings, a
+-- separate future upgrade. `lang` keeps matches (and answers) in the
+-- athlete's own language.
+-- ============================================================
+
+create extension if not exists pg_trgm;
+
+create table if not exists scout_faq (
+  id bigint generated always as identity primary key,
+  sport text,
+  lang text not null default 'en',
+  question text not null,
+  answer text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists scout_faq_question_trgm_idx on scout_faq using gin (question gin_trgm_ops);
+
+alter table scout_faq enable row level security;
+create policy scout_faq_admin_read on scout_faq for select using (is_admin());
+
+create or replace function match_scout_faq(p_question text, p_lang text default 'en', p_sport text default null)
+returns table(id bigint, question text, answer text, similarity real)
+language sql stable as $$
+  select id, question, answer, similarity(question, p_question) as similarity
+  from scout_faq
+  where lang = p_lang
+    and (p_sport is null or sport is null or sport = p_sport)
+    and similarity(question, p_question) > 0.30
+  order by similarity(question, p_question) desc
+  limit 1;
+$$;
+
+grant execute on function match_scout_faq(text, text, text) to service_role, authenticated;
+
+-- ============================================================
 -- Done.
 -- ============================================================
