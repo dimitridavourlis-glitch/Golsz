@@ -204,6 +204,21 @@ async function searchPlayers(input) {
 // call. Validated against real production traffic in shadow mode first
 // (logged only, no routing) before being trusted with the real dispatch
 // below — see git history on this file for that validation pass.
+// The EXAMPLES/ESCALATION GUIDANCE content below is real, useful
+// classifier guidance (grounded in actual production misclassifications
+// this session — the web_lookup-vs-simple_knowledge miss, the off_topic
+// anomaly that still needed a tool, etc.) — but it also does double duty
+// clearing Haiku 4.5's 4,096-token cache minimum. Measured (Anthropic
+// tokenizer, ~106 FAQ entries): base taxonomy + FAQ list alone was only
+// ~2,450 tokens — comfortably under the minimum, so this whole block was
+// paying full uncached price on every single classification call. This
+// content pushes it to ~4,300+ tokens so caching actually applies; as the
+// FAQ list keeps growing (the point of the Common Questions workflow),
+// it'll clear the minimum on its own even without this block, but no
+// reason to wait on that. Verify the real number via
+// response.usage.cache_creation_input_tokens on a live classifier call,
+// same as every other caching claim in this file — don't just trust that
+// adding content worked.
 const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent, and separately check it against the FAQ list appended below. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false,"faq_id":null-or-a-number}
 Intents:
 - db_lookup: searching/filtering for clubs, coaches, opportunities, or GOLSZ players by criteria
@@ -215,7 +230,41 @@ Intents:
 - agent_workflow: drafting an outreach message to a club, coach, or agent
 - web_lookup: needs real-time or external info not available on GOLSZ (specific current programs, news, rankings, rule/eligibility changes) — words like "current," "new," "this year," or "changed" are a strong signal this belongs here, not in simple_knowledge
 - off_topic: not sports, recruiting, or career related
-needs_tool is true whenever the intent is web_lookup or db_lookup, or answering well otherwise requires search_golsz_players or web_search.`;
+needs_tool is true whenever the intent is web_lookup or db_lookup, or answering well otherwise requires search_golsz_players or web_search.
+
+EXAMPLES (message -> correct classification):
+"What does offside mean in soccer?" -> {"intent":"simple_knowledge","confidence":0.95,"needs_tool":false,"faq_id":null}
+"What changed in NCAA transfer rules this year?" -> {"intent":"web_lookup","confidence":0.9,"needs_tool":true,"faq_id":null} (real traffic showed this pattern getting missed as simple_knowledge — "this year"/"changed" means it needs a live lookup)
+"Find me strikers born in 2008 from Texas on GOLSZ" -> {"intent":"db_lookup","confidence":0.9,"needs_tool":true,"faq_id":null}
+"Can you help me with my algebra homework?" -> {"intent":"off_topic","confidence":0.95,"needs_tool":false,"faq_id":null}
+"Given my profile, what should my next 3 months look like?" -> {"intent":"career_advice","confidence":0.85,"needs_tool":false,"faq_id":null} (references their own specific profile — too personalized for a stored FAQ answer)
+"Who's the better prospect, me or the kid who plays my position on my team?" -> {"intent":"player_comparison","confidence":0.85,"needs_tool":false,"faq_id":null}
+"Can you draft an email to Coach Smith about my interest in the program?" -> {"intent":"agent_workflow","confidence":0.9,"needs_tool":false,"faq_id":null}
+"How does a player actually get scouted onto one of those elite academy teams?" -> if the FAQ list below (provided fresh with every request — never rely on a memorized id) contains an entry meaning the same thing (e.g. explaining a youth development platform's entry process), set faq_id to THAT entry's real id from the list, even though this wording shares almost no words with it — match by meaning, never by memorized wording or a guessed id number.
+"Is it bad for my kid to play more than one sport instead of focusing on one?" -> same principle: if the current FAQ list has an entry about single-sport specialization vs. multi-sport play, match it despite the very different phrasing here. Always re-check the actual list provided in this request; never assume an id from a past conversation or example.
+"What's my profile missing that I should fill in?" -> {"intent":"profile_assist","confidence":0.9,"needs_tool":false,"faq_id":null} (about their own specific profile, not a general question — never faq_id even if topically close to a stored FAQ)
+"Is this kid actually good enough for a D1 program?" -> {"intent":"scouting_analysis","confidence":0.85,"needs_tool":false,"faq_id":null}
+"What tournaments are happening near me this month?" -> {"intent":"web_lookup","confidence":0.85,"needs_tool":true,"faq_id":null}
+"lol ok whatever, tell me a joke instead" -> {"intent":"off_topic","confidence":0.95,"needs_tool":false,"faq_id":null}
+"What's the actual difference between an athletic scholarship and financial aid, and can I get both?" -> a close paraphrase of a stored FAQ still counts as a match — check the list below for the closest real id, don't invent one.
+"My son is 11 and dominating his age group — should he move up to play with older kids?" -> {"intent":"career_advice","confidence":0.8,"needs_tool":false,"faq_id":null} (mentions a myth-adjacent topic but includes specific personal detail — a judgment call, not a lookup, so career_advice not simple_knowledge, and no faq_id since it needs a personalized answer)
+"How do I know if a private coach is worth the money for my situation?" -> {"intent":"career_advice","confidence":0.75,"needs_tool":false,"faq_id":null} (asks for a judgment applied to "my situation," not the general question — lower confidence since it's borderline)
+"What's a redshirt year and would it make sense for someone like me?" -> {"intent":"career_advice","confidence":0.7,"needs_tool":false,"faq_id":null} (the definition half matches a stored FAQ, but "someone like me" makes this a personalized judgment call overall — don't set faq_id just because part of the message is FAQ-shaped)
+
+"Qu'est-ce que le hors-jeu au football?" -> {"intent":"simple_knowledge","confidence":0.9,"needs_tool":false,"faq_id":null} (non-English messages classify the same way — language never changes the intent taxonomy, only which language's FAQ list to check against)
+"¿Debería mi hija especializarse en un solo deporte?" -> {"intent":"simple_knowledge","confidence":0.85,"needs_tool":false,"faq_id":null} (would match a Spanish-language FAQ row if one exists for this question; matches only within the same lang, never across languages)
+"what" -> {"intent":"off_topic","confidence":0.4,"needs_tool":false,"faq_id":null} (too short/ambiguous to confidently classify — low confidence rather than guessing a specific intent)
+"Can you look up whether Coach Martinez at State is still recruiting my grad year?" -> {"intent":"web_lookup","confidence":0.85,"needs_tool":true,"faq_id":null} (a specific, real-time fact about one named coach/program — not a stored FAQ candidate no matter how it's worded)
+
+ESCALATION GUIDANCE (when torn between two intents or confidence levels):
+- A message that needs search_golsz_players or web_search is never simple_knowledge/profile_assist/agent_workflow/player_comparison, regardless of how it's phrased — needs_tool always wins.
+- Confidence should drop (below 0.7) whenever the message mixes a general question with the user's own specific situation, references prior conversation turns that change what's being asked, or could reasonably belong to two different intents at once.
+- Never set faq_id just because part of a longer message resembles a stored FAQ — only when the ENTIRE question is answered by that FAQ with nothing personalized left over.
+- A message containing multiple distinct questions (e.g. a general question plus a personal follow-up in the same turn) should classify by whichever part needs the more capable handling — if any part needs personalization, tool use, or judgment, that part decides the intent even if the other part alone would have been a simple lookup.
+- When a message is a near-exact repeat of an earlier turn in the same conversation (the user re-asking because the last answer didn't land), treat that as a signal to escalate rather than repeat the same routing decision — a repeated question is evidence the cheaper path already failed once.
+- If a message reads as satisfied or a simple acknowledgment of a previous answer ("thanks," "got it," "makes sense") rather than a new question, classify it as off_topic with high confidence and needs_tool false — there's nothing to look up or reason about, and it should never be treated as db_lookup, web_lookup, or any tool-needing intent just because the prior turn was.
+- A message that names a specific real person, team, school, or organization by name (not a general category) and asks a factual question about them almost always needs web_lookup, even if the underlying topic sounds generic — "what division is State University in" needs a real lookup even though "what's the difference between divisions" is simple_knowledge.
+- Treat an image attached to the message the same as any other content when deciding intent — a photo of a highlight reel thumbnail or a stat sheet accompanying a career_advice-shaped question doesn't change the intent, but a photo with no real question attached (just "what do you think?") should default to career_advice or scouting_analysis depending on who's asking, never simple_knowledge.`;
 
 // Appends the FAQ list to the classifier prompt and asks it to match by
 // MEANING, not wording — a paraphrase or a completely different way of
