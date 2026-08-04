@@ -545,19 +545,27 @@ async function getUserId(authHeader) {
   }
 }
 
-// Read plan + admin flag + increment daily usage via the SQL helper.
-// Returns { plan, isAdmin, calls }.
+// Read plan + admin flag + the admin-granted unlimited-AI override
+// (migration 045, profiles.ai_unlimited — separate from is_admin, lets an
+// admin lift one athlete's Scout ceiling without touching their plan or
+// giving them Admin Panel access) + increment daily usage via the SQL
+// helper. Returns { plan, isAdmin, aiUnlimited, calls }.
 async function meter(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, calls: 0 };
+  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, calls: 0 };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let plan = "starter";
   let isAdmin = false;
+  let aiUnlimited = false;
   try {
-    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin", { headers });
+    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited", { headers });
     const rows = await p.json();
-    if (Array.isArray(rows) && rows[0]) { plan = rows[0].plan || "starter"; isAdmin = !!rows[0].is_admin; }
+    if (Array.isArray(rows) && rows[0]) {
+      plan = rows[0].plan || "starter";
+      isAdmin = !!rows[0].is_admin;
+      aiUnlimited = !!rows[0].ai_unlimited;
+    }
   } catch {}
   let calls = 0;
   try {
@@ -566,7 +574,7 @@ async function meter(userId) {
     });
     calls = await c.json();
   } catch {}
-  return { plan, isAdmin, calls: Number(calls) || 0 };
+  return { plan, isAdmin, aiUnlimited, calls: Number(calls) || 0 };
 }
 
 export default async function handler(req, res) {
@@ -601,9 +609,9 @@ export default async function handler(req, res) {
   if (process.env.SUPABASE_URL) {
     userId = await getUserId(req.headers.authorization);
     if (!userId) return res.status(401).json({ error: "Sign in to use the Scout." });
-    const { plan, isAdmin, calls } = await meter(userId);
+    const { plan, isAdmin, aiUnlimited, calls } = await meter(userId);
     userPlan = plan;
-    if (!isAdmin) {
+    if (!isAdmin && !aiUnlimited) {
       const limit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
         : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 15)
         : Number(process.env.FREE_DAILY_LIMIT || 8);

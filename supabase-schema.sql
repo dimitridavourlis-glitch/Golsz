@@ -1992,5 +1992,14 @@ $$;
 grant execute on function admin_scout_model_mix() to authenticated;
 
 -- ============================================================
+-- 045 — Admin override: grant a specific athlete unlimited Scout access
+-- Separate from is_admin (grants nothing but a higher Scout ceiling) and
+-- separate from plan (no billing change). Covered by the existing
+-- profiles_admin_write policy (023) — no new RLS policy needed.
+-- ============================================================
+
+alter table profiles add column if not exists ai_unlimited boolean not null default false;
+
+-- ============================================================
 -- Done.
 -- ============================================================

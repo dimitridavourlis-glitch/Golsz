@@ -312,6 +312,7 @@ const I18N = {
     admin_delete_post: "Delete post", admin_dismiss: "Dismiss", admin_resolved: "Resolved",
     admin_search_name: "Search by name…", admin_no_name: "(no name)", admin_minor: "MINOR", admin_admin: "ADMIN",
     admin_joined: "joined ", admin_ago: " ago", admin_revoke_admin: "Revoke admin", admin_make_admin: "Make admin",
+    admin_ai_unlimited_badge: "Unlimited AI", admin_grant_ai_unlimited: "Grant unlimited AI", admin_revoke_ai_unlimited: "Revoke unlimited AI", admin_ai_unlimited_hint: "Lifts their daily Scout question cap — no plan or billing change.",
     admin_add_event: "ADD EVENT", admin_title_ph: "Title", admin_location_ph: "Location", admin_level_ph: "Level",
     admin_spots_ph: "Spots available", admin_create_event: "Create event",
     admin_banned: "BANNED", admin_block_user: "Block", admin_unblock_user: "Unblock",
@@ -502,6 +503,7 @@ const I18N = {
     admin_delete_post: "Supprimer la publication", admin_dismiss: "Ignorer", admin_resolved: "Résolu",
     admin_search_name: "Rechercher par nom…", admin_no_name: "(sans nom)", admin_minor: "MINEUR", admin_admin: "ADMIN",
     admin_joined: "inscrit il y a ", admin_ago: "", admin_revoke_admin: "Révoquer admin", admin_make_admin: "Nommer admin",
+    admin_ai_unlimited_badge: "IA illimitée", admin_grant_ai_unlimited: "Accorder IA illimitée", admin_revoke_ai_unlimited: "Révoquer IA illimitée", admin_ai_unlimited_hint: "Supprime son plafond quotidien de questions Scout — aucun changement de forfait ou de facturation.",
     admin_banned: "BANNI", admin_block_user: "Bloquer", admin_unblock_user: "Débloquer",
     admin_unverified: "non vérifié", admin_verify_user_err: "Impossible de mettre à jour le statut de vérification.",
     admin_tier_none: "Non vérifié", admin_tier_pro: "Vérif. Pro", admin_tier_elite: "Vérif. Elite",
@@ -692,6 +694,7 @@ const I18N = {
     admin_delete_post: "Eliminar publicación", admin_dismiss: "Descartar", admin_resolved: "Resuelto",
     admin_search_name: "Buscar por nombre…", admin_no_name: "(sin nombre)", admin_minor: "MENOR", admin_admin: "ADMIN",
     admin_joined: "se unió hace ", admin_ago: "", admin_revoke_admin: "Revocar admin", admin_make_admin: "Hacer admin",
+    admin_ai_unlimited_badge: "IA ilimitada", admin_grant_ai_unlimited: "Otorgar IA ilimitada", admin_revoke_ai_unlimited: "Revocar IA ilimitada", admin_ai_unlimited_hint: "Elimina su límite diario de preguntas a Scout — sin cambio de plan ni de facturación.",
     admin_banned: "BANEADO", admin_block_user: "Bloquear", admin_unblock_user: "Desbloquear",
     admin_unverified: "no verificado", admin_verify_user_err: "No se pudo actualizar el estado de verificación.",
     admin_tier_none: "No verificado", admin_tier_pro: "Verif. Pro", admin_tier_elite: "Verif. Elite",
@@ -882,6 +885,7 @@ const I18N = {
     admin_delete_post: "Διαγραφή ανάρτησης", admin_dismiss: "Απόρριψη", admin_resolved: "Επιλύθηκε",
     admin_search_name: "Αναζήτηση με όνομα…", admin_no_name: "(χωρίς όνομα)", admin_minor: "ΑΝΗΛΙΚΟΣ", admin_admin: "ADMIN",
     admin_joined: "εγγράφηκε πριν από ", admin_ago: "", admin_revoke_admin: "Ανάκληση admin", admin_make_admin: "Ορισμός ως admin",
+    admin_ai_unlimited_badge: "Απεριόριστο AI", admin_grant_ai_unlimited: "Χορήγηση απεριόριστου AI", admin_revoke_ai_unlimited: "Ανάκληση απεριόριστου AI", admin_ai_unlimited_hint: "Αφαιρεί το ημερήσιο όριο ερωτήσεων στο Scout — καμία αλλαγή στο πλάνο ή τη χρέωση.",
     admin_banned: "ΑΠΟΚΛΕΙΣΜΕΝΟΣ", admin_block_user: "Αποκλεισμός", admin_unblock_user: "Άρση αποκλεισμού",
     admin_unverified: "μη επαληθευμένο", admin_verify_user_err: "Δεν ήταν δυνατή η ενημέρωση της κατάστασης επαλήθευσης.",
     admin_tier_none: "Μη επαληθευμένο", admin_tier_pro: "Επαλ. Pro", admin_tier_elite: "Επαλ. Elite",
@@ -3880,7 +3884,7 @@ function AdminPanel({ onBack }) {
 
   async function loadUsers(query) {
     try {
-      let q = sb.from("profiles").select("id, full_name, plan, is_minor, is_admin, is_banned, occupation, verified_tier, created_at").order("created_at", { ascending: false }).limit(100);
+      let q = sb.from("profiles").select("id, full_name, plan, is_minor, is_admin, is_banned, occupation, verified_tier, ai_unlimited, created_at").order("created_at", { ascending: false }).limit(100);
       if (query && query.trim()) q = q.ilike("full_name", `%${query.trim()}%`);
       const { data, error } = await q;
       if (error) throw error;
@@ -3934,6 +3938,14 @@ function AdminPanel({ onBack }) {
   async function setUserPlan(id, val) {
     try { await sb.from("profiles").update({ plan: val }).eq("id", id); logAdmin("set_plan", id, { plan: val }); loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin set-plan error:", e); }
+  }
+  // migration 045 — profiles.ai_unlimited. Deliberately separate from
+  // is_admin (grants nothing but a higher Scout ceiling, no Admin Panel
+  // access) and from plan (no billing change) — api/scout.js's meter()
+  // checks this directly and skips the daily-limit check when it's true.
+  async function setUserAiUnlimited(id, val) {
+    try { await sb.from("profiles").update({ ai_unlimited: val }).eq("id", id); logAdmin(val ? "grant_ai_unlimited" : "revoke_ai_unlimited", id); loadUsers(userQuery); }
+    catch (e) { console.error("GOLSZ admin ai-unlimited error:", e); }
   }
   // Ban/delete need the real Supabase Admin API (service role key,
   // server-only), not just a profiles/table update — see
@@ -4372,6 +4384,7 @@ function AdminPanel({ onBack }) {
                   {u.is_minor && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_minor")}</span>}
                   {u.is_admin && <span style={{ fontSize: 9, color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_admin")}</span>}
                   {u.is_banned && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_banned")}</span>}
+                  {u.ai_unlimited && <span style={{ fontSize: 9, color: C.elite, border: `1px solid ${C.eliteBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_ai_unlimited_badge")}</span>}
                   {u.occupation && u.occupation !== "Player" && (
                     <span style={{
                       fontSize: 9,
@@ -4436,6 +4449,10 @@ function AdminPanel({ onBack }) {
                       fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
                       background: u.is_admin ? "#C8F1351a" : "transparent", color: u.is_admin ? C.lime : C.slate, border: `1px solid ${u.is_admin ? C.lime : C.line2}`,
                     }}>{u.is_admin ? t("admin_revoke_admin") : t("admin_make_admin")}</button>
+                    <button onClick={() => setUserAiUnlimited(u.id, !u.ai_unlimited)} title={t("admin_ai_unlimited_hint")} style={{
+                      fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
+                      background: u.ai_unlimited ? "#4A9EFF1a" : "transparent", color: u.ai_unlimited ? C.elite : C.slate, border: `1px solid ${u.ai_unlimited ? C.elite : C.line2}`,
+                    }}>{u.ai_unlimited ? t("admin_revoke_ai_unlimited") : t("admin_grant_ai_unlimited")}</button>
                     {u.id !== myUid && (
                       <button onClick={() => setUserBanned(u.id, !u.is_banned)} style={{
                         fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
