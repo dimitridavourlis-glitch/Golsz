@@ -304,7 +304,7 @@ const I18N = {
     blocked_title: "Blocked accounts", blocked_empty: "You haven't blocked anyone.", blocked_unblock: "Unblock",
     admin_checking: "Checking access…", admin_only: "Admins only.", admin_title: "Admin panel",
     admin_stat_users: "USERS", admin_stat_posts: "POSTS", admin_stat_events: "EVENTS", admin_stat_pending: "PENDING",
-    admin_tab_reports: "Reports", admin_tab_users: "Users", admin_tab_analytics: "Analytics", admin_tab_audit: "Audit log", admin_tab_moderation: "Moderation", admin_tab_errors: "Errors",
+    admin_tab_reports: "Reports", admin_tab_users: "Users", admin_tab_analytics: "Analytics", admin_tab_audit: "Audit log", admin_tab_moderation: "Moderation", admin_tab_errors: "Errors", admin_tab_system: "System", admin_view_auto_queue: "Auto Queue",
     admin_no_moderation_items: "Nothing flagged yet.", admin_minor_safety: "MINOR SAFETY", admin_confidence: "confidence",
     admin_no_errors: "No errors logged. All quiet.",
     admin_no_reports: "No reports yet.", admin_reported_by: "Reported by ", admin_post_removed: "Post already removed.",
@@ -494,7 +494,7 @@ const I18N = {
     blocked_title: "Comptes bloqués", blocked_empty: "Vous n'avez bloqué personne.", blocked_unblock: "Débloquer",
     admin_checking: "Vérification de l'accès…", admin_only: "Réservé aux administrateurs.", admin_title: "Panneau d'administration",
     admin_stat_users: "UTILISATEURS", admin_stat_posts: "PUBLICATIONS", admin_stat_events: "ÉVÉNEMENTS", admin_stat_pending: "EN ATTENTE",
-    admin_tab_reports: "Signalements", admin_tab_users: "Utilisateurs", admin_tab_analytics: "Analytique", admin_tab_audit: "Journal d'audit", admin_tab_moderation: "Modération", admin_tab_errors: "Erreurs",
+    admin_tab_reports: "Signalements", admin_tab_users: "Utilisateurs", admin_tab_analytics: "Analytique", admin_tab_audit: "Journal d'audit", admin_tab_moderation: "Modération", admin_tab_errors: "Erreurs", admin_tab_system: "Système", admin_view_auto_queue: "File automatique",
     admin_no_moderation_items: "Rien de signalé pour l'instant.", admin_minor_safety: "SÉCURITÉ MINEUR", admin_confidence: "confiance",
     admin_no_errors: "Aucune erreur enregistrée. Tout va bien.",
     admin_no_reports: "Aucun signalement pour l'instant.", admin_reported_by: "Signalé par ", admin_post_removed: "Publication déjà supprimée.",
@@ -684,7 +684,7 @@ const I18N = {
     blocked_title: "Cuentas bloqueadas", blocked_empty: "No has bloqueado a nadie.", blocked_unblock: "Desbloquear",
     admin_checking: "Comprobando acceso…", admin_only: "Solo administradores.", admin_title: "Panel de administración",
     admin_stat_users: "USUARIOS", admin_stat_posts: "PUBLICACIONES", admin_stat_events: "EVENTOS", admin_stat_pending: "PENDIENTES",
-    admin_tab_reports: "Reportes", admin_tab_users: "Usuarios", admin_tab_analytics: "Analítica", admin_tab_audit: "Registro de auditoría", admin_tab_moderation: "Moderación", admin_tab_errors: "Errores",
+    admin_tab_reports: "Reportes", admin_tab_users: "Usuarios", admin_tab_analytics: "Analítica", admin_tab_audit: "Registro de auditoría", admin_tab_moderation: "Moderación", admin_tab_errors: "Errores", admin_tab_system: "Sistema", admin_view_auto_queue: "Cola automática",
     admin_no_moderation_items: "Nada marcado todavía.", admin_minor_safety: "SEGURIDAD MENOR", admin_confidence: "confianza",
     admin_no_errors: "No hay errores registrados. Todo tranquilo.",
     admin_no_reports: "Aún no hay reportes.", admin_reported_by: "Reportado por ", admin_post_removed: "Publicación ya eliminada.",
@@ -874,7 +874,7 @@ const I18N = {
     blocked_title: "Αποκλεισμένοι λογαριασμοί", blocked_empty: "Δεν έχετε αποκλείσει κανέναν.", blocked_unblock: "Άρση αποκλεισμού",
     admin_checking: "Έλεγχος πρόσβασης…", admin_only: "Μόνο για διαχειριστές.", admin_title: "Πίνακας διαχείρισης",
     admin_stat_users: "ΧΡΗΣΤΕΣ", admin_stat_posts: "ΑΝΑΡΤΗΣΕΙΣ", admin_stat_events: "ΕΚΔΗΛΩΣΕΙΣ", admin_stat_pending: "ΕΚΚΡΕΜΗ",
-    admin_tab_reports: "Αναφορές", admin_tab_users: "Χρήστες", admin_tab_analytics: "Αναλυτικά", admin_tab_audit: "Αρχείο καταγραφής", admin_tab_moderation: "Συντονισμός", admin_tab_errors: "Σφάλματα",
+    admin_tab_reports: "Αναφορές", admin_tab_users: "Χρήστες", admin_tab_analytics: "Αναλυτικά", admin_tab_audit: "Αρχείο καταγραφής", admin_tab_moderation: "Συντονισμός", admin_tab_errors: "Σφάλματα", admin_tab_system: "Σύστημα", admin_view_auto_queue: "Αυτόματη ουρά",
     admin_no_moderation_items: "Τίποτα επισημασμένο ακόμα.", admin_minor_safety: "ΑΣΦΑΛΕΙΑ ΑΝΗΛΙΚΩΝ", admin_confidence: "βεβαιότητα",
     admin_no_errors: "Δεν έχουν καταγραφεί σφάλματα. Όλα ήσυχα.",
     admin_no_reports: "Δεν υπάρχουν αναφορές ακόμα.", admin_reported_by: "Αναφέρθηκε από ", admin_post_removed: "Η ανάρτηση έχει ήδη αφαιρεθεί.",
@@ -3799,7 +3799,16 @@ function AdminPanel({ onBack }) {
   const { t } = useLang();
   const [authorized, setAuthorized] = useState(null);
   const [myUid, setMyUid] = useState(null);
-  const [tab, setTab] = useState("reports");
+  // Reports and the AI auto-moderation queue are both "content needing
+  // review," and the audit log + error log are both low-frequency ops/
+  // developer visibility — grouping each pair under one top-level tab
+  // (same sub-nav pattern Analytics already uses below) took the top bar
+  // from 6 tabs down to 4, which is what actually made it hard to
+  // navigate: a 4-wide bar fits without horizontal scrolling, a 6-wide one
+  // didn't and was easy to mis-tap or scroll past.
+  const [tab, setTab] = useState("moderation");
+  const [moderationView, setModerationView] = useState("reports"); // "reports" | "queue"
+  const [systemView, setSystemView] = useState("audit"); // "audit" | "errors"
   const [stats, setStats] = useState(null);
   const [reports, setReports] = useState(null);
   const [users, setUsers] = useState(null);
@@ -4229,6 +4238,22 @@ function AdminPanel({ onBack }) {
     }}>{label}</button>
   );
 
+  // Shared sub-nav row for a tab that groups a couple of related views
+  // (Moderation: Reports/Auto Queue, System: Audit log/Errors, Analytics:
+  // Overview/Community/Scout AI/Common Questions) — one visual pattern
+  // instead of three copies of the same button row.
+  const subNav = (items, current, setter) => (
+    <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+      {items.map(([id, label]) => (
+        <button key={id} onClick={() => setter(id)} style={{
+          flex: 1, padding: "8px 0", borderRadius: 9, cursor: "pointer", fontFamily: "inherit",
+          fontSize: 11.5, fontWeight: 700, border: `1px solid ${current === id ? C.lime : C.line2}`,
+          background: current === id ? C.lime : "transparent", color: current === id ? C.ink : C.slate,
+        }}>{label}</button>
+      ))}
+    </div>
+  );
+
   if (authorized === null) return <div style={{ padding: 20, color: C.slate, fontSize: 13 }}>{t("admin_checking")}</div>;
   if (!authorized) return (
     <div style={{ padding: 20 }}>
@@ -4255,40 +4280,81 @@ function AdminPanel({ onBack }) {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 4, background: C.turf, borderRadius: 11, padding: 4, marginBottom: 14, overflowX: "auto" }} className="noscroll">
-        {tabBtn("reports", t("admin_tab_reports"))}
+      {/* 4 tabs at flex:1 fit one row on a phone screen with no scrolling
+          needed — the old 6-wide version needed overflowX scroll, which is
+          exactly what made it easy to mis-tap or scroll past a tab. */}
+      <div style={{ display: "flex", gap: 4, background: C.turf, borderRadius: 11, padding: 4, marginBottom: 14 }}>
+        {tabBtn("moderation", t("admin_tab_moderation"))}
         {tabBtn("users", t("admin_tab_users"))}
         {tabBtn("analytics", t("admin_tab_analytics"))}
-        {tabBtn("audit", t("admin_tab_audit"))}
-        {tabBtn("moderation", t("admin_tab_moderation"))}
-        {tabBtn("errors", t("admin_tab_errors"))}
+        {tabBtn("system", t("admin_tab_system"))}
       </div>
 
-      {tab === "reports" && (
+      {tab === "moderation" && (
         <div>
-          {reports === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
-          {reports && reports.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_reports")}</div>}
-          {reports && reports.map((r) => (
-            <div key={r.id} style={{ ...card, opacity: r.resolved_at ? 0.5 : 1 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: C.slate, marginBottom: 6 }}>
-                <span>{t("admin_reported_by")}{r.reporterName}{r.reason ? ` — "${r.reason}"` : ""}</span>
-                <span>{timeAgo(r.created_at)}</span>
-              </div>
-              {r.post ? (
-                <div style={{ fontSize: 13, marginBottom: 8 }}>
-                  <b>{r.authorName}:</b> {r.post.headline}{r.post.body ? ` — ${r.post.body}` : ""}
+          {subNav([
+            ["reports", t("admin_tab_reports")],
+            ["queue", t("admin_view_auto_queue")],
+          ], moderationView, setModerationView)}
+
+          {moderationView === "reports" && (
+            <div>
+              {reports === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+              {reports && reports.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_reports")}</div>}
+              {reports && reports.map((r) => (
+                <div key={r.id} style={{ ...card, opacity: r.resolved_at ? 0.5 : 1 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: C.slate, marginBottom: 6 }}>
+                    <span>{t("admin_reported_by")}{r.reporterName}{r.reason ? ` — "${r.reason}"` : ""}</span>
+                    <span>{timeAgo(r.created_at)}</span>
+                  </div>
+                  {r.post ? (
+                    <div style={{ fontSize: 13, marginBottom: 8 }}>
+                      <b>{r.authorName}:</b> {r.post.headline}{r.post.body ? ` — ${r.post.body}` : ""}
+                    </div>
+                  ) : <div style={{ fontSize: 13, color: C.slate, marginBottom: 8, fontStyle: "italic" }}>{t("admin_post_removed")}</div>}
+                  {!r.resolved_at ? (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {r.post && (
+                        <button onClick={() => deleteReportedPost(r.post_id, r.id)} style={{ ...iconBtn(C.amber), fontSize: 11.5 }}><Trash2 size={13} /> {t("admin_delete_post")}</button>
+                      )}
+                      <button onClick={() => resolveReport(r.id)} style={{ ...iconBtn(C.slate), fontSize: 11.5 }}>{t("admin_dismiss")}</button>
+                    </div>
+                  ) : <div style={{ fontSize: 10.5, color: C.lime }}>{t("admin_resolved")}</div>}
                 </div>
-              ) : <div style={{ fontSize: 13, color: C.slate, marginBottom: 8, fontStyle: "italic" }}>{t("admin_post_removed")}</div>}
-              {!r.resolved_at ? (
-                <div style={{ display: "flex", gap: 8 }}>
-                  {r.post && (
-                    <button onClick={() => deleteReportedPost(r.post_id, r.id)} style={{ ...iconBtn(C.amber), fontSize: 11.5 }}><Trash2 size={13} /> {t("admin_delete_post")}</button>
-                  )}
-                  <button onClick={() => resolveReport(r.id)} style={{ ...iconBtn(C.slate), fontSize: 11.5 }}>{t("admin_dismiss")}</button>
-                </div>
-              ) : <div style={{ fontSize: 10.5, color: C.lime }}>{t("admin_resolved")}</div>}
+              ))}
             </div>
-          ))}
+          )}
+
+          {moderationView === "queue" && (
+            <div>
+              {moderationQueue === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+              {moderationQueue && moderationQueue.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_moderation_items")}</div>}
+              {moderationQueue && moderationQueue.map((m) => {
+                const isBlock = m.decision === "block";
+                const dColor = isBlock ? C.amber : C.lime;
+                const dBorder = isBlock ? C.amberBorder : C.limeBorder;
+                return (
+                  <div key={m.id} style={{ ...card, opacity: m.resolved_at ? 0.5 : 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10.5, color: C.slate, marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: dColor, border: `1px solid ${dBorder}`, borderRadius: 999, padding: "2px 8px" }}>{m.decision.toUpperCase()}</span>
+                        {m.minor_safety_triggered && <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 999, padding: "2px 8px" }}>{t("admin_minor_safety")}</span>}
+                        <span>{m.authorName} · {m.content_type}</span>
+                      </div>
+                      <span>{timeAgo(m.created_at)}</span>
+                    </div>
+                    {m.text && <div style={{ fontSize: 13, marginBottom: 6, whiteSpace: "pre-wrap" }}>{m.text}</div>}
+                    <div style={{ fontSize: 11, color: C.slate, marginBottom: m.resolved_at ? 0 : 8 }}>
+                      <b>{m.primary_reason_code}</b>{m.rationale ? ` — ${m.rationale}` : ""} · {t("admin_confidence")} {Math.round((m.confidence || 0) * 100)}%
+                    </div>
+                    {!m.resolved_at && (
+                      <button onClick={() => resolveModerationItem(m.id)} style={{ ...iconBtn(C.slate), fontSize: 11.5 }}>{t("admin_dismiss")}</button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -4330,6 +4396,14 @@ function AdminPanel({ onBack }) {
                 </div>
                 <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{t("admin_joined")}{timeAgo(u.created_at)}{t("admin_ago")}</div>
               </div>
+              {/* Only the two controls actually changed often (plan, verified
+                  tier) stay on the default row. Make/revoke admin, ban, and
+                  delete are rarer and more consequential — they used to sit
+                  in the same row as everything else, which made this the
+                  single busiest, easiest-to-mis-tap row in the whole panel.
+                  They now live behind the same expand toggle activity
+                  already used, so the row's default state is calm and the
+                  serious actions take one deliberate extra tap to reach. */}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
                 <select value={u.plan} onChange={(e) => setUserPlan(u.id, e.target.value)} style={{ ...field, padding: "5px 7px", fontSize: 11.5 }}>
                   <option value="starter">starter</option><option value="pro">pro</option><option value="elite">elite</option>
@@ -4348,31 +4422,33 @@ function AdminPanel({ onBack }) {
                     );
                   })}
                 </div>
-                <button onClick={() => setUserAdmin(u.id, !u.is_admin)} style={{
-                  fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                  background: u.is_admin ? "#C8F1351a" : "transparent", color: u.is_admin ? C.lime : C.slate, border: `1px solid ${u.is_admin ? C.lime : C.line2}`,
-                }}>{u.is_admin ? t("admin_revoke_admin") : t("admin_make_admin")}</button>
-                {u.id !== myUid && (
-                  <button onClick={() => setUserBanned(u.id, !u.is_banned)} style={{
-                    fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                    background: u.is_banned ? "#C89B3C1a" : "transparent", color: u.is_banned ? C.amber : C.slate, border: `1px solid ${u.is_banned ? C.amber : C.line2}`,
-                  }}>{u.is_banned ? t("admin_unblock_user") : t("admin_block_user")}</button>
-                )}
-                {u.id !== myUid && (
-                  <button onClick={() => deleteUser(u.id)} title={t("admin_delete_user")} style={{
-                    display: "flex", alignItems: "center", padding: "5px 7px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                    background: "transparent", color: C.amber, border: `1px solid ${C.amberBorder}`,
-                  }}><Trash2 size={13} /></button>
-                )}
                 <button onClick={() => toggleUserActivity(u.id)} title={t("admin_view_activity")} style={{
                   display: "flex", alignItems: "center", padding: "5px 7px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
                   background: expandedActivityId === u.id ? "#C8F1351a" : "transparent", color: expandedActivityId === u.id ? C.lime : C.slate,
                   border: `1px solid ${expandedActivityId === u.id ? C.lime : C.line2}`,
-                }}><History size={13} /></button>
+                }}>{expandedActivityId === u.id ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>
               </div>
 
               {expandedActivityId === u.id && (
                 <div style={{ width: "100%", marginTop: 4, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                    <button onClick={() => setUserAdmin(u.id, !u.is_admin)} style={{
+                      fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
+                      background: u.is_admin ? "#C8F1351a" : "transparent", color: u.is_admin ? C.lime : C.slate, border: `1px solid ${u.is_admin ? C.lime : C.line2}`,
+                    }}>{u.is_admin ? t("admin_revoke_admin") : t("admin_make_admin")}</button>
+                    {u.id !== myUid && (
+                      <button onClick={() => setUserBanned(u.id, !u.is_banned)} style={{
+                        fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
+                        background: u.is_banned ? "#C89B3C1a" : "transparent", color: u.is_banned ? C.amber : C.slate, border: `1px solid ${u.is_banned ? C.amber : C.line2}`,
+                      }}>{u.is_banned ? t("admin_unblock_user") : t("admin_block_user")}</button>
+                    )}
+                    {u.id !== myUid && (
+                      <button onClick={() => deleteUser(u.id)} title={t("admin_delete_user")} style={{
+                        display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
+                        background: "transparent", color: C.amber, border: `1px solid ${C.amberBorder}`,
+                      }}><Trash2 size={12} /> {t("admin_delete_user")}</button>
+                    )}
+                  </div>
                   {!userActivity[u.id] && userActivity[u.id] !== false && <div style={{ fontSize: 11.5, color: C.slate }}>{t("loading")}</div>}
                   {userActivity[u.id] === false && <div style={{ fontSize: 11.5, color: C.slate }}>{t("admin_activity_err")}</div>}
                   {userActivity[u.id] && (
@@ -4403,15 +4479,12 @@ function AdminPanel({ onBack }) {
                   groups them into findable views instead of removing any of
                   them. Manage events stays outside this nav (below, always
                   visible) since it's a tool, not an analytics view. */}
-              <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-                {[["overview", t("admin_view_overview")], ["community", t("admin_view_community")], ["scoutai", t("admin_view_scout_ai")], ["commonqs", t("admin_view_common_qs")]].map(([id, label]) => (
-                  <button key={id} onClick={() => setAnalyticsView(id)} style={{
-                    flex: 1, padding: "8px 0", borderRadius: 9, cursor: "pointer", fontFamily: "inherit",
-                    fontSize: 11.5, fontWeight: 700, border: `1px solid ${analyticsView === id ? C.lime : C.line2}`,
-                    background: analyticsView === id ? C.lime : "transparent", color: analyticsView === id ? C.ink : C.slate,
-                  }}>{label}</button>
-                ))}
-              </div>
+              {subNav([
+                ["overview", t("admin_view_overview")],
+                ["community", t("admin_view_community")],
+                ["scoutai", t("admin_view_scout_ai")],
+                ["commonqs", t("admin_view_common_qs")],
+              ], analyticsView, setAnalyticsView)}
 
               {analyticsView === "overview" && (
                 <>
@@ -4634,80 +4707,58 @@ function AdminPanel({ onBack }) {
         </div>
       )}
 
-      {tab === "audit" && (
+      {tab === "system" && (
         <div>
-          {auditLog === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
-          {auditLog && auditLog.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_audit_log")}</div>}
-          {auditLog && auditLog.map((a) => (
-            <div key={a.id} style={card}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: C.slate, marginBottom: 4 }}>
-                <span>{a.adminName}</span>
-                <span>{timeAgo(a.created_at)}</span>
-              </div>
-              <div style={{ fontSize: 13 }}>
-                <b>{a.action}</b>
-                {a.detail ? <span style={{ color: C.slate }}> — {JSON.stringify(a.detail)}</span> : null}
-              </div>
-              {a.target_id && <div style={{ fontSize: 10, color: C.slate, fontFamily: "'Space Mono', monospace", marginTop: 3 }}>{t("admin_audit_target")}{a.target_id}</div>}
-            </div>
-          ))}
-        </div>
-      )}
+          {subNav([
+            ["audit", t("admin_tab_audit")],
+            ["errors", t("admin_tab_errors")],
+          ], systemView, setSystemView)}
 
-      {tab === "moderation" && (
-        <div>
-          {moderationQueue === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
-          {moderationQueue && moderationQueue.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_moderation_items")}</div>}
-          {moderationQueue && moderationQueue.map((m) => {
-            const isBlock = m.decision === "block";
-            const dColor = isBlock ? C.amber : C.lime;
-            const dBorder = isBlock ? C.amberBorder : C.limeBorder;
-            return (
-              <div key={m.id} style={{ ...card, opacity: m.resolved_at ? 0.5 : 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10.5, color: C.slate, marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: dColor, border: `1px solid ${dBorder}`, borderRadius: 999, padding: "2px 8px" }}>{m.decision.toUpperCase()}</span>
-                    {m.minor_safety_triggered && <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 999, padding: "2px 8px" }}>{t("admin_minor_safety")}</span>}
-                    <span>{m.authorName} · {m.content_type}</span>
+          {systemView === "audit" && (
+            <div>
+              {auditLog === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+              {auditLog && auditLog.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_audit_log")}</div>}
+              {auditLog && auditLog.map((a) => (
+                <div key={a.id} style={card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10.5, color: C.slate, marginBottom: 4 }}>
+                    <span>{a.adminName}</span>
+                    <span>{timeAgo(a.created_at)}</span>
                   </div>
-                  <span>{timeAgo(m.created_at)}</span>
+                  <div style={{ fontSize: 13 }}>
+                    <b>{a.action}</b>
+                    {a.detail ? <span style={{ color: C.slate }}> — {JSON.stringify(a.detail)}</span> : null}
+                  </div>
+                  {a.target_id && <div style={{ fontSize: 10, color: C.slate, fontFamily: "'Space Mono', monospace", marginTop: 3 }}>{t("admin_audit_target")}{a.target_id}</div>}
                 </div>
-                {m.text && <div style={{ fontSize: 13, marginBottom: 6, whiteSpace: "pre-wrap" }}>{m.text}</div>}
-                <div style={{ fontSize: 11, color: C.slate, marginBottom: m.resolved_at ? 0 : 8 }}>
-                  <b>{m.primary_reason_code}</b>{m.rationale ? ` — ${m.rationale}` : ""} · {t("admin_confidence")} {Math.round((m.confidence || 0) * 100)}%
-                </div>
-                {!m.resolved_at && (
-                  <button onClick={() => resolveModerationItem(m.id)} style={{ ...iconBtn(C.slate), fontSize: 11.5 }}>{t("admin_dismiss")}</button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+              ))}
+            </div>
+          )}
 
-      {tab === "errors" && (
-        <div>
-          {errorLog === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
-          {errorLog && errorLog.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_errors")}</div>}
-          {errorLog && errorLog.map((e) => {
-            const isServer = e.source !== "client";
-            const eColor = isServer ? C.amber : C.slate;
-            const eBorder = isServer ? C.amberBorder : C.line2;
-            return (
-              <div key={e.id} style={{ ...card, opacity: e.resolved_at ? 0.5 : 1 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10.5, color: C.slate, marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
-                  <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: eColor, border: `1px solid ${eBorder}`, borderRadius: 999, padding: "2px 8px" }}>{e.source}</span>
-                  <span>{timeAgo(e.created_at)}</span>
-                </div>
-                <div style={{ fontSize: 13, marginBottom: 6 }}>{e.message}</div>
-                {e.url && <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 6, wordBreak: "break-all" }}>{e.url}</div>}
-                {e.detail && <div style={{ fontSize: 10.5, color: C.slate, marginBottom: e.resolved_at ? 0 : 8, wordBreak: "break-word" }}>{JSON.stringify(e.detail)}</div>}
-                {!e.resolved_at && (
-                  <button onClick={() => resolveErrorLogItem(e.id)} style={{ ...iconBtn(C.slate), fontSize: 11.5 }}>{t("admin_dismiss")}</button>
-                )}
-              </div>
-            );
-          })}
+          {systemView === "errors" && (
+            <div>
+              {errorLog === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+              {errorLog && errorLog.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_errors")}</div>}
+              {errorLog && errorLog.map((e) => {
+                const isServer = e.source !== "client";
+                const eColor = isServer ? C.amber : C.slate;
+                const eBorder = isServer ? C.amberBorder : C.line2;
+                return (
+                  <div key={e.id} style={{ ...card, opacity: e.resolved_at ? 0.5 : 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10.5, color: C.slate, marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
+                      <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: eColor, border: `1px solid ${eBorder}`, borderRadius: 999, padding: "2px 8px" }}>{e.source}</span>
+                      <span>{timeAgo(e.created_at)}</span>
+                    </div>
+                    <div style={{ fontSize: 13, marginBottom: 6 }}>{e.message}</div>
+                    {e.url && <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 6, wordBreak: "break-all" }}>{e.url}</div>}
+                    {e.detail && <div style={{ fontSize: 10.5, color: C.slate, marginBottom: e.resolved_at ? 0 : 8, wordBreak: "break-word" }}>{JSON.stringify(e.detail)}</div>}
+                    {!e.resolved_at && (
+                      <button onClick={() => resolveErrorLogItem(e.id)} style={{ ...iconBtn(C.slate), fontSize: 11.5 }}>{t("admin_dismiss")}</button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
