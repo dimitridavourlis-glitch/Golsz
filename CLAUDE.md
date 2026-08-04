@@ -1060,9 +1060,13 @@ you add another place that surfaces a Message button, it doesn't need any follow
   elsewhere on the home page (the three journey sections, the footer) still link to `contact.html`, whose
   waitlist form uses the exact same client-only fake-success `data-waitlist-form` handling in `js/main.js`.
   Flagged, not yet fixed — needs a decision (wire it to a real backend, or remove it there too).
-- **Non-mechanical Pro/Elite features.** Only Scout's daily limit is actually gated by `profiles.plan`
-  today. Marketing bullets like "full verified passport" or "priority visibility" aren't backed by any
-  distinct mechanic anywhere in the app — gating those needs a product decision on what they mean first.
+- **Pricing is $6/$14/$30 (Starter/Pro/Elite), each gated by a real AI Scout daily question limit** — 8/15/20
+  respectively, enforced in `api/scout.js` and led with as the first bullet on each plan card (not vague
+  marketing language). Stripe Payment Links were re-created in test/sandbox mode for these exact prices
+  (2026-08-05) — Starter now has its own link too, since it moved from free to paid. Still true, though:
+  secondary bullets like "full verified passport" or "priority visibility" aren't backed by any distinct
+  mechanic anywhere in the app beyond the question limit — gating those further needs a product decision
+  on what they mean first.
 - **`coaches`/`agents` now have real RLS (migration 027)** — owner-only (`id = auth.uid()`), same simple
   shape as `push_subscriptions`. Still unused by the app today (every occupation's extra fields live in
   `athletes` — see `ProfileEditor` — so nothing actually writes to these two tables yet), but they're no
