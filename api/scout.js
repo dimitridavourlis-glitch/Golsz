@@ -77,15 +77,16 @@ async function logError(source, message, detail) {
   } catch (e) { console.error("GOLSZ error-log write failed:", e); }
 }
 
-// Writes one row to scout_routing_log (migrations 039 + 040) per real
+// Writes one row to scout_routing_log (migrations 039 + 040 + 044) per real
 // reply — which model actually answered (haiku/sonnet/database), the
-// classifier's intent/confidence, real token usage, and an estimated
-// dollar cost for that one reply. Never the question or answer text
-// itself. Powers the Admin Panel's "AI Model Usage" card
+// classifier's intent/confidence, real token usage, an estimated dollar
+// cost for that one reply, the athlete's subscription tier, and (sonnet
+// only) why it escalated past Haiku. Never the question or answer text
+// itself, never a user_id. Powers the Admin Panel's "AI Model Usage" card
 // (admin_scout_model_mix()) and monthly cost cards
 // (admin_scout_cost_summary()). Self-contained and best-effort, same as
 // logError — a logging failure must never affect the real response.
-async function logRouting(answeredBy, classification, model, usage) {
+async function logRouting(answeredBy, classification, model, usage, extra) {
   try {
     const supaUrl = process.env.SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_KEY;
@@ -102,9 +103,25 @@ async function logRouting(answeredBy, classification, model, usage) {
         cache_creation_input_tokens: (usage && usage.cache_creation_input_tokens) || null,
         output_tokens: (usage && usage.output_tokens) || null,
         estimated_cost_usd: estimateCost(model, usage),
+        plan: (extra && extra.plan) || null,
+        escalation_reason: (extra && extra.escalationReason) || null,
       }),
     });
   } catch (e) { console.error("GOLSZ routing-log write failed:", e); }
+}
+
+// Explains, for telemetry only, why a message escalated past Haiku to
+// Sonnet — never shown to the athlete. Lets the Admin Panel eventually
+// answer "is Sonnet usage actually driven by real complexity, or mostly
+// classifier misses/timeouts?" before anyone designs a tier-based Sonnet
+// quota around it.
+function escalationReason(classification) {
+  if (!classification || classification.error) return "classifier_unavailable";
+  if (classification.raw) return "classifier_unparseable";
+  if (classification.needs_tool) return "needs_tool";
+  if (!HAIKU_INTENTS.has(classification.intent)) return "intent_requires_deep_reasoning";
+  if (typeof classification.confidence === "number" && classification.confidence < HAIKU_CONFIDENCE_THRESHOLD) return "low_confidence";
+  return "haiku_requested_tool"; // only remaining path here: was Haiku-eligible but Haiku itself asked for a tool
 }
 
 // Feeds the Admin Panel's "Commonly Asked Questions" view (migration
@@ -580,10 +597,12 @@ export default async function handler(req, res) {
   // can also use it — persistProfileUpdates() needs the same verified id,
   // never a value trusted from the request body.
   let userId = null;
+  let userPlan = null; // threaded down to logRouting() below — pure telemetry, no gating logic depends on it yet
   if (process.env.SUPABASE_URL) {
     userId = await getUserId(req.headers.authorization);
     if (!userId) return res.status(401).json({ error: "Sign in to use the Scout." });
     const { plan, isAdmin, calls } = await meter(userId);
+    userPlan = plan;
     if (!isAdmin) {
       const limit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 25)
         : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 10)
@@ -623,7 +642,7 @@ export default async function handler(req, res) {
         content: [{ type: "text", text: JSON.stringify({ reply: faqMatch.answer, profile_updates: null }) }],
         stop_reason: "end_turn",
       };
-      await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 });
+      await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan });
       return res.status(200).json(payload);
     }
     await logFaqMiss(classification, latestUserText(conversation));
@@ -652,7 +671,7 @@ export default async function handler(req, res) {
       const data = await r.json();
       if (r.ok && data.stop_reason !== "tool_use") {
         console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
-        await logRouting("haiku", classification, HAIKU_MODEL, data.usage);
+        await logRouting("haiku", classification, HAIKU_MODEL, data.usage, { plan: userPlan });
         await persistProfileUpdates(userId, extractProfileUpdates(data));
         return res.status(200).json(data);
       }
@@ -732,7 +751,7 @@ export default async function handler(req, res) {
       data = await r.json();
       if (!r.ok) return res.status(r.status).json(data);
     }
-    await logRouting("sonnet", classification, process.env.SCOUT_MODEL || "claude-sonnet-5", data.usage);
+    await logRouting("sonnet", classification, process.env.SCOUT_MODEL || "claude-sonnet-5", data.usage, { plan: userPlan, escalationReason: escalationReason(classification) });
     await persistProfileUpdates(userId, extractProfileUpdates(data));
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
