@@ -604,8 +604,8 @@ export default async function handler(req, res) {
     const { plan, isAdmin, calls } = await meter(userId);
     userPlan = plan;
     if (!isAdmin) {
-      const limit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 25)
-        : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 10)
+      const limit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
+        : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 15)
         : Number(process.env.FREE_DAILY_LIMIT || 8);
       if (calls > limit) {
         const message = plan === "elite"
