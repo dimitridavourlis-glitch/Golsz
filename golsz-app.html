@@ -5566,6 +5566,15 @@ function Auth({ onDone, paidReturn }) {
   const [forgotMode, setForgotMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [confirmPolling, setConfirmPolling] = useState(false);
+  // Real production incident: a user signed up, never received Supabase's
+  // confirmation email (its default sender is rate-limited and easily
+  // lands in spam — see CLAUDE.md), and came back later to log in with no
+  // way to recover. Login threw "Email not confirmed" with no path
+  // forward. This tracks that specific failure so the error box can offer
+  // a real fix (resend) instead of just restating the problem.
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState("");
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
   const pollRef = useRef(null);
   const isSignup = mode === "signup";
 
@@ -5618,6 +5627,28 @@ function Auth({ onDone, paidReturn }) {
     } finally { setBusy(false); }
   }
 
+  // Self-service recovery for the exact incident this was built for: a
+  // signup whose confirmation email never arrived. Resends it, then
+  // starts the same quiet auto-login polling signup already uses (see
+  // startConfirmPolling above) — the moment the athlete confirms from
+  // whatever device they open the new email on, this tab logs them in
+  // with no need to come back and log in by hand a second time.
+  async function resendConfirmation() {
+    if (!sb || !unconfirmedEmail || resendBusy) return;
+    // Deliberately doesn't clear `err` here — the original "hasn't been
+    // confirmed" explanation stays visible alongside the new "sent" line
+    // below rather than the whole box vanishing when the message resets.
+    setResendBusy(true);
+    try {
+      const { error } = await sb.auth.resend({ type: "signup", email: unconfirmedEmail });
+      if (error) throw error;
+      setResendSent(true);
+      startConfirmPolling(unconfirmedEmail, pw);
+    } catch (e) {
+      setErr((e && e.message) || "Couldn't resend the confirmation email. Try again in a minute.");
+    } finally { setResendBusy(false); }
+  }
+
   const dobNum = { d: parseInt(dobDay, 10), m: parseInt(dobMonth, 10), y: parseInt(dobYear, 10) };
   const dobOk = dobDay && dobMonth && dobYear
     && dobNum.d >= 1 && dobNum.d <= 31
@@ -5648,6 +5679,8 @@ function Auth({ onDone, paidReturn }) {
     if (isSignup && website.trim()) return;
     setErr("");
     setNotice("");
+    setUnconfirmedEmail("");
+    setResendSent(false);
     // preview mode: no backend configured -> behave like the demo
     if (!sb) {
       if (isSignup && selected.price > 0 && STRIPE_LINKS[plan]) { window.location.href = STRIPE_LINKS[plan]; return; }
@@ -5713,7 +5746,17 @@ function Auth({ onDone, paidReturn }) {
       if (checkoutTab) { try { checkoutTab.close(); } catch (e2) {} }
       console.error("GOLSZ auth error:", e);
       let msg = "Something went wrong. Try again.";
-      if (e && typeof e.message === "string" && e.message.trim()) {
+      // The exact failure a real user hit: signed up, the confirmation
+      // email never arrived, came back later to log in and got stuck with
+      // no way forward. Supabase surfaces this as code "email_not_confirmed"
+      // (checked first — message text has changed across supabase-js
+      // versions, the code hasn't) or the message "Email not confirmed".
+      // Give a real recovery path here instead of just showing the error.
+      const isUnconfirmed = e && (e.code === "email_not_confirmed" || /email.*not.*confirmed/i.test(e.message || ""));
+      if (isUnconfirmed) {
+        setUnconfirmedEmail(email.trim());
+        msg = "Your email address hasn't been confirmed yet, so we can't sign you in. This usually means the confirmation email never reached your inbox — resend it below.";
+      } else if (e && typeof e.message === "string" && e.message.trim()) {
         msg = e.message;
       } else if (e instanceof TypeError) {
         msg = "Couldn't reach Supabase — check your internet connection, that the project isn't paused, and that this page is served over http(s), not opened as a local file.";
@@ -5864,6 +5907,18 @@ function Auth({ onDone, paidReturn }) {
             <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
               <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignup ? t("auth_couldnt_signup") : t("auth_couldnt_login")}</div>
               <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
+              {unconfirmedEmail && !resendSent && (
+                <button onClick={resendConfirmation} disabled={resendBusy} style={{
+                  marginTop: 10, width: "100%", background: "transparent", border: `1px solid ${C.amber}`, color: C.warnText,
+                  borderRadius: 9, padding: "9px", fontWeight: 700, fontSize: 12.5, cursor: resendBusy ? "default" : "pointer",
+                  fontFamily: "inherit", opacity: resendBusy ? 0.6 : 1,
+                }}>{resendBusy ? "Resending…" : "Resend confirmation email"}</button>
+              )}
+              {resendSent && (
+                <div style={{ marginTop: 8, color: C.lime, fontSize: 12.5, fontWeight: 600 }}>
+                  Sent — check {unconfirmedEmail} (and spam). This page will sign you in automatically once you confirm it.
+                </div>
+              )}
             </div>
           )}
 
