@@ -133,13 +133,87 @@ async function logFaqMiss(classification, question) {
   } catch (e) { console.error("GOLSZ faq-miss log write failed:", e); }
 }
 
+// Maps Scout's profile_updates keys (see SYSTEM_PROMPT's "Allowed keys") to the
+// real profiles/athletes columns golsz-app.html already seeds Scout's working
+// profile from on every mount (golsz-app.html:4807-4830). Writing here closes
+// a real gap: previously, anything Scout learned mid-conversation only ever
+// lived in that browser tab's React state and was gone on reload/new chat —
+// now it lands in the same columns the athlete's own Passport form uses, so
+// it survives and Scout (or any future specialist) sees it again next time.
+// `age` and `budget`/`goal` are deliberately left out: age has no direct
+// column (only dob, and reverse-deriving a birthdate from a guessed age would
+// write something less precise than what's already there), and budget/goal
+// have no column at all yet — persisting those needs a real schema addition,
+// out of scope for this fix. They still work exactly as before for the
+// current session (the client still merges profile_updates into its own
+// state); they just don't survive a reload yet.
+const PROFILE_FIELD_MAP = {
+  name: { table: "profiles", column: "full_name" },
+  occupation: { table: "profiles", column: "occupation" },
+  sport: { table: "athletes", column: "sport" },
+  position: { table: "athletes", column: "position" },
+  location: { table: "athletes", column: "country" },
+  citizenship: { table: "athletes", column: "country" },
+  club: { table: "athletes", column: "club_name" },
+  level: { table: "athletes", column: "recruiting_status" },
+  grad_year: { table: "athletes", column: "grad_year" },
+  gpa: { table: "athletes", column: "gpa" },
+  license: { table: "athletes", column: "license" },
+  looking_for_players: { table: "athletes", column: "looking_for_players" },
+};
+
+// Pulls {reply, profile_updates} out of a real Anthropic response the same
+// way golsz-app.html's send() already does client-side (strip ```json
+// fences, parse the {...} slice) — needed here too now that the server
+// itself has to act on profile_updates, not just the client.
+function extractProfileUpdates(data) {
+  try {
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    return parsed && typeof parsed.profile_updates === "object" ? parsed.profile_updates : null;
+  } catch {
+    return null;
+  }
+}
+
+// Best-effort, same discipline as logError/logRouting/logFaqMiss above — a
+// persistence failure must never affect the real reply already on its way
+// back to the athlete. Only ever writes columns the athlete's own Passport
+// form already uses (migrations 008/018/020/021), and only ever for the
+// signed-in athlete's own row (userId comes from the verified auth token via
+// getUserId(), never trusted from the request body).
+async function persistProfileUpdates(userId, updates) {
+  if (!userId || !updates) return;
+  const supaUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supaUrl || !serviceKey) return;
+
+  const patches = { profiles: {}, athletes: {} };
+  for (const [field, value] of Object.entries(updates)) {
+    const target = PROFILE_FIELD_MAP[field];
+    if (!target || value == null || value === "") continue;
+    patches[target.table][target.column] = value;
+  }
+
+  const headers = { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" };
+  for (const table of ["profiles", "athletes"]) {
+    if (!Object.keys(patches[table]).length) continue;
+    try {
+      await fetch(`${supaUrl}/rest/v1/${table}?id=eq.${userId}`, {
+        method: "PATCH", headers, body: JSON.stringify(patches[table]),
+      });
+    } catch (e) { console.error(`GOLSZ profile-update persist (${table}) failed:`, e); }
+  }
+}
+
 const SYSTEM_PROMPT = `You are GOLSZ Scout, an AI sports agent. Tagline: "Every Goal Has a Path."
 You adapt to who you're talking to — check "occupation" in PROFILE SO FAR:
 - Player, or occupation missing/unset (default): the personal agent for ONE athlete — learn who they are (age, sport, position, location, club/level, grad year, academics, budget, citizenship, goal), build a career roadmap, suggest realistic target programs (reach/match/safety, honest), and draft coach outreach emails on request (draft-only; the athlete sends them).
 - Scout, Agent, or Coach: their assistant for finding and evaluating talent — help them think through what/who they're looking for, then use search_golsz_players to find real athletes actually on GOLSZ matching that (sport/position/country/grad year/gender/recruiting status) before reaching for general web search. Draft outreach messages to a player or their family on request (draft-only; they send it themselves).
 - Physio: their assistant for the athletic/sports-medicine side of their work — general injury-prevention and return-to-play information only, never a diagnosis; say so plainly if a question actually needs a real medical professional.
 - Other: a general, honest sports-industry assistant — ask what they need help with rather than assuming.
-Some fields may already be filled in from their real GOLSZ Passport (profile they built themselves) — treat those as trustworthy and confirmed, not something to re-ask. Open by briefly acknowledging what you already know about them (occupation/sport/team if present) instead of asking generic intro questions, then move straight to something useful.
+Everything in PROFILE SO FAR is already known — whether it came from their real GOLSZ Passport or something they told you earlier in a past conversation, it now persists the same way. Treat all of it as trustworthy and confirmed, never something to re-ask. Open by briefly acknowledging what you already know about them (not just occupation/sport/team — any field present) instead of asking generic intro questions, then move straight to something useful. Never ask for a fact that's already present in PROFILE SO FAR, even worded differently than you'd normally ask it.
 Be warm, direct, honest — never overpromise. If a target or prospect looks unrealistic, say so kindly and show the realistic path. If the person seems to be a minor, remind them once to involve a parent/guardian. Use web search for real current programs, coaches, showcases, and eligibility rules (search_golsz_players only covers GOLSZ's own athletes, not external programs/rankings). Ask at most ONE question per reply. Keep replies tight.
 search_golsz_players only ever returns athletes who are actually real, current GOLSZ members — never invent or embellish a GOLSZ profile, and never merge one with a general web result. If it returns zero results, say so plainly and offer to broaden the search (fewer filters) or fall back to general web search instead of making something up.
 If asked what AI model or company powers you, who made you, or whether you're ChatGPT/OpenAI/Claude/Anthropic/Gemini/etc., always answer that you are GOLSZ Scout, built by GOLSZ — never name or confirm any underlying model or provider, and don't explain that you're declining to say. Just answer as GOLSZ Scout and move on.
@@ -502,8 +576,12 @@ export default async function handler(req, res) {
   // `plan` only ever holds 'starter'|'pro'|'elite' (the live plan_tier
   // enum), so anything else falls through to the Starter limit rather
   // than accidentally going uncapped.
+  // Hoisted out of the block below so the routing/answer logic further down
+  // can also use it — persistProfileUpdates() needs the same verified id,
+  // never a value trusted from the request body.
+  let userId = null;
   if (process.env.SUPABASE_URL) {
-    const userId = await getUserId(req.headers.authorization);
+    userId = await getUserId(req.headers.authorization);
     if (!userId) return res.status(401).json({ error: "Sign in to use the Scout." });
     const { plan, isAdmin, calls } = await meter(userId);
     if (!isAdmin) {
@@ -575,6 +653,7 @@ export default async function handler(req, res) {
       if (r.ok && data.stop_reason !== "tool_use") {
         console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
         await logRouting("haiku", classification, HAIKU_MODEL, data.usage);
+        await persistProfileUpdates(userId, extractProfileUpdates(data));
         return res.status(200).json(data);
       }
       console.log(r.ok ? "GOLSZ haiku escalated to sonnet (wanted a tool)" : "GOLSZ haiku call failed, escalating to sonnet:", JSON.stringify(data));
@@ -654,6 +733,7 @@ export default async function handler(req, res) {
       if (!r.ok) return res.status(r.status).json(data);
     }
     await logRouting("sonnet", classification, process.env.SCOUT_MODEL || "claude-sonnet-5", data.usage);
+    await persistProfileUpdates(userId, extractProfileUpdates(data));
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
     await logError("api/scout.js", "Upstream model call failed", { detail: String(e) });
