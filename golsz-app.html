@@ -303,6 +303,7 @@ const I18N = {
     passport_no_followers_self: "No followers yet — your Discover and Feed activity is how people find you.",
     passport_admin_panel: "Admin panel", passport_terms: "Terms & Conditions", passport_athlete_fallback: "GOLSZ Athlete",
     passport_foot: "FOOT", passport_share: "Share", passport_share_copied: "Link copied — anyone can view this, no account needed",
+    passport_share_err: "Couldn't turn on sharing. Try again.", passport_is_public: "Your Passport is public via link", passport_make_private: "Make private",
     public_passport_not_found: "This passport doesn't exist or the link is broken.", public_passport_private: "This passport isn't public yet.", public_passport_cta: "Get your own GOLSZ Passport →",
     blocked_title: "Blocked accounts", blocked_empty: "You haven't blocked anyone.", blocked_unblock: "Unblock",
     admin_checking: "Checking access…", admin_only: "Admins only.", admin_title: "Admin panel",
@@ -496,6 +497,7 @@ const I18N = {
     passport_no_followers_self: "Pas encore d'abonnés — votre activité sur Découvrir et le fil est ce qui permet aux gens de vous trouver.",
     passport_admin_panel: "Panneau d'administration", passport_terms: "Conditions d'utilisation", passport_athlete_fallback: "Athlète GOLSZ",
     passport_foot: "PIED", passport_share: "Partager", passport_share_copied: "Lien copié — visible par tous, aucun compte requis",
+    passport_share_err: "Impossible d'activer le partage. Réessayez.", passport_is_public: "Votre Passeport est public via un lien", passport_make_private: "Rendre privé",
     public_passport_not_found: "Ce passeport n'existe pas ou le lien est cassé.", public_passport_private: "Ce passeport n'est pas encore public.", public_passport_cta: "Obtenez votre propre Passeport GOLSZ →",
     blocked_title: "Comptes bloqués", blocked_empty: "Vous n'avez bloqué personne.", blocked_unblock: "Débloquer",
     admin_checking: "Vérification de l'accès…", admin_only: "Réservé aux administrateurs.", admin_title: "Panneau d'administration",
@@ -689,6 +691,7 @@ const I18N = {
     passport_no_followers_self: "Aún no tienes seguidores — tu actividad en Descubrir y el feed es cómo la gente te encuentra.",
     passport_admin_panel: "Panel de administración", passport_terms: "Términos y condiciones", passport_athlete_fallback: "Atleta de GOLSZ",
     passport_foot: "PIE", passport_share: "Compartir", passport_share_copied: "Enlace copiado — cualquiera puede verlo, sin necesidad de cuenta",
+    passport_share_err: "No se pudo activar el uso compartido. Inténtalo de nuevo.", passport_is_public: "Tu Pasaporte es público mediante enlace", passport_make_private: "Hacer privado",
     public_passport_not_found: "Este pasaporte no existe o el enlace está roto.", public_passport_private: "Este pasaporte aún no es público.", public_passport_cta: "Consigue tu propio Pasaporte GOLSZ →",
     blocked_title: "Cuentas bloqueadas", blocked_empty: "No has bloqueado a nadie.", blocked_unblock: "Desbloquear",
     admin_checking: "Comprobando acceso…", admin_only: "Solo administradores.", admin_title: "Panel de administración",
@@ -882,6 +885,7 @@ const I18N = {
     passport_no_followers_self: "Δεν έχετε ακόλουθους ακόμα — η δραστηριότητά σας στην Ανακάλυψη και τη ροή είναι ο τρόπος να σας βρουν.",
     passport_admin_panel: "Πίνακας διαχείρισης", passport_terms: "Όροι & Προϋποθέσεις", passport_athlete_fallback: "Αθλητής GOLSZ",
     passport_foot: "ΠΟΔΙ", passport_share: "Κοινοποίηση", passport_share_copied: "Ο σύνδεσμος αντιγράφηκε — ορατός σε όλους, χωρίς λογαριασμό",
+    passport_share_err: "Δεν ήταν δυνατή η ενεργοποίηση κοινοποίησης. Δοκιμάστε ξανά.", passport_is_public: "Το Διαβατήριό σας είναι δημόσιο μέσω συνδέσμου", passport_make_private: "Ιδιωτικό",
     public_passport_not_found: "Αυτό το διαβατήριο δεν υπάρχει ή ο σύνδεσμος είναι κατεστραμμένος.", public_passport_private: "Αυτό το διαβατήριο δεν είναι ακόμα δημόσιο.", public_passport_cta: "Αποκτήστε το δικό σας Διαβατήριο GOLSZ →",
     blocked_title: "Αποκλεισμένοι λογαριασμοί", blocked_empty: "Δεν έχετε αποκλείσει κανέναν.", blocked_unblock: "Άρση αποκλεισμού",
     admin_checking: "Έλεγχος πρόσβασης…", admin_only: "Μόνο για διαχειριστές.", admin_title: "Πίνακας διαχείρισης",
@@ -3340,18 +3344,34 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const real = !!uid;
   const viewingOther = !!(viewUserId && uid && viewUserId !== uid);
 
-  // Copies a link that works with zero GOLSZ account — see PublicPassport
-  // and get_public_passport() (migration 046). If the athlete is a
-  // restricted minor (no approved parent yet), the link still copies (no
-  // point blocking that client-side), but the RPC itself returns nothing
-  // and PublicPassport shows "not public yet" — the real enforcement is
-  // server-side, this is just so sharing always works the same way.
+  // Sharing is an explicit, athlete-initiated action, not an always-on
+  // default — profiles.passport_public (migration 047) starts false for
+  // everyone, and get_public_passport() only ever returns data once it's
+  // true. Clicking "Share" is the actual opt-in: it flips that flag on,
+  // then copies a link that works with zero GOLSZ account (see
+  // PublicPassport). If the athlete is a restricted minor (no approved
+  // parent yet), the flag can still be set and the link still copies, but
+  // the RPC itself keeps returning nothing regardless — that gate is
+  // enforced server-side and passport_public doesn't override it.
   async function sharePassport() {
     if (!uid) return;
+    if (!profile || !profile.passport_public) {
+      try {
+        const { error } = await sb.from("profiles").update({ passport_public: true }).eq("id", uid);
+        if (error) throw error;
+        setProfile((p) => ({ ...p, passport_public: true }));
+      } catch (e) { console.error("GOLSZ passport-public error:", e); setShareMsg(t("passport_share_err")); setTimeout(() => setShareMsg(""), 4000); return; }
+    }
     const url = `${window.location.origin}${window.location.pathname}?public=${uid}`;
     try { await navigator.clipboard.writeText(url); setShareMsg(t("passport_share_copied")); }
     catch (e) { setShareMsg(url); }
     setTimeout(() => setShareMsg(""), 4000);
+  }
+
+  async function makePassportPrivate() {
+    if (!uid) return;
+    try { await sb.from("profiles").update({ passport_public: false }).eq("id", uid); setProfile((p) => ({ ...p, passport_public: false })); }
+    catch (e) { console.error("GOLSZ passport-private error:", e); }
   }
 
   // Same validate-then-upload-as-ArrayBuffer pattern Feed's post-image
@@ -3427,7 +3447,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         setFollowedByThem(!!theirFollow);
       } else {
         const [{ data: prof }, { data: ath }] = await Promise.all([
-          sb.from("profiles").select("full_name, is_admin, occupation, verified_tier, plan, avatar_url").eq("id", user.id).single(),
+          sb.from("profiles").select("full_name, is_admin, occupation, verified_tier, plan, avatar_url, passport_public").eq("id", user.id).single(),
           sb.from("athletes").select("*").eq("id", user.id).single(),
         ]);
         setProfile(prof || null);
@@ -3521,6 +3541,15 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           <span style={{ fontSize: 9.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>GOLSZ · GLOBAL</span>
         )}
       </div>
+      {/* passport_public (migration 047) is off by default — sharing is an
+          explicit choice, not an always-public account. This banner only
+          ever shows once the athlete has actually clicked Share. */}
+      {!viewingOther && real && profile && profile.passport_public && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#C8F1351a", border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, gap: 10 }}>
+          <span style={{ fontSize: 12, color: C.chalk }}>{t("passport_is_public")}</span>
+          <button onClick={makePassportPrivate} style={{ ...iconBtn(C.amber), fontSize: 11 }}>{t("passport_make_private")}</button>
+        </div>
+      )}
       {shareMsg && (
         <div style={{ background: "#C8F1351a", border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: C.chalk, wordBreak: "break-all" }}>{shareMsg}</div>
       )}
