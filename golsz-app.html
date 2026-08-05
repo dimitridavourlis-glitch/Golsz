@@ -1946,7 +1946,7 @@ const SPORTS = ["All", "Soccer", "Basketball", "Track", "Hockey", "Tennis"];
 const NON_PLAYER_SPORTS = ["Soccer", "Baseball", "Basketball", "Hockey", "American Football", "Other"];
 const GENDERS = [["All", "All"], ["M", "Male"], ["F", "Female"]];
 const SCHOOL_LEVELS = ["High School", "University", "Other"];
-const OCCUPATIONS = ["Player", "Scout", "Agent", "Coach", "Physio", "Other"];
+const OCCUPATIONS = ["Player", "Parent", "Scout", "Agent", "Coach", "Physio", "Other"];
 const COUNTRIES = ["All", "Canada", "USA", "England", "Spain", "Germany", "Jamaica", "Japan", "Brazil", "Sweden", "Morocco"];
 const POSITIONS = ["All", "Left Back", "Striker", "Midfielder", "Guard", "Forward", "Center", "Goalie", "Sprinter", "Distance", "Singles"];
 
@@ -3147,14 +3147,21 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
   const row = (children) => <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>{children}</div>;
   const group = (lbl, children) => <div style={{ marginBottom: 12 }}><span style={label}>{lbl}</span>{children}</div>;
   const isPlayer = !form.occupation || form.occupation === "Player";
+  // A parent isn't an athlete themselves — nothing athlete-shaped
+  // (sport/position/club/stats) applies to their own account at all.
+  // Their real "profile" is the Family & Parent Access section below
+  // (request a link to their child by email), not a sport pick.
+  const isParent = form.occupation === "Parent";
 
   async function save() {
     if (!sb || busy) return;
     const name = (form.full_name || "").trim();
     if (!name) { setErr(t("editor_name_required")); return; }
     if (!form.occupation) { setErr(t("auth_occupation_required")); return; }
-    if (!form.sport) { setErr(t("editor_sport_required")); return; }
-    if (!isPlayer && !(form.club_name || "").trim()) { setErr(t("editor_team_required")); return; }
+    if (!isParent) {
+      if (!form.sport) { setErr(t("editor_sport_required")); return; }
+      if (!isPlayer && !(form.club_name || "").trim()) { setErr(t("editor_team_required")); return; }
+    }
     setBusy(true); setErr("");
     try {
       const { decision } = await moderateContent({ text: form.bio || "", contentType: "profile_field", surface: "profile" });
@@ -3213,7 +3220,7 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
           </select>
         ))}
 
-        {row(<>
+        {!isParent && row(<>
           <div><span style={label}>{t("editor_sport_label")}</span>
             <select style={field} value={form.sport || ""} onChange={set("sport")}>
               <option value="">{t("editor_select")}</option>
@@ -3276,11 +3283,11 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
           </>);
         })()}
 
-        {!isPlayer && group(t("editor_license_label"), (
+        {!isPlayer && !isParent && group(t("editor_license_label"), (
           <input style={field} value={form.license || ""} onChange={set("license")} placeholder={t("editor_license_ph")} />
         ))}
 
-        {!isPlayer && group(t("editor_looking_label"), (
+        {!isPlayer && !isParent && group(t("editor_looking_label"), (
           <select style={field} value={form.looking_for_players || ""} onChange={set("looking_for_players")}>
             <option value="">—</option>
             <option value="true">{t("yes")}</option>
@@ -3288,7 +3295,7 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
           </select>
         ))}
 
-        {row(<>
+        {!isParent && row(<>
           <div><span style={label}>{t("editor_country_label")}</span>
             <input style={field} list="country-options" value={form.country || ""} onChange={set("country")} placeholder={t("editor_country_ph")} />
             <datalist id="country-options">{COUNTRIES.filter((c) => c !== "All").map((c) => <option key={c} value={c} />)}</datalist>
@@ -3474,8 +3481,14 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     : `GLS<CAN<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<LEFTBACK<<<<<${p.id.replace(/[·]/g, "")}<2027CA`;
   const occupationSet = !!(profile && profile.occupation);
   const isPlayerProfile = !occupationSet || profile.occupation === "Player";
+  const isParentProfile = occupationSet && profile.occupation === "Parent";
+  // A parent's own account has no sport/club to fill in at all — see
+  // ProfileEditor's isParent branch — so "done onboarding" for them just
+  // means occupation is set. Without this exception they'd stay stuck in
+  // the locked editor forever, since athlete.sport can never become true
+  // for an account that never shows that field.
   const incomplete = !viewingOther && real && profile && athlete && (
-    !occupationSet || !athlete.sport || (!isPlayerProfile && !athlete.club_name)
+    !occupationSet || (!isParentProfile && (!athlete.sport || (!isPlayerProfile && !athlete.club_name)))
   );
 
   const editorInitial = () => ({
@@ -3560,6 +3573,13 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           onSaved={() => { setEditing(false); load(); }}
         />
       )}
+
+      {/* A parent's real "profile" is linking to their child, not filling in
+          athlete fields they don't have — surface Family & Parent Access
+          right here instead of making them scroll past a sport/position
+          card full of placeholders to find it (it also still renders in
+          its usual spot below for every other occupation). */}
+      {!viewingOther && isParentProfile && <FamilyAccess />}
 
       {/* passport document */}
       <div style={{
