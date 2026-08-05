@@ -52,6 +52,7 @@ const MessageSquare = svg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h
 const BadgeCheck = svg('<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/>');
 const MapPin = svg('<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>');
 const ChevronLeft = svg('<path d="m15 18-6-6 6-6"/>');
+const Share2 = svg('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>');
 const ChevronDown = svg('<path d="m6 9 6 6 6-6"/>');
 const ChevronUp = svg('<path d="m18 15-6-6-6 6"/>');
 const Send = svg('<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>');
@@ -301,6 +302,8 @@ const I18N = {
     passport_no_followers_other: "No followers yet.",
     passport_no_followers_self: "No followers yet — your Discover and Feed activity is how people find you.",
     passport_admin_panel: "Admin panel", passport_terms: "Terms & Conditions", passport_athlete_fallback: "GOLSZ Athlete",
+    passport_foot: "FOOT", passport_share: "Share", passport_share_copied: "Link copied — anyone can view this, no account needed",
+    public_passport_not_found: "This passport doesn't exist or the link is broken.", public_passport_private: "This passport isn't public yet.", public_passport_cta: "Get your own GOLSZ Passport →",
     blocked_title: "Blocked accounts", blocked_empty: "You haven't blocked anyone.", blocked_unblock: "Unblock",
     admin_checking: "Checking access…", admin_only: "Admins only.", admin_title: "Admin panel",
     admin_stat_users: "USERS", admin_stat_posts: "POSTS", admin_stat_events: "EVENTS", admin_stat_pending: "PENDING",
@@ -492,6 +495,8 @@ const I18N = {
     passport_no_followers_other: "Pas encore d'abonnés.",
     passport_no_followers_self: "Pas encore d'abonnés — votre activité sur Découvrir et le fil est ce qui permet aux gens de vous trouver.",
     passport_admin_panel: "Panneau d'administration", passport_terms: "Conditions d'utilisation", passport_athlete_fallback: "Athlète GOLSZ",
+    passport_foot: "PIED", passport_share: "Partager", passport_share_copied: "Lien copié — visible par tous, aucun compte requis",
+    public_passport_not_found: "Ce passeport n'existe pas ou le lien est cassé.", public_passport_private: "Ce passeport n'est pas encore public.", public_passport_cta: "Obtenez votre propre Passeport GOLSZ →",
     blocked_title: "Comptes bloqués", blocked_empty: "Vous n'avez bloqué personne.", blocked_unblock: "Débloquer",
     admin_checking: "Vérification de l'accès…", admin_only: "Réservé aux administrateurs.", admin_title: "Panneau d'administration",
     admin_stat_users: "UTILISATEURS", admin_stat_posts: "PUBLICATIONS", admin_stat_events: "ÉVÉNEMENTS", admin_stat_pending: "EN ATTENTE",
@@ -683,6 +688,8 @@ const I18N = {
     passport_no_followers_other: "Aún no tiene seguidores.",
     passport_no_followers_self: "Aún no tienes seguidores — tu actividad en Descubrir y el feed es cómo la gente te encuentra.",
     passport_admin_panel: "Panel de administración", passport_terms: "Términos y condiciones", passport_athlete_fallback: "Atleta de GOLSZ",
+    passport_foot: "PIE", passport_share: "Compartir", passport_share_copied: "Enlace copiado — cualquiera puede verlo, sin necesidad de cuenta",
+    public_passport_not_found: "Este pasaporte no existe o el enlace está roto.", public_passport_private: "Este pasaporte aún no es público.", public_passport_cta: "Consigue tu propio Pasaporte GOLSZ →",
     blocked_title: "Cuentas bloqueadas", blocked_empty: "No has bloqueado a nadie.", blocked_unblock: "Desbloquear",
     admin_checking: "Comprobando acceso…", admin_only: "Solo administradores.", admin_title: "Panel de administración",
     admin_stat_users: "USUARIOS", admin_stat_posts: "PUBLICACIONES", admin_stat_events: "EVENTOS", admin_stat_pending: "PENDIENTES",
@@ -874,6 +881,8 @@ const I18N = {
     passport_no_followers_other: "Δεν έχει ακόλουθους ακόμα.",
     passport_no_followers_self: "Δεν έχετε ακόλουθους ακόμα — η δραστηριότητά σας στην Ανακάλυψη και τη ροή είναι ο τρόπος να σας βρουν.",
     passport_admin_panel: "Πίνακας διαχείρισης", passport_terms: "Όροι & Προϋποθέσεις", passport_athlete_fallback: "Αθλητής GOLSZ",
+    passport_foot: "ΠΟΔΙ", passport_share: "Κοινοποίηση", passport_share_copied: "Ο σύνδεσμος αντιγράφηκε — ορατός σε όλους, χωρίς λογαριασμό",
+    public_passport_not_found: "Αυτό το διαβατήριο δεν υπάρχει ή ο σύνδεσμος είναι κατεστραμμένος.", public_passport_private: "Αυτό το διαβατήριο δεν είναι ακόμα δημόσιο.", public_passport_cta: "Αποκτήστε το δικό σας Διαβατήριο GOLSZ →",
     blocked_title: "Αποκλεισμένοι λογαριασμοί", blocked_empty: "Δεν έχετε αποκλείσει κανέναν.", blocked_unblock: "Άρση αποκλεισμού",
     admin_checking: "Έλεγχος πρόσβασης…", admin_only: "Μόνο για διαχειριστές.", admin_title: "Πίνακας διαχείρισης",
     admin_stat_users: "ΧΡΗΣΤΕΣ", admin_stat_posts: "ΑΝΑΡΤΗΣΕΙΣ", admin_stat_events: "ΕΚΔΗΛΩΣΕΙΣ", admin_stat_pending: "ΕΚΚΡΕΜΗ",
@@ -3023,6 +3032,110 @@ function toPassport(profile, ath, uid, t) {
   };
 }
 
+/* ============ PUBLIC PASSPORT (shareable, no account required) ============
+   Reached via ?public=<id> (see Root()), which short-circuits the whole
+   auth flow — this renders before Auth/GolszApp even mount, so someone
+   without a GOLSZ account can open a shared link. Backed entirely by
+   get_public_passport() (migration 046), a narrow anon-readable RPC —
+   never a direct table select — so it can never accidentally expose more
+   than that RPC deliberately returns, and returns null outright for a
+   restricted (unapproved) minor, same gate as everywhere else in the app. */
+function PublicPassport({ userId }) {
+  const { t } = useLang();
+  const [state, setState] = useState("loading"); // loading | ok | private | error
+  const [p, setP] = useState(null);
+
+  useEffect(() => {
+    if (!sb || !userId) { setState("error"); return; }
+    (async () => {
+      try {
+        const { data, error } = await sb.rpc("get_public_passport", { p_user: userId });
+        if (error) throw error;
+        if (!data) { setState("private"); return; }
+        setP(data);
+        setState("ok");
+      } catch (e) { console.error("GOLSZ public passport error:", e); setState("error"); }
+    })();
+  }, [userId]);
+
+  const dash = (v) => (v === null || v === undefined || v === "" ? "—" : v);
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.pitch, color: C.chalk, fontFamily: "'Archivo', system-ui, sans-serif", padding: "28px 16px" }}>
+      <div style={{ maxWidth: 420, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <img src="/assets/logo-mark.png" alt="" style={{ width: 40, height: 40, marginBottom: 6 }} />
+          <div style={{ fontWeight: 900, fontSize: 24, letterSpacing: "0.03em", fontStretch: "expanded" }}>GOLSZ<span style={{ color: C.lime }}>.</span></div>
+        </div>
+
+        {state === "loading" && <div style={{ textAlign: "center", color: C.slate, fontSize: 13, padding: "40px 0" }}>{t("loading")}</div>}
+        {state === "error" && <div style={{ textAlign: "center", color: C.slate, fontSize: 13, padding: "40px 0" }}>{t("public_passport_not_found")}</div>}
+        {state === "private" && <div style={{ textAlign: "center", color: C.slate, fontSize: 13, padding: "40px 0" }}>{t("public_passport_private")}</div>}
+
+        {state === "ok" && p && (
+          <div style={{
+            background: `linear-gradient(160deg, ${C.card}, ${C.turf})`,
+            border: `1px solid ${C.line2}`, borderRadius: 16, overflow: "hidden",
+            boxShadow: `0 0 0 1px ${C.pitch}, 0 20px 40px -20px #000`,
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: `1px dashed ${C.line2}`, background: C.passportStrip }}>
+              <span style={{ fontSize: 10, letterSpacing: "0.22em", fontWeight: 800, color: C.lime }}>DIGITAL SPORTS PASSPORT</span>
+              <span style={{ fontSize: 9.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{flagFor(p.country)} {dash(p.country)}</span>
+            </div>
+            <div style={{ display: "flex", gap: 14, padding: 16 }}>
+              <div style={{
+                width: 84, height: 100, borderRadius: 10, flexShrink: 0,
+                background: p.avatar_url ? undefined : `linear-gradient(135deg, ${C.turf}, ${C.line2})`,
+                border: `1px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center",
+                overflow: "hidden", fontFamily: "'Space Mono', monospace", fontWeight: 800, fontSize: 34, color: C.lime,
+              }}>
+                {p.avatar_url ? <img src={p.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(p.full_name || "?")}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.05, fontStretch: "expanded" }}>{p.full_name || t("passport_athlete_fallback")}</div>
+                  {p.verified_tier && p.verified_tier !== "none" && (
+                    <BadgeCheck size={17} color={C.pitch} fill={p.verified_tier === "elite" ? C.elite : C.lime} strokeWidth={2.5} />
+                  )}
+                </div>
+                {p.occupation && (
+                  <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 999, padding: "2px 8px", display: "inline-block", marginTop: 4 }}>{p.occupation.toUpperCase()}</span>
+                )}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 10px", marginTop: 10, fontSize: 11.5 }}>
+                  <div><span style={{ color: C.slate }}>{t("passport_sport")}: </span>{dash(p.sport)}</div>
+                  <div><span style={{ color: C.slate }}>{t("passport_position")}: </span>{dash(p.position)}</div>
+                  <div><span style={{ color: C.slate }}>{t("passport_club")}: </span>{dash(p.club_name)}</div>
+                  <div><span style={{ color: C.slate }}>{t("passport_grad")}: </span>{dash(p.grad_year)}</div>
+                  <div><span style={{ color: C.slate }}>{t("passport_status")}: </span>{dash(p.recruiting_status)}</div>
+                  <div><span style={{ color: C.slate }}>{t("passport_foot")}: </span>{dash(p.foot)}</div>
+                </div>
+              </div>
+            </div>
+            {p.bio && (
+              <div style={{ padding: "0 16px 16px", fontSize: 12.5, color: C.body, lineHeight: 1.5 }}>{p.bio}</div>
+            )}
+            {Array.isArray(p.highlights) && p.highlights.length > 0 && (
+              <div style={{ padding: "0 16px 16px" }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8, borderTop: `1px dashed ${C.line2}`, paddingTop: 14 }}>{t("highlights_title")}</div>
+                {p.highlights.map((m, i) => (
+                  <a key={m.id || i} href={m.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", color: C.chalk, textDecoration: "none", borderBottom: i < p.highlights.length - 1 ? `1px solid ${C.line}` : "none" }}>
+                    <Video size={13} color={C.lime} style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 12.5 }}>{m.title}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div style={{ textAlign: "center", marginTop: 20 }}>
+          <a href="/" style={{ fontSize: 12, color: C.slate, textDecoration: "none" }}>{t("public_passport_cta")}</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProfileEditor({ initial, locked, onClose, onSaved }) {
   const { t } = useLang();
   const [form, setForm] = useState(initial);
@@ -3216,8 +3329,23 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarErr, setAvatarErr] = useState("");
   const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo immediately
+  const [shareMsg, setShareMsg] = useState("");
   const real = !!uid;
   const viewingOther = !!(viewUserId && uid && viewUserId !== uid);
+
+  // Copies a link that works with zero GOLSZ account — see PublicPassport
+  // and get_public_passport() (migration 046). If the athlete is a
+  // restricted minor (no approved parent yet), the link still copies (no
+  // point blocking that client-side), but the RPC itself returns nothing
+  // and PublicPassport shows "not public yet" — the real enforcement is
+  // server-side, this is just so sharing always works the same way.
+  async function sharePassport() {
+    if (!uid) return;
+    const url = `${window.location.origin}${window.location.pathname}?public=${uid}`;
+    try { await navigator.clipboard.writeText(url); setShareMsg(t("passport_share_copied")); }
+    catch (e) { setShareMsg(url); }
+    setTimeout(() => setShareMsg(""), 4000);
+  }
 
   // Same validate-then-upload-as-ArrayBuffer pattern Feed's post-image
   // upload already uses (raw File uploads can arrive empty on some
@@ -3372,11 +3500,17 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         {viewingOther ? (
           <button onClick={onBack} style={{ ...iconBtn(C.chalk), fontSize: 11.5 }}><ChevronLeft size={16} /> {t("back")}</button>
         ) : real ? (
-          <button onClick={() => setEditing(true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}><Pencil size={13} /> {t("passport_edit")}</button>
+          <div style={{ display: "flex", gap: 14 }}>
+            <button onClick={sharePassport} style={{ ...iconBtn(C.chalk), fontSize: 11.5 }}><Share2 size={13} /> {t("passport_share")}</button>
+            <button onClick={() => setEditing(true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}><Pencil size={13} /> {t("passport_edit")}</button>
+          </div>
         ) : (
           <span style={{ fontSize: 9.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>GOLSZ · GLOBAL</span>
         )}
       </div>
+      {shareMsg && (
+        <div style={{ background: "#C8F1351a", border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: C.chalk, wordBreak: "break-all" }}>{shareMsg}</div>
+      )}
 
       {viewingOther && (
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -6047,6 +6181,13 @@ function BannedScreen({ onSignOut }) {
 }
 
 function Root() {
+  // A shared Passport link (?public=<id>) has to work for someone with no
+  // GOLSZ account at all, so this short-circuits before any auth check —
+  // PublicPassport never touches Auth/GolszApp/session state, it only
+  // calls the anon-readable get_public_passport() RPC (migration 046).
+  const publicPassportId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("public") : null;
+  if (publicPassportId) return React.createElement(PublicPassport, { userId: publicPassportId });
+
   const paidReturn = typeof window !== "undefined" && /checkout=success/.test(window.location.search);
   const [authed, setAuthed] = useState(false);
   const [ready, setReady] = useState(false);
