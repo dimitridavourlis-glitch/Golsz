@@ -503,7 +503,7 @@ async function searchPlayers(input) {
 // same as every other caching claim in this file — don't just trust that
 // adding content worked.
 const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent, separately check it against the FAQ list appended below, and maintain a running conversation summary plus two routing hints. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false,"faq_id":null-or-a-number,"summary_so_far":"...","missing_information":[...],"recommended_specialist":null-or-"..."}
-SUMMARY: the message may open with a "CONVERSATION SUMMARY SO FAR: ..." section describing everything discussed before this turn (empty/absent on a conversation's first message — that's normal, not an error). Produce an updated "summary_so_far": 1-3 short sentences covering the prior summary plus what this new message adds — never just repeat the input back. If there's no prior summary and this message alone isn't summary-worthy yet (a greeting, "thanks", etc.), a short one-sentence summary of just this message is fine. Never include a literal "}" character anywhere in summary_so_far — it would cut this response off early.
+SUMMARY: the message may open with a "CONVERSATION SUMMARY SO FAR: ..." section describing everything discussed before this turn (empty/absent on a conversation's first message — that's normal, not an error). Produce an updated "summary_so_far": ONE short sentence, 25 words max, covering the prior summary plus what this new message adds — never just repeat the input back, never a numbered list, never multiple sentences. If there's no prior summary and this message alone isn't summary-worthy yet (a greeting, "thanks", etc.), a few words is fine — it does not need to be a full sentence. Never include a literal "}" character anywhere in summary_so_far — it would cut this response off early.
 ATHLETE CONTEXT: the message may also include a "PROFILE SO FAR: {...}" section (hard facts already on file) and a "SCOUT CONTEXT SO FAR: {...}" section (softer qualification facts already captured — dream/goal, target level, gap, urgency, interest flags, etc.). Use both plus the summary to fill in:
 - "missing_information": an array of up to 3 field names, chosen only from this list, that are NOT already present in either section and would meaningfully help right now: dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, professional_interest, college_interest, trial_interest. Use an empty array if nothing important is missing, or the conversation doesn't call for asking right now (e.g. off_topic, or the athlete is mid-thought on something else).
 - "recommended_specialist": which specialist should likely handle THIS message — one of "college" (NCAA/NAIA/JUCO, scholarships, school fit), "pro_pathway" (professional clubs, trials, agents), "development" (training, skill gaps, performance), "eligibility" (NCAA rules, amateurism, compliance) — or null when the general Scout persona is clearly still right (most messages). Base this only on what the current message is actually asking, not the athlete's whole history.
@@ -587,9 +587,11 @@ async function classifyIntent(key, conversation, faqList) {
   try {
     const { ok, data } = await callAnthropic(key, {
       model: MODEL_REGISTRY.FAST_CHAT.model,
-      // max_tokens was 100, then 350, now 450 — missing_information/
-      // recommended_specialist add a bit more on top of summary_so_far.
-      maxTokens: 450,
+      // max_tokens was 100, then 350, then 450 — now 300: summary_so_far is
+      // capped to one 25-word sentence (was open-ended "1-3 sentences"),
+      // which needs less room and finishes faster, helping stay inside the
+      // timeout above instead of falling through to a costlier Sonnet reply.
+      maxTokens: 300,
       // Real traffic showed Haiku sometimes treating the classification
       // request as a conversation to actually help with, rambling on past
       // the JSON (e.g. "...}```\n\nI can help you draft that email...").
@@ -831,10 +833,16 @@ export default async function handler(req, res) {
 
   try {
     const faqList = await getFaqList(faqLang);
-    // 3.5s cap — a real user question must never wait on a stuck classifier.
-    // If it times out, classification is null and shouldRouteToHaiku(null)
-    // safely falls through to the proven Sonnet path below.
-    const classification = await withTimeout(classifyIntent(key, conversation, faqList), 3500);
+    // 4.5s cap (was 3.5s — raised after real traffic showed the classifier
+    // timing out often enough to matter for cost: adding summary_so_far/
+    // missing_information/recommended_specialist this session made it do
+    // more work per call, and every timeout falls through to a full Sonnet
+    // reply as a safety net, which costs ~6x a Haiku reply for no reason
+    // beyond the classifier being slow). If it still times out,
+    // classification is null and shouldRouteToHaiku(null) safely falls
+    // through to the proven Sonnet path below — this is a latency budget
+    // increase, not a behavior change.
+    const classification = await withTimeout(classifyIntent(key, conversation, faqList), 4500);
     console.log("GOLSZ scout routing:", JSON.stringify(classification));
 
     // Phase 2b: the classifier call above also maintains a running
