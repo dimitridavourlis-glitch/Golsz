@@ -16,7 +16,10 @@
 //   ALLOWED_ORIGIN           your app origin, e.g. https://golsz.com  (defaults to *)
 //   SUPABASE_URL             enables auth check + metering
 //   SUPABASE_SERVICE_KEY     service role key (server-only; never ship to the browser)
-//   FREE_DAILY_LIMIT         Scout calls/day on the free plan (default 8)
+//   FREE_DAILY_LIMIT         Scout calls/day on the free plan (default 3)
+//   STARTER_DAILY_LIMIT      Scout calls/day on Starter ($6/mo, default 8)
+//   PRO_DAILY_LIMIT          Scout calls/day on Pro ($14/mo, default 15)
+//   ELITE_DAILY_LIMIT        Scout calls/day on Elite ($30/mo, default 20)
 //
 // Routing: every message is classified first (classifyIntent, cheap Haiku
 // call). Low-stakes, no-tool-needed intents (simple_knowledge,
@@ -596,11 +599,12 @@ export default async function handler(req, res) {
     : SYSTEM_PROMPT;
 
   // ---- optional auth + metering (enabled only when Supabase env is set) ----
-  // Three tiers, all capped (Elite is a higher ceiling, not unlimited —
+  // Four tiers, all capped (Elite is a higher ceiling, not unlimited —
   // see CLAUDE.md, this changed from an earlier uncapped-Elite design).
-  // `plan` only ever holds 'starter'|'pro'|'elite' (the live plan_tier
-  // enum), so anything else falls through to the Starter limit rather
-  // than accidentally going uncapped.
+  // `plan` holds 'free'|'starter'|'pro'|'elite' (the live plan_tier enum —
+  // migration 048 added 'free' as a real fourth tier below Starter), so
+  // anything unrecognized falls through to the Free limit rather than
+  // accidentally going uncapped.
   // Hoisted out of the block below so the routing/answer logic further down
   // can also use it — persistProfileUpdates() needs the same verified id,
   // never a value trusted from the request body.
@@ -614,13 +618,16 @@ export default async function handler(req, res) {
     if (!isAdmin && !aiUnlimited) {
       const limit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
         : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 15)
-        : Number(process.env.FREE_DAILY_LIMIT || 8);
+        : plan === "starter" ? Number(process.env.STARTER_DAILY_LIMIT || 8)
+        : Number(process.env.FREE_DAILY_LIMIT || 3);
       if (calls > limit) {
         const message = plan === "elite"
           ? "Daily Scout limit reached. Check back tomorrow."
           : plan === "pro"
           ? "Daily Scout limit reached. Upgrade to Elite for more Scout messages."
-          : "Free daily limit reached. Upgrade to Pro or Elite for more Scout messages.";
+          : plan === "starter"
+          ? "Daily Scout limit reached. Upgrade to Pro or Elite for more Scout messages."
+          : "Free daily limit reached. Upgrade for more Scout messages.";
         return res.status(402).json({ error: message });
       }
     }

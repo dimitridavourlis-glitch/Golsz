@@ -17,10 +17,11 @@
 //
 // Attribution: golsz-app.html's Auth appends ?client_reference_id=<user.id>
 // to the Payment Link redirect, so checkout.session.completed can identify
-// who paid. Plan is inferred from the checkout amount (Pro=$29, Elite=$79,
-// matching PLANS in golsz-app.html) since Payment Links don't carry
-// arbitrary metadata via URL — if those prices ever change, update the
-// thresholds below to match.
+// who paid. Plan is inferred from the checkout amount (Starter=$6, Pro=$14,
+// Elite=$30, matching PLANS in golsz-app.html) since Payment Links don't
+// carry arbitrary metadata via URL — if those prices ever change, update
+// the thresholds below to match. Free never reaches this file at all since
+// it has no Stripe link and never goes through checkout.
 // ============================================================
 
 export const config = { api: { bodyParser: false } };
@@ -112,14 +113,14 @@ export default async function handler(req, res) {
       const profileId = session.client_reference_id;
       const customerId = session.customer;
       const amount = session.amount_total || 0;
-      const plan = amount >= 7900 ? "elite" : amount >= 2900 ? "pro" : null;
+      const plan = amount >= 3000 ? "elite" : amount >= 1400 ? "pro" : amount >= 600 ? "starter" : null;
       if (profileId && UUID_RE.test(profileId) && plan) {
         await patchProfile(supaUrl, serviceKey, `id=eq.${profileId}`, { plan, stripe_customer_id: customerId || null });
       }
     } else if (event.type === "customer.subscription.deleted") {
       const customerId = event.data.object.customer;
       if (customerId) {
-        await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, { plan: "starter" });
+        await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, { plan: "free" });
       }
     }
     // other event types are ignored — Stripe expects a 200 regardless
