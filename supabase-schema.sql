@@ -2209,5 +2209,72 @@ end;
 $$;
 
 -- ============================================================
+-- 049 — Scout conversation summaries
+-- Phase 2b of the AI Scout architecture plan (approved): stop resending
+-- the entire conversation transcript to the model on every turn. Adds a
+-- running per-conversation summary, produced as a byproduct of the
+-- classifier call (classifyIntent()) that already runs on every
+-- message — no new model call. Server-written only (service-role key,
+-- same pattern as scout_routing_log / persistProfileUpdates); RLS only
+-- needs an owner-scoped SELECT policy for the client's own restore-on-
+-- mount read.
+-- ============================================================
+
+create table if not exists scout_conversation_summaries (
+  conversation_id uuid primary key,
+  user_id uuid not null references profiles(id) on delete cascade,
+  summary text not null default '',
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists scout_conversation_summaries_user_idx on scout_conversation_summaries (user_id);
+
+alter table scout_conversation_summaries enable row level security;
+
+create policy scout_conversation_summaries_read on scout_conversation_summaries
+  for select using (auth.uid() = user_id);
+
+-- ============================================================
+-- 050 — Structured Athlete Context
+-- Phase 2a of the AI Scout architecture plan (approved). Adds
+-- athletes.scout_context, a jsonb column holding the "softer"
+-- athlete-intelligence fields (dream_outcome, target_level,
+-- target_country, timeline, perceived_strengths, perceived_weaknesses,
+-- main_gap, urgency, confidence, professional_interest, college_interest,
+-- trial_interest, plus an ai_meta blob written by the classifier — see
+-- Phase 2c) that have no home in the existing Passport columns, which
+-- remain untouched. Each field is stored as
+-- {value, source: 'athlete_stated'|'ai_inferred', confidence, updated_at}
+-- — never silently promoted to "verified". api/scout.js is the only
+-- writer (service-role), via merge_scout_context(), whose jsonb ||
+-- merge preserves fields a given update doesn't touch.
+-- ============================================================
+
+alter table athletes add column if not exists scout_context jsonb not null default '{}'::jsonb;
+
+create or replace function merge_scout_context(p_user uuid, p_updates jsonb)
+returns void language sql security definer set search_path to 'public' as $$
+  update athletes set scout_context = coalesce(scout_context, '{}'::jsonb) || p_updates where id = p_user;
+$$;
+
+revoke execute on function merge_scout_context(uuid, jsonb) from anon;
+revoke execute on function merge_scout_context(uuid, jsonb) from authenticated;
+revoke execute on function merge_scout_context(uuid, jsonb) from public;
+grant execute on function merge_scout_context(uuid, jsonb) to service_role;
+
+-- ============================================================
+-- 051 — scout_routing_log: provider + specialist columns
+-- Phase 2c/2f of the AI Scout architecture plan (approved). provider is
+-- hardcoded "anthropic" by api/scout.js for now (every model it calls
+-- today is Anthropic's) — becomes meaningful once Phase 3 wires up a
+-- second real provider behind the Phase 2e model registry. specialist
+-- records the classifier's recommended_specialist for that turn. Both
+-- additive/nullable.
+-- ============================================================
+
+alter table scout_routing_log add column if not exists provider text;
+alter table scout_routing_log add column if not exists specialist text;
+
+-- ============================================================
 -- Done.
 -- ============================================================

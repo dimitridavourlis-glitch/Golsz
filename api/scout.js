@@ -32,7 +32,36 @@
 // ============================================================
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-const HAIKU_MODEL = process.env.SCOUT_HAIKU_MODEL || "claude-haiku-4-5";
+
+// Phase 2e of the AI Scout architecture plan (approved): a small registry
+// mapping capability role -> {provider, model} instead of scattering model
+// names/env-var lookups across call sites. Anthropic-only in this MVP —
+// the real goal isn't a second live provider yet, it's that swapping which
+// model answers a given role is a one-line change here, not a hunt through
+// the file. Phase 3 adds a second provider by giving callAnthropic() (or a
+// sibling call*() function) a place to plug in per `provider`.
+const MODEL_REGISTRY = {
+  FAST_CHAT: { provider: "anthropic", model: process.env.SCOUT_HAIKU_MODEL || "claude-haiku-4-5" },
+  DEEP_SCOUT: { provider: "anthropic", model: process.env.SCOUT_MODEL || "claude-sonnet-5" },
+};
+
+// Shared low-level caller for a single (non-looping) Anthropic Messages API
+// call — used by the classifier, the Haiku/FAST_CHAT path, and the final
+// forced no-tools Sonnet/DEEP_SCOUT reply. The Sonnet tool-loop below calls
+// the API directly instead, since it needs to inspect stop_reason and push
+// new turns between calls, not just get one reply back.
+async function callAnthropic(apiKey, { model, system, messages, tools, thinking, maxTokens, stopSequences }) {
+  const body = { model, max_tokens: maxTokens || 4096, system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }], messages };
+  if (tools) body.tools = tools;
+  if (thinking) body.thinking = thinking;
+  if (stopSequences) body.stop_sequences = stopSequences;
+  const r = await fetch(ANTHROPIC_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify(body),
+  });
+  return { ok: r.ok, status: r.status, data: await r.json() };
+}
 
 // $ per 1M tokens (standard, non-intro pricing) — used only to estimate a
 // real dollar cost per reply for scout_routing_log / the Admin Panel's
@@ -80,13 +109,14 @@ async function logError(source, message, detail) {
   } catch (e) { console.error("GOLSZ error-log write failed:", e); }
 }
 
-// Writes one row to scout_routing_log (migrations 039 + 040 + 044) per real
-// reply — which model actually answered (haiku/sonnet/database), the
+// Writes one row to scout_routing_log (migrations 039 + 040 + 044 + 051) per
+// real reply — which model actually answered (haiku/sonnet/database), the
 // classifier's intent/confidence, real token usage, an estimated dollar
-// cost for that one reply, the athlete's subscription tier, and (sonnet
-// only) why it escalated past Haiku. Never the question or answer text
-// itself, never a user_id. Powers the Admin Panel's "AI Model Usage" card
-// (admin_scout_model_mix()) and monthly cost cards
+// cost for that one reply, the athlete's subscription tier, (sonnet only)
+// why it escalated past Haiku, and (051, Phase 2f) which provider answered
+// and which specialist persona was in use. Never the question or answer
+// text itself, never a user_id. Powers the Admin Panel's "AI Model Usage"
+// card (admin_scout_model_mix()) and monthly cost cards
 // (admin_scout_cost_summary()). Self-contained and best-effort, same as
 // logError — a logging failure must never affect the real response.
 async function logRouting(answeredBy, classification, model, usage, extra) {
@@ -108,6 +138,12 @@ async function logRouting(answeredBy, classification, model, usage, extra) {
         estimated_cost_usd: estimateCost(model, usage),
         plan: (extra && extra.plan) || null,
         escalation_reason: (extra && extra.escalationReason) || null,
+        // Anthropic-only until Phase 3 of the AI Scout architecture plan
+        // onboards a second provider behind the Phase 2e model registry —
+        // hardcoded rather than derived from `model` since every model this
+        // file calls today is Anthropic's regardless of which one answered.
+        provider: model ? "anthropic" : null,
+        specialist: (extra && extra.specialist) || null,
       }),
     });
   } catch (e) { console.error("GOLSZ routing-log write failed:", e); }
@@ -227,6 +263,133 @@ async function persistProfileUpdates(userId, updates) {
   }
 }
 
+// The "softer" Athlete Context fields (migration 050, Phase 2a) — things
+// Scout infers or is told rather than hard Passport facts. Validated
+// against this allowlist before ever reaching merge_scout_context() so a
+// malformed/unexpected key from a model response can't write an arbitrary
+// jsonb key onto the row.
+const SCOUT_CONTEXT_KEYS = new Set([
+  "dream_outcome", "target_level", "target_country", "timeline",
+  "perceived_strengths", "perceived_weaknesses", "main_gap", "urgency",
+  "confidence", "professional_interest", "college_interest", "trial_interest",
+]);
+
+// Same extraction shape as extractProfileUpdates(), pulling scout_context_updates
+// instead of profile_updates out of the same parsed reply.
+function extractScoutContextUpdates(data) {
+  try {
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    return parsed && typeof parsed.scout_context_updates === "object" ? parsed.scout_context_updates : null;
+  } catch {
+    return null;
+  }
+}
+
+// Writes to athletes.scout_context via merge_scout_context() (migration
+// 050) — never a direct PATCH, since a plain PATCH would replace the whole
+// jsonb column and clobber fields this turn didn't touch; the RPC's jsonb
+// || merge only overwrites the top-level keys actually present here.
+// "source" is never trusted as-is from the model: only "athlete_stated"
+// passes through, everything else (including a model claiming "verified")
+// defaults to "ai_inferred" — that word is reserved for a real future
+// verification pathway, not something the model can self-assign. Same
+// best-effort discipline as every other persistX helper in this file.
+async function persistScoutContext(userId, updates) {
+  if (!userId || !updates) return;
+  const supaUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supaUrl || !serviceKey) return;
+
+  const patch = {};
+  const now = new Date().toISOString();
+  for (const [field, entry] of Object.entries(updates)) {
+    if (!SCOUT_CONTEXT_KEYS.has(field) || entry == null) continue;
+    const value = (entry && typeof entry === "object") ? entry.value : entry;
+    if (value == null || value === "") continue;
+    const source = (entry && typeof entry === "object" && entry.source === "athlete_stated") ? "athlete_stated" : "ai_inferred";
+    const confidence = (entry && typeof entry === "object" && typeof entry.confidence === "number") ? entry.confidence : null;
+    patch[field] = { value, source, confidence, updated_at: now };
+  }
+  if (!Object.keys(patch).length) return;
+
+  try {
+    await fetch(`${supaUrl}/rest/v1/rpc/merge_scout_context`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_user: userId, p_updates: patch }),
+    });
+  } catch (e) { console.error("GOLSZ scout context persist failed:", e); }
+}
+
+// Loose validation only — real security here is that this is a best-effort,
+// service-role, non-user-content write; a malformed conversationId just
+// fails the uuid column insert and gets caught below. Matches this file's
+// existing conventions (persistProfileUpdates etc.), not an injection guard.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// The named specialists from the AI Scout architecture plan's Phase 2d —
+// "scout" (the generalist persona) is deliberately not a member of this set
+// since the classifier only ever names a specialist to hand off TO; null
+// (or anything unrecognized) means "stay with Scout," handled as the
+// fallback case wherever recommended_specialist is read.
+const SPECIALISTS = new Set(["college", "pro_pathway", "development", "eligibility"]);
+
+// Writes the classifier's routing decision (missing_information,
+// recommended_specialist — Phase 2c) into scout_context's "ai_meta" key.
+// Deliberately a full replace of that one key (not an accumulating merge
+// like the athlete-fact keys in persistScoutContext) — it's this turn's
+// live routing snapshot, not a fact that should persist once stale.
+// Reuses the same merge_scout_context() RPC; jsonb || only ever touches
+// the "ai_meta" top-level key here, leaving every other scout_context
+// field untouched.
+async function persistAiMeta(userId, classification) {
+  if (!userId) return;
+  const supaUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supaUrl || !serviceKey) return;
+
+  const missing = Array.isArray(classification && classification.missing_information)
+    ? classification.missing_information.filter((f) => SCOUT_CONTEXT_KEYS.has(f)).slice(0, 3)
+    : [];
+  const specialist = (classification && SPECIALISTS.has(classification.recommended_specialist)) ? classification.recommended_specialist : null;
+  const aiMeta = { missing_information: missing, recommended_specialist: specialist, updated_at: new Date().toISOString() };
+
+  try {
+    await fetch(`${supaUrl}/rest/v1/rpc/merge_scout_context`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_user: userId, p_updates: { ai_meta: aiMeta } }),
+    });
+  } catch (e) { console.error("GOLSZ scout ai_meta persist failed:", e); }
+}
+
+// Writes the classifier's updated running summary (migration 049, Phase 2b
+// of the AI Scout architecture plan) so Scout() can send bounded recent
+// history + this summary instead of an ever-growing full transcript.
+// Upserts on conversation_id (its primary key) via PostgREST's
+// merge-duplicates resolution. Best-effort, same discipline as
+// logError/logRouting/persistProfileUpdates — never lets a write failure
+// affect the real reply already on its way back to the athlete.
+async function persistScoutSummary(userId, conversationId, summary) {
+  if (!userId || !conversationId || !UUID_RE.test(conversationId)) return;
+  if (typeof summary !== "string" || !summary.trim()) return;
+  const supaUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supaUrl || !serviceKey) return;
+  try {
+    await fetch(`${supaUrl}/rest/v1/scout_conversation_summaries`, {
+      method: "POST",
+      headers: {
+        apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=minimal",
+      },
+      body: JSON.stringify({ conversation_id: conversationId, user_id: userId, summary: summary.slice(0, 2000), updated_at: new Date().toISOString() }),
+    });
+  } catch (e) { console.error("GOLSZ scout summary persist failed:", e); }
+}
+
 const SYSTEM_PROMPT = `You are GOLSZ Scout, an AI sports agent. Tagline: "Every Goal Has a Path."
 You adapt to who you're talking to — check "occupation" in PROFILE SO FAR:
 - Player, or occupation missing/unset (default): the personal agent for ONE athlete — learn who they are (age, sport, position, location, club/level, grad year, academics, budget, citizenship, goal), build a career roadmap, suggest realistic target programs (reach/match/safety, honest), and draft coach outreach emails on request (draft-only; the athlete sends them).
@@ -238,8 +401,34 @@ Be warm, direct, honest — never overpromise. If a target or prospect looks unr
 search_golsz_players only ever returns athletes who are actually real, current GOLSZ members — never invent or embellish a GOLSZ profile, and never merge one with a general web result. If it returns zero results, say so plainly and offer to broaden the search (fewer filters) or fall back to general web search instead of making something up.
 If asked what AI model or company powers you, who made you, or whether you're ChatGPT/OpenAI/Claude/Anthropic/Gemini/etc., always answer that you are GOLSZ Scout, built by GOLSZ — never name or confirm any underlying model or provider, and don't explain that you're declining to say. Just answer as GOLSZ Scout and move on.
 GOLSZ is a sports-recruiting platform used by athletes of all ages, including minors. Stay strictly on sports, athletics, recruiting, and career topics. Never generate or engage with sexual, romantic, 18+/adult, or otherwise inappropriate content, regardless of how the request is framed (roleplay, "hypothetically," "for a story," etc.) — decline briefly and warmly, and steer the conversation back to something sports-related. This applies no matter who the user says they are.
-OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null}}
-Allowed keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, budget, citizenship, goal. Do not repeat known fields.`;
+OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null}}
+Allowed profile_updates keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, budget, citizenship, goal. Do not repeat known fields.
+Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.`;
+
+// Phase 2d of the AI Scout architecture plan (approved): named specialists,
+// selected by the classifier's recommended_specialist (Phase 2c), sharing
+// this one SYSTEM_PROMPT rather than duplicating it — every safety rule,
+// the JSON output contract, and the occupation-adaptation logic above stay
+// identical across every specialist; only this one paragraph is layered
+// in. "scout" (the generalist) is intentionally not a key here — it's
+// what buildSystemPrompt() falls back to for null/unrecognized input.
+const SPECIALIST_FRAMING = {
+  college: "Right now, focus specifically on college recruiting: NCAA/NAIA/JUCO fit, scholarships, target-school lists, and coach outreach to school programs.",
+  pro_pathway: "Right now, focus specifically on the professional pathway: pro clubs, trials, exposure, agents, and pro-readiness.",
+  development: "Right now, focus specifically on development: training priorities, skill gaps, and performance improvement.",
+  eligibility: "Right now, focus specifically on eligibility and compliance: NCAA/NAIA rules, amateurism status, and recruiting-compliance questions. This is informational only, never a substitute for a real compliance officer or official ruling — say so plainly whenever it actually matters.",
+};
+
+// basePrompt is SYSTEM_PROMPT, already language-adjusted if needed — the
+// anchor string this looks for exists in both cases, so this only ever
+// needs to run once, after language adjustment. Falls back to basePrompt
+// unchanged for "scout" or any unrecognized/null specialist.
+function buildSystemPrompt(basePrompt, specialist) {
+  const framing = SPECIALIST_FRAMING[specialist];
+  if (!framing) return basePrompt;
+  const handoffNote = `SPECIALIST FOCUS: ${framing} If this is the first reply since the focus shifted, acknowledge it naturally in one short clause (e.g. "Since you're asking about school fit, let's look at that properly") — never a jarring "Connecting you to our College Specialist" announcement, and never restart discovery on facts already known.\n`;
+  return basePrompt.replace("Everything in PROFILE SO FAR is already known", handoffNote + "Everything in PROFILE SO FAR is already known");
+}
 
 // A custom (client-side, from Anthropic's perspective) tool — unlike
 // web_search_20250305, which Anthropic hosts and executes itself,
@@ -313,7 +502,11 @@ async function searchPlayers(input) {
 // response.usage.cache_creation_input_tokens on a live classifier call,
 // same as every other caching claim in this file — don't just trust that
 // adding content worked.
-const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent, and separately check it against the FAQ list appended below. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false,"faq_id":null-or-a-number}
+const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent, separately check it against the FAQ list appended below, and maintain a running conversation summary plus two routing hints. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false,"faq_id":null-or-a-number,"summary_so_far":"...","missing_information":[...],"recommended_specialist":null-or-"..."}
+SUMMARY: the message may open with a "CONVERSATION SUMMARY SO FAR: ..." section describing everything discussed before this turn (empty/absent on a conversation's first message — that's normal, not an error). Produce an updated "summary_so_far": 1-3 short sentences covering the prior summary plus what this new message adds — never just repeat the input back. If there's no prior summary and this message alone isn't summary-worthy yet (a greeting, "thanks", etc.), a short one-sentence summary of just this message is fine. Never include a literal "}" character anywhere in summary_so_far — it would cut this response off early.
+ATHLETE CONTEXT: the message may also include a "PROFILE SO FAR: {...}" section (hard facts already on file) and a "SCOUT CONTEXT SO FAR: {...}" section (softer qualification facts already captured — dream/goal, target level, gap, urgency, interest flags, etc.). Use both plus the summary to fill in:
+- "missing_information": an array of up to 3 field names, chosen only from this list, that are NOT already present in either section and would meaningfully help right now: dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, professional_interest, college_interest, trial_interest. Use an empty array if nothing important is missing, or the conversation doesn't call for asking right now (e.g. off_topic, or the athlete is mid-thought on something else).
+- "recommended_specialist": which specialist should likely handle THIS message — one of "college" (NCAA/NAIA/JUCO, scholarships, school fit), "pro_pathway" (professional clubs, trials, agents), "development" (training, skill gaps, performance), "eligibility" (NCAA rules, amateurism, compliance) — or null when the general Scout persona is clearly still right (most messages). Base this only on what the current message is actually asking, not the athlete's whole history.
 Intents:
 - db_lookup: searching/filtering for clubs, coaches, opportunities, or GOLSZ players by criteria
 - simple_knowledge: football rules, terms, or general explainers with no personalization needed
@@ -392,25 +585,22 @@ async function classifyIntent(key, conversation, faqList) {
   const text = latestUserText(conversation);
   if (!text) return null;
   try {
-    const r = await fetch(ANTHROPIC_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({
-        model: HAIKU_MODEL,
-        max_tokens: 100,
-        // Real traffic showed Haiku sometimes treating the classification
-        // request as a conversation to actually help with, rambling on past
-        // the JSON (e.g. "...}```\n\nI can help you draft that email...").
-        // The schema is always a flat, single-level object — exactly one
-        // closing brace — so stopping generation right there is a hard
-        // guarantee against trailing chatter, not just a prompt request.
-        stop_sequences: ["}"],
-        system: [{ type: "text", text: buildClassifierSystem(faqList), cache_control: { type: "ephemeral" } }],
-        messages: [{ role: "user", content: text.slice(0, 2000) }],
-      }),
+    const { ok, data } = await callAnthropic(key, {
+      model: MODEL_REGISTRY.FAST_CHAT.model,
+      // max_tokens was 100, then 350, now 450 — missing_information/
+      // recommended_specialist add a bit more on top of summary_so_far.
+      maxTokens: 450,
+      // Real traffic showed Haiku sometimes treating the classification
+      // request as a conversation to actually help with, rambling on past
+      // the JSON (e.g. "...}```\n\nI can help you draft that email...").
+      // The schema is always a flat, single-level object — exactly one
+      // closing brace — so stopping generation right there is a hard
+      // guarantee against trailing chatter, not just a prompt request.
+      stopSequences: ["}"],
+      system: buildClassifierSystem(faqList),
+      messages: [{ role: "user", content: text.slice(0, 2000) }],
     });
-    const data = await r.json();
-    if (!r.ok) return { error: data };
+    if (!ok) return { error: data };
     const block = (data.content || []).find((b) => b.type === "text");
     if (!block) return null;
     // Also strip a leading ```json fence — the stop_sequence prevents
@@ -594,7 +784,9 @@ export default async function handler(req, res) {
   const messages = body && body.messages;
   if (!Array.isArray(messages)) return res.status(400).json({ error: "messages[] required" });
   const langName = LANG_NAMES[body && body.lang];
-  const systemPrompt = langName && langName !== "English"
+  // Language-adjusted only — the specialist framing (Phase 2d) is layered
+  // in below, once recommendedSpecialist is known from classification.
+  const baseSystemPrompt = langName && langName !== "English"
     ? `${SYSTEM_PROMPT}\n\nRespond in ${langName} — the athlete has GOLSZ set to ${langName}. Keep the same JSON output shape; only the "reply" text and any drafted email should be in ${langName}.`
     : SYSTEM_PROMPT;
 
@@ -645,6 +837,28 @@ export default async function handler(req, res) {
     const classification = await withTimeout(classifyIntent(key, conversation, faqList), 3500);
     console.log("GOLSZ scout routing:", JSON.stringify(classification));
 
+    // Phase 2b: the classifier call above also maintains a running
+    // conversation summary (see CLASSIFIER_SYSTEM) so Scout() can send
+    // bounded recent history instead of the full transcript. Falls back to
+    // whatever summary the client already had if this turn's classification
+    // didn't produce a usable one (timeout, parse failure, etc.) — the
+    // summary just doesn't advance that turn rather than being lost.
+    const priorSummary = (body && typeof body.summary === "string") ? body.summary : "";
+    const updatedSummary = (classification && typeof classification.summary_so_far === "string" && classification.summary_so_far.trim())
+      ? classification.summary_so_far.trim()
+      : priorSummary;
+    if (userId && body && typeof body.conversationId === "string") {
+      await persistScoutSummary(userId, body.conversationId, updatedSummary);
+    }
+    // Phase 2c: the classifier's missing_information/recommended_specialist
+    // hints, written to scout_context.ai_meta regardless of which path below
+    // ends up answering — routing metadata, not an answer-dependent fact.
+    await persistAiMeta(userId, classification);
+    const recommendedSpecialist = (classification && SPECIALISTS.has(classification.recommended_specialist)) ? classification.recommended_specialist : null;
+    // Phase 2d: the actual specialist hand-off — everything downstream
+    // (Haiku path, Sonnet path) uses this instead of baseSystemPrompt.
+    const systemPrompt = buildSystemPrompt(baseSystemPrompt, recommendedSpecialist);
+
     // ---- Database path: a real $0-AI-cost answer, matched by MEANING (not
     // exact wording) inside the classification call above, before any real
     // answering model runs. ----
@@ -656,8 +870,9 @@ export default async function handler(req, res) {
       const payload = {
         content: [{ type: "text", text: JSON.stringify({ reply: faqMatch.answer, profile_updates: null }) }],
         stop_reason: "end_turn",
+        scout_summary: updatedSummary,
       };
-      await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan });
+      await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist });
       return res.status(200).json(payload);
     }
     await logFaqMiss(classification, latestUserText(conversation));
@@ -672,25 +887,21 @@ export default async function handler(req, res) {
     // response is discarded and the request falls through to the Sonnet
     // path below instead of trying to run a second tool loop here.
     if (shouldRouteToHaiku(classification)) {
-      const r = await fetch(ANTHROPIC_URL, {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-        body: JSON.stringify({
-          model: HAIKU_MODEL,
-          max_tokens: 4096,
-          system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-          messages: conversation,
-          tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL],
-        }),
+      const { ok, data } = await callAnthropic(key, {
+        model: MODEL_REGISTRY.FAST_CHAT.model,
+        system: systemPrompt,
+        messages: conversation,
+        tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL],
       });
-      const data = await r.json();
-      if (r.ok && data.stop_reason !== "tool_use") {
+      if (ok && data.stop_reason !== "tool_use") {
         console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
-        await logRouting("haiku", classification, HAIKU_MODEL, data.usage, { plan: userPlan });
+        await logRouting("haiku", classification, MODEL_REGISTRY.FAST_CHAT.model, data.usage, { plan: userPlan, specialist: recommendedSpecialist });
         await persistProfileUpdates(userId, extractProfileUpdates(data));
+        await persistScoutContext(userId, extractScoutContextUpdates(data));
+        data.scout_summary = updatedSummary;
         return res.status(200).json(data);
       }
-      console.log(r.ok ? "GOLSZ haiku escalated to sonnet (wanted a tool)" : "GOLSZ haiku call failed, escalating to sonnet:", JSON.stringify(data));
+      console.log(ok ? "GOLSZ haiku escalated to sonnet (wanted a tool)" : "GOLSZ haiku call failed, escalating to sonnet:", JSON.stringify(data));
     }
 
     // ---- Sonnet path (model / prompt / tools owned here, not the client) ----
@@ -702,38 +913,25 @@ export default async function handler(req, res) {
     const MAX_TOOL_TURNS = 4;
     let data;
     for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
-      const r = await fetch(ANTHROPIC_URL, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": key,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: process.env.SCOUT_MODEL || "claude-sonnet-5",
-          // 1000 was cutting off longer replies (drafted coach emails, full
-          // roadmaps) mid-sentence — since Scout's whole response is one JSON
-          // object, a truncated reply also breaks the JSON.parse on the
-          // client and falls back to showing the raw truncated blob.
-          max_tokens: 4096,
-          // Sonnet 5 runs adaptive thinking by default when this is omitted —
-          // real, billed output tokens for a task (conversational advice +
-          // one JSON reply) that doesn't need visible step-by-step reasoning.
-          // Disabling it is a pure cost cut — confirmed against real traffic
-          // to produce tighter, equally (or more) correctly formatted
-          // replies than leaving it on.
-          thinking: { type: "disabled" },
-          // Cached: this system prompt + the tools below are identical for
-          // every user on the same language — verified in production at
-          // ~4,287 tokens, comfortably over Sonnet 5's 1,024-token minimum,
-          // with real cache reads confirmed via response.usage.cache_read_input_tokens.
-          system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-          messages: conversation,
-          tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL],
-        }),
+      const result = await callAnthropic(key, {
+        model: MODEL_REGISTRY.DEEP_SCOUT.model,
+        // Sonnet 5 runs adaptive thinking by default when this is omitted —
+        // real, billed output tokens for a task (conversational advice +
+        // one JSON reply) that doesn't need visible step-by-step reasoning.
+        // Disabling it is a pure cost cut — confirmed against real traffic
+        // to produce tighter, equally (or more) correctly formatted
+        // replies than leaving it on.
+        thinking: { type: "disabled" },
+        // Cached: this system prompt + the tools below are identical for
+        // every user on the same language — verified in production at
+        // ~4,287 tokens, comfortably over Sonnet 5's 1,024-token minimum,
+        // with real cache reads confirmed via response.usage.cache_read_input_tokens.
+        system: systemPrompt,
+        messages: conversation,
+        tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL],
       });
-      data = await r.json();
-      if (!r.ok) return res.status(r.status).json(data);
+      data = result.data;
+      if (!result.ok) return res.status(result.status).json(data);
       console.log("GOLSZ scout usage check:", JSON.stringify(data.usage));
 
       const searchCalls = (data.content || []).filter((b) => b.type === "tool_use" && b.name === "search_golsz_players");
@@ -752,22 +950,19 @@ export default async function handler(req, res) {
       // text content, so returning this as-is would show an empty bubble
       // (the exact bug fixed elsewhere in this file's history). Force one
       // final answer with no tools available instead of looping forever.
-      const r = await fetch(ANTHROPIC_URL, {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-        body: JSON.stringify({
-          model: process.env.SCOUT_MODEL || "claude-sonnet-5",
-          max_tokens: 4096,
-          thinking: { type: "disabled" },
-          system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-          messages: conversation,
-        }),
+      const result = await callAnthropic(key, {
+        model: MODEL_REGISTRY.DEEP_SCOUT.model,
+        thinking: { type: "disabled" },
+        system: systemPrompt,
+        messages: conversation,
       });
-      data = await r.json();
-      if (!r.ok) return res.status(r.status).json(data);
+      data = result.data;
+      if (!result.ok) return res.status(result.status).json(data);
     }
-    await logRouting("sonnet", classification, process.env.SCOUT_MODEL || "claude-sonnet-5", data.usage, { plan: userPlan, escalationReason: escalationReason(classification) });
+    await logRouting("sonnet", classification, MODEL_REGISTRY.DEEP_SCOUT.model, data.usage, { plan: userPlan, escalationReason: escalationReason(classification), specialist: recommendedSpecialist });
     await persistProfileUpdates(userId, extractProfileUpdates(data));
+    await persistScoutContext(userId, extractScoutContextUpdates(data));
+    data.scout_summary = updatedSummary;
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
     await logError("api/scout.js", "Upstream model call failed", { detail: String(e) });

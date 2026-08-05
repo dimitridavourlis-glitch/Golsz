@@ -267,20 +267,16 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   (process.env.SUPABASE_URL)`. Without that env var set, the endpoint accepts unauthenticated requests
   with no rate limiting. This is intentional for early preview deploys, not a bug.
 - `meter()` reads the caller's plan from the `profiles` table and increments usage via the
-  `increment_scout_usage` Postgres RPC (defined in `supabase-schema.sql`). **Three tiers, all capped —
-  Elite is a higher ceiling, not unlimited**: Starter at `FREE_DAILY_LIMIT` (default 8/day), Pro at
-  `PRO_DAILY_LIMIT` (default 10/day), Elite at `ELITE_DAILY_LIMIT` (default 25/day). This matches `PLANS`'
-  marketing copy in `golsz-app.html` — Pro's card says "Extended AI Scout access", Elite's says "Even more
-  AI Scout access"; neither claims "Unlimited" anymore. **This has already changed shape twice** (Pro/Elite
-  both uncapped → Pro capped/Elite uncapped → all three capped) — if you touch these limits again, update
-  the marketing copy in the same commit rather than letting it drift out of sync with reality, since the
-  whole point of the last two passes was fixing exactly that kind of mismatch (a card claiming "Unlimited"
-  when the code no longer guaranteed it). **The free-tier plan value is `'starter'`, not `'free'`** — the
-  live `plan_tier` enum only
-  allows `'starter' | 'pro' | 'elite'` (confirmed 2026-07-15 via direct write attempts; `'free'` errors with
-  `invalid input value for enum plan_tier`). Before migration 008, this check compared against `'free'` and
-  `handle_new_user()` never applied the signup's chosen plan at all, so the daily limit silently never fired
-  for any user — real cost exposure. If you ever add a new plan tier, add it to the Postgres enum first
+  `increment_scout_usage` Postgres RPC (defined in `supabase-schema.sql`). **Four tiers, all capped — Elite
+  is a higher ceiling, not unlimited**: Free at `FREE_DAILY_LIMIT` (default 3/day), Starter at
+  `STARTER_DAILY_LIMIT` (default 8/day), Pro at `PRO_DAILY_LIMIT` (default 15/day), Elite at
+  `ELITE_DAILY_LIMIT` (default 20/day) — matches `PLANS`' pricing in `golsz-app.html` ($0/$6/$14/$30). If you
+  touch these limits again, update the marketing copy in the same commit rather than letting it drift out of
+  sync with reality — this has bitten this file before (a card claiming "Unlimited" when the code no longer
+  guaranteed it). **`plan_tier` now genuinely has a `'free'` value** (migration 048, added this session) —
+  before that, `'starter'` did double duty as the free/default tier, and before migration 008, this file
+  compared against a `'free'` string the enum didn't even contain yet, so the daily limit silently never
+  fired for any user. If you ever add another plan tier, add it to the Postgres enum first
   (`alter type plan_tier add value ...`) and confirm it live before referencing it anywhere in code — don't
   assume a string is a valid enum value just because it appears in `PLANS`.
 - `meter()` also reads `profiles.is_admin`; the daily-limit check is skipped entirely when `isAdmin` is
@@ -307,13 +303,17 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   project dependency-free like `api/scout.js`). Needs `bodyParser: false` (exported via `config`) since
   signature verification requires the raw request bytes, not Vercel's auto-parsed JSON.
 - Handles two event types: `checkout.session.completed` (sets `profiles.plan` + `stripe_customer_id`,
-  identified via `client_reference_id` — see below) and `customer.subscription.deleted` (reverts to
-  `'starter'` — **not** `'free'`, which isn't a valid `plan_tier` value, see the enum note above — matched by
-  `stripe_customer_id`). Everything else is acknowledged with 200 and ignored.
-- **Plan is inferred from `amount_total`** (Pro ≥ $29 → `'pro'`, Elite ≥ $79 → `'elite'`), because Stripe
-  Payment Links don't carry arbitrary metadata through the URL — only `client_reference_id` and
-  `prefilled_email`. If Pro/Elite pricing ever changes, update the thresholds in this file to match `PLANS`
-  in `golsz-app.html`.
+  identified via `client_reference_id` — see below) and `customer.subscription.deleted` (reverts to the real
+  `'free'` tier — matched by `stripe_customer_id`). Everything else is acknowledged with 200 and ignored.
+- **Plan is inferred from `amount_total`** (Starter ≥ $6 → `'starter'`, Pro ≥ $14 → `'pro'`, Elite ≥ $30 →
+  `'elite'`), because Stripe Payment Links don't carry arbitrary metadata through the URL — only
+  `client_reference_id` and `prefilled_email`. **This file went stale once already**: pricing moved to
+  $6/$14/$30 earlier in the same session this file was updated, but the thresholds here were left at the old
+  $29/$79 values — every real Starter/Pro payment silently mapped to `plan=null` (no upgrade applied at all)
+  and every Elite payment mapped to `'pro'` instead, until caught and fixed while unrelated free-tier work
+  touched this same plan logic. If Starter/Pro/Elite pricing ever changes, update the thresholds here in the
+  **same commit**, not a follow-up — `PLANS` in `golsz-app.html` is the other half of this pair and they must
+  never drift apart. Free never reaches this file — it has no Stripe link and never goes through checkout.
 - **Attribution**: `Auth`'s checkout redirect in `golsz-app.html` appends
   `?client_reference_id=<user.id>&prefilled_email=<email>` to `STRIPE_LINKS[plan]` right after signup, so
   the webhook can identify who paid. If you ever change how/where checkout is triggered, keep that query
@@ -865,6 +865,74 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
   `profile_assist`, `agent_workflow`, or `db_lookup`, which are personal, action-oriented, or not
   FAQ-shaped). No `user_id` or any identifying column is stored at all, and the question is truncated to 500
   characters. The Admin Panel reads it directly (`sb.from("scout_faq_misses")`), same pattern as `error_log`.
+
+### AI Scout architecture — Phase 2 MVP (migrations 049-051)
+
+The user handed over a 28-item "Master Intelligence & Multi-Model Protocol" spec: a persistent,
+model-agnostic Athlete Context as real memory, an AI Manager/router, named specialists sharing one Scout
+persona, and provider-swappable models. The spec's own instruction was to audit what exists first and
+propose the smallest change before writing code — that audit + the approved MVP plan live at
+`/Users/dimitriosdavourlis/.claude/plans/rosy-doodling-toast.md` (kept for reference; not part of the repo).
+Six pieces shipped, all additive, no existing behavior removed:
+
+- **Bounded conversation context (migration 049, `scout_conversation_summaries`)**: `Scout()`'s `send()`
+  used to resend the *entire* transcript to `/api/scout.js` on every turn, growing unbounded within a
+  conversation — directly against the spec's "don't repeatedly send enormous conversation histories." Now
+  it sends only the last `RECENT_TURNS` (6) messages plus a running summary string embedded in the same
+  `PROFILE SO FAR: ...` prefix trick the last message already used for hard facts. The summary itself costs
+  no extra model call — `classifyIntent()`'s existing per-turn Haiku call (already firing regardless) now
+  also returns `summary_so_far` in its structured output, folding in the prior summary (read from the
+  message text it already parses) plus the new turn. Persisted server-side only via
+  `persistScoutSummary()` (service-role, upsert on `conversation_id`); the client holds its own copy in
+  `summary` state, refreshed from `data.scout_summary` on every reply and re-hydrated on mount/history-load
+  from the table. RLS: owner-scoped `SELECT` only — nothing but `api/scout.js`'s service-role key writes it.
+- **Structured Athlete Context (migration 050, `athletes.scout_context` jsonb)**: holds the "softer"
+  qualification facts the spec's Athlete Context describes that had no column before — `dream_outcome`,
+  `target_level`, `target_country`, `timeline`, `perceived_strengths`, `perceived_weaknesses`, `main_gap`,
+  `urgency`, `confidence`, `professional_interest`, `college_interest`, `trial_interest` — plus an `ai_meta`
+  sub-object (below). Existing Passport columns (`sport`, `position`, `club_name`, etc.) are untouched; this
+  is purely additive. Each field is `{value, source: 'athlete_stated'|'ai_inferred', confidence, updated_at}`
+  — **never `'verified'`**, which is reserved for a real future verification pathway the model can't
+  self-assign. `SYSTEM_PROMPT`'s JSON contract gained a second output key, `scout_context_updates` (alongside
+  the existing `profile_updates`), extracted by `extractScoutContextUpdates()` and written via
+  `merge_scout_context(p_user, p_updates)` — a `security definer` RPC granted only to `service_role` (same
+  revoke-from-anon/authenticated pattern as `increment_scout_usage`) that does `scout_context = scout_context
+  || p_updates`, so a partial update never clobbers fields it didn't touch. The client keeps its own
+  flattened `{field: value}` mirror in `scoutContext` state (seeded on mount from the same column, updated
+  from each reply's `scout_context_updates`) and includes it in the prompt as `SCOUT CONTEXT SO FAR: {...}`
+  — this is what gives the classifier something real to judge "missing information" against below.
+- **AI Manager fields (migration 051, `scout_routing_log.provider`/`.specialist`)**: `classifyIntent()`'s
+  output grew two more fields — `missing_information` (up to 3 `scout_context` field names worth asking
+  about next, validated against the same allowlist `persistScoutContext()` uses) and `recommended_specialist`
+  (`college`/`pro_pathway`/`development`/`eligibility`, or `null` for the default Scout persona). Both are
+  written into `scout_context.ai_meta` via `persistAiMeta()` — deliberately a **full replace** of that one
+  key (not an accumulating merge like the fact fields above), since it's a live per-turn routing snapshot,
+  not a fact that should persist once stale. `scout_routing_log` gained matching `provider` (hardcoded
+  `"anthropic"` for now — see the model registry below) and `specialist` columns, both nullable/additive.
+- **Named specialists (`SPECIALIST_FRAMING`, `buildSystemPrompt()`)**: rather than duplicating
+  `SYSTEM_PROMPT` per specialist (a real maintenance/safety-drift risk — every rule, the JSON contract, and
+  the occupation-branching logic would need to stay in sync across copies), `buildSystemPrompt(basePrompt,
+  specialist)` layers ONE extra paragraph into the existing prompt via a string anchor
+  (`"Everything in PROFILE SO FAR is already known"`), selected by `recommendedSpecialist` from the
+  classifier. Falls back to the unmodified generalist prompt for `null`/unrecognized specialists. The
+  hand-off is just: one natural acknowledgment clause on the first reply after a switch, never a "Connecting
+  you to..." announcement, and never re-asking anything already in `profile`/`scoutContext`.
+- **Provider-agnostic model registry (`MODEL_REGISTRY`, `callAnthropic()`)**: `api/scout.js` now has one
+  `MODEL_REGISTRY = { FAST_CHAT: {...}, DEEP_SCOUT: {...} }` object instead of a standalone `HAIKU_MODEL`
+  constant and an inline `process.env.SCOUT_MODEL || "claude-sonnet-5"` repeated at every call site.
+  Anthropic-only in this pass (deliberately — the spec's own sequencing calls for a benchmark before picking
+  a second real provider, not guessing) but every model reference in the file now reads
+  `MODEL_REGISTRY.FAST_CHAT.model` / `.DEEP_SCOUT.model`, so swapping which model answers a role is a one-line
+  registry edit, not a hunt through the file. `callAnthropic(apiKey, {model, system, messages, tools,
+  thinking, maxTokens, stopSequences})` also consolidates what used to be three near-identical raw `fetch`
+  blocks (the classifier call, the Haiku reply, the final forced no-tools Sonnet reply) into one helper — the
+  Sonnet tool-loop still calls it directly per turn rather than through a higher-level abstraction, since it
+  needs to inspect `stop_reason`/push new turns between calls, which a generic "messages in, reply out"
+  signature can't express.
+- **Explicitly deferred** (see the plan file): a second live model provider, the full Dream→Current
+  Position→Gap→Pathway→Action discovery state machine, Media/Film AI (needs real video-content
+  understanding, not just link storage), the formal 50-100-scenario model benchmark, and per-athlete cost
+  tables. None of these were needed to prove out "one Scout, real memory, real routing, provider-swappable."
 
 ### Scout double-reply fix — `sendingRef` re-entrancy guard
 

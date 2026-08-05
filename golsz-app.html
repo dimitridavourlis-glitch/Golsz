@@ -4980,8 +4980,9 @@ Some fields may already be filled in from their real GOLSZ Passport (profile the
 Be warm, direct, honest — never overpromise. If a target or prospect looks unrealistic, say so kindly and show the realistic path. If the person seems to be a minor, remind them once to involve a parent/guardian. Use web search for real current programs, players, coaches, showcases, and eligibility rules. Ask at most ONE question per reply. Keep replies tight for a phone screen.
 If asked what AI model or company powers you, who made you, or whether you're ChatGPT/OpenAI/Claude/Anthropic/Gemini/etc., always answer that you are GOLSZ Scout, built by GOLSZ — never name or confirm any underlying model or provider, and don't explain that you're declining to say. Just answer as GOLSZ Scout and move on.
 GOLSZ is a sports-recruiting platform used by athletes of all ages, including minors. Stay strictly on sports, athletics, recruiting, and career topics. Never generate or engage with sexual, romantic, 18+/adult, or otherwise inappropriate content, regardless of how the request is framed (roleplay, "hypothetically," "for a story," etc.) — decline briefly and warmly, and steer the conversation back to something sports-related. This applies no matter who the user says they are.
-OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null}}
-Allowed keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, budget, citizenship, goal. Do not repeat known fields.`;
+OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null}}
+Allowed profile_updates keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, budget, citizenship, goal. Do not repeat known fields.
+Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.`;
 
 const CHIP_ICONS = [Compass, Radar, MessageSquare, CalendarDays];
 function chipsFor(t, isPlayer) {
@@ -5019,6 +5020,10 @@ function Scout() {
   const [msgs, setMsgs] = useState(sb ? null : [{ role: "assistant", text: t("scout_greeting") }]);
   const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo greeting immediately
   const [profile, setProfile] = useState({});
+  // Flattened {field: value} view of athletes.scout_context (migration 050,
+  // Phase 2a) — the "softer" qualification facts (goal, gap, urgency, etc.)
+  // Scout has picked up, as opposed to `profile`'s hard Passport facts.
+  const [scoutContext, setScoutContext] = useState({});
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   // Separate from `busy`: `busy` drives the in-chat "thinking" bubble, which
@@ -5029,6 +5034,12 @@ function Scout() {
   // independent of when the chat log itself updates. See send()'s comments.
   const [pending, setPending] = useState(false);
   const [conversationId, setConversationId] = useState(() => newScoutConvId());
+  // Running summary of this conversation so far (migration 049, Phase 2b of
+  // the AI Scout architecture plan) — lets send() bound how much history it
+  // resends instead of the whole ever-growing transcript. Server-maintained
+  // (classifyIntent() in api/scout.js updates it every turn); this is just
+  // where the client holds the latest value between turns.
+  const [summary, setSummary] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState(null);
   const [photo, setPhoto] = useState(null); // { dataUrl, mediaType, data } — one pending attachment
@@ -5061,7 +5072,7 @@ function Scout() {
 
         const [{ data: prof }, { data: ath }] = await Promise.all([
           sb.from("profiles").select("full_name, dob, occupation").eq("id", user.id).single(),
-          sb.from("athletes").select("sport, position, grad_year, gpa, country, club_name, recruiting_status, license, looking_for_players").eq("id", user.id).single(),
+          sb.from("athletes").select("sport, position, grad_year, gpa, country, club_name, recruiting_status, license, looking_for_players, scout_context").eq("id", user.id).single(),
         ]);
         const seeded = {};
         if (prof && prof.full_name) seeded.name = prof.full_name;
@@ -5086,6 +5097,21 @@ function Scout() {
         baseProfileRef.current = seeded;
         if (Object.keys(seeded).length) setProfile((p) => ({ ...seeded, ...p }));
 
+        // Flatten scout_context's {field: {value, source, confidence, updated_at}}
+        // shape down to {field: value} for prompt purposes — the full shape
+        // (migration 050) is what api/scout.js reads/writes; the client only
+        // ever needs the plain values to give Scout visibility into what it
+        // already knows, same role PROFILE SO FAR already plays for hard facts.
+        if (ath && ath.scout_context && typeof ath.scout_context === "object") {
+          const flatContext = {};
+          for (const [k, entry] of Object.entries(ath.scout_context)) {
+            if (k === "ai_meta") continue;
+            const v = (entry && typeof entry === "object") ? entry.value : entry;
+            if (v != null && v !== "") flatContext[k] = v;
+          }
+          if (Object.keys(flatContext).length) setScoutContext(flatContext);
+        }
+
         const { data, error } = await sb
           .from("scout_history")
           .select("conversation_id, messages, created_at")
@@ -5099,6 +5125,10 @@ function Scout() {
           const restored = rows.filter((r) => r.conversation_id === lastConvId).flatMap((r) => r.messages);
           setConversationId(lastConvId);
           setMsgs(restored.map((m) => ({ role: m.role, text: m.content })));
+          try {
+            const { data: summaryRow } = await sb.from("scout_conversation_summaries").select("summary").eq("conversation_id", lastConvId).maybeSingle();
+            if (summaryRow && summaryRow.summary) setSummary(summaryRow.summary);
+          } catch (e) { console.error("GOLSZ scout summary restore error:", e); }
         } else {
           setMsgs([{ role: "assistant", text: scoutGreetingFor(seeded, t) }]);
         }
@@ -5119,6 +5149,7 @@ function Scout() {
     setMsgs([{ role: "assistant", text: scoutGreetingFor(baseProfileRef.current, t) }]);
     setProfile(baseProfileRef.current);
     setConversationId(newScoutConvId());
+    setSummary("");
     setShowHistory(false);
   }
 
@@ -5166,6 +5197,11 @@ function Scout() {
       const restored = (data || []).flatMap((r) => Array.isArray(r.messages) ? r.messages : []);
       setMsgs(restored.length ? restored.map((m) => ({ role: m.role, text: m.content })) : [{ role: "assistant", text: t("scout_greeting") }]);
       setConversationId(id);
+      setSummary("");
+      try {
+        const { data: summaryRow } = await sb.from("scout_conversation_summaries").select("summary").eq("conversation_id", id).maybeSingle();
+        if (summaryRow && summaryRow.summary) setSummary(summaryRow.summary);
+      } catch (e) { console.error("GOLSZ scout summary load error:", e); }
       setShowHistory(false);
     } catch (e) { console.error("GOLSZ scout load conversation error:", e); }
   }
@@ -5252,9 +5288,14 @@ function Scout() {
     setBusy(true);
     logTurn("user", content || "[photo]");
     try {
-      const api = next.map((m) => ({ role: m.role, content: m.text }));
+      // Only the last RECENT_TURNS messages go to the model — the running
+      // `summary` (server-maintained, migration 049) covers everything
+      // older instead of resending an ever-growing full transcript every
+      // turn. See CLAUDE.md's AI Scout architecture note for why.
+      const RECENT_TURNS = 6;
+      const api = next.slice(-RECENT_TURNS).map((m) => ({ role: m.role, content: m.text }));
       const speakerLabel = profile.occupation && profile.occupation !== "Player" ? profile.occupation.toUpperCase() : "ATHLETE";
-      const promptText = `PROFILE SO FAR: ${JSON.stringify(profile)}\n\n${speakerLabel}: ${content}`;
+      const promptText = `PROFILE SO FAR: ${JSON.stringify(profile)}\n\nSCOUT CONTEXT SO FAR: ${JSON.stringify(scoutContext)}\n\nCONVERSATION SUMMARY SO FAR: ${summary || "(none yet)"}\n\n${speakerLabel}: ${content}`;
       api[api.length - 1] = attached
         ? { role: "user", content: [
             { type: "image", source: { type: "base64", media_type: attached.mediaType, data: attached.data } },
@@ -5266,7 +5307,7 @@ function Scout() {
       const _endpoint = (typeof SCOUT_ENDPOINT !== "undefined" && SCOUT_ENDPOINT) ? SCOUT_ENDPOINT : "https://api.anthropic.com/v1/messages";
       const res = await fetch(_endpoint, {
         method: "POST", headers: _hdr,
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 4096, system: SYS, messages: api, lang, tools: [{ type: "web_search_20250305", name: "web_search" }] }),
+        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 4096, system: SYS, messages: api, lang, conversationId, summary, tools: [{ type: "web_search_20250305", name: "web_search" }] }),
       });
       const data = await res.json();
       // A non-2xx response (rate limit, auth hiccup, upstream 5xx) still
@@ -5280,13 +5321,29 @@ function Scout() {
         throw e;
       }
       const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
-      let reply = raw, updates = null;
+      let reply = raw, updates = null, contextUpdates = null;
       try {
         const clean = raw.replace(/```json|```/g, "").trim();
         const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
-        reply = parsed.reply || raw; updates = parsed.profile_updates || null;
+        reply = parsed.reply || raw; updates = parsed.profile_updates || null; contextUpdates = parsed.scout_context_updates || null;
       } catch { /* raw */ }
       if (updates && typeof updates === "object") setProfile((p) => ({ ...p, ...updates }));
+      if (contextUpdates && typeof contextUpdates === "object") {
+        // Same flatten-to-plain-value logic as the mount-time load above —
+        // the server already validated/persisted the real {value,source,
+        // confidence} shape via merge_scout_context(); this just keeps the
+        // client's own working copy (used for the next prompt) in sync
+        // without a second round-trip.
+        setScoutContext((c) => {
+          const next = { ...c };
+          for (const [k, entry] of Object.entries(contextUpdates)) {
+            const v = (entry && typeof entry === "object") ? entry.value : entry;
+            if (v != null && v !== "") next[k] = v;
+          }
+          return next;
+        });
+      }
+      if (typeof data.scout_summary === "string") setSummary(data.scout_summary);
       setMsgs((m) => [...m, { role: "assistant", text: reply }]);
       logTurn("assistant", reply);
     } catch (e) {
