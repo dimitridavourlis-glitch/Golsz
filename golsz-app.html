@@ -5832,9 +5832,13 @@ function GolszApp({ onSignOut, startOnboarding }) {
       const params = new URLSearchParams(window.location.search);
       if (params.get("profile")) return "profile";
       const p = params.get("page");
-      const valid = ["feed", "discover", "scout", "events", "profile", "messages", "admin"];
-      return valid.includes(p) ? p : "feed";
-    } catch (e) { return "feed"; }
+      // Feed/Discover/Events/Messages are launch-scoped off the main nav
+      // (kept fully intact in the code for a later update — see the "go"
+      // function and the route list below, both untouched) — this just
+      // narrows what a fresh page load can land on directly.
+      const valid = ["scout", "profile", "admin"];
+      return valid.includes(p) ? p : "scout";
+    } catch (e) { return "scout"; }
   });
   const [thread, setThread] = useState(null);
   const [hasUnreadMsgs, setHasUnreadMsgs] = useState(false);
@@ -5875,20 +5879,16 @@ function GolszApp({ onSignOut, startOnboarding }) {
   const mustFinishProfile = profileComplete === false;
   useEffect(() => { if (mustFinishProfile) setPage("profile"); }, [mustFinishProfile]);
 
+  // Feed/Discover/Events/Messages are launch-scoped off both nav bars —
+  // see the "go" function and the route list below, both left fully
+  // intact so re-adding a nav entry later is the only step needed.
   const NAV = [
-    { id: "feed", icon: Home, label: t("nav_home") },
-    { id: "discover", icon: Compass, label: t("nav_discover") },
-    { id: "scout", icon: Radar, label: t("nav_scout"), center: true },
-    { id: "events", icon: CalendarDays, label: t("nav_events") },
+    { id: "scout", icon: Radar, label: t("nav_scout") },
     { id: "profile", icon: User, label: t("nav_passport") },
   ];
 
   const SIDEBAR_NAV = [
-    { id: "feed", icon: Home, label: t("nav_home") },
-    { id: "discover", icon: Compass, label: t("nav_discover") },
     { id: "scout", icon: Radar, label: t("nav_ai_scout") },
-    { id: "events", icon: CalendarDays, label: t("nav_events") },
-    { id: "messages", icon: MessageSquare, label: t("nav_messages"), badge: hasUnreadMsgs },
     { id: "profile", icon: User, label: t("nav_profile") },
   ];
 
