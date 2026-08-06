@@ -6126,10 +6126,9 @@ function GolszApp({ onSignOut, startOnboarding }) {
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <SettingsButton />
         <NotificationBell />
-        <button onClick={() => { if (mustFinishProfile) return; setPage("messages"); setThread(null); }} style={{ position: "relative", background: "none", border: "none", color: page === "messages" ? C.lime : C.chalk, cursor: mustFinishProfile ? "default" : "pointer", opacity: mustFinishProfile ? 0.35 : 1, padding: 4 }}>
-          <MessageSquare size={22} />
-          {hasUnreadMsgs && <span style={{ position: "absolute", top: 2, right: 2, width: 8, height: 8, borderRadius: 99, background: C.lime, border: `2px solid ${C.pitch}` }} />}
-        </button>
+        {/* Messages header shortcut is launch-scoped off along with the
+            Messages nav tab — the button itself is untouched, just not
+            rendered here. */}
         </div>
       </header>
 
