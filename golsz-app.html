@@ -1270,7 +1270,7 @@ function SettingsButton() {
         <SettingsIcon size={22} />
       </button>
       {open && ReactDOM.createPortal(
-        <div style={{ position: "fixed", inset: 0, background: "#000000a6", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setOpen(false)}>
+        <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000a6", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setOpen(false)}>
           <div onClick={(e) => e.stopPropagation()} className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 420, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
               <div style={{ fontWeight: 800, fontSize: 16 }}>{t("settings_title")}</div>
@@ -2193,7 +2193,7 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+    <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: "18px 18px calc(18px + env(safe-area-inset-bottom, 0px))", boxSizing: "border-box" }} className="noscroll">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div style={{ fontWeight: 800, fontSize: 16 }}>{t("events_add_title")}</div>
@@ -3151,7 +3151,7 @@ function PostsGrid({ viewUserId }) {
       )}
 
       {openPost && (
-        <div onClick={() => setOpenPost(null)} style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 18, boxSizing: "border-box" }}>
+        <div onClick={() => setOpenPost(null)} className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 18, boxSizing: "border-box" }}>
           <div onClick={(e) => e.stopPropagation()} className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 480, width: "100%", maxHeight: "88vh", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button onClick={() => setOpenPost(null)} style={iconBtn(C.chalk)}><X size={18} /></button>
@@ -3372,7 +3372,7 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+    <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
       <div style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, borderRadius: "18px 18px 0 0", maxWidth: 480, width: "100%", maxHeight: "92vh", overflowY: "auto", padding: "16px 18px calc(18px + env(safe-area-inset-bottom, 0px))", boxSizing: "border-box" }} className="noscroll">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: locked ? 4 : 16, gap: 8 }}>
           <div style={{ fontWeight: 800, fontSize: 15, flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t("editor_title")}</div>
@@ -6213,6 +6213,14 @@ const CSS = `
      100dvh tracks the real visible height; 100vh above is just the
      pre-dvh-support fallback (Safari < 15.4). */
   .app-shell { height: 100vh; height: 100dvh; }
+  /* Same iOS Safari fix as .app-shell above, for the full-screen fixed
+     overlays (Edit Profile, post viewer, add-to-events, the settings
+     menu backdrop) — inset:0 alone sizes a position:fixed box against
+     the larger layout viewport, so with the address bar visible its
+     content (and Save/close buttons) can render below the fold, behind
+     the browser chrome or this app's own header/bottom nav. Explicit
+     height wins over inset:0's implied bottom, so this is enough. */
+  .fixed-sheet { height: 100vh; height: 100dvh; }
   .noscroll::-webkit-scrollbar { display: none; }
   .noscroll { -ms-overflow-style: none; scrollbar-width: none; }
   .msg { animation: rise .22s ease; }
