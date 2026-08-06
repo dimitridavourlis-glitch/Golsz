@@ -303,7 +303,7 @@ const I18N = {
     passport_no_followers_other: "No followers yet.",
     passport_no_followers_self: "No followers yet — your Discover and Feed activity is how people find you.",
     passport_admin_panel: "Admin panel", passport_terms: "Terms & Conditions", passport_athlete_fallback: "GOLSZ Athlete",
-    passport_foot: "FOOT", passport_share: "Share", passport_share_copied: "Link copied — anyone can view this, no account needed",
+    passport_foot: "FOOT", passport_share: "Share", passport_share_copied: "Link copied — they'll need a free GOLSZ account to view it.", passport_share_title: "My GOLSZ Passport", passport_share_text: "Check out my GOLSZ Sports Passport",
     passport_share_err: "Couldn't turn on sharing. Try again.", passport_is_public: "Your Passport is public via link", passport_make_private: "Make private",
     public_passport_not_found: "This passport doesn't exist or the link is broken.", public_passport_private: "This passport isn't public yet.", public_passport_cta: "Get your own GOLSZ Passport →",
     blocked_title: "Blocked accounts", blocked_empty: "You haven't blocked anyone.", blocked_unblock: "Unblock",
@@ -503,7 +503,7 @@ const I18N = {
     passport_no_followers_other: "Pas encore d'abonnés.",
     passport_no_followers_self: "Pas encore d'abonnés — votre activité sur Découvrir et le fil est ce qui permet aux gens de vous trouver.",
     passport_admin_panel: "Panneau d'administration", passport_terms: "Conditions d'utilisation", passport_athlete_fallback: "Athlète GOLSZ",
-    passport_foot: "PIED", passport_share: "Partager", passport_share_copied: "Lien copié — visible par tous, aucun compte requis",
+    passport_foot: "PIED", passport_share: "Partager", passport_share_copied: "Lien copié — un compte GOLSZ gratuit sera nécessaire pour le voir.", passport_share_title: "Mon Passeport GOLSZ", passport_share_text: "Découvrez mon Passeport Sportif GOLSZ",
     passport_share_err: "Impossible d'activer le partage. Réessayez.", passport_is_public: "Votre Passeport est public via un lien", passport_make_private: "Rendre privé",
     public_passport_not_found: "Ce passeport n'existe pas ou le lien est cassé.", public_passport_private: "Ce passeport n'est pas encore public.", public_passport_cta: "Obtenez votre propre Passeport GOLSZ →",
     blocked_title: "Comptes bloqués", blocked_empty: "Vous n'avez bloqué personne.", blocked_unblock: "Débloquer",
@@ -703,7 +703,7 @@ const I18N = {
     passport_no_followers_other: "Aún no tiene seguidores.",
     passport_no_followers_self: "Aún no tienes seguidores — tu actividad en Descubrir y el feed es cómo la gente te encuentra.",
     passport_admin_panel: "Panel de administración", passport_terms: "Términos y condiciones", passport_athlete_fallback: "Atleta de GOLSZ",
-    passport_foot: "PIE", passport_share: "Compartir", passport_share_copied: "Enlace copiado — cualquiera puede verlo, sin necesidad de cuenta",
+    passport_foot: "PIE", passport_share: "Compartir", passport_share_copied: "Enlace copiado — necesitarán una cuenta gratuita de GOLSZ para verlo.", passport_share_title: "Mi Pasaporte GOLSZ", passport_share_text: "Mira mi Pasaporte Deportivo GOLSZ",
     passport_share_err: "No se pudo activar el uso compartido. Inténtalo de nuevo.", passport_is_public: "Tu Pasaporte es público mediante enlace", passport_make_private: "Hacer privado",
     public_passport_not_found: "Este pasaporte no existe o el enlace está roto.", public_passport_private: "Este pasaporte aún no es público.", public_passport_cta: "Consigue tu propio Pasaporte GOLSZ →",
     blocked_title: "Cuentas bloqueadas", blocked_empty: "No has bloqueado a nadie.", blocked_unblock: "Desbloquear",
@@ -903,7 +903,7 @@ const I18N = {
     passport_no_followers_other: "Δεν έχει ακόλουθους ακόμα.",
     passport_no_followers_self: "Δεν έχετε ακόλουθους ακόμα — η δραστηριότητά σας στην Ανακάλυψη και τη ροή είναι ο τρόπος να σας βρουν.",
     passport_admin_panel: "Πίνακας διαχείρισης", passport_terms: "Όροι & Προϋποθέσεις", passport_athlete_fallback: "Αθλητής GOLSZ",
-    passport_foot: "ΠΟΔΙ", passport_share: "Κοινοποίηση", passport_share_copied: "Ο σύνδεσμος αντιγράφηκε — ορατός σε όλους, χωρίς λογαριασμό",
+    passport_foot: "ΠΟΔΙ", passport_share: "Κοινοποίηση", passport_share_copied: "Ο σύνδεσμος αντιγράφηκε — θα χρειαστεί δωρεάν λογαριασμό GOLSZ για να τον δει.", passport_share_title: "Το Διαβατήριό μου GOLSZ", passport_share_text: "Δείτε το Αθλητικό μου Διαβατήριο GOLSZ",
     passport_share_err: "Δεν ήταν δυνατή η ενεργοποίηση κοινοποίησης. Δοκιμάστε ξανά.", passport_is_public: "Το Διαβατήριό σας είναι δημόσιο μέσω συνδέσμου", passport_make_private: "Ιδιωτικό",
     public_passport_not_found: "Αυτό το διαβατήριο δεν υπάρχει ή ο σύνδεσμος είναι κατεστραμμένος.", public_passport_private: "Αυτό το διαβατήριο δεν είναι ακόμα δημόσιο.", public_passport_cta: "Αποκτήστε το δικό σας Διαβατήριο GOLSZ →",
     blocked_title: "Αποκλεισμένοι λογαριασμοί", blocked_empty: "Δεν έχετε αποκλείσει κανέναν.", blocked_unblock: "Άρση αποκλεισμού",
@@ -3387,25 +3387,20 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const real = !!uid;
   const viewingOther = !!(viewUserId && uid && viewUserId !== uid);
 
-  // Sharing is an explicit, athlete-initiated action, not an always-on
-  // default — profiles.passport_public (migration 047) starts false for
-  // everyone, and get_public_passport() only ever returns data once it's
-  // true. Clicking "Share" is the actual opt-in: it flips that flag on,
-  // then copies a link that works with zero GOLSZ account (see
-  // PublicPassport). If the athlete is a restricted minor (no approved
-  // parent yet), the flag can still be set and the link still copies, but
-  // the RPC itself keeps returning nothing regardless — that gate is
-  // enforced server-side and passport_public doesn't override it.
+  // Sharing sends an authenticated deep link (?profile=<uid>) rather than
+  // the old no-login public-passport link — a recipient needs a (free)
+  // GOLSZ account to open it, same as viewing any other athlete's Passport
+  // in-app already requires (athletes_read already allows any signed-in
+  // user to read a non-restricted, non-banned athlete's row). Uses the
+  // native OS share sheet (Messages/Messenger/Mail/etc.) when available,
+  // falling back to a clipboard copy on desktop browsers without it.
   async function sharePassport() {
     if (!uid) return;
-    if (!profile || !profile.passport_public) {
-      try {
-        const { error } = await sb.from("profiles").update({ passport_public: true }).eq("id", uid);
-        if (error) throw error;
-        setProfile((p) => ({ ...p, passport_public: true }));
-      } catch (e) { console.error("GOLSZ passport-public error:", e); setShareMsg(t("passport_share_err")); setTimeout(() => setShareMsg(""), 4000); return; }
+    const url = `${window.location.origin}${window.location.pathname}?profile=${uid}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: t("passport_share_title"), text: t("passport_share_text"), url }); return; }
+      catch (e) { if (e && e.name === "AbortError") return; /* fall through to clipboard on real errors */ }
     }
-    const url = `${window.location.origin}${window.location.pathname}?public=${uid}`;
     try { await navigator.clipboard.writeText(url); setShareMsg(t("passport_share_copied")); }
     catch (e) { setShareMsg(url); }
     setTimeout(() => setShareMsg(""), 4000);
@@ -5827,10 +5822,16 @@ const bubbleAgent = { background: C.turf, border: `1px solid ${C.line2}`, border
 const bubbleUser = { background: C.lime, color: C.ink, borderRadius: "14px 2px 14px 14px", padding: "10px 13px", margin: "0 0 12px 30px", fontSize: 14, lineHeight: 1.55, fontWeight: 500 };
 
 function GolszApp({ onSignOut, startOnboarding }) {
+  // A shared Passport link (?profile=<uid>, see Passport's sharePassport())
+  // survives the sign-in/sign-up flow since it's untouched in the URL —
+  // Root() renders Auth first for a signed-out visitor, then this reads
+  // the same query string once GolszApp mounts post-login.
   const [page, setPage] = useState(() => {
     if (startOnboarding) return "profile";
     try {
-      const p = new URLSearchParams(window.location.search).get("page");
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("profile")) return "profile";
+      const p = params.get("page");
       const valid = ["feed", "discover", "scout", "events", "profile", "messages", "admin"];
       return valid.includes(p) ? p : "feed";
     } catch (e) { return "feed"; }
@@ -5838,7 +5839,11 @@ function GolszApp({ onSignOut, startOnboarding }) {
   const [thread, setThread] = useState(null);
   const [hasUnreadMsgs, setHasUnreadMsgs] = useState(false);
   const [onboarding, setOnboarding] = useState(!!startOnboarding);
-  const [viewProfileId, setViewProfileId] = useState(null);
+  const [viewProfileId, setViewProfileId] = useState(() => {
+    if (startOnboarding) return null; // finishing your own profile takes priority over a shared link
+    try { return new URLSearchParams(window.location.search).get("profile") || null; }
+    catch (e) { return null; }
+  });
   // Stack of { page, viewProfileId } snapshots to restore on "back" out of a
   // viewed profile — e.g. opening a passport from a chat thread's header and
   // pressing back should land back in that same thread, not on your own
