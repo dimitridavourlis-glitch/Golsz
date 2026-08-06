@@ -6299,7 +6299,10 @@ const CSS = `
     --passport-strip: #DCEDC7;
   }
 
-  body { margin: 0; background: ${C.pitch}; }
+  /* .app-shell sets its own font-family inline, which portaled modals
+     (document.body children, not its descendants — see .fixed-sheet
+     usages) don't inherit. Setting it here too covers those directly. */
+  body { margin: 0; background: ${C.pitch}; font-family: 'Archivo', system-ui, sans-serif; color: ${C.chalk}; }
   /* iOS Safari's address bar collapses/expands as you scroll, but 100vh
      is locked to the tallest (address-bar-hidden) case — the shell would
      render taller than the actually-visible viewport whenever the bar was
