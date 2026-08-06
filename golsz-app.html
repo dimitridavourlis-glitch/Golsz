@@ -5727,6 +5727,13 @@ function Scout({ onGoToProfile }) {
   // Phase 2a) — the "softer" qualification facts (goal, gap, urgency, etc.)
   // Scout has picked up, as opposed to `profile`'s hard Passport facts.
   const [scoutContext, setScoutContext] = useState({});
+  // Latest value per metric from athlete_benchmarks (migration 071) — a
+  // compact summary (not the full retest history) so the development/
+  // nutrition specialist can reference real recorded numbers ("your
+  // 40-yard dash is 4.5s") instead of generic advice. Loaded once on
+  // mount alongside profile/scout_context; never refreshed mid-
+  // conversation since Scout itself doesn't write to this table.
+  const [benchmarkSummary, setBenchmarkSummary] = useState({});
   // { type, label, params } | null — "My Next Move" (see extractNextBestAction
   // in api/scout.js). A real, persistent, explainable UI object rather than
   // one more chat bubble: loaded from the last conversation's ai_meta on
@@ -5785,10 +5792,19 @@ function Scout({ onGoToProfile }) {
         if (!user) { setMsgs([{ role: "assistant", text: t("scout_greeting") }]); return; }
         uidRef.current = user.id;
 
-        const [{ data: prof }, { data: ath }] = await Promise.all([
+        const [{ data: prof }, { data: ath }, { data: benchmarks }] = await Promise.all([
           sb.from("profiles").select("full_name, dob, occupation").eq("id", user.id).single(),
           sb.from("athletes").select("sport, position, grad_year, gpa, country, club_name, recruiting_status, license, looking_for_players, education_level, scout_context").eq("id", user.id).single(),
+          sb.from("athlete_benchmarks").select("metric, value, unit, recorded_date").eq("user_id", user.id).order("recorded_date", { ascending: false }),
         ]);
+        if (Array.isArray(benchmarks) && benchmarks.length) {
+          // First row per metric (already newest-first) wins — latest
+          // reading only, not the whole retest history, to keep the
+          // prompt compact.
+          const latest = {};
+          for (const b of benchmarks) if (!latest[b.metric]) latest[b.metric] = `${b.value}${b.unit ? " " + b.unit : ""}`;
+          setBenchmarkSummary(latest);
+        }
         const seeded = {};
         if (prof && prof.full_name) seeded.name = prof.full_name;
         if (prof && prof.occupation) seeded.occupation = prof.occupation;
@@ -6013,7 +6029,8 @@ function Scout({ onGoToProfile }) {
       const RECENT_TURNS = 6;
       const api = next.slice(-RECENT_TURNS).map((m) => ({ role: m.role, content: m.text }));
       const speakerLabel = profile.occupation && profile.occupation !== "Player" ? profile.occupation.toUpperCase() : "ATHLETE";
-      const promptText = `PROFILE SO FAR: ${JSON.stringify(profile)}\n\nSCOUT CONTEXT SO FAR: ${JSON.stringify(scoutContext)}\n\nCONVERSATION SUMMARY SO FAR: ${summary || "(none yet)"}\n\n${speakerLabel}: ${content}`;
+      const benchmarksLine = Object.keys(benchmarkSummary).length ? `\n\nLATEST RECORDED BENCHMARKS: ${JSON.stringify(benchmarkSummary)}` : "";
+      const promptText = `PROFILE SO FAR: ${JSON.stringify(profile)}\n\nSCOUT CONTEXT SO FAR: ${JSON.stringify(scoutContext)}${benchmarksLine}\n\nCONVERSATION SUMMARY SO FAR: ${summary || "(none yet)"}\n\n${speakerLabel}: ${content}`;
       api[api.length - 1] = attached
         ? { role: "user", content: [
             { type: "image", source: { type: "base64", media_type: attached.mediaType, data: attached.data } },
