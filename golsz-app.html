@@ -4034,21 +4034,8 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         <div style={{ fontSize: 13.5, lineHeight: 1.55, color: C.body }}>{p.bio}</div>
       </div>
 
-      {/* following + followers */}
-      {real && (
-        <FollowListCard
-          title={(n) => n === null ? t("passport_following_count") : `${n} ${t("passport_following_count")}`}
-          list={followingList} onViewProfile={onViewProfile}
-          emptyText={viewingOther ? t("passport_not_following_other") : t("passport_not_following_self")}
-        />
-      )}
-      {real && (
-        <FollowListCard
-          title={(n) => n === null ? t("passport_followers_count") : `${n} ${n === 1 ? t("passport_follower_singular") : t("passport_followers_count")}`}
-          list={followers} onViewProfile={onViewProfile}
-          emptyText={viewingOther ? t("passport_no_followers_other") : t("passport_no_followers_self")}
-        />
-      )}
+      {/* Following/Followers (FollowListCard) are launch-scoped off
+          Passport for now — untouched, just not rendered here. */}
 
       {/* media */}
       <Highlights viewUserId={viewingOther ? viewUserId : null} />
