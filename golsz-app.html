@@ -264,10 +264,11 @@ const I18N = {
     family_disclaimer: "The account owner must approve before a parent can see their private data. This confirms mutual consent — it isn't independent identity verification.",
     family_sent_msg: "Request sent — waiting on their approval.", family_not_found_msg: "No GOLSZ account found with that email.",
     family_couldnt_send: "Couldn't send request.",
-    highlights_title: "VERIFIED MEDIA", highlights_empty: "No highlights yet.",
+    highlights_title: "VERIFIED MEDIA", highlights_title_unverified: "MEDIA", highlights_empty: "No highlights yet.",
     passport_posts_title: "POSTS", passport_posts_empty: "No posts yet.",
     highlights_title_ph: "Highlight title (e.g. Full match vs Montreal)", highlights_link_ph: "Link (YouTube, Veo, Hudl…)",
     highlights_add: "Add", highlights_invalid_url: "Enter a valid video link (starting with https://).",
+    timeline_title: "CAREER TIMELINE", timeline_empty: "No milestones yet.", timeline_year_ph: "Year", timeline_text_ph: "e.g. Committed to Tusculum University", timeline_add: "Add", timeline_add_err: "Couldn't add that. Try again.",
     highlights_add_err: "Couldn't add that link.", highlights_watch: "Watch highlight",
     editor_title: "Build your profile", editor_name_label: "FULL NAME", editor_name_ph: "Your name",
     editor_sport_label: "SPORT", editor_select: "Select…", editor_position_label: "POSITION",
@@ -464,10 +465,11 @@ const I18N = {
     family_disclaimer: "Le titulaire du compte doit approuver avant qu'un parent puisse voir ses données privées. Ceci confirme un consentement mutuel — ce n'est pas une vérification d'identité indépendante.",
     family_sent_msg: "Demande envoyée — en attente de son approbation.", family_not_found_msg: "Aucun compte GOLSZ trouvé avec cet e-mail.",
     family_couldnt_send: "Impossible d'envoyer la demande.",
-    highlights_title: "MÉDIAS VÉRIFIÉS", highlights_empty: "Aucun temps fort pour l'instant.",
+    highlights_title: "MÉDIAS VÉRIFIÉS", highlights_title_unverified: "MÉDIAS", highlights_empty: "Aucun temps fort pour l'instant.",
     passport_posts_title: "PUBLICATIONS", passport_posts_empty: "Aucune publication pour l'instant.",
     highlights_title_ph: "Titre du temps fort (ex. Match complet vs Montréal)", highlights_link_ph: "Lien (YouTube, Veo, Hudl…)",
     highlights_add: "Ajouter", highlights_invalid_url: "Indiquez un lien vidéo valide (commençant par https://).",
+    timeline_title: "PARCOURS SPORTIF", timeline_empty: "Aucune étape pour l'instant.", timeline_year_ph: "Année", timeline_text_ph: "ex. Engagement à Tusculum University", timeline_add: "Ajouter", timeline_add_err: "Impossible d'ajouter. Réessayez.",
     highlights_add_err: "Impossible d'ajouter ce lien.", highlights_watch: "Voir le temps fort",
     editor_title: "Créez votre profil", editor_name_label: "NOM COMPLET", editor_name_ph: "Votre nom",
     editor_sport_label: "SPORT", editor_select: "Sélectionner…", editor_position_label: "POSTE",
@@ -664,10 +666,11 @@ const I18N = {
     family_disclaimer: "El titular de la cuenta debe aprobar antes de que un padre o madre pueda ver sus datos privados. Esto confirma el consentimiento mutuo — no es una verificación de identidad independiente.",
     family_sent_msg: "Solicitud enviada — esperando su aprobación.", family_not_found_msg: "No se encontró ninguna cuenta de GOLSZ con ese correo.",
     family_couldnt_send: "No se pudo enviar la solicitud.",
-    highlights_title: "MEDIOS VERIFICADOS", highlights_empty: "Aún no hay mejores jugadas.",
+    highlights_title: "MEDIOS VERIFICADOS", highlights_title_unverified: "MEDIOS", highlights_empty: "Aún no hay mejores jugadas.",
     passport_posts_title: "PUBLICACIONES", passport_posts_empty: "Aún no hay publicaciones.",
     highlights_title_ph: "Título de la jugada (ej. Partido completo vs Montreal)", highlights_link_ph: "Enlace (YouTube, Veo, Hudl…)",
     highlights_add: "Añadir", highlights_invalid_url: "Introduce un enlace de vídeo válido (que empiece por https://).",
+    timeline_title: "TRAYECTORIA DEPORTIVA", timeline_empty: "Aún no hay hitos.", timeline_year_ph: "Año", timeline_text_ph: "ej. Compromiso con Tusculum University", timeline_add: "Añadir", timeline_add_err: "No se pudo añadir. Inténtalo de nuevo.",
     highlights_add_err: "No se pudo añadir ese enlace.", highlights_watch: "Ver la jugada",
     editor_title: "Crea tu perfil", editor_name_label: "NOMBRE COMPLETO", editor_name_ph: "Tu nombre",
     editor_sport_label: "DEPORTE", editor_select: "Seleccionar…", editor_position_label: "POSICIÓN",
@@ -864,10 +867,11 @@ const I18N = {
     family_disclaimer: "Ο κάτοχος του λογαριασμού πρέπει να εγκρίνει πριν ένας γονέας δει τα ιδιωτικά του δεδομένα. Αυτό επιβεβαιώνει αμοιβαία συναίνεση — δεν αποτελεί ανεξάρτητη επαλήθευση ταυτότητας.",
     family_sent_msg: "Το αίτημα στάλθηκε — αναμονή έγκρισης.", family_not_found_msg: "Δεν βρέθηκε λογαριασμός GOLSZ με αυτό το email.",
     family_couldnt_send: "Δεν ήταν δυνατή η αποστολή του αιτήματος.",
-    highlights_title: "ΕΠΑΛΗΘΕΥΜΕΝΑ ΜΕΣΑ", highlights_empty: "Δεν υπάρχουν highlights ακόμα.",
+    highlights_title: "ΕΠΑΛΗΘΕΥΜΕΝΑ ΜΕΣΑ", highlights_title_unverified: "ΜΕΣΑ", highlights_empty: "Δεν υπάρχουν highlights ακόμα.",
     passport_posts_title: "ΑΝΑΡΤΗΣΕΙΣ", passport_posts_empty: "Δεν υπάρχουν αναρτήσεις ακόμα.",
     highlights_title_ph: "Τίτλος highlight (π.χ. Πλήρης αγώνας εναντίον Μόντρεαλ)", highlights_link_ph: "Σύνδεσμος (YouTube, Veo, Hudl…)",
     highlights_add: "Προσθήκη", highlights_invalid_url: "Εισαγάγετε έγκυρο σύνδεσμο βίντεο (που να ξεκινά με https://).",
+    timeline_title: "ΑΘΛΗΤΙΚΗ ΠΟΡΕΙΑ", timeline_empty: "Δεν υπάρχουν σταθμοί ακόμα.", timeline_year_ph: "Έτος", timeline_text_ph: "π.χ. Δέσμευση στο Tusculum University", timeline_add: "Προσθήκη", timeline_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.",
     highlights_add_err: "Δεν ήταν δυνατή η προσθήκη αυτού του συνδέσμου.", highlights_watch: "Δείτε το highlight",
     editor_title: "Δημιουργήστε το προφίλ σας", editor_name_label: "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", editor_name_ph: "Το όνομά σας",
     editor_sport_label: "ΑΘΛΗΜΑ", editor_select: "Επιλέξτε…", editor_position_label: "ΘΕΣΗ",
@@ -2858,6 +2862,13 @@ function Highlights({ viewUserId }) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // The "VERIFIED MEDIA" label used to show unconditionally — every
+  // account's self-submitted, AI-moderated links, whether or not the
+  // account itself was ever actually verified. Now it only claims
+  // "verified" when the owner has real identity verification
+  // (profiles.identity_verified, migration 058's admin-reviewed
+  // workflow) — anyone else sees a neutral "Media" header instead.
+  const [ownerVerified, setOwnerVerified] = useState(false);
   const isOwner = !!(uid && (!viewUserId || viewUserId === uid));
 
   useEffect(() => {
@@ -2868,9 +2879,13 @@ function Highlights({ viewUserId }) {
         if (!user) return;
         setUid(user.id);
         const targetId = viewUserId || user.id;
-        const { data, error } = await sb.from("athletes").select("highlights").eq("id", targetId).single();
+        const [{ data, error }, { data: prof }] = await Promise.all([
+          sb.from("athletes").select("highlights").eq("id", targetId).single(),
+          sb.from("profiles").select("identity_verified").eq("id", targetId).maybeSingle(),
+        ]);
         if (error) throw error;
         setItems(Array.isArray(data && data.highlights) ? data.highlights : []);
+        setOwnerVerified(!!(prof && prof.identity_verified));
         setLoaded(true);
       } catch (e) { console.error("GOLSZ highlights load error:", e); }
     })();
@@ -2925,7 +2940,10 @@ function Highlights({ viewUserId }) {
 
   return (
     <div style={{ ...card }}>
-      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("highlights_title")}</div>
+      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+        {ownerVerified && <BadgeCheck size={11} color={C.lime} />}
+        {ownerVerified ? t("highlights_title") : t("highlights_title_unverified")}
+      </div>
       {loaded && items.length === 0 && (
         <div style={{ fontSize: 12.5, color: C.slate }}>{t("highlights_empty")}</div>
       )}
@@ -2951,6 +2969,108 @@ function Highlights({ viewUserId }) {
               style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
             <button onClick={addHighlight} disabled={!title.trim() || !url.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!title.trim() || !url.trim() || busy) ? 0.5 : 1 }}>
               {busy ? "…" : t("highlights_add")}
+            </button>
+          </div>
+          {err && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 6 }}>{err}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============ CAREER TIMELINE ============
+   Same viewUserId convention and jsonb-list pattern as Highlights above —
+   self-service entries {id, year, text} on athletes.timeline (migration
+   065). Replaces the old hardcoded, demo-only "CAREER TIMELINE" card that
+   never showed on a real account. */
+function Timeline({ viewUserId }) {
+  const { t } = useLang();
+  const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [uid, setUid] = useState(null);
+  const [year, setYear] = useState("");
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const isOwner = !!(uid && (!viewUserId || viewUserId === uid));
+
+  useEffect(() => {
+    if (!sb) return;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        setUid(user.id);
+        const targetId = viewUserId || user.id;
+        const { data, error } = await sb.from("athletes").select("timeline").eq("id", targetId).single();
+        if (error) throw error;
+        const list = Array.isArray(data && data.timeline) ? data.timeline : [];
+        // Newest first — a coach skimming a shared Passport should see the
+        // most recent milestone (this season, a commitment) before older
+        // ones, not have to scroll past years of history first.
+        setItems([...list].sort((a, b) => String(b.year).localeCompare(String(a.year))));
+        setLoaded(true);
+      } catch (e) { console.error("GOLSZ timeline load error:", e); }
+    })();
+  }, [viewUserId]);
+
+  async function saveList(list) {
+    if (!sb || !uid || !isOwner) return;
+    try { await sb.from("athletes").update({ timeline: list }).eq("id", uid); }
+    catch (e) { console.error("GOLSZ timeline save error:", e); }
+  }
+
+  async function addEntry() {
+    if (!sb || !uid || !isOwner || !year.trim() || !text.trim() || busy) return;
+    setBusy(true); setErr("");
+    try {
+      const { decision } = await moderateContent({ text: text.trim(), contentType: "profile_field", surface: "profile" });
+      if (decision === "block") throw new Error(t("moderation_blocked"));
+      const entry = {
+        id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()),
+        year: year.trim().slice(0, 20), text: text.trim().slice(0, 200),
+      };
+      const next = [...items, entry];
+      const sorted = [...next].sort((a, b) => String(b.year).localeCompare(String(a.year)));
+      await saveList(next);
+      setItems(sorted);
+      setYear(""); setText("");
+    } catch (e) {
+      setErr((e && e.message) ? e.message : t("timeline_add_err"));
+    } finally { setBusy(false); }
+  }
+
+  async function removeEntry(id) {
+    if (!sb || !uid || !isOwner) return;
+    const next = items.filter((m) => m.id !== id);
+    setItems(next);
+    await saveList(next);
+  }
+
+  return (
+    <div style={{ ...card }}>
+      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("timeline_title")}</div>
+      {loaded && items.length === 0 && (
+        <div style={{ fontSize: 12.5, color: C.slate }}>{t("timeline_empty")}</div>
+      )}
+      {items.map((e, i) => (
+        <div key={e.id || i} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "7px 0", borderBottom: i < items.length - 1 ? `1px solid ${C.line}` : "none" }}>
+          <div style={{ fontFamily: "'Space Mono', monospace", fontWeight: 800, color: C.lime, fontSize: 13, width: 56, flexShrink: 0, paddingTop: 1 }}>{e.year}</div>
+          <div style={{ fontSize: 13, color: C.body, flex: 1, lineHeight: 1.5 }}>{e.text}</div>
+          {isOwner && e.id && (
+            <button onClick={() => removeEntry(e.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, marginLeft: 4, display: "flex", flexShrink: 0 }}><X size={13} /></button>
+          )}
+        </div>
+      ))}
+      {sb && isOwner && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
+          <div style={{ display: "flex", gap: 6 }}>
+            <input value={year} onChange={(e) => setYear(e.target.value)} placeholder={t("timeline_year_ph")}
+              style={{ width: 90, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+            <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t("timeline_text_ph")}
+              style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+            <button onClick={addEntry} disabled={!year.trim() || !text.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!year.trim() || !text.trim() || busy) ? 0.5 : 1 }}>
+              {busy ? "…" : t("timeline_add")}
             </button>
           </div>
           {err && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 6 }}>{err}</div>}
@@ -3825,21 +3945,11 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       {/* media */}
       <Highlights viewUserId={viewingOther ? viewUserId : null} />
 
+      {/* career timeline */}
+      <Timeline viewUserId={viewingOther ? viewUserId : null} />
+
       {/* posts grid */}
       {real && <PostsGrid viewUserId={viewingOther ? viewUserId : null} />}
-
-      {/* timeline — not backed by a real data model yet, demo only */}
-      {!real && (
-        <div style={{ ...card, marginBottom: 8 }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>CAREER TIMELINE</div>
-          {p.timeline.map((e, i) => (
-            <div key={i} style={{ display: "flex", gap: 12, marginBottom: i < p.timeline.length - 1 ? 12 : 0 }}>
-              <div style={{ fontFamily: "'Space Mono', monospace", fontWeight: 800, color: C.lime, fontSize: 13, width: 40 }}>{e.yr}</div>
-              <div style={{ fontSize: 13, color: C.body, flex: 1, borderLeft: `2px solid ${C.line2}`, paddingLeft: 12 }}>{e.txt}</div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {!viewingOther && <RestrictedBanner />}
       {!viewingOther && <FamilyAccess />}
