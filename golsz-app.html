@@ -81,6 +81,7 @@ const Search = svg('<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>'
 const CalendarPlus = svg('<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M10 16h4"/><path d="M12 14v4"/>');
 const Target = svg('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>');
 const Mail = svg('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>');
+const Download = svg('<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>');
 
 
 
@@ -308,6 +309,7 @@ const I18N = {
     passport_photo_err: "Couldn't upload your photo — try again.",
     passport_passport_no: "PASSPORT NO.", passport_height: "HEIGHT", passport_grad: "GRAD", passport_gpa: "GPA",
     passport_weight: "WEIGHT", passport_status: "STATUS", passport_bio_title: "SCOUTING BIO",
+    passport_export_pdf: "Export PDF", passport_export_generated: "Generated {date} · golsz.com",
     passport_license: "LICENSE", passport_looking_for: "LOOKING FOR PLAYERS",
     passport_unverified_prefix: "UNVERIFIED ", passport_verified_tooltip: "Verified Pro member",
     passport_verified_elite_tooltip: "Verified Elite member",
@@ -522,6 +524,7 @@ const I18N = {
     passport_photo_err: "Impossible d'envoyer votre photo — réessayez.",
     passport_passport_no: "N° PASSEPORT", passport_height: "TAILLE", passport_grad: "DIPLÔME", passport_gpa: "GPA",
     passport_weight: "POIDS", passport_status: "STATUT", passport_bio_title: "BIO DE RECRUTEMENT",
+    passport_export_pdf: "Exporter en PDF", passport_export_generated: "Généré le {date} · golsz.com",
     passport_license: "LICENCE", passport_looking_for: "RECHERCHE DE JOUEURS",
     passport_unverified_prefix: "NON VÉRIFIÉ ", passport_verified_tooltip: "Membre Pro vérifié",
     passport_verified_elite_tooltip: "Membre Elite vérifié",
@@ -736,6 +739,7 @@ const I18N = {
     passport_photo_err: "No se pudo subir tu foto — inténtalo de nuevo.",
     passport_passport_no: "N.º DE PASAPORTE", passport_height: "ALTURA", passport_grad: "GRADUACIÓN", passport_gpa: "GPA",
     passport_weight: "PESO", passport_status: "ESTADO", passport_bio_title: "BIOGRAFÍA DEPORTIVA",
+    passport_export_pdf: "Exportar PDF", passport_export_generated: "Generado el {date} · golsz.com",
     passport_license: "LICENCIA", passport_looking_for: "BUSCANDO JUGADORES",
     passport_unverified_prefix: "NO VERIFICADO ", passport_verified_tooltip: "Miembro Pro verificado",
     passport_verified_elite_tooltip: "Miembro Elite verificado",
@@ -950,6 +954,7 @@ const I18N = {
     passport_photo_err: "Δεν ήταν δυνατή η μεταφόρτωση της φωτογραφίας — δοκιμάστε ξανά.",
     passport_passport_no: "ΑΡ. ΔΙΑΒΑΤΗΡΙΟΥ", passport_height: "ΥΨΟΣ", passport_grad: "ΑΠΟΦΟΙΤΗΣΗ", passport_gpa: "GPA",
     passport_weight: "ΒΑΡΟΣ", passport_status: "ΚΑΤΑΣΤΑΣΗ", passport_bio_title: "ΒΙΟΓΡΑΦΙΚΟ ΣΚΑΟΥΤΙΝΓΚ",
+    passport_export_pdf: "Εξαγωγή PDF", passport_export_generated: "Δημιουργήθηκε στις {date} · golsz.com",
     passport_license: "ΑΔΕΙΑ", passport_looking_for: "ΑΝΑΖΗΤΗΣΗ ΠΑΙΚΤΩΝ",
     passport_unverified_prefix: "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ ", passport_verified_tooltip: "Επαληθευμένο μέλος Pro",
     passport_verified_elite_tooltip: "Επαληθευμένο μέλος Elite",
@@ -3986,6 +3991,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         ) : real ? (
           <div style={{ display: "flex", gap: 14 }}>
             <button onClick={sharePassport} style={{ ...iconBtn(C.chalk), fontSize: 11.5 }}><Share2 size={13} /> {t("passport_share")}</button>
+            <button onClick={() => window.print()} style={{ ...iconBtn(C.chalk), fontSize: 11.5 }}><Download size={13} /> {t("passport_export_pdf")}</button>
             <button onClick={() => setEditing(true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}><Pencil size={13} /> {t("passport_edit")}</button>
           </div>
         ) : (
@@ -4248,6 +4254,35 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           <button onClick={onSignOut} style={{ background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{t("nav_signout")}</button>
         </div>
       )}
+
+      {/* PDF export (window.print()'s own "Save as PDF" destination, see
+          .passport-print-view in the CSS template) — always in the DOM,
+          hidden until an actual print/print-preview happens. Scoped to
+          this component's own core identity fields (the same data already
+          in the passport card + bio above); highlights/timeline/
+          benchmarks live in separate components with their own state and
+          aren't threaded in here for v1. */}
+      <div className="passport-print-view">
+        <div style={{ fontWeight: 900, fontSize: 20, marginBottom: 4 }}>GOLSZ<span style={{ color: "#6B9C1F" }}>.</span> {t("passport_title_self")}</div>
+        <div style={{ fontSize: 11, color: "#555", marginBottom: 16 }}>{p.id}</div>
+        <div style={{ fontSize: 22, fontWeight: 800 }}>{p.name}</div>
+        {p.occupation && <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>{p.occupation.toUpperCase()}</div>}
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 10 }}>
+          <tbody>
+            <tr><td style={{ padding: "4px 12px 4px 0", color: "#555" }}>{t("passport_sport")}</td><td>{p.sport}</td><td style={{ padding: "4px 12px 4px 24px", color: "#555" }}>{p.positionLabel}</td><td>{p.position}</td></tr>
+            <tr><td style={{ padding: "4px 12px 4px 0", color: "#555" }}>{t("passport_club")}</td><td>{p.club}</td><td style={{ padding: "4px 12px 4px 24px", color: "#555" }}>{t("passport_grad")}</td><td>{p.grad}</td></tr>
+            <tr><td style={{ padding: "4px 12px 4px 0", color: "#555" }}>{t("passport_status")}</td><td>{p.status}</td><td style={{ padding: "4px 12px 4px 24px", color: "#555" }}>{p.prefLabel}</td><td>{p.foot}</td></tr>
+            <tr><td style={{ padding: "4px 12px 4px 0", color: "#555" }}>{t("passport_height")}</td><td>{p.height}</td><td style={{ padding: "4px 12px 4px 24px", color: "#555" }}>{t("passport_weight")}</td><td>{p.weight}</td></tr>
+          </tbody>
+        </table>
+        {p.bio && p.bio !== t("passport_no_bio") && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 10, letterSpacing: "0.1em", color: "#555", marginBottom: 4 }}>{t("passport_bio_title")}</div>
+            <div style={{ fontSize: 13, lineHeight: 1.5 }}>{p.bio}</div>
+          </div>
+        )}
+        <div style={{ marginTop: 24, fontSize: 10, color: "#888" }}>{t("passport_export_generated").replace("{date}", new Date().toLocaleDateString())}</div>
+      </div>
     </div>
   );
 }
@@ -6828,6 +6863,21 @@ const CSS = `
     .discover-grid { grid-template-columns: repeat(3, 1fr) !important; }
     .pricing-grid { grid-template-columns: repeat(3, 1fr) !important; }
     aside button:hover, main button:not(:disabled):hover { filter: brightness(1.12); }
+  }
+  /* PDF Passport export (task: "fully independent, no dependencies") —
+     window.print()'s own "Save as PDF" destination, not a client-side PDF
+     library. .passport-print-view is always in the DOM (display:none) so
+     no extra state/render branch is needed; this block is the only thing
+     that makes it visible, and only during an actual print/print-preview.
+     Hides everything else via the standard visibility-swap technique
+     (simpler and more robust than adding a "no-print" class to every nav/
+     button/modal scattered across the app) rather than an allowlist that
+     could miss something and bleed UI chrome into the PDF. */
+  .passport-print-view { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    .passport-print-view, .passport-print-view * { visibility: visible; }
+    .passport-print-view { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 24px; color: #000; background: #fff; }
   }
 `;
 
