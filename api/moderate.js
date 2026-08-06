@@ -466,6 +466,17 @@ export default async function handler(req, res) {
       result.reason_codes = [...result.reason_codes, "LOW_TRUST_ACCOUNT"];
     }
 
+    // Trust & Safety Moderation System — off-topic public posts are now a
+    // hard block, not just a review-queue flag. Scoped to the public feed
+    // only: DMs and profile fields keep the softer review-only behavior,
+    // since private conversation shouldn't be forced to stay on-topic the
+    // way a public post on a sports-recruiting platform should.
+    if (result.decision !== "block" && result.sports_relevance === "low" && classifierInput.content_type === "post" && classifierInput.surface === "public_feed") {
+      result.decision = "block";
+      result.primary_reason_code = "LOW_SPORTS_RELEVANCE";
+      if (!result.reason_codes.includes("LOW_SPORTS_RELEVANCE")) result.reason_codes = [...result.reason_codes, "LOW_SPORTS_RELEVANCE"];
+    }
+
     if (result.decision !== "allow" && supaUrl && serviceKey) {
       await logModerationItem(supaUrl, serviceKey, userId, classifierInput, result);
       if (result.minor_safety_triggered) {
