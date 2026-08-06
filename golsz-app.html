@@ -348,14 +348,20 @@ const I18N = {
     admin_blocked: "BLOCKED", admin_block_event: "Block", admin_unblock_event: "Unblock",
     admin_block_event_err: "Couldn't update this event.",
     admin_overview: "OVERVIEW", admin_signups_today: "SIGNUPS TODAY", admin_signups_week: "SIGNUPS 7D",
-    admin_total_follows: "FOLLOWS", admin_verified_count: "VERIFIED", admin_banned_count: "BANNED",
-    admin_mrr_estimate: "EST. MRR", admin_signups_14d: "SIGNUPS (14D)", admin_posts_14d: "POSTS (14D)",
-    admin_plan_mix: "PLAN MIX", admin_occupation_mix: "OCCUPATION MIX", admin_verification_mix: "VERIFICATION MIX",
+    admin_banned_count: "BANNED",
+    admin_mrr_estimate: "EST. MRR", admin_signups_14d: "SIGNUPS (14D)",
+    admin_plan_mix: "PLAN MIX", admin_occupation_mix: "OCCUPATION MIX", admin_verification_mix: "IDENTITY VERIFICATION",
     admin_sport_mix: "SPORT MIX", admin_gender_mix: "GENDER MIX", admin_top_countries: "TOP COUNTRIES",
     admin_not_set: "Not set", admin_gender_male: "Male", admin_gender_female: "Female",
     admin_scout_conversations: "SCOUT CHATS", admin_scout_users: "SCOUT USERS", admin_messages_total: "MESSAGES",
-    admin_messages_7d: "MESSAGES 7D", admin_push_subscribers: "PUSH SUBS", admin_top_followed: "TOP FOLLOWED",
+    admin_messages_7d: "MESSAGES 7D", admin_push_subscribers: "PUSH SUBS",
     admin_ai_model_mix: "AI MODEL USAGE", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Database (no AI call)",
+    admin_free_users: "FREE USERS", admin_free_ai_exhausted: "CAP HIT", admin_free_ai_budget: "FREE AI LIFETIME BUDGET", admin_free_ai_avg_used: "AVG USED",
+    admin_conversion_funnel: "CONVERSION FUNNEL", admin_conversion_shown: "SEEN NUDGE", admin_conversion_now_paid: "NOW PAID", admin_conversion_note: "\"Now paid\" is a proxy (no timestamp ties it to the nudge itself) — directionally useful, not a precise before/after.",
+    admin_identity_verified: "Verified", admin_identity_pending: "Pending", admin_identity_none: "Not started",
+    admin_view_progression: "Progression", admin_profile_quality_avg: "AVG PROFILE QUALITY", admin_profile_quality_hint: "SQL approximation of each athlete's own Home readiness score — see the migration's own comment for exactly which checks it does/doesn't replicate.",
+    admin_benchmarks_usage: "PERFORMANCE BENCHMARKS", admin_benchmarks_total: "ENTRIES RECORDED", admin_benchmarks_users: "ATHLETES USING IT",
+    admin_targets_usage: "TARGET SCHOOLS & CLUBS", admin_targets_total: "TARGETS", admin_targets_users: "ATHLETES USING IT",
     admin_scout_cache_hits: "CACHE HITS (LIVE)", admin_scout_cache_answers: "CACHED ANSWERS", admin_scout_margin_by_plan: "AI COST % OF PLAN REVENUE", admin_scout_over_target: "OVER TARGET",
     admin_scout_cost_month: "SCOUT AI COST (MONTH)", admin_scout_avg_cost_msg: "AVG COST / MESSAGE (MONTH)",
     admin_view_overview: "Overview", admin_view_community: "Community", admin_view_scout_ai: "Scout AI",
@@ -561,14 +567,20 @@ const I18N = {
     admin_blocked: "BLOQUÉ", admin_block_event: "Bloquer", admin_unblock_event: "Débloquer",
     admin_block_event_err: "Impossible de mettre à jour cet événement.",
     admin_overview: "APERÇU", admin_signups_today: "INSCRITS AUJOURD'HUI", admin_signups_week: "INSCRITS 7J",
-    admin_total_follows: "ABONNEMENTS", admin_verified_count: "VÉRIFIÉS", admin_banned_count: "BANNIS",
-    admin_mrr_estimate: "MRR EST.", admin_signups_14d: "INSCRITS (14J)", admin_posts_14d: "PUBLICATIONS (14J)",
-    admin_plan_mix: "RÉPARTITION DES FORFAITS", admin_occupation_mix: "RÉPARTITION DES RÔLES", admin_verification_mix: "RÉPARTITION DE VÉRIFICATION",
+    admin_banned_count: "BANNIS",
+    admin_mrr_estimate: "MRR EST.", admin_signups_14d: "INSCRITS (14J)",
+    admin_plan_mix: "RÉPARTITION DES FORFAITS", admin_occupation_mix: "RÉPARTITION DES RÔLES", admin_verification_mix: "VÉRIFICATION D'IDENTITÉ",
     admin_sport_mix: "RÉPARTITION DES SPORTS", admin_gender_mix: "RÉPARTITION PAR GENRE", admin_top_countries: "PRINCIPAUX PAYS",
     admin_not_set: "Non défini", admin_gender_male: "Homme", admin_gender_female: "Femme",
     admin_scout_conversations: "CONVERSATIONS SCOUT", admin_scout_users: "UTILISATEURS SCOUT", admin_messages_total: "MESSAGES",
-    admin_messages_7d: "MESSAGES 7J", admin_push_subscribers: "ABONNÉS PUSH", admin_top_followed: "PLUS SUIVIS",
+    admin_messages_7d: "MESSAGES 7J", admin_push_subscribers: "ABONNÉS PUSH",
     admin_ai_model_mix: "UTILISATION DU MODÈLE IA", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Base de données (sans appel IA)",
+    admin_free_users: "UTILISATEURS FREE", admin_free_ai_exhausted: "QUOTA ATTEINT", admin_free_ai_budget: "BUDGET IA À VIE (FREE)", admin_free_ai_avg_used: "UTILISÉ EN MOYENNE",
+    admin_conversion_funnel: "ENTONNOIR DE CONVERSION", admin_conversion_shown: "A VU LA RELANCE", admin_conversion_now_paid: "PASSÉ AU PAYANT", admin_conversion_note: "« Passé au payant » est une estimation (aucun horodatage ne le relie directement à la relance) — utile comme tendance, pas comme mesure précise.",
+    admin_identity_verified: "Vérifié", admin_identity_pending: "En attente", admin_identity_none: "Non commencé",
+    admin_view_progression: "Progression", admin_profile_quality_avg: "QUALITÉ MOYENNE DES PROFILS", admin_profile_quality_hint: "Approximation SQL du score de préparation affiché à chaque athlète sur Accueil — voir le commentaire de la migration pour le détail exact des critères.",
+    admin_benchmarks_usage: "REPÈRES DE PERFORMANCE", admin_benchmarks_total: "ENTRÉES ENREGISTRÉES", admin_benchmarks_users: "ATHLÈTES UTILISATEURS",
+    admin_targets_usage: "ÉCOLES & CLUBS CIBLÉS", admin_targets_total: "CIBLES", admin_targets_users: "ATHLÈTES UTILISATEURS",
     admin_scout_cache_hits: "HITS DE CACHE (EN DIRECT)", admin_scout_cache_answers: "RÉPONSES EN CACHE", admin_scout_margin_by_plan: "COÛT IA EN % DU REVENU DU PLAN", admin_scout_over_target: "AU-DESSUS DE LA CIBLE",
     admin_scout_cost_month: "COÛT IA SCOUT (MOIS)", admin_scout_avg_cost_msg: "COÛT MOYEN / MESSAGE (MOIS)",
     admin_view_overview: "Aperçu", admin_view_community: "Communauté", admin_view_scout_ai: "IA Scout",
@@ -776,14 +788,20 @@ const I18N = {
     admin_blocked: "BLOQUEADO", admin_block_event: "Bloquear", admin_unblock_event: "Desbloquear",
     admin_block_event_err: "No se pudo actualizar este evento.",
     admin_overview: "RESUMEN", admin_signups_today: "REGISTROS HOY", admin_signups_week: "REGISTROS 7D",
-    admin_total_follows: "SEGUIMIENTOS", admin_verified_count: "VERIFICADOS", admin_banned_count: "BANEADOS",
-    admin_mrr_estimate: "MRR EST.", admin_signups_14d: "REGISTROS (14D)", admin_posts_14d: "PUBLICACIONES (14D)",
-    admin_plan_mix: "MEZCLA DE PLANES", admin_occupation_mix: "MEZCLA DE OCUPACIONES", admin_verification_mix: "MEZCLA DE VERIFICACIÓN",
+    admin_banned_count: "BANEADOS",
+    admin_mrr_estimate: "MRR EST.", admin_signups_14d: "REGISTROS (14D)",
+    admin_plan_mix: "MEZCLA DE PLANES", admin_occupation_mix: "MEZCLA DE OCUPACIONES", admin_verification_mix: "VERIFICACIÓN DE IDENTIDAD",
     admin_sport_mix: "MEZCLA DE DEPORTES", admin_gender_mix: "MEZCLA DE GÉNERO", admin_top_countries: "PAÍSES PRINCIPALES",
     admin_not_set: "No definido", admin_gender_male: "Masculino", admin_gender_female: "Femenino",
     admin_scout_conversations: "CHATS DE SCOUT", admin_scout_users: "USUARIOS DE SCOUT", admin_messages_total: "MENSAJES",
-    admin_messages_7d: "MENSAJES 7D", admin_push_subscribers: "SUSCRIPTORES PUSH", admin_top_followed: "MÁS SEGUIDOS",
+    admin_messages_7d: "MENSAJES 7D", admin_push_subscribers: "SUSCRIPTORES PUSH",
     admin_ai_model_mix: "USO DE MODELO IA", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Base de datos (sin llamada IA)",
+    admin_free_users: "USUARIOS FREE", admin_free_ai_exhausted: "LÍMITE ALCANZADO", admin_free_ai_budget: "PRESUPUESTO IA DE POR VIDA (FREE)", admin_free_ai_avg_used: "USO PROMEDIO",
+    admin_conversion_funnel: "EMBUDO DE CONVERSIÓN", admin_conversion_shown: "VIO EL AVISO", admin_conversion_now_paid: "AHORA DE PAGO", admin_conversion_note: "\"Ahora de pago\" es una aproximación (no hay marca de tiempo que lo vincule directamente al aviso) — útil como tendencia, no como medida exacta.",
+    admin_identity_verified: "Verificado", admin_identity_pending: "Pendiente", admin_identity_none: "No iniciado",
+    admin_view_progression: "Progresión", admin_profile_quality_avg: "CALIDAD MEDIA DE PERFIL", admin_profile_quality_hint: "Aproximación en SQL de la puntuación de preparación que cada atleta ve en Inicio — consulta el comentario de la migración para el detalle exacto de los criterios.",
+    admin_benchmarks_usage: "MARCAS DE RENDIMIENTO", admin_benchmarks_total: "MARCAS REGISTRADAS", admin_benchmarks_users: "ATLETAS QUE LO USAN",
+    admin_targets_usage: "ESCUELAS Y CLUBES OBJETIVO", admin_targets_total: "OBJETIVOS", admin_targets_users: "ATLETAS QUE LO USAN",
     admin_scout_cache_hits: "ACIERTOS DE CACHÉ (EN VIVO)", admin_scout_cache_answers: "RESPUESTAS EN CACHÉ", admin_scout_margin_by_plan: "COSTO IA COMO % DEL INGRESO DEL PLAN", admin_scout_over_target: "SOBRE EL OBJETIVO",
     admin_scout_cost_month: "COSTO IA SCOUT (MES)", admin_scout_avg_cost_msg: "COSTO PROMEDIO / MENSAJE (MES)",
     admin_view_overview: "Resumen", admin_view_community: "Comunidad", admin_view_scout_ai: "IA Scout",
@@ -991,14 +1009,20 @@ const I18N = {
     admin_blocked: "ΑΠΟΚΛΕΙΣΜΕΝΟ", admin_block_event: "Αποκλεισμός", admin_unblock_event: "Άρση αποκλεισμού",
     admin_block_event_err: "Δεν ήταν δυνατή η ενημέρωση αυτής της εκδήλωσης.",
     admin_overview: "ΕΠΙΣΚΟΠΗΣΗ", admin_signups_today: "ΕΓΓΡΑΦΕΣ ΣΗΜΕΡΑ", admin_signups_week: "ΕΓΓΡΑΦΕΣ 7Η",
-    admin_total_follows: "ΑΚΟΛΟΥΘΗΣΕΙΣ", admin_verified_count: "ΕΠΑΛΗΘΕΥΜΕΝΟΙ", admin_banned_count: "ΑΠΟΚΛΕΙΣΜΕΝΟΙ",
-    admin_mrr_estimate: "ΕΚΤ. MRR", admin_signups_14d: "ΕΓΓΡΑΦΕΣ (14Η)", admin_posts_14d: "ΑΝΑΡΤΗΣΕΙΣ (14Η)",
-    admin_plan_mix: "ΚΑΤΑΝΟΜΗ ΠΑΚΕΤΩΝ", admin_occupation_mix: "ΚΑΤΑΝΟΜΗ ΡΟΛΩΝ", admin_verification_mix: "ΚΑΤΑΝΟΜΗ ΕΠΑΛΗΘΕΥΣΗΣ",
+    admin_banned_count: "ΑΠΟΚΛΕΙΣΜΕΝΟΙ",
+    admin_mrr_estimate: "ΕΚΤ. MRR", admin_signups_14d: "ΕΓΓΡΑΦΕΣ (14Η)",
+    admin_plan_mix: "ΚΑΤΑΝΟΜΗ ΠΑΚΕΤΩΝ", admin_occupation_mix: "ΚΑΤΑΝΟΜΗ ΡΟΛΩΝ", admin_verification_mix: "ΕΠΑΛΗΘΕΥΣΗ ΤΑΥΤΟΤΗΤΑΣ",
     admin_sport_mix: "ΚΑΤΑΝΟΜΗ ΑΘΛΗΜΑΤΩΝ", admin_gender_mix: "ΚΑΤΑΝΟΜΗ ΦΥΛΟΥ", admin_top_countries: "ΚΟΡΥΦΑΙΕΣ ΧΩΡΕΣ",
     admin_not_set: "Δεν έχει οριστεί", admin_gender_male: "Άνδρας", admin_gender_female: "Γυναίκα",
     admin_scout_conversations: "ΣΥΝΟΜΙΛΙΕΣ SCOUT", admin_scout_users: "ΧΡΗΣΤΕΣ SCOUT", admin_messages_total: "ΜΗΝΥΜΑΤΑ",
-    admin_messages_7d: "ΜΗΝΥΜΑΤΑ 7Η", admin_push_subscribers: "ΣΥΝΔΡΟΜΗΤΕΣ PUSH", admin_top_followed: "ΔΗΜΟΦΙΛΕΣΤΕΡΟΙ",
+    admin_messages_7d: "ΜΗΝΥΜΑΤΑ 7Η", admin_push_subscribers: "ΣΥΝΔΡΟΜΗΤΕΣ PUSH",
     admin_ai_model_mix: "ΧΡΗΣΗ ΜΟΝΤΕΛΟΥ AI", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Βάση δεδομένων (χωρίς κλήση AI)",
+    admin_free_users: "ΧΡΗΣΤΕΣ FREE", admin_free_ai_exhausted: "ΕΞΑΝΤΛΗΘΗΚΕ", admin_free_ai_budget: "ΔΙΑ ΒΙΟΥ ΠΡΟΫΠΟΛΟΓΙΣΜΟΣ AI (FREE)", admin_free_ai_avg_used: "ΜΕΣΗ ΧΡΗΣΗ",
+    admin_conversion_funnel: "ΧΩΝΙ ΜΕΤΑΤΡΟΠΗΣ", admin_conversion_shown: "ΕΙΔΕ ΤΗΝ ΥΠΕΝΘΥΜΙΣΗ", admin_conversion_now_paid: "ΤΩΡΑ ΕΠΙ ΠΛΗΡΩΜΗ", admin_conversion_note: "Το «τώρα επί πληρωμή» είναι εκτίμηση (δεν υπάρχει χρονική σήμανση που να το συνδέει άμεσα με την υπενθύμιση) — χρήσιμο ως τάση, όχι ως ακριβής μέτρηση.",
+    admin_identity_verified: "Επαληθευμένο", admin_identity_pending: "Εκκρεμεί", admin_identity_none: "Δεν ξεκίνησε",
+    admin_view_progression: "Πρόοδος", admin_profile_quality_avg: "ΜΕΣΗ ΠΟΙΟΤΗΤΑ ΠΡΟΦΙΛ", admin_profile_quality_hint: "Προσέγγιση SQL της βαθμολογίας ετοιμότητας που βλέπει κάθε αθλητής στην Αρχική — δες το σχόλιο της migration για την ακριβή λίστα κριτηρίων.",
+    admin_benchmarks_usage: "ΔΕΙΚΤΕΣ ΑΠΟΔΟΣΗΣ", admin_benchmarks_total: "ΚΑΤΑΧΩΡΙΣΕΙΣ", admin_benchmarks_users: "ΑΘΛΗΤΕΣ ΠΟΥ ΤΟ ΧΡΗΣΙΜΟΠΟΙΟΥΝ",
+    admin_targets_usage: "ΣΧΟΛΕΣ & ΣΥΛΛΟΓΟΙ-ΣΤΟΧΟΙ", admin_targets_total: "ΣΤΟΧΟΙ", admin_targets_users: "ΑΘΛΗΤΕΣ ΠΟΥ ΤΟ ΧΡΗΣΙΜΟΠΟΙΟΥΝ",
     admin_scout_cache_hits: "ΕΠΙΤΥΧΙΕΣ CACHE (ΖΩΝΤΑΝΑ)", admin_scout_cache_answers: "ΑΠΑΝΤΗΣΕΙΣ ΣΕ CACHE", admin_scout_margin_by_plan: "ΚΟΣΤΟΣ AI ΩΣ % ΕΣΟΔΩΝ ΠΛΑΝΟΥ", admin_scout_over_target: "ΥΠΕΡΒΑΙΝΕΙ ΤΟΝ ΣΤΟΧΟ",
     admin_scout_cost_month: "ΚΟΣΤΟΣ AI SCOUT (ΜΗΝΑΣ)", admin_scout_avg_cost_msg: "ΜΕΣΟ ΚΟΣΤΟΣ / ΜΗΝΥΜΑ (ΜΗΝΑΣ)",
     admin_view_overview: "Επισκόπηση", admin_view_community: "Κοινότητα", admin_view_scout_ai: "AI Scout",
@@ -4875,10 +4899,16 @@ function AdminPanel({ onBack }) {
   // would need real SQL aggregation if the user base grows a lot.
   async function loadAnalytics() {
     try {
-      const [{ data: profRows }, { data: postRows }, { data: followRows }, { data: athleteRows }, { data: counts, error: countsErr }, { data: modelMix }, { data: costSummary }, { data: cacheStats }, { data: marginSummary }, { data: moderationStats }] = await Promise.all([
+      // posts/follows are no longer fetched here — Feed/Follow are
+      // launch-scoped off the nav (see NAV in GolszApp), so the cards that
+      // used to read them (Top Followed, the posts-per-day chart,
+      // totalFollows) were permanently stuck at 0 and just added clutter +
+      // two unused queries every load. See task from the admin-panel
+      // revamp pass — removed along with those cards, not just hidden,
+      // since there's no plausible future where this specific query comes
+      // back without the cards themselves coming back first.
+      const [{ data: profRows }, { data: athleteRows }, { data: counts, error: countsErr }, { data: modelMix }, { data: costSummary }, { data: cacheStats }, { data: marginSummary }, { data: moderationStats }] = await Promise.all([
         sb.from("profiles").select("plan, occupation, verified_tier, is_banned, is_minor, created_at").order("created_at", { ascending: false }).limit(2000),
-        sb.from("posts").select("id, created_at").order("created_at", { ascending: false }).limit(2000),
-        sb.from("follows").select("follower_id, followed_id").limit(2000),
         sb.from("athletes").select("sport, gender, country").limit(2000),
         sb.rpc("admin_analytics_counts"),
         // migration 039 — real counts of which model actually answered each
@@ -4934,15 +4964,6 @@ function AdminPanel({ onBack }) {
         if (p.is_banned) bannedCount++;
       });
 
-      const followedTally = new Map();
-      (followRows || []).forEach((f) => followedTally.set(f.followed_id, (followedTally.get(f.followed_id) || 0) + 1));
-      const topFollowedIds = [...followedTally.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
-      let topFollowed = [];
-      if (topFollowedIds.length) {
-        const { data: names } = await sb.from("public_profile_names").select("id, full_name").in("id", topFollowedIds.map(([id]) => id));
-        const nameById = Object.fromEntries((names || []).map((n) => [n.id, n.full_name]));
-        topFollowed = topFollowedIds.map(([id, count]) => ({ id, name: nameById[id] || "GOLSZ User", count }));
-      }
 
       // Sport/gender/country all live on `athletes`, not `profiles` — set
       // by anyone who's filled in their Passport, any occupation, not
@@ -4970,17 +4991,55 @@ function AdminPanel({ onBack }) {
       setAnalytics({
         totalUsers: profiles.length,
         signupsToday, signupsWeek,
-        totalFollows: (followRows || []).length,
-        verifiedCount: tierCounts.pro + tierCounts.elite,
         bannedCount,
         // Starter is a paid tier now ($5.99/mo, no longer free), so it counts
         // toward MRR too — this used to only count pro/elite from when
         // Starter was a free loss-leader. Prices: $5.99 / $14.99 / $29.99.
         mrrEstimate: Math.round((planCounts.starter * 5.99 + planCounts.pro * 14.99 + planCounts.elite * 29.99) * 100) / 100,
         signupsPerDay: bucketByDay(profiles),
-        postsPerDay: bucketByDay(postRows),
         planCounts, occCounts, tierCounts,
-        topFollowed,
+        // Real identity verification (migration 058) — distinct from
+        // tierCounts above, which is verified_tier, a subscription badge
+        // auto-set from plan (see protect_profile_columns()), not proof
+        // anyone actually verified who they are. The Community tab's
+        // "Verification mix" card reads this now, not tierCounts.
+        identityVerifiedCount: (counts && counts.identity_verified_count) || 0,
+        // Lifetime free AI budget funnel (migration 068/073) — the core
+        // metric for "GOLSZ sells athlete progression, not AI questions":
+        // how many free accounts exist, how much of their lifetime budget
+        // they've used on average, and how many have hit the cap (the
+        // moment the conversion screen becomes relevant to them). 40 is
+        // FREE_LIFETIME_LIMIT's own server-side default — see this RPC's
+        // own comment in supabase-schema.sql if that env var ever changes.
+        freeAi: {
+          usersTotal: (counts && counts.free_ai_users_total) || 0,
+          avgUsed: (counts && counts.free_ai_avg_used) || 0,
+          exhaustedCount: (counts && counts.free_ai_exhausted_count) || 0,
+        },
+        // Guided-onboarding conversion screen (migration 069) — how many
+        // free accounts have been shown it, and of those, how many are no
+        // longer on the free plan (a proxy for "converted after seeing
+        // it," not a precise before/after since there's no shown_at
+        // timestamp — see this RPC's own comment).
+        conversion: {
+          shownCount: (counts && counts.conversion_shown_count) || 0,
+          nowPaidCount: (counts && counts.conversion_now_paid_count) || 0,
+        },
+        // Benchmarks (071) + Targets (072) — real usage of the two newest
+        // BUILD/MOVE-phase features, previously invisible to admins.
+        benchmarks: {
+          total: (counts && counts.benchmarks_total) || 0,
+          users: (counts && counts.benchmarks_users) || 0,
+        },
+        targets: {
+          total: (counts && counts.targets_total) || 0,
+          users: (counts && counts.targets_users) || 0,
+          byStatus: (counts && counts.targets_by_status) || {},
+        },
+        // SQL approximation of computeProfileQuality() — see this RPC's
+        // own comment in supabase-schema.sql for exactly which checks it
+        // does/doesn't replicate.
+        profileQualityAvg: (counts && counts.profile_quality_avg) || 0,
         totalAthletes: athletes.length,
         sportCounts, sportUnset, notSetLabel,
         genderCounts, genderUnset,
@@ -5381,6 +5440,7 @@ function AdminPanel({ onBack }) {
                 ["overview", t("admin_view_overview")],
                 ["community", t("admin_view_community")],
                 ["scoutai", t("admin_view_scout_ai")],
+                ["progression", t("admin_view_progression")],
                 ["commonqs", t("admin_view_common_qs")],
                 ["moderation", t("admin_view_moderation_stats")],
               ], analyticsView, setAnalyticsView)}
@@ -5392,8 +5452,8 @@ function AdminPanel({ onBack }) {
                     {[
                       [t("admin_signups_today"), analytics.signupsToday],
                       [t("admin_signups_week"), analytics.signupsWeek],
-                      [t("admin_total_follows"), analytics.totalFollows],
-                      [t("admin_verified_count"), analytics.verifiedCount],
+                      [t("admin_free_users"), analytics.freeAi.usersTotal],
+                      [t("admin_free_ai_exhausted"), analytics.freeAi.exhaustedCount],
                       [t("admin_banned_count"), analytics.bannedCount],
                       [t("admin_mrr_estimate"), "$" + analytics.mrrEstimate.toFixed(2)],
                     ].map(([label, v]) => (
@@ -5404,26 +5464,29 @@ function AdminPanel({ onBack }) {
                     ))}
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-                    <div style={{ ...card, margin: 0 }}>
-                      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_signups_14d")}</div>
-                      <Bars data={analytics.signupsPerDay} color={C.lime} />
-                    </div>
-                    <div style={{ ...card, margin: 0 }}>
-                      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_posts_14d")}</div>
-                      <Bars data={analytics.postsPerDay} color={C.elite} />
-                    </div>
+                  <div style={{ ...card, margin: "0 0 16px" }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_signups_14d")}</div>
+                    <Bars data={analytics.signupsPerDay} color={C.lime} />
                   </div>
 
+                  {/* Guided-onboarding conversion screen (migration 069) —
+                      the direct measure of whether the free-plan funnel
+                      (see the stat grid above) is actually converting.
+                      nowPaidCount is a proxy (no shown_at timestamp exists
+                      to prove causation), labeled as such in copy below. */}
                   <div style={{ ...card }}>
-                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_top_followed")}</div>
-                    {analytics.topFollowed.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("admin_no_data")}</div>}
-                    {analytics.topFollowed.map((u, i) => (
-                      <div key={u.id} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: i < analytics.topFollowed.length - 1 ? `1px solid ${C.line}` : "none", fontSize: 13 }}>
-                        <span>{i + 1}. {u.name}</span>
-                        <span style={{ color: C.slate, fontFamily: "'Space Mono', monospace" }}>{u.count}</span>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_conversion_funnel")}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{analytics.conversion.shownCount}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_conversion_shown")}</div>
                       </div>
-                    ))}
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{analytics.conversion.nowPaidCount}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_conversion_now_paid")}</div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11, color: C.slate, lineHeight: 1.4 }}>{t("admin_conversion_note")}</div>
                   </div>
                 </>
               )}
@@ -5432,6 +5495,7 @@ function AdminPanel({ onBack }) {
                 <>
                   <div style={{ ...card }}>
                     <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_plan_mix")}</div>
+                    <BreakdownBar label="Free" count={analytics.planCounts.free} total={analytics.totalUsers} color={C.body} />
                     <BreakdownBar label="Starter" count={analytics.planCounts.starter} total={analytics.totalUsers} color={C.slate} />
                     <BreakdownBar label="Pro" count={analytics.planCounts.pro} total={analytics.totalUsers} color={C.lime} />
                     <BreakdownBar label="Elite" count={analytics.planCounts.elite} total={analytics.totalUsers} color={C.elite} />
@@ -5471,11 +5535,19 @@ function AdminPanel({ onBack }) {
                     ))}
                   </div>
 
+                  {/* Real identity verification (identity_verified, migration
+                      058) — was verified_tier before this revamp, which is
+                      just a subscription badge auto-set from plan (see
+                      protect_profile_columns()), not proof anyone actually
+                      verified who they are. tierCounts/admin_tier_* above
+                      are untouched and still correctly describe the Users
+                      tab's subscription badges — this card just stopped
+                      reusing them for a claim they were never accurate for. */}
                   <div style={{ ...card }}>
                     <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_verification_mix")}</div>
-                    <BreakdownBar label={t("admin_tier_none")} count={analytics.tierCounts.none} total={analytics.totalUsers} color={C.amber} />
-                    <BreakdownBar label={t("admin_tier_pro")} count={analytics.tierCounts.pro} total={analytics.totalUsers} color={C.lime} />
-                    <BreakdownBar label={t("admin_tier_elite")} count={analytics.tierCounts.elite} total={analytics.totalUsers} color={C.elite} />
+                    <BreakdownBar label={t("admin_identity_verified")} count={analytics.identityVerifiedCount} total={analytics.totalUsers} color={C.lime} />
+                    <BreakdownBar label={t("admin_identity_pending")} count={analytics.moderation.verificationPending} total={analytics.totalUsers} color={C.amber} />
+                    <BreakdownBar label={t("admin_identity_none")} count={Math.max(analytics.totalUsers - analytics.identityVerifiedCount - analytics.moderation.verificationPending, 0)} total={analytics.totalUsers} color={C.slate} />
                   </div>
 
                   <div style={{ ...card }}>
@@ -5536,6 +5608,31 @@ function AdminPanel({ onBack }) {
                     )}
                   </div>
 
+                  {/* Lifetime free AI budget (migration 068/073) — distinct
+                      from the recurring daily cap: how many free accounts
+                      exist, how much of their never-resetting lifetime
+                      budget they've used on average, and how many have
+                      actually hit the wall (the moment they'd see a 403
+                      free_ai_exhausted from api/scout.js and the
+                      conversion screen becomes relevant — see Overview). */}
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_free_ai_budget")}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{analytics.freeAi.usersTotal}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_free_users")}</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{analytics.freeAi.avgUsed}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_free_ai_avg_used")}</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{analytics.freeAi.exhaustedCount}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_free_ai_exhausted")}</div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Multi-Model Cost-Control System (migration 056) —
                       cache hit rate + cost-as-%-of-revenue per plan, with
                       the approved plan's own warning thresholds
@@ -5570,6 +5667,53 @@ function AdminPanel({ onBack }) {
                 </>
               )}
 
+              {/* Progression — visibility into the BUILD/MOVE-phase features
+                  shipped this session (Readiness, Benchmarks, Targets),
+                  none of which the Admin Panel could see before this pass. */}
+              {analyticsView === "progression" && (
+                <>
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_profile_quality_avg")}</div>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ fontSize: 28, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{analytics.profileQualityAvg}</div>
+                      <div style={{ fontSize: 11, color: C.slate, marginTop: 4 }}>{t("admin_profile_quality_hint")}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_benchmarks_usage")}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{analytics.benchmarks.total}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_benchmarks_total")}</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{analytics.benchmarks.users}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_benchmarks_users")}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_targets_usage")}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: analytics.targets.total > 0 ? 14 : 0 }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{analytics.targets.total}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_targets_total")}</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{analytics.targets.users}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_targets_users")}</div>
+                      </div>
+                    </div>
+                    {analytics.targets.total === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("admin_no_data")}</div>}
+                    {TARGET_STATUSES.map((s) => (
+                      <BreakdownBar key={s} label={t("targets_status_" + s)} count={analytics.targets.byStatus[s] || 0} total={analytics.targets.total} color={s === "responded" || s === "closed" ? C.lime : C.slate} />
+                    ))}
+                  </div>
+                </>
+              )}
+
               {analyticsView === "commonqs" && (
                 <>
                   <div style={{ fontSize: 12, color: C.slate, lineHeight: 1.5, margin: "2px 2px 12px" }}>{t("admin_common_qs_hint")}</div>
@@ -5599,7 +5743,12 @@ function AdminPanel({ onBack }) {
                       [t("admin_mod_avg_resolution"), analytics.moderation.avgResolutionMinutes + "m"],
                       [t("admin_mod_spam_total"), analytics.moderation.spamBlockedTotal],
                       [t("admin_mod_scam_total"), analytics.moderation.scamBlockedTotal],
-                      [t("admin_mod_events_flagged"), analytics.moderation.eventsFlaggedTotal],
+                      // Events flagged was dropped from this grid — Events
+                      // is launch-scoped off the nav, so this stayed
+                      // permanently 0 and was pure clutter. moderation.
+                      // eventsFlaggedTotal itself is untouched (still comes
+                      // through from admin_moderation_stats()) in case
+                      // Events ever comes back.
                     ].map(([label, v]) => (
                       <div key={label} style={{ ...card, margin: 0, padding: "10px 8px", textAlign: "center" }}>
                         <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{v}</div>
