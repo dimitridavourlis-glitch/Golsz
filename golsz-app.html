@@ -1970,12 +1970,22 @@ function Feed({ onMessage, onViewProfile }) {
 }
 
 /* ============ DISCOVER (player database) ============ */
-const SPORTS = ["All", "Soccer", "Basketball", "Track", "Hockey", "Tennis"];
-// Separate from SPORTS (which drives Discover's athlete filter, SPORT_POSITIONS,
-// SPORT_PREFERENCE — all athlete-specific) since a Coach/Agent/Scout/Physio isn't
-// filtered through any of those; their sport list is scoped to what they'd
-// realistically be signing up to work in.
-const NON_PLAYER_SPORTS = ["Soccer", "Baseball", "Basketball", "Hockey", "American Football", "Other"];
+// "Soccer"/"Track"/"Hockey" etc. are the exact strings already stored in
+// existing athletes.sport rows — kept unchanged rather than renamed (e.g.
+// to "Football"/"Track & Field"/"Ice Hockey") so old data still matches.
+const SPORTS = [
+  "All", "American Football", "Archery", "Badminton", "Baseball", "Basketball", "Bowling",
+  "Boxing", "Cheerleading", "Cricket", "Cross Country", "Cycling", "Diving", "Equestrian",
+  "Fencing", "Field Hockey", "Golf", "Gymnastics", "Handball", "Hockey", "Lacrosse",
+  "Martial Arts", "Racquetball", "Rowing", "Rugby", "Sailing", "Skiing", "Snowboarding",
+  "Soccer", "Softball", "Squash", "Swimming", "Table Tennis", "Tennis", "Track",
+  "Triathlon", "Volleyball", "Water Polo", "Weightlifting", "Wrestling",
+];
+// Coach/Agent/Scout/Physio aren't filtered through Discover's athlete
+// filter, SPORT_POSITIONS, or SPORT_PREFERENCE (all athlete-specific) —
+// but there's no reason their own sport list should be a separate,
+// shorter one, so it's the same list plus the "Other" catch-all.
+const NON_PLAYER_SPORTS = [...SPORTS.filter((s) => s !== "All"), "Other"];
 const GENDERS = [["All", "All"], ["M", "Male"], ["F", "Female"]];
 const SCHOOL_LEVELS = ["High School", "University", "Other"];
 const OCCUPATIONS = ["Player", "Parent", "Scout", "Agent", "Coach", "Physio", "Other"];
