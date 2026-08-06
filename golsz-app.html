@@ -2258,7 +2258,13 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
     } finally { setBusy(false); }
   }
 
-  return (
+  // Portaled straight to document.body — nested inside .app-shell's
+  // scrollable <main>, a plain position:fixed div doesn't reliably
+  // escape to the true viewport on iOS Safari (the same reason the
+  // Settings modal already does this). Rendering outside that ancestor
+  // chain entirely is what actually guarantees it paints above the
+  // header/bottom nav instead of getting trapped behind them.
+  return ReactDOM.createPortal(
     <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 18, boxSizing: "border-box" }}>
       <div style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 480, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }} className="noscroll">
         <div style={{ position: "sticky", top: 0, zIndex: 2, background: C.pitch, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 8 }}>
@@ -2304,7 +2310,8 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
           cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1,
         }}>{busy ? t("events_saving") : t("events_save")}</button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -3216,7 +3223,9 @@ function PostsGrid({ viewUserId }) {
         </div>
       )}
 
-      {openPost && (
+      {/* Portaled to document.body for the same reason as the other
+          modals — see ProfileEditor's comment above its own portal. */}
+      {openPost && ReactDOM.createPortal(
         <div onClick={() => setOpenPost(null)} className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 18, boxSizing: "border-box" }}>
           <div onClick={(e) => e.stopPropagation()} className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 480, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -3238,7 +3247,8 @@ function PostsGrid({ viewUserId }) {
               <span>{timeAgo(openPost.created_at)}</span>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -3438,7 +3448,13 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
     } finally { setBusy(false); }
   }
 
-  return (
+  // Portaled straight to document.body — nested inside .app-shell's
+  // scrollable <main>, a plain position:fixed div doesn't reliably
+  // escape to the true viewport on iOS Safari (the same reason the
+  // Settings modal already does this). Rendering outside that ancestor
+  // chain entirely is what actually guarantees it paints above the
+  // header/bottom nav instead of getting trapped behind them.
+  return ReactDOM.createPortal(
     <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 18, boxSizing: "border-box" }}>
       <div style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 480, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }} className="noscroll">
         {/* Sticky, not just top-padded: on a tall sheet that's still
@@ -3574,7 +3590,8 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
           <textarea style={{ ...field, resize: "vertical", minHeight: 80 }} maxLength={600} value={form.bio || ""} onChange={set("bio")} placeholder={t("editor_bio_ph")} />
         ))}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
