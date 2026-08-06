@@ -275,6 +275,7 @@ const I18N = {
     highlights_title_ph: "Highlight title (e.g. Full match vs Montreal)", highlights_link_ph: "Link (YouTube, Veo, Hudl…)",
     highlights_add: "Add", highlights_invalid_url: "Enter a valid video link (starting with https://).",
     timeline_title: "CAREER TIMELINE", timeline_empty: "No milestones yet.", timeline_year_ph: "Year", timeline_text_ph: "e.g. Committed to Tusculum University", timeline_add: "Add", timeline_add_err: "Couldn't add that. Try again.",
+    benchmarks_title: "PERFORMANCE BENCHMARKS", benchmarks_empty: "No benchmarks recorded yet.", benchmarks_metric_ph: "Metric (e.g. 40-yard dash)", benchmarks_value_ph: "Value", benchmarks_unit_ph: "Unit", benchmarks_add: "Record", benchmarks_add_err: "Couldn't record that. Try again.", benchmarks_invalid_value: "Enter a number for the value.",
     highlights_add_err: "Couldn't add that link.", highlights_watch: "Watch highlight",
     editor_title: "Build your profile", editor_name_label: "FULL NAME", editor_name_ph: "Your name",
     editor_sport_label: "SPORT", editor_select: "Select…", editor_position_label: "POSITION",
@@ -484,6 +485,7 @@ const I18N = {
     highlights_title_ph: "Titre du temps fort (ex. Match complet vs Montréal)", highlights_link_ph: "Lien (YouTube, Veo, Hudl…)",
     highlights_add: "Ajouter", highlights_invalid_url: "Indiquez un lien vidéo valide (commençant par https://).",
     timeline_title: "PARCOURS SPORTIF", timeline_empty: "Aucune étape pour l'instant.", timeline_year_ph: "Année", timeline_text_ph: "ex. Engagement à Tusculum University", timeline_add: "Ajouter", timeline_add_err: "Impossible d'ajouter. Réessayez.",
+    benchmarks_title: "REPÈRES DE PERFORMANCE", benchmarks_empty: "Aucun repère enregistré pour l'instant.", benchmarks_metric_ph: "Mesure (ex. 40 yards)", benchmarks_value_ph: "Valeur", benchmarks_unit_ph: "Unité", benchmarks_add: "Enregistrer", benchmarks_add_err: "Impossible d'enregistrer. Réessayez.", benchmarks_invalid_value: "Entrez un nombre pour la valeur.",
     highlights_add_err: "Impossible d'ajouter ce lien.", highlights_watch: "Voir le temps fort",
     editor_title: "Créez votre profil", editor_name_label: "NOM COMPLET", editor_name_ph: "Votre nom",
     editor_sport_label: "SPORT", editor_select: "Sélectionner…", editor_position_label: "POSTE",
@@ -693,6 +695,7 @@ const I18N = {
     highlights_title_ph: "Título de la jugada (ej. Partido completo vs Montreal)", highlights_link_ph: "Enlace (YouTube, Veo, Hudl…)",
     highlights_add: "Añadir", highlights_invalid_url: "Introduce un enlace de vídeo válido (que empiece por https://).",
     timeline_title: "TRAYECTORIA DEPORTIVA", timeline_empty: "Aún no hay hitos.", timeline_year_ph: "Año", timeline_text_ph: "ej. Compromiso con Tusculum University", timeline_add: "Añadir", timeline_add_err: "No se pudo añadir. Inténtalo de nuevo.",
+    benchmarks_title: "MARCAS DE RENDIMIENTO", benchmarks_empty: "Aún no hay marcas registradas.", benchmarks_metric_ph: "Prueba (ej. 40 yardas)", benchmarks_value_ph: "Valor", benchmarks_unit_ph: "Unidad", benchmarks_add: "Registrar", benchmarks_add_err: "No se pudo registrar. Inténtalo de nuevo.", benchmarks_invalid_value: "Introduce un número para el valor.",
     highlights_add_err: "No se pudo añadir ese enlace.", highlights_watch: "Ver la jugada",
     editor_title: "Crea tu perfil", editor_name_label: "NOMBRE COMPLETO", editor_name_ph: "Tu nombre",
     editor_sport_label: "DEPORTE", editor_select: "Seleccionar…", editor_position_label: "POSICIÓN",
@@ -902,6 +905,7 @@ const I18N = {
     highlights_title_ph: "Τίτλος highlight (π.χ. Πλήρης αγώνας εναντίον Μόντρεαλ)", highlights_link_ph: "Σύνδεσμος (YouTube, Veo, Hudl…)",
     highlights_add: "Προσθήκη", highlights_invalid_url: "Εισαγάγετε έγκυρο σύνδεσμο βίντεο (που να ξεκινά με https://).",
     timeline_title: "ΑΘΛΗΤΙΚΗ ΠΟΡΕΙΑ", timeline_empty: "Δεν υπάρχουν σταθμοί ακόμα.", timeline_year_ph: "Έτος", timeline_text_ph: "π.χ. Δέσμευση στο Tusculum University", timeline_add: "Προσθήκη", timeline_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.",
+    benchmarks_title: "ΔΕΙΚΤΕΣ ΑΠΟΔΟΣΗΣ", benchmarks_empty: "Δεν έχουν καταγραφεί δείκτες ακόμα.", benchmarks_metric_ph: "Δείκτης (π.χ. σπριντ 40 yards)", benchmarks_value_ph: "Τιμή", benchmarks_unit_ph: "Μονάδα", benchmarks_add: "Καταγραφή", benchmarks_add_err: "Δεν καταγράφηκε. Δοκιμάστε ξανά.", benchmarks_invalid_value: "Εισάγετε έναν αριθμό για την τιμή.",
     highlights_add_err: "Δεν ήταν δυνατή η προσθήκη αυτού του συνδέσμου.", highlights_watch: "Δείτε το highlight",
     editor_title: "Δημιουργήστε το προφίλ σας", editor_name_label: "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", editor_name_ph: "Το όνομά σας",
     editor_sport_label: "ΑΘΛΗΜΑ", editor_select: "Επιλέξτε…", editor_position_label: "ΘΕΣΗ",
@@ -3191,6 +3195,104 @@ function Timeline({ viewUserId }) {
   );
 }
 
+/* ============ BENCHMARKS (record + retest history) ============
+   Backed by a real table (athlete_benchmarks, migration 071), not a jsonb
+   array like Highlights/Timeline above — same reasoning as that
+   migration's own comment. Private to the owner: unlike Highlights/
+   Timeline, this never renders on someone else's viewed Passport (v1
+   scope, see the migration comment) — viewUserId is accepted only so the
+   render call site doesn't need special-casing, not because another
+   viewer's benchmarks are ever fetched or shown. */
+function Benchmarks({ viewUserId }) {
+  const { t } = useLang();
+  const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [uid, setUid] = useState(null);
+  const [metric, setMetric] = useState("");
+  const [value, setValue] = useState("");
+  const [unit, setUnit] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const isOwner = !!(uid && !viewUserId);
+
+  useEffect(() => {
+    if (!sb || viewUserId) return; // private in v1 — never fetched for another athlete's viewed Passport
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        setUid(user.id);
+        const { data, error } = await sb.from("athlete_benchmarks").select("id, metric, value, unit, recorded_date").eq("user_id", user.id).order("recorded_date", { ascending: false });
+        if (error) throw error;
+        setItems(data || []);
+      } catch (e) { console.error("GOLSZ benchmarks load error:", e); }
+      setLoaded(true);
+    })();
+  }, [viewUserId]);
+
+  async function addEntry() {
+    if (!sb || !uid || !isOwner || !metric.trim() || !value.trim() || busy) return;
+    setBusy(true); setErr("");
+    try {
+      const numValue = Number(value);
+      if (!Number.isFinite(numValue)) throw new Error(t("benchmarks_invalid_value"));
+      const { data, error } = await sb.from("athlete_benchmarks").insert({
+        user_id: uid, metric: metric.trim().slice(0, 60), value: numValue, unit: unit.trim().slice(0, 20) || null,
+      }).select("id, metric, value, unit, recorded_date").single();
+      if (error) throw error;
+      setItems((prev) => [data, ...prev]);
+      setMetric(""); setValue(""); setUnit("");
+    } catch (e) {
+      setErr((e && e.message) || t("benchmarks_add_err"));
+    } finally { setBusy(false); }
+  }
+
+  async function removeEntry(id) {
+    if (!sb || !uid || !isOwner) return;
+    setItems((prev) => prev.filter((b) => b.id !== id));
+    try { await sb.from("athlete_benchmarks").delete().eq("id", id).eq("user_id", uid); }
+    catch (e) { console.error("GOLSZ benchmark delete error:", e); }
+  }
+
+  if (viewUserId) return null;
+
+  const grouped = {};
+  for (const b of items) { (grouped[b.metric] = grouped[b.metric] || []).push(b); }
+  const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
+
+  return (
+    <div style={{ ...card }}>
+      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("benchmarks_title")}</div>
+      {loaded && items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate }}>{t("benchmarks_empty")}</div>}
+      {Object.entries(grouped).map(([m, entries]) => (
+        <div key={m} style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: C.chalk, marginBottom: 4 }}>{m}</div>
+          {entries.map((e, i) => (
+            <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 0", borderBottom: i < entries.length - 1 ? `1px solid ${C.line}` : "none" }}>
+              <div style={{ fontFamily: "'Space Mono', monospace", fontWeight: 800, color: C.lime, fontSize: 13 }}>{e.value}{e.unit ? ` ${e.unit}` : ""}</div>
+              <div style={{ fontSize: 11, color: C.slate, marginLeft: "auto" }}>{e.recorded_date}</div>
+              <button onClick={() => removeEntry(e.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><X size={13} /></button>
+            </div>
+          ))}
+        </div>
+      ))}
+      {sb && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <input value={metric} onChange={(e) => setMetric(e.target.value)} placeholder={t("benchmarks_metric_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
+            <input value={value} onChange={(e) => setValue(e.target.value)} placeholder={t("benchmarks_value_ph")} inputMode="decimal" style={{ width: 90, ...inputStyle }} />
+            <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder={t("benchmarks_unit_ph")} style={{ width: 70, ...inputStyle }} />
+            <button onClick={addEntry} disabled={!metric.trim() || !value.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!metric.trim() || !value.trim() || busy) ? 0.5 : 1 }}>
+              {busy ? "…" : t("benchmarks_add")}
+            </button>
+          </div>
+          {err && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 6 }}>{err}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ============ POSTS GRID (Instagram-style) ============
    Same viewUserId convention as Highlights above (null = own profile).
    Square-tile grid of this person's own Feed posts — image posts show
@@ -4095,6 +4197,11 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
 
       {/* career timeline */}
       <Timeline viewUserId={viewingOther ? viewUserId : null} />
+
+      {/* performance benchmarks — private to the owner, see Benchmarks'
+          own comment; still passed viewUserId so it renders nothing
+          rather than erroring when viewing someone else's Passport. */}
+      <Benchmarks viewUserId={viewingOther ? viewUserId : null} />
 
       {/* Posts grid, Family & Parent Access, Blocked Accounts, and the
           restricted-minor banner are launch-scoped off Passport for now
