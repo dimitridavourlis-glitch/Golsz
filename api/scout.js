@@ -1497,6 +1497,7 @@ export default async function handler(req, res) {
         stop_reason: "end_turn",
         scout_summary: updatedSummary,
         scout_usage: reservedQuestion ? { remaining: questionsRemaining, limit: dailyLimit } : undefined,
+        next_move: extractNextBestAction(classification),
       };
       await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist });
       return res.status(200).json(payload);
@@ -1535,6 +1536,7 @@ export default async function handler(req, res) {
         await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist });
         cached.scout_summary = updatedSummary;
         if (reservedQuestion) cached.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
+        cached.next_move = extractNextBestAction(classification);
         return res.status(200).json(cached);
       }
     }
@@ -1575,7 +1577,14 @@ export default async function handler(req, res) {
         await persistScoutContext(userId, scoutContextUpdates);
         data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
+        // next_move is THIS request's own classification result, not a fact
+        // about the shared cached answer — attached only after
+        // setCachedResponse's JSON.stringify has already run (synchronously,
+        // before its first await), so a personalized next-move suggestion
+        // never gets baked into what a different user sees on a future cache
+        // hit for the same generic simple_knowledge answer.
         if (cacheKey && !profileUpdates && !scoutContextUpdates) await setCachedResponse(cacheKey, classification.intent, modelTier, data);
+        data.next_move = extractNextBestAction(classification);
         return res.status(200).json(data);
       }
       if (!ok) {
@@ -1631,6 +1640,7 @@ export default async function handler(req, res) {
         await persistScoutContext(userId, extractScoutContextUpdates(data));
         data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
+        data.next_move = extractNextBestAction(classification);
         // Deliberately never cached — a degraded, apologetic reply shouldn't
         // get served back to a different athlete once things recover.
         return res.status(200).json(data);
@@ -1655,6 +1665,7 @@ export default async function handler(req, res) {
     await persistScoutContext(userId, extractScoutContextUpdates(data));
     data.scout_summary = updatedSummary;
     if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
+    data.next_move = extractNextBestAction(classification);
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
     if (reservedQuestion) await releaseScoutQuestion(userId);
