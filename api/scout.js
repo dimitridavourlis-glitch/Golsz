@@ -90,6 +90,306 @@ function estimateCost(model, usage) {
   );
 }
 
+// ============================================================
+// Multi-Model AI Scout & Cost-Control System (approved plan).
+// Four provider-agnostic tiers (economy/standard/advanced/premium),
+// deterministic complexity scoring, plan-based tier caps, and a
+// cost-based downgrade gate — layered on TOP of the existing, real,
+// production-validated Haiku/Sonnet routing above (shouldRouteToHaiku,
+// escalationReason) rather than replacing it. The one genuinely new
+// behavior this adds: a Free-plan user's non-tool-requiring, Sonnet-bound
+// question (career_advice, scouting_analysis, etc.) now gets capped down
+// to Haiku instead of reaching Sonnet — the actual cost lever the plan
+// caps are for. Tool-requiring questions (db_lookup/web_lookup) are never
+// capped down by plan — search correctness isn't a discretionary luxury.
+// ============================================================
+
+const TIER_ORDER = ["economy", "standard", "advanced", "premium"];
+
+// The highest tier each plan may ever reach — a ceiling, not a default.
+// An Elite user's simple question still lands on economy; this only stops
+// the OTHER direction (a Free user's complex question can't reach premium).
+const PLAN_MODEL_ACCESS = { free: "standard", starter: "advanced", pro: "advanced", elite: "premium" };
+
+function capTier(tier, plan) {
+  const cap = PLAN_MODEL_ACCESS[plan] || PLAN_MODEL_ACCESS.free;
+  return TIER_ORDER[Math.min(TIER_ORDER.indexOf(tier), TIER_ORDER.indexOf(cap))];
+}
+
+// Deterministic 0-100 complexity score — no LLM call spent scoring a
+// message, per the plan's "don't spend money on an additional AI
+// classification call" instruction. Reuses signals already computed for
+// free (classifier intent/needs_tool) plus cheap, local text heuristics.
+function complexityScore({ text, classification }) {
+  let score = 10; // floor — even the simplest real question isn't 0
+  const len = (text || "").length;
+  if (len > 600) score += 25;
+  else if (len > 250) score += 12;
+  else if (len > 100) score += 5;
+
+  const intent = classification && classification.intent;
+  if (intent === "career_advice" || intent === "scouting_analysis") score += 25;
+  else if (intent === "player_comparison") score += 15;
+  else if (intent === "web_lookup" || intent === "db_lookup") score += 10;
+
+  if (classification && classification.needs_tool) score += 10;
+  // Strategic/long-horizon phrasing — the spec's own worked example
+  // ("Elite user asking about a 3-year strategy -> premium"). Two
+  // independent signals (keyword + an explicit multi-year number) so a
+  // genuinely long-horizon ask reliably clears the premium band (>75)
+  // even after only a moderate career_advice/length bump — verified
+  // against this exact worked example in a one-off test harness.
+  if (/\b(strategy|long[- ]term|multi[- ]year|roadmap|comprehensive)\b/i.test(text || "")) score += 30;
+  if (/\b([2-9]|\d{2,})\s*[- ]?years?\b/i.test(text || "")) score += 15;
+
+  return Math.max(0, Math.min(100, score));
+}
+
+// Combines the score with the EXISTING Haiku/Sonnet gate (shouldRouteToHaiku,
+// already tuned against real production traffic) rather than recomputing
+// that decision from scratch — the score only picks WHICH tier within
+// whichever side of that gate the message already falls on, then the plan
+// cap can pull a non-tool Sonnet-bound question back down to Haiku.
+function selectModelTier({ plan, classification, score }) {
+  const needsTool = !!(classification && classification.needs_tool);
+  const eligibleForHaiku = shouldRouteToHaiku(classification);
+  const rawTier = eligibleForHaiku
+    ? (score > 25 ? "standard" : "economy")
+    : (score > 75 ? "premium" : "advanced");
+  // Tool-requiring questions are a correctness need, not a discretionary
+  // depth choice — never capped down by plan, same as today's unconditional
+  // Sonnet routing whenever needs_tool is true.
+  const tier = needsTool ? rawTier : capTier(rawTier, plan);
+  return { tier, score, needsTool };
+}
+
+// scout_model_config (migration 052) makes provider/model/pricing per tier
+// admin-editable at runtime instead of hardcoded here. Cached in-memory per
+// warm serverless instance (same TTL pattern as getFaqList above) — a
+// config edit takes up to this TTL to take effect, not instant, which is
+// the right tradeoff for a table that changes rarely versus a fresh DB
+// round trip on every request. Falls back to ANTHROPIC_DEFAULTS below if a
+// tier has no enabled row — a bad edit here degrades gracefully, never
+// hard-fails Scout.
+const ANTHROPIC_DEFAULTS = {
+  economy: { provider: "anthropic", model_name: "claude-haiku-4-5", input_cost_per_million: 1, output_cost_per_million: 5, max_output_tokens: 1024 },
+  standard: { provider: "anthropic", model_name: "claude-haiku-4-5", input_cost_per_million: 1, output_cost_per_million: 5, max_output_tokens: 2048 },
+  advanced: { provider: "anthropic", model_name: "claude-sonnet-5", input_cost_per_million: 3, output_cost_per_million: 15, max_output_tokens: 4096 },
+  premium: { provider: "anthropic", model_name: "claude-sonnet-5", input_cost_per_million: 3, output_cost_per_million: 15, max_output_tokens: 4096 },
+};
+
+let modelConfigCache = { at: 0, byTier: null };
+const MODEL_CONFIG_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function getModelConfigByTier() {
+  const now = Date.now();
+  if (modelConfigCache.byTier && now - modelConfigCache.at < MODEL_CONFIG_CACHE_TTL_MS) return modelConfigCache.byTier;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return ANTHROPIC_DEFAULTS;
+  try {
+    const r = await fetch(`${url}/rest/v1/scout_model_config?enabled=eq.true&order=model_tier.asc,priority.asc`, {
+      headers: { apikey: key, Authorization: "Bearer " + key },
+    });
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows.length) return modelConfigCache.byTier || ANTHROPIC_DEFAULTS;
+    const byTier = {};
+    for (const row of rows) if (!byTier[row.model_tier]) byTier[row.model_tier] = row; // lowest priority number wins per tier
+    for (const tier of TIER_ORDER) if (!byTier[tier]) byTier[tier] = ANTHROPIC_DEFAULTS[tier];
+    modelConfigCache = { at: now, byTier };
+    return byTier;
+  } catch {
+    return modelConfigCache.byTier || ANTHROPIC_DEFAULTS;
+  }
+}
+
+// Env-overridable per-plan cost constants from the plan's spec. TARGET_COSTS
+// is aspirational (real traffic varies around it, not enforced per-request);
+// HARD_MAX_COST_PER_REQUEST is the one that actually forces a downgrade.
+const TARGET_COSTS = {
+  free: Number(process.env.SCOUT_TARGET_COST_FREE || 0.002),
+  starter: Number(process.env.SCOUT_TARGET_COST_STARTER || 0.002),
+  pro: Number(process.env.SCOUT_TARGET_COST_PRO || 0.003),
+  elite: Number(process.env.SCOUT_TARGET_COST_ELITE || 0.006),
+};
+const HARD_MAX_COST_PER_REQUEST = {
+  free: Number(process.env.SCOUT_HARD_MAX_COST_FREE || 0.01),
+  starter: Number(process.env.SCOUT_HARD_MAX_COST_STARTER || 0.02),
+  pro: Number(process.env.SCOUT_HARD_MAX_COST_PRO || 0.04),
+  elite: Number(process.env.SCOUT_HARD_MAX_COST_ELITE || 0.08),
+};
+
+function estimateTierCost(tierConfig, estimatedInputTokens, outputTokens) {
+  const inputCost = (estimatedInputTokens * (tierConfig.input_cost_per_million || 0)) / 1e6;
+  const outputCost = (outputTokens * (tierConfig.output_cost_per_million || 0)) / 1e6;
+  return inputCost + outputCost;
+}
+
+// Downgrades (never upgrades) a tier if its OWN worst-case cost — using that
+// tier's max_output_tokens as the output ceiling, since real output length
+// isn't known until after the call — would exceed this plan's hard
+// per-request ceiling. Never silently upgrades past what was selected.
+async function budgetGate(tier, plan, estimatedInputTokens) {
+  const byTier = await getModelConfigByTier();
+  const hardMax = HARD_MAX_COST_PER_REQUEST[plan] || HARD_MAX_COST_PER_REQUEST.free;
+  let idx = TIER_ORDER.indexOf(tier);
+  while (idx > 0) {
+    const cfg = byTier[TIER_ORDER[idx]];
+    if (estimateTierCost(cfg, estimatedInputTokens, cfg.max_output_tokens) <= hardMax) break;
+    idx -= 1;
+  }
+  return TIER_ORDER[idx];
+}
+
+// AiProviderAdapter — one shared shape every provider implements, so the
+// handler calls adapter.generate(...) without ever branching on provider
+// name. anthropicAdapter is real (wraps callAnthropic above); gemini/xai/
+// openai are code-complete stubs wired into scout_model_config but never
+// actually invoked while their rows stay enabled=false in production — no
+// API keys exist for them in this project yet, and turning one on is a
+// config change (a scout_model_config row + an env var), never a code
+// change, once a real key and a benchmark pass exist.
+const anthropicAdapter = {
+  provider: "anthropic",
+  async generate({ apiKey, model, system, messages, tools, thinking, maxTokens, stopSequences }) {
+    return callAnthropic(apiKey, { model, system, messages, tools, thinking, maxTokens, stopSequences });
+  },
+};
+function unconfiguredAdapter(provider) {
+  return {
+    provider,
+    async generate() {
+      throw new Error(`${provider} adapter has no configured API key — scout_model_config must keep ${provider} rows disabled until one exists`);
+    },
+  };
+}
+const PROVIDER_ADAPTERS = {
+  anthropic: anthropicAdapter,
+  google: unconfiguredAdapter("google"),
+  xai: unconfiguredAdapter("xai"),
+  openai: unconfiguredAdapter("openai"),
+};
+function adapterFor(provider) {
+  return PROVIDER_ADAPTERS[provider] || anthropicAdapter;
+}
+
+// Emergency kill switches — checked first in the handler, before any model
+// call or DB write. A disabled switch returns the same graceful message an
+// athlete would see for an ordinary outage; nothing about why is leaked.
+const SCOUT_GLOBAL_ENABLED = process.env.SCOUT_GLOBAL_ENABLED !== "false";
+const SCOUT_PREMIUM_ENABLED = process.env.SCOUT_PREMIUM_ENABLED !== "false";
+const SCOUT_DAILY_SPEND_LIMIT = process.env.SCOUT_DAILY_SPEND_LIMIT_USD ? Number(process.env.SCOUT_DAILY_SPEND_LIMIT_USD) : null;
+const SCOUT_MONTHLY_SPEND_LIMIT = process.env.SCOUT_MONTHLY_SPEND_LIMIT_USD ? Number(process.env.SCOUT_MONTHLY_SPEND_LIMIT_USD) : null;
+
+let platformSpendCache = { at: 0, value: null };
+const PLATFORM_SPEND_CACHE_TTL_MS = 60 * 1000;
+
+// Best-effort platform-wide spend check, cached per warm instance — a soft
+// safety net (a minute of staleness is fine for an emergency brake), not a
+// billing source of truth. Reads scout_daily_usage directly (service key
+// already bypasses RLS) rather than a dedicated RPC, same pattern as every
+// other server-role-only read in this file.
+async function getPlatformSpend() {
+  const now = Date.now();
+  if (platformSpendCache.value && now - platformSpendCache.at < PLATFORM_SPEND_CACHE_TTL_MS) return platformSpendCache.value;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return { today: 0, month: 0 };
+  try {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const monthStr = todayStr.slice(0, 7) + "-01";
+    const headers = { apikey: key, Authorization: "Bearer " + key };
+    const [todayRows, monthRows] = await Promise.all([
+      fetch(`${url}/rest/v1/scout_daily_usage?usage_date=eq.${todayStr}&select=total_cost`, { headers }).then((r) => r.json()),
+      fetch(`${url}/rest/v1/scout_daily_usage?usage_date=gte.${monthStr}&select=total_cost`, { headers }).then((r) => r.json()),
+    ]);
+    const sum = (rows) => (Array.isArray(rows) ? rows.reduce((s, row) => s + (Number(row.total_cost) || 0), 0) : 0);
+    const value = { today: sum(todayRows), month: sum(monthRows) };
+    platformSpendCache = { at: now, value };
+    return value;
+  } catch {
+    return platformSpendCache.value || { today: 0, month: 0 };
+  }
+}
+
+// Rate limit + idempotency — both in-memory, scoped to one warm serverless
+// instance. Real, honest limitation: Vercel can route concurrent requests
+// to different instances, so neither guarantees distributed correctness the
+// way reserve_scout_question's DB-level atomic increment does for the daily
+// limit. What this DOES stop: the common real case of a rapid double-click
+// or a retry-storm landing on the same warm instance. The daily-limit
+// atomicity below is the real guarantee; this is a best-effort second layer
+// on top of it, not a replacement.
+const recentRequestsByUser = new Map();
+const RATE_LIMIT_MIN_INTERVAL_MS = 3000;
+const seenRequestIds = new Map();
+const REQUEST_ID_TTL_MS = 5 * 60 * 1000;
+
+function isRateLimited(userId) {
+  if (!userId) return false;
+  const now = Date.now();
+  const last = recentRequestsByUser.get(userId);
+  recentRequestsByUser.set(userId, now);
+  if (recentRequestsByUser.size > 5000) recentRequestsByUser.clear(); // crude unbounded-growth guard
+  return typeof last === "number" && now - last < RATE_LIMIT_MIN_INTERVAL_MS;
+}
+
+function isDuplicateRequest(requestId) {
+  if (!requestId) return false;
+  const now = Date.now();
+  for (const [id, at] of seenRequestIds) if (now - at > REQUEST_ID_TTL_MS) seenRequestIds.delete(id);
+  if (seenRequestIds.has(requestId)) return true;
+  seenRequestIds.set(requestId, now);
+  return false;
+}
+
+// Generic response cache (migration 054) — only for genuinely
+// non-personalized, shared answers (simple_knowledge — the one intent that
+// by definition needs no athlete-specific context). Distinct from scout_faq
+// (curated, admin-written): this caches actual model output the first time
+// a given effective question is answered, keyed by intent+text+lang+tier.
+const CACHE_ELIGIBLE_INTENTS = new Set(["simple_knowledge"]);
+const RESPONSE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+function cacheKeyFor(intent, text, lang, tier) {
+  return `${intent}:${lang}:${tier}:${String(text || "").trim().toLowerCase().slice(0, 300)}`;
+}
+
+async function getCachedResponse(cacheKey) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return null;
+  try {
+    const r = await fetch(`${url}/rest/v1/scout_response_cache?cache_key=eq.${encodeURIComponent(cacheKey)}&expires_at=gte.${encodeURIComponent(new Date().toISOString())}&select=id,response,hit_count`, {
+      headers: { apikey: key, Authorization: "Bearer " + key },
+    });
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows[0]) return null;
+    const row = rows[0];
+    fetch(`${url}/rest/v1/scout_response_cache?id=eq.${row.id}`, {
+      method: "PATCH",
+      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ hit_count: (row.hit_count || 0) + 1 }),
+    }).catch(() => {});
+    return row.response;
+  } catch {
+    return null;
+  }
+}
+
+async function setCachedResponse(cacheKey, intent, tier, response) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return;
+  try {
+    await fetch(`${url}/rest/v1/scout_response_cache`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify({ cache_key: cacheKey, intent, model_tier: tier, response, expires_at: new Date(Date.now() + RESPONSE_CACHE_TTL_MS).toISOString() }),
+    });
+  } catch (e) { console.error("GOLSZ response cache write failed:", e); }
+}
+
 // Writes a real server-side failure to error_log (migration 036) so it
 // shows up in the Admin Panel's "Errors" tab instead of only ever
 // existing in Vercel's own function logs. Self-contained (reads its own
@@ -216,6 +516,12 @@ const PROFILE_FIELD_MAP = {
   gpa: { table: "athletes", column: "gpa" },
   license: { table: "athletes", column: "license" },
   looking_for_players: { table: "athletes", column: "looking_for_players" },
+  // Real Passport column (migration 018) — moved here from SCOUT_CONTEXT_KEYS,
+  // which had accidentally duplicated it as a soft/AI-inferred jsonb key
+  // (Failover & Discovery Polish audit finding). A hard, athlete-verified
+  // fact belongs in profile_updates, never re-inferred and risked conflicting
+  // with the real column.
+  education_level: { table: "athletes", column: "education_level" },
 };
 
 // Pulls {reply, profile_updates} out of a real Anthropic response the same
@@ -268,10 +574,21 @@ async function persistProfileUpdates(userId, updates) {
 // against this allowlist before ever reaching merge_scout_context() so a
 // malformed/unexpected key from a model response can't write an arbitrary
 // jsonb key onto the row.
+// height/weight/dominant_side/preferred_countries added for the Multi-Model
+// AI Scout & Cost-Control System (approved plan, migration 055 scope);
+// secondary_goal/secondary_gaps/scholarship_interest/transfer_interest/
+// exposure_need added for the Failover & Discovery Polish pass — all
+// additive to the same jsonb column (migration 050), no schema change
+// needed beyond this allowlist since scout_context is jsonb.
+// education_level is deliberately NOT here — it's a real Passport column
+// (migration 018), handled as a hard fact via PROFILE_FIELD_MAP instead;
+// it was a naming-collision bug to have it in both places.
 const SCOUT_CONTEXT_KEYS = new Set([
   "dream_outcome", "target_level", "target_country", "timeline",
   "perceived_strengths", "perceived_weaknesses", "main_gap", "urgency",
   "confidence", "professional_interest", "college_interest", "trial_interest",
+  "height", "weight", "dominant_side", "preferred_countries",
+  "secondary_goal", "secondary_gaps", "scholarship_interest", "transfer_interest", "exposure_need",
 ]);
 
 // Same extraction shape as extractProfileUpdates(), pulling scout_context_updates
@@ -336,8 +653,15 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // fallback case wherever recommended_specialist is read.
 const SPECIALISTS = new Set(["college", "pro_pathway", "development", "eligibility"]);
 
+// Failover & Discovery Polish pass: which stage of the Dream -> Current
+// Position -> Gap -> Pathway -> Action discovery sequence this turn is at —
+// validated the same way as recommended_specialist, so a malformed/invented
+// stage from the model just falls back to null rather than writing garbage.
+const CONVERSATION_STAGES = new Set(["discovery", "qualification", "pathway", "action"]);
+
 // Writes the classifier's routing decision (missing_information,
-// recommended_specialist — Phase 2c) into scout_context's "ai_meta" key.
+// recommended_specialist — Phase 2c; conversation_stage/next_best_action —
+// Failover & Discovery Polish pass) into scout_context's "ai_meta" key.
 // Deliberately a full replace of that one key (not an accumulating merge
 // like the athlete-fact keys in persistScoutContext) — it's this turn's
 // live routing snapshot, not a fact that should persist once stale.
@@ -354,7 +678,13 @@ async function persistAiMeta(userId, classification) {
     ? classification.missing_information.filter((f) => SCOUT_CONTEXT_KEYS.has(f)).slice(0, 3)
     : [];
   const specialist = (classification && SPECIALISTS.has(classification.recommended_specialist)) ? classification.recommended_specialist : null;
-  const aiMeta = { missing_information: missing, recommended_specialist: specialist, updated_at: new Date().toISOString() };
+  const stage = (classification && CONVERSATION_STAGES.has(classification.conversation_stage)) ? classification.conversation_stage : null;
+  const nextAction = (classification && typeof classification.next_best_action === "string") ? classification.next_best_action.slice(0, 200) : null;
+  const aiMeta = {
+    missing_information: missing, recommended_specialist: specialist,
+    conversation_stage: stage, next_best_action: nextAction,
+    updated_at: new Date().toISOString(),
+  };
 
   try {
     await fetch(`${supaUrl}/rest/v1/rpc/merge_scout_context`, {
@@ -398,12 +728,14 @@ You adapt to who you're talking to — check "occupation" in PROFILE SO FAR:
 - Other: a general, honest sports-industry assistant — ask what they need help with rather than assuming.
 Everything in PROFILE SO FAR is already known — whether it came from their real GOLSZ Passport or something they told you earlier in a past conversation, it now persists the same way. Treat all of it as trustworthy and confirmed, never something to re-ask. Open by briefly acknowledging what you already know about them (not just occupation/sport/team — any field present) instead of asking generic intro questions, then move straight to something useful. Never ask for a fact that's already present in PROFILE SO FAR, even worded differently than you'd normally ask it.
 Be warm, direct, honest — never overpromise. If a target or prospect looks unrealistic, say so kindly and show the realistic path. If the person seems to be a minor, remind them once to involve a parent/guardian. Use web search for real current programs, coaches, showcases, and eligibility rules (search_golsz_players only covers GOLSZ's own athletes, not external programs/rankings). Ask at most ONE question per reply. Keep replies tight.
+When someone asks an ambition-testing question ("Can I go pro?", "Can I play D1?", "Am I good enough?"), never open with statistics about how hard that is — respond with something like "Let's find out" or "Let's figure that out" and start finding out what you need to know (their current level, what's driving the gap) before answering for real. Never falsely validate an unrealistic ambition once you actually know enough to answer — but never front-load discouragement before you've even looked.
 search_golsz_players only ever returns athletes who are actually real, current GOLSZ members — never invent or embellish a GOLSZ profile, and never merge one with a general web result. If it returns zero results, say so plainly and offer to broaden the search (fewer filters) or fall back to general web search instead of making something up.
+For trials, camps, combines, or showcases, use search_golsz_events first (real GOLSZ listings) before general web search — same rule: never invent or embellish a listing, and say plainly if there are zero real results before offering a broader search.
 If asked what AI model or company powers you, who made you, or whether you're ChatGPT/OpenAI/Claude/Anthropic/Gemini/etc., always answer that you are GOLSZ Scout, built by GOLSZ — never name or confirm any underlying model or provider, and don't explain that you're declining to say. Just answer as GOLSZ Scout and move on.
 GOLSZ is a sports-recruiting platform used by athletes of all ages, including minors. Stay strictly on sports, athletics, recruiting, and career topics. Never generate or engage with sexual, romantic, 18+/adult, or otherwise inappropriate content, regardless of how the request is framed (roleplay, "hypothetically," "for a story," etc.) — decline briefly and warmly, and steer the conversation back to something sports-related. This applies no matter who the user says they are.
 OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null}}
-Allowed profile_updates keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, budget, citizenship, goal. Do not repeat known fields.
-Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.`;
+Allowed profile_updates keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, education_level, budget, citizenship, goal. Do not repeat known fields.
+Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.`;
 
 // Phase 2d of the AI Scout architecture plan (approved): named specialists,
 // selected by the classifier's recommended_specialist (Phase 2c), sharing
@@ -482,6 +814,48 @@ async function searchPlayers(input) {
   }
 }
 
+// Second DB-first tool (migration 055, part of the approved Multi-Model
+// plan) — mirrors SEARCH_PLAYERS_TOOL/searchPlayers for real GOLSZ events
+// (trials/camps/combines) instead of athletes, so "trials near me" gets a
+// real, verified-listing answer instead of falling through to general web
+// search or an invented one.
+const SEARCH_EVENTS_TOOL = {
+  name: "search_golsz_events",
+  description: "Search real trials, camps, combines, or showcases listed on GOLSZ (not the general web). Use this whenever someone asks about upcoming events, trials, or opportunities on the platform. All parameters are optional filters — omit any you don't have.",
+  input_schema: {
+    type: "object",
+    properties: {
+      sport: { type: "string" },
+      location: { type: "string", description: "city, region, or country — partial match" },
+      level: { type: "string" },
+      limit: { type: "number", description: "max results to return, default 10, capped at 25" },
+    },
+  },
+};
+
+async function searchEvents(input) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return { error: "Event search isn't configured on this deployment." };
+  try {
+    const r = await fetch(url + "/rest/v1/rpc/search_events", {
+      method: "POST",
+      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        p_sport: input.sport || null,
+        p_location: input.location || null,
+        p_level: input.level || null,
+        p_limit: Math.min(Number(input.limit) || 10, 25),
+      }),
+    });
+    const rows = await r.json();
+    if (!r.ok) return { error: "Search failed." };
+    return { results: rows };
+  } catch (e) {
+    return { error: "Search failed." };
+  }
+}
+
 // ---- Intent classifier / router ----
 // Classifies every message into the taxonomy below using a cheap Haiku
 // call. Validated against real production traffic in shadow mode first
@@ -502,11 +876,13 @@ async function searchPlayers(input) {
 // response.usage.cache_creation_input_tokens on a live classifier call,
 // same as every other caching claim in this file — don't just trust that
 // adding content worked.
-const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent, separately check it against the FAQ list appended below, and maintain a running conversation summary plus two routing hints. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false,"faq_id":null-or-a-number,"summary_so_far":"...","missing_information":[...],"recommended_specialist":null-or-"..."}
+const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent, separately check it against the FAQ list appended below, and maintain a running conversation summary plus four routing hints. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false,"faq_id":null-or-a-number,"summary_so_far":"...","missing_information":[...],"recommended_specialist":null-or-"...","conversation_stage":"...","next_best_action":"..."}
 SUMMARY: the message may open with a "CONVERSATION SUMMARY SO FAR: ..." section describing everything discussed before this turn (empty/absent on a conversation's first message — that's normal, not an error). Produce an updated "summary_so_far": ONE short sentence, 25 words max, covering the prior summary plus what this new message adds — never just repeat the input back, never a numbered list, never multiple sentences. If there's no prior summary and this message alone isn't summary-worthy yet (a greeting, "thanks", etc.), a few words is fine — it does not need to be a full sentence. Never include a literal "}" character anywhere in summary_so_far — it would cut this response off early.
 ATHLETE CONTEXT: the message may also include a "PROFILE SO FAR: {...}" section (hard facts already on file) and a "SCOUT CONTEXT SO FAR: {...}" section (softer qualification facts already captured — dream/goal, target level, gap, urgency, interest flags, etc.). Use both plus the summary to fill in:
-- "missing_information": an array of up to 3 field names, chosen only from this list, that are NOT already present in either section and would meaningfully help right now: dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, professional_interest, college_interest, trial_interest. Use an empty array if nothing important is missing, or the conversation doesn't call for asking right now (e.g. off_topic, or the athlete is mid-thought on something else).
+- "missing_information": an array of up to 3 field names, chosen only from this list, that are NOT already present in either section and would meaningfully help right now: dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need. Use an empty array if nothing important is missing, or the conversation doesn't call for asking right now (e.g. off_topic, or the athlete is mid-thought on something else).
 - "recommended_specialist": which specialist should likely handle THIS message — one of "college" (NCAA/NAIA/JUCO, scholarships, school fit), "pro_pathway" (professional clubs, trials, agents), "development" (training, skill gaps, performance), "eligibility" (NCAA rules, amateurism, compliance) — or null when the general Scout persona is clearly still right (most messages). Base this only on what the current message is actually asking, not the athlete's whole history.
+- "conversation_stage": one of "discovery" (still learning who they are/what they want), "qualification" (understanding their gap/situation in depth), "pathway" (discussing realistic routes/programs), "action" (drafting outreach, a concrete next step) — your best read of where THIS conversation is right now.
+- "next_best_action": a short (under 10 words) plain-language note on what would most help next turn (e.g. "ask about academics", "suggest 2-3 target schools") — internal routing signal only, never shown to the athlete.
 Intents:
 - db_lookup: searching/filtering for clubs, coaches, opportunities, or GOLSZ players by criteria
 - simple_knowledge: football rules, terms, or general explainers with no personalization needed
@@ -587,11 +963,12 @@ async function classifyIntent(key, conversation, faqList) {
   try {
     const { ok, data } = await callAnthropic(key, {
       model: MODEL_REGISTRY.FAST_CHAT.model,
-      // max_tokens was 100, then 350, then 450 — now 300: summary_so_far is
-      // capped to one 25-word sentence (was open-ended "1-3 sentences"),
-      // which needs less room and finishes faster, helping stay inside the
-      // timeout above instead of falling through to a costlier Sonnet reply.
-      maxTokens: 300,
+      // max_tokens was 100, then 350, then 450, then 300 — now 350: the
+      // Failover & Discovery Polish pass added two more short fields
+      // (conversation_stage, next_best_action) to the JSON contract, which
+      // need a little more room than the 300 budget that was tuned for the
+      // previous (smaller) schema.
+      maxTokens: 350,
       // Real traffic showed Haiku sometimes treating the classification
       // request as a conversation to actually help with, rambling on past
       // the JSON (e.g. "...}```\n\nI can help you draft that email...").
@@ -743,12 +1120,16 @@ async function getUserId(authHeader) {
 // Read plan + admin flag + the admin-granted unlimited-AI override
 // (migration 045, profiles.ai_unlimited — separate from is_admin, lets an
 // admin lift one athlete's Scout ceiling without touching their plan or
-// giving them Admin Panel access) + increment daily usage via the SQL
-// helper. Returns { plan, isAdmin, aiUnlimited, calls }.
-async function meter(userId) {
+// giving them Admin Panel access). Returns { plan, isAdmin, aiUnlimited }.
+// Usage reservation is now a separate call (reserveScoutQuestion, migration
+// 053) — splitting these two concerns lets the handler know the plan's
+// limit BEFORE atomically reserving against it, instead of the old
+// increment_scout_usage() incrementing blind and checking after, which had
+// a real check-then-act race between concurrent requests near the limit.
+async function getProfileMeta(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, calls: 0 };
+  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let plan = "starter";
   let isAdmin = false;
@@ -762,20 +1143,139 @@ async function meter(userId) {
       aiUnlimited = !!rows[0].ai_unlimited;
     }
   } catch {}
-  let calls = 0;
+  return { plan, isAdmin, aiUnlimited };
+}
+
+// Atomic reserve-and-check (migration 053) — one statement, row-locked by
+// Postgres for its duration, so a concurrent second request genuinely waits
+// instead of racing a separate check. Fails OPEN (allowed: true) on our own
+// metering outage — a Supabase hiccup should never block a real athlete's
+// question over our bookkeeping.
+async function reserveScoutQuestion(userId, limit) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key || !userId) return { allowed: true, used: 0, limit };
   try {
-    const c = await fetch(url + "/rest/v1/rpc/increment_scout_usage", {
-      method: "POST", headers, body: JSON.stringify({ p_user: userId }),
+    const r = await fetch(url + "/rest/v1/rpc/reserve_scout_question", {
+      method: "POST",
+      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_user: userId, p_plan_limit: limit }),
     });
-    calls = await c.json();
-  } catch {}
-  return { plan, isAdmin, aiUnlimited, calls: Number(calls) || 0 };
+    const data = await r.json();
+    return data && typeof data === "object" ? data : { allowed: true, used: 0, limit };
+  } catch {
+    return { allowed: true, used: 0, limit };
+  }
+}
+
+// Gives the reserved slot back when a request was counted but never
+// produced a real answer (provider failure, upstream error) — "retries
+// caused by provider failures must not count as additional user
+// questions." Best-effort, same discipline as every other persistX/logX
+// helper in this file.
+async function releaseScoutQuestion(userId) {
+  if (!userId) return;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return;
+  try {
+    await fetch(url + "/rest/v1/rpc/release_scout_question", {
+      method: "POST",
+      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_user: userId }),
+    });
+  } catch (e) { console.error("GOLSZ release_scout_question failed:", e); }
+}
+
+// Adds the real token/cost numbers to today's scout_daily_usage row once a
+// reply actually completes — separate from reservation since the cost
+// isn't known until after the model responds.
+async function recordScoutUsageCost(userId, cost, inputTokens, outputTokens) {
+  if (!userId) return;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return;
+  try {
+    await fetch(url + "/rest/v1/rpc/record_scout_usage_cost", {
+      method: "POST",
+      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_user: userId, p_cost: cost || 0, p_input_tokens: inputTokens || 0, p_output_tokens: outputTokens || 0 }),
+    });
+  } catch (e) { console.error("GOLSZ record_scout_usage_cost failed:", e); }
+}
+
+// Runs the full Sonnet/DEEP_SCOUT tool-loop against a COPY of the given
+// conversation (Automatic Failover, Failover & Discovery Polish pass) — a
+// failed attempt never leaves partial tool-call turns behind for a
+// subsequent retry to trip over. Returns the same {ok, data} shape as
+// callAnthropic()/adapter.generate() so the handler's retry/fallback logic
+// can treat a whole-reply attempt uniformly.
+async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation) {
+  const conversation = baseConversation.slice();
+  const MAX_TOOL_TURNS = 4;
+  let data;
+  for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
+    const result = await callAnthropic(key, {
+      model: deepTierConfig.model_name || MODEL_REGISTRY.DEEP_SCOUT.model,
+      // Sonnet 5 runs adaptive thinking by default when this is omitted —
+      // real, billed output tokens for a task (conversational advice +
+      // one JSON reply) that doesn't need visible step-by-step reasoning.
+      // Disabling it is a pure cost cut — confirmed against real traffic
+      // to produce tighter, equally (or more) correctly formatted
+      // replies than leaving it on.
+      thinking: { type: "disabled" },
+      // Cached: this system prompt + the tools below are identical for
+      // every user on the same language — verified in production at
+      // ~4,287 tokens, comfortably over Sonnet 5's 1,024-token minimum,
+      // with real cache reads confirmed via response.usage.cache_read_input_tokens.
+      system: systemPrompt,
+      messages: conversation,
+      maxTokens: deepTierConfig.max_output_tokens,
+      tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL, SEARCH_EVENTS_TOOL],
+    });
+    data = result.data;
+    if (!result.ok) return { ok: false, data };
+    console.log("GOLSZ scout usage check:", JSON.stringify(data.usage));
+
+    const searchCalls = (data.content || []).filter((b) => b.type === "tool_use" && (b.name === "search_golsz_players" || b.name === "search_golsz_events"));
+    if (data.stop_reason !== "tool_use" || !searchCalls.length) return { ok: true, data };
+
+    conversation.push({ role: "assistant", content: data.content });
+    const results = await Promise.all(searchCalls.map(async (call) => ({
+      type: "tool_result",
+      tool_use_id: call.id,
+      content: JSON.stringify(call.name === "search_golsz_events" ? await searchEvents(call.input || {}) : await searchPlayers(call.input || {})),
+    })));
+    conversation.push({ role: "user", content: results });
+  }
+  if (data.stop_reason === "tool_use") {
+    // Hit MAX_TOOL_TURNS still mid-tool-call — the client only renders
+    // text content, so returning this as-is would show an empty bubble
+    // (the exact bug fixed elsewhere in this file's history). Force one
+    // final answer with no tools available instead of looping forever.
+    const result = await callAnthropic(key, {
+      model: deepTierConfig.model_name || MODEL_REGISTRY.DEEP_SCOUT.model,
+      thinking: { type: "disabled" },
+      system: systemPrompt,
+      messages: conversation,
+      maxTokens: deepTierConfig.max_output_tokens,
+    });
+    if (!result.ok) return { ok: false, data: result.data };
+    data = result.data;
+  }
+  return { ok: true, data };
 }
 
 export default async function handler(req, res) {
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // Emergency global kill switch — checked before anything else, including
+  // the API key check, so flipping SCOUT_GLOBAL_ENABLED=false takes effect
+  // even in a misconfigured deployment. Same graceful message an athlete
+  // would see for an ordinary outage; nothing about why is leaked.
+  if (!SCOUT_GLOBAL_ENABLED) return res.status(503).json({ error: "Scout is temporarily unavailable. Please try again shortly." });
 
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return res.status(500).json({ error: "Server missing ANTHROPIC_API_KEY" });
@@ -785,6 +1285,9 @@ export default async function handler(req, res) {
   if (typeof body === "string") { try { body = JSON.parse(body); } catch { body = {}; } }
   const messages = body && body.messages;
   if (!Array.isArray(messages)) return res.status(400).json({ error: "messages[] required" });
+  const MAX_MESSAGE_LENGTH = 4000;
+  const incomingText = latestUserText(messages);
+  if (incomingText && incomingText.length > MAX_MESSAGE_LENGTH) return res.status(400).json({ error: "Message is too long." });
   const langName = LANG_NAMES[body && body.lang];
   // Language-adjusted only — the specialist framing (Phase 2d) is layered
   // in below, once recommendedSpecialist is known from classification.
@@ -804,17 +1307,47 @@ export default async function handler(req, res) {
   // never a value trusted from the request body.
   let userId = null;
   let userPlan = null; // threaded down to logRouting() below — pure telemetry, no gating logic depends on it yet
+  let dailyLimit = null;
+  let questionsRemaining = null; // null = no usage info to show the client (unmetered deployment, or an unlimited/admin account)
+  let reservedQuestion = false; // true once reserve_scout_question has counted this request — release it if we bail before a real answer
   if (process.env.SUPABASE_URL) {
     userId = await getUserId(req.headers.authorization);
     if (!userId) return res.status(401).json({ error: "Sign in to use the Scout." });
-    const { plan, isAdmin, aiUnlimited, calls } = await meter(userId);
+
+    // Burst protection + duplicate-submission guard — see the comment above
+    // isRateLimited()/isDuplicateRequest() for the honest limits of an
+    // in-memory, single-instance check.
+    if (isRateLimited(userId)) return res.status(429).json({ error: "Please wait a moment before sending another message." });
+    const requestId = body && typeof body.requestId === "string" ? body.requestId : null;
+    if (isDuplicateRequest(requestId)) return res.status(409).json({ error: "That message is already being processed." });
+
+    // Emergency platform-wide spend ceiling — checked before reserving a
+    // question, so a tripped budget never counts against the athlete's own
+    // daily allowance.
+    if (SCOUT_DAILY_SPEND_LIMIT || SCOUT_MONTHLY_SPEND_LIMIT) {
+      const spend = await getPlatformSpend();
+      const overBudget = (SCOUT_DAILY_SPEND_LIMIT && spend.today >= SCOUT_DAILY_SPEND_LIMIT) || (SCOUT_MONTHLY_SPEND_LIMIT && spend.month >= SCOUT_MONTHLY_SPEND_LIMIT);
+      if (overBudget) return res.status(503).json({ error: "Scout is temporarily unavailable. Please try again shortly." });
+    }
+
+    // Four tiers, all capped (Elite is a higher ceiling, not unlimited —
+    // see CLAUDE.md, this changed from an earlier uncapped-Elite design).
+    // `plan` holds 'free'|'starter'|'pro'|'elite' (the live plan_tier enum —
+    // migration 048 added 'free' as a real fourth tier below Starter), so
+    // anything unrecognized falls through to the Free limit rather than
+    // accidentally going uncapped.
+    const { plan, isAdmin, aiUnlimited } = await getProfileMeta(userId);
     userPlan = plan;
+    dailyLimit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
+      : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 15)
+      : plan === "starter" ? Number(process.env.STARTER_DAILY_LIMIT || 8)
+      : Number(process.env.FREE_DAILY_LIMIT || 3);
+
     if (!isAdmin && !aiUnlimited) {
-      const limit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
-        : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 15)
-        : plan === "starter" ? Number(process.env.STARTER_DAILY_LIMIT || 8)
-        : Number(process.env.FREE_DAILY_LIMIT || 3);
-      if (calls > limit) {
+      const reservation = await reserveScoutQuestion(userId, dailyLimit);
+      reservedQuestion = true;
+      questionsRemaining = Math.max(dailyLimit - (Number(reservation.used) || 0), 0);
+      if (!reservation.allowed) {
         const message = plan === "elite"
           ? "Daily Scout limit reached. Check back tomorrow."
           : plan === "pro"
@@ -822,7 +1355,7 @@ export default async function handler(req, res) {
           : plan === "starter"
           ? "Daily Scout limit reached. Upgrade to Pro or Elite for more Scout messages."
           : "Free daily limit reached. Upgrade for more Scout messages.";
-        return res.status(402).json({ error: message });
+        return res.status(402).json({ error: message, scout_usage: { remaining: 0, limit: dailyLimit } });
       }
     }
   }
@@ -879,11 +1412,48 @@ export default async function handler(req, res) {
         content: [{ type: "text", text: JSON.stringify({ reply: faqMatch.answer, profile_updates: null }) }],
         stop_reason: "end_turn",
         scout_summary: updatedSummary,
+        scout_usage: reservedQuestion ? { remaining: questionsRemaining, limit: dailyLimit } : undefined,
       };
       await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist });
       return res.status(200).json(payload);
     }
     await logFaqMiss(classification, latestUserText(conversation));
+
+    // ---- Multi-Model tier selection (approved Cost-Control plan) ----
+    // Picks economy/standard/advanced/premium on top of the existing,
+    // production-validated Haiku/Sonnet gate (shouldRouteToHaiku, inside
+    // selectModelTier) instead of replacing it — see that function's own
+    // comment for what's genuinely new (a plan cap can force a non-tool
+    // Sonnet-bound question down to Haiku; a real cost lever, not just
+    // bookkeeping). planForRouting defaults to "elite" (no cap) rather than
+    // "free" when Supabase isn't configured, so a deployment with no plan
+    // enforcement at all doesn't silently start capping quality either.
+    const planForRouting = userPlan || "elite";
+    const latestText = latestUserText(conversation);
+    const complexity = complexityScore({ text: latestText, classification });
+    let modelTier = selectModelTier({ plan: planForRouting, classification, score: complexity }).tier;
+    if (modelTier === "premium" && !SCOUT_PREMIUM_ENABLED) modelTier = "advanced";
+    const estimatedInputTokens = Math.ceil((JSON.stringify(conversation).length + systemPrompt.length) / 4);
+    modelTier = await budgetGate(modelTier, planForRouting, estimatedInputTokens);
+    const byTier = await getModelConfigByTier();
+    const tierConfig = byTier[modelTier] || ANTHROPIC_DEFAULTS[modelTier];
+    const useHaiku = modelTier === "economy" || modelTier === "standard";
+    console.log("GOLSZ scout tier:", JSON.stringify({ tier: modelTier, score: complexity, plan: userPlan }));
+
+    // ---- Generic response cache (migration 054) — only for genuinely
+    // non-personalized, shared answers (simple_knowledge). ----
+    let cacheKey = null;
+    if (classification && CACHE_ELIGIBLE_INTENTS.has(classification.intent)) {
+      cacheKey = cacheKeyFor(classification.intent, latestText, faqLang, modelTier);
+      const cached = await getCachedResponse(cacheKey);
+      if (cached) {
+        console.log("GOLSZ scout cache hit");
+        await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist });
+        cached.scout_summary = updatedSummary;
+        if (reservedQuestion) cached.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
+        return res.status(200).json(cached);
+      }
+    }
 
     // ---- Haiku path: low-stakes, no-tool-needed intents, answered for real ----
     // Tools are included here (even though the classifier says none should be
@@ -894,85 +1464,115 @@ export default async function handler(req, res) {
     // If Haiku unexpectedly asks for a tool anyway (a classifier miss), that
     // response is discarded and the request falls through to the Sonnet
     // path below instead of trying to run a second tool loop here.
-    if (shouldRouteToHaiku(classification)) {
-      const { ok, data } = await callAnthropic(key, {
-        model: MODEL_REGISTRY.FAST_CHAT.model,
+    // haikuFailureReason is set ONLY on a genuine Haiku provider error (not a
+    // normal "Haiku wanted a tool" escalation) — carried into the eventual
+    // Sonnet logRouting call below so a real failover shows up distinctly
+    // from an ordinary routing decision in scout_routing_log.escalation_reason
+    // (Automatic Failover, Failover & Discovery Polish pass).
+    let haikuFailureReason = null;
+    if (useHaiku) {
+      const adapter = adapterFor(tierConfig.provider);
+      const { ok, data } = await adapter.generate({
+        apiKey: key,
+        model: tierConfig.model_name || MODEL_REGISTRY.FAST_CHAT.model,
         system: systemPrompt,
         messages: conversation,
-        tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL],
+        maxTokens: tierConfig.max_output_tokens,
+        tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL, SEARCH_EVENTS_TOOL],
       });
       if (ok && data.stop_reason !== "tool_use") {
         console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
-        await logRouting("haiku", classification, MODEL_REGISTRY.FAST_CHAT.model, data.usage, { plan: userPlan, specialist: recommendedSpecialist });
-        await persistProfileUpdates(userId, extractProfileUpdates(data));
-        await persistScoutContext(userId, extractScoutContextUpdates(data));
+        const cost = estimateCost(tierConfig.model_name, data.usage);
+        const profileUpdates = extractProfileUpdates(data);
+        const scoutContextUpdates = extractScoutContextUpdates(data);
+        await logRouting("haiku", classification, tierConfig.model_name, data.usage, { plan: userPlan, specialist: recommendedSpecialist });
+        await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
+        await persistProfileUpdates(userId, profileUpdates);
+        await persistScoutContext(userId, scoutContextUpdates);
         data.scout_summary = updatedSummary;
+        if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
+        if (cacheKey && !profileUpdates && !scoutContextUpdates) await setCachedResponse(cacheKey, classification.intent, modelTier, data);
         return res.status(200).json(data);
       }
-      console.log(ok ? "GOLSZ haiku escalated to sonnet (wanted a tool)" : "GOLSZ haiku call failed, escalating to sonnet:", JSON.stringify(data));
+      if (!ok) {
+        haikuFailureReason = "haiku_provider_failure";
+        console.log("GOLSZ haiku call failed, escalating to sonnet:", JSON.stringify(data));
+      } else {
+        console.log("GOLSZ haiku escalated to sonnet (wanted a tool)");
+      }
     }
 
     // ---- Sonnet path (model / prompt / tools owned here, not the client) ----
     // web_search_20250305 is server-hosted — Anthropic runs it and just hands
-    // back the result, no action needed here. search_golsz_players is ours,
-    // so when the model calls it we have to execute it and send the result
-    // back as a new turn ourselves; loop until it stops asking for that tool
-    // (capped so a stuck loop can't run away with the request/the bill).
-    const MAX_TOOL_TURNS = 4;
-    let data;
-    for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
-      const result = await callAnthropic(key, {
-        model: MODEL_REGISTRY.DEEP_SCOUT.model,
-        // Sonnet 5 runs adaptive thinking by default when this is omitted —
-        // real, billed output tokens for a task (conversational advice +
-        // one JSON reply) that doesn't need visible step-by-step reasoning.
-        // Disabling it is a pure cost cut — confirmed against real traffic
-        // to produce tighter, equally (or more) correctly formatted
-        // replies than leaving it on.
-        thinking: { type: "disabled" },
-        // Cached: this system prompt + the tools below are identical for
-        // every user on the same language — verified in production at
-        // ~4,287 tokens, comfortably over Sonnet 5's 1,024-token minimum,
-        // with real cache reads confirmed via response.usage.cache_read_input_tokens.
-        system: systemPrompt,
-        messages: conversation,
-        tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL],
-      });
-      data = result.data;
-      if (!result.ok) return res.status(result.status).json(data);
-      console.log("GOLSZ scout usage check:", JSON.stringify(data.usage));
+    // back the result, no action needed here. search_golsz_players/
+    // search_golsz_events are ours, so when the model calls one we have to
+    // execute it and send the result back as a new turn ourselves; loop
+    // until it stops asking for a tool (capped so a stuck loop can't run
+    // away with the request/the bill). deepTierConfig falls back to the
+    // "advanced" row when the Haiku attempt above escalated here (economy/
+    // standard have no Sonnet-side row of their own).
+    const deepTierConfig = useHaiku ? (byTier.advanced || ANTHROPIC_DEFAULTS.advanced) : tierConfig;
 
-      const searchCalls = (data.content || []).filter((b) => b.type === "tool_use" && b.name === "search_golsz_players");
-      if (data.stop_reason !== "tool_use" || !searchCalls.length) break;
+    let sonnetResult = await runDeepReply(key, deepTierConfig, systemPrompt, conversation);
+    if (!sonnetResult.ok) {
+      // Automatic failover, step 1: retry the WHOLE reply once, from a fresh
+      // conversation copy (runDeepReply never mutates the caller's array) —
+      // never resume mid-tool-exchange after a failure.
+      console.log("GOLSZ sonnet call failed, retrying once:", JSON.stringify(sonnetResult.data));
+      sonnetResult = await runDeepReply(key, deepTierConfig, systemPrompt, conversation);
+    }
 
-      conversation.push({ role: "assistant", content: data.content });
-      const results = await Promise.all(searchCalls.map(async (call) => ({
-        type: "tool_result",
-        tool_use_id: call.id,
-        content: JSON.stringify(await searchPlayers(call.input || {})),
-      })));
-      conversation.push({ role: "user", content: results });
-    }
-    if (data.stop_reason === "tool_use") {
-      // Hit MAX_TOOL_TURNS still mid-tool-call — the client only renders
-      // text content, so returning this as-is would show an empty bubble
-      // (the exact bug fixed elsewhere in this file's history). Force one
-      // final answer with no tools available instead of looping forever.
-      const result = await callAnthropic(key, {
-        model: MODEL_REGISTRY.DEEP_SCOUT.model,
-        thinking: { type: "disabled" },
-        system: systemPrompt,
+    if (!sonnetResult.ok) {
+      // Automatic failover, step 2: cross-model fallback to a plain,
+      // no-tools Haiku reply. Never invents search results/listings while
+      // degraded — explicitly told to say so plainly instead (spec: "return
+      // a transparent message rather than inventing current information").
+      console.log("GOLSZ sonnet retry also failed, falling back to haiku:", JSON.stringify(sonnetResult.data));
+      const fallbackSystem = systemPrompt + "\n\nNOTE: Live database/web search is temporarily unavailable. Give the best general guidance you can and say plainly that real-time GOLSZ search isn't available right now — never invent specific results, listings, or players.";
+      const fastCfg = byTier.economy || ANTHROPIC_DEFAULTS.economy;
+      const haikuFallback = await adapterFor(fastCfg.provider).generate({
+        apiKey: key,
+        model: fastCfg.model_name || MODEL_REGISTRY.FAST_CHAT.model,
+        system: fallbackSystem,
         messages: conversation,
+        maxTokens: fastCfg.max_output_tokens,
       });
-      data = result.data;
-      if (!result.ok) return res.status(result.status).json(data);
+      if (haikuFallback.ok) {
+        const data = haikuFallback.data;
+        console.log("GOLSZ scout usage check (haiku fallback):", JSON.stringify(data.usage));
+        const cost = estimateCost(fastCfg.model_name, data.usage);
+        await logRouting("haiku", classification, fastCfg.model_name, data.usage, { plan: userPlan, escalationReason: "sonnet_provider_failure", specialist: recommendedSpecialist });
+        await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
+        await persistProfileUpdates(userId, extractProfileUpdates(data));
+        await persistScoutContext(userId, extractScoutContextUpdates(data));
+        data.scout_summary = updatedSummary;
+        if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
+        // Deliberately never cached — a degraded, apologetic reply shouldn't
+        // get served back to a different athlete once things recover.
+        return res.status(200).json(data);
+      }
+
+      // Automatic failover, step 3 (both models down): stop here — never
+      // loop further (spec: "Never endlessly retry providers"). Release the
+      // reserved question (no real answer was produced) and fail gracefully,
+      // same wording/status as the emergency kill-switch responses above.
+      console.log("GOLSZ haiku fallback also failed:", JSON.stringify(haikuFallback.data));
+      if (reservedQuestion) await releaseScoutQuestion(userId);
+      await logError("api/scout.js", "Both Sonnet and Haiku failed (automatic failover exhausted)", { detail: JSON.stringify({ sonnet: sonnetResult.data, haiku: haikuFallback.data }) });
+      return res.status(503).json({ error: "Scout is temporarily unavailable. Please try again shortly." });
     }
-    await logRouting("sonnet", classification, MODEL_REGISTRY.DEEP_SCOUT.model, data.usage, { plan: userPlan, escalationReason: escalationReason(classification), specialist: recommendedSpecialist });
+
+    const data = sonnetResult.data;
+    const sonnetCost = estimateCost(deepTierConfig.model_name, data.usage);
+    await logRouting("sonnet", classification, deepTierConfig.model_name, data.usage, { plan: userPlan, escalationReason: haikuFailureReason || escalationReason(classification), specialist: recommendedSpecialist });
+    await recordScoutUsageCost(userId, sonnetCost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
     await persistProfileUpdates(userId, extractProfileUpdates(data));
     await persistScoutContext(userId, extractScoutContextUpdates(data));
     data.scout_summary = updatedSummary;
+    if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
+    if (reservedQuestion) await releaseScoutQuestion(userId);
     await logError("api/scout.js", "Upstream model call failed", { detail: String(e) });
     return res.status(502).json({ error: "Upstream model call failed", detail: String(e) });
   }

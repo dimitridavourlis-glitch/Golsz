@@ -140,6 +140,16 @@ Discourse:
 - Content promoting self-harm, disordered eating, or extreme weight manipulation
 - Profanity, vulgar, or obscene language (swear words), even when not directed at anyone and even inside otherwise-fine competitive banter or trash talk — this platform is used by minors, so blunt/informal language is fine but actual swear words are not
 
+# Sports relevance
+
+Separately from the safety decision above, judge how sports-relevant the content is:
+
+- "high": highlights, training, coaching, recruiting, scholarships, clubs, universities, tournaments, combines, jobs, sports science, recovery, nutrition, tactics, match analysis — or anything else squarely about sport/athletics/recruiting.
+- "medium": tangential but plausibly relevant to someone on a sports-recruiting platform (general career/academic questions from an athlete, light personal updates alongside sports content).
+- "low": politics, religion, cryptocurrency promotion, MLM, generic business ads, celebrity gossip, unrelated memes, dating, non-sports affiliate marketing — content with no real connection to sport.
+
+Low relevance is a signal, not a safety violation — never "block" solely for being off-topic. If relevance is "low" and nothing else in this prompt would already make this "review" or "block", set decision to "review" (still publishes, just queued so it can be deprioritized/removed if it's actually spam) with primary_reason_code "LOW_SPORTS_RELEVANCE".
+
 # Output
 
 Return only this JSON object, with no prose, no markdown, and no code fences:
@@ -150,10 +160,11 @@ Return only this JSON object, with no prose, no markdown, and no code fences:
   "reason_codes": [string],
   "confidence": number,
   "minor_safety_triggered": boolean,
-  "rationale": string
+  "rationale": string,
+  "sports_relevance": "high" | "medium" | "low"
 }
 
-Reason codes are drawn from: MINOR_CONTACT_SOLICITATION, MINOR_OFFPLATFORM, MINOR_SECRECY, MINOR_APPEARANCE, MINOR_MEDIA_REQUEST, MINOR_ISOLATION, MINOR_BODY_TARGETS, MINOR_PRIVATE_INDUCEMENT, MINOR_ADULT_DM_UNSUPERVISED, SEXUAL_CONTENT, HARASSMENT, HATE, DOXXING, IMPERSONATION, RECRUITING_FRAUD, PED, BETTING, SPAM, SELF_HARM, PROFANITY, UNVERIFIED_AUTHORITY, COMPENSATION_MENTION, MEDICAL_ADVICE, CONTEXT_INSUFFICIENT, CLEAN.
+Reason codes are drawn from: MINOR_CONTACT_SOLICITATION, MINOR_OFFPLATFORM, MINOR_SECRECY, MINOR_APPEARANCE, MINOR_MEDIA_REQUEST, MINOR_ISOLATION, MINOR_BODY_TARGETS, MINOR_PRIVATE_INDUCEMENT, MINOR_ADULT_DM_UNSUPERVISED, SEXUAL_CONTENT, HARASSMENT, HATE, DOXXING, IMPERSONATION, RECRUITING_FRAUD, PED, BETTING, SPAM, SELF_HARM, PROFANITY, UNVERIFIED_AUTHORITY, COMPENSATION_MENTION, MEDICAL_ADVICE, LOW_SPORTS_RELEVANCE, CONTEXT_INSUFFICIENT, CLEAN.
 
 \`confidence\` is 0.0 to 1.0 for the decision as a whole. \`rationale\` is one sentence, under 30 words, written for a human moderator. It must not quote the content back. For "allow", use "CLEAN" as the primary reason code and an empty rationale string.
 
@@ -222,7 +233,7 @@ function mapRole(occupation) {
 async function getProfileContext(supaUrl, serviceKey, userId) {
   if (!userId) return null;
   try {
-    const r = await fetch(`${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=occupation,is_minor,verified_tier,is_admin`, {
+    const r = await fetch(`${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=occupation,is_minor,verified_tier,is_admin,trust_score`, {
       headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
     });
     const rows = await r.json();
@@ -233,6 +244,12 @@ async function getProfileContext(supaUrl, serviceKey, userId) {
       is_minor: !!row.is_minor,
       verified: row.verified_tier === "pro" || row.verified_tier === "elite",
       is_admin: !!row.is_admin,
+      // Trust & Safety Moderation System — read alongside the context this
+      // function already resolves server-side, no extra round trip.
+      // Default 50 (the same default the trust_score column itself uses)
+      // when null/missing rather than 0, so a lookup failure never looks
+      // like the worst possible trust level.
+      trust_score: typeof row.trust_score === "number" ? row.trust_score : 50,
     };
   } catch {
     return null;
@@ -360,7 +377,7 @@ export default async function handler(req, res) {
     if (!userId) return res.status(401).json({ error: "Sign in required." });
   }
 
-  let author = { role: null, is_minor: false, verified: false, is_admin: false };
+  let author = { role: null, is_minor: false, verified: false, is_admin: false, trust_score: 50 };
   if (supaUrl && serviceKey && userId) {
     const ctx = await getProfileContext(supaUrl, serviceKey, userId);
     if (ctx) author = ctx;
@@ -389,7 +406,11 @@ export default async function handler(req, res) {
     content_type: VALID_CONTENT_TYPES.includes(body.contentType) ? body.contentType : "post",
     text: text.slice(0, 4000),
     media_description: (body.mediaDescription && String(body.mediaDescription).slice(0, 500)) || null,
-    author,
+    // Narrowed to the documented schema — trust_score/is_admin stay
+    // server-side only, used in the escalation check below, not shown to
+    // the classifier (it has no documented meaning for it and isn't part
+    // of the prompt's stated input contract).
+    author: { role: author.role, is_minor: author.is_minor, verified: author.verified },
     recipient,
     surface: VALID_SURFACES.includes(body.surface) ? body.surface : "public_feed",
   };
@@ -400,7 +421,10 @@ export default async function handler(req, res) {
       headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
         model: process.env.MODERATION_MODEL || "claude-haiku-4-5-20251001",
-        max_tokens: 400,
+        // 400 -> 450: the Trust & Safety Moderation System pass added one
+        // more short output field (sports_relevance), same JSON call, no
+        // new AI request — this just gives it a little more room.
+        max_tokens: 450,
         system: MODERATION_SYSTEM_PROMPT,
         messages: [{ role: "user", content: JSON.stringify(classifierInput) }],
       }),
@@ -418,7 +442,29 @@ export default async function handler(req, res) {
       confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0,
       minor_safety_triggered: !!parsed.minor_safety_triggered,
       rationale: typeof parsed.rationale === "string" ? parsed.rationale.slice(0, 500) : "",
+      // Trust & Safety Moderation System — a signal, not stored as its own
+      // column: the prompt already folds "low" relevance into decision
+      // "review" with primary_reason_code LOW_SPORTS_RELEVANCE when
+      // nothing else applies, so this rides the existing moderation_queue
+      // shape instead of a new one. Returned here too for visibility.
+      sports_relevance: ["high", "medium", "low"].includes(parsed.sports_relevance) ? parsed.sports_relevance : null,
     };
+
+    // Trust & Safety Moderation System — rule-based escalation, no extra AI
+    // call. A very-low-trust account (honeypot-flagged signups start at 0;
+    // repeated confirmed violations pull real accounts down over time via
+    // recompute_trust_score) gets its otherwise-"allow" content queued for
+    // a human look instead of publishing unreviewed — never escalates past
+    // "review" here (an "allow" -> "block" jump belongs to the classifier's
+    // own judgment, not a blanket trust-score rule), and never touches a
+    // decision the classifier already flagged as "review"/"block" — this
+    // only tightens the one path where low trust combined with a clean
+    // read is still worth a second look.
+    if (result.decision === "allow" && author.trust_score < 20) {
+      result.decision = "review";
+      result.primary_reason_code = "LOW_TRUST_ACCOUNT";
+      result.reason_codes = [...result.reason_codes, "LOW_TRUST_ACCOUNT"];
+    }
 
     if (result.decision !== "allow" && supaUrl && serviceKey) {
       await logModerationItem(supaUrl, serviceKey, userId, classifierInput, result);

@@ -2276,5 +2276,963 @@ alter table scout_routing_log add column if not exists provider text;
 alter table scout_routing_log add column if not exists specialist text;
 
 -- ============================================================
+-- 052 — Admin-editable model/pricing config
+-- Golsz Multi-Model AI Scout & Cost-Control System (approved plan).
+--
+-- Today MODEL_REGISTRY in api/scout.js hardcodes model IDs and their
+-- prices live only in a PRICING constant used for cost estimation —
+-- neither is admin-editable without a deploy. scout_model_config makes
+-- provider/model/tier/pricing a runtime, admin-editable row set;
+-- api/scout.js reads it (service-role, bypasses RLS) to pick which
+-- model answers a given tier and to estimate cost before calling it,
+-- falling back to its own hardcoded defaults if a tier has no
+-- enabled row (so a bad edit here degrades gracefully, never hard-fails
+-- Scout).
+--
+-- Economy/standard point at Haiku and advanced/premium point at Sonnet
+-- today — the only two models GOLSZ actually calls. Gemini/Grok/OpenAI
+-- rows are seeded disabled (enabled=false) as real, ready-to-flip
+-- placeholders: turning one on is editing this table (or the admin
+-- RPC below), not a code change — but nothing here has been tested
+-- against a real key, so they stay off until that happens deliberately.
+--
+-- Admin-only: no SELECT policy (service-role bypasses RLS for the
+-- request-time read); admin dashboard reads via admin_get_model_config()
+-- and writes enabled/priority via admin_update_model_config(), same
+-- is_admin()-gated security-definer pattern used throughout this schema.
+-- ============================================================
+
+create table if not exists scout_model_config (
+  id uuid primary key default gen_random_uuid(),
+  provider text not null,
+  model_name text not null,
+  model_tier text not null check (model_tier in ('economy', 'standard', 'advanced', 'premium')),
+  input_cost_per_million numeric not null,
+  output_cost_per_million numeric not null,
+  cached_input_cost_per_million numeric,
+  max_output_tokens int not null,
+  enabled boolean not null default true,
+  priority int not null default 100,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (provider, model_name, model_tier)
+);
+
+alter table scout_model_config enable row level security;
+
+create or replace function admin_get_model_config()
+returns setof scout_model_config language plpgsql security definer set search_path to 'public' as $$
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  return query select * from scout_model_config order by model_tier, priority;
+end;
+$$;
+
+grant execute on function admin_get_model_config() to authenticated;
+
+-- Deliberately narrow write surface: live enable/disable + priority
+-- reordering is the operational lever (kill a misbehaving model, or
+-- prefer a cheaper one within a tier) without a deploy. Pricing/model
+-- edits go through the SQL editor directly — rare, deliberate changes,
+-- not something the admin panel needs a form for on day one.
+create or replace function admin_update_model_config(p_id uuid, p_enabled boolean, p_priority int)
+returns void language plpgsql security definer set search_path to 'public' as $$
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  update scout_model_config set enabled = p_enabled, priority = coalesce(p_priority, priority), updated_at = now() where id = p_id;
+end;
+$$;
+
+grant execute on function admin_update_model_config(uuid, boolean, int) to authenticated;
+
+-- Seed real, currently-paid-for models plus disabled placeholders for
+-- the providers named in the spec. Cached-input rates are Anthropic's
+-- ~10% (Haiku) / ~20% (Sonnet, verified this session) of input price.
+-- Placeholder model IDs (Gemini/Grok/OpenAI) are current as of this
+-- session's own pricing lookup but MUST be re-verified against the
+-- provider's live pricing page before ever setting enabled = true.
+insert into scout_model_config (provider, model_name, model_tier, input_cost_per_million, output_cost_per_million, cached_input_cost_per_million, max_output_tokens, enabled, priority) values
+  ('anthropic', 'claude-haiku-4-5', 'economy', 1, 5, 0.1, 1024, true, 10),
+  ('anthropic', 'claude-haiku-4-5', 'standard', 1, 5, 0.1, 2048, true, 10),
+  ('anthropic', 'claude-sonnet-5', 'advanced', 3, 15, 0.3, 4096, true, 10),
+  ('anthropic', 'claude-sonnet-5', 'premium', 3, 15, 0.3, 4096, true, 10),
+  ('google', 'gemini-3.1-flash-lite', 'economy', 0.25, 1.5, null, 1024, false, 20),
+  ('xai', 'grok-4.1-fast', 'economy', 0.20, 0.50, 0.05, 1024, false, 20),
+  ('openai', 'gpt-5-mini', 'economy', 0.25, 2, null, 1024, false, 30)
+on conflict (provider, model_name, model_tier) do nothing;
+
+-- ============================================================
+-- 053 — Atomic daily-usage reservation
+-- Golsz Multi-Model AI Scout & Cost-Control System (approved plan).
+--
+-- Fixes a real race condition in increment_scout_usage() (migration
+-- ~008): that function inserts a scout_history marker row
+-- UNCONDITIONALLY, then counts same-day markers — the actual limit
+-- check (`calls > limit`) happens afterward, in api/scout.js. Two
+-- concurrent requests near a plan's daily limit (e.g. two browser
+-- tabs) can each insert their own marker and each read a count that
+-- doesn't yet reflect the other's insert, letting both through when
+-- only one slot remained.
+--
+-- scout_daily_usage is one row per (user_id, usage_date, UTC).
+-- reserve_scout_question() does the increment-and-check as a single
+-- atomic statement (INSERT ... ON CONFLICT ... DO UPDATE) — Postgres
+-- row-locks the (user_id, usage_date) row for the duration, so a
+-- concurrent second call genuinely waits for the first to commit
+-- before it sees (and acts on) the current count. No check-then-act
+-- window exists.
+--
+-- release_scout_question() gives the slot back when a reservation
+-- succeeded but the request failed before any model was actually
+-- called (e.g. a config error) — "retries caused by provider
+-- failures must not count as additional user questions."
+--
+-- record_scout_usage_cost() adds the real token/cost numbers to the
+-- same day's row once a reply actually completes — reservation and
+-- cost-recording are separate calls because the cost isn't known
+-- until after the model responds.
+--
+-- Server-role only (service key), same access pattern as
+-- increment_scout_usage; the old function is left in place unused
+-- (only api/scout.js's meter() called it, and that call site is being
+-- replaced) rather than dropped, to avoid touching anything else that
+-- might reference it.
+-- ============================================================
+
+create table if not exists scout_daily_usage (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  usage_date date not null,
+  questions_used int not null default 0,
+  input_tokens bigint not null default 0,
+  output_tokens bigint not null default 0,
+  total_cost numeric not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(user_id, usage_date)
+);
+
+create index if not exists scout_daily_usage_date_idx on scout_daily_usage (usage_date);
+
+alter table scout_daily_usage enable row level security;
+
+create policy scout_daily_usage_read on scout_daily_usage
+  for select using (auth.uid() = user_id);
+
+create or replace function reserve_scout_question(p_user uuid, p_plan_limit int)
+returns jsonb language plpgsql security definer set search_path to 'public' as $$
+declare
+  v_used int;
+begin
+  insert into scout_daily_usage (user_id, usage_date, questions_used)
+  values (p_user, (now() at time zone 'utc')::date, 1)
+  on conflict (user_id, usage_date) do update
+    set questions_used = case when scout_daily_usage.questions_used < p_plan_limit
+                               then scout_daily_usage.questions_used + 1
+                               else scout_daily_usage.questions_used end,
+        updated_at = now()
+  returning questions_used into v_used;
+
+  return jsonb_build_object('allowed', v_used <= p_plan_limit, 'used', v_used, 'limit', p_plan_limit);
+end;
+$$;
+
+create or replace function release_scout_question(p_user uuid)
+returns void language plpgsql security definer set search_path to 'public' as $$
+begin
+  update scout_daily_usage
+  set questions_used = greatest(questions_used - 1, 0), updated_at = now()
+  where user_id = p_user and usage_date = (now() at time zone 'utc')::date;
+end;
+$$;
+
+create or replace function record_scout_usage_cost(p_user uuid, p_cost numeric, p_input_tokens int, p_output_tokens int)
+returns void language plpgsql security definer set search_path to 'public' as $$
+begin
+  update scout_daily_usage
+  set total_cost = total_cost + coalesce(p_cost, 0),
+      input_tokens = input_tokens + coalesce(p_input_tokens, 0),
+      output_tokens = output_tokens + coalesce(p_output_tokens, 0),
+      updated_at = now()
+  where user_id = p_user and usage_date = (now() at time zone 'utc')::date;
+end;
+$$;
+
+revoke execute on function reserve_scout_question(uuid, int) from anon;
+revoke execute on function reserve_scout_question(uuid, int) from authenticated;
+revoke execute on function reserve_scout_question(uuid, int) from public;
+grant execute on function reserve_scout_question(uuid, int) to service_role;
+
+revoke execute on function release_scout_question(uuid) from anon;
+revoke execute on function release_scout_question(uuid) from authenticated;
+revoke execute on function release_scout_question(uuid) from public;
+grant execute on function release_scout_question(uuid) to service_role;
+
+revoke execute on function record_scout_usage_cost(uuid, numeric, int, int) from anon;
+revoke execute on function record_scout_usage_cost(uuid, numeric, int, int) from authenticated;
+revoke execute on function record_scout_usage_cost(uuid, numeric, int, int) from public;
+grant execute on function record_scout_usage_cost(uuid, numeric, int, int) to service_role;
+
+-- ============================================================
+-- 054 — Generic AI response cache
+-- Golsz Multi-Model AI Scout & Cost-Control System (approved plan).
+--
+-- scout_faq (migration 041) is a curated, admin-written Q&A table
+-- matched by meaning via the classifier — valuable, but bounded to
+-- what's been written. scout_response_cache is a plain TTL'd cache of
+-- *actual* answers Scout has already produced, keyed by a normalized
+-- (intent, sanitized query, model tier, prompt version) so a repeat of
+-- the same effective question — same intent/tier/language/db-result
+-- version — skips the model call entirely on the next hit. Personalized
+-- replies (career_advice, scouting_analysis, anything touching
+-- scout_context) are never cached — only genuinely shared, non-personal
+-- answers (simple_knowledge, generic profile_assist copy, opportunity
+-- searches with identical filters) are cache candidates; api/scout.js
+-- decides candidacy, this table just stores what qualified.
+--
+-- Server-role only — cache lookups/writes happen inside api/scout.js,
+-- never client-side, so no SELECT/INSERT policy for authenticated/anon.
+-- ============================================================
+
+create table if not exists scout_response_cache (
+  id uuid primary key default gen_random_uuid(),
+  cache_key text not null unique,
+  intent text,
+  model_tier text,
+  response jsonb not null,
+  expires_at timestamptz not null,
+  hit_count int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists scout_response_cache_expires_idx on scout_response_cache (expires_at);
+
+alter table scout_response_cache enable row level security;
+-- no select/insert/update policy — service-role only, same as scout_model_config
+
+-- ============================================================
+-- 055 — search_events(): database-first opportunity search
+-- Golsz Multi-Model AI Scout & Cost-Control System (approved plan).
+--
+-- Mirrors search_players() (migration 022) exactly, for the events
+-- table instead of athletes. Before this, "show me football trials in
+-- Cyprus" had no database-first path at all — events already holds
+-- real trials/camps/combines (used today only by the Admin Panel's
+-- event manager), but Scout had no way to query it; the question would
+-- fall through to general web_search (unverified) or a generic answer.
+-- Wired into api/scout.js as a second tool alongside search_golsz_players
+-- so Scout can only ever report real, verified GOLSZ events — never
+-- invent a listing. Excludes blocked events, same as the public feed.
+-- ============================================================
+
+create or replace function search_events(
+  p_sport text default null,
+  p_location text default null,
+  p_level text default null,
+  p_after_date date default null,
+  p_limit int default 10
+)
+returns table (
+  id uuid,
+  title text,
+  sport text,
+  location text,
+  level text,
+  event_date date,
+  spots_available int
+)
+language sql security definer set search_path to 'public' as $$
+  select e.id, e.title, e.sport, e.location, e.level, e.event_date, e.spots_available
+  from events e
+  where not e.is_blocked
+    and e.event_date >= coalesce(p_after_date, current_date)
+    and (p_sport is null or e.sport ilike p_sport)
+    and (p_location is null or e.location ilike '%' || p_location || '%')
+    and (p_level is null or e.level ilike p_level)
+  order by e.event_date asc
+  limit least(coalesce(p_limit, 10), 25);
+$$;
+
+grant execute on function search_events(text, text, text, date, int) to authenticated;
+
+
+-- ============================================================
+-- 056 — Admin cost/margin dashboard
+-- Golsz Multi-Model AI Scout & Cost-Control System (approved plan).
+--
+-- Extends the existing Analytics -> "AI Model Usage" card
+-- (admin_scout_model_mix/admin_scout_cost_summary, migrations 039/040)
+-- rather than building a parallel dashboard. Same is_admin()-gated
+-- security-definer pattern throughout. Every function here returns dollar
+-- figures / counts only — never question or answer text — and the
+-- existing privacy boundaries stay unchanged: scout_routing_log still has
+-- no user_id (migration-038 audit — admins never see who asked what);
+-- scout_daily_usage carries user_id + cost numbers only, the same
+-- metadata-yes/content-no line already drawn around scout_faq_misses.
+-- ============================================================
+
+create or replace function admin_scout_cost_by_plan()
+returns table (plan text, message_count bigint, total_cost numeric, avg_cost numeric)
+language plpgsql security definer set search_path to 'public' as $$
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  return query
+  select coalesce(l.plan, 'unknown'), count(*), coalesce(sum(l.estimated_cost_usd), 0), coalesce(avg(l.estimated_cost_usd), 0)
+  from scout_routing_log l
+  where l.created_at >= date_trunc('month', now())
+  group by coalesce(l.plan, 'unknown');
+end;
+$$;
+
+grant execute on function admin_scout_cost_by_plan() to authenticated;
+
+create or replace function admin_scout_cache_stats()
+returns jsonb language plpgsql security definer set search_path to 'public' as $$
+declare
+  result jsonb;
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  select jsonb_build_object(
+    'cached_answers', count(*),
+    'total_hits', coalesce(sum(hit_count), 0)
+  ) into result
+  from scout_response_cache
+  where expires_at >= now();
+  return result;
+end;
+$$;
+
+grant execute on function admin_scout_cache_stats() to authenticated;
+
+create or replace function admin_scout_top_cost_users(p_limit int default 10)
+returns table (user_id uuid, full_name text, plan text, total_cost numeric, questions_used bigint)
+language plpgsql security definer set search_path to 'public' as $$
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  return query
+  select u.user_id, p.full_name, p.plan, sum(u.total_cost), sum(u.questions_used)
+  from scout_daily_usage u
+  join profiles p on p.id = u.user_id
+  where u.usage_date >= date_trunc('month', now())::date
+  group by u.user_id, p.full_name, p.plan
+  order by sum(u.total_cost) desc
+  limit least(coalesce(p_limit, 10), 25);
+end;
+$$;
+
+grant execute on function admin_scout_top_cost_users(int) to authenticated;
+
+-- Plan prices hardcoded here (matching PLANS in golsz-app.html: Free $0,
+-- Starter $6, Pro $14, Elite $30) since pricing lives in client display
+-- code today, not a DB table — kept in sync manually if PLANS ever changes.
+create or replace function admin_scout_margin_summary()
+returns table (plan text, subscriber_count bigint, monthly_revenue numeric, ai_cost numeric, ai_cost_pct numeric)
+language plpgsql security definer set search_path to 'public' as $$
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  return query
+  select
+    p.plan,
+    count(distinct p.id),
+    count(distinct p.id) * (case p.plan when 'starter' then 6 when 'pro' then 14 when 'elite' then 30 else 0 end),
+    coalesce(sum(u.total_cost), 0),
+    case when count(distinct p.id) * (case p.plan when 'starter' then 6 when 'pro' then 14 when 'elite' then 30 else 0 end) > 0
+      then round(100 * coalesce(sum(u.total_cost), 0) / (count(distinct p.id) * (case p.plan when 'starter' then 6 when 'pro' then 14 when 'elite' then 30 else 0 end)), 2)
+      else 0
+    end
+  from profiles p
+  left join scout_daily_usage u on u.user_id = p.id and u.usage_date >= date_trunc('month', now())::date
+  group by p.plan;
+end;
+$$;
+
+grant execute on function admin_scout_margin_summary() to authenticated;
+
+-- ============================================================
+-- 057 — Trust score
+-- Golsz Trust & Safety Moderation System (approved plan).
+--
+-- A computed 0-100 trust signal on profiles, built entirely from data
+-- that already exists (moderation_queue history, post_reports against
+-- the user, account age, is_banned, and the new identity_verified flag
+-- from migration 058) rather than a new tracking system. Recomputed at
+-- the moment something relevant changes (a moderation item gets
+-- resolved, a report comes in, a ban/unban happens, a verification gets
+-- approved) via recompute_trust_score() — not a cron job, since GOLSZ
+-- has no scheduled-job infra today and every event that should move the
+-- score is already a real, single mutation point.
+--
+-- Gates (wired in later migrations/code, not here): posting/messaging
+-- rate limits for low-trust accounts, review priority in the moderation
+-- queue, verification eligibility.
+-- ============================================================
+
+alter table profiles add column if not exists trust_score int not null default 50 check (trust_score between 0 and 100);
+
+create or replace function recompute_trust_score(p_user uuid)
+returns int language plpgsql security definer set search_path to 'public' as $$
+declare
+  v_score int := 50;
+  v_created timestamptz;
+  v_banned boolean;
+  v_identity_verified boolean;
+  v_violations int;
+  v_reporters int;
+  v_age_days int;
+begin
+  select created_at, is_banned, coalesce(identity_verified, false)
+    into v_created, v_banned, v_identity_verified
+  from profiles where id = p_user;
+
+  if v_created is null then
+    return v_score;
+  end if;
+
+  v_age_days := extract(day from (now() - v_created));
+  v_score := v_score + least(20, (v_age_days / 90) * 5);
+
+  if v_identity_verified then
+    v_score := v_score + 10;
+  end if;
+
+  select count(*) into v_violations
+  from moderation_queue
+  where author_id = p_user and decision in ('block', 'review') and resolved_at is not null;
+  v_score := v_score - least(45, v_violations * 15);
+
+  select count(distinct reporter_id) into v_reporters
+  from post_reports pr join posts p on p.id = pr.post_id
+  where p.author_id = p_user;
+  v_score := v_score - least(25, v_reporters * 5);
+
+  if v_banned then
+    v_score := v_score - 30;
+  end if;
+
+  v_score := greatest(0, least(100, v_score));
+  update profiles set trust_score = v_score where id = p_user;
+  return v_score;
+end;
+$$;
+
+grant execute on function recompute_trust_score(uuid) to authenticated;
+
+
+-- ============================================================
+-- 058 — Verification workflow
+-- Golsz Trust & Safety Moderation System (approved plan).
+--
+-- Revives a real self-service identity/occupation verification design
+-- that was drafted once (~migration 024) and explicitly dropped before
+-- shipping. `verified_tier` (migration 025) is a SUBSCRIPTION badge
+-- (auto-synced from profiles.plan) — this is a genuinely separate
+-- concept: `identity_verified` means "an admin actually looked at proof
+-- this account is who it claims to be," independent of what they pay.
+-- Scoped to the occupations that already exist as real profiles on
+-- GOLSZ (Player/Coach/Scout/Agent/Physio) — not club/university/
+-- federation entities, since those aren't real profile types here today.
+--
+-- Also extends protect_profile_columns() (last defined for migration
+-- 048) so a signed-in user can't just PATCH their own trust_score or
+-- identity_verified directly — same lockdown as is_admin/is_banned/
+-- verified_tier already get.
+-- ============================================================
+
+alter table profiles add column if not exists identity_verified boolean not null default false;
+
+create table if not exists verification_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  occupation text,
+  proof_url text,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'denied')),
+  admin_notes text,
+  reviewed_by uuid references profiles(id) on delete set null,
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists verification_requests_pending_idx on verification_requests (created_at) where status = 'pending';
+
+alter table verification_requests enable row level security;
+
+drop policy if exists verification_requests_own_read on verification_requests;
+create policy verification_requests_own_read on verification_requests for select using (
+  user_id = auth.uid() or is_admin()
+);
+
+drop policy if exists verification_requests_own_insert on verification_requests;
+create policy verification_requests_own_insert on verification_requests for insert with check (
+  user_id = auth.uid()
+);
+
+create or replace function admin_review_verification(p_id uuid, p_approve boolean, p_notes text default null)
+returns void language plpgsql security definer set search_path to 'public' as $$
+declare
+  v_user uuid;
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  select user_id into v_user from verification_requests where id = p_id;
+  if v_user is null then
+    raise exception 'request not found';
+  end if;
+  update verification_requests
+    set status = case when p_approve then 'approved' else 'denied' end,
+        admin_notes = p_notes, reviewed_by = auth.uid(), reviewed_at = now()
+    where id = p_id;
+  if p_approve then
+    update profiles set identity_verified = true where id = v_user;
+  end if;
+  perform recompute_trust_score(v_user);
+end;
+$$;
+
+grant execute on function admin_review_verification(uuid, boolean, text) to authenticated;
+
+create or replace function protect_profile_columns()
+returns trigger language plpgsql security definer set search_path to 'public' as $$
+begin
+  if not (auth.role() is null or auth.role() = 'service_role' or is_admin()) then
+    new.is_admin := old.is_admin;
+    new.is_banned := old.is_banned;
+    new.verified_tier := old.verified_tier;
+    new.stripe_customer_id := old.stripe_customer_id;
+    new.identity_verified := old.identity_verified;
+    new.trust_score := old.trust_score;
+    if new.plan is distinct from old.plan and new.plan <> 'free' then
+      new.plan := old.plan;
+    end if;
+  end if;
+
+  if new.plan is distinct from old.plan then
+    new.verified_tier := case new.plan when 'elite' then 'elite' when 'pro' then 'pro' else 'none' end;
+  end if;
+
+  return new;
+end;
+$$;
+
+
+-- ============================================================
+-- 059 — Appeals
+-- Golsz Trust & Safety Moderation System (approved plan).
+--
+-- Ties to two real decision points: a moderation_queue item (dispute a
+-- "review"/"block" classification) and a ban (profiles.is_banned). On
+-- overturn: a moderation_queue-linked appeal has nothing to "restore"
+-- for a block decision (blocked content was never saved in the first
+-- place — resubmitting is the real remedy), so overturning just marks
+-- the appeal resolved and recomputes trust; a ban-linked appeal flips
+-- profiles.is_banned back to false at the SQL level.
+--
+-- IMPORTANT, deliberately not hidden: this does NOT clear the parallel
+-- real Supabase Auth ban_duration set via the Admin API in
+-- api/admin-user-action.js's "ban" action — a pure SQL function can't
+-- call an external HTTP API, so a full unban still needs that
+-- endpoint's "unban" action run too. Flagging this limitation rather
+-- than pretending the SQL-level flip is the whole story.
+-- ============================================================
+
+create table if not exists moderation_appeals (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  moderation_queue_id uuid references moderation_queue(id) on delete set null,
+  ban_related boolean not null default false,
+  reason text not null,
+  status text not null default 'pending' check (status in ('pending', 'upheld', 'overturned')),
+  admin_notes text,
+  reviewed_by uuid references profiles(id) on delete set null,
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists moderation_appeals_pending_idx on moderation_appeals (created_at) where status = 'pending';
+
+alter table moderation_appeals enable row level security;
+
+drop policy if exists moderation_appeals_own_read on moderation_appeals;
+create policy moderation_appeals_own_read on moderation_appeals for select using (
+  user_id = auth.uid() or is_admin()
+);
+
+drop policy if exists moderation_appeals_own_insert on moderation_appeals;
+create policy moderation_appeals_own_insert on moderation_appeals for insert with check (
+  user_id = auth.uid()
+);
+
+create or replace function admin_review_appeal(p_id uuid, p_overturn boolean, p_notes text default null)
+returns void language plpgsql security definer set search_path to 'public' as $$
+declare
+  v_user uuid;
+  v_ban_related boolean;
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  select user_id, ban_related into v_user, v_ban_related from moderation_appeals where id = p_id;
+  if v_user is null then
+    raise exception 'appeal not found';
+  end if;
+  update moderation_appeals
+    set status = case when p_overturn then 'overturned' else 'upheld' end,
+        admin_notes = p_notes, reviewed_by = auth.uid(), reviewed_at = now()
+    where id = p_id;
+  if p_overturn and v_ban_related then
+    update profiles set is_banned = false where id = v_user;
+  end if;
+  perform recompute_trust_score(v_user);
+end;
+$$;
+
+grant execute on function admin_review_appeal(uuid, boolean, text) to authenticated;
+
+
+-- ============================================================
+-- 060 — Generalized reports (DMs, profiles)
+-- Golsz Trust & Safety Moderation System (approved plan).
+--
+-- post_reports (an original-schema table) stays exactly as-is for posts
+-- — this adds a parallel table for target types post_reports never
+-- covered (direct messages, profiles), rather than migrating existing
+-- rows/call sites. Both tables are read together by the admin Reports
+-- tab. Events already have an admin-block path (`is_blocked`) and don't
+-- need a user-facing report route.
+-- ============================================================
+
+create table if not exists content_reports (
+  id uuid primary key default gen_random_uuid(),
+  reporter_id uuid not null references profiles(id) on delete cascade,
+  target_type text not null check (target_type in ('message', 'profile')),
+  target_id uuid not null,
+  reason text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists content_reports_target_idx on content_reports (target_type, target_id);
+
+alter table content_reports enable row level security;
+
+drop policy if exists content_reports_insert on content_reports;
+create policy content_reports_insert on content_reports for insert with check (
+  reporter_id = auth.uid()
+);
+
+drop policy if exists content_reports_admin_read on content_reports;
+create policy content_reports_admin_read on content_reports for select using (
+  is_admin()
+);
+
+
+-- ============================================================
+-- 061 — Trust-based messaging rate limit
+-- Golsz Trust & Safety Moderation System (approved plan).
+--
+-- message_requests (an original-schema table) already gates the FIRST
+-- message between two users behind mutual accept — but places no limit
+-- on how many DIFFERENT people a brand-new or low-trust account can
+-- message-request in a day (a real mass-messaging/spam vector).
+-- check_message_request_limit() uses the same atomic reserve pattern as
+-- reserve_scout_question (this session's AI Scout work) — one
+-- insert-on-conflict statement, row-locked by Postgres, no
+-- check-then-act race. It's called from INSIDE ensure_message_request()
+-- (not exposed to the client directly) so the limit can't be bypassed by
+-- simply not calling it — both functions run under the same
+-- security-definer execution context, so the internal call works
+-- without needing a client-facing grant.
+-- ============================================================
+
+create table if not exists message_request_daily_usage (
+  user_id uuid not null references profiles(id) on delete cascade,
+  usage_date date not null default current_date,
+  requests_sent int not null default 0,
+  primary key (user_id, usage_date)
+);
+
+alter table message_request_daily_usage enable row level security;
+
+create or replace function check_message_request_limit(p_user uuid, p_daily_limit int)
+returns boolean language plpgsql security definer set search_path to 'public' as $$
+declare
+  v_used int;
+begin
+  insert into message_request_daily_usage (user_id, usage_date, requests_sent)
+  values (p_user, current_date, 1)
+  on conflict (user_id, usage_date) do update
+    set requests_sent = case when message_request_daily_usage.requests_sent < p_daily_limit
+                              then message_request_daily_usage.requests_sent + 1
+                              else message_request_daily_usage.requests_sent end
+  returning requests_sent into v_used;
+  return v_used <= p_daily_limit;
+end;
+$$;
+
+revoke all on function check_message_request_limit(uuid, int) from public, authenticated, anon;
+grant execute on function check_message_request_limit(uuid, int) to service_role;
+
+-- Extends ensure_message_request() (an original-schema function) with the
+-- trust-based check. Only a genuinely NEW request (no prior thread with
+-- this recipient — the existing early-return above already covers "already
+-- talking to them") counts against the limit. Only low-trust (<30) or
+-- brand-new (<7 days old) accounts are capped; established accounts are
+-- unlimited at this layer — the mutual-accept friction remains the primary
+-- defense for everyone.
+create or replace function ensure_message_request(p_recipient uuid)
+returns void language plpgsql security definer set search_path to 'public' as $$
+declare
+  v_trust int;
+  v_created timestamptz;
+  v_daily_limit int := 10;
+begin
+  if auth.uid() is null or p_recipient is null or p_recipient = auth.uid() then
+    return;
+  end if;
+  if exists (
+    select 1 from message_requests
+    where (sender_id = auth.uid() and recipient_id = p_recipient)
+       or (sender_id = p_recipient and recipient_id = auth.uid())
+  ) then
+    return;
+  end if;
+
+  select trust_score, created_at into v_trust, v_created from profiles where id = auth.uid();
+  if coalesce(v_trust, 50) < 30 or v_created > now() - interval '7 days' then
+    if not check_message_request_limit(auth.uid(), v_daily_limit) then
+      raise exception 'Daily message-request limit reached for new/low-trust accounts';
+    end if;
+  end if;
+
+  insert into message_requests (sender_id, recipient_id, status)
+  values (auth.uid(), p_recipient, 'pending');
+end;
+$$;
+
+grant execute on function ensure_message_request(uuid) to authenticated;
+
+
+-- ============================================================
+-- 062 — Fake-opportunity heuristics for events
+-- Golsz Trust & Safety Moderation System (approved plan).
+--
+-- Rule-based, no AI call — events are created directly client-side
+-- (AddToEventsModal for private saves, Admin Panel for public listings),
+-- with no serverless proxy function to hook a server-side check into, so
+-- this runs as a BEFORE INSERT trigger, the same pattern already used for
+-- protect_profile_columns(). Flags (via the existing is_blocked column,
+-- same one the Admin Panel's manual block button already uses) a new
+-- event as high-risk — pending review, never silently deleted — when
+-- either:
+--   (a) a near-duplicate (same title/location/date) already exists from
+--       a DIFFERENT account, AND the creating account is under 48h old
+--       (the spec's "newly created accounts" + "duplicate postings"
+--       combination), or
+--   (b) the free-text notes contain a common link-shortener domain (often
+--       used to obscure a scam destination) or an upfront-payment phrase
+--       ("wire transfer", "processing fee", "registration fee", "western
+--       union" — the spec's "requests for upfront payment").
+-- Real GOLSZ contact for a flagged event still goes through the existing
+-- Admin Panel review path (unblock is just flipping is_blocked back).
+-- ============================================================
+
+create or replace function check_event_fake_signals()
+returns trigger language plpgsql security definer set search_path to 'public' as $$
+declare
+  v_creator_created_at timestamptz;
+  v_is_new_account boolean;
+  v_duplicate_exists boolean;
+  v_suspicious_text boolean;
+begin
+  if new.created_by is null then
+    return new;
+  end if;
+
+  select created_at into v_creator_created_at from profiles where id = new.created_by;
+  v_is_new_account := v_creator_created_at is not null and v_creator_created_at > now() - interval '48 hours';
+
+  select exists (
+    select 1 from events e
+    where e.created_by is distinct from new.created_by
+      and lower(e.title) = lower(new.title)
+      and coalesce(lower(e.location), '') = coalesce(lower(new.location), '')
+      and e.event_date = new.event_date
+  ) into v_duplicate_exists;
+
+  v_suspicious_text := coalesce(new.notes, '') ~* '(bit\.ly|tinyurl|wire transfer|processing fee|registration fee|upfront payment|western union)';
+
+  if (v_is_new_account and v_duplicate_exists) or v_suspicious_text then
+    new.is_blocked := true;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists events_fake_signals_check on events;
+create trigger events_fake_signals_check before insert on events
+  for each row execute function check_event_fake_signals();
+
+-- ============================================================
+-- 063 — Server-side honeypot signal
+-- Golsz Trust & Safety Moderation System (approved plan).
+--
+-- The signup honeypot (golsz-app.html's hidden "website" field) was
+-- purely client-side — a bot that called Supabase's signup API directly,
+-- skipping the React form entirely, bypassed it trivially. This closes
+-- that gap the safe way: golsz-app.html now always proceeds with signup
+-- (a bot still gets no signal telling it apart from a real submission)
+-- but passes the honeypot's value through in signup metadata, and this
+-- migration extends handle_new_user() (the real, existing trigger this
+-- codebase already uses for every signup) to read it.
+--
+-- Deliberately NOT a hard rejection — raising an exception here would
+-- abort the whole signup transaction, and this trigger's binding to
+-- auth.users isn't captured in any migration (set up outside the
+-- migration history), so its exact timing/transaction behavior can't be
+-- fully verified from the codebase alone. A false positive that locks out
+-- a real signup with zero recourse is a worse failure mode than under-
+-- reacting, so instead: a non-empty honeypot value just starts the new
+-- account at trust_score = 0 instead of the normal 50 default — heavily
+-- capped by the trust-score-gated limits (messaging, posting priority)
+-- already in place, and visible to an admin, without ever touching
+-- whether the signup itself succeeds.
+--
+-- Full function reproduced from its last definition (~migration 048) with
+-- only the honeypot/trust_score addition — every other line unchanged.
+-- ============================================================
+
+create or replace function handle_new_user()
+returns trigger language plpgsql security definer set search_path to 'public' as $$
+declare
+  v_dob date;
+  v_is_minor boolean := false;
+  v_parent_email text;
+  v_parent_id uuid;
+  v_plan text;
+  v_occupation text;
+  v_honeypot text;
+  v_trust_score int := 50;
+begin
+  v_dob := nullif(new.raw_user_meta_data->>'date_of_birth', '')::date;
+  if v_dob is not null then
+    v_is_minor := (date_part('year', age(v_dob)) < 18);
+  end if;
+  v_parent_email := nullif(new.raw_user_meta_data->>'parent_email', '');
+
+  v_plan := new.raw_user_meta_data->>'plan';
+  if v_plan is null or v_plan not in ('free', 'starter', 'pro', 'elite') then
+    v_plan := 'free';
+  end if;
+
+  v_occupation := nullif(new.raw_user_meta_data->>'occupation', '');
+  if v_occupation is not null and v_occupation not in ('Player', 'Parent', 'Scout', 'Agent', 'Coach', 'Physio', 'Other') then
+    v_occupation := null;
+  end if;
+
+  v_honeypot := nullif(new.raw_user_meta_data->>'hp', '');
+  if v_honeypot is not null then
+    v_trust_score := 0;
+  end if;
+
+  insert into profiles (id, full_name, dob, is_minor, pending_parent_email, plan, occupation, trust_score)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', ''),
+    v_dob,
+    v_is_minor,
+    case when v_is_minor then v_parent_email else null end,
+    v_plan::plan_tier,
+    v_occupation,
+    v_trust_score
+  )
+  on conflict (id) do nothing;
+
+  insert into athletes (id) values (new.id)
+  on conflict (id) do nothing;
+
+  if v_is_minor and v_parent_email is not null then
+    select u.id into v_parent_id from auth.users u where u.email = v_parent_email;
+    if v_parent_id is not null and v_parent_id <> new.id then
+      insert into parent_links (parent_id, athlete_id, relationship)
+      values (v_parent_id, new.id, 'parent')
+      on conflict (parent_id, athlete_id) do nothing;
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+-- ============================================================
+-- ============================================================
+-- 064 — Admin moderation analytics
+-- Golsz Trust & Safety Moderation System (approved plan).
+--
+-- One RPC following the exact admin_scout_model_mix()/
+-- admin_analytics_counts() pattern already used by the Analytics tab —
+-- extends that existing dashboard rather than adding a new one. Reason
+-- codes (SPAM, RECRUITING_FRAUD) come from api/moderate.js's own
+-- documented reason-code list, so these counts stay in sync with
+-- whatever the classifier is actually allowed to emit.
+-- ============================================================
+
+create or replace function admin_moderation_stats()
+returns jsonb language plpgsql security definer set search_path to 'public' as $$
+declare
+  result jsonb;
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  select jsonb_build_object(
+    'moderation_items_today', (select count(*) from moderation_queue where created_at >= current_date),
+    'blocked_today', (select count(*) from moderation_queue where decision = 'block' and created_at >= current_date),
+    'spam_blocked_total', (select count(*) from moderation_queue where decision = 'block' and reason_codes @> array['SPAM']),
+    'scam_blocked_total', (select count(*) from moderation_queue where decision = 'block' and reason_codes @> array['RECRUITING_FRAUD']),
+    'avg_resolution_minutes', (
+      select round(avg(extract(epoch from (resolved_at - created_at)) / 60)::numeric, 1)
+      from moderation_queue where resolved_at is not null
+    ),
+    'appeals_pending', (select count(*) from moderation_appeals where status = 'pending'),
+    'appeals_upheld', (select count(*) from moderation_appeals where status = 'upheld'),
+    'appeals_overturned', (select count(*) from moderation_appeals where status = 'overturned'),
+    'verification_pending', (select count(*) from verification_requests where status = 'pending'),
+    'verification_approved', (select count(*) from verification_requests where status = 'approved'),
+    'events_flagged_total', (select count(*) from events where is_blocked = true),
+    'trust_score_buckets', (
+      select coalesce(jsonb_object_agg(bucket, n), '{}'::jsonb)
+      from (
+        select
+          case
+            when trust_score < 20 then '0-19'
+            when trust_score < 40 then '20-39'
+            when trust_score < 60 then '40-59'
+            when trust_score < 80 then '60-79'
+            else '80-100'
+          end as bucket,
+          count(*) as n
+        from profiles
+        group by 1
+      ) b
+    )
+  ) into result;
+  return result;
+end;
+$$;
+
+grant execute on function admin_moderation_stats() to authenticated;
+
 -- Done.
 -- ============================================================

@@ -315,6 +315,8 @@ const I18N = {
     admin_no_reports: "No reports yet.", admin_reported_by: "Reported by ", admin_post_removed: "Post already removed.",
     admin_no_audit_log: "No admin actions logged yet.", admin_audit_target: "Target: ", admin_unknown_admin: "Unknown admin",
     admin_delete_post: "Delete post", admin_dismiss: "Dismiss", admin_resolved: "Resolved",
+    admin_view_verification: "Verification", admin_view_appeals: "Appeals", admin_no_verification_requests: "No verification requests.", admin_no_appeals: "No appeals.", admin_approve: "Approve", admin_deny: "Deny", admin_overturn: "Overturn", admin_uphold: "Uphold", admin_ban_related: "Ban appeal",
+    admin_view_moderation_stats: "Moderation", admin_moderation_today: "MODERATION TODAY", admin_mod_items_today: "Items today", admin_mod_blocked_today: "Blocked today", admin_mod_avg_resolution: "Avg resolution", admin_mod_spam_total: "Spam blocked (all-time)", admin_mod_scam_total: "Scams blocked (all-time)", admin_mod_events_flagged: "Events flagged", admin_mod_appeals: "Appeals", admin_mod_trust_distribution: "Trust score distribution", admin_pending: "Pending",
     admin_search_name: "Search by name…", admin_no_name: "(no name)", admin_minor: "MINOR", admin_admin: "ADMIN",
     admin_joined: "joined ", admin_ago: " ago", admin_revoke_admin: "Revoke admin", admin_make_admin: "Make admin",
     admin_ai_unlimited_badge: "Unlimited AI", admin_grant_ai_unlimited: "Grant unlimited AI", admin_revoke_ai_unlimited: "Revoke unlimited AI", admin_ai_unlimited_hint: "Lifts their daily Scout question cap — no plan or billing change.",
@@ -336,6 +338,7 @@ const I18N = {
     admin_scout_conversations: "SCOUT CHATS", admin_scout_users: "SCOUT USERS", admin_messages_total: "MESSAGES",
     admin_messages_7d: "MESSAGES 7D", admin_push_subscribers: "PUSH SUBS", admin_top_followed: "TOP FOLLOWED",
     admin_ai_model_mix: "AI MODEL USAGE", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Database (no AI call)",
+    admin_scout_cache_hits: "CACHE HITS (LIVE)", admin_scout_cache_answers: "CACHED ANSWERS", admin_scout_margin_by_plan: "AI COST % OF PLAN REVENUE", admin_scout_over_target: "OVER TARGET",
     admin_scout_cost_month: "SCOUT AI COST (MONTH)", admin_scout_avg_cost_msg: "AVG COST / MESSAGE (MONTH)",
     admin_view_overview: "Overview", admin_view_community: "Community", admin_view_scout_ai: "Scout AI",
     admin_view_common_qs: "Common Questions", admin_common_qs_hint: "Real questions Scout couldn't match to an existing FAQ answer — add the recurring ones to scout_faq to keep lowering the monthly AI cost.", admin_no_faq_misses: "No unmatched questions logged yet.",
@@ -344,7 +347,9 @@ const I18N = {
     admin_activity_today: "Today:", admin_activity_7d: "Last 7d:", admin_activity_30d: "Last 30d:",
     admin_no_data: "No data yet.", admin_manage_events: "Manage events", admin_analytics_err: "Couldn't load analytics.",
     banned_title: "Account suspended", banned_message: "Your GOLSZ account has been suspended. If you think this is a mistake, contact support.",
-    scout_header: "AI SCOUT", scout_fields_on_file: "FIELDS ON FILE", scout_live_agent: "LIVE AGENT",
+    appeal_start: "Appeal this suspension", appeal_placeholder: "Explain why you think this suspension is a mistake…", appeal_submit: "Submit appeal", appeal_submitted: "Your appeal has been submitted. A moderator will review it.",
+    verify_title: "Get verified", verify_desc: "Request identity verification for your role. Optionally include a link to supporting proof (e.g. a club or federation profile).", verify_proof_placeholder: "Proof URL (optional)", verify_submit: "Request verification", verify_pending: "Your verification request is pending review.", verify_submitted: "Verification request submitted.",
+    scout_header: "AI SCOUT", scout_fields_on_file: "FIELDS ON FILE", scout_live_agent: "LIVE AGENT", scout_questions_left: "QUESTIONS LEFT TODAY",
     scout_history_title: "History", scout_new_chat: "New chat", scout_no_past: "No past conversations yet.",
     scout_new_conversation: "New conversation", scout_ago_messages: " messages", scout_delete_conv: "Delete conversation",
     scout_scout_label: "SCOUT", scout_input_ph: "Talk to your scout…",
@@ -510,6 +515,8 @@ const I18N = {
     admin_no_reports: "Aucun signalement pour l'instant.", admin_reported_by: "Signalé par ", admin_post_removed: "Publication déjà supprimée.",
     admin_no_audit_log: "Aucune action admin enregistrée pour l'instant.", admin_audit_target: "Cible : ", admin_unknown_admin: "Admin inconnu",
     admin_delete_post: "Supprimer la publication", admin_dismiss: "Ignorer", admin_resolved: "Résolu",
+    admin_view_verification: "Vérification", admin_view_appeals: "Appels", admin_no_verification_requests: "Aucune demande de vérification.", admin_no_appeals: "Aucun appel.", admin_approve: "Approuver", admin_deny: "Refuser", admin_overturn: "Annuler", admin_uphold: "Maintenir", admin_ban_related: "Appel de suspension",
+    admin_view_moderation_stats: "Modération", admin_moderation_today: "MODÉRATION AUJOURD'HUI", admin_mod_items_today: "Éléments aujourd'hui", admin_mod_blocked_today: "Bloqués aujourd'hui", admin_mod_avg_resolution: "Résolution moy.", admin_mod_spam_total: "Spam bloqué (total)", admin_mod_scam_total: "Arnaques bloquées (total)", admin_mod_events_flagged: "Événements signalés", admin_mod_appeals: "Appels", admin_mod_trust_distribution: "Répartition du score de confiance", admin_pending: "En attente",
     admin_search_name: "Rechercher par nom…", admin_no_name: "(sans nom)", admin_minor: "MINEUR", admin_admin: "ADMIN",
     admin_joined: "inscrit il y a ", admin_ago: "", admin_revoke_admin: "Révoquer admin", admin_make_admin: "Nommer admin",
     admin_ai_unlimited_badge: "IA illimitée", admin_grant_ai_unlimited: "Accorder IA illimitée", admin_revoke_ai_unlimited: "Révoquer IA illimitée", admin_ai_unlimited_hint: "Supprime son plafond quotidien de questions Scout — aucun changement de forfait ou de facturation.",
@@ -529,6 +536,7 @@ const I18N = {
     admin_scout_conversations: "CONVERSATIONS SCOUT", admin_scout_users: "UTILISATEURS SCOUT", admin_messages_total: "MESSAGES",
     admin_messages_7d: "MESSAGES 7J", admin_push_subscribers: "ABONNÉS PUSH", admin_top_followed: "PLUS SUIVIS",
     admin_ai_model_mix: "UTILISATION DU MODÈLE IA", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Base de données (sans appel IA)",
+    admin_scout_cache_hits: "HITS DE CACHE (EN DIRECT)", admin_scout_cache_answers: "RÉPONSES EN CACHE", admin_scout_margin_by_plan: "COÛT IA EN % DU REVENU DU PLAN", admin_scout_over_target: "AU-DESSUS DE LA CIBLE",
     admin_scout_cost_month: "COÛT IA SCOUT (MOIS)", admin_scout_avg_cost_msg: "COÛT MOYEN / MESSAGE (MOIS)",
     admin_view_overview: "Aperçu", admin_view_community: "Communauté", admin_view_scout_ai: "IA Scout",
     admin_view_common_qs: "Questions fréquentes", admin_common_qs_hint: "Questions réelles que Scout n'a pas pu associer à une réponse FAQ existante — ajoutez celles qui reviennent souvent à scout_faq pour continuer à réduire le coût mensuel de l'IA.", admin_no_faq_misses: "Aucune question non associée enregistrée pour l'instant.",
@@ -537,9 +545,11 @@ const I18N = {
     admin_activity_today: "Aujourd'hui :", admin_activity_7d: "7 derniers jours :", admin_activity_30d: "30 derniers jours :",
     admin_no_data: "Aucune donnée pour l'instant.", admin_manage_events: "Gérer les événements", admin_analytics_err: "Impossible de charger les statistiques.",
     banned_title: "Compte suspendu", banned_message: "Votre compte GOLSZ a été suspendu. Si vous pensez qu'il s'agit d'une erreur, contactez le support.",
+    appeal_start: "Faire appel de cette suspension", appeal_placeholder: "Expliquez pourquoi vous pensez que cette suspension est une erreur…", appeal_submit: "Envoyer l'appel", appeal_submitted: "Votre appel a été envoyé. Un modérateur l'examinera.",
+    verify_title: "Se faire vérifier", verify_desc: "Demandez une vérification d'identité pour votre rôle. Vous pouvez inclure un lien vers une preuve (profil de club ou de fédération, par exemple).", verify_proof_placeholder: "Lien de preuve (facultatif)", verify_submit: "Demander la vérification", verify_pending: "Votre demande de vérification est en cours d'examen.", verify_submitted: "Demande de vérification envoyée.",
     admin_add_event: "AJOUTER UN ÉVÉNEMENT", admin_title_ph: "Titre", admin_location_ph: "Lieu", admin_level_ph: "Niveau",
     admin_spots_ph: "Places disponibles", admin_create_event: "Créer l'événement",
-    scout_header: "AI SCOUT", scout_fields_on_file: "CHAMPS ENREGISTRÉS", scout_live_agent: "AGENT EN DIRECT",
+    scout_header: "AI SCOUT", scout_fields_on_file: "CHAMPS ENREGISTRÉS", scout_live_agent: "AGENT EN DIRECT", scout_questions_left: "QUESTIONS RESTANTES AUJOURD'HUI",
     scout_history_title: "Historique", scout_new_chat: "Nouvelle discussion", scout_no_past: "Aucune conversation passée.",
     scout_new_conversation: "Nouvelle conversation", scout_ago_messages: " messages", scout_delete_conv: "Supprimer la conversation",
     scout_scout_label: "SCOUT", scout_input_ph: "Parlez à votre agent…",
@@ -705,6 +715,8 @@ const I18N = {
     admin_no_reports: "Aún no hay reportes.", admin_reported_by: "Reportado por ", admin_post_removed: "Publicación ya eliminada.",
     admin_no_audit_log: "Aún no hay acciones de administrador registradas.", admin_audit_target: "Objetivo: ", admin_unknown_admin: "Admin desconocido",
     admin_delete_post: "Eliminar publicación", admin_dismiss: "Descartar", admin_resolved: "Resuelto",
+    admin_view_verification: "Verificación", admin_view_appeals: "Apelaciones", admin_no_verification_requests: "No hay solicitudes de verificación.", admin_no_appeals: "No hay apelaciones.", admin_approve: "Aprobar", admin_deny: "Denegar", admin_overturn: "Revocar", admin_uphold: "Mantener", admin_ban_related: "Apelación de suspensión",
+    admin_view_moderation_stats: "Moderación", admin_moderation_today: "MODERACIÓN HOY", admin_mod_items_today: "Elementos hoy", admin_mod_blocked_today: "Bloqueados hoy", admin_mod_avg_resolution: "Resolución media", admin_mod_spam_total: "Spam bloqueado (total)", admin_mod_scam_total: "Estafas bloqueadas (total)", admin_mod_events_flagged: "Eventos marcados", admin_mod_appeals: "Apelaciones", admin_mod_trust_distribution: "Distribución del puntaje de confianza", admin_pending: "Pendiente",
     admin_search_name: "Buscar por nombre…", admin_no_name: "(sin nombre)", admin_minor: "MENOR", admin_admin: "ADMIN",
     admin_joined: "se unió hace ", admin_ago: "", admin_revoke_admin: "Revocar admin", admin_make_admin: "Hacer admin",
     admin_ai_unlimited_badge: "IA ilimitada", admin_grant_ai_unlimited: "Otorgar IA ilimitada", admin_revoke_ai_unlimited: "Revocar IA ilimitada", admin_ai_unlimited_hint: "Elimina su límite diario de preguntas a Scout — sin cambio de plan ni de facturación.",
@@ -724,6 +736,7 @@ const I18N = {
     admin_scout_conversations: "CHATS DE SCOUT", admin_scout_users: "USUARIOS DE SCOUT", admin_messages_total: "MENSAJES",
     admin_messages_7d: "MENSAJES 7D", admin_push_subscribers: "SUSCRIPTORES PUSH", admin_top_followed: "MÁS SEGUIDOS",
     admin_ai_model_mix: "USO DE MODELO IA", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Base de datos (sin llamada IA)",
+    admin_scout_cache_hits: "ACIERTOS DE CACHÉ (EN VIVO)", admin_scout_cache_answers: "RESPUESTAS EN CACHÉ", admin_scout_margin_by_plan: "COSTO IA COMO % DEL INGRESO DEL PLAN", admin_scout_over_target: "SOBRE EL OBJETIVO",
     admin_scout_cost_month: "COSTO IA SCOUT (MES)", admin_scout_avg_cost_msg: "COSTO PROMEDIO / MENSAJE (MES)",
     admin_view_overview: "Resumen", admin_view_community: "Comunidad", admin_view_scout_ai: "IA Scout",
     admin_view_common_qs: "Preguntas frecuentes", admin_common_qs_hint: "Preguntas reales que Scout no pudo asociar a una respuesta de la FAQ — añade las que se repitan a scout_faq para seguir reduciendo el costo mensual de IA.", admin_no_faq_misses: "Aún no hay preguntas sin coincidencia registradas.",
@@ -732,9 +745,11 @@ const I18N = {
     admin_activity_today: "Hoy:", admin_activity_7d: "Últimos 7 días:", admin_activity_30d: "Últimos 30 días:",
     admin_no_data: "Aún no hay datos.", admin_manage_events: "Gestionar eventos", admin_analytics_err: "No se pudieron cargar las estadísticas.",
     banned_title: "Cuenta suspendida", banned_message: "Tu cuenta de GOLSZ ha sido suspendida. Si crees que esto es un error, contacta con soporte.",
+    appeal_start: "Apelar esta suspensión", appeal_placeholder: "Explica por qué crees que esta suspensión es un error…", appeal_submit: "Enviar apelación", appeal_submitted: "Tu apelación ha sido enviada. Un moderador la revisará.",
+    verify_title: "Verificarse", verify_desc: "Solicita la verificación de identidad para tu rol. Puedes incluir un enlace de prueba (por ejemplo, un perfil de club o federación).", verify_proof_placeholder: "Enlace de prueba (opcional)", verify_submit: "Solicitar verificación", verify_pending: "Tu solicitud de verificación está pendiente de revisión.", verify_submitted: "Solicitud de verificación enviada.",
     admin_add_event: "AÑADIR EVENTO", admin_title_ph: "Título", admin_location_ph: "Ubicación", admin_level_ph: "Nivel",
     admin_spots_ph: "Plazas disponibles", admin_create_event: "Crear evento",
-    scout_header: "AI SCOUT", scout_fields_on_file: "CAMPOS REGISTRADOS", scout_live_agent: "AGENTE EN VIVO",
+    scout_header: "AI SCOUT", scout_fields_on_file: "CAMPOS REGISTRADOS", scout_live_agent: "AGENTE EN VIVO", scout_questions_left: "PREGUNTAS RESTANTES HOY",
     scout_history_title: "Historial", scout_new_chat: "Nuevo chat", scout_no_past: "Aún no hay conversaciones pasadas.",
     scout_new_conversation: "Nueva conversación", scout_ago_messages: " mensajes", scout_delete_conv: "Eliminar conversación",
     scout_scout_label: "SCOUT", scout_input_ph: "Habla con tu agente…",
@@ -900,6 +915,8 @@ const I18N = {
     admin_no_reports: "Δεν υπάρχουν αναφορές ακόμα.", admin_reported_by: "Αναφέρθηκε από ", admin_post_removed: "Η ανάρτηση έχει ήδη αφαιρεθεί.",
     admin_no_audit_log: "Δεν έχουν καταγραφεί ενέργειες διαχειριστή ακόμα.", admin_audit_target: "Στόχος: ", admin_unknown_admin: "Άγνωστος διαχειριστής",
     admin_delete_post: "Διαγραφή ανάρτησης", admin_dismiss: "Απόρριψη", admin_resolved: "Επιλύθηκε",
+    admin_view_verification: "Επαλήθευση", admin_view_appeals: "Ενστάσεις", admin_no_verification_requests: "Δεν υπάρχουν αιτήματα επαλήθευσης.", admin_no_appeals: "Δεν υπάρχουν ενστάσεις.", admin_approve: "Έγκριση", admin_deny: "Απόρριψη", admin_overturn: "Ανατροπή", admin_uphold: "Διατήρηση", admin_ban_related: "Ένσταση αναστολής",
+    admin_view_moderation_stats: "Συντονισμός", admin_moderation_today: "ΣΥΝΤΟΝΙΣΜΟΣ ΣΗΜΕΡΑ", admin_mod_items_today: "Στοιχεία σήμερα", admin_mod_blocked_today: "Αποκλεισμένα σήμερα", admin_mod_avg_resolution: "Μέση επίλυση", admin_mod_spam_total: "Spam αποκλεισμένα (σύνολο)", admin_mod_scam_total: "Απάτες αποκλεισμένες (σύνολο)", admin_mod_events_flagged: "Σημειωμένες εκδηλώσεις", admin_mod_appeals: "Ενστάσεις", admin_mod_trust_distribution: "Κατανομή βαθμολογίας εμπιστοσύνης", admin_pending: "Εκκρεμεί",
     admin_search_name: "Αναζήτηση με όνομα…", admin_no_name: "(χωρίς όνομα)", admin_minor: "ΑΝΗΛΙΚΟΣ", admin_admin: "ADMIN",
     admin_joined: "εγγράφηκε πριν από ", admin_ago: "", admin_revoke_admin: "Ανάκληση admin", admin_make_admin: "Ορισμός ως admin",
     admin_ai_unlimited_badge: "Απεριόριστο AI", admin_grant_ai_unlimited: "Χορήγηση απεριόριστου AI", admin_revoke_ai_unlimited: "Ανάκληση απεριόριστου AI", admin_ai_unlimited_hint: "Αφαιρεί το ημερήσιο όριο ερωτήσεων στο Scout — καμία αλλαγή στο πλάνο ή τη χρέωση.",
@@ -919,6 +936,7 @@ const I18N = {
     admin_scout_conversations: "ΣΥΝΟΜΙΛΙΕΣ SCOUT", admin_scout_users: "ΧΡΗΣΤΕΣ SCOUT", admin_messages_total: "ΜΗΝΥΜΑΤΑ",
     admin_messages_7d: "ΜΗΝΥΜΑΤΑ 7Η", admin_push_subscribers: "ΣΥΝΔΡΟΜΗΤΕΣ PUSH", admin_top_followed: "ΔΗΜΟΦΙΛΕΣΤΕΡΟΙ",
     admin_ai_model_mix: "ΧΡΗΣΗ ΜΟΝΤΕΛΟΥ AI", admin_model_haiku: "Haiku", admin_model_sonnet: "Sonnet", admin_model_database: "Βάση δεδομένων (χωρίς κλήση AI)",
+    admin_scout_cache_hits: "ΕΠΙΤΥΧΙΕΣ CACHE (ΖΩΝΤΑΝΑ)", admin_scout_cache_answers: "ΑΠΑΝΤΗΣΕΙΣ ΣΕ CACHE", admin_scout_margin_by_plan: "ΚΟΣΤΟΣ AI ΩΣ % ΕΣΟΔΩΝ ΠΛΑΝΟΥ", admin_scout_over_target: "ΥΠΕΡΒΑΙΝΕΙ ΤΟΝ ΣΤΟΧΟ",
     admin_scout_cost_month: "ΚΟΣΤΟΣ AI SCOUT (ΜΗΝΑΣ)", admin_scout_avg_cost_msg: "ΜΕΣΟ ΚΟΣΤΟΣ / ΜΗΝΥΜΑ (ΜΗΝΑΣ)",
     admin_view_overview: "Επισκόπηση", admin_view_community: "Κοινότητα", admin_view_scout_ai: "AI Scout",
     admin_view_common_qs: "Συχνές ερωτήσεις", admin_common_qs_hint: "Πραγματικές ερωτήσεις που το Scout δεν μπόρεσε να αντιστοιχίσει σε υπάρχουσα απάντηση FAQ — πρόσθεσε τις πιο συχνές στο scout_faq για να συνεχίσεις να μειώνεις το μηνιαίο κόστος AI.", admin_no_faq_misses: "Δεν έχουν καταγραφεί ακόμη μη αντιστοιχισμένες ερωτήσεις.",
@@ -927,9 +945,11 @@ const I18N = {
     admin_activity_today: "Σήμερα:", admin_activity_7d: "Τελ. 7 ημέρες:", admin_activity_30d: "Τελ. 30 ημέρες:",
     admin_no_data: "Δεν υπάρχουν δεδομένα ακόμα.", admin_manage_events: "Διαχείριση εκδηλώσεων", admin_analytics_err: "Δεν ήταν δυνατή η φόρτωση των στατιστικών.",
     banned_title: "Ο λογαριασμός ανεστάλη", banned_message: "Ο λογαριασμός σας στο GOLSZ έχει ανασταλεί. Αν πιστεύετε ότι πρόκειται για λάθος, επικοινωνήστε με την υποστήριξη.",
+    appeal_start: "Ένσταση κατά της αναστολής", appeal_placeholder: "Εξηγήστε γιατί πιστεύετε ότι αυτή η αναστολή είναι λάθος…", appeal_submit: "Υποβολή ένστασης", appeal_submitted: "Η ένστασή σας υποβλήθηκε. Ένας συντονιστής θα την εξετάσει.",
+    verify_title: "Λάβετε επαλήθευση", verify_desc: "Ζητήστε επαλήθευση ταυτότητας για τον ρόλο σας. Προαιρετικά, προσθέστε έναν σύνδεσμο απόδειξης (π.χ. προφίλ συλλόγου ή ομοσπονδίας).", verify_proof_placeholder: "Σύνδεσμος απόδειξης (προαιρετικό)", verify_submit: "Αίτημα επαλήθευσης", verify_pending: "Το αίτημα επαλήθευσής σας εκκρεμεί προς έλεγχο.", verify_submitted: "Το αίτημα επαλήθευσης υποβλήθηκε.",
     admin_add_event: "ΠΡΟΣΘΗΚΗ ΕΚΔΗΛΩΣΗΣ", admin_title_ph: "Τίτλος", admin_location_ph: "Τοποθεσία", admin_level_ph: "Επίπεδο",
     admin_spots_ph: "Διαθέσιμες θέσεις", admin_create_event: "Δημιουργία εκδήλωσης",
-    scout_header: "AI SCOUT", scout_fields_on_file: "ΠΕΔΙΑ ΚΑΤΑΧΩΡΗΜΕΝΑ", scout_live_agent: "ΖΩΝΤΑΝΟΣ ΠΡΑΚΤΟΡΑΣ",
+    scout_header: "AI SCOUT", scout_fields_on_file: "ΠΕΔΙΑ ΚΑΤΑΧΩΡΗΜΕΝΑ", scout_live_agent: "ΖΩΝΤΑΝΟΣ ΠΡΑΚΤΟΡΑΣ", scout_questions_left: "ΕΡΩΤΗΣΕΙΣ ΠΟΥ ΑΠΟΜΕΝΟΥΝ ΣΗΜΕΡΑ",
     scout_history_title: "Ιστορικό", scout_new_chat: "Νέα συνομιλία", scout_no_past: "Δεν υπάρχουν προηγούμενες συνομιλίες ακόμα.",
     scout_new_conversation: "Νέα συνομιλία", scout_ago_messages: " μηνύματα", scout_delete_conv: "Διαγραφή συνομιλίας",
     scout_scout_label: "SCOUT", scout_input_ph: "Μιλήστε στον σκάουτ σας…",
@@ -2329,8 +2349,10 @@ function Messages({ thread, setThread, onViewProfile }) {
   const [err, setErr] = useState("");
   const [savingEvent, setSavingEvent] = useState(null);
   const [threadReqStatus, setThreadReqStatus] = useState(null); // 'pending_sent' | 'pending_received' | 'accepted' | null
+  const [reportedThread, setReportedThread] = useState(false);
   const threadRef = useRef(thread);
   useEffect(() => { threadRef.current = thread; }, [thread]);
+  useEffect(() => { setReportedThread(false); }, [thread]);
 
   useEffect(() => {
     if (!sb) return;
@@ -2515,6 +2537,19 @@ function Messages({ thread, setThread, onViewProfile }) {
     }
   }
 
+  // Trust & Safety Moderation System — generalized report path (migration
+  // 060, content_reports) alongside the existing post_reports-only
+  // reportPost() elsewhere in this file. target_id is the counterpart's
+  // user id — there's no single message id that represents a whole
+  // conversation, and that's what a DM report is actually about.
+  async function reportThread(counterpartId) {
+    if (!sb || !uid || !counterpartId || reportedThread) return;
+    try {
+      await sb.from("content_reports").insert({ reporter_id: uid, target_type: "message", target_id: counterpartId, reason: "reported from message thread" });
+      setReportedThread(true);
+    } catch (e) { console.error("GOLSZ thread report error:", e); }
+  }
+
   if (typeof thread === "string") {
     const name = (counterpart && counterpart.name) || "…";
     return (
@@ -2528,6 +2563,9 @@ function Messages({ thread, setThread, onViewProfile }) {
           >
             <Avatar init={initials(name)} size={36} />
             <div style={{ fontWeight: 700, fontSize: 14, color: C.msgName }}>{name}</div>
+          </button>
+          <button onClick={() => reportThread(thread)} style={{ ...iconBtn(reportedThread ? C.amber : C.slate), fontSize: 11, marginLeft: "auto" }}>
+            {reportedThread ? t("action_reported") : t("action_report")}
           </button>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: 14 }}>
@@ -3345,6 +3383,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const [avatarErr, setAvatarErr] = useState("");
   const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo immediately
   const [shareMsg, setShareMsg] = useState("");
+  const [reportedProfile, setReportedProfile] = useState(false);
   const real = !!uid;
   const viewingOther = !!(viewUserId && uid && viewUserId !== uid);
 
@@ -3499,6 +3538,16 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     } catch (e) { console.error("GOLSZ passport follow error:", e); setFollowing(was); }
   }
 
+  // Trust & Safety Moderation System — generalized report path (migration
+  // 060, content_reports), same pattern as Messages' reportThread().
+  async function reportProfile() {
+    if (!sb || !uid || !viewUserId || viewUserId === uid || reportedProfile) return;
+    try {
+      await sb.from("content_reports").insert({ reporter_id: uid, target_type: "profile", target_id: viewUserId, reason: "reported from profile" });
+      setReportedProfile(true);
+    } catch (e) { console.error("GOLSZ profile report error:", e); }
+  }
+
   const p = real ? toPassport(profile, athlete, viewingOther ? viewUserId : uid, t) : PASSPORT;
   const mrz = real
     ? `${p.id.replace(/[·]/g, "<")}<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<<<<<<<<<<<<<<<<<<<<<<<<<<<`
@@ -3577,6 +3626,9 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
               <MessageSquare size={15} /> {t("passport_message")}
             </button>
           )}
+          <button onClick={reportProfile} style={{ ...iconBtn(reportedProfile ? C.amber : C.slate), fontSize: 11 }}>
+            {reportedProfile ? t("action_reported") : t("action_report")}
+          </button>
         </div>
       )}
 
@@ -3796,6 +3848,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
 
       {!viewingOther && <RestrictedBanner />}
       {!viewingOther && <FamilyAccess />}
+      {!viewingOther && real && profile && <VerificationRequest occupation={profile.occupation} />}
       {!viewingOther && <BlockedAccounts />}
 
       {!viewingOther && profile && profile.is_admin && (
@@ -3937,6 +3990,73 @@ function BlockedAccounts() {
   );
 }
 
+// Trust & Safety Moderation System — self-service identity verification
+// (migration 058, verification_requests). Revives the design drafted once
+// around migration 024 and dropped before shipping. Scoped to the
+// occupations that already exist as real profile roles.
+const VERIFIABLE_OCCUPATIONS = ["Player", "Scout", "Agent", "Coach", "Physio"];
+function VerificationRequest({ occupation }) {
+  const { t } = useLang();
+  const [uid, setUid] = useState(null);
+  const [verified, setVerified] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [proofUrl, setProofUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function load() {
+    if (!sb) return;
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return;
+      setUid(user.id);
+      const [{ data: prof }, { data: reqs }] = await Promise.all([
+        sb.from("profiles").select("identity_verified").eq("id", user.id).single(),
+        sb.from("verification_requests").select("status").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
+      ]);
+      setVerified(!!(prof && prof.identity_verified));
+      setPending(!!(reqs && reqs[0] && reqs[0].status === "pending"));
+    } catch (e) { console.error("GOLSZ verification load error:", e); }
+  }
+  useEffect(() => { load(); }, []);
+
+  async function submit() {
+    if (!sb || !uid || busy) return;
+    setBusy(true);
+    try {
+      await sb.from("verification_requests").insert({ user_id: uid, occupation, proof_url: proofUrl.trim() || null });
+      setDone(true); setPending(true);
+    } catch (e) { console.error("GOLSZ verification submit error:", e); }
+    setBusy(false);
+  }
+
+  if (!sb || !occupation || !VERIFIABLE_OCCUPATIONS.includes(occupation) || verified) return null;
+
+  return (
+    <div style={{ ...card, marginBottom: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <BadgeCheck size={16} color={C.slate} />
+        <span style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>{t("verify_title")}</span>
+      </div>
+      {pending ? (
+        <div style={{ fontSize: 12.5, color: C.slate }}>{t("verify_pending")}</div>
+      ) : done ? (
+        <div style={{ fontSize: 12.5, color: C.lime }}>{t("verify_submitted")}</div>
+      ) : (
+        <React.Fragment>
+          <div style={{ fontSize: 12.5, color: C.slate, marginBottom: 10, lineHeight: 1.5 }}>{t("verify_desc")}</div>
+          <input value={proofUrl} onChange={(e) => setProofUrl(e.target.value)} placeholder={t("verify_proof_placeholder")}
+            style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13, fontFamily: "inherit", boxSizing: "border-box", marginBottom: 10 }} />
+          <button onClick={submit} disabled={busy} style={{
+            width: "100%", background: "transparent", color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 10,
+            padding: "10px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: busy ? 0.6 : 1,
+          }}>{t("verify_submit")}</button>
+        </React.Fragment>
+      )}
+    </div>
+  );
+}
+
 /* Dependency-free vertical bar sparkline — this codebase deliberately
    has no charting library (no build step, fixed CDN scripts only), so
    this is plain divs sized by percentage of the max value, same
@@ -4013,6 +4133,8 @@ function AdminPanel({ onBack }) {
   const [showEventsManager, setShowEventsManager] = useState(false);
   const [auditLog, setAuditLog] = useState(null);
   const [moderationQueue, setModerationQueue] = useState(null);
+  const [verificationRequests, setVerificationRequests] = useState(null);
+  const [appeals, setAppeals] = useState(null);
   const [errorLog, setErrorLog] = useState(null);
   const [faqMisses, setFaqMisses] = useState(null);
   const [expandedActivityId, setExpandedActivityId] = useState(null);
@@ -4236,6 +4358,50 @@ function AdminPanel({ onBack }) {
     } catch (e) { console.error("GOLSZ admin resolve moderation error:", e); }
   }
 
+  // Trust & Safety Moderation System — verification review (migration 058).
+  async function loadVerificationRequests() {
+    try {
+      const { data, error } = await sb.from("verification_requests")
+        .select("id, user_id, occupation, proof_url, status, admin_notes, created_at")
+        .order("status", { ascending: true }).order("created_at", { ascending: false }).limit(100);
+      if (error) throw error;
+      const ids = [...new Set((data || []).map((r) => r.user_id))];
+      const { data: names } = ids.length ? await sb.from("public_profile_names").select("id, full_name").in("id", ids) : { data: [] };
+      const nameById = Object.fromEntries((names || []).map((n) => [n.id, n.full_name]));
+      setVerificationRequests((data || []).map((r) => ({ ...r, userName: nameById[r.user_id] || t("admin_unknown_admin") })));
+    } catch (e) { console.error("GOLSZ admin verification requests error:", e); setVerificationRequests([]); }
+  }
+  async function reviewVerification(id, approve) {
+    try {
+      const { error } = await sb.rpc("admin_review_verification", { p_id: id, p_approve: approve });
+      if (error) throw error;
+      logAdmin(approve ? "approve_verification" : "deny_verification", id);
+      loadVerificationRequests();
+    } catch (e) { console.error("GOLSZ admin review verification error:", e); }
+  }
+
+  // Trust & Safety Moderation System — appeals review (migration 059).
+  async function loadAppeals() {
+    try {
+      const { data, error } = await sb.from("moderation_appeals")
+        .select("id, user_id, moderation_queue_id, ban_related, reason, status, admin_notes, created_at")
+        .order("status", { ascending: true }).order("created_at", { ascending: false }).limit(100);
+      if (error) throw error;
+      const ids = [...new Set((data || []).map((r) => r.user_id))];
+      const { data: names } = ids.length ? await sb.from("public_profile_names").select("id, full_name").in("id", ids) : { data: [] };
+      const nameById = Object.fromEntries((names || []).map((n) => [n.id, n.full_name]));
+      setAppeals((data || []).map((r) => ({ ...r, userName: nameById[r.user_id] || t("admin_unknown_admin") })));
+    } catch (e) { console.error("GOLSZ admin appeals error:", e); setAppeals([]); }
+  }
+  async function reviewAppeal(id, overturn) {
+    try {
+      const { error } = await sb.rpc("admin_review_appeal", { p_id: id, p_overturn: overturn });
+      if (error) throw error;
+      logAdmin(overturn ? "overturn_appeal" : "uphold_appeal", id);
+      loadAppeals();
+    } catch (e) { console.error("GOLSZ admin review appeal error:", e); }
+  }
+
   // General app-crash visibility (migration 036) — client-side JS
   // errors (golsz-app.html's window.onerror/unhandledrejection
   // handlers) and real server-side failures (every api/*.js file's own
@@ -4287,7 +4453,7 @@ function AdminPanel({ onBack }) {
   // would need real SQL aggregation if the user base grows a lot.
   async function loadAnalytics() {
     try {
-      const [{ data: profRows }, { data: postRows }, { data: followRows }, { data: athleteRows }, { data: counts, error: countsErr }, { data: modelMix }, { data: costSummary }] = await Promise.all([
+      const [{ data: profRows }, { data: postRows }, { data: followRows }, { data: athleteRows }, { data: counts, error: countsErr }, { data: modelMix }, { data: costSummary }, { data: cacheStats }, { data: marginSummary }, { data: moderationStats }] = await Promise.all([
         sb.from("profiles").select("plan, occupation, verified_tier, is_banned, is_minor, created_at").order("created_at", { ascending: false }).limit(2000),
         sb.from("posts").select("id, created_at").order("created_at", { ascending: false }).limit(2000),
         sb.from("follows").select("follower_id, followed_id").limit(2000),
@@ -4303,6 +4469,16 @@ function AdminPanel({ onBack }) {
         // bill — Anthropic's invoice is the source of truth, but this
         // tracks closely since it's the same real token counts).
         sb.rpc("admin_scout_cost_summary"),
+        // migration 056 — Multi-Model Cost-Control System's dashboard
+        // extensions: cache hit rate, and cost-as-%-of-revenue per plan
+        // (the warning thresholds from the approved plan: Starter/Pro
+        // <10%, Elite <15% of that plan's monthly revenue).
+        sb.rpc("admin_scout_cache_stats"),
+        sb.rpc("admin_scout_margin_summary"),
+        // Trust & Safety Moderation System (migration 064) — moderation-
+        // specific stats, folded into this same existing dashboard rather
+        // than a new one.
+        sb.rpc("admin_moderation_stats"),
       ]);
       if (countsErr) throw countsErr;
 
@@ -4401,6 +4577,20 @@ function AdminPanel({ onBack }) {
         scoutMessagesMonth: (costSummary && costSummary.message_count_month) || 0,
         scoutCostMonth: (costSummary && costSummary.total_cost_month) || 0,
         scoutAvgCostPerMessage: (costSummary && costSummary.avg_cost_per_message_month) || 0,
+        // Multi-Model Cost-Control System (migration 056) additions.
+        scoutCacheAnswers: (cacheStats && cacheStats.cached_answers) || 0,
+        scoutCacheHits: (cacheStats && cacheStats.total_hits) || 0,
+        // Target thresholds from the approved plan: Starter/Pro AI cost
+        // should stay under 10% of that plan's monthly revenue, Elite
+        // under 15% — flagged in the UI, not enforced automatically.
+        scoutMarginByPlan: (marginSummary || []).map((r) => ({
+          plan: r.plan,
+          subscribers: Number(r.subscriber_count) || 0,
+          revenue: Number(r.monthly_revenue) || 0,
+          cost: Number(r.ai_cost) || 0,
+          costPct: Number(r.ai_cost_pct) || 0,
+          overTarget: (r.plan === "elite" ? Number(r.ai_cost_pct) > 15 : (r.plan === "starter" || r.plan === "pro") && Number(r.ai_cost_pct) > 10),
+        })),
         // Avg hours per active user, not per total signups — someone who
         // never opened the app in a given window shouldn't drag the
         // average toward zero and hide how engaged actual users are.
@@ -4410,6 +4600,20 @@ function AdminPanel({ onBack }) {
         activeUsersWeek: (counts && counts.activity_users_7d) || 0,
         activeUsersMonth: (counts && counts.activity_users_30d) || 0,
         activeUsersYear: (counts && counts.activity_users_365d) || 0,
+        moderation: {
+          itemsToday: (moderationStats && moderationStats.moderation_items_today) || 0,
+          blockedToday: (moderationStats && moderationStats.blocked_today) || 0,
+          spamBlockedTotal: (moderationStats && moderationStats.spam_blocked_total) || 0,
+          scamBlockedTotal: (moderationStats && moderationStats.scam_blocked_total) || 0,
+          avgResolutionMinutes: (moderationStats && moderationStats.avg_resolution_minutes) || 0,
+          appealsPending: (moderationStats && moderationStats.appeals_pending) || 0,
+          appealsUpheld: (moderationStats && moderationStats.appeals_upheld) || 0,
+          appealsOverturned: (moderationStats && moderationStats.appeals_overturned) || 0,
+          verificationPending: (moderationStats && moderationStats.verification_pending) || 0,
+          verificationApproved: (moderationStats && moderationStats.verification_approved) || 0,
+          eventsFlaggedTotal: (moderationStats && moderationStats.events_flagged_total) || 0,
+          trustScoreBuckets: (moderationStats && moderationStats.trust_score_buckets) || {},
+        },
       });
     } catch (e) { console.error("GOLSZ admin analytics error:", e); setAnalytics(false); }
   }
@@ -4424,7 +4628,7 @@ function AdminPanel({ onBack }) {
         const { data: prof } = await sb.from("profiles").select("is_admin").eq("id", user.id).single();
         const ok = !!(prof && prof.is_admin);
         setAuthorized(ok);
-        if (ok) { loadStats(); loadReports(); loadUsers(); loadEvents(); loadAnalytics(); loadAuditLog(); loadModerationQueue(); loadErrorLog(); loadFaqMisses(); }
+        if (ok) { loadStats(); loadReports(); loadUsers(); loadEvents(); loadAnalytics(); loadAuditLog(); loadModerationQueue(); loadVerificationRequests(); loadAppeals(); loadErrorLog(); loadFaqMisses(); }
       } catch (e) { console.error("GOLSZ admin auth-check error:", e); setAuthorized(false); }
     })();
   }, []);
@@ -4494,6 +4698,8 @@ function AdminPanel({ onBack }) {
           {subNav([
             ["reports", t("admin_tab_reports")],
             ["queue", t("admin_view_auto_queue")],
+            ["verification", t("admin_view_verification")],
+            ["appeals", t("admin_view_appeals")],
           ], moderationView, setModerationView)}
 
           {moderationView === "reports" && (
@@ -4548,6 +4754,67 @@ function AdminPanel({ onBack }) {
                     </div>
                     {!m.resolved_at && (
                       <button onClick={() => resolveModerationItem(m.id)} style={{ ...iconBtn(C.slate), fontSize: 11.5 }}>{t("admin_dismiss")}</button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {moderationView === "verification" && (
+            <div>
+              {verificationRequests === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+              {verificationRequests && verificationRequests.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_verification_requests")}</div>}
+              {verificationRequests && verificationRequests.map((v) => {
+                const isPending = v.status === "pending";
+                const dColor = v.status === "approved" ? C.lime : v.status === "denied" ? C.amber : C.slate;
+                const dBorder = v.status === "approved" ? C.limeBorder : v.status === "denied" ? C.amberBorder : C.line2;
+                return (
+                  <div key={v.id} style={{ ...card, opacity: isPending ? 1 : 0.6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10.5, color: C.slate, marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: dColor, border: `1px solid ${dBorder}`, borderRadius: 999, padding: "2px 8px" }}>{v.status.toUpperCase()}</span>
+                        <span>{v.userName} · {v.occupation}</span>
+                      </div>
+                      <span>{timeAgo(v.created_at)}</span>
+                    </div>
+                    {v.proof_url && <div style={{ fontSize: 12.5, marginBottom: 8, wordBreak: "break-all" }}><a href={safeHref(v.proof_url)} target="_blank" rel="noopener noreferrer" style={{ color: C.lime }}>{v.proof_url}</a></div>}
+                    {isPending && (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => reviewVerification(v.id, true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}>{t("admin_approve")}</button>
+                        <button onClick={() => reviewVerification(v.id, false)} style={{ ...iconBtn(C.amber), fontSize: 11.5 }}>{t("admin_deny")}</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {moderationView === "appeals" && (
+            <div>
+              {appeals === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+              {appeals && appeals.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_appeals")}</div>}
+              {appeals && appeals.map((a) => {
+                const isPending = a.status === "pending";
+                const dColor = a.status === "overturned" ? C.lime : a.status === "upheld" ? C.amber : C.slate;
+                const dBorder = a.status === "overturned" ? C.limeBorder : a.status === "upheld" ? C.amberBorder : C.line2;
+                return (
+                  <div key={a.id} style={{ ...card, opacity: isPending ? 1 : 0.6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10.5, color: C.slate, marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: dColor, border: `1px solid ${dBorder}`, borderRadius: 999, padding: "2px 8px" }}>{a.status.toUpperCase()}</span>
+                        {a.ban_related && <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 999, padding: "2px 8px" }}>{t("admin_ban_related")}</span>}
+                        <span>{a.userName}</span>
+                      </div>
+                      <span>{timeAgo(a.created_at)}</span>
+                    </div>
+                    <div style={{ fontSize: 13, marginBottom: isPending ? 8 : 0, whiteSpace: "pre-wrap" }}>{a.reason}</div>
+                    {isPending && (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={() => reviewAppeal(a.id, true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}>{t("admin_overturn")}</button>
+                        <button onClick={() => reviewAppeal(a.id, false)} style={{ ...iconBtn(C.amber), fontSize: 11.5 }}>{t("admin_uphold")}</button>
+                      </div>
                     )}
                   </div>
                 );
@@ -4688,6 +4955,7 @@ function AdminPanel({ onBack }) {
                 ["community", t("admin_view_community")],
                 ["scoutai", t("admin_view_scout_ai")],
                 ["commonqs", t("admin_view_common_qs")],
+                ["moderation", t("admin_view_moderation_stats")],
               ], analyticsView, setAnalyticsView)}
 
               {analyticsView === "overview" && (
@@ -4840,6 +5108,38 @@ function AdminPanel({ onBack }) {
                       </>
                     )}
                   </div>
+
+                  {/* Multi-Model Cost-Control System (migration 056) —
+                      cache hit rate + cost-as-%-of-revenue per plan, with
+                      the approved plan's own warning thresholds
+                      (Starter/Pro <10%, Elite <15%) flagged inline. */}
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_scout_cache_hits")}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{analytics.scoutCacheAnswers}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_scout_cache_answers")}</div>
+                      </div>
+                      <div style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{analytics.scoutCacheHits}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{t("admin_scout_cache_hits")}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_scout_margin_by_plan")}</div>
+                    {!analytics.scoutMarginByPlan.length && <div style={{ fontSize: 12, color: C.slate }}>{t("admin_no_data")}</div>}
+                    {analytics.scoutMarginByPlan.map((row) => (
+                      <div key={row.plan} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${C.line}` }}>
+                        <span style={{ fontSize: 12, textTransform: "capitalize" }}>{row.plan}</span>
+                        <span style={{ fontSize: 10.5, color: C.slate }}>{row.subscribers} · ${row.cost.toFixed(2)} / ${row.revenue.toFixed(0)}</span>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: row.overTarget ? "#ff5c5c" : C.lime, fontFamily: "'Space Mono', monospace" }}>
+                          {row.costPct.toFixed(1)}%{row.overTarget ? ` ⚠ ${t("admin_scout_over_target")}` : ""}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </>
               )}
 
@@ -4859,6 +5159,51 @@ function AdminPanel({ onBack }) {
                       </div>
                     </div>
                   ))}
+                </>
+              )}
+
+              {analyticsView === "moderation" && (
+                <>
+                  <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, margin: "2px 0 8px" }}>{t("admin_moderation_today")}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
+                    {[
+                      [t("admin_mod_items_today"), analytics.moderation.itemsToday],
+                      [t("admin_mod_blocked_today"), analytics.moderation.blockedToday],
+                      [t("admin_mod_avg_resolution"), analytics.moderation.avgResolutionMinutes + "m"],
+                      [t("admin_mod_spam_total"), analytics.moderation.spamBlockedTotal],
+                      [t("admin_mod_scam_total"), analytics.moderation.scamBlockedTotal],
+                      [t("admin_mod_events_flagged"), analytics.moderation.eventsFlaggedTotal],
+                    ].map(([label, v]) => (
+                      <div key={label} style={{ ...card, margin: 0, padding: "10px 8px", textAlign: "center" }}>
+                        <div style={{ fontSize: 16, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.lime }}>{v}</div>
+                        <div style={{ fontSize: 8.5, letterSpacing: "0.06em", color: C.slate, fontWeight: 700 }}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+                    <div style={{ ...card, margin: 0 }}>
+                      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_mod_appeals")}</div>
+                      <BreakdownBar label={t("admin_pending")} count={analytics.moderation.appealsPending} total={analytics.moderation.appealsPending + analytics.moderation.appealsUpheld + analytics.moderation.appealsOverturned} color={C.amber} />
+                      <BreakdownBar label={t("admin_uphold")} count={analytics.moderation.appealsUpheld} total={analytics.moderation.appealsPending + analytics.moderation.appealsUpheld + analytics.moderation.appealsOverturned} color={C.slate} />
+                      <BreakdownBar label={t("admin_overturn")} count={analytics.moderation.appealsOverturned} total={analytics.moderation.appealsPending + analytics.moderation.appealsUpheld + analytics.moderation.appealsOverturned} color={C.lime} />
+                    </div>
+                    <div style={{ ...card, margin: 0 }}>
+                      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_view_verification")}</div>
+                      <BreakdownBar label={t("admin_pending")} count={analytics.moderation.verificationPending} total={analytics.moderation.verificationPending + analytics.moderation.verificationApproved} color={C.amber} />
+                      <BreakdownBar label={t("admin_approve")} count={analytics.moderation.verificationApproved} total={analytics.moderation.verificationPending + analytics.moderation.verificationApproved} color={C.lime} />
+                    </div>
+                  </div>
+
+                  <div style={{ ...card }}>
+                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_mod_trust_distribution")}</div>
+                    {["0-19", "20-39", "40-59", "60-79", "80-100"].map((bucket) => {
+                      const buckets = analytics.moderation.trustScoreBuckets || {};
+                      const n = buckets[bucket] || 0;
+                      const total = Object.values(buckets).reduce((a, b) => a + b, 0);
+                      return <BreakdownBar key={bucket} label={bucket} count={n} total={total} color={bucket === "0-19" ? C.amber : C.lime} />;
+                    })}
+                  </div>
                 </>
               )}
 
@@ -5040,6 +5385,11 @@ function Scout() {
   // (classifyIntent() in api/scout.js updates it every turn); this is just
   // where the client holds the latest value between turns.
   const [summary, setSummary] = useState("");
+  // { remaining, limit } from the Multi-Model Cost-Control System's
+  // scout_usage response field (api/scout.js) — null until the first real
+  // reply/limit-reached response arrives, or forever null for an admin/
+  // unlimited account (server omits scout_usage in that case).
+  const [scoutUsage, setScoutUsage] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState(null);
   const [photo, setPhoto] = useState(null); // { dataUrl, mediaType, data } — one pending attachment
@@ -5072,7 +5422,7 @@ function Scout() {
 
         const [{ data: prof }, { data: ath }] = await Promise.all([
           sb.from("profiles").select("full_name, dob, occupation").eq("id", user.id).single(),
-          sb.from("athletes").select("sport, position, grad_year, gpa, country, club_name, recruiting_status, license, looking_for_players, scout_context").eq("id", user.id).single(),
+          sb.from("athletes").select("sport, position, grad_year, gpa, country, club_name, recruiting_status, license, looking_for_players, education_level, scout_context").eq("id", user.id).single(),
         ]);
         const seeded = {};
         if (prof && prof.full_name) seeded.name = prof.full_name;
@@ -5093,6 +5443,7 @@ function Scout() {
           if (ath.gpa) seeded.gpa = ath.gpa;
           if (ath.license) seeded.license = ath.license;
           if (ath.looking_for_players != null) seeded.looking_for_players = ath.looking_for_players;
+          if (ath.education_level) seeded.education_level = ath.education_level;
         }
         baseProfileRef.current = seeded;
         if (Object.keys(seeded).length) setProfile((p) => ({ ...seeded, ...p }));
@@ -5305,11 +5656,19 @@ function Scout() {
       let _hdr = { "Content-Type": "application/json" };
       try { if (typeof sb !== "undefined" && sb) { const _s = await sb.auth.getSession(); if (_s && _s.data && _s.data.session) _hdr["Authorization"] = "Bearer " + _s.data.session.access_token; } } catch (e) {}
       const _endpoint = (typeof SCOUT_ENDPOINT !== "undefined" && SCOUT_ENDPOINT) ? SCOUT_ENDPOINT : "https://api.anthropic.com/v1/messages";
+      // requestId lets the server (api/scout.js) reject an exact duplicate
+      // submission (double-click, retry-storm) without double-charging —
+      // crypto.randomUUID() is available in every browser this app targets.
+      const requestId = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random();
       const res = await fetch(_endpoint, {
         method: "POST", headers: _hdr,
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 4096, system: SYS, messages: api, lang, conversationId, summary, tools: [{ type: "web_search_20250305", name: "web_search" }] }),
+        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 4096, system: SYS, messages: api, lang, conversationId, summary, requestId, tools: [{ type: "web_search_20250305", name: "web_search" }] }),
       });
       const data = await res.json();
+      // scout_usage ({remaining, limit}) is present on both success and
+      // limit-reached (402) responses — capture it either way so the
+      // header's "questions left today" count updates even on a refusal.
+      if (data && data.scout_usage && typeof data.scout_usage === "object") setScoutUsage(data.scout_usage);
       // A non-2xx response (rate limit, auth hiccup, upstream 5xx) still
       // arrives here as valid JSON — without this check data.content is
       // undefined, raw ends up "", and an empty assistant bubble gets
@@ -5363,7 +5722,7 @@ function Scout() {
         <span style={{ fontWeight: 800, letterSpacing: "0.04em" }}>{t("scout_header")}</span>
         <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 10, color: C.slate, fontFamily: "'Space Mono', monospace" }}>
-            {known.length ? `${known.length} ${t("scout_fields_on_file")}` : t("scout_live_agent")}
+            {scoutUsage ? `${scoutUsage.remaining} ${t("scout_questions_left")}` : known.length ? `${known.length} ${t("scout_fields_on_file")}` : t("scout_live_agent")}
           </span>
           <button onClick={openHistory} title={t("scout_history_title")} style={iconBtn(showHistory ? C.lime : C.slate)}><History size={16} /></button>
           <button onClick={newChat} title={t("scout_new_chat")} style={iconBtn(C.lime)}><Plus size={17} /></button>
@@ -5943,11 +6302,17 @@ function Auth({ onDone, paidReturn }) {
 
   async function submit() {
     if (!ok || busy || confirmPolling) return;
-    // Honeypot: a real user never sees or fills this field, so anything
-    // in it means an automated script filled every input on the page.
-    // Return without an error so a bot gets no signal telling it apart
-    // from a real (if slow) submission.
-    if (isSignup && website.trim()) return;
+    // Honeypot: a real user never sees or fills this field, so anything in
+    // it means an automated script filled every input on the page. Trust &
+    // Safety Moderation System pass: this used to silently no-op the whole
+    // signup client-side — real, but a client-only gate a bot hitting
+    // Supabase's signup API directly (skipping this component entirely)
+    // trivially bypasses. Now the signup still proceeds (so a bot gets no
+    // signal telling it apart from a real submission, same as before) but
+    // the honeypot's value is passed through in signup metadata below, and
+    // handle_new_user() (server-side, migration 063) sets a rock-bottom
+    // trust_score on the new account when it arrives non-empty — additive
+    // and non-blocking, never risks rejecting a real signup outright.
     setErr("");
     setNotice("");
     setUnconfirmedEmail("");
@@ -5976,6 +6341,7 @@ function Auth({ onDone, paidReturn }) {
         const { data, error } = await sb.auth.signUp({ email: signupEmail, password: signupPw, options: { data: {
           full_name: name.trim(), plan: selected.id, date_of_birth: dobIso,
           parent_email: isMinor ? parentEmail.trim() : "",
+          hp: website.trim(),
         } } });
         if (error) throw error;
         if (selected.price > 0 && STRIPE_LINKS[plan] && data.user) {
@@ -6274,6 +6640,33 @@ function ResetPassword({ onDone }) {
 
 function BannedScreen({ onSignOut }) {
   const { t } = useLang();
+  const [uid, setUid] = useState(null);
+  const [showAppeal, setShowAppeal] = useState(false);
+  const [reason, setReason] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!sb) return;
+    (async () => {
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) setUid(user.id);
+    })();
+  }, []);
+
+  // Trust & Safety Moderation System — appeals (migration 059). A banned
+  // account is exactly the case the spec's "track appeals" ask is really
+  // about, and this screen is the one place a banned user can still reach.
+  async function submitAppeal() {
+    if (!sb || !uid || !reason.trim() || busy) return;
+    setBusy(true);
+    try {
+      await sb.from("moderation_appeals").insert({ user_id: uid, ban_related: true, reason: reason.trim().slice(0, 1000) });
+      setSubmitted(true);
+    } catch (e) { console.error("GOLSZ appeal submit error:", e); }
+    setBusy(false);
+  }
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "calc(28px + env(safe-area-inset-top, 0px)) 18px 28px", background: "radial-gradient(1100px 560px at 50% -12%, " + C.turf + ", " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
       <style>{CSS}</style>
@@ -6284,6 +6677,21 @@ function BannedScreen({ onSignOut }) {
         <div style={{ background: C.card, border: "1px solid " + C.line, borderRadius: 18, padding: 20, textAlign: "center" }}>
           <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 8, color: C.amber }}>{t("banned_title")}</div>
           <div style={{ fontSize: 13, color: C.slate, lineHeight: 1.5, marginBottom: 16 }}>{t("banned_message")}</div>
+          {submitted ? (
+            <div style={{ fontSize: 12.5, color: C.lime, marginBottom: 16 }}>{t("appeal_submitted")}</div>
+          ) : showAppeal ? (
+            <div style={{ marginBottom: 16, textAlign: "left" }}>
+              <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={4} placeholder={t("appeal_placeholder")}
+                style={{ width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 10, color: C.chalk, padding: 10, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box", marginBottom: 8 }} />
+              <button onClick={submitAppeal} disabled={!reason.trim() || busy} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 10, padding: "11px", fontWeight: 700, fontSize: 13, cursor: reason.trim() ? "pointer" : "default", opacity: reason.trim() ? 1 : 0.5, fontFamily: "inherit" }}>
+                {t("appeal_submit")}
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setShowAppeal(true)} style={{ width: "100%", background: "transparent", color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "12px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>
+              {t("appeal_start")}
+            </button>
+          )}
           <button onClick={onSignOut} style={{ width: "100%", background: "transparent", color: C.chalk, border: `1px solid ${C.line2}`, borderRadius: 12, padding: "13px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>{t("nav_signout")}</button>
         </div>
       </div>

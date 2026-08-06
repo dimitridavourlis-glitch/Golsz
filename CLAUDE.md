@@ -934,6 +934,81 @@ Six pieces shipped, all additive, no existing behavior removed:
   understanding, not just link storage), the formal 50-100-scenario model benchmark, and per-athlete cost
   tables. None of these were needed to prove out "one Scout, real memory, real routing, provider-swappable."
 
+### Multi-Model AI Scout & Cost-Control System (migrations 052-056)
+
+A second, much larger spec followed the Phase 2 MVP above: provider-agnostic cost tiers, deterministic
+complexity scoring, per-plan tier caps, atomic daily-limit enforcement, a generic response cache,
+database-first event search, rate limiting/idempotency, emergency kill switches, and an admin cost/margin
+dashboard — written in generic TypeScript/Next.js SaaS vocabulary (`PLAN_MODEL_ACCESS`, `AiProviderAdapter`,
+`ai_daily_usage`, a Jest-style test list) that doesn't match this repo's real stack (single-file JSX,
+Babel-standalone, no build step, no TypeScript, no test framework). The plan translating the spec onto the
+real stack lives at `/Users/dimitriosdavourlis/.claude/plans/rosy-doodling-toast.md` (overwritten from the
+Phase 2 plan above — not part of the repo). Extends the Phase 2 MVP's real infrastructure rather than
+building a parallel `ai_*` schema next to it.
+
+- **`scout_model_config` (migration 052)**: provider/model/tier/pricing as an admin-editable table instead
+  of hardcoded constants — `api/scout.js` reads it (service-role, 5-minute in-memory cache) to pick which
+  model answers a tier and to estimate cost before calling it, falling back to hardcoded
+  `ANTHROPIC_DEFAULTS` if a tier has no enabled row. Seeded with the real Haiku/Sonnet rows (economy/standard
+  → Haiku, advanced/premium → Sonnet) plus Gemini/Grok/OpenAI rows seeded `enabled: false` — real,
+  ready-to-flip placeholders, not live: no API keys exist for those providers in this project, and turning
+  one on for live traffic needs a benchmark pass first, same reasoning as the Phase 2 MVP's deferral.
+  Admin-only reads/writes via `admin_get_model_config()`/`admin_update_model_config()`.
+- **`scout_daily_usage` + atomic reservation (migration 053)**: fixes a real, previously-unfixed race in
+  `increment_scout_usage()` (migration ~008) — that function inserted a `scout_history` marker row
+  unconditionally, then counted same-day markers, with the actual limit check happening *after* the insert
+  in `api/scout.js`; two concurrent requests near a plan's limit boundary could both pass. `reserve_scout_question(p_user, p_plan_limit)`
+  does the increment-and-check as one atomic `insert ... on conflict ... do update`, row-locked by Postgres
+  for its duration — no check-then-act window. `release_scout_question()` gives the slot back when a
+  reservation succeeded but no real answer was produced (provider failure); `record_scout_usage_cost()` adds
+  real token/cost numbers once a reply completes. `api/scout.js`'s `meter()` was split into `getProfileMeta()`
+  (plan/admin/unlimited lookup only) + these three RPC callers.
+- **Complexity scoring + 4-tier routing (`complexityScore()`, `selectModelTier()`)**: a deterministic 0-100
+  score (text length, classifier intent, `needs_tool`, strategic/multi-year phrasing) maps to
+  economy/standard/advanced/premium, layered on top of the existing, production-validated
+  `shouldRouteToHaiku()` gate rather than replacing it — the score only picks which tier within whichever
+  side of that gate a message already falls on. `PLAN_MODEL_ACCESS` (free→standard, starter/pro→advanced,
+  elite→premium) then caps the result — the one genuinely new behavior: a Free-plan user's non-tool-requiring
+  Sonnet-bound question (career_advice, scouting_analysis) now gets capped down to Haiku instead of reaching
+  Sonnet. Tool-requiring questions (db_lookup/web_lookup) are never capped by plan — search correctness isn't
+  a discretionary luxury. Verified against the spec's own worked examples (Elite simple question → economy;
+  Elite 3-year-strategy question → premium; Pro/Starter complex question → advanced, never premium) in a
+  one-off Node test harness (no test framework exists to hang a permanent suite off of).
+- **Cost budget gate (`budgetGate()`, `TARGET_COSTS`/`HARD_MAX_COST_PER_REQUEST`)**: downgrades (never
+  upgrades) a tier if its own worst-case cost — using that tier's `max_output_tokens` as the ceiling —
+  would exceed an env-overridable per-plan hard limit.
+- **`AiProviderAdapter` (`anthropicAdapter`, `unconfiguredAdapter()`)**: one shared `{provider, generate()}`
+  shape; the handler calls `adapterFor(provider).generate(...)` without ever branching on provider name.
+  Gemini/xAI/OpenAI adapters are code-complete stubs that throw if ever reached — never invoked while their
+  `scout_model_config` rows stay disabled.
+- **Response cache (migration 054, `scout_response_cache`)**: a plain TTL'd cache of actual answers Scout
+  has already produced, distinct from the curated `scout_faq` — only for `simple_knowledge` (the one intent
+  that's non-personalized by definition), keyed by intent+text+lang+tier, and never written if the response
+  carried `profile_updates`/`scout_context_updates`.
+- **`search_events()` (migration 055)**: mirrors `search_players()` for the `events` table — a second
+  database-first tool (`search_golsz_events`) so "trials near me" gets a real, verified GOLSZ listing instead
+  of falling through to general web search or an invented one.
+- **Rate limiting + idempotency**: in-memory, scoped to one warm serverless instance (`isRateLimited()`,
+  `isDuplicateRequest()`) — an honest, documented limitation, not a distributed guarantee; the daily-limit
+  atomicity above is the real guarantee, this is a best-effort second layer against a double-click/retry-storm
+  landing on the same instance. Client sends a `requestId` (UUID) per send.
+- **Emergency switches**: `SCOUT_GLOBAL_ENABLED`/`SCOUT_PREMIUM_ENABLED`/`SCOUT_DAILY_SPEND_LIMIT_USD`/
+  `SCOUT_MONTHLY_SPEND_LIMIT_USD` env vars, checked before any model call or DB write; a tripped switch
+  returns the same graceful message an ordinary outage would.
+- **Client "questions remaining" UI**: `Scout()`'s header shows `{remaining} QUESTIONS LEFT TODAY` once a
+  `scout_usage` field arrives on any response (present on success and on a 402 limit-reached response);
+  never shown for admin/unlimited accounts (server omits the field).
+- **Admin dashboard (migration 056)**: extends the existing Analytics → "AI Model Usage" card —
+  `admin_scout_cost_by_plan()`, `admin_scout_cache_stats()`, `admin_scout_top_cost_users()` (dollar figures +
+  call counts only, never question content — same metadata-yes/content-no boundary as `scout_faq_misses`),
+  `admin_scout_margin_summary()` (AI cost as % of that plan's monthly revenue, with a ⚠ badge past the
+  spec's own thresholds: Starter/Pro >10%, Elite >15%).
+- **Explicitly not done**: no TypeScript/Jest/build-step introduced (verification instead: `node --check`,
+  a full-file Babel syntax check, and a one-off Node harness for the tier-selection logic); no live
+  Gemini/Grok/OpenAI traffic (no API keys in this project, deferred pending a benchmark); `scout_routing_log`'s
+  anonymity (no `user_id`, migration-038 privacy audit) is unchanged — per-user cost visibility lives only in
+  `scout_daily_usage`, which carries `user_id` + dollar figures, never conversation content.
+
 ### Scout double-reply fix — `sendingRef` re-entrancy guard
 
 - **Real bug, not a formatting issue:** users reported Scout sometimes answering with two replies back-to-back
