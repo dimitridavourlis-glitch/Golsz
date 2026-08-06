@@ -20,6 +20,9 @@
 //   STARTER_DAILY_LIMIT      Scout calls/day on Starter ($6/mo, default 8)
 //   PRO_DAILY_LIMIT          Scout calls/day on Pro ($14/mo, default 15)
 //   ELITE_DAILY_LIMIT        Scout calls/day on Elite ($30/mo, default 20)
+//   FREE_LIFETIME_LIMIT      total Scout calls EVER on the free plan, never
+//                            resets (default 40) — separate from
+//                            FREE_DAILY_LIMIT, see migration 068
 //
 // Routing: every message is classified first (classifyIntent, cheap Haiku
 // call). Low-stakes, no-tool-needed intents (simple_knowledge,
@@ -1187,6 +1190,42 @@ async function releaseScoutQuestion(userId) {
   } catch (e) { console.error("GOLSZ release_scout_question failed:", e); }
 }
 
+// Lifetime counterpart to reserveScoutQuestion/releaseScoutQuestion above —
+// same atomic RPC pattern (migration 068), but backed by
+// profiles.free_ai_lifetime_used, which never resets. Only ever called for
+// plan === 'free': "GOLSZ sells athlete progression, not AI questions" means
+// the free plan is a bounded trial, not a daily allowance that runs forever.
+async function reserveFreeAiQuestion(userId, limit) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key || !userId) return { allowed: true, used: 0, limit };
+  try {
+    const r = await fetch(url + "/rest/v1/rpc/reserve_free_ai_question", {
+      method: "POST",
+      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_user: userId, p_lifetime_limit: limit }),
+    });
+    const data = await r.json();
+    return data && typeof data === "object" ? data : { allowed: true, used: 0, limit };
+  } catch {
+    return { allowed: true, used: 0, limit };
+  }
+}
+
+async function releaseFreeAiQuestion(userId) {
+  if (!userId) return;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return;
+  try {
+    await fetch(url + "/rest/v1/rpc/release_free_ai_question", {
+      method: "POST",
+      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_user: userId }),
+    });
+  } catch (e) { console.error("GOLSZ release_free_ai_question failed:", e); }
+}
+
 // Adds the real token/cost numbers to today's scout_daily_usage row once a
 // reply actually completes — separate from reservation since the cost
 // isn't known until after the model responds.
@@ -1310,6 +1349,7 @@ export default async function handler(req, res) {
   let dailyLimit = null;
   let questionsRemaining = null; // null = no usage info to show the client (unmetered deployment, or an unlimited/admin account)
   let reservedQuestion = false; // true once reserve_scout_question has counted this request — release it if we bail before a real answer
+  let reservedFreeAi = false; // true once reserve_free_ai_question (068, lifetime, free plan only) has counted this request
   if (process.env.SUPABASE_URL) {
     userId = await getUserId(req.headers.authorization);
     if (!userId) return res.status(401).json({ error: "Sign in to use the Scout." });
@@ -1356,6 +1396,30 @@ export default async function handler(req, res) {
           ? "Daily Scout limit reached. Upgrade to Pro or Elite for more Scout messages."
           : "Free daily limit reached. Upgrade for more Scout messages.";
         return res.status(402).json({ error: message, scout_usage: { remaining: 0, limit: dailyLimit } });
+      }
+
+      // Lifetime free AI budget (migration 068) — checked only for plan ===
+      // 'free', only after the daily reservation succeeds (a request that
+      // was never going to run today shouldn't burn lifetime budget either).
+      // Distinct status code (403, not the daily-limit's 402) and error
+      // shape so the client can show "upgrade to keep using Scout" instead
+      // of "try again tomorrow" — those are different problems for the
+      // athlete to solve. Model tier is already capped to Haiku-equivalent
+      // for free plan by PLAN_MODEL_ACCESS below; this only bounds HOW MANY
+      // of those cheap replies a free account ever gets, not just per day.
+      if (plan === "free") {
+        const freeLifetimeLimit = Number(process.env.FREE_LIFETIME_LIMIT || 40);
+        const freeReservation = await reserveFreeAiQuestion(userId, freeLifetimeLimit);
+        reservedFreeAi = true;
+        if (!freeReservation.allowed) {
+          await releaseScoutQuestion(userId);
+          reservedQuestion = false;
+          return res.status(403).json({
+            error: "You've used all your free GOLSZ Scout questions. Upgrade to keep getting AI-powered guidance.",
+            code: "free_ai_exhausted",
+            scout_usage: { remaining: 0, limit: dailyLimit },
+          });
+        }
       }
     }
   }
@@ -1558,6 +1622,7 @@ export default async function handler(req, res) {
       // same wording/status as the emergency kill-switch responses above.
       console.log("GOLSZ haiku fallback also failed:", JSON.stringify(haikuFallback.data));
       if (reservedQuestion) await releaseScoutQuestion(userId);
+      if (reservedFreeAi) await releaseFreeAiQuestion(userId);
       await logError("api/scout.js", "Both Sonnet and Haiku failed (automatic failover exhausted)", { detail: JSON.stringify({ sonnet: sonnetResult.data, haiku: haikuFallback.data }) });
       return res.status(503).json({ error: "Scout is temporarily unavailable. Please try again shortly." });
     }
@@ -1573,6 +1638,7 @@ export default async function handler(req, res) {
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
     if (reservedQuestion) await releaseScoutQuestion(userId);
+    if (reservedFreeAi) await releaseFreeAiQuestion(userId);
     await logError("api/scout.js", "Upstream model call failed", { detail: String(e) });
     return res.status(502).json({ error: "Upstream model call failed", detail: String(e) });
   }
