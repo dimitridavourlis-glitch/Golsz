@@ -311,6 +311,7 @@ const I18N = {
     blocked_title: "Blocked accounts", blocked_empty: "You haven't blocked anyone.", blocked_unblock: "Unblock",
     admin_checking: "Checking access…", admin_only: "Admins only.", admin_title: "Admin panel",
     admin_stat_users: "USERS", admin_stat_posts: "POSTS", admin_stat_events: "EVENTS", admin_stat_pending: "PENDING",
+    admin_stat_verified: "VERIFIED", admin_stat_pending_verification: "PENDING VERIF.", admin_stat_pending_appeals: "PENDING APPEALS",
     admin_tab_reports: "Reports", admin_tab_users: "Users", admin_tab_analytics: "Analytics", admin_tab_audit: "Audit log", admin_tab_moderation: "Moderation", admin_tab_errors: "Errors", admin_tab_system: "System", admin_view_auto_queue: "Auto Queue",
     admin_no_moderation_items: "Nothing flagged yet.", admin_minor_safety: "MINOR SAFETY", admin_confidence: "confidence",
     admin_no_errors: "No errors logged. All quiet.",
@@ -513,6 +514,7 @@ const I18N = {
     blocked_title: "Comptes bloqués", blocked_empty: "Vous n'avez bloqué personne.", blocked_unblock: "Débloquer",
     admin_checking: "Vérification de l'accès…", admin_only: "Réservé aux administrateurs.", admin_title: "Panneau d'administration",
     admin_stat_users: "UTILISATEURS", admin_stat_posts: "PUBLICATIONS", admin_stat_events: "ÉVÉNEMENTS", admin_stat_pending: "EN ATTENTE",
+    admin_stat_verified: "VÉRIFIÉS", admin_stat_pending_verification: "VÉRIF. EN ATTENTE", admin_stat_pending_appeals: "APPELS EN ATTENTE",
     admin_tab_reports: "Signalements", admin_tab_users: "Utilisateurs", admin_tab_analytics: "Analytique", admin_tab_audit: "Journal d'audit", admin_tab_moderation: "Modération", admin_tab_errors: "Erreurs", admin_tab_system: "Système", admin_view_auto_queue: "File automatique",
     admin_no_moderation_items: "Rien de signalé pour l'instant.", admin_minor_safety: "SÉCURITÉ MINEUR", admin_confidence: "confiance",
     admin_no_errors: "Aucune erreur enregistrée. Tout va bien.",
@@ -715,6 +717,7 @@ const I18N = {
     blocked_title: "Cuentas bloqueadas", blocked_empty: "No has bloqueado a nadie.", blocked_unblock: "Desbloquear",
     admin_checking: "Comprobando acceso…", admin_only: "Solo administradores.", admin_title: "Panel de administración",
     admin_stat_users: "USUARIOS", admin_stat_posts: "PUBLICACIONES", admin_stat_events: "EVENTOS", admin_stat_pending: "PENDIENTES",
+    admin_stat_verified: "VERIFICADOS", admin_stat_pending_verification: "VERIF. PENDIENTE", admin_stat_pending_appeals: "APELACIONES PENDIENTES",
     admin_tab_reports: "Reportes", admin_tab_users: "Usuarios", admin_tab_analytics: "Analítica", admin_tab_audit: "Registro de auditoría", admin_tab_moderation: "Moderación", admin_tab_errors: "Errores", admin_tab_system: "Sistema", admin_view_auto_queue: "Cola automática",
     admin_no_moderation_items: "Nada marcado todavía.", admin_minor_safety: "SEGURIDAD MENOR", admin_confidence: "confianza",
     admin_no_errors: "No hay errores registrados. Todo tranquilo.",
@@ -917,6 +920,7 @@ const I18N = {
     blocked_title: "Αποκλεισμένοι λογαριασμοί", blocked_empty: "Δεν έχετε αποκλείσει κανέναν.", blocked_unblock: "Άρση αποκλεισμού",
     admin_checking: "Έλεγχος πρόσβασης…", admin_only: "Μόνο για διαχειριστές.", admin_title: "Πίνακας διαχείρισης",
     admin_stat_users: "ΧΡΗΣΤΕΣ", admin_stat_posts: "ΑΝΑΡΤΗΣΕΙΣ", admin_stat_events: "ΕΚΔΗΛΩΣΕΙΣ", admin_stat_pending: "ΕΚΚΡΕΜΗ",
+    admin_stat_verified: "ΕΠΑΛΗΘΕΥΜΕΝΟΙ", admin_stat_pending_verification: "ΕΚΚΡ. ΕΠΑΛΗΘΕΥΣΗ", admin_stat_pending_appeals: "ΕΚΚΡ. ΕΝΣΤΑΣΕΙΣ",
     admin_tab_reports: "Αναφορές", admin_tab_users: "Χρήστες", admin_tab_analytics: "Αναλυτικά", admin_tab_audit: "Αρχείο καταγραφής", admin_tab_moderation: "Συντονισμός", admin_tab_errors: "Σφάλματα", admin_tab_system: "Σύστημα", admin_view_auto_queue: "Αυτόματη ουρά",
     admin_no_moderation_items: "Τίποτα επισημασμένο ακόμα.", admin_minor_safety: "ΑΣΦΑΛΕΙΑ ΑΝΗΛΙΚΩΝ", admin_confidence: "βεβαιότητα",
     admin_no_errors: "Δεν έχουν καταγραφεί σφάλματα. Όλα ήσυχα.",
@@ -4052,11 +4056,14 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       {/* career timeline */}
       <Timeline viewUserId={viewingOther ? viewUserId : null} />
 
-      {/* Posts grid, Family & Parent Access, and Blocked Accounts are
-          launch-scoped off Passport for now — PostsGrid/FamilyAccess/
-          BlockedAccounts are untouched, just not rendered here. */}
+      {/* Posts grid, Family & Parent Access, Blocked Accounts, and the
+          restricted-minor banner are launch-scoped off Passport for now
+          — PostsGrid/FamilyAccess/BlockedAccounts/RestrictedBanner are
+          untouched, just not rendered here. The banner specifically:
+          is_restricted_minor() itself was disabled (migration 066)
+          since there's no account-to-account contact surface live right
+          now, so showing "you're restricted" would just be inaccurate. */}
 
-      {!viewingOther && <RestrictedBanner />}
       {!viewingOther && real && profile && <VerificationRequest occupation={profile.occupation} />}
 
       {!viewingOther && profile && profile.is_admin && (
@@ -4326,7 +4333,10 @@ function AdminPanel({ onBack }) {
   // navigate: a 4-wide bar fits without horizontal scrolling, a 6-wide one
   // didn't and was easy to mis-tap or scroll past.
   const [tab, setTab] = useState("moderation");
-  const [moderationView, setModerationView] = useState("reports"); // "reports" | "queue"
+  // Reports (post_reports) is launch-scoped off the sub-nav below since
+  // Feed is off and nothing new lands there — "queue" is the new default
+  // landing view instead of the now-unreachable "reports".
+  const [moderationView, setModerationView] = useState("queue");
   const [systemView, setSystemView] = useState("audit"); // "audit" | "errors"
   const [stats, setStats] = useState(null);
   const [reports, setReports] = useState(null);
@@ -4348,15 +4358,19 @@ function AdminPanel({ onBack }) {
   const [expandedActivityId, setExpandedActivityId] = useState(null);
   const [userActivity, setUserActivity] = useState({}); // userId -> { perDay: [{label, value}], today, week, month }
 
+  // Posts/Events counts and pending post_reports used to headline this —
+  // swapped for stats that actually map to the two Moderation sub-tabs
+  // still live (Verification, Appeals) now that Feed/Events/Reports are
+  // launch-scoped off along with their own admin tools below.
   async function loadStats() {
     try {
-      const [{ count: userCount }, { count: postCount }, { count: eventCount }, { count: pendingReports }] = await Promise.all([
+      const [{ count: userCount }, { count: verifiedCount }, { count: pendingVerification }, { count: pendingAppeals }] = await Promise.all([
         sb.from("profiles").select("id", { count: "exact", head: true }),
-        sb.from("posts").select("id", { count: "exact", head: true }),
-        sb.from("events").select("id", { count: "exact", head: true }),
-        sb.from("post_reports").select("id", { count: "exact", head: true }).is("resolved_at", null),
+        sb.from("profiles").select("id", { count: "exact", head: true }).eq("identity_verified", true),
+        sb.from("verification_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        sb.from("moderation_appeals").select("id", { count: "exact", head: true }).eq("status", "pending"),
       ]);
-      setStats({ userCount: userCount || 0, postCount: postCount || 0, eventCount: eventCount || 0, pendingReports: pendingReports || 0 });
+      setStats({ userCount: userCount || 0, verifiedCount: verifiedCount || 0, pendingVerification: pendingVerification || 0, pendingAppeals: pendingAppeals || 0 });
     } catch (e) { console.error("GOLSZ admin stats error:", e); }
   }
 
@@ -4836,7 +4850,10 @@ function AdminPanel({ onBack }) {
         const { data: prof } = await sb.from("profiles").select("is_admin").eq("id", user.id).single();
         const ok = !!(prof && prof.is_admin);
         setAuthorized(ok);
-        if (ok) { loadStats(); loadReports(); loadUsers(); loadEvents(); loadAnalytics(); loadAuditLog(); loadModerationQueue(); loadVerificationRequests(); loadAppeals(); loadErrorLog(); loadFaqMisses(); }
+        // loadReports()/loadEvents() are skipped here — their tabs
+        // (Reports, Manage events) are launch-scoped off below, so
+        // there's no UI these would populate right now.
+        if (ok) { loadStats(); loadUsers(); loadAnalytics(); loadAuditLog(); loadModerationQueue(); loadVerificationRequests(); loadAppeals(); loadErrorLog(); loadFaqMisses(); }
       } catch (e) { console.error("GOLSZ admin auth-check error:", e); setAuthorized(false); }
     })();
   }, []);
@@ -4882,9 +4899,9 @@ function AdminPanel({ onBack }) {
 
       {stats && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
-          {[["users", t("admin_stat_users"), stats.userCount], ["posts", t("admin_stat_posts"), stats.postCount], ["events", t("admin_stat_events"), stats.eventCount], ["pending", t("admin_stat_pending"), stats.pendingReports]].map(([id, label, v]) => (
+          {[["users", t("admin_stat_users"), stats.userCount], ["verified", t("admin_stat_verified"), stats.verifiedCount], ["pendingVerification", t("admin_stat_pending_verification"), stats.pendingVerification], ["pendingAppeals", t("admin_stat_pending_appeals"), stats.pendingAppeals]].map(([id, label, v]) => (
             <div key={id} style={{ ...card, margin: 0, padding: "10px 8px", textAlign: "center" }}>
-              <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: id === "pending" && v > 0 ? C.amber : C.lime }}>{v}</div>
+              <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: id.startsWith("pending") && v > 0 ? C.amber : C.lime }}>{v}</div>
               <div style={{ fontSize: 9, letterSpacing: "0.08em", color: C.slate, fontWeight: 700 }}>{label}</div>
             </div>
           ))}
@@ -4903,8 +4920,10 @@ function AdminPanel({ onBack }) {
 
       {tab === "moderation" && (
         <div>
+          {/* Reports (post_reports, Feed-specific) is launch-scoped off —
+              its own code below is untouched, just not reachable from
+              this sub-nav for now. */}
           {subNav([
-            ["reports", t("admin_tab_reports")],
             ["queue", t("admin_view_auto_queue")],
             ["verification", t("admin_view_verification")],
             ["appeals", t("admin_view_appeals")],
@@ -5415,50 +5434,9 @@ function AdminPanel({ onBack }) {
                 </>
               )}
 
-              <button onClick={() => setShowEventsManager((s) => !s)} style={{ ...iconBtn(C.chalk), width: "100%", justifyContent: "center", marginTop: 4, marginBottom: showEventsManager ? 10 : 0 }}>
-                {showEventsManager ? "▴" : "▾"} {t("admin_manage_events")}
-              </button>
-
-              {showEventsManager && (
-                <div>
-                  <div style={{ ...card }}>
-                    <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("admin_add_event")}</div>
-                    <input value={evTitle} onChange={(e) => setEvTitle(e.target.value)} placeholder={t("admin_title_ph")} style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 8 }} />
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                      <select value={evSport} onChange={(e) => setEvSport(e.target.value)} style={field}>
-                        {SPORTS.filter((s) => s !== "All").map((s) => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                      <input type="date" value={evDate} onChange={(e) => setEvDate(e.target.value)} style={field} />
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                      <input value={evLoc} onChange={(e) => setEvLoc(e.target.value)} placeholder={t("admin_location_ph")} style={field} />
-                      <input value={evLevel} onChange={(e) => setEvLevel(e.target.value)} placeholder={t("admin_level_ph")} style={field} />
-                    </div>
-                    <input type="number" value={evSpots} onChange={(e) => setEvSpots(e.target.value)} placeholder={t("admin_spots_ph")} style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
-                    <button onClick={createEvent} disabled={!evTitle.trim() || !evDate} style={{
-                      width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 10, padding: "11px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit",
-                      opacity: !evTitle.trim() || !evDate ? 0.5 : 1,
-                    }}>{t("admin_create_event")}</button>
-                  </div>
-                  {events === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
-                  {events && events.map((e) => (
-                    <div key={e.id} style={{ ...card, display: "flex", alignItems: "center", gap: 10, opacity: e.is_blocked ? 0.6 : 1 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                          {e.title}
-                          {e.is_blocked && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_blocked")}</span>}
-                        </div>
-                        <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{e.event_date} · {e.sport} · {e.location || "—"}</div>
-                      </div>
-                      <button onClick={() => setEventBlocked(e.id, !e.is_blocked)} style={{
-                        fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                        background: e.is_blocked ? "#C89B3C1a" : "transparent", color: e.is_blocked ? C.amber : C.slate, border: `1px solid ${e.is_blocked ? C.amber : C.line2}`,
-                      }}>{e.is_blocked ? t("admin_unblock_event") : t("admin_block_event")}</button>
-                      <button onClick={() => deleteEvent(e.id)} style={iconBtn(C.amber)}><Trash2 size={15} /></button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Manage events is launch-scoped off along with Events
+                  itself — createEvent/deleteEvent/setEventBlocked and
+                  this whole tool are untouched, just not rendered. */}
             </>
           )}
         </div>
