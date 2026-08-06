@@ -106,7 +106,7 @@ const C = {
 /* ============ mock data ============ */
 const PASSPORT = {
   name: "Dimitri K.", handle: "@dimitri.k", id: "GLS·CA·2027·04418",
-  sport: "Soccer", position: "Left Back", nat: "🇨🇦 Canada", foot: "Right",
+  sport: "Soccer", position: "Left Back", positionLabel: "POSITION", nat: "🇨🇦 Canada", foot: "Right",
   height: "5'11\"", grad: "2027", club: "Toronto FC Academy", level: "NCAA-track",
   gpa: "3.8", pace: "34.1 km/h", initials: "DK",
   badges: [
@@ -272,6 +272,7 @@ const I18N = {
     highlights_add_err: "Couldn't add that link.", highlights_watch: "Watch highlight",
     editor_title: "Build your profile", editor_name_label: "FULL NAME", editor_name_ph: "Your name",
     editor_sport_label: "SPORT", editor_select: "Select…", editor_position_label: "POSITION",
+    editor_sport_specific_note: "We tailor a couple of questions to your sport so your AI Scout can give more specific advice.",
     editor_position_pick_sport: "Pick a sport first", editor_gender_label: "GENDER", editor_grad_year_label: "GRAD YEAR",
     editor_school_level_label: "SCHOOL LEVEL",
     editor_height_label: "HEIGHT (CM)", editor_weight_label: "WEIGHT (KG)", editor_gpa_label: "GPA",
@@ -473,6 +474,7 @@ const I18N = {
     highlights_add_err: "Impossible d'ajouter ce lien.", highlights_watch: "Voir le temps fort",
     editor_title: "Créez votre profil", editor_name_label: "NOM COMPLET", editor_name_ph: "Votre nom",
     editor_sport_label: "SPORT", editor_select: "Sélectionner…", editor_position_label: "POSTE",
+    editor_sport_specific_note: "Nous adaptons quelques questions à votre sport pour que votre Agent IA puisse donner des conseils plus précis.",
     editor_position_pick_sport: "Choisissez d'abord un sport", editor_gender_label: "GENRE", editor_grad_year_label: "ANNÉE DE DIPLÔME",
     editor_school_level_label: "NIVEAU SCOLAIRE",
     editor_height_label: "TAILLE (CM)", editor_weight_label: "POIDS (KG)", editor_gpa_label: "MOYENNE (GPA)",
@@ -674,6 +676,7 @@ const I18N = {
     highlights_add_err: "No se pudo añadir ese enlace.", highlights_watch: "Ver la jugada",
     editor_title: "Crea tu perfil", editor_name_label: "NOMBRE COMPLETO", editor_name_ph: "Tu nombre",
     editor_sport_label: "DEPORTE", editor_select: "Seleccionar…", editor_position_label: "POSICIÓN",
+    editor_sport_specific_note: "Adaptamos algunas preguntas a tu deporte para que tu Agente IA pueda darte consejos más específicos.",
     editor_position_pick_sport: "Elige primero un deporte", editor_gender_label: "GÉNERO", editor_grad_year_label: "AÑO DE GRADUACIÓN",
     editor_school_level_label: "NIVEL ESCOLAR",
     editor_height_label: "ALTURA (CM)", editor_weight_label: "PESO (KG)", editor_gpa_label: "PROMEDIO (GPA)",
@@ -875,6 +878,7 @@ const I18N = {
     highlights_add_err: "Δεν ήταν δυνατή η προσθήκη αυτού του συνδέσμου.", highlights_watch: "Δείτε το highlight",
     editor_title: "Δημιουργήστε το προφίλ σας", editor_name_label: "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", editor_name_ph: "Το όνομά σας",
     editor_sport_label: "ΑΘΛΗΜΑ", editor_select: "Επιλέξτε…", editor_position_label: "ΘΕΣΗ",
+    editor_sport_specific_note: "Προσαρμόζουμε μερικές ερωτήσεις στο άθλημά σας ώστε ο AI Σκάουτ να δώσει πιο συγκεκριμένες συμβουλές.",
     editor_position_pick_sport: "Επιλέξτε πρώτα άθλημα", editor_gender_label: "ΦΥΛΟ", editor_grad_year_label: "ΕΤΟΣ ΑΠΟΦΟΙΤΗΣΗΣ",
     editor_school_level_label: "ΕΚΠΑΙΔΕΥΤΙΚΟ ΕΠΙΠΕΔΟ",
     editor_height_label: "ΥΨΟΣ (ΕΚ)", editor_weight_label: "ΒΑΡΟΣ (ΚΙΛΑ)", editor_gpa_label: "ΒΑΘΜΟΣ (GPA)",
@@ -2004,12 +2008,74 @@ const SPORT_POSITIONS = {
   Track: ["Sprints (100m–200m)", "400m", "Middle Distance (800m–1500m)", "Distance (3000m+)", "Hurdles", "Relay", "Long Jump", "Triple Jump", "High Jump", "Pole Vault", "Shot Put", "Discus", "Javelin", "Hammer Throw", "Multi-Event (Combined)"],
   Hockey: ["Goalie", "Left Defense", "Right Defense", "Center", "Left Wing", "Right Wing"],
   Tennis: ["Singles", "Doubles", "Singles & Doubles"],
+  "American Football": ["Quarterback", "Running Back", "Wide Receiver", "Tight End", "Offensive Line", "Defensive Line", "Linebacker", "Cornerback", "Safety", "Kicker/Punter"],
+  Baseball: ["Pitcher", "Catcher", "First Base", "Second Base", "Third Base", "Shortstop", "Left Field", "Center Field", "Right Field", "Designated Hitter"],
+  Softball: ["Pitcher", "Catcher", "First Base", "Second Base", "Third Base", "Shortstop", "Left Field", "Center Field", "Right Field"],
+  Volleyball: ["Outside Hitter", "Opposite Hitter", "Middle Blocker", "Setter", "Libero", "Defensive Specialist"],
+  Lacrosse: ["Attack", "Midfield", "Defense", "Goalie", "Faceoff Specialist", "Long Stick Midfielder"],
+  "Field Hockey": ["Goalkeeper", "Defender", "Midfielder", "Forward"],
+  Rugby: ["Prop", "Hooker", "Lock", "Flanker", "Number 8", "Scrum-half", "Fly-half", "Center", "Wing", "Fullback"],
+  Handball: ["Goalkeeper", "Left Back", "Right Back", "Center Back", "Left Wing", "Right Wing", "Pivot"],
+  "Water Polo": ["Goalkeeper", "Center Forward", "Center Back", "Driver", "Wing", "Point"],
+  Cricket: ["Batsman", "Bowler", "All-rounder", "Wicket-keeper"],
+  Cheerleading: ["Base", "Flyer", "Backspot", "Tumbler"],
+  Swimming: ["Freestyle", "Backstroke", "Breaststroke", "Butterfly", "Individual Medley", "Relay"],
+  Diving: ["Springboard (1m)", "Springboard (3m)", "Platform", "Synchronized"],
+  "Cross Country": ["5K", "8K", "10K", "Relay"],
+  Triathlon: ["Sprint", "Olympic", "Half-Ironman", "Ironman", "Duathlon"],
+  Boxing: ["Flyweight", "Bantamweight", "Featherweight", "Lightweight", "Welterweight", "Middleweight", "Light Heavyweight", "Heavyweight"],
+  Wrestling: ["Flyweight", "Bantamweight", "Featherweight", "Lightweight", "Welterweight", "Middleweight", "Light Heavyweight", "Heavyweight"],
+  Weightlifting: ["Flyweight", "Bantamweight", "Featherweight", "Lightweight", "Middleweight", "Light Heavyweight", "Heavyweight", "Super Heavyweight"],
+  "Martial Arts": ["Karate", "Taekwondo", "Judo", "Brazilian Jiu-Jitsu", "MMA", "Kickboxing", "Wrestling"],
+  Cycling: ["Road", "Track", "Mountain Bike", "BMX", "Cyclocross"],
+  Gymnastics: ["Floor", "Vault", "Balance Beam", "Uneven Bars", "Rings", "Pommel Horse", "Parallel Bars", "High Bar", "All-Around"],
+  Skiing: ["Alpine", "Cross-Country", "Freestyle", "Ski Jumping", "Slalom", "Giant Slalom"],
+  Snowboarding: ["Halfpipe", "Slopestyle", "Big Air", "Snowboard Cross", "Freeride"],
+  Equestrian: ["Dressage", "Show Jumping", "Eventing", "Western", "Reining"],
+  Fencing: ["Foil", "Épée", "Sabre"],
+  Sailing: ["Dinghy", "Keelboat", "Windsurfing", "Match Racing"],
+  Rowing: ["Coxswain", "Sweep (Port)", "Sweep (Starboard)", "Sculling"],
+  Archery: ["Recurve", "Compound", "Barebow"],
+  "Table Tennis": ["Singles", "Doubles", "Mixed Doubles"],
+  Badminton: ["Singles", "Doubles", "Mixed Doubles"],
+  Squash: ["Singles", "Doubles"],
+  Racquetball: ["Singles", "Doubles"],
 };
+// Default label is "POSITION" (editor_position_label) — these override it
+// for sports where "position" isn't the right word for what's actually
+// being asked (an event, a weight class, a discipline, etc.).
+const SPORT_POSITION_LABEL = {
+  Track: "EVENT", Swimming: "EVENT", Diving: "EVENT", "Cross Country": "EVENT", Triathlon: "EVENT", Gymnastics: "EVENT",
+  Boxing: "WEIGHT CLASS", Wrestling: "WEIGHT CLASS", Weightlifting: "WEIGHT CLASS",
+  "Martial Arts": "DISCIPLINE", Cycling: "DISCIPLINE", Skiing: "DISCIPLINE", Snowboarding: "DISCIPLINE", Equestrian: "DISCIPLINE",
+  Fencing: "WEAPON", Sailing: "CLASS", Rowing: "SEAT", Archery: "DIVISION",
+  Tennis: "PLAYS", "Table Tennis": "PLAYS", Badminton: "PLAYS", Squash: "PLAYS", Racquetball: "PLAYS",
+  Cheerleading: "ROLE",
+};
+// Golf and Bowling have no natural position/event/discipline concept —
+// the field is hidden entirely rather than showing a mismatched fallback.
+const SPORTS_WITHOUT_POSITION = ["Golf", "Bowling"];
 const SPORT_PREFERENCE = {
   Soccer: { label: "PREFERRED FOOT", options: ["Left", "Right", "Both"] },
   Hockey: { label: "SHOOTS", options: ["Left", "Right"] },
   Basketball: { label: "DOMINANT HAND", options: ["Left", "Right", "Ambidextrous"] },
   Tennis: { label: "PLAYS", options: ["Right-handed", "Left-handed", "Ambidextrous"] },
+  Baseball: { label: "BATS/THROWS", options: ["Right", "Left", "Switch"] },
+  Softball: { label: "BATS/THROWS", options: ["Right", "Left", "Switch"] },
+  Golf: { label: "PLAYS", options: ["Right-handed", "Left-handed"] },
+  Cricket: { label: "BATTING STYLE", options: ["Right-handed", "Left-handed"] },
+  "Table Tennis": { label: "PLAYS", options: ["Right-handed", "Left-handed"] },
+  Badminton: { label: "PLAYS", options: ["Right-handed", "Left-handed"] },
+  Squash: { label: "PLAYS", options: ["Right-handed", "Left-handed"] },
+  Racquetball: { label: "PLAYS", options: ["Right-handed", "Left-handed"] },
+  Fencing: { label: "STANCE", options: ["Right-handed", "Left-handed"] },
+  Boxing: { label: "STANCE", options: ["Orthodox", "Southpaw"] },
+  "Martial Arts": { label: "STANCE", options: ["Orthodox", "Southpaw"] },
+  Archery: { label: "STYLE", options: ["Right-handed", "Left-handed"] },
+  Volleyball: { label: "HITS", options: ["Right-handed", "Left-handed"] },
+  "Water Polo": { label: "THROWS", options: ["Right-handed", "Left-handed"] },
+  Handball: { label: "THROWS", options: ["Right-handed", "Left-handed"] },
+  Lacrosse: { label: "THROWS", options: ["Right-handed", "Left-handed"] },
 };
 
 function Discover({ onMessage, onViewProfile }) {
@@ -3196,6 +3262,7 @@ function toPassport(profile, ath, uid, t) {
     id: `GLS·${(country ? country.slice(0, 2) : "XX").toUpperCase()}·${dash(ath && ath.grad_year)}·${shortId}`,
     initials: initials(name), nat: `${flagFor(country)} ${dash(country)}`,
     sport: dash(ath && ath.sport), position: dash(ath && ath.position), club: dash(ath && ath.club_name),
+    positionLabel: SPORT_POSITION_LABEL[ath && ath.sport] || "POSITION",
     foot: dash(ath && ath.foot), prefLabel: (SPORT_PREFERENCE[ath && ath.sport] || {}).label || "FOOT",
     height: ath && ath.height_cm ? `${ath.height_cm} cm` : "—",
     grad: [ath && ath.grad_year, ath && ath.education_level].filter(Boolean).join(" · ") || "—",
@@ -3279,7 +3346,7 @@ function PublicPassport({ userId }) {
                 )}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 10px", marginTop: 10, fontSize: 11.5 }}>
                   <div><span style={{ color: C.slate }}>{t("passport_sport")}: </span>{dash(p.sport)}</div>
-                  <div><span style={{ color: C.slate }}>{t("passport_position")}: </span>{dash(p.position)}</div>
+                  <div><span style={{ color: C.slate }}>{p.positionLabel}: </span>{dash(p.position)}</div>
                   <div><span style={{ color: C.slate }}>{t("passport_club")}: </span>{dash(p.club_name)}</div>
                   <div><span style={{ color: C.slate }}>{t("passport_grad")}: </span>{dash(p.grad_year)}</div>
                   <div><span style={{ color: C.slate }}>{t("passport_status")}: </span>{dash(p.recruiting_status)}</div>
@@ -3403,13 +3470,21 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
               {(isPlayer ? SPORTS.filter((s) => s !== "All") : NON_PLAYER_SPORTS).map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          {isPlayer ? (
-            <div><span style={label}>{t("editor_position_label")}</span>
+          {isPlayer && !SPORTS_WITHOUT_POSITION.includes(form.sport) ? (
+            <div><span style={label}>{SPORT_POSITION_LABEL[form.sport] || t("editor_position_label")}</span>
               <input style={field} list="position-options" value={form.position || ""} onChange={set("position")} placeholder={form.sport ? `e.g. ${(SPORT_POSITIONS[form.sport] || POSITIONS)[0]}` : t("editor_position_pick_sport")} />
               <datalist id="position-options">{(SPORT_POSITIONS[form.sport] || POSITIONS.filter((p) => p !== "All")).map((p) => <option key={p} value={p} />)}</datalist>
             </div>
           ) : <div />}
         </>)}
+
+        {/* Position/event options, and the handedness field further down,
+            both swap per sport (see SPORT_POSITIONS/SPORT_POSITION_LABEL/
+            SPORT_PREFERENCE above) — this just tells the athlete why, so
+            it doesn't read as a generic form that happens to change. */}
+        {isPlayer && form.sport && (
+          <div style={{ fontSize: 11.5, color: C.slate, marginTop: -6, marginBottom: 12, lineHeight: 1.4 }}>{t("editor_sport_specific_note")}</div>
+        )}
 
         {isPlayer && row(<>
           <div><span style={label}>{t("editor_gender_label")}</span>
@@ -3870,7 +3945,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
             {isPlayerProfile ? (
               <>
                 <PassRow k={t("passport_sport")} v={p.sport} />
-                <PassRow k={t("passport_position")} v={p.position} />
+                <PassRow k={p.positionLabel} v={p.position} />
                 <PassRow k={t("passport_club")} v={p.club} />
               </>
             ) : (
