@@ -3774,12 +3774,10 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         />
       )}
 
-      {/* A parent's real "profile" is linking to their child, not filling in
-          athlete fields they don't have — surface Family & Parent Access
-          right here instead of making them scroll past a sport/position
-          card full of placeholders to find it (it also still renders in
-          its usual spot below for every other occupation). */}
-      {!viewingOther && isParentProfile && <FamilyAccess />}
+      {/* Family & Parent Access is launch-scoped off Passport for now —
+          <FamilyAccess /> itself is untouched, just not rendered here or
+          in its usual spot below (see the other disabled call near
+          RestrictedBanner/BlockedAccounts). */}
 
       {/* passport document */}
       <div style={{
@@ -3948,13 +3946,12 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       {/* career timeline */}
       <Timeline viewUserId={viewingOther ? viewUserId : null} />
 
-      {/* posts grid */}
-      {real && <PostsGrid viewUserId={viewingOther ? viewUserId : null} />}
+      {/* Posts grid, Family & Parent Access, and Blocked Accounts are
+          launch-scoped off Passport for now — PostsGrid/FamilyAccess/
+          BlockedAccounts are untouched, just not rendered here. */}
 
       {!viewingOther && <RestrictedBanner />}
-      {!viewingOther && <FamilyAccess />}
       {!viewingOther && real && profile && <VerificationRequest occupation={profile.occupation} />}
-      {!viewingOther && <BlockedAccounts />}
 
       {!viewingOther && profile && profile.is_admin && (
         <button onClick={onOpenAdmin} style={{
