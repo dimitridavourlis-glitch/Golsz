@@ -6578,6 +6578,16 @@ const CSS = `
 /* ===== BACKEND CONFIG — fill these in to go live (leave blank to preview) ===== */
 const SUPABASE_URL = "https://wachjqfhlbchcuovyewg.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Po2PXFdCkqZ26mtkJEJ4fA_HHBy5i_s";
+// Cloudflare Turnstile site key (public — safe to embed, same category as
+// SUPABASE_ANON_KEY above, NOT the secret key). Empty by default: the
+// widget and the pre-signup verification call below both no-op entirely
+// until this is set, so signup keeps working exactly as before with no
+// code change needed to ship this file. To activate: create a Turnstile
+// widget at https://dash.cloudflare.com (Turnstile section) for this
+// site's domain, paste its SITE key here, and set its SECRET key as the
+// TURNSTILE_SECRET_KEY env var on Vercel (api/verify-turnstile.js reads
+// it — never put the secret key in this file, it's client-visible).
+const TURNSTILE_SITE_KEY = "";
 const SCOUT_ENDPOINT = "/api/scout";  // same-origin — works on any Vercel deploy + `vercel dev` locally
 // Stripe Payment Link URLs (sandbox/test mode). Re-created 2026-08-05 for
 // the real pricing ($6/$14/$30, see PLANS below) — the old links were for
@@ -6636,6 +6646,53 @@ if (typeof window !== "undefined") {
   });
 }
 
+// Cloudflare Turnstile widget — a real CAPTCHA layer in front of signup,
+// on top of (not instead of) the existing honeypot (see `website` state in
+// Auth below): the honeypot only demotes trust_score after the fact for a
+// bot that fills every field, but does nothing to stop a bot calling
+// Supabase's signup API directly with a scripted request. Renders nothing
+// and never blocks signup when TURNSTILE_SITE_KEY is unset (see that
+// constant's own comment for activation steps) — this component and the
+// api/verify-turnstile.js call in Auth's submit() are both fully inert
+// until then, so shipping this code has zero effect on real signups today.
+function TurnstileWidget({ onToken }) {
+  const ref = useRef(null);
+  const widgetId = useRef(null);
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY || !ref.current) return;
+    let cancelled = false;
+    function renderWidget() {
+      if (cancelled || !window.turnstile || !ref.current || widgetId.current) return;
+      widgetId.current = window.turnstile.render(ref.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        theme: "dark",
+        callback: (token) => onToken(token),
+        "expired-callback": () => onToken(""),
+        "error-callback": () => onToken(""),
+      });
+    }
+    if (window.turnstile) {
+      renderWidget();
+    } else if (!document.getElementById("cf-turnstile-script")) {
+      const script = document.createElement("script");
+      script.id = "cf-turnstile-script";
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      script.async = true; script.defer = true;
+      script.onload = renderWidget;
+      document.head.appendChild(script);
+    } else {
+      document.getElementById("cf-turnstile-script").addEventListener("load", renderWidget);
+    }
+    return () => {
+      cancelled = true;
+      if (window.turnstile && widgetId.current) { try { window.turnstile.remove(widgetId.current); } catch (e) {} }
+      widgetId.current = null;
+    };
+  }, []);
+  if (!TURNSTILE_SITE_KEY) return null;
+  return <div ref={ref} style={{ margin: "4px 0 12px" }} />;
+}
+
 function Auth({ onDone, paidReturn }) {
   const isDesktop = useIsDesktop();
   const { t } = useLang();
@@ -6649,6 +6706,7 @@ function Auth({ onDone, paidReturn }) {
   const [dobYear, setDobYear] = useState("");
   const [parentEmail, setParentEmail] = useState("");
   const [website, setWebsite] = useState(""); // honeypot — real users never see or fill this field, only bots that auto-fill every input do
+  const [turnstileToken, setTurnstileToken] = useState(""); // Cloudflare Turnstile — see TurnstileWidget/TURNSTILE_SITE_KEY above; stays "" (harmless) whenever Turnstile isn't configured
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [notice, setNotice] = useState(paidReturn ? "Payment received! If this is the only tab open, log in below once you've confirmed your email. Otherwise close this tab and go back to where you signed up — it'll sign you in automatically the moment your email is confirmed, from whatever device you use to confirm it." : "");
@@ -6754,7 +6812,8 @@ function Auth({ onDone, paidReturn }) {
   const isMinor = age !== null && age < 18;
   const parentEmailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail.trim());
 
-  const ok = email.trim() && pw.trim() && (!isSignup || (name.trim() && dobOk && (!isMinor || parentEmailOk)));
+  const turnstileOk = !TURNSTILE_SITE_KEY || !isSignup || !!turnstileToken;
+  const ok = email.trim() && pw.trim() && turnstileOk && (!isSignup || (name.trim() && dobOk && (!isMinor || parentEmailOk)));
   const selected = PLANS.find((p) => p.id === plan) || PLANS[0];
   const field = { width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 12, color: C.chalk, padding: "13px 14px", fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 12, boxSizing: "border-box" };
   const dobField = { ...field, marginBottom: 0, textAlign: "center" };
@@ -6795,6 +6854,18 @@ function Auth({ onDone, paidReturn }) {
     setBusy(true);
     try {
       if (isSignup) {
+        // Real bot-blocking layer, on top of (not instead of) the honeypot
+        // above — verified server-side via api/verify-turnstile.js, which
+        // holds the actual secret key. No-ops (never blocks) whenever
+        // TURNSTILE_SITE_KEY is unset, so this is dormant until activated.
+        if (TURNSTILE_SITE_KEY) {
+          const verifyRes = await fetch("/api/verify-turnstile", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: turnstileToken }),
+          });
+          const verifyData = await verifyRes.json().catch(() => ({}));
+          if (!verifyRes.ok || !verifyData.success) throw new Error("Verification failed — please retry the challenge below and try again.");
+        }
         const signupEmail = email.trim();
         const signupPw = pw;
         const { data, error } = await sb.auth.signUp({ email: signupEmail, password: signupPw, options: { data: {
@@ -6991,6 +7062,8 @@ function Auth({ onDone, paidReturn }) {
               )}
             </div>
           )}
+
+          {isSignup && TURNSTILE_SITE_KEY && <TurnstileWidget onToken={setTurnstileToken} />}
 
           {notice && (
             <div style={{ background: "#C8F1351a", border: "1px solid #C8F13544", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
