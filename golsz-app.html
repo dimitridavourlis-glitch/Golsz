@@ -79,6 +79,8 @@ const Plus = svg('<path d="M5 12h14"/><path d="M12 5v14"/>');
 const History = svg('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>');
 const Search = svg('<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>');
 const CalendarPlus = svg('<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M10 16h4"/><path d="M12 14v4"/>');
+const Target = svg('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>');
+const Mail = svg('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>');
 
 
 
@@ -204,6 +206,10 @@ const I18N = {
     nav_home: "Home", home_greeting: "Welcome back, {name}.", home_readiness_title: "GOLSZ READINESS", home_profile_quality: "PROFILE QUALITY", home_verification: "VERIFICATION",
     home_verify_status_none: "Not started", home_verify_status_pending: "Pending review", home_verify_status_verified: "Verified",
     home_missing_title: "STILL MISSING", home_finish_profile: "Finish your Passport", home_get_started: "GET STARTED",
+    nav_targets: "Targets", targets_title: "TARGET SCHOOLS & CLUBS", targets_name_ph: "School or club name", targets_contact_name_ph: "Contact name", targets_contact_email_ph: "Contact email",
+    targets_add: "Add", targets_add_err: "Couldn't add that. Try again.", targets_empty: "No targets yet — add the first school or club you're pursuing.",
+    targets_notes_ph: "Notes", targets_draft_ph: "Draft outreach email",
+    targets_status_researching: "Researching", targets_status_contacted: "Contacted", targets_status_responded: "Responded", targets_status_follow_up: "Follow up", targets_status_closed: "Closed",
     plan_starter_feat1: "8 AI Scout questions per day", plan_starter_feat2: "Digital Sports Passport (basic)", plan_starter_feat3: "Browse players & events",
     plan_pro_feat1: "15 AI Scout questions per day", plan_pro_feat2: "Full verified passport", plan_pro_feat3: "Full target-school lists & roadmap", plan_pro_feat4: "Unlimited coach outreach drafts", plan_pro_feat5: "Priority combines & trials",
     plan_elite_feat1: "20 AI Scout questions per day", plan_elite_feat2: "Everything in Pro", plan_elite_feat3: "Priority scout visibility", plan_elite_feat4: "Human-reviewed highlight feedback", plan_elite_feat5: "Early access to showcases",
@@ -414,6 +420,10 @@ const I18N = {
     nav_home: "Accueil", home_greeting: "Bon retour, {name}.", home_readiness_title: "PRÉPARATION GOLSZ", home_profile_quality: "QUALITÉ DU PROFIL", home_verification: "VÉRIFICATION",
     home_verify_status_none: "Non commencé", home_verify_status_pending: "En cours de révision", home_verify_status_verified: "Vérifié",
     home_missing_title: "IL MANQUE ENCORE", home_finish_profile: "Terminez votre Passeport", home_get_started: "POUR COMMENCER",
+    nav_targets: "Cibles", targets_title: "ÉCOLES & CLUBS CIBLÉS", targets_name_ph: "Nom de l'école ou du club", targets_contact_name_ph: "Nom du contact", targets_contact_email_ph: "Email du contact",
+    targets_add: "Ajouter", targets_add_err: "Impossible d'ajouter. Réessayez.", targets_empty: "Aucune cible pour l'instant — ajoutez la première école ou le premier club visé.",
+    targets_notes_ph: "Notes", targets_draft_ph: "Brouillon d'email de contact",
+    targets_status_researching: "Recherche", targets_status_contacted: "Contacté", targets_status_responded: "Répondu", targets_status_follow_up: "Relance", targets_status_closed: "Clôturé",
     plan_starter_feat1: "8 questions par jour avec l'agent IA", plan_starter_feat2: "Passeport Sportif Numérique (basique)", plan_starter_feat3: "Parcourez joueurs et événements",
     plan_pro_feat1: "15 questions par jour avec l'agent IA", plan_pro_feat2: "Passeport entièrement vérifié", plan_pro_feat3: "Listes complètes d'écoles cibles et feuille de route", plan_pro_feat4: "Brouillons illimités de contact avec les entraîneurs", plan_pro_feat5: "Combines et essais prioritaires",
     plan_elite_feat1: "20 questions par jour avec l'agent IA", plan_elite_feat2: "Tout ce qui est dans Pro", plan_elite_feat3: "Visibilité prioritaire auprès des recruteurs", plan_elite_feat4: "Retour d'expert sur vos temps forts", plan_elite_feat5: "Accès anticipé aux showcases",
@@ -624,6 +634,10 @@ const I18N = {
     nav_home: "Inicio", home_greeting: "Bienvenido de nuevo, {name}.", home_readiness_title: "PREPARACIÓN GOLSZ", home_profile_quality: "CALIDAD DEL PERFIL", home_verification: "VERIFICACIÓN",
     home_verify_status_none: "No iniciado", home_verify_status_pending: "En revisión", home_verify_status_verified: "Verificado",
     home_missing_title: "AÚN FALTA", home_finish_profile: "Termina tu Pasaporte", home_get_started: "PARA EMPEZAR",
+    nav_targets: "Objetivos", targets_title: "ESCUELAS Y CLUBES OBJETIVO", targets_name_ph: "Nombre de la escuela o club", targets_contact_name_ph: "Nombre del contacto", targets_contact_email_ph: "Email del contacto",
+    targets_add: "Añadir", targets_add_err: "No se pudo añadir. Inténtalo de nuevo.", targets_empty: "Aún no hay objetivos — añade la primera escuela o club que te interese.",
+    targets_notes_ph: "Notas", targets_draft_ph: "Borrador de email de contacto",
+    targets_status_researching: "Investigando", targets_status_contacted: "Contactado", targets_status_responded: "Respondido", targets_status_follow_up: "Seguimiento", targets_status_closed: "Cerrado",
     plan_starter_feat1: "8 preguntas al día con el agente IA", plan_starter_feat2: "Pasaporte Deportivo Digital (básico)", plan_starter_feat3: "Explora jugadores y eventos",
     plan_pro_feat1: "15 preguntas al día con el agente IA", plan_pro_feat2: "Pasaporte completamente verificado", plan_pro_feat3: "Listas completas de escuelas objetivo y hoja de ruta", plan_pro_feat4: "Borradores ilimitados de contacto con entrenadores", plan_pro_feat5: "Pruebas y combines prioritarios",
     plan_elite_feat1: "20 preguntas al día con el agente IA", plan_elite_feat2: "Todo lo de Pro", plan_elite_feat3: "Visibilidad prioritaria ante ojeadores", plan_elite_feat4: "Retroalimentación de expertos sobre tus mejores jugadas", plan_elite_feat5: "Acceso anticipado a showcases",
@@ -834,6 +848,10 @@ const I18N = {
     nav_home: "Αρχική", home_greeting: "Καλώς όρισες πάλι, {name}.", home_readiness_title: "ΕΤΟΙΜΟΤΗΤΑ GOLSZ", home_profile_quality: "ΠΟΙΟΤΗΤΑ ΠΡΟΦΙΛ", home_verification: "ΕΠΑΛΗΘΕΥΣΗ",
     home_verify_status_none: "Δεν ξεκίνησε", home_verify_status_pending: "Υπό εξέταση", home_verify_status_verified: "Επαληθευμένο",
     home_missing_title: "ΛΕΙΠΟΥΝ ΑΚΟΜΑ", home_finish_profile: "Ολοκλήρωσε το Διαβατήριό σου", home_get_started: "ΞΕΚΙΝΑ",
+    nav_targets: "Στόχοι", targets_title: "ΣΧΟΛΕΣ & ΣΥΛΛΟΓΟΙ-ΣΤΟΧΟΙ", targets_name_ph: "Όνομα σχολής ή συλλόγου", targets_contact_name_ph: "Όνομα επαφής", targets_contact_email_ph: "Email επαφής",
+    targets_add: "Προσθήκη", targets_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", targets_empty: "Δεν υπάρχουν στόχοι ακόμα — πρόσθεσε την πρώτη σχολή ή σύλλογο που σε ενδιαφέρει.",
+    targets_notes_ph: "Σημειώσεις", targets_draft_ph: "Πρόχειρο email επικοινωνίας",
+    targets_status_researching: "Έρευνα", targets_status_contacted: "Επικοινώνησα", targets_status_responded: "Απάντησαν", targets_status_follow_up: "Παρακολούθηση", targets_status_closed: "Έκλεισε",
     plan_starter_feat1: "8 ερωτήσεις την ημέρα στον πράκτορα AI", plan_starter_feat2: "Ψηφιακό Αθλητικό Διαβατήριο (βασικό)", plan_starter_feat3: "Περιήγηση σε αθλητές & εκδηλώσεις",
     plan_pro_feat1: "15 ερωτήσεις την ημέρα στον πράκτορα AI", plan_pro_feat2: "Πλήρως επαληθευμένο διαβατήριο", plan_pro_feat3: "Πλήρεις λίστες σχολών-στόχων & οδικός χάρτης", plan_pro_feat4: "Απεριόριστα προσχέδια επικοινωνίας με προπονητές", plan_pro_feat5: "Προτεραιότητα σε δοκιμές & trials",
     plan_elite_feat1: "20 ερωτήσεις την ημέρα στον πράκτορα AI", plan_elite_feat2: "Όλα όσα περιλαμβάνει το Pro", plan_elite_feat3: "Προτεραιότητα προβολής σε σκάουτ", plan_elite_feat4: "Ανθρώπινη αξιολόγηση highlights", plan_elite_feat5: "Πρόωρη πρόσβαση σε showcases",
@@ -6288,10 +6306,121 @@ function HomeTab({ onNavigate }) {
         </div>
       )}
       <SectionTitle>{t("home_get_started")}</SectionTitle>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         <button onClick={() => onNavigate("scout")} style={entryCard}><Radar size={20} color={C.lime} />{t("nav_ai_scout")}</button>
         <button onClick={() => onNavigate("profile")} style={entryCard}><User size={20} color={C.lime} />{t("nav_profile")}</button>
+        <button onClick={() => onNavigate("targets")} style={entryCard}><Target size={20} color={C.lime} />{t("nav_targets")}</button>
       </div>
+    </div>
+  );
+}
+
+// Target school/club list + outreach status pipeline (migration 072) — the
+// brief's "MOVE" phase, turning a plan into real outreach. status is a
+// simple linear pipeline the athlete drives themselves; notes/draft_email
+// save on blur (not on every keystroke) to avoid a network round trip per
+// character while still never requiring an explicit "save" click.
+const TARGET_STATUSES = ["researching", "contacted", "responded", "follow_up", "closed"];
+function Targets() {
+  const { t } = useLang();
+  const [uid, setUid] = useState(null);
+  const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [name, setName] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
+
+  useEffect(() => {
+    if (!sb) { setLoaded(true); return; }
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) { setLoaded(true); return; }
+        setUid(user.id);
+        const { data, error } = await sb.from("outreach_targets").select("id, name, contact_name, contact_email, status, notes, draft_email, created_at").eq("user_id", user.id).order("created_at", { ascending: false });
+        if (error) throw error;
+        setItems(data || []);
+      } catch (e) { console.error("GOLSZ targets load error:", e); }
+      setLoaded(true);
+    })();
+  }, []);
+
+  async function addTarget() {
+    if (!sb || !uid || !name.trim() || busy) return;
+    setBusy(true); setErr("");
+    try {
+      const { data, error } = await sb.from("outreach_targets").insert({
+        user_id: uid, name: name.trim().slice(0, 120),
+        contact_name: contactName.trim().slice(0, 120) || null,
+        contact_email: contactEmail.trim().slice(0, 200) || null,
+      }).select("id, name, contact_name, contact_email, status, notes, draft_email, created_at").single();
+      if (error) throw error;
+      setItems((prev) => [data, ...prev]);
+      setName(""); setContactName(""); setContactEmail("");
+    } catch (e) {
+      setErr((e && e.message) || t("targets_add_err"));
+    } finally { setBusy(false); }
+  }
+
+  async function updateTarget(id, updates) {
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...updates } : it)));
+    try { await sb.from("outreach_targets").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id).eq("user_id", uid); }
+    catch (e) { console.error("GOLSZ target update error:", e); }
+  }
+
+  async function removeTarget(id) {
+    setItems((prev) => prev.filter((it) => it.id !== id));
+    try { await sb.from("outreach_targets").delete().eq("id", id).eq("user_id", uid); }
+    catch (e) { console.error("GOLSZ target delete error:", e); }
+  }
+
+  if (!loaded) return <div style={{ padding: "40px 20px", textAlign: "center", color: C.slate, fontSize: 13 }}>{t("loading")}</div>;
+
+  const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
+
+  return (
+    <div style={{ padding: "8px 12px 20px" }}>
+      <SectionTitle>{t("targets_title")}</SectionTitle>
+      <div style={{ ...card }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("targets_name_ph")} style={{ flex: "1 1 160px", ...inputStyle }} />
+          <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder={t("targets_contact_name_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
+          <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder={t("targets_contact_email_ph")} type="email" style={{ flex: "1 1 140px", ...inputStyle }} />
+          <button onClick={addTarget} disabled={!name.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!name.trim() || busy) ? 0.5 : 1 }}>
+            {busy ? "…" : t("targets_add")}
+          </button>
+        </div>
+        {err && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 6 }}>{err}</div>}
+      </div>
+
+      {items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, padding: "10px 2px" }}>{t("targets_empty")}</div>}
+
+      {items.map((it) => (
+        <div key={it.id} style={{ ...card }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>{it.name}</div>
+              {(it.contact_name || it.contact_email) && <div style={{ fontSize: 11.5, color: C.slate }}>{[it.contact_name, it.contact_email].filter(Boolean).join(" · ")}</div>}
+            </div>
+            <select value={it.status} onChange={(e) => updateTarget(it.id, { status: e.target.value })} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "6px 8px", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
+              {TARGET_STATUSES.map((s) => <option key={s} value={s}>{t("targets_status_" + s)}</option>)}
+            </select>
+            <button onClick={() => setExpandedId(expandedId === it.id ? null : it.id)} style={{ ...iconBtn(C.slate), flexShrink: 0 }}>{expandedId === it.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>
+            <button onClick={() => removeTarget(it.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><X size={14} /></button>
+          </div>
+          {expandedId === it.id && (
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
+              <textarea defaultValue={it.notes || ""} onBlur={(e) => updateTarget(it.id, { notes: e.target.value })} placeholder={t("targets_notes_ph")}
+                style={{ width: "100%", minHeight: 50, resize: "vertical", marginBottom: 8, ...inputStyle }} />
+              <textarea defaultValue={it.draft_email || ""} onBlur={(e) => updateTarget(it.id, { draft_email: e.target.value })} placeholder={t("targets_draft_ph")}
+                style={{ width: "100%", minHeight: 80, resize: "vertical", ...inputStyle }} />
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -6310,7 +6439,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
       // (kept fully intact in the code for a later update — see the "go"
       // function and the route list below, both untouched) — this just
       // narrows what a fresh page load can land on directly.
-      const valid = ["home", "scout", "profile", "admin"];
+      const valid = ["home", "scout", "profile", "targets", "admin"];
       return valid.includes(p) ? p : "home";
     } catch (e) { return "home"; }
   });
@@ -6385,12 +6514,14 @@ function GolszApp({ onSignOut, startOnboarding }) {
   const NAV = [
     { id: "home", icon: Home, label: t("nav_home") },
     { id: "scout", icon: Radar, label: t("nav_scout") },
+    { id: "targets", icon: Target, label: t("nav_targets") },
     { id: "profile", icon: User, label: t("nav_passport") },
   ];
 
   const SIDEBAR_NAV = [
     { id: "home", icon: Home, label: t("nav_home") },
     { id: "scout", icon: Radar, label: t("nav_ai_scout") },
+    { id: "targets", icon: Target, label: t("nav_targets") },
     { id: "profile", icon: User, label: t("nav_profile") },
   ];
 
@@ -6490,6 +6621,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
             {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
             {page === "home" && <HomeTab onNavigate={go} />}
             {page === "scout" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout onGoToProfile={() => go("profile")} /></div>}
+            {page === "targets" && <Targets />}
             {page === "events" && <Events />}
             {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} />}
             {page === "messages" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Messages thread={thread} setThread={setThread} onViewProfile={viewProfile} /></div>}
@@ -6528,6 +6660,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "home" && <HomeTab onNavigate={go} />}
         {page === "scout" && <Scout onGoToProfile={() => go("profile")} />}
+        {page === "targets" && <Targets />}
         {page === "events" && <Events />}
         {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "messages" && <Messages thread={thread} setThread={setThread} onViewProfile={viewProfile} />}
