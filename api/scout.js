@@ -662,6 +662,26 @@ const SPECIALISTS = new Set(["college", "pro_pathway", "development", "eligibili
 // stage from the model just falls back to null rather than writing garbage.
 const CONVERSATION_STAGES = new Set(["discovery", "qualification", "pathway", "action"]);
 
+// next_best_action used to be free text ("internal routing signal only,
+// never shown to the athlete"). This session it became a typed object so
+// it can power "My Next Move" — a real, user-facing UI object, not a chat
+// bubble — without a second AI call: same classifier response, structured
+// instead of prose. Scoped to actions that exist in the app TODAY (no
+// benchmarks/targets types yet — those get added here once those features
+// ship, not before).
+const NEXT_ACTION_TYPES = new Set(["ask_scout", "complete_profile", "share_passport", "none"]);
+
+function extractNextBestAction(classification) {
+  const raw = classification && classification.next_best_action;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const type = NEXT_ACTION_TYPES.has(raw.type) ? raw.type : "none";
+  const label = typeof raw.label === "string" ? raw.label.trim().slice(0, 80) : "";
+  if (type === "none" || !label) return null;
+  const rawParams = (raw.params && typeof raw.params === "object" && !Array.isArray(raw.params)) ? raw.params : {};
+  const prompt = typeof rawParams.prompt === "string" ? rawParams.prompt.trim().slice(0, 200) : null;
+  return { type, label, params: prompt ? { prompt } : {} };
+}
+
 // Writes the classifier's routing decision (missing_information,
 // recommended_specialist — Phase 2c; conversation_stage/next_best_action —
 // Failover & Discovery Polish pass) into scout_context's "ai_meta" key.
@@ -682,7 +702,7 @@ async function persistAiMeta(userId, classification) {
     : [];
   const specialist = (classification && SPECIALISTS.has(classification.recommended_specialist)) ? classification.recommended_specialist : null;
   const stage = (classification && CONVERSATION_STAGES.has(classification.conversation_stage)) ? classification.conversation_stage : null;
-  const nextAction = (classification && typeof classification.next_best_action === "string") ? classification.next_best_action.slice(0, 200) : null;
+  const nextAction = extractNextBestAction(classification);
   const aiMeta = {
     missing_information: missing, recommended_specialist: specialist,
     conversation_stage: stage, next_best_action: nextAction,
@@ -879,13 +899,13 @@ async function searchEvents(input) {
 // response.usage.cache_creation_input_tokens on a live classifier call,
 // same as every other caching claim in this file — don't just trust that
 // adding content worked.
-const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent, separately check it against the FAQ list appended below, and maintain a running conversation summary plus four routing hints. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false,"faq_id":null-or-a-number,"summary_so_far":"...","missing_information":[...],"recommended_specialist":null-or-"...","conversation_stage":"...","next_best_action":"..."}
+const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent, separately check it against the FAQ list appended below, and maintain a running conversation summary plus four routing hints. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false,"faq_id":null-or-a-number,"summary_so_far":"...","missing_information":[...],"recommended_specialist":null-or-"...","conversation_stage":"...","next_best_action":{"type":"ask_scout|complete_profile|share_passport|none","label":"...","params":{}}}
 SUMMARY: the message may open with a "CONVERSATION SUMMARY SO FAR: ..." section describing everything discussed before this turn (empty/absent on a conversation's first message — that's normal, not an error). Produce an updated "summary_so_far": ONE short sentence, 25 words max, covering the prior summary plus what this new message adds — never just repeat the input back, never a numbered list, never multiple sentences. If there's no prior summary and this message alone isn't summary-worthy yet (a greeting, "thanks", etc.), a few words is fine — it does not need to be a full sentence. Never include a literal "}" character anywhere in summary_so_far — it would cut this response off early.
 ATHLETE CONTEXT: the message may also include a "PROFILE SO FAR: {...}" section (hard facts already on file) and a "SCOUT CONTEXT SO FAR: {...}" section (softer qualification facts already captured — dream/goal, target level, gap, urgency, interest flags, etc.). Use both plus the summary to fill in:
 - "missing_information": an array of up to 3 field names, chosen only from this list, that are NOT already present in either section and would meaningfully help right now: dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need. Use an empty array if nothing important is missing, or the conversation doesn't call for asking right now (e.g. off_topic, or the athlete is mid-thought on something else).
 - "recommended_specialist": which specialist should likely handle THIS message — one of "college" (NCAA/NAIA/JUCO, scholarships, school fit), "pro_pathway" (professional clubs, trials, agents), "development" (training, skill gaps, performance), "eligibility" (NCAA rules, amateurism, compliance) — or null when the general Scout persona is clearly still right (most messages). Base this only on what the current message is actually asking, not the athlete's whole history.
 - "conversation_stage": one of "discovery" (still learning who they are/what they want), "qualification" (understanding their gap/situation in depth), "pathway" (discussing realistic routes/programs), "action" (drafting outreach, a concrete next step) — your best read of where THIS conversation is right now.
-- "next_best_action": a short (under 10 words) plain-language note on what would most help next turn (e.g. "ask about academics", "suggest 2-3 target schools") — internal routing signal only, never shown to the athlete.
+- "next_best_action": a structured suggestion, SHOWN DIRECTLY TO THE ATHLETE as "My Next Move" — write "label" in plain second-person language they'd understand out of context, never internal jargon. {"type":"ask_scout","label":"Build your target school list","params":{"prompt":"Help me build a list of target schools"}} — use "ask_scout" for a specific, useful follow-up topic (most turns): params.prompt is the exact next message they could tap to send (under 15 words, first person). Use "complete_profile" (params:{}) only when ATHLETE CONTEXT clearly shows their Passport basics (sport/position/club) are still missing. Use "share_passport" (params:{}) only at a natural "you're ready to be seen" moment — e.g. right after drafting outreach, or discussing getting scouted/noticed. Use "none" (params:{}) when nothing concrete stands out yet — a greeting, an off-topic message, or a simple "thanks"/acknowledgment.
 Intents:
 - db_lookup: searching/filtering for clubs, coaches, opportunities, or GOLSZ players by criteria
 - simple_knowledge: football rules, terms, or general explainers with no personalization needed
