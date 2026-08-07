@@ -204,6 +204,12 @@ const I18N = {
     plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport", plan_free_feat3: "Identity verification",
     conversion_title: "We've learned enough about you — let's build your plan.", conversion_body: "GOLSZ Scout now knows your sport, your goals, and what you're working on. Upgrade to unlock deeper guidance built around your progression — not just more questions.", conversion_dismiss: "Not now",
     feature_lock_body: "This is part of GOLSZ's guided pathway tools.", feature_lock_cta: "Upgrade to unlock",
+    guided_step_goal: "Understanding your goal: {goal}", guided_step_goal_fallback: "Getting to know what you're working toward.",
+    guided_step_passport: "Analyzing your Passport — {score}% complete.", guided_step_missing: "Missing: {list}.", guided_step_missing_none: "Your Passport basics are all filled in.",
+    guided_step_readiness: "Initial Readiness assessment: {score}/100.", guided_step_next_move: "Your next move: {label}", guided_step_next_move_generic: "Building your first recommended next move.",
+    guided_ready_title: "You're ready to build your plan.", guided_ready_body: "GOLSZ Readiness, My Next Move, Targets, and Benchmarks are ready to unlock.",
+    guided_locked_readiness: "GOLSZ Readiness", guided_locked_next_move: "My Next Move", guided_locked_targets: "Targets", guided_locked_benchmarks: "Benchmarks",
+    guided_continue_cta: "Continue my journey",
     next_move_title: "MY NEXT MOVE", next_move_act: "Do this", next_move_dismiss: "Mark done", next_move_locked: "Scout found your next move — upgrade to see it.",
     next_move_why_ask_scout: "Based on what you told Scout", next_move_why_complete_profile: "Your Passport is missing some basics", next_move_why_share_passport: "You're ready to be seen — share your Passport",
     nav_home: "Home", home_greeting: "Welcome back, {name}.", home_readiness_title: "GOLSZ READINESS", home_profile_quality: "PROFILE QUALITY", home_verification: "VERIFICATION",
@@ -438,6 +444,12 @@ const I18N = {
     plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique", plan_free_feat3: "Vérification d'identité",
     conversion_title: "On en sait assez sur vous — construisons votre plan.", conversion_body: "GOLSZ Scout connaît maintenant votre sport, vos objectifs et ce sur quoi vous travaillez. Passez à un forfait supérieur pour un accompagnement plus poussé, centré sur votre progression — pas seulement plus de questions.", conversion_dismiss: "Pas maintenant",
     feature_lock_body: "Cela fait partie des outils de parcours guidé de GOLSZ.", feature_lock_cta: "Passer à un forfait supérieur",
+    guided_step_goal: "Compréhension de votre objectif : {goal}", guided_step_goal_fallback: "Nous apprenons ce vers quoi vous travaillez.",
+    guided_step_passport: "Analyse de votre Passeport — {score}% complété.", guided_step_missing: "Manquant : {list}.", guided_step_missing_none: "Les bases de votre Passeport sont toutes remplies.",
+    guided_step_readiness: "Évaluation initiale de préparation : {score}/100.", guided_step_next_move: "Votre prochaine étape : {label}", guided_step_next_move_generic: "Construction de votre première étape recommandée.",
+    guided_ready_title: "Vous êtes prêt à construire votre plan.", guided_ready_body: "GOLSZ Readiness, Ma Prochaine Étape, Cibles et Repères sont prêts à être débloqués.",
+    guided_locked_readiness: "GOLSZ Readiness", guided_locked_next_move: "Ma Prochaine Étape", guided_locked_targets: "Cibles", guided_locked_benchmarks: "Repères",
+    guided_continue_cta: "Continuer mon parcours",
     next_move_title: "VOTRE PROCHAINE ÉTAPE", next_move_act: "Faire ça", next_move_dismiss: "Marquer comme fait", next_move_locked: "Scout a trouvé votre prochaine étape — passez à un forfait supérieur pour la voir.",
     next_move_why_ask_scout: "D'après ce que vous avez dit à Scout", next_move_why_complete_profile: "Il manque des informations de base à votre Passeport", next_move_why_share_passport: "Vous êtes prêt à être vu — partagez votre Passeport",
     nav_home: "Accueil", home_greeting: "Bon retour, {name}.", home_readiness_title: "PRÉPARATION GOLSZ", home_profile_quality: "QUALITÉ DU PROFIL", home_verification: "VÉRIFICATION",
@@ -672,6 +684,12 @@ const I18N = {
     plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital", plan_free_feat3: "Verificación de identidad",
     conversion_title: "Ya sabemos suficiente sobre ti — construyamos tu plan.", conversion_body: "GOLSZ Scout ya conoce tu deporte, tus objetivos y en qué estás trabajando. Mejora tu plan para obtener una guía más profunda centrada en tu progreso, no solo más preguntas.", conversion_dismiss: "Ahora no",
     feature_lock_body: "Esto forma parte de las herramientas de trayectoria guiada de GOLSZ.", feature_lock_cta: "Mejora tu plan para desbloquear",
+    guided_step_goal: "Entendiendo tu objetivo: {goal}", guided_step_goal_fallback: "Conociendo hacia qué estás trabajando.",
+    guided_step_passport: "Analizando tu Pasaporte — {score}% completo.", guided_step_missing: "Falta: {list}.", guided_step_missing_none: "Los datos básicos de tu Pasaporte están completos.",
+    guided_step_readiness: "Evaluación inicial de preparación: {score}/100.", guided_step_next_move: "Tu próximo paso: {label}", guided_step_next_move_generic: "Preparando tu primer paso recomendado.",
+    guided_ready_title: "Estás listo para construir tu plan.", guided_ready_body: "GOLSZ Readiness, Tu Próximo Paso, Objetivos y Marcas están listos para desbloquear.",
+    guided_locked_readiness: "GOLSZ Readiness", guided_locked_next_move: "Tu Próximo Paso", guided_locked_targets: "Objetivos", guided_locked_benchmarks: "Marcas",
+    guided_continue_cta: "Continuar mi camino",
     next_move_title: "TU PRÓXIMO PASO", next_move_act: "Hacer esto", next_move_dismiss: "Marcar como hecho", next_move_locked: "Scout encontró tu próximo paso — mejora tu plan para verlo.",
     next_move_why_ask_scout: "Basado en lo que le contaste a Scout", next_move_why_complete_profile: "A tu Pasaporte le faltan datos básicos", next_move_why_share_passport: "Estás listo para que te vean — comparte tu Pasaporte",
     nav_home: "Inicio", home_greeting: "Bienvenido de nuevo, {name}.", home_readiness_title: "PREPARACIÓN GOLSZ", home_profile_quality: "CALIDAD DEL PERFIL", home_verification: "VERIFICACIÓN",
@@ -906,6 +924,12 @@ const I18N = {
     plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο", plan_free_feat3: "Επαλήθευση ταυτότητας",
     conversion_title: "Μάθαμε αρκετά για εσένα — ας χτίσουμε το πλάνο σου.", conversion_body: "Ο GOLSZ Scout γνωρίζει πλέον το άθλημά σου, τους στόχους σου και τι δουλεύεις. Αναβάθμισε για βαθύτερη καθοδήγηση γύρω από την εξέλιξή σου — όχι απλώς περισσότερες ερωτήσεις.", conversion_dismiss: "Όχι τώρα",
     feature_lock_body: "Αυτό αποτελεί μέρος των εργαλείων καθοδηγούμενης πορείας του GOLSZ.", feature_lock_cta: "Αναβάθμισε για ξεκλείδωμα",
+    guided_step_goal: "Κατανοώντας τον στόχο σου: {goal}", guided_step_goal_fallback: "Μαθαίνουμε προς τι δουλεύεις.",
+    guided_step_passport: "Ανάλυση του Διαβατηρίου σου — {score}% ολοκληρωμένο.", guided_step_missing: "Λείπει: {list}.", guided_step_missing_none: "Τα βασικά στοιχεία του Διαβατηρίου σου είναι πλήρη.",
+    guided_step_readiness: "Αρχική αξιολόγηση ετοιμότητας: {score}/100.", guided_step_next_move: "Η επόμενή σου κίνηση: {label}", guided_step_next_move_generic: "Δημιουργία της πρώτης προτεινόμενης κίνησής σου.",
+    guided_ready_title: "Είσαι έτοιμος να χτίσεις το πλάνο σου.", guided_ready_body: "Το GOLSZ Readiness, Η Επόμενή σου Κίνηση, Στόχοι και Δείκτες είναι έτοιμα για ξεκλείδωμα.",
+    guided_locked_readiness: "GOLSZ Readiness", guided_locked_next_move: "Η Επόμενή σου Κίνηση", guided_locked_targets: "Στόχοι", guided_locked_benchmarks: "Δείκτες",
+    guided_continue_cta: "Συνέχισε την πορεία μου",
     next_move_title: "Η ΕΠΟΜΕΝΗ ΣΟΥ ΚΙΝΗΣΗ", next_move_act: "Κάνε το", next_move_dismiss: "Ολοκληρώθηκε", next_move_locked: "Ο Scout βρήκε την επόμενή σου κίνηση — αναβάθμισε για να τη δεις.",
     next_move_why_ask_scout: "Με βάση όσα είπες στον Scout", next_move_why_complete_profile: "Στο Διαβατήριό σου λείπουν βασικά στοιχεία", next_move_why_share_passport: "Είσαι έτοιμος να σε δουν — μοιράσου το Διαβατήριό σου",
     nav_home: "Αρχική", home_greeting: "Καλώς όρισες πάλι, {name}.", home_readiness_title: "ΕΤΟΙΜΟΤΗΤΑ GOLSZ", home_profile_quality: "ΠΟΙΟΤΗΤΑ ΠΡΟΦΙΛ", home_verification: "ΕΠΑΛΗΘΕΥΣΗ",
@@ -7428,8 +7452,8 @@ function GolszApp({ onSignOut, startOnboarding }) {
           </div>
         </main>
       </div>
-      {showConversion && <ConversionScreen uid={conversionUid} onDismiss={dismissConversion} />}
-      {upgradeUid && <ConversionScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
+      {showConversion && <GuidedAssessment uid={conversionUid} onDismiss={dismissConversion} />}
+      {upgradeUid && <UpgradeScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
       </>
     );
   }
@@ -7500,21 +7524,23 @@ function GolszApp({ onSignOut, startOnboarding }) {
         })}
       </nav>
     </div>
-    {showConversion && <ConversionScreen uid={conversionUid} onDismiss={dismissConversion} />}
-    {upgradeUid && <ConversionScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
+    {showConversion && <GuidedAssessment uid={conversionUid} onDismiss={dismissConversion} />}
+    {upgradeUid && <UpgradeScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
     </>
   );
 }
 
-// One-time conversion nudge for free-plan accounts (see GolszApp's
-// showConversion effect above for the eligibility rule) — portaled to
-// document.body like every other full-screen overlay in this file (Settings,
-// ProfileEditor, AddToEventsModal, the post viewer) so it isn't trapped
-// inside a scrolling ancestor on iOS Safari. PLANS/STRIPE_LINKS are the same
-// constants SettingsButton's plan picker uses, just rendered as a smaller,
-// free-excluded card list here rather than reaching into that component's
-// own internal modal state.
-function ConversionScreen({ uid, onDismiss }) {
+// Lightweight direct pricing screen — used for manual "Upgrade" taps from
+// locked-feature buttons throughout the app (openUpgrade in GolszApp).
+// Portaled to document.body like every other full-screen overlay in this
+// file (Settings, ProfileEditor, AddToEventsModal, the post viewer) so
+// it isn't trapped inside a scrolling ancestor on iOS Safari. PLANS/
+// STRIPE_LINKS are the same constants SettingsButton's plan picker uses.
+// See GuidedAssessment below for the separate, scripted FIRST-conversion
+// experience — this component is deliberately NOT that; someone tapping a
+// random locked Targets button mid-session shouldn't replay a multi-step
+// "we've learned about you" reveal, just see plans and pick one.
+function UpgradeScreen({ uid, onDismiss }) {
   const { t } = useLang();
   return ReactDOM.createPortal(
     <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000a6", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
@@ -7541,6 +7567,141 @@ function ConversionScreen({ uid, onDismiss }) {
           ))}
         </div>
         <button onClick={onDismiss} style={{ width: "100%", textAlign: "center", background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 8 }}>{t("conversion_dismiss")}</button>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// Brief §11's exact scripted first-conversion flow: goal -> Passport
+// analysis -> missing info -> initial Readiness -> ONE Next Move -> "you're
+// ready to build your plan" with locked features VISIBLE (not hidden) ->
+// "CONTINUE MY JOURNEY" -> plans. Fires once per account (GolszApp's
+// showConversion effect, same eligibility rule as before: free plan,
+// Passport complete, >=3 real Scout uses). Steps auto-advance on a timer
+// so it reads as a guided reveal of what Scout already learned, not a
+// form to fill out — brief's own framing: "We've learned enough about
+// you. Now let's build your plan," never "you've used all your questions."
+const GUIDED_STEPS = ["goal", "passport", "missing", "readiness", "next_move", "ready"];
+function GuidedAssessment({ uid, onDismiss }) {
+  const { t } = useLang();
+  const [step, setStep] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const [goal, setGoal] = useState("");
+  const [quality, setQuality] = useState(null);
+  const [verified, setVerified] = useState(false);
+  const [nextMove, setNextMove] = useState(null);
+  const [showPlans, setShowPlans] = useState(false);
+
+  useEffect(() => {
+    if (!sb || !uid) { setLoaded(true); return; }
+    (async () => {
+      try {
+        const [{ data: prof }, { data: ath }] = await Promise.all([
+          sb.from("profiles").select("full_name, occupation, avatar_url, identity_verified").eq("id", uid).single(),
+          sb.from("athletes").select("sport, position, club_name, grad_year, country, recruiting_status, bio, highlights, timeline, scout_context").eq("id", uid).single(),
+        ]);
+        setQuality(computeProfileQuality(ath, prof));
+        setVerified(!!(prof && prof.identity_verified));
+        const ctx = ath && ath.scout_context;
+        if (ctx && typeof ctx === "object") {
+          const dreamOutcome = ctx.dream_outcome;
+          const goalVal = (dreamOutcome && typeof dreamOutcome === "object") ? dreamOutcome.value : dreamOutcome;
+          if (goalVal) setGoal(String(goalVal));
+          const aiMeta = ctx.ai_meta;
+          if (aiMeta && aiMeta.next_best_action && typeof aiMeta.next_best_action === "object") setNextMove(aiMeta.next_best_action);
+        }
+      } catch (e) { console.error("GOLSZ guided assessment load error:", e); }
+      setLoaded(true);
+    })();
+  }, [uid]);
+
+  // Auto-advances through the reveal; stops at the last step ("ready") and
+  // waits for CONTINUE MY JOURNEY instead of auto-showing plans, so the
+  // athlete always sees the locked-features moment before any pricing.
+  useEffect(() => {
+    if (!loaded || step >= GUIDED_STEPS.length - 1) return;
+    const id = setTimeout(() => setStep((s) => s + 1), 1800);
+    return () => clearTimeout(id);
+  }, [loaded, step]);
+
+  const stepKey = GUIDED_STEPS[Math.min(step, GUIDED_STEPS.length - 1)];
+  // Readiness here is deliberately just Profile Quality + Verification
+  // averaged (not the full 5-sub-score Home composite) — Performance/
+  // Development/Pathway are near-certainly untouched by an athlete only
+  // 3 real Scout messages in, and averaging in three zeros this early
+  // would understate things dishonestly rather than "initial."
+  const readinessScore = quality ? Math.round((quality.score + (verified ? 100 : 0)) / 2) : 0;
+  const LOCKED_TILES = [
+    { icon: BadgeCheck, key: "readiness" }, { icon: Radar, key: "next_move" },
+    { icon: Target, key: "targets" }, { icon: Trophy, key: "benchmarks" },
+  ];
+
+  return ReactDOM.createPortal(
+    <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000a6", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+      <div className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 440, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 22, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
+        {!loaded ? (
+          <div style={{ textAlign: "center", padding: "30px 0", color: C.slate, fontSize: 13 }}>{t("loading")}</div>
+        ) : !showPlans ? (
+          <>
+            <div style={{ textAlign: "center", marginBottom: 14 }}><Radar size={26} color={C.lime} /></div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: stepKey === "ready" ? 18 : 6 }}>
+              {GUIDED_STEPS.slice(0, stepKey === "ready" ? 5 : step + 1).map((s, i) => (
+                <div key={s} style={{ display: "flex", alignItems: "flex-start", gap: 10, opacity: i === step && stepKey !== "ready" ? 1 : 0.55 }}>
+                  <BadgeCheck size={15} color={C.lime} style={{ marginTop: 1, flexShrink: 0 }} />
+                  <div style={{ fontSize: 13, color: C.chalk, lineHeight: 1.45 }}>
+                    {s === "goal" && (goal ? t("guided_step_goal").replace("{goal}", goal) : t("guided_step_goal_fallback"))}
+                    {s === "passport" && t("guided_step_passport").replace("{score}", quality ? quality.score : 0)}
+                    {s === "missing" && (quality && quality.missing.length ? t("guided_step_missing").replace("{list}", quality.missing.slice(0, 3).join(", ")) : t("guided_step_missing_none"))}
+                    {s === "readiness" && t("guided_step_readiness").replace("{score}", readinessScore)}
+                    {s === "next_move" && (nextMove ? t("guided_step_next_move").replace("{label}", nextMove.label) : t("guided_step_next_move_generic"))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {stepKey === "ready" && (
+              <>
+                <div style={{ fontSize: 17, fontWeight: 900, textAlign: "center", marginBottom: 6, lineHeight: 1.3 }}>{t("guided_ready_title")}</div>
+                <div style={{ fontSize: 12.5, color: C.slate, textAlign: "center", marginBottom: 16, lineHeight: 1.5 }}>{t("guided_ready_body")}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 18 }}>
+                  {LOCKED_TILES.map(({ icon: Icon, key }) => (
+                    <div key={key} style={{ background: C.turf, border: `1px dashed ${C.line2}`, borderRadius: 12, padding: "12px 10px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+                      <Lock size={13} color={C.slate} />
+                      <span style={{ fontSize: 10.5, fontWeight: 700, color: C.slate }}>{t("guided_locked_" + key)}</span>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setShowPlans(true)} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "13px 14px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>{t("guided_continue_cta")}</button>
+                <button onClick={onDismiss} style={{ width: "100%", textAlign: "center", background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 8 }}>{t("conversion_dismiss")}</button>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <div style={{ textAlign: "center", marginBottom: 8 }}><Radar size={26} color={C.lime} /></div>
+            <div style={{ fontSize: 18, fontWeight: 900, textAlign: "center", marginBottom: 8, lineHeight: 1.3 }}>{t("conversion_title")}</div>
+            <div style={{ fontSize: 13, color: C.slate, textAlign: "center", marginBottom: 20, lineHeight: 1.5 }}>{t("conversion_body")}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+              {PLANS.filter((pl) => pl.id !== "free").map((pl) => (
+                <button key={pl.id} onClick={() => {
+                  const link = STRIPE_LINKS[pl.id];
+                  if (!link || !uid) return;
+                  const checkoutUrl = new URL(link);
+                  checkoutUrl.searchParams.set("client_reference_id", uid);
+                  window.location.href = checkoutUrl.toString();
+                }} style={{
+                  textAlign: "left", cursor: "pointer", fontFamily: "inherit",
+                  background: C.turf, border: `1.5px solid ${C.line2}`, borderRadius: 12,
+                  padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>{pl.name}</div>
+                  <div style={{ fontSize: 12.5, color: C.lime, fontWeight: 700 }}>${pl.price}/mo</div>
+                </button>
+              ))}
+            </div>
+            <button onClick={onDismiss} style={{ width: "100%", textAlign: "center", background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 8 }}>{t("conversion_dismiss")}</button>
+          </>
+        )}
       </div>
     </div>,
     document.body
