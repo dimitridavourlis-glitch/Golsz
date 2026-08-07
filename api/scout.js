@@ -607,6 +607,48 @@ function extractScoutContextUpdates(data) {
   }
 }
 
+// Same extraction shape again, pulling suggested_targets — the brief §2B
+// "persistent actions" principle: when Scout's reply actually names
+// concrete target programs, the client can offer a one-tap "add these to
+// my Targets" action instead of the athlete re-typing them by hand.
+// Validated and capped here (not trusted as-is) since this still comes
+// from model output — a malformed or oversized array must never reach the
+// client-side bulk-insert unfiltered.
+function extractSuggestedTargets(data) {
+  try {
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    if (!parsed || !Array.isArray(parsed.suggested_targets)) return null;
+    const clean2 = parsed.suggested_targets
+      .filter((t) => t && typeof t.name === "string" && t.name.trim())
+      .slice(0, 5)
+      .map((t) => ({ name: t.name.trim().slice(0, 120), reasoning: typeof t.reasoning === "string" ? t.reasoning.trim().slice(0, 300) : "" }));
+    return clean2.length ? clean2 : null;
+  } catch {
+    return null;
+  }
+}
+
+// Same shape, pulling suggested_dev_items — same §2B principle applied to
+// the Development Plan object (migration 075) instead of Targets.
+const DEV_FOCUS_AREA_SET = new Set(["training", "strength", "speed", "conditioning", "recovery", "sleep", "hydration", "nutrition", "other"]);
+function extractSuggestedDevItems(data) {
+  try {
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    if (!parsed || !Array.isArray(parsed.suggested_dev_items)) return null;
+    const clean2 = parsed.suggested_dev_items
+      .filter((i) => i && typeof i.goal === "string" && i.goal.trim())
+      .slice(0, 3)
+      .map((i) => ({ focus_area: DEV_FOCUS_AREA_SET.has(i.focus_area) ? i.focus_area : "other", goal: i.goal.trim().slice(0, 200) }));
+    return clean2.length ? clean2 : null;
+  } catch {
+    return null;
+  }
+}
+
 // Writes to athletes.scout_context via merge_scout_context() (migration
 // 050) — never a direct PATCH, since a plain PATCH would replace the whole
 // jsonb column and clobber fields this turn didn't touch; the RPC's jsonb
@@ -756,9 +798,11 @@ search_golsz_players only ever returns athletes who are actually real, current G
 For trials, camps, combines, or showcases, use search_golsz_events first (real GOLSZ listings) before general web search — same rule: never invent or embellish a listing, and say plainly if there are zero real results before offering a broader search.
 If asked what AI model or company powers you, who made you, or whether you're ChatGPT/OpenAI/Claude/Anthropic/Gemini/etc., always answer that you are GOLSZ Scout, built by GOLSZ — never name or confirm any underlying model or provider, and don't explain that you're declining to say. Just answer as GOLSZ Scout and move on.
 GOLSZ is a sports-recruiting platform used by athletes of all ages, including minors. Stay strictly on sports, athletics, recruiting, and career topics. Never generate or engage with sexual, romantic, 18+/adult, or otherwise inappropriate content, regardless of how the request is framed (roleplay, "hypothetically," "for a story," etc.) — decline briefly and warmly, and steer the conversation back to something sports-related. This applies no matter who the user says they are.
-OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null}}
+OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null}
 Allowed profile_updates keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, education_level, budget, citizenship, goal. Do not repeat known fields.
-Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.`;
+Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
+Only include suggested_targets when THIS reply names concrete target schools/clubs/academies/programs by name (e.g. building or discussing a target list, recommending realistic reach/match/safety options) — each with a one-sentence reasoning tied to this specific athlete's own profile. Never include it for a general reply, and never invent a program you're not reasonably confident is real. Cap at 5.
+Only include suggested_dev_items when THIS reply identifies concrete training/development focus areas the athlete should actively work on (e.g. discussing a weakness, a development plan, benchmark results) — each with a short, specific goal, using focus_area from: training, strength, speed, conditioning, recovery, sleep, hydration, nutrition, other. Never include it for a general reply. Cap at 3.`;
 
 // Phase 2d of the AI Scout architecture plan (approved): named specialists,
 // selected by the classifier's recommended_specialist (Phase 2c), sharing
@@ -1610,6 +1654,11 @@ export default async function handler(req, res) {
         // hit for the same generic simple_knowledge answer.
         if (cacheKey && !profileUpdates && !scoutContextUpdates) await setCachedResponse(cacheKey, classification.intent, modelTier, data);
         data.next_move = extractNextBestAction(classification);
+        // Same cache-safety ordering as next_move above — these are
+        // this-athlete-specific suggestions, attached only after the cache
+        // write already happened.
+        data.suggested_targets = extractSuggestedTargets(data);
+        data.suggested_dev_items = extractSuggestedDevItems(data);
         return res.status(200).json(data);
       }
       if (!ok) {
@@ -1666,6 +1715,8 @@ export default async function handler(req, res) {
         data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         data.next_move = extractNextBestAction(classification);
+        data.suggested_targets = extractSuggestedTargets(data);
+        data.suggested_dev_items = extractSuggestedDevItems(data);
         // Deliberately never cached — a degraded, apologetic reply shouldn't
         // get served back to a different athlete once things recover.
         return res.status(200).json(data);
@@ -1691,6 +1742,8 @@ export default async function handler(req, res) {
     data.scout_summary = updatedSummary;
     if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
     data.next_move = extractNextBestAction(classification);
+    data.suggested_targets = extractSuggestedTargets(data);
+    data.suggested_dev_items = extractSuggestedDevItems(data);
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
     if (reservedQuestion) await releaseScoutQuestion(userId);

@@ -388,6 +388,8 @@ const I18N = {
     scout_history_title: "History", scout_new_chat: "New chat", scout_no_past: "No past conversations yet.",
     scout_new_conversation: "New conversation", scout_ago_messages: " messages", scout_delete_conv: "Delete conversation",
     scout_scout_label: "SCOUT", scout_input_ph: "Talk to your scout…",
+    scout_build_target_list: "Add {n} to my Targets", scout_build_target_list_locked: "Add to my Targets — Pro", scout_targets_added: "Added to your Targets.",
+    scout_add_dev_items: "Add {n} to my Development Plan", scout_add_dev_items_locked: "Add to my Development Plan — Pro", scout_dev_items_added: "Added to your Development Plan.",
     scout_attach_photo: "Attach a photo", scout_photo_attached: "Photo attached — Scout will take a look.",
     scout_connection_dropped: "Connection dropped mid-play. Send that again and I'm on it.",
     scout_greeting: "I'm your GOLSZ Scout.\n\nTell me about yourself like you'd tell a scout — age, sport, position, where you play, and where you want to end up. I'll build your path from there.",
@@ -619,6 +621,8 @@ const I18N = {
     scout_history_title: "Historique", scout_new_chat: "Nouvelle discussion", scout_no_past: "Aucune conversation passée.",
     scout_new_conversation: "Nouvelle conversation", scout_ago_messages: " messages", scout_delete_conv: "Supprimer la conversation",
     scout_scout_label: "SCOUT", scout_input_ph: "Parlez à votre agent…",
+    scout_build_target_list: "Ajouter {n} à mes Cibles", scout_build_target_list_locked: "Ajouter à mes Cibles — Pro", scout_targets_added: "Ajouté à vos Cibles.",
+    scout_add_dev_items: "Ajouter {n} à mon Plan de Développement", scout_add_dev_items_locked: "Ajouter à mon Plan de Développement — Pro", scout_dev_items_added: "Ajouté à votre Plan de Développement.",
     scout_attach_photo: "Joindre une photo", scout_photo_attached: "Photo jointe — votre agent va y jeter un œil.",
     scout_connection_dropped: "Connexion interrompue en plein jeu. Renvoyez ça et je m'en occupe.",
     scout_greeting: "Je suis votre Agent GOLSZ.\n\nParlez-moi de vous comme vous le feriez à un recruteur — âge, sport, poste, où vous jouez, et où vous voulez aller. Je construirai votre parcours à partir de là.",
@@ -850,6 +854,8 @@ const I18N = {
     scout_history_title: "Historial", scout_new_chat: "Nuevo chat", scout_no_past: "Aún no hay conversaciones pasadas.",
     scout_new_conversation: "Nueva conversación", scout_ago_messages: " mensajes", scout_delete_conv: "Eliminar conversación",
     scout_scout_label: "SCOUT", scout_input_ph: "Habla con tu agente…",
+    scout_build_target_list: "Añadir {n} a mis Objetivos", scout_build_target_list_locked: "Añadir a mis Objetivos — Pro", scout_targets_added: "Añadido a tus Objetivos.",
+    scout_add_dev_items: "Añadir {n} a mi Plan de Desarrollo", scout_add_dev_items_locked: "Añadir a mi Plan de Desarrollo — Pro", scout_dev_items_added: "Añadido a tu Plan de Desarrollo.",
     scout_attach_photo: "Adjuntar una foto", scout_photo_attached: "Foto adjunta — tu agente le echará un vistazo.",
     scout_connection_dropped: "Se perdió la conexión a mitad de la jugada. Envíalo de nuevo y me encargo.",
     scout_greeting: "Soy tu Agente GOLSZ.\n\nCuéntame sobre ti como se lo contarías a un ojeador — edad, deporte, posición, dónde juegas y a dónde quieres llegar. Construiré tu camino a partir de ahí.",
@@ -1081,6 +1087,8 @@ const I18N = {
     scout_history_title: "Ιστορικό", scout_new_chat: "Νέα συνομιλία", scout_no_past: "Δεν υπάρχουν προηγούμενες συνομιλίες ακόμα.",
     scout_new_conversation: "Νέα συνομιλία", scout_ago_messages: " μηνύματα", scout_delete_conv: "Διαγραφή συνομιλίας",
     scout_scout_label: "SCOUT", scout_input_ph: "Μιλήστε στον σκάουτ σας…",
+    scout_build_target_list: "Προσθήκη {n} στους Στόχους μου", scout_build_target_list_locked: "Προσθήκη στους Στόχους μου — Pro", scout_targets_added: "Προστέθηκε στους Στόχους σου.",
+    scout_add_dev_items: "Προσθήκη {n} στο Πλάνο Ανάπτυξής μου", scout_add_dev_items_locked: "Προσθήκη στο Πλάνο Ανάπτυξής μου — Pro", scout_dev_items_added: "Προστέθηκε στο Πλάνο Ανάπτυξής σου.",
     scout_attach_photo: "Επισύναψη φωτογραφίας", scout_photo_attached: "Η φωτογραφία επισυνάφθηκε — ο σκάουτ θα τη δει.",
     scout_connection_dropped: "Η σύνδεση διακόπηκε στη μέση. Στείλτε το ξανά και θα το αναλάβω.",
     scout_greeting: "Είμαι ο GOLSZ Σκάουτ σας.\n\nΠείτε μου για εσάς όπως θα λέγατε σε έναν σκάουτ — ηλικία, άθλημα, θέση, πού παίζετε και πού θέλετε να καταλήξετε. Θα χτίσω τη διαδρομή σας από εκεί.",
@@ -6412,7 +6420,11 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       }
       if (typeof data.scout_summary === "string") setSummary(data.scout_summary);
       if (Object.prototype.hasOwnProperty.call(data, "next_move")) setNextMove(data.next_move || null);
-      setMsgs((m) => [...m, { role: "assistant", text: reply }]);
+      // suggested_targets/suggested_dev_items (brief §2B "persistent
+      // actions") are already server-validated/capped — attached straight
+      // to this specific message so the "add these" buttons render right
+      // under the reply that generated them, not as a separate object.
+      setMsgs((m) => [...m, { role: "assistant", text: reply, suggestedTargets: data.suggested_targets || null, suggestedDevItems: data.suggested_dev_items || null }]);
       logTurn("assistant", reply);
     } catch (e) {
       const msg = e && e.code === "SCOUT_HTTP_ERROR" ? e.message : t("scout_connection_dropped");
@@ -6439,6 +6451,30 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
     if (!sb) return;
     try { const { error } = await sb.rpc("dismiss_next_move"); if (error) throw error; }
     catch (e) { console.error("GOLSZ dismiss next-move error:", e); }
+  }
+
+  // Brief §2B "persistent actions": one tap turns Scout's suggested_targets/
+  // suggested_dev_items (already server-validated/capped) into real rows,
+  // instead of the athlete re-typing what Scout just said. Marks the
+  // message's own suggestions consumed afterward (msgIndex) so the button
+  // can't double-insert on a re-render or a slow double-tap.
+  async function addSuggestedTargets(msgIndex, targets) {
+    if (!sb || !uidRef.current || !targets || !targets.length) return;
+    try {
+      const rows = targets.map((t) => ({ user_id: uidRef.current, name: t.name, fit_reasoning: t.reasoning || null }));
+      const { error } = await sb.from("outreach_targets").insert(rows);
+      if (error) throw error;
+      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedTargets: null, targetsAdded: true } : msg)));
+    } catch (e) { console.error("GOLSZ add suggested targets error:", e); }
+  }
+  async function addSuggestedDevItems(msgIndex, items) {
+    if (!sb || !uidRef.current || !items || !items.length) return;
+    try {
+      const rows = items.map((i) => ({ user_id: uidRef.current, focus_area: i.focus_area, goal: i.goal }));
+      const { error } = await sb.from("development_plan_items").insert(rows);
+      if (error) throw error;
+      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedDevItems: null, devItemsAdded: true } : msg)));
+    } catch (e) { console.error("GOLSZ add suggested dev items error:", e); }
   }
 
   const known = Object.keys(profile).filter((k) => profile[k]);
@@ -6509,6 +6545,30 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
               {m.role === "assistant" && <div style={{ fontSize: 9, letterSpacing: "0.22em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("scout_scout_label")}</div>}
               {m.photo && <img src={m.photo} style={{ display: "block", maxWidth: "100%", borderRadius: 10, marginBottom: m.text ? 6 : 0 }} />}
               {m.text && <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>}
+              {m.suggestedTargets && m.suggestedTargets.length > 0 && (
+                hasFeature(plan, "targets") ? (
+                  <button onClick={() => addSuggestedTargets(i, m.suggestedTargets)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Target size={13} /> {t("scout_build_target_list").replace("{n}", m.suggestedTargets.length)}
+                  </button>
+                ) : (
+                  <button onClick={onUpgrade} style={{ marginTop: 8, background: C.turf, color: C.slate, border: `1px dashed ${C.line2}`, borderRadius: 9, padding: "8px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Lock size={12} /> {t("scout_build_target_list_locked")}
+                  </button>
+                )
+              )}
+              {m.targetsAdded && <div style={{ marginTop: 8, fontSize: 11.5, color: C.lime }}>{t("scout_targets_added")}</div>}
+              {m.suggestedDevItems && m.suggestedDevItems.length > 0 && (
+                hasFeature(plan, "development_plan") ? (
+                  <button onClick={() => addSuggestedDevItems(i, m.suggestedDevItems)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Radar size={13} /> {t("scout_add_dev_items").replace("{n}", m.suggestedDevItems.length)}
+                  </button>
+                ) : (
+                  <button onClick={onUpgrade} style={{ marginTop: 8, background: C.turf, color: C.slate, border: `1px dashed ${C.line2}`, borderRadius: 9, padding: "8px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Lock size={12} /> {t("scout_add_dev_items_locked")}
+                  </button>
+                )
+              )}
+              {m.devItemsAdded && <div style={{ marginTop: 8, fontSize: 11.5, color: C.lime }}>{t("scout_dev_items_added")}</div>}
             </div>
           ))}
           {loaded && !pending && msgs && msgs.length <= 1 && (
