@@ -7561,12 +7561,15 @@ function GolszApp({ onSignOut, startOnboarding }) {
   // Feed/Discover/Events/Messages are launch-scoped off both nav bars —
   // see the "go" function and the route list below, both left fully
   // intact so re-adding a nav entry later is the only step needed.
+  // Account tab removed from both nav bars — Settings/account is still
+  // reachable via the header's own gear icon (SettingsButton renders it
+  // independently of these arrays), so this only drops the duplicate
+  // nav-bar entry point, not the feature itself.
   const NAV = [
     { id: "home", icon: Home, label: t("nav_home") },
     { id: "scout", icon: Radar, label: t("nav_scout") },
     { id: "targets", icon: Target, label: t("nav_targets") },
     { id: "profile", icon: User, label: t("nav_passport") },
-    { id: "account", icon: SettingsIcon, label: t("nav_account") },
   ];
 
   const SIDEBAR_NAV = [
@@ -7574,7 +7577,6 @@ function GolszApp({ onSignOut, startOnboarding }) {
     { id: "scout", icon: Radar, label: t("nav_ai_scout") },
     { id: "targets", icon: Target, label: t("nav_targets") },
     { id: "profile", icon: User, label: t("nav_profile") },
-    { id: "account", icon: SettingsIcon, label: t("nav_account") },
   ];
 
   const go = (id) => {
