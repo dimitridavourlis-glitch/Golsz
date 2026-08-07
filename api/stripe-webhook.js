@@ -9,6 +9,8 @@
 // Dashboard (Developers -> Webhooks) once deployed, subscribed to:
 //   checkout.session.completed
 //   customer.subscription.deleted
+//   customer.subscription.updated
+//   invoice.payment_failed
 //
 // Required env vars:
 //   STRIPE_WEBHOOK_SECRET     from the Stripe Dashboard webhook you register
@@ -77,6 +79,14 @@ function verifyStripeSignature(rawBody, sigHeader, secret) {
 // api/admin-user-action.js.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Payment Links don't carry arbitrary metadata, so plan is inferred from
+// price the same way in every handler that needs it — kept as one function
+// so the thresholds (Starter=$6, Pro=$14, Elite=$30, matching PLANS in
+// golsz-app.html) only need updating in one place if prices ever change.
+function planFromAmount(amount) {
+  return amount >= 3000 ? "elite" : amount >= 1400 ? "pro" : amount >= 600 ? "starter" : null;
+}
+
 async function patchProfile(supaUrl, serviceKey, filterQuery, body) {
   await fetch(`${supaUrl}/rest/v1/profiles?${filterQuery}`, {
     method: "PATCH",
@@ -112,15 +122,42 @@ export default async function handler(req, res) {
       const session = event.data.object;
       const profileId = session.client_reference_id;
       const customerId = session.customer;
-      const amount = session.amount_total || 0;
-      const plan = amount >= 3000 ? "elite" : amount >= 1400 ? "pro" : amount >= 600 ? "starter" : null;
+      const plan = planFromAmount(session.amount_total || 0);
       if (profileId && UUID_RE.test(profileId) && plan) {
-        await patchProfile(supaUrl, serviceKey, `id=eq.${profileId}`, { plan, stripe_customer_id: customerId || null });
+        await patchProfile(supaUrl, serviceKey, `id=eq.${profileId}`, { plan, stripe_customer_id: customerId || null, payment_past_due: false });
       }
     } else if (event.type === "customer.subscription.deleted") {
       const customerId = event.data.object.customer;
       if (customerId) {
-        await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, { plan: "free" });
+        await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, { plan: "free", payment_past_due: false });
+      }
+    } else if (event.type === "customer.subscription.updated") {
+      // Syncs plan changes and recovers/flags the past-due state as the
+      // subscription's status transitions (e.g. active -> past_due after a
+      // failed charge, or past_due -> active after Stripe's retry succeeds).
+      // A hard cutoff to "free" only happens for a status Stripe uses to
+      // mean the subscription is truly over — "canceled"/"unpaid"/
+      // "incomplete_expired" — everything else (trialing, past_due) keeps
+      // the account's paid plan intact while Stripe keeps retrying.
+      const sub = event.data.object;
+      const customerId = sub.customer;
+      const status = sub.status;
+      if (customerId) {
+        if (status === "canceled" || status === "unpaid" || status === "incomplete_expired") {
+          await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, { plan: "free", payment_past_due: false });
+        } else {
+          const item = sub.items && sub.items.data && sub.items.data[0];
+          const amount = item && item.price && typeof item.price.unit_amount === "number" ? item.price.unit_amount : null;
+          const plan = amount === null ? null : planFromAmount(amount);
+          const patch = { payment_past_due: status === "past_due" };
+          if (plan) patch.plan = plan;
+          await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, patch);
+        }
+      }
+    } else if (event.type === "invoice.payment_failed") {
+      const customerId = event.data.object.customer;
+      if (customerId) {
+        await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, { payment_past_due: true });
       }
     }
     // other event types are ignored — Stripe expects a 200 regardless

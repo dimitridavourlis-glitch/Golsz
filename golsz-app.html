@@ -262,6 +262,7 @@ const I18N = {
     settings_email_sent: "Check {email} for a confirmation link to finish the change.",
     settings_email_err: "Couldn't update email.",
     settings_plan: "PLAN", settings_plan_current: "Current", settings_plan_switch: "Choose",
+    settings_payment_past_due: "Your last payment didn't go through. Update your card with Stripe (check your receipt email) to keep your plan active.",
     settings_plan_checkout_unavailable: "Checkout isn't set up yet — check back soon.",
     settings_plan_downgrade_note: "Switched to Starter. This won't cancel an existing paid subscription — use the receipt email Stripe sent you to manage or cancel billing.",
     settings_plan_err: "Couldn't update your plan — try again.",
@@ -514,6 +515,7 @@ const I18N = {
     settings_email_sent: "Consultez {email} pour un lien de confirmation afin de finaliser le changement.",
     settings_email_err: "Impossible de mettre à jour l'e-mail.",
     settings_plan: "FORMULE", settings_plan_current: "Actuelle", settings_plan_switch: "Choisir",
+    settings_payment_past_due: "Votre dernier paiement a échoué. Mettez à jour votre carte via Stripe (voir l'e-mail de reçu) pour garder votre formule active.",
     settings_plan_checkout_unavailable: "Le paiement n'est pas encore configuré — revenez bientôt.",
     settings_plan_downgrade_note: "Passé à Starter. Cela n'annule pas un abonnement payant existant — utilisez l'e-mail de reçu envoyé par Stripe pour gérer ou annuler la facturation.",
     settings_plan_err: "Impossible de mettre à jour votre formule — réessayez.",
@@ -766,6 +768,7 @@ const I18N = {
     settings_email_sent: "Revisa {email} para un enlace de confirmación y completar el cambio.",
     settings_email_err: "No se pudo actualizar el correo.",
     settings_plan: "PLAN", settings_plan_current: "Actual", settings_plan_switch: "Elegir",
+    settings_payment_past_due: "Tu último pago no se procesó. Actualiza tu tarjeta con Stripe (revisa el correo del recibo) para mantener tu plan activo.",
     settings_plan_checkout_unavailable: "El pago aún no está configurado — vuelve pronto.",
     settings_plan_downgrade_note: "Cambiado a Starter. Esto no cancela una suscripción de pago existente — usa el correo del recibo de Stripe para gestionar o cancelar la facturación.",
     settings_plan_err: "No se pudo actualizar tu plan — inténtalo de nuevo.",
@@ -1018,6 +1021,7 @@ const I18N = {
     settings_email_sent: "Ελέγξτε το {email} για σύνδεσμο επιβεβαίωσης για να ολοκληρώσετε την αλλαγή.",
     settings_email_err: "Δεν ήταν δυνατή η ενημέρωση του email.",
     settings_plan: "ΠΑΚΕΤΟ", settings_plan_current: "Τρέχον", settings_plan_switch: "Επιλογή",
+    settings_payment_past_due: "Η τελευταία σας πληρωμή απέτυχε. Ενημερώστε την κάρτα σας μέσω Stripe (δείτε το email απόδειξης) για να διατηρήσετε το πακέτο σας ενεργό.",
     settings_plan_checkout_unavailable: "Η πληρωμή δεν έχει ρυθμιστεί ακόμα — ελέγξτε ξανά σύντομα.",
     settings_plan_downgrade_note: "Αλλάξατε σε Starter. Αυτό δεν ακυρώνει τυχόν υπάρχουσα συνδρομή — χρησιμοποιήστε το email απόδειξης από το Stripe για να διαχειριστείτε ή να ακυρώσετε τη χρέωση.",
     settings_plan_err: "Δεν ήταν δυνατή η ενημέρωση του πακέτου σας — δοκιμάστε ξανά.",
@@ -1348,6 +1352,7 @@ function SettingsButton({ openSignal }) {
   const { lang, setLang, t } = useLang();
   const [uid, setUid] = useState(null);
   const [currentPlan, setCurrentPlan] = useState(null);
+  const [paymentPastDue, setPaymentPastDue] = useState(false);
   const [planBusy, setPlanBusy] = useState(false);
   const [planMsg, setPlanMsg] = useState("");
   const [notifEnabled, setNotifEnabled] = useState(false);
@@ -1385,8 +1390,9 @@ function SettingsButton({ openSignal }) {
         if (!user) return;
         setUid(user.id);
         setCurrentEmail(user.email || "");
-        const { data: prof } = await sb.from("profiles").select("plan").eq("id", user.id).single();
+        const { data: prof } = await sb.from("profiles").select("plan, payment_past_due").eq("id", user.id).single();
         if (prof && prof.plan) setCurrentPlan(prof.plan);
+        if (prof) setPaymentPastDue(!!prof.payment_past_due);
       } catch (e) { console.error("GOLSZ settings profile error:", e); }
     })();
   }, []);
@@ -1539,6 +1545,11 @@ function SettingsButton({ openSignal }) {
             {sb && uid && (
               <div style={{ marginBottom: 18 }}>
                 <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_plan")}</div>
+                {paymentPastDue && (
+                  <div style={{ background: "#C89B3C1a", border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "10px 12px", marginBottom: 10, fontSize: 12, color: C.warnText, lineHeight: 1.4 }}>
+                    {t("settings_payment_past_due")}
+                  </div>
+                )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {PLANS.map((pl) => {
                     const isCurrent = currentPlan === pl.id;
