@@ -22,7 +22,43 @@
     initActiveNav();
     initScrollReveal();
     initForms();
+    initHeroRegion();
   });
+
+  // Swaps the homepage hero's background photo based on the visitor's
+  // region (Canada / US / Europe / default), resolved server-side via
+  // /api/geo.js so no client-side geo lookup or third-party service is
+  // involved. No-op on any page without a [data-hero-region] hero. The
+  // CSS gradient fallback already on .hero-mega covers the time between
+  // page load and this resolving (or if it fails/no image exists yet for
+  // that region), so the hero never shows a broken background.
+  function initHeroRegion() {
+    var hero = document.querySelector("[data-hero-region]");
+    if (!hero) return;
+
+    var IMAGE_BY_REGION = {
+      ca: "assets/hero-ca.jpg",
+      us: "assets/hero-us.jpg",
+      eu: "assets/hero-eu.jpg",
+    };
+
+    fetch("/api/geo")
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        var path = data && IMAGE_BY_REGION[data.region];
+        if (!path) return;
+        var img = new Image();
+        img.onload = function () {
+          hero.style.backgroundImage = "linear-gradient(100deg, rgba(9,12,10,0.94) 0%, rgba(9,12,10,0.72) 42%, rgba(9,12,10,0.25) 68%, rgba(9,12,10,0.55) 100%), linear-gradient(0deg, rgba(9,12,10,0.9) 0%, transparent 22%), url(" + path + ")";
+        };
+        // Only swap once the image is actually decoded/loaded — never
+        // point background-image at a path that doesn't exist yet, which
+        // would just leave the CSS fallback gradients showing anyway, but
+        // silently, instead of erroring loudly during development.
+        img.src = path;
+      })
+      .catch(function () { /* fallback gradient stays — see .hero-mega */ });
+  }
 
   function initFooterYear() {
     var yearEls = document.querySelectorAll("[data-year]");
