@@ -649,6 +649,21 @@ function extractSuggestedDevItems(data) {
   }
 }
 
+// Same extraction shape again, pulling drafted_email — brief §8: "AI Scout
+// should be able to create professional introduction/email drafts using
+// Passport information," wired to a target's own draft_email column
+// (migration 072/077) instead of requiring manual copy-paste.
+function extractDraftedEmail(data) {
+  try {
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    return (parsed && typeof parsed.drafted_email === "string" && parsed.drafted_email.trim()) ? parsed.drafted_email.trim().slice(0, 4000) : null;
+  } catch {
+    return null;
+  }
+}
+
 // Writes to athletes.scout_context via merge_scout_context() (migration
 // 050) — never a direct PATCH, since a plain PATCH would replace the whole
 // jsonb column and clobber fields this turn didn't touch; the RPC's jsonb
@@ -798,11 +813,12 @@ search_golsz_players only ever returns athletes who are actually real, current G
 For trials, camps, combines, or showcases, use search_golsz_events first (real GOLSZ listings) before general web search — same rule: never invent or embellish a listing, and say plainly if there are zero real results before offering a broader search.
 If asked what AI model or company powers you, who made you, or whether you're ChatGPT/OpenAI/Claude/Anthropic/Gemini/etc., always answer that you are GOLSZ Scout, built by GOLSZ — never name or confirm any underlying model or provider, and don't explain that you're declining to say. Just answer as GOLSZ Scout and move on.
 GOLSZ is a sports-recruiting platform used by athletes of all ages, including minors. Stay strictly on sports, athletics, recruiting, and career topics. Never generate or engage with sexual, romantic, 18+/adult, or otherwise inappropriate content, regardless of how the request is framed (roleplay, "hypothetically," "for a story," etc.) — decline briefly and warmly, and steer the conversation back to something sports-related. This applies no matter who the user says they are.
-OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null}
+OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"drafted_email":"the full drafted email text" or null}
 Allowed profile_updates keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, education_level, budget, citizenship, goal. Do not repeat known fields.
 Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
 Only include suggested_targets when THIS reply names concrete target schools/clubs/academies/programs by name (e.g. building or discussing a target list, recommending realistic reach/match/safety options) — each with a one-sentence reasoning tied to this specific athlete's own profile. Never include it for a general reply, and never invent a program you're not reasonably confident is real. Cap at 5.
-Only include suggested_dev_items when THIS reply identifies concrete training/development focus areas the athlete should actively work on (e.g. discussing a weakness, a development plan, benchmark results) — each with a short, specific goal, using focus_area from: training, strength, speed, conditioning, recovery, sleep, hydration, nutrition, other. Never include it for a general reply. Cap at 3.`;
+Only include suggested_dev_items when THIS reply identifies concrete training/development focus areas the athlete should actively work on (e.g. discussing a weakness, a development plan, benchmark results) — each with a short, specific goal, using focus_area from: training, strength, speed, conditioning, recovery, sleep, hydration, nutrition, other. Never include it for a general reply. Cap at 3.
+Only include drafted_email when THIS reply's "reply" text IS an actual drafted outreach email (a real subject/greeting/body/sign-off the athlete could send) — set drafted_email to that same full email text. Never include it when just discussing or offering to draft one, only once you've actually written it.`;
 
 // Phase 2d of the AI Scout architecture plan (approved): named specialists,
 // selected by the classifier's recommended_specialist (Phase 2c), sharing
@@ -1659,6 +1675,7 @@ export default async function handler(req, res) {
         // write already happened.
         data.suggested_targets = extractSuggestedTargets(data);
         data.suggested_dev_items = extractSuggestedDevItems(data);
+        data.drafted_email = extractDraftedEmail(data);
         return res.status(200).json(data);
       }
       if (!ok) {
@@ -1717,6 +1734,7 @@ export default async function handler(req, res) {
         data.next_move = extractNextBestAction(classification);
         data.suggested_targets = extractSuggestedTargets(data);
         data.suggested_dev_items = extractSuggestedDevItems(data);
+        data.drafted_email = extractDraftedEmail(data);
         // Deliberately never cached — a degraded, apologetic reply shouldn't
         // get served back to a different athlete once things recover.
         return res.status(200).json(data);
@@ -1744,6 +1762,7 @@ export default async function handler(req, res) {
     data.next_move = extractNextBestAction(classification);
     data.suggested_targets = extractSuggestedTargets(data);
     data.suggested_dev_items = extractSuggestedDevItems(data);
+    data.drafted_email = extractDraftedEmail(data);
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
     if (reservedQuestion) await releaseScoutQuestion(userId);

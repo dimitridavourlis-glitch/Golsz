@@ -390,6 +390,7 @@ const I18N = {
     scout_scout_label: "SCOUT", scout_input_ph: "Talk to your scout…",
     scout_build_target_list: "Add {n} to my Targets", scout_build_target_list_locked: "Add to my Targets — Pro", scout_targets_added: "Added to your Targets.",
     scout_add_dev_items: "Add {n} to my Development Plan", scout_add_dev_items_locked: "Add to my Development Plan — Pro", scout_dev_items_added: "Added to your Development Plan.",
+    scout_save_email: "Save this email to a Target", scout_save_email_locked: "Save to a Target — Pro", scout_save_email_pick: "Choose a target…", scout_save_email_confirm: "Save", scout_save_email_cancel: "Cancel", scout_save_email_no_targets: "You don't have any targets yet — add one first.", scout_email_saved: "Saved to your target.",
     scout_attach_photo: "Attach a photo", scout_photo_attached: "Photo attached — Scout will take a look.",
     scout_connection_dropped: "Connection dropped mid-play. Send that again and I'm on it.",
     scout_greeting: "I'm your GOLSZ Scout.\n\nTell me about yourself like you'd tell a scout — age, sport, position, where you play, and where you want to end up. I'll build your path from there.",
@@ -623,6 +624,7 @@ const I18N = {
     scout_scout_label: "SCOUT", scout_input_ph: "Parlez à votre agent…",
     scout_build_target_list: "Ajouter {n} à mes Cibles", scout_build_target_list_locked: "Ajouter à mes Cibles — Pro", scout_targets_added: "Ajouté à vos Cibles.",
     scout_add_dev_items: "Ajouter {n} à mon Plan de Développement", scout_add_dev_items_locked: "Ajouter à mon Plan de Développement — Pro", scout_dev_items_added: "Ajouté à votre Plan de Développement.",
+    scout_save_email: "Enregistrer cet e-mail sur une Cible", scout_save_email_locked: "Enregistrer sur une Cible — Pro", scout_save_email_pick: "Choisissez une cible…", scout_save_email_confirm: "Enregistrer", scout_save_email_cancel: "Annuler", scout_save_email_no_targets: "Vous n'avez pas encore de cibles — ajoutez-en une d'abord.", scout_email_saved: "Enregistré sur votre cible.",
     scout_attach_photo: "Joindre une photo", scout_photo_attached: "Photo jointe — votre agent va y jeter un œil.",
     scout_connection_dropped: "Connexion interrompue en plein jeu. Renvoyez ça et je m'en occupe.",
     scout_greeting: "Je suis votre Agent GOLSZ.\n\nParlez-moi de vous comme vous le feriez à un recruteur — âge, sport, poste, où vous jouez, et où vous voulez aller. Je construirai votre parcours à partir de là.",
@@ -856,6 +858,7 @@ const I18N = {
     scout_scout_label: "SCOUT", scout_input_ph: "Habla con tu agente…",
     scout_build_target_list: "Añadir {n} a mis Objetivos", scout_build_target_list_locked: "Añadir a mis Objetivos — Pro", scout_targets_added: "Añadido a tus Objetivos.",
     scout_add_dev_items: "Añadir {n} a mi Plan de Desarrollo", scout_add_dev_items_locked: "Añadir a mi Plan de Desarrollo — Pro", scout_dev_items_added: "Añadido a tu Plan de Desarrollo.",
+    scout_save_email: "Guardar este correo en un Objetivo", scout_save_email_locked: "Guardar en un Objetivo — Pro", scout_save_email_pick: "Elige un objetivo…", scout_save_email_confirm: "Guardar", scout_save_email_cancel: "Cancelar", scout_save_email_no_targets: "Aún no tienes objetivos — añade uno primero.", scout_email_saved: "Guardado en tu objetivo.",
     scout_attach_photo: "Adjuntar una foto", scout_photo_attached: "Foto adjunta — tu agente le echará un vistazo.",
     scout_connection_dropped: "Se perdió la conexión a mitad de la jugada. Envíalo de nuevo y me encargo.",
     scout_greeting: "Soy tu Agente GOLSZ.\n\nCuéntame sobre ti como se lo contarías a un ojeador — edad, deporte, posición, dónde juegas y a dónde quieres llegar. Construiré tu camino a partir de ahí.",
@@ -1089,6 +1092,7 @@ const I18N = {
     scout_scout_label: "SCOUT", scout_input_ph: "Μιλήστε στον σκάουτ σας…",
     scout_build_target_list: "Προσθήκη {n} στους Στόχους μου", scout_build_target_list_locked: "Προσθήκη στους Στόχους μου — Pro", scout_targets_added: "Προστέθηκε στους Στόχους σου.",
     scout_add_dev_items: "Προσθήκη {n} στο Πλάνο Ανάπτυξής μου", scout_add_dev_items_locked: "Προσθήκη στο Πλάνο Ανάπτυξής μου — Pro", scout_dev_items_added: "Προστέθηκε στο Πλάνο Ανάπτυξής σου.",
+    scout_save_email: "Αποθήκευση αυτού του email σε Στόχο", scout_save_email_locked: "Αποθήκευση σε Στόχο — Pro", scout_save_email_pick: "Επίλεξε έναν στόχο…", scout_save_email_confirm: "Αποθήκευση", scout_save_email_cancel: "Ακύρωση", scout_save_email_no_targets: "Δεν έχεις ακόμα στόχους — πρόσθεσε έναν πρώτα.", scout_email_saved: "Αποθηκεύτηκε στον στόχο σου.",
     scout_attach_photo: "Επισύναψη φωτογραφίας", scout_photo_attached: "Η φωτογραφία επισυνάφθηκε — ο σκάουτ θα τη δει.",
     scout_connection_dropped: "Η σύνδεση διακόπηκε στη μέση. Στείλτε το ξανά και θα το αναλάβω.",
     scout_greeting: "Είμαι ο GOLSZ Σκάουτ σας.\n\nΠείτε μου για εσάς όπως θα λέγατε σε έναν σκάουτ — ηλικία, άθλημα, θέση, πού παίζετε και πού θέλετε να καταλήξετε. Θα χτίσω τη διαδρομή σας από εκεί.",
@@ -6424,7 +6428,7 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       // actions") are already server-validated/capped — attached straight
       // to this specific message so the "add these" buttons render right
       // under the reply that generated them, not as a separate object.
-      setMsgs((m) => [...m, { role: "assistant", text: reply, suggestedTargets: data.suggested_targets || null, suggestedDevItems: data.suggested_dev_items || null }]);
+      setMsgs((m) => [...m, { role: "assistant", text: reply, suggestedTargets: data.suggested_targets || null, suggestedDevItems: data.suggested_dev_items || null, draftedEmail: data.drafted_email || null }]);
       logTurn("assistant", reply);
     } catch (e) {
       const msg = e && e.code === "SCOUT_HTTP_ERROR" ? e.message : t("scout_connection_dropped");
@@ -6475,6 +6479,34 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       if (error) throw error;
       setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedDevItems: null, devItemsAdded: true } : msg)));
     } catch (e) { console.error("GOLSZ add suggested dev items error:", e); }
+  }
+
+  // Brief §8: "AI Scout should be able to create professional introduction/
+  // email drafts" — saves a Scout-drafted email straight onto an existing
+  // target's draft_email column instead of manual copy-paste. Target list
+  // fetched lazily (only once the athlete actually opens the picker) since
+  // most Scout replies never need it.
+  const [emailTargets, setEmailTargets] = useState(null);
+  const [savingEmailFor, setSavingEmailFor] = useState(null);
+  const [selectedEmailTarget, setSelectedEmailTarget] = useState("");
+  async function openSaveEmailPicker(msgIndex) {
+    setSavingEmailFor(msgIndex);
+    setSelectedEmailTarget("");
+    if (emailTargets !== null || !sb || !uidRef.current) return;
+    try {
+      const { data, error } = await sb.from("outreach_targets").select("id, name").eq("user_id", uidRef.current).order("created_at", { ascending: false });
+      if (error) throw error;
+      setEmailTargets(data || []);
+    } catch (e) { console.error("GOLSZ load targets for email save error:", e); setEmailTargets([]); }
+  }
+  async function saveDraftedEmail(msgIndex, emailText) {
+    if (!sb || !selectedEmailTarget) return;
+    try {
+      const { error } = await sb.from("outreach_targets").update({ draft_email: emailText, updated_at: new Date().toISOString() }).eq("id", selectedEmailTarget).eq("user_id", uidRef.current);
+      if (error) throw error;
+      setSavingEmailFor(null);
+      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, draftedEmail: null, emailSaved: true } : msg)));
+    } catch (e) { console.error("GOLSZ save drafted email error:", e); }
   }
 
   const known = Object.keys(profile).filter((k) => profile[k]);
@@ -6569,6 +6601,29 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
                 )
               )}
               {m.devItemsAdded && <div style={{ marginTop: 8, fontSize: 11.5, color: C.lime }}>{t("scout_dev_items_added")}</div>}
+              {m.draftedEmail && savingEmailFor !== i && (
+                hasFeature(plan, "targets") ? (
+                  <button onClick={() => openSaveEmailPicker(i)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Mail size={13} /> {t("scout_save_email")}
+                  </button>
+                ) : (
+                  <button onClick={onUpgrade} style={{ marginTop: 8, background: C.turf, color: C.slate, border: `1px dashed ${C.line2}`, borderRadius: 9, padding: "8px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Lock size={12} /> {t("scout_save_email_locked")}
+                  </button>
+                )
+              )}
+              {m.draftedEmail && savingEmailFor === i && (
+                <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <select value={selectedEmailTarget} onChange={(e) => setSelectedEmailTarget(e.target.value)} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "7px 8px", fontSize: 12, fontFamily: "inherit", flex: "1 1 140px" }}>
+                    <option value="">{t("scout_save_email_pick")}</option>
+                    {(emailTargets || []).map((tg) => <option key={tg.id} value={tg.id}>{tg.name}</option>)}
+                  </select>
+                  <button onClick={() => saveDraftedEmail(i, m.draftedEmail)} disabled={!selectedEmailTarget} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 8, padding: "7px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", opacity: !selectedEmailTarget ? 0.5 : 1 }}>{t("scout_save_email_confirm")}</button>
+                  <button onClick={() => setSavingEmailFor(null)} style={{ background: "none", border: "none", color: C.slate, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>{t("scout_save_email_cancel")}</button>
+                  {emailTargets && emailTargets.length === 0 && <div style={{ fontSize: 11.5, color: C.slate, width: "100%" }}>{t("scout_save_email_no_targets")}</div>}
+                </div>
+              )}
+              {m.emailSaved && <div style={{ marginTop: 8, fontSize: 11.5, color: C.lime }}>{t("scout_email_saved")}</div>}
             </div>
           ))}
           {loaded && !pending && msgs && msgs.length <= 1 && (
