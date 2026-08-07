@@ -256,6 +256,9 @@ const I18N = {
     settings_change_email: "Change email", settings_current_email: "Current: ", settings_new_email_ph: "New email address",
     settings_update_email_btn: "Update email", settings_email_invalid: "Enter a valid email address.",
     settings_email_same: "That's already your current email.",
+    settings_danger_zone: "DANGER ZONE", settings_delete_account: "Delete account",
+    settings_delete_warning: "This permanently deletes your account, profile, and uploaded photos. This cannot be undone. Type DELETE to confirm.",
+    settings_delete_confirm_ph: "Type DELETE to confirm", settings_delete_confirm_btn: "Permanently delete",
     settings_email_sent: "Check {email} for a confirmation link to finish the change.",
     settings_email_err: "Couldn't update email.",
     settings_plan: "PLAN", settings_plan_current: "Current", settings_plan_switch: "Choose",
@@ -505,6 +508,9 @@ const I18N = {
     settings_change_email: "Changer l'e-mail", settings_current_email: "Actuel : ", settings_new_email_ph: "Nouvelle adresse e-mail",
     settings_update_email_btn: "Mettre à jour l'e-mail", settings_email_invalid: "Entrez une adresse e-mail valide.",
     settings_email_same: "C'est déjà votre e-mail actuel.",
+    settings_danger_zone: "ZONE DE DANGER", settings_delete_account: "Supprimer le compte",
+    settings_delete_warning: "Cela supprime définitivement votre compte, votre profil et vos photos. Cette action est irréversible. Tapez DELETE pour confirmer.",
+    settings_delete_confirm_ph: "Tapez DELETE pour confirmer", settings_delete_confirm_btn: "Supprimer définitivement",
     settings_email_sent: "Consultez {email} pour un lien de confirmation afin de finaliser le changement.",
     settings_email_err: "Impossible de mettre à jour l'e-mail.",
     settings_plan: "FORMULE", settings_plan_current: "Actuelle", settings_plan_switch: "Choisir",
@@ -754,6 +760,9 @@ const I18N = {
     settings_change_email: "Cambiar correo", settings_current_email: "Actual: ", settings_new_email_ph: "Nueva dirección de correo",
     settings_update_email_btn: "Actualizar correo", settings_email_invalid: "Introduce una dirección de correo válida.",
     settings_email_same: "Ese ya es tu correo actual.",
+    settings_danger_zone: "ZONA DE PELIGRO", settings_delete_account: "Eliminar cuenta",
+    settings_delete_warning: "Esto elimina permanentemente tu cuenta, perfil y fotos subidas. No se puede deshacer. Escribe DELETE para confirmar.",
+    settings_delete_confirm_ph: "Escribe DELETE para confirmar", settings_delete_confirm_btn: "Eliminar permanentemente",
     settings_email_sent: "Revisa {email} para un enlace de confirmación y completar el cambio.",
     settings_email_err: "No se pudo actualizar el correo.",
     settings_plan: "PLAN", settings_plan_current: "Actual", settings_plan_switch: "Elegir",
@@ -1003,6 +1012,9 @@ const I18N = {
     settings_change_email: "Αλλαγή email", settings_current_email: "Τρέχον: ", settings_new_email_ph: "Νέα διεύθυνση email",
     settings_update_email_btn: "Ενημέρωση email", settings_email_invalid: "Εισαγάγετε έγκυρη διεύθυνση email.",
     settings_email_same: "Αυτό είναι ήδη το τρέχον email σας.",
+    settings_danger_zone: "ΕΠΙΚΙΝΔΥΝΗ ΖΩΝΗ", settings_delete_account: "Διαγραφή λογαριασμού",
+    settings_delete_warning: "Αυτό διαγράφει οριστικά τον λογαριασμό, το προφίλ και τις φωτογραφίες σας. Δεν αναιρείται. Πληκτρολογήστε DELETE για επιβεβαίωση.",
+    settings_delete_confirm_ph: "Πληκτρολογήστε DELETE για επιβεβαίωση", settings_delete_confirm_btn: "Οριστική διαγραφή",
     settings_email_sent: "Ελέγξτε το {email} για σύνδεσμο επιβεβαίωσης για να ολοκληρώσετε την αλλαγή.",
     settings_email_err: "Δεν ήταν δυνατή η ενημέρωση του email.",
     settings_plan: "ΠΑΚΕΤΟ", settings_plan_current: "Τρέχον", settings_plan_switch: "Επιλογή",
@@ -1353,6 +1365,14 @@ function SettingsButton({ openSignal }) {
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailErr, setEmailErr] = useState("");
   const [emailSent, setEmailSent] = useState(false);
+  // Self-service account deletion (GDPR right to erasure) — a real,
+  // irreversible server call (api/delete-account.js), so this requires
+  // typing DELETE to confirm rather than a single tap, on top of the
+  // server's own confirm:true backstop.
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteErr, setDeleteErr] = useState("");
 
   // Split from the push-status effect below (which bails out entirely when
   // pushSupported() is false) since uid/plan need to load regardless of
@@ -1462,6 +1482,31 @@ function SettingsButton({ openSignal }) {
       console.error("GOLSZ change email error:", e);
       setEmailErr((e && e.message) || t("settings_email_err"));
     } finally { setEmailBusy(false); }
+  }
+
+  async function deleteAccount() {
+    if (!sb || deleteBusy || deleteConfirmText.trim().toUpperCase() !== "DELETE") return;
+    setDeleteBusy(true); setDeleteErr("");
+    try {
+      const { data: sessionData } = await sb.auth.getSession();
+      const token = sessionData && sessionData.session && sessionData.session.access_token;
+      if (!token) throw new Error("Sign in again and retry.");
+      const res = await fetch("/api/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ confirm: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((data && data.error) || "Couldn't delete the account.");
+      // The account is gone server-side — sign out this client's own
+      // stale session and reload straight to a clean signed-out state.
+      await sb.auth.signOut();
+      window.location.href = window.location.pathname;
+    } catch (e) {
+      console.error("GOLSZ delete account error:", e);
+      setDeleteErr((e && e.message) || "Couldn't delete the account. Try again or contact support.");
+      setDeleteBusy(false);
+    }
   }
 
   return (
@@ -1599,6 +1644,33 @@ function SettingsButton({ openSignal }) {
                           </div>
                         </>
                       )}
+                    </div>
+                  )}
+                </div>
+                <div style={{ marginTop: 18, paddingTop: 14, borderTop: `1px solid ${C.line}` }}>
+                  <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.amber, fontWeight: 700, marginBottom: 8 }}>{t("settings_danger_zone")}</div>
+                  {!deleteOpen ? (
+                    <button onClick={() => { setDeleteOpen(true); setDeleteConfirmText(""); setDeleteErr(""); }} style={{
+                      width: "100%", textAlign: "left", background: "transparent", border: `1px solid ${C.amberBorder}`, borderRadius: 12,
+                      padding: "12px 14px", color: C.warnText, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                    }}>{t("settings_delete_account")}</button>
+                  ) : (
+                    <div style={{ background: "#C89B3C1a", border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: 14 }}>
+                      <div style={{ fontSize: 12, color: C.warnText, lineHeight: 1.4, marginBottom: 10 }}>{t("settings_delete_warning")}</div>
+                      <input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder={t("settings_delete_confirm_ph")}
+                        style={{ width: "100%", background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
+                      {deleteErr && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8 }}>{deleteErr}</div>}
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={deleteAccount} disabled={deleteBusy || deleteConfirmText.trim().toUpperCase() !== "DELETE"} style={{
+                          flex: 1, background: C.amber, color: C.ink, border: "none", borderRadius: 9, padding: "9px",
+                          fontWeight: 800, fontSize: 12.5, cursor: (deleteBusy || deleteConfirmText.trim().toUpperCase() !== "DELETE") ? "default" : "pointer",
+                          fontFamily: "inherit", opacity: (deleteBusy || deleteConfirmText.trim().toUpperCase() !== "DELETE") ? 0.5 : 1,
+                        }}>{deleteBusy ? t("events_saving") : t("settings_delete_confirm_btn")}</button>
+                        <button onClick={() => { setDeleteOpen(false); setDeleteConfirmText(""); setDeleteErr(""); }} style={{
+                          background: "transparent", color: C.slate, border: `1px solid ${C.line2}`, borderRadius: 9,
+                          padding: "9px 14px", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                        }}>{t("settings_cancel")}</button>
+                      </div>
                     </div>
                   )}
                 </div>
