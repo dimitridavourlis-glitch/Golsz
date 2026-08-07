@@ -332,7 +332,7 @@ const I18N = {
     passport_no_followers_self: "No followers yet — your Discover and Feed activity is how people find you.",
     passport_admin_panel: "Admin panel", passport_terms: "Terms & Conditions", passport_athlete_fallback: "GOLSZ Athlete",
     passport_foot: "FOOT", passport_share: "Share", passport_share_copied: "Link copied — anyone can view it, no account needed.", passport_share_title: "My GOLSZ Passport", passport_share_text: "Check out my GOLSZ Sports Passport",
-    passport_share_err: "Couldn't turn on sharing. Try again.", passport_is_public: "Your Passport is public via link", passport_make_private: "Make private",
+    passport_share_err: "Couldn't create a share link. Try again.", passport_manage_links: "Manage share links", passport_no_links: "No active share links yet.", passport_revoke_link: "Revoke",
     public_passport_not_found: "This passport doesn't exist or the link is broken.", public_passport_private: "This passport isn't public yet.", public_passport_cta: "Get your own GOLSZ Passport →",
     blocked_title: "Blocked accounts", blocked_empty: "You haven't blocked anyone.", blocked_unblock: "Unblock",
     admin_checking: "Checking access…", admin_only: "Admins only.", admin_title: "Admin panel",
@@ -566,7 +566,7 @@ const I18N = {
     passport_no_followers_self: "Pas encore d'abonnés — votre activité sur Découvrir et le fil est ce qui permet aux gens de vous trouver.",
     passport_admin_panel: "Panneau d'administration", passport_terms: "Conditions d'utilisation", passport_athlete_fallback: "Athlète GOLSZ",
     passport_foot: "PIED", passport_share: "Partager", passport_share_copied: "Lien copié — visible par tous, sans compte.", passport_share_title: "Mon Passeport GOLSZ", passport_share_text: "Découvrez mon Passeport Sportif GOLSZ",
-    passport_share_err: "Impossible d'activer le partage. Réessayez.", passport_is_public: "Votre Passeport est public via un lien", passport_make_private: "Rendre privé",
+    passport_share_err: "Impossible de créer un lien de partage. Réessayez.", passport_manage_links: "Gérer les liens de partage", passport_no_links: "Aucun lien de partage actif pour l'instant.", passport_revoke_link: "Révoquer",
     public_passport_not_found: "Ce passeport n'existe pas ou le lien est cassé.", public_passport_private: "Ce passeport n'est pas encore public.", public_passport_cta: "Obtenez votre propre Passeport GOLSZ →",
     blocked_title: "Comptes bloqués", blocked_empty: "Vous n'avez bloqué personne.", blocked_unblock: "Débloquer",
     admin_checking: "Vérification de l'accès…", admin_only: "Réservé aux administrateurs.", admin_title: "Panneau d'administration",
@@ -800,7 +800,7 @@ const I18N = {
     passport_no_followers_self: "Aún no tienes seguidores — tu actividad en Descubrir y el feed es cómo la gente te encuentra.",
     passport_admin_panel: "Panel de administración", passport_terms: "Términos y condiciones", passport_athlete_fallback: "Atleta de GOLSZ",
     passport_foot: "PIE", passport_share: "Compartir", passport_share_copied: "Enlace copiado — cualquiera puede verlo, sin necesidad de cuenta.", passport_share_title: "Mi Pasaporte GOLSZ", passport_share_text: "Mira mi Pasaporte Deportivo GOLSZ",
-    passport_share_err: "No se pudo activar el uso compartido. Inténtalo de nuevo.", passport_is_public: "Tu Pasaporte es público mediante enlace", passport_make_private: "Hacer privado",
+    passport_share_err: "No se pudo crear el enlace para compartir. Inténtalo de nuevo.", passport_manage_links: "Gestionar enlaces para compartir", passport_no_links: "Aún no hay enlaces activos.", passport_revoke_link: "Revocar",
     public_passport_not_found: "Este pasaporte no existe o el enlace está roto.", public_passport_private: "Este pasaporte aún no es público.", public_passport_cta: "Consigue tu propio Pasaporte GOLSZ →",
     blocked_title: "Cuentas bloqueadas", blocked_empty: "No has bloqueado a nadie.", blocked_unblock: "Desbloquear",
     admin_checking: "Comprobando acceso…", admin_only: "Solo administradores.", admin_title: "Panel de administración",
@@ -1034,7 +1034,7 @@ const I18N = {
     passport_no_followers_self: "Δεν έχετε ακόλουθους ακόμα — η δραστηριότητά σας στην Ανακάλυψη και τη ροή είναι ο τρόπος να σας βρουν.",
     passport_admin_panel: "Πίνακας διαχείρισης", passport_terms: "Όροι & Προϋποθέσεις", passport_athlete_fallback: "Αθλητής GOLSZ",
     passport_foot: "ΠΟΔΙ", passport_share: "Κοινοποίηση", passport_share_copied: "Ο σύνδεσμος αντιγράφηκε — τον βλέπει οποιοσδήποτε, χωρίς λογαριασμό.", passport_share_title: "Το Διαβατήριό μου GOLSZ", passport_share_text: "Δείτε το Αθλητικό μου Διαβατήριο GOLSZ",
-    passport_share_err: "Δεν ήταν δυνατή η ενεργοποίηση κοινοποίησης. Δοκιμάστε ξανά.", passport_is_public: "Το Διαβατήριό σας είναι δημόσιο μέσω συνδέσμου", passport_make_private: "Ιδιωτικό",
+    passport_share_err: "Δεν ήταν δυνατή η δημιουργία συνδέσμου κοινοποίησης. Δοκιμάστε ξανά.", passport_manage_links: "Διαχείριση συνδέσμων κοινοποίησης", passport_no_links: "Δεν υπάρχουν ενεργοί σύνδεσμοι ακόμα.", passport_revoke_link: "Ανάκληση",
     public_passport_not_found: "Αυτό το διαβατήριο δεν υπάρχει ή ο σύνδεσμος είναι κατεστραμμένος.", public_passport_private: "Αυτό το διαβατήριο δεν είναι ακόμα δημόσιο.", public_passport_cta: "Αποκτήστε το δικό σας Διαβατήριο GOLSZ →",
     blocked_title: "Αποκλεισμένοι λογαριασμοί", blocked_empty: "Δεν έχετε αποκλείσει κανέναν.", blocked_unblock: "Άρση αποκλεισμού",
     admin_checking: "Έλεγχος πρόσβασης…", admin_only: "Μόνο για διαχειριστές.", admin_title: "Πίνακας διαχείρισης",
@@ -3622,23 +3622,28 @@ function toPassport(profile, ath, uid, t) {
    never a direct table select — so it can never accidentally expose more
    than that RPC deliberately returns, and returns null outright for a
    restricted (unapproved) minor, same gate as everywhere else in the app. */
-function PublicPassport({ userId }) {
+function PublicPassport({ userId, token }) {
   const { t } = useLang();
   const [state, setState] = useState("loading"); // loading | ok | private | error
   const [p, setP] = useState(null);
 
   useEffect(() => {
-    if (!sb || !userId) { setState("error"); return; }
+    if (!sb || (!userId && !token)) { setState("error"); return; }
     (async () => {
       try {
-        const { data, error } = await sb.rpc("get_public_passport", { p_user: userId });
+        // token mode (migration 078, revocable per-link sharing) is the
+        // current share flow; userId mode (?public=<uid>, migration 046)
+        // is kept working for any link shared before this change.
+        const { data, error } = token
+          ? await sb.rpc("get_public_passport_by_token", { p_token: token })
+          : await sb.rpc("get_public_passport", { p_user: userId });
         if (error) throw error;
         if (!data) { setState("private"); return; }
         setP(data);
         setState("ok");
       } catch (e) { console.error("GOLSZ public passport error:", e); setState("error"); }
     })();
-  }, [userId]);
+  }, [userId, token]);
 
   const dash = (v) => (v === null || v === undefined || v === "" ? "—" : v);
 
@@ -3939,21 +3944,35 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo immediately
   const [shareMsg, setShareMsg] = useState("");
   const [reportedProfile, setReportedProfile] = useState(false);
+  // Revocable share links (migration 078) — each Share tap creates its own
+  // token instead of flipping one global public/private boolean, so any
+  // single link can be individually revoked. Loaded lazily (only once the
+  // athlete opens the manager) since most Passport views never need it.
+  const [shareLinks, setShareLinks] = useState(null);
+  const [shareLinksOpen, setShareLinksOpen] = useState(false);
   const real = !!uid;
   const viewingOther = !!(viewUserId && uid && viewUserId !== uid);
 
-  // Sharing sends a no-login link (?public=<uid>) — coaches/scouts/agents
+  // Sharing sends a no-login link (?share=<token>) — coaches/scouts/agents
   // must be able to open a Passport with zero signup friction (see
-  // PublicPassport + get_public_passport() RPC, migration 046). Clicking
-  // Share is the explicit opt-in that flips passport_public on; the athlete
-  // can flip it back off any time via "Make private" below. Uses the
-  // native OS share sheet (Messages/Messenger/Mail/etc.) when available,
-  // falling back to a clipboard copy on desktop browsers without it.
+  // PublicPassport + get_public_passport_by_token() RPC, migration 078).
+  // Every tap creates a NEW token via create_passport_share_token() rather
+  // than reusing one global public/private flag — see that migration's own
+  // comment for why: any one link can be individually revoked afterward
+  // without killing every other copy. Uses the native OS share sheet
+  // (Messages/Messenger/Mail/etc.) when available, falling back to a
+  // clipboard copy on desktop browsers without it.
   async function sharePassport() {
-    if (!uid) return;
-    try { await sb.from("profiles").update({ passport_public: true }).eq("id", uid); setProfile((p) => ({ ...p, passport_public: true })); }
-    catch (e) { console.error("GOLSZ passport-public error:", e); setShareMsg(t("passport_share_err")); setTimeout(() => setShareMsg(""), 4000); return; }
-    const url = `${window.location.origin}${window.location.pathname}?public=${uid}`;
+    if (!uid || !sb) return;
+    let token;
+    try {
+      const { data, error } = await sb.rpc("create_passport_share_token");
+      if (error) throw error;
+      token = data && data.token;
+      if (!token) throw new Error("no token returned");
+      setShareLinks((prev) => (prev ? [{ id: data.id, token: data.token, label: data.label, created_at: data.created_at }, ...prev] : prev));
+    } catch (e) { console.error("GOLSZ create share token error:", e); setShareMsg(t("passport_share_err")); setTimeout(() => setShareMsg(""), 4000); return; }
+    const url = `${window.location.origin}${window.location.pathname}?share=${token}`;
     if (navigator.share) {
       try { await navigator.share({ title: t("passport_share_title"), text: t("passport_share_text"), url }); return; }
       catch (e) { if (e && e.name === "AbortError") return; /* fall through to clipboard on real errors */ }
@@ -3963,10 +3982,21 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     setTimeout(() => setShareMsg(""), 4000);
   }
 
-  async function makePassportPrivate() {
-    if (!uid) return;
-    try { await sb.from("profiles").update({ passport_public: false }).eq("id", uid); setProfile((p) => ({ ...p, passport_public: false })); }
-    catch (e) { console.error("GOLSZ passport-private error:", e); }
+  async function loadShareLinks() {
+    setShareLinksOpen((open) => !open);
+    if (shareLinks !== null || !sb || !uid) return;
+    try {
+      const { data, error } = await sb.from("passport_share_tokens").select("id, token, label, revoked, created_at, last_accessed_at").eq("user_id", uid).eq("revoked", false).order("created_at", { ascending: false });
+      if (error) throw error;
+      setShareLinks(data || []);
+    } catch (e) { console.error("GOLSZ load share links error:", e); setShareLinks([]); }
+  }
+
+  async function revokeShareLink(id) {
+    if (!sb || !uid) return;
+    setShareLinks((prev) => (prev || []).filter((l) => l.id !== id));
+    try { const { error } = await sb.rpc("revoke_passport_share_token", { p_id: id }); if (error) throw error; }
+    catch (e) { console.error("GOLSZ revoke share link error:", e); }
   }
 
   // Same validate-then-upload-as-ArrayBuffer pattern Feed's post-image
@@ -4042,7 +4072,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         setFollowedByThem(!!theirFollow);
       } else {
         const [{ data: prof }, { data: ath }] = await Promise.all([
-          sb.from("profiles").select("full_name, is_admin, occupation, verified_tier, plan, avatar_url, passport_public").eq("id", user.id).single(),
+          sb.from("profiles").select("full_name, is_admin, occupation, verified_tier, plan, avatar_url").eq("id", user.id).single(),
           sb.from("athletes").select("*").eq("id", user.id).single(),
         ]);
         setProfile(prof || null);
@@ -4147,17 +4177,30 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           <span style={{ fontSize: 9.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>GOLSZ · GLOBAL</span>
         )}
       </div>
-      {/* passport_public (migration 047) is off by default — sharing is an
-          explicit choice, not an always-public account. This banner only
-          ever shows once the athlete has actually clicked Share. */}
-      {!viewingOther && real && profile && profile.passport_public && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#C8F1351a", border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, gap: 10 }}>
-          <span style={{ fontSize: 12, color: C.chalk }}>{t("passport_is_public")}</span>
-          <button onClick={makePassportPrivate} style={{ ...iconBtn(C.amber), fontSize: 11 }}>{t("passport_make_private")}</button>
-        </div>
-      )}
       {shareMsg && (
         <div style={{ background: "#C8F1351a", border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: C.chalk, wordBreak: "break-all" }}>{shareMsg}</div>
+      )}
+      {/* Revocable share links (migration 078) — each row is its own
+          ?share=<token> link the athlete has actually sent out; "Revoke"
+          kills just that one without touching any others. */}
+      {!viewingOther && real && (
+        <div style={{ marginBottom: 10 }}>
+          <button onClick={loadShareLinks} style={{ background: "none", border: "none", color: C.slate, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+            {shareLinksOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />} {t("passport_manage_links")}
+          </button>
+          {shareLinksOpen && (
+            <div style={{ marginTop: 8 }}>
+              {shareLinks === null && <div style={{ fontSize: 12, color: C.slate }}>{t("loading")}</div>}
+              {shareLinks && shareLinks.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("passport_no_links")}</div>}
+              {shareLinks && shareLinks.map((l) => (
+                <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.line}` }}>
+                  <span style={{ fontSize: 11.5, color: C.chalk, flex: 1, fontFamily: "'Space Mono', monospace" }}>{l.token.slice(0, 8)}… — {new Date(l.created_at).toLocaleDateString()}</span>
+                  <button onClick={() => revokeShareLink(l.id)} style={{ ...iconBtn(C.amber), fontSize: 11, flexShrink: 0 }}>{t("passport_revoke_link")}</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {viewingOther && (
@@ -8266,10 +8309,14 @@ function BannedScreen({ onSignOut }) {
 }
 
 function Root() {
-  // A shared Passport link (?public=<id>) has to work for someone with no
-  // GOLSZ account at all, so this short-circuits before any auth check —
-  // PublicPassport never touches Auth/GolszApp/session state, it only
-  // calls the anon-readable get_public_passport() RPC (migration 046).
+  // A shared Passport link has to work for someone with no GOLSZ account at
+  // all, so this short-circuits before any auth check — PublicPassport
+  // never touches Auth/GolszApp/session state. ?share=<token> (migration
+  // 078, revocable per-link sharing) is the current share flow;
+  // ?public=<uid> (migration 046) is kept working for any link shared
+  // before this change, both routed to the same component.
+  const shareToken = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("share") : null;
+  if (shareToken) return React.createElement(PublicPassport, { token: shareToken });
   const publicPassportId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("public") : null;
   if (publicPassportId) return React.createElement(PublicPassport, { userId: publicPassportId });
 
