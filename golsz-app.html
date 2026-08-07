@@ -7401,6 +7401,20 @@ function Auth({ onDone, paidReturn }) {
     setBusy(true);
     try {
       if (isSignup) {
+        // IP-based rate limit (migration 074) — server-side, reads the real
+        // caller IP from Vercel's x-forwarded-for header (never trusted
+        // from anything the client sends), so unlike the honeypot above a
+        // script hitting Supabase's signup API directly still hits this if
+        // it goes through Auth's own submit() to get here, and repeated
+        // attempts from the same IP get capped regardless of email used.
+        try {
+          const guardRes = await fetch("/api/signup-guard", { method: "POST", headers: { "Content-Type": "application/json" } });
+          const guardData = await guardRes.json().catch(() => ({ allowed: true }));
+          if (guardData && guardData.allowed === false) throw new Error("Too many signup attempts from this network. Please try again later.");
+        } catch (e) {
+          if (e instanceof Error && e.message.startsWith("Too many signup attempts")) throw e;
+          // network/endpoint hiccup — fail open, same as the server side does
+        }
         // Real bot-blocking layer, on top of (not instead of) the honeypot
         // above — verified server-side via api/verify-turnstile.js, which
         // holds the actual secret key. No-ops (never blocks) whenever
