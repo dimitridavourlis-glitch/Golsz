@@ -206,17 +206,19 @@ const I18N = {
     auth_working: "Working…", auth_create_free: "Create free account",
     auth_continue_payment: "Continue to payment — ", auth_per_month: "/month",
     auth_couldnt_signup: "COULDN'T COMPLETE SIGNUP", auth_couldnt_login: "COULDN'T LOG IN",
-    plan_free_tag: "No card needed", plan_starter_tag: "Get started", plan_pro_tag: "Most popular", plan_elite_tag: "Serious recruits",
-    plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport", plan_free_feat3: "Identity verification",
+    plan_free_tag: "No card needed", plan_starter_tag: "Get started", plan_pro_tag: "Most popular", plan_elite_tag: "It's GOLSZ Time",
+    plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport — profile, achievements & career history", plan_free_feat3: "AI Scout athlete intake & goal discovery",
     conversion_title: "We've learned enough about you — let's build your plan.", conversion_body: "GOLSZ Scout now knows your sport, your goals, and what you're working on. Upgrade to unlock deeper guidance built around your progression — not just more questions.", conversion_dismiss: "Not now",
     feature_lock_body: "This is part of GOLSZ's guided pathway tools.", feature_lock_cta: "Upgrade to unlock",
     guided_step_goal: "Understanding your goal: {goal}", guided_step_goal_fallback: "Getting to know what you're working toward.",
     guided_step_passport: "Analyzing your Passport — {score}% complete.", guided_step_missing: "Missing: {list}.", guided_step_missing_none: "Your Passport basics are all filled in.",
     guided_step_readiness: "Initial Readiness assessment: {score}/100.", guided_step_next_move: "Your next move: {label}", guided_step_next_move_generic: "Building your first recommended next move.",
-    guided_ready_title: "You're ready to build your plan.", guided_ready_body: "GOLSZ Readiness, My Next Move, Targets, and Benchmarks are ready to unlock.",
+    guided_ready_title: "That's the athlete you are today.", guided_ready_body: "Now let's figure out how you become the athlete you want to be — GOLSZ Readiness, My Next Move, Targets, and Benchmarks are ready to unlock.",
+    elite_welcome_eyebrow: "IT'S GOLSZ TIME", elite_welcome_title: "Welcome to GOLSZ Elite.", elite_welcome_body: "Before we build your complete program, we need to understand you — the athlete you are today, where you want to go, and what your normal week looks like. We'll build your Passport, establish your goals, create your Pathway, and organize your development around getting there.", elite_welcome_cta: "Let's build it",
     guided_locked_readiness: "GOLSZ Readiness", guided_locked_next_move: "My Next Move", guided_locked_targets: "Targets", guided_locked_benchmarks: "Benchmarks",
     guided_continue_cta: "Continue my journey",
     next_move_title: "MY NEXT MOVE", next_move_act: "Do this", next_move_dismiss: "Mark done", next_move_locked: "Scout found your next move — upgrade to see it.",
+    next_move_type_complete_profile: "Finish your Passport.", next_move_type_define_goal: "Tell Scout what you're aiming for.", next_move_type_invite_to_pathway: "Build your Pathway.", next_move_type_establish_baseline: "Set your baseline with Scout.", next_move_type_build_pathway: "Build your Pathway with Scout.", next_move_type_target_work: "Identify your first targets.", next_move_type_follow_up: "Follow up on a stale target.", next_move_type_retest: "Time to log a new benchmark.", next_move_type_review_progress: "Review your progress.",
     next_move_why_ask_scout: "Based on what you told Scout", next_move_why_complete_profile: "Your Passport is missing some basics", next_move_why_share_passport: "You're ready to be seen — share your Passport",
     nav_home: "Home", home_greeting: "Welcome back, {name}.", home_readiness_title: "GOLSZ READINESS", home_profile_quality: "PROFILE QUALITY", home_verification: "VERIFICATION",
     home_verify_status_none: "Not started", home_verify_status_pending: "Pending review", home_verify_status_verified: "Verified",
@@ -231,8 +233,8 @@ const I18N = {
     targets_add: "Add", targets_add_err: "Couldn't add that. Try again.", targets_empty: "No targets yet — add the first school or club you're pursuing.",
     targets_notes_ph: "Notes", targets_draft_ph: "Draft outreach email",
     targets_status_researching: "Researching", targets_status_preparing: "Preparing", targets_status_contacted: "Contacted", targets_status_responded: "Responded", targets_status_follow_up: "Follow up", targets_status_opportunity: "Opportunity", targets_fit_reasoning_ph: "Why this is a good fit (optional)",
-    plan_starter_feat1: "8 AI Scout questions/day — no lifetime limit", plan_starter_feat2: "Digital Sports Passport", plan_starter_feat3: "PDF Passport export", plan_starter_feat4: "Identity verification",
-    plan_pro_feat1: "15 AI Scout questions/day — no lifetime limit", plan_pro_feat2: "Digital Sports Passport + PDF export", plan_pro_feat3: "GOLSZ Readiness & My Next Move", plan_pro_feat4: "Target school/club tracker", plan_pro_feat5: "Performance benchmark tracking", plan_pro_feat6: "Identity verification",
+    plan_starter_feat1: "8 AI Scout questions/day — no lifetime limit", plan_starter_feat2: "Everything in Free", plan_starter_feat3: "Personalized Pathway, My Next Move & baseline assessment", plan_starter_feat4: "Target lists, basic outreach & PDF Passport export",
+    plan_pro_feat1: "15 AI Scout questions/day — no lifetime limit", plan_pro_feat2: "Everything in Basic", plan_pro_feat3: "GOLSZ Readiness & progress reviews", plan_pro_feat4: "Training & development plan", plan_pro_feat5: "Richer target tracking & outreach follow-ups", plan_pro_feat6: "Identity verification",
     plan_elite_feat1: "20 AI Scout questions/day — no lifetime limit", plan_elite_feat2: "Everything in Pro",
     feed_title: "Your feed", feed_search: "Search your feed…", feed_share_update: "Share an update…",
     feed_new_post: "NEW POST", feed_whats_happening: "What's happening?", feed_add_details: "Add details (optional)",
@@ -407,9 +409,10 @@ const I18N = {
     scout_history_title: "History", scout_new_chat: "New chat", scout_no_past: "No past conversations yet.",
     scout_new_conversation: "New conversation", scout_ago_messages: " messages", scout_delete_conv: "Delete conversation",
     scout_scout_label: "SCOUT", scout_input_ph: "Talk to your scout…",
-    scout_build_target_list: "Add {n} to my Targets", scout_build_target_list_locked: "Add to my Targets — Pro", scout_targets_added: "Added to your Targets.",
+    scout_build_target_list: "Add {n} to my Targets", scout_build_target_list_locked: "Add to my Targets — Basic", scout_targets_added: "Added to your Targets.",
     scout_add_dev_items: "Add {n} to my Development Plan", scout_add_dev_items_locked: "Add to my Development Plan — Pro", scout_dev_items_added: "Added to your Development Plan.",
-    scout_save_email: "Save this email to a Target", scout_save_email_locked: "Save to a Target — Pro", scout_save_email_pick: "Choose a target…", scout_save_email_confirm: "Save", scout_save_email_cancel: "Cancel", scout_save_email_no_targets: "You don't have any targets yet — add one first.", scout_email_saved: "Saved to your target.",
+    scout_build_pathway: "Build my Pathway", scout_build_pathway_locked: "Build my Pathway — Basic", scout_pathway_added: "Your Pathway is built.",
+    scout_save_email: "Save this email to a Target", scout_save_email_locked: "Save to a Target — Basic", scout_save_email_pick: "Choose a target…", scout_save_email_confirm: "Save", scout_save_email_cancel: "Cancel", scout_save_email_no_targets: "You don't have any targets yet — add one first.", scout_email_saved: "Saved to your target.",
     scout_attach_photo: "Attach a photo", scout_photo_attached: "Photo attached — Scout will take a look.",
     scout_connection_dropped: "Connection dropped mid-play. Send that again and I'm on it.",
     scout_greeting: "I'm your GOLSZ Scout.\n\nTell me about yourself like you'd tell a scout — age, sport, position, where you play, and where you want to end up. I'll build your path from there.",
@@ -459,17 +462,19 @@ const I18N = {
     auth_working: "Chargement…", auth_create_free: "Créer un compte gratuit",
     auth_continue_payment: "Continuer vers le paiement — ", auth_per_month: "/mois",
     auth_couldnt_signup: "INSCRIPTION IMPOSSIBLE", auth_couldnt_login: "CONNEXION IMPOSSIBLE",
-    plan_free_tag: "Sans carte bancaire", plan_starter_tag: "Pour commencer", plan_pro_tag: "Le plus populaire", plan_elite_tag: "Recrues sérieuses",
-    plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique", plan_free_feat3: "Vérification d'identité",
+    plan_free_tag: "Sans carte bancaire", plan_starter_tag: "Pour commencer", plan_pro_tag: "Le plus populaire", plan_elite_tag: "C'est l'heure GOLSZ",
+    plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique — profil, palmarès & parcours", plan_free_feat3: "Découverte de l'athlète & de vos objectifs avec Scout",
     conversion_title: "On en sait assez sur vous — construisons votre plan.", conversion_body: "GOLSZ Scout connaît maintenant votre sport, vos objectifs et ce sur quoi vous travaillez. Passez à un forfait supérieur pour un accompagnement plus poussé, centré sur votre progression — pas seulement plus de questions.", conversion_dismiss: "Pas maintenant",
     feature_lock_body: "Cela fait partie des outils de parcours guidé de GOLSZ.", feature_lock_cta: "Passer à un forfait supérieur",
     guided_step_goal: "Compréhension de votre objectif : {goal}", guided_step_goal_fallback: "Nous apprenons ce vers quoi vous travaillez.",
     guided_step_passport: "Analyse de votre Passeport — {score}% complété.", guided_step_missing: "Manquant : {list}.", guided_step_missing_none: "Les bases de votre Passeport sont toutes remplies.",
     guided_step_readiness: "Évaluation initiale de préparation : {score}/100.", guided_step_next_move: "Votre prochaine étape : {label}", guided_step_next_move_generic: "Construction de votre première étape recommandée.",
-    guided_ready_title: "Vous êtes prêt à construire votre plan.", guided_ready_body: "GOLSZ Readiness, Ma Prochaine Étape, Cibles et Repères sont prêts à être débloqués.",
+    guided_ready_title: "Voilà l'athlète que vous êtes aujourd'hui.", guided_ready_body: "Voyons maintenant comment devenir l'athlète que vous voulez être — GOLSZ Readiness, Ma Prochaine Étape, Cibles et Repères sont prêts à être débloqués.",
+    elite_welcome_eyebrow: "C'EST L'HEURE GOLSZ", elite_welcome_title: "Bienvenue dans GOLSZ Elite.", elite_welcome_body: "Avant de construire votre programme complet, nous devons vous comprendre — l'athlète que vous êtes aujourd'hui, où vous voulez aller, et à quoi ressemble votre semaine normale. Nous allons construire votre Passeport, définir vos objectifs, créer votre Parcours et organiser votre développement pour y arriver.", elite_welcome_cta: "Construisons-le",
     guided_locked_readiness: "GOLSZ Readiness", guided_locked_next_move: "Ma Prochaine Étape", guided_locked_targets: "Cibles", guided_locked_benchmarks: "Repères",
     guided_continue_cta: "Continuer mon parcours",
     next_move_title: "VOTRE PROCHAINE ÉTAPE", next_move_act: "Faire ça", next_move_dismiss: "Marquer comme fait", next_move_locked: "Scout a trouvé votre prochaine étape — passez à un forfait supérieur pour la voir.",
+    next_move_type_complete_profile: "Terminez votre Passeport.", next_move_type_define_goal: "Dites à Scout votre objectif.", next_move_type_invite_to_pathway: "Construisez votre Parcours.", next_move_type_establish_baseline: "Établissez votre niveau de référence avec Scout.", next_move_type_build_pathway: "Construisez votre Parcours avec Scout.", next_move_type_target_work: "Identifiez vos premières cibles.", next_move_type_follow_up: "Relancez une cible en attente.", next_move_type_retest: "Il est temps d'enregistrer un nouveau repère.", next_move_type_review_progress: "Consultez vos progrès.",
     next_move_why_ask_scout: "D'après ce que vous avez dit à Scout", next_move_why_complete_profile: "Il manque des informations de base à votre Passeport", next_move_why_share_passport: "Vous êtes prêt à être vu — partagez votre Passeport",
     nav_home: "Accueil", home_greeting: "Bon retour, {name}.", home_readiness_title: "PRÉPARATION GOLSZ", home_profile_quality: "QUALITÉ DU PROFIL", home_verification: "VÉRIFICATION",
     home_verify_status_none: "Non commencé", home_verify_status_pending: "En cours de révision", home_verify_status_verified: "Vérifié",
@@ -484,8 +489,8 @@ const I18N = {
     targets_add: "Ajouter", targets_add_err: "Impossible d'ajouter. Réessayez.", targets_empty: "Aucune cible pour l'instant — ajoutez la première école ou le premier club visé.",
     targets_notes_ph: "Notes", targets_draft_ph: "Brouillon d'email de contact",
     targets_status_researching: "Recherche", targets_status_preparing: "Préparation", targets_status_contacted: "Contacté", targets_status_responded: "Répondu", targets_status_follow_up: "Relance", targets_status_opportunity: "Opportunité", targets_fit_reasoning_ph: "Pourquoi c'est un bon choix (facultatif)",
-    plan_starter_feat1: "8 questions/jour avec Scout — sans limite à vie", plan_starter_feat2: "Passeport Sportif Numérique", plan_starter_feat3: "Export PDF du Passeport", plan_starter_feat4: "Vérification d'identité",
-    plan_pro_feat1: "15 questions/jour avec Scout — sans limite à vie", plan_pro_feat2: "Passeport Sportif Numérique + export PDF", plan_pro_feat3: "GOLSZ Readiness & Ma Prochaine Étape", plan_pro_feat4: "Suivi des écoles/clubs ciblés", plan_pro_feat5: "Suivi des repères de performance", plan_pro_feat6: "Vérification d'identité",
+    plan_starter_feat1: "8 questions/jour avec Scout — sans limite à vie", plan_starter_feat2: "Tout ce qui est dans Free", plan_starter_feat3: "Parcours personnalisé, Ma Prochaine Étape & bilan de départ", plan_starter_feat4: "Listes de cibles, approche de base & export PDF du Passeport",
+    plan_pro_feat1: "15 questions/jour avec Scout — sans limite à vie", plan_pro_feat2: "Tout ce qui est dans Basic", plan_pro_feat3: "GOLSZ Readiness & bilans de progression", plan_pro_feat4: "Plan d'entraînement & de développement", plan_pro_feat5: "Suivi enrichi des cibles & relances", plan_pro_feat6: "Vérification d'identité",
     plan_elite_feat1: "20 questions/jour avec Scout — sans limite à vie", plan_elite_feat2: "Tout ce qui est dans Pro",
     feed_title: "Votre fil", feed_search: "Rechercher dans votre fil…", feed_share_update: "Partager une actualité…",
     feed_new_post: "NOUVELLE PUBLICATION", feed_whats_happening: "Quoi de neuf ?", feed_add_details: "Ajouter des détails (facultatif)",
@@ -660,9 +665,10 @@ const I18N = {
     scout_history_title: "Historique", scout_new_chat: "Nouvelle discussion", scout_no_past: "Aucune conversation passée.",
     scout_new_conversation: "Nouvelle conversation", scout_ago_messages: " messages", scout_delete_conv: "Supprimer la conversation",
     scout_scout_label: "SCOUT", scout_input_ph: "Parlez à votre agent…",
-    scout_build_target_list: "Ajouter {n} à mes Cibles", scout_build_target_list_locked: "Ajouter à mes Cibles — Pro", scout_targets_added: "Ajouté à vos Cibles.",
+    scout_build_target_list: "Ajouter {n} à mes Cibles", scout_build_target_list_locked: "Ajouter à mes Cibles — Basic", scout_targets_added: "Ajouté à vos Cibles.",
     scout_add_dev_items: "Ajouter {n} à mon Plan de Développement", scout_add_dev_items_locked: "Ajouter à mon Plan de Développement — Pro", scout_dev_items_added: "Ajouté à votre Plan de Développement.",
-    scout_save_email: "Enregistrer cet e-mail sur une Cible", scout_save_email_locked: "Enregistrer sur une Cible — Pro", scout_save_email_pick: "Choisissez une cible…", scout_save_email_confirm: "Enregistrer", scout_save_email_cancel: "Annuler", scout_save_email_no_targets: "Vous n'avez pas encore de cibles — ajoutez-en une d'abord.", scout_email_saved: "Enregistré sur votre cible.",
+    scout_build_pathway: "Construire mon Parcours", scout_build_pathway_locked: "Construire mon Parcours — Basic", scout_pathway_added: "Votre Parcours est construit.",
+    scout_save_email: "Enregistrer cet e-mail sur une Cible", scout_save_email_locked: "Enregistrer sur une Cible — Basic", scout_save_email_pick: "Choisissez une cible…", scout_save_email_confirm: "Enregistrer", scout_save_email_cancel: "Annuler", scout_save_email_no_targets: "Vous n'avez pas encore de cibles — ajoutez-en une d'abord.", scout_email_saved: "Enregistré sur votre cible.",
     scout_attach_photo: "Joindre une photo", scout_photo_attached: "Photo jointe — votre agent va y jeter un œil.",
     scout_connection_dropped: "Connexion interrompue en plein jeu. Renvoyez ça et je m'en occupe.",
     scout_greeting: "Je suis votre Agent GOLSZ.\n\nParlez-moi de vous comme vous le feriez à un recruteur — âge, sport, poste, où vous jouez, et où vous voulez aller. Je construirai votre parcours à partir de là.",
@@ -712,17 +718,19 @@ const I18N = {
     auth_working: "Procesando…", auth_create_free: "Crear cuenta gratuita",
     auth_continue_payment: "Continuar al pago — ", auth_per_month: "/mes",
     auth_couldnt_signup: "NO SE PUDO COMPLETAR EL REGISTRO", auth_couldnt_login: "NO SE PUDO INICIAR SESIÓN",
-    plan_free_tag: "Sin tarjeta", plan_starter_tag: "Para empezar", plan_pro_tag: "Más popular", plan_elite_tag: "Reclutas serios",
-    plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital", plan_free_feat3: "Verificación de identidad",
+    plan_free_tag: "Sin tarjeta", plan_starter_tag: "Para empezar", plan_pro_tag: "Más popular", plan_elite_tag: "Es hora de GOLSZ",
+    plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital — perfil, logros y trayectoria", plan_free_feat3: "Descubrimiento del atleta y tus objetivos con Scout",
     conversion_title: "Ya sabemos suficiente sobre ti — construyamos tu plan.", conversion_body: "GOLSZ Scout ya conoce tu deporte, tus objetivos y en qué estás trabajando. Mejora tu plan para obtener una guía más profunda centrada en tu progreso, no solo más preguntas.", conversion_dismiss: "Ahora no",
     feature_lock_body: "Esto forma parte de las herramientas de trayectoria guiada de GOLSZ.", feature_lock_cta: "Mejora tu plan para desbloquear",
     guided_step_goal: "Entendiendo tu objetivo: {goal}", guided_step_goal_fallback: "Conociendo hacia qué estás trabajando.",
     guided_step_passport: "Analizando tu Pasaporte — {score}% completo.", guided_step_missing: "Falta: {list}.", guided_step_missing_none: "Los datos básicos de tu Pasaporte están completos.",
     guided_step_readiness: "Evaluación inicial de preparación: {score}/100.", guided_step_next_move: "Tu próximo paso: {label}", guided_step_next_move_generic: "Preparando tu primer paso recomendado.",
-    guided_ready_title: "Estás listo para construir tu plan.", guided_ready_body: "GOLSZ Readiness, Tu Próximo Paso, Objetivos y Marcas están listos para desbloquear.",
+    guided_ready_title: "Ese es el atleta que eres hoy.", guided_ready_body: "Ahora veamos cómo te conviertes en el atleta que quieres ser — GOLSZ Readiness, Tu Próximo Paso, Objetivos y Marcas están listos para desbloquear.",
+    elite_welcome_eyebrow: "ES HORA DE GOLSZ", elite_welcome_title: "Bienvenido a GOLSZ Elite.", elite_welcome_body: "Antes de construir tu programa completo, necesitamos entenderte — el atleta que eres hoy, adónde quieres llegar y cómo es tu semana normal. Construiremos tu Pasaporte, definiremos tus objetivos, crearemos tu Camino y organizaremos tu desarrollo para llegar allí.", elite_welcome_cta: "Construyámoslo",
     guided_locked_readiness: "GOLSZ Readiness", guided_locked_next_move: "Tu Próximo Paso", guided_locked_targets: "Objetivos", guided_locked_benchmarks: "Marcas",
     guided_continue_cta: "Continuar mi camino",
     next_move_title: "TU PRÓXIMO PASO", next_move_act: "Hacer esto", next_move_dismiss: "Marcar como hecho", next_move_locked: "Scout encontró tu próximo paso — mejora tu plan para verlo.",
+    next_move_type_complete_profile: "Termina tu Pasaporte.", next_move_type_define_goal: "Dile a Scout cuál es tu meta.", next_move_type_invite_to_pathway: "Construye tu Trayectoria.", next_move_type_establish_baseline: "Establece tu línea base con Scout.", next_move_type_build_pathway: "Construye tu Trayectoria con Scout.", next_move_type_target_work: "Identifica tus primeros objetivos.", next_move_type_follow_up: "Da seguimiento a un objetivo pendiente.", next_move_type_retest: "Hora de registrar un nuevo referente.", next_move_type_review_progress: "Revisa tu progreso.",
     next_move_why_ask_scout: "Basado en lo que le contaste a Scout", next_move_why_complete_profile: "A tu Pasaporte le faltan datos básicos", next_move_why_share_passport: "Estás listo para que te vean — comparte tu Pasaporte",
     nav_home: "Inicio", home_greeting: "Bienvenido de nuevo, {name}.", home_readiness_title: "PREPARACIÓN GOLSZ", home_profile_quality: "CALIDAD DEL PERFIL", home_verification: "VERIFICACIÓN",
     home_verify_status_none: "No iniciado", home_verify_status_pending: "En revisión", home_verify_status_verified: "Verificado",
@@ -737,8 +745,8 @@ const I18N = {
     targets_add: "Añadir", targets_add_err: "No se pudo añadir. Inténtalo de nuevo.", targets_empty: "Aún no hay objetivos — añade la primera escuela o club que te interese.",
     targets_notes_ph: "Notas", targets_draft_ph: "Borrador de email de contacto",
     targets_status_researching: "Investigando", targets_status_preparing: "Preparando", targets_status_contacted: "Contactado", targets_status_responded: "Respondido", targets_status_follow_up: "Seguimiento", targets_status_opportunity: "Oportunidad", targets_fit_reasoning_ph: "Por qué encaja bien (opcional)",
-    plan_starter_feat1: "8 preguntas/día con Scout — sin límite de por vida", plan_starter_feat2: "Pasaporte Deportivo Digital", plan_starter_feat3: "Exportación PDF del Pasaporte", plan_starter_feat4: "Verificación de identidad",
-    plan_pro_feat1: "15 preguntas/día con Scout — sin límite de por vida", plan_pro_feat2: "Pasaporte Deportivo Digital + exportación PDF", plan_pro_feat3: "GOLSZ Readiness y Tu Próximo Paso", plan_pro_feat4: "Seguimiento de escuelas/clubes objetivo", plan_pro_feat5: "Seguimiento de marcas de rendimiento", plan_pro_feat6: "Verificación de identidad",
+    plan_starter_feat1: "8 preguntas/día con Scout — sin límite de por vida", plan_starter_feat2: "Todo lo de Free", plan_starter_feat3: "Camino personalizado, Tu Próximo Paso y evaluación inicial", plan_starter_feat4: "Listas de objetivos, contacto básico y exportación PDF del Pasaporte",
+    plan_pro_feat1: "15 preguntas/día con Scout — sin límite de por vida", plan_pro_feat2: "Todo lo de Basic", plan_pro_feat3: "GOLSZ Readiness y revisiones de progreso", plan_pro_feat4: "Plan de entrenamiento y desarrollo", plan_pro_feat5: "Seguimiento avanzado de objetivos y seguimientos", plan_pro_feat6: "Verificación de identidad",
     plan_elite_feat1: "20 preguntas/día con Scout — sin límite de por vida", plan_elite_feat2: "Todo lo de Pro",
     feed_title: "Tu feed", feed_search: "Buscar en tu feed…", feed_share_update: "Comparte una novedad…",
     feed_new_post: "NUEVA PUBLICACIÓN", feed_whats_happening: "¿Qué está pasando?", feed_add_details: "Añade detalles (opcional)",
@@ -913,9 +921,10 @@ const I18N = {
     scout_history_title: "Historial", scout_new_chat: "Nuevo chat", scout_no_past: "Aún no hay conversaciones pasadas.",
     scout_new_conversation: "Nueva conversación", scout_ago_messages: " mensajes", scout_delete_conv: "Eliminar conversación",
     scout_scout_label: "SCOUT", scout_input_ph: "Habla con tu agente…",
-    scout_build_target_list: "Añadir {n} a mis Objetivos", scout_build_target_list_locked: "Añadir a mis Objetivos — Pro", scout_targets_added: "Añadido a tus Objetivos.",
+    scout_build_target_list: "Añadir {n} a mis Objetivos", scout_build_target_list_locked: "Añadir a mis Objetivos — Basic", scout_targets_added: "Añadido a tus Objetivos.",
     scout_add_dev_items: "Añadir {n} a mi Plan de Desarrollo", scout_add_dev_items_locked: "Añadir a mi Plan de Desarrollo — Pro", scout_dev_items_added: "Añadido a tu Plan de Desarrollo.",
-    scout_save_email: "Guardar este correo en un Objetivo", scout_save_email_locked: "Guardar en un Objetivo — Pro", scout_save_email_pick: "Elige un objetivo…", scout_save_email_confirm: "Guardar", scout_save_email_cancel: "Cancelar", scout_save_email_no_targets: "Aún no tienes objetivos — añade uno primero.", scout_email_saved: "Guardado en tu objetivo.",
+    scout_build_pathway: "Construir mi Trayectoria", scout_build_pathway_locked: "Construir mi Trayectoria — Basic", scout_pathway_added: "Tu Trayectoria está construida.",
+    scout_save_email: "Guardar este correo en un Objetivo", scout_save_email_locked: "Guardar en un Objetivo — Basic", scout_save_email_pick: "Elige un objetivo…", scout_save_email_confirm: "Guardar", scout_save_email_cancel: "Cancelar", scout_save_email_no_targets: "Aún no tienes objetivos — añade uno primero.", scout_email_saved: "Guardado en tu objetivo.",
     scout_attach_photo: "Adjuntar una foto", scout_photo_attached: "Foto adjunta — tu agente le echará un vistazo.",
     scout_connection_dropped: "Se perdió la conexión a mitad de la jugada. Envíalo de nuevo y me encargo.",
     scout_greeting: "Soy tu Agente GOLSZ.\n\nCuéntame sobre ti como se lo contarías a un ojeador — edad, deporte, posición, dónde juegas y a dónde quieres llegar. Construiré tu camino a partir de ahí.",
@@ -965,17 +974,19 @@ const I18N = {
     auth_working: "Επεξεργασία…", auth_create_free: "Δημιουργία δωρεάν λογαριασμού",
     auth_continue_payment: "Συνέχεια στην πληρωμή — ", auth_per_month: "/μήνα",
     auth_couldnt_signup: "Η ΕΓΓΡΑΦΗ ΑΠΕΤΥΧΕ", auth_couldnt_login: "Η ΣΥΝΔΕΣΗ ΑΠΕΤΥΧΕ",
-    plan_free_tag: "Χωρίς κάρτα", plan_starter_tag: "Ξεκινήστε", plan_pro_tag: "Δημοφιλέστερο", plan_elite_tag: "Σοβαροί υποψήφιοι",
-    plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο", plan_free_feat3: "Επαλήθευση ταυτότητας",
+    plan_free_tag: "Χωρίς κάρτα", plan_starter_tag: "Ξεκινήστε", plan_pro_tag: "Δημοφιλέστερο", plan_elite_tag: "Είναι ώρα για GOLSZ",
+    plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο — προφίλ, διακρίσεις & πορεία", plan_free_feat3: "Γνωριμία με τον αθλητή & τους στόχους σου μέσω του Scout",
     conversion_title: "Μάθαμε αρκετά για εσένα — ας χτίσουμε το πλάνο σου.", conversion_body: "Ο GOLSZ Scout γνωρίζει πλέον το άθλημά σου, τους στόχους σου και τι δουλεύεις. Αναβάθμισε για βαθύτερη καθοδήγηση γύρω από την εξέλιξή σου — όχι απλώς περισσότερες ερωτήσεις.", conversion_dismiss: "Όχι τώρα",
     feature_lock_body: "Αυτό αποτελεί μέρος των εργαλείων καθοδηγούμενης πορείας του GOLSZ.", feature_lock_cta: "Αναβάθμισε για ξεκλείδωμα",
     guided_step_goal: "Κατανοώντας τον στόχο σου: {goal}", guided_step_goal_fallback: "Μαθαίνουμε προς τι δουλεύεις.",
     guided_step_passport: "Ανάλυση του Διαβατηρίου σου — {score}% ολοκληρωμένο.", guided_step_missing: "Λείπει: {list}.", guided_step_missing_none: "Τα βασικά στοιχεία του Διαβατηρίου σου είναι πλήρη.",
     guided_step_readiness: "Αρχική αξιολόγηση ετοιμότητας: {score}/100.", guided_step_next_move: "Η επόμενή σου κίνηση: {label}", guided_step_next_move_generic: "Δημιουργία της πρώτης προτεινόμενης κίνησής σου.",
-    guided_ready_title: "Είσαι έτοιμος να χτίσεις το πλάνο σου.", guided_ready_body: "Το GOLSZ Readiness, Η Επόμενή σου Κίνηση, Στόχοι και Δείκτες είναι έτοιμα για ξεκλείδωμα.",
+    guided_ready_title: "Αυτός είναι ο αθλητής που είσαι σήμερα.", guided_ready_body: "Τώρα ας δούμε πώς θα γίνεις ο αθλητής που θέλεις να είσαι — Το GOLSZ Readiness, Η Επόμενή σου Κίνηση, Στόχοι και Δείκτες είναι έτοιμα για ξεκλείδωμα.",
+    elite_welcome_eyebrow: "ΕΙΝΑΙ ΩΡΑ ΓΙΑ GOLSZ", elite_welcome_title: "Καλωσόρισες στο GOLSZ Elite.", elite_welcome_body: "Πριν χτίσουμε το πλήρες πρόγραμμά σου, χρειάζεται να σε γνωρίσουμε — τον αθλητή που είσαι σήμερα, πού θέλεις να φτάσεις και πώς μοιάζει η συνηθισμένη σου εβδομάδα. Θα χτίσουμε το Διαβατήριό σου, θα καθορίσουμε τους στόχους σου, θα δημιουργήσουμε το Μονοπάτι σου και θα οργανώσουμε την ανάπτυξή σου γύρω από αυτό.", elite_welcome_cta: "Ας το χτίσουμε",
     guided_locked_readiness: "GOLSZ Readiness", guided_locked_next_move: "Η Επόμενή σου Κίνηση", guided_locked_targets: "Στόχοι", guided_locked_benchmarks: "Δείκτες",
     guided_continue_cta: "Συνέχισε την πορεία μου",
     next_move_title: "Η ΕΠΟΜΕΝΗ ΣΟΥ ΚΙΝΗΣΗ", next_move_act: "Κάνε το", next_move_dismiss: "Ολοκληρώθηκε", next_move_locked: "Ο Scout βρήκε την επόμενή σου κίνηση — αναβάθμισε για να τη δεις.",
+    next_move_type_complete_profile: "Ολοκλήρωσε το Διαβατήριό σου.", next_move_type_define_goal: "Πες στον Scout τον στόχο σου.", next_move_type_invite_to_pathway: "Δημιούργησε την Πορεία σου.", next_move_type_establish_baseline: "Καθόρισε το σημείο εκκίνησής σου με τον Scout.", next_move_type_build_pathway: "Δημιούργησε την Πορεία σου με τον Scout.", next_move_type_target_work: "Εντόπισε τους πρώτους σου στόχους.", next_move_type_follow_up: "Κάνε follow-up σε έναν στόχο.", next_move_type_retest: "Ώρα να καταγράψεις νέο δείκτη επίδοσης.", next_move_type_review_progress: "Δες την πρόοδό σου.",
     next_move_why_ask_scout: "Με βάση όσα είπες στον Scout", next_move_why_complete_profile: "Στο Διαβατήριό σου λείπουν βασικά στοιχεία", next_move_why_share_passport: "Είσαι έτοιμος να σε δουν — μοιράσου το Διαβατήριό σου",
     nav_home: "Αρχική", home_greeting: "Καλώς όρισες πάλι, {name}.", home_readiness_title: "ΕΤΟΙΜΟΤΗΤΑ GOLSZ", home_profile_quality: "ΠΟΙΟΤΗΤΑ ΠΡΟΦΙΛ", home_verification: "ΕΠΑΛΗΘΕΥΣΗ",
     home_verify_status_none: "Δεν ξεκίνησε", home_verify_status_pending: "Υπό εξέταση", home_verify_status_verified: "Επαληθευμένο",
@@ -990,8 +1001,8 @@ const I18N = {
     targets_add: "Προσθήκη", targets_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", targets_empty: "Δεν υπάρχουν στόχοι ακόμα — πρόσθεσε την πρώτη σχολή ή σύλλογο που σε ενδιαφέρει.",
     targets_notes_ph: "Σημειώσεις", targets_draft_ph: "Πρόχειρο email επικοινωνίας",
     targets_status_researching: "Έρευνα", targets_status_preparing: "Προετοιμασία", targets_status_contacted: "Επικοινώνησα", targets_status_responded: "Απάντησαν", targets_status_follow_up: "Παρακολούθηση", targets_status_opportunity: "Ευκαιρία", targets_fit_reasoning_ph: "Γιατί ταιριάζει καλά (προαιρετικό)",
-    plan_starter_feat1: "8 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_starter_feat2: "Ψηφιακό Αθλητικό Διαβατήριο", plan_starter_feat3: "Εξαγωγή PDF Διαβατηρίου", plan_starter_feat4: "Επαλήθευση ταυτότητας",
-    plan_pro_feat1: "15 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_pro_feat2: "Ψηφιακό Αθλητικό Διαβατήριο + εξαγωγή PDF", plan_pro_feat3: "GOLSZ Readiness & Η Επόμενή σου Κίνηση", plan_pro_feat4: "Παρακολούθηση σχολών/συλλόγων-στόχων", plan_pro_feat5: "Παρακολούθηση δεικτών απόδοσης", plan_pro_feat6: "Επαλήθευση ταυτότητας",
+    plan_starter_feat1: "8 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_starter_feat2: "Όλα όσα περιλαμβάνει το Free", plan_starter_feat3: "Προσωπικό Μονοπάτι, Η Επόμενή σου Κίνηση & αρχική αξιολόγηση", plan_starter_feat4: "Λίστες στόχων, βασική προσέγγιση & εξαγωγή PDF Διαβατηρίου",
+    plan_pro_feat1: "15 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_pro_feat2: "Όλα όσα περιλαμβάνει το Basic", plan_pro_feat3: "GOLSZ Readiness & αξιολογήσεις προόδου", plan_pro_feat4: "Πλάνο προπόνησης & ανάπτυξης", plan_pro_feat5: "Εμπλουτισμένη παρακολούθηση στόχων & follow-up", plan_pro_feat6: "Επαλήθευση ταυτότητας",
     plan_elite_feat1: "20 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_elite_feat2: "Όλα όσα περιλαμβάνει το Pro",
     feed_title: "Η ροή σας", feed_search: "Αναζήτηση στη ροή σας…", feed_share_update: "Μοιραστείτε μια ενημέρωση…",
     feed_new_post: "ΝΕΑ ΑΝΑΡΤΗΣΗ", feed_whats_happening: "Τι συμβαίνει;", feed_add_details: "Προσθήκη λεπτομερειών (προαιρετικό)",
@@ -1166,9 +1177,10 @@ const I18N = {
     scout_history_title: "Ιστορικό", scout_new_chat: "Νέα συνομιλία", scout_no_past: "Δεν υπάρχουν προηγούμενες συνομιλίες ακόμα.",
     scout_new_conversation: "Νέα συνομιλία", scout_ago_messages: " μηνύματα", scout_delete_conv: "Διαγραφή συνομιλίας",
     scout_scout_label: "SCOUT", scout_input_ph: "Μιλήστε στον σκάουτ σας…",
-    scout_build_target_list: "Προσθήκη {n} στους Στόχους μου", scout_build_target_list_locked: "Προσθήκη στους Στόχους μου — Pro", scout_targets_added: "Προστέθηκε στους Στόχους σου.",
+    scout_build_target_list: "Προσθήκη {n} στους Στόχους μου", scout_build_target_list_locked: "Προσθήκη στους Στόχους μου — Basic", scout_targets_added: "Προστέθηκε στους Στόχους σου.",
     scout_add_dev_items: "Προσθήκη {n} στο Πλάνο Ανάπτυξής μου", scout_add_dev_items_locked: "Προσθήκη στο Πλάνο Ανάπτυξής μου — Pro", scout_dev_items_added: "Προστέθηκε στο Πλάνο Ανάπτυξής σου.",
-    scout_save_email: "Αποθήκευση αυτού του email σε Στόχο", scout_save_email_locked: "Αποθήκευση σε Στόχο — Pro", scout_save_email_pick: "Επίλεξε έναν στόχο…", scout_save_email_confirm: "Αποθήκευση", scout_save_email_cancel: "Ακύρωση", scout_save_email_no_targets: "Δεν έχεις ακόμα στόχους — πρόσθεσε έναν πρώτα.", scout_email_saved: "Αποθηκεύτηκε στον στόχο σου.",
+    scout_build_pathway: "Δημιουργία της Πορείας μου", scout_build_pathway_locked: "Δημιουργία Πορείας — Basic", scout_pathway_added: "Η Πορεία σου δημιουργήθηκε.",
+    scout_save_email: "Αποθήκευση αυτού του email σε Στόχο", scout_save_email_locked: "Αποθήκευση σε Στόχο — Basic", scout_save_email_pick: "Επίλεξε έναν στόχο…", scout_save_email_confirm: "Αποθήκευση", scout_save_email_cancel: "Ακύρωση", scout_save_email_no_targets: "Δεν έχεις ακόμα στόχους — πρόσθεσε έναν πρώτα.", scout_email_saved: "Αποθηκεύτηκε στον στόχο σου.",
     scout_attach_photo: "Επισύναψη φωτογραφίας", scout_photo_attached: "Η φωτογραφία επισυνάφθηκε — ο σκάουτ θα τη δει.",
     scout_connection_dropped: "Η σύνδεση διακόπηκε στη μέση. Στείλτε το ξανά και θα το αναλάβω.",
     scout_greeting: "Είμαι ο GOLSZ Σκάουτ σας.\n\nΠείτε μου για εσάς όπως θα λέγατε σε έναν σκάουτ — ηλικία, άθλημα, θέση, πού παίζετε και πού θέλετε να καταλήξετε. Θα χτίσω τη διαδρομή σας από εκεί.",
@@ -2259,7 +2271,7 @@ function Feed({ onMessage, onViewProfile }) {
 const SPORTS = [
   "All", "American Football", "Archery", "Badminton", "Baseball", "Basketball", "Bowling",
   "Boxing", "Cheerleading", "Cricket", "Cross Country", "Cycling", "Diving", "Equestrian",
-  "Fencing", "Field Hockey", "Golf", "Gymnastics", "Handball", "Hockey", "Lacrosse",
+  "Fencing", "Field Hockey", "Futsal", "Golf", "Gymnastics", "Handball", "Hockey", "Lacrosse",
   "Martial Arts", "Racquetball", "Rowing", "Rugby", "Sailing", "Skiing", "Snowboarding",
   "Soccer", "Softball", "Squash", "Swimming", "Table Tennis", "Tennis", "Track",
   "Triathlon", "Volleyball", "Water Polo", "Weightlifting", "Wrestling",
@@ -3694,20 +3706,71 @@ function computePathwayScore(pathway, targetsCount) {
   return { score: Math.min(100, score), hasPathway: !!pathway, milestonesDone: milestones.filter((m) => m.done).length, milestonesTotal: milestones.length, targetsCount };
 }
 
-// Plan-gating (brief §13 PAID VALUE LADDER): FREE gets Passport + capped
-// Scout only; these are the features built this session that must not be
-// silently free — pdf_export/outreach are STARTER — BUILD ME, the rest are
-// PRO — GUIDE ME. Anything not listed here (Passport itself, Scout chat)
-// stays ungated — differentiated by usage caps elsewhere, not feature access.
+// GOLSZ Final Product / AI Scout / Pathway / Elite Architecture directive
+// §11 "database-first state logic — do not ask the LLM to infer product
+// state." Pure, deterministic, no AI call — this is the authoritative
+// "what should this athlete do right now" decision for the Home dashboard;
+// Scout (see api/scout.js stateBlock) narrates around the SAME early
+// stages (profile/goal/plan/baseline/pathway) but never decides them, and
+// this function is the one place the fuller ladder (target/follow-up/
+// benchmark staleness) is computed at all — deliberately only here, not
+// re-run on every Scout message, since it needs data (all targets, all
+// benchmarks) that's already loaded for Home's own cards but would be
+// wasteful to re-fetch per chat message for a dashboard-level nudge.
+// TARGET_WORK/FOLLOW_UP is a deliberate merge of the directive's separate
+// "TARGET_WORK"/"OUTREACH"/"FOLLOW_UP" states into two: GOLSZ doesn't
+// currently track a distinct "identified but not yet contacted" outreach
+// stage separately from "stuck in an active status too long" (monthly's
+// existing staleTargets signal, same 7-day threshold
+// api/target-followup-reminders.js already uses) — reusing that one real
+// signal is more honest than inventing a third derived state with no
+// backing data behind it.
+const BENCHMARK_RETEST_DAYS = 60;
+function computeNextMove({ profileComplete, goalDefined, plan, baselineComplete, pathwayCreated, targetsCount, staleTargets, mostRecentBenchmarkDate }) {
+  if (!profileComplete) return "COMPLETE_PROFILE";
+  if (!goalDefined) return "DEFINE_GOAL";
+  if (plan === "free") return "INVITE_TO_PATHWAY";
+  if (!baselineComplete) return "ESTABLISH_BASELINE";
+  if (!pathwayCreated) return "BUILD_PATHWAY";
+  if (!targetsCount) return "TARGET_WORK";
+  if (staleTargets > 0) return "FOLLOW_UP";
+  if (!mostRecentBenchmarkDate || (Date.now() - new Date(mostRecentBenchmarkDate).getTime()) > BENCHMARK_RETEST_DAYS * 24 * 60 * 60 * 1000) return "RETEST";
+  return "REVIEW_PROGRESS";
+}
+// Where the "act on this" button for each deterministic type should send
+// the athlete — every type funnels to a real, already-built page; Scout
+// is the right destination for anything conversational (goal-setting,
+// baseline, Pathway-building), Targets for target/outreach work, Profile
+// for finishing the Passport itself.
+const NEXT_MOVE_TYPE_TARGET_PAGE = {
+  COMPLETE_PROFILE: "profile", DEFINE_GOAL: "scout", INVITE_TO_PATHWAY: "scout",
+  ESTABLISH_BASELINE: "scout", BUILD_PATHWAY: "scout", TARGET_WORK: "targets",
+  FOLLOW_UP: "targets", RETEST: "profile", REVIEW_PROGRESS: "scout",
+};
+
+// Plan-gating — re-mapped per the GOLSZ Final Product / AI Scout / Pathway
+// / Elite Architecture directive §5/§6: FREE = "understand me" (Passport +
+// capped Scout only, unchanged). BASIC = "build my path" — Pathway, My
+// Next Move, target identification/basic outreach, and PDF export all move
+// down from Pro to Starter here, since the directive explicitly lists them
+// as Basic-tier deliverables ("personalized Pathway," "baseline
+// assessment," "My Next Move," "target identification," "basic outreach
+// strategy," "Passport PDF export" — all under §5 BASIC). PRO = "manage my
+// journey" — GOLSZ Readiness and the Development Plan stay at Pro; the
+// directive's §6 PRO list explicitly names "GOLSZ Readiness" as a Pro
+// capability and never mentions Pathway/targets/benchmarks/PDF as newly
+// unlocked there (they're already unlocked one tier down). Anything not
+// listed here (Passport itself, Scout chat) stays ungated — differentiated
+// by usage caps elsewhere, not feature access.
 const PLAN_RANK = { free: 0, starter: 1, pro: 2, elite: 3 };
 const FEATURE_MIN_PLAN = {
   pdf_export: "starter",
   readiness: "pro",
-  next_move: "pro",
-  targets: "pro",
-  benchmarks: "pro",
+  next_move: "starter",
+  targets: "starter",
+  benchmarks: "starter",
   development_plan: "pro",
-  pathway_plan: "pro",
+  pathway_plan: "starter",
 };
 function hasFeature(plan, feature) {
   const min = FEATURE_MIN_PLAN[feature];
@@ -5829,7 +5892,7 @@ function AdminPanel({ onBack }) {
                   <div style={{ ...card }}>
                     <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_plan_mix")}</div>
                     <BreakdownBar label="Free" count={analytics.planCounts.free} total={analytics.totalUsers} color={C.body} />
-                    <BreakdownBar label="Starter" count={analytics.planCounts.starter} total={analytics.totalUsers} color={C.slate} />
+                    <BreakdownBar label="Basic" count={analytics.planCounts.starter} total={analytics.totalUsers} color={C.slate} />
                     <BreakdownBar label="Pro" count={analytics.planCounts.pro} total={analytics.totalUsers} color={C.lime} />
                     <BreakdownBar label="Elite" count={analytics.planCounts.elite} total={analytics.totalUsers} color={C.elite} />
                   </div>
@@ -6609,7 +6672,7 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       // actions") are already server-validated/capped — attached straight
       // to this specific message so the "add these" buttons render right
       // under the reply that generated them, not as a separate object.
-      setMsgs((m) => [...m, { role: "assistant", text: reply, suggestedTargets: data.suggested_targets || null, suggestedDevItems: data.suggested_dev_items || null, draftedEmail: data.drafted_email || null }]);
+      setMsgs((m) => [...m, { role: "assistant", text: reply, suggestedTargets: data.suggested_targets || null, suggestedDevItems: data.suggested_dev_items || null, suggestedPathway: data.suggested_pathway || null, draftedEmail: data.drafted_email || null }]);
       logTurn("assistant", reply);
     } catch (e) {
       const msg = e && e.code === "SCOUT_HTTP_ERROR" ? e.message : t("scout_connection_dropped");
@@ -6660,6 +6723,26 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       if (error) throw error;
       setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedDevItems: null, devItemsAdded: true } : msg)));
     } catch (e) { console.error("GOLSZ add suggested dev items error:", e); }
+  }
+  // Same one-tap pattern as the two above, for Scout's suggested_pathway
+  // (GOLSZ Final Product directive §5 "personalized Pathway" — a Basic+
+  // feature, see FEATURE_MIN_PLAN). pathway_plan is one row per athlete
+  // (user_id is its primary key — migration 093), so this upserts rather
+  // than inserts, safe whether this is a first Pathway or a rebuild.
+  // baseline_complete is set true in the same write: building a real
+  // Pathway is the moment GOLSZ actually has enough about the athlete to
+  // call their baseline established — no separate "record a baseline"
+  // flow exists (or is needed) beyond this.
+  async function addSuggestedPathway(msgIndex, pathway) {
+    if (!sb || !uidRef.current || !pathway) return;
+    try {
+      const { error } = await sb.from("pathway_plan").upsert(
+        { user_id: uidRef.current, pathway_type: pathway.pathway_type, target_timeline: pathway.target_timeline || null, milestones: pathway.milestones, baseline_complete: true, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" }
+      );
+      if (error) throw error;
+      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedPathway: null, pathwayAdded: true } : msg)));
+    } catch (e) { console.error("GOLSZ add suggested pathway error:", e); }
   }
 
   // Brief §8: "AI Scout should be able to create professional introduction/
@@ -6782,6 +6865,18 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
                 )
               )}
               {m.devItemsAdded && <div style={{ marginTop: 8, fontSize: 11.5, color: C.lime }}>{t("scout_dev_items_added")}</div>}
+              {m.suggestedPathway && (
+                hasFeature(plan, "pathway_plan") ? (
+                  <button onClick={() => addSuggestedPathway(i, m.suggestedPathway)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Compass size={13} /> {t("scout_build_pathway")}
+                  </button>
+                ) : (
+                  <button onClick={onUpgrade} style={{ marginTop: 8, background: C.turf, color: C.slate, border: `1px dashed ${C.line2}`, borderRadius: 9, padding: "8px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                    <Lock size={12} /> {t("scout_build_pathway_locked")}
+                  </button>
+                )
+              )}
+              {m.pathwayAdded && <div style={{ marginTop: 8, fontSize: 11.5, color: C.lime }}>{t("scout_pathway_added")}</div>}
               {m.draftedEmail && savingEmailFor !== i && (
                 hasFeature(plan, "targets") ? (
                   <button onClick={() => openSaveEmailPicker(i)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
@@ -6915,6 +7010,12 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
   const [monthly, setMonthly] = useState(null);
   const [nextMove, setNextMove] = useState(null);
   const [name, setName] = useState("");
+  // Deterministic state-machine inputs (directive §11) — profileComplete
+  // mirrors the exact same minimal heuristic GolszApp already gates the
+  // whole app behind (!!athlete.sport), goalDefined comes straight off
+  // the new profiles.goal_defined column (migration 093).
+  const [profileComplete, setProfileComplete] = useState(false);
+  const [goalDefined, setGoalDefined] = useState(false);
 
   useEffect(() => {
     if (!sb) return;
@@ -6923,15 +7024,17 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) { setLoaded(true); return; }
         const [{ data: prof }, { data: ath }, { data: reqs }, { data: benchmarks }, { data: devItems }, { data: pathwayRow }, { data: targets }] = await Promise.all([
-          sb.from("profiles").select("full_name, occupation, avatar_url, identity_verified").eq("id", user.id).single(),
+          sb.from("profiles").select("full_name, occupation, avatar_url, identity_verified, goal_defined, plan").eq("id", user.id).single(),
           sb.from("athletes").select("sport, position, club_name, grad_year, country, recruiting_status, bio, highlights, timeline, scout_context").eq("id", user.id).single(),
           sb.from("verification_requests").select("status").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
           sb.from("athlete_benchmarks").select("metric, value, unit, recorded_date").eq("user_id", user.id).order("recorded_date", { ascending: false }),
           sb.from("development_plan_items").select("status").eq("user_id", user.id),
-          sb.from("pathway_plan").select("pathway_type, milestones").eq("user_id", user.id).maybeSingle(),
+          sb.from("pathway_plan").select("pathway_type, milestones, baseline_complete").eq("user_id", user.id).maybeSingle(),
           sb.from("outreach_targets").select("id, status, updated_at").eq("user_id", user.id),
         ]);
         if (prof && prof.full_name) setName(prof.full_name);
+        setProfileComplete(!!(ath && ath.sport));
+        setGoalDefined(!!(prof && prof.goal_defined));
         setQuality(computeProfileQuality(ath, prof));
         const pendingReq = !!(reqs && reqs[0] && reqs[0].status === "pending");
         const isVerified = !!(prof && prof.identity_verified);
@@ -7056,12 +7159,27 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
           <button onClick={() => onNavigate("profile")} style={{ ...iconBtn(C.lime), fontSize: 12 }}>{t("home_finish_profile")}</button>
         </div>
       )}
-      {nextMove && hasFeature(plan, "next_move") && (
-        <div style={{ ...highlightCard, cursor: "pointer" }} onClick={() => onNavigate("scout")}>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.ink, opacity: 0.65, fontWeight: 700, marginBottom: 6 }}>{t("next_move_title")}</div>
-          <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>{nextMove.label}</div>
-        </div>
-      )}
+      {hasFeature(plan, "next_move") && (() => {
+        // Deterministic type (directive §11) drives WHAT to show and
+        // WHERE it navigates; nextMove.label (Scout's own most recent
+        // suggestion, when present) is used as the more specific/current
+        // wording for that same moment — falls back to a static
+        // translated label per type when Scout hasn't said anything yet.
+        // The TYPE itself is never taken from the AI.
+        const deterministicType = computeNextMove({
+          profileComplete, goalDefined, plan, baselineComplete: !!(pathwayRow && pathwayRow.baseline_complete),
+          pathwayCreated: !!pathwayRow, targetsCount: pathway ? pathway.targetsCount : 0,
+          staleTargets: monthly ? monthly.staleTargets : 0,
+          mostRecentBenchmarkDate: recentBenchmarks[0] ? recentBenchmarks[0].recorded_date : null,
+        });
+        const label = nextMove && nextMove.label ? nextMove.label : t("next_move_type_" + deterministicType);
+        return (
+          <div style={{ ...highlightCard, cursor: "pointer" }} onClick={() => onNavigate(NEXT_MOVE_TYPE_TARGET_PAGE[deterministicType] || "scout")}>
+            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.ink, opacity: 0.65, fontWeight: 700, marginBottom: 6 }}>{t("next_move_title")}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>{label}</div>
+          </div>
+        );
+      })()}
       <SectionTitle>{t("home_get_started")}</SectionTitle>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         <button onClick={() => onNavigate("scout")} style={entryCard}><Radar size={20} color={C.lime} />{t("nav_ai_scout")}</button>
@@ -7508,14 +7626,16 @@ function GolszApp({ onSignOut, startOnboarding }) {
   useEffect(() => { if (mustFinishProfile) setPage("profile"); }, [mustFinishProfile]);
 
   // Guided-onboarding conversion moment ("we've learned enough about you —
-  // let's build your plan"): fires once, for free-plan accounts only, once
-  // the athlete has both finished the required Passport basics
-  // (profileComplete) AND actually used Scout a few real times (reusing
-  // free_ai_lifetime_used from migration 068 as the "learned enough about
-  // you" signal, instead of inventing a second counter) — never on the
-  // very first profile save, which would show it before GOLSZ knows
-  // anything real. onboarding_conversion_shown (migration 069) makes this
-  // a true one-time nudge per account, not a once-per-session popup.
+  // let's build your plan"): fires once, for free-plan accounts only.
+  // GOLSZ Final Product directive §4 is explicit about the two real
+  // conditions — "Once the Passport is sufficiently complete AND Scout
+  // understands the athlete's stated goal" (profile_complete && goal_defined)
+  // — goal_defined (migration 093) is now the primary, spec-mandated gate;
+  // free_ai_lifetime_used >= 3 stays as an additional light floor so this
+  // can't fire off a single very-fast first message, not as the primary
+  // signal it was before goal_defined existed. onboarding_conversion_shown
+  // (migration 069) makes this a true one-time nudge per account, not a
+  // once-per-session popup.
   const [showConversion, setShowConversion] = useState(false);
   const [conversionUid, setConversionUid] = useState(null);
   // Plan-gating (brief §13, see hasFeature() above): the athlete's own uid
@@ -7524,6 +7644,29 @@ function GolszApp({ onSignOut, startOnboarding }) {
   // so gated features can check hasFeature(userPlan, "...") at render time.
   const [userUid, setUserUid] = useState(null);
   const [userPlan, setUserPlan] = useState(null);
+  // Direct-to-Elite accelerated onboarding (directive §8): "a user must not
+  // have to purchase Free -> Basic -> Pro sequentially... no artificial
+  // paywall interruptions" — someone who bought Elite before ever finishing
+  // their Passport gets one welcome moment, then drops straight into the
+  // SAME existing intake flow everyone uses (mustFinishProfile already
+  // forces the Passport page below; this doesn't add a new flow, just a
+  // one-time Elite-flavored welcome in front of the existing one). Fetched
+  // independently of the conversion-check effect below, which deliberately
+  // only runs once profileComplete is already true — this needs plan
+  // BEFORE that's known, so it can't share that effect.
+  const [showEliteWelcome, setShowEliteWelcome] = useState(false);
+  const [eliteWelcomeDismissed, setEliteWelcomeDismissed] = useState(false);
+  useEffect(() => {
+    if (!sb) return;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        const { data } = await sb.from("profiles").select("plan").eq("id", user.id).single();
+        if (data && data.plan === "elite") setShowEliteWelcome(true);
+      } catch (e) { console.error("GOLSZ elite-welcome check error:", e); }
+    })();
+  }, []);
   useEffect(() => {
     if (!sb || profileComplete !== true) return;
     (async () => {
@@ -7531,10 +7674,10 @@ function GolszApp({ onSignOut, startOnboarding }) {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
         setUserUid(user.id);
-        const { data } = await sb.from("profiles").select("plan, onboarding_conversion_shown, free_ai_lifetime_used").eq("id", user.id).single();
+        const { data } = await sb.from("profiles").select("plan, onboarding_conversion_shown, free_ai_lifetime_used, goal_defined").eq("id", user.id).single();
         if (!data) return;
         setUserPlan(data.plan || "free");
-        if (data.plan === "free" && !data.onboarding_conversion_shown && (data.free_ai_lifetime_used || 0) >= 3) {
+        if (data.plan === "free" && !data.onboarding_conversion_shown && data.goal_defined && (data.free_ai_lifetime_used || 0) >= 3) {
           setConversionUid(user.id);
           setShowConversion(true);
         }
@@ -7698,6 +7841,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         </main>
       </div>
       {showConversion && <GuidedAssessment uid={conversionUid} onDismiss={dismissConversion} />}
+      {showEliteWelcome && profileComplete === false && !eliteWelcomeDismissed && <EliteWelcome onDismiss={() => setEliteWelcomeDismissed(true)} />}
       {upgradeUid && <UpgradeScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
       </>
     );
@@ -7782,6 +7926,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
       </nav>
     </div>
     {showConversion && <GuidedAssessment uid={conversionUid} onDismiss={dismissConversion} />}
+      {showEliteWelcome && profileComplete === false && !eliteWelcomeDismissed && <EliteWelcome onDismiss={() => setEliteWelcomeDismissed(true)} />}
     {upgradeUid && <UpgradeScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
     </>
   );
@@ -7839,6 +7984,27 @@ function UpgradeScreen({ uid, onDismiss }) {
 // so it reads as a guided reveal of what Scout already learned, not a
 // form to fill out — brief's own framing: "We've learned enough about
 // you. Now let's build your plan," never "you've used all your questions."
+// Direct-to-Elite welcome (directive §8) — a single static screen, not a
+// multi-step reveal like GuidedAssessment below: there's nothing to recap
+// yet (profile_complete is false), the whole point is "no artificial
+// paywall interruptions" between buying Elite and starting the SAME real
+// intake every plan uses. Dismissing just drops straight into the
+// existing mustFinishProfile -> Passport flow already in place.
+function EliteWelcome({ onDismiss }) {
+  const { t } = useLang();
+  return ReactDOM.createPortal(
+    <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000a6", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+      <div style={{ background: C.pitch, border: `1px solid ${C.elite}`, borderRadius: 18, maxWidth: 420, width: "100%", padding: 26, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)", textAlign: "center" }}>
+        <div style={{ fontSize: 10, letterSpacing: "0.2em", color: C.elite, fontWeight: 800, marginBottom: 10 }}>{t("elite_welcome_eyebrow")}</div>
+        <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 12, lineHeight: 1.3 }}>{t("elite_welcome_title")}</div>
+        <div style={{ fontSize: 13, color: C.slate, lineHeight: 1.6, marginBottom: 22 }}>{t("elite_welcome_body")}</div>
+        <button onClick={onDismiss} style={{ width: "100%", background: C.elite, color: "#fff", border: "none", borderRadius: 12, padding: "13px 14px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit" }}>{t("elite_welcome_cta")}</button>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 const GUIDED_STEPS = ["goal", "passport", "missing", "readiness", "next_move", "ready"];
 function GuidedAssessment({ uid, onDismiss }) {
   const { t } = useLang();
@@ -8083,16 +8249,21 @@ const VAPID_PUBLIC_KEY = "BNrfmAAoP_PL4FocIjzfw5aaxzHsuCknwUeG5pX21v7cjvMCzt3PL2
 // name is a brand/tier label (like Spotify's "Premium") kept in English across
 // every language; tag + feature bullets are translated via plan_<id>_tag /
 // plan_<id>_featN keys in I18N — see Auth's plan-card rendering.
-// Matches the brief's §13 PAID VALUE LADDER and the real FEATURE_MIN_PLAN
-// gate above: FREE = Passport + capped Scout only. STARTER adds PDF export
-// (its "BUILD ME" differentiator). PRO adds GOLSZ Readiness/My Next Move/
-// target tracker/benchmarks (its "GUIDE ME" differentiator). Elite is the
-// same feature set as Pro today, priced for a higher Scout volume ceiling —
-// no false "advanced research" claim, since tool-call access isn't actually
-// capped differently between Starter/Pro/Elite in api/scout.js yet.
+// GOLSZ FINAL PRODUCT ARCHITECTURE (four levels of GOLSZ INVOLVEMENT, not
+// message counts — id stays "starter" since that's the live Stripe/DB enum
+// value, only the display name changed to "Basic"): FREE = "UNDERSTAND ME"
+// (Passport + athlete intake/discovery with Scout). BASIC = "BUILD MY PATH"
+// — matches FEATURE_MIN_PLAN above: this is where Pathway/My Next Move/
+// targets/benchmarks/PDF export actually unlock. PRO = "MANAGE MY JOURNEY"
+// — adds GOLSZ Readiness + the training/development plan (also gated at
+// "pro" in FEATURE_MIN_PLAN) plus richer target/outreach tracking. ELITE =
+// "LIVE THE PLAN" — everything in Pro at the highest Scout volume ceiling;
+// schedule/diary/GOLSZ Motion have DB space reserved (migration 095) but no
+// shipped UI yet, so per §10 ("never promise future features as live") the
+// pricing copy does not list them until they're real.
 const PLANS = [
   { id: "free",    name: "Free",    price: 0,  featKeys: ["plan_free_feat1", "plan_free_feat2", "plan_free_feat3"] },
-  { id: "starter", name: "Starter", price: 6,  featKeys: ["plan_starter_feat1", "plan_starter_feat2", "plan_starter_feat3", "plan_starter_feat4"] },
+  { id: "starter", name: "Basic",   price: 6,  featKeys: ["plan_starter_feat1", "plan_starter_feat2", "plan_starter_feat3", "plan_starter_feat4"] },
   { id: "pro",   name: "Pro",     price: 14, featKeys: ["plan_pro_feat1", "plan_pro_feat2", "plan_pro_feat3", "plan_pro_feat4", "plan_pro_feat5", "plan_pro_feat6"] },
   { id: "elite", name: "Elite",   price: 30, featKeys: ["plan_elite_feat1", "plan_elite_feat2"] },
 ];

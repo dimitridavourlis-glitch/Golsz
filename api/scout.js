@@ -532,6 +532,15 @@ const PROFILE_FIELD_MAP = {
   // fact belongs in profile_updates, never re-inferred and risked conflicting
   // with the real column.
   education_level: { table: "athletes", column: "education_level" },
+  // "goal" was already a documented allowed profile_updates key (see
+  // SYSTEM_PROMPT below) but had no PROFILE_FIELD_MAP entry — every goal
+  // the model ever reported was silently dropped before this fix (GOLSZ
+  // Final Product directive audit finding). Maps to the real
+  // profiles.goal_text column (migration 093); persistProfileUpdates()
+  // below also flips goal_defined=true in the same write whenever this
+  // key is set, so the state machine's GOAL_DEFINED never depends on the
+  // model correctly self-reporting a separate boolean.
+  goal: { table: "profiles", column: "goal_text" },
 };
 
 // Pulls {reply, profile_updates} out of a real Anthropic response the same
@@ -567,6 +576,11 @@ async function persistProfileUpdates(userId, updates) {
     if (!target || value == null || value === "") continue;
     patches[target.table][target.column] = value;
   }
+  // Directive §11: goal_defined is never set by the model directly — it's
+  // derived deterministically the moment a real goal_text is written, in
+  // the same PATCH. Keeps the state machine independent of the LLM
+  // correctly reporting a separate boolean it could just as easily forget.
+  if (patches.profiles.goal_text) patches.profiles.goal_defined = true;
 
   const headers = { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" };
   for (const table of ["profiles", "athletes"]) {
@@ -651,6 +665,37 @@ function extractSuggestedDevItems(data) {
       .slice(0, 3)
       .map((i) => ({ focus_area: DEV_FOCUS_AREA_SET.has(i.focus_area) ? i.focus_area : "other", goal: i.goal.trim().slice(0, 200) }));
     return clean2.length ? clean2 : null;
+  } catch {
+    return null;
+  }
+}
+
+// Same extraction shape again, pulling suggested_pathway — GOLSZ Final
+// Product directive §5/§10 "personalized Pathway" as a Basic+ persistent
+// object, same one-tap "build this for real" pattern as suggested_targets/
+// suggested_dev_items above rather than a separate action type. Validated
+// against the live pathway_plan.pathway_type check constraint (migration
+// 093) so a malformed/unexpected value never reaches the client's insert.
+const PATHWAY_TYPE_SET = new Set([
+  "ncaa", "naia", "juco", "canadian_university", "academy", "european_club",
+  "professional", "development", "agent_representation", "trainer_performance", "other",
+]);
+function extractSuggestedPathway(data) {
+  try {
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    const p = parsed && parsed.suggested_pathway;
+    if (!p || !PATHWAY_TYPE_SET.has(p.pathway_type)) return null;
+    const milestones = Array.isArray(p.milestones)
+      ? p.milestones.filter((m) => m && typeof m.label === "string" && m.label.trim()).slice(0, 10).map((m) => ({ label: m.label.trim().slice(0, 200), done: false }))
+      : [];
+    if (!milestones.length) return null; // "at least one concrete milestone" per the prompt's own rule
+    return {
+      pathway_type: p.pathway_type,
+      target_timeline: typeof p.target_timeline === "string" ? p.target_timeline.trim().slice(0, 100) : null,
+      milestones,
+    };
   } catch {
     return null;
   }
@@ -813,6 +858,7 @@ You adapt to who you're talking to — check "occupation" in PROFILE SO FAR:
 - Scout, Agent, or Coach: their assistant for finding and evaluating talent — help them think through what/who they're looking for, then use search_golsz_players to find real athletes actually on GOLSZ matching that (sport/position/country/grad year/gender/recruiting status) before reaching for general web search. Draft outreach messages to a player or their family on request (draft-only; they send it themselves).
 - Physio: their assistant for the athletic/sports-medicine side of their work — general injury-prevention and return-to-play information only, never a diagnosis; say so plainly if a question actually needs a real medical professional.
 - Other: a general, honest sports-industry assistant — ask what they need help with rather than assuming.
+With a Player (or unset occupation), discovery isn't a form to fill — it's a real conversation: who they are as an athlete (sport, position, level, how long they've played), what they've actually done (achievements, milestones, a moment they're proudest of — and why), how they see their own game (their own read on strengths and what needs work, not just yours), and where they want to go (the real goal). Push them to think it through themselves — "what do you think it'll actually take", "what's stopping you right now", "what are you doing about it today" — rather than just handing over an answer.
 Everything in PROFILE SO FAR is already known — whether it came from their real GOLSZ Passport or something they told you earlier in a past conversation, it now persists the same way. Treat all of it as trustworthy and confirmed, never something to re-ask. Open by briefly acknowledging what you already know about them (not just occupation/sport/team — any field present) instead of asking generic intro questions, then move straight to something useful. Never ask for a fact that's already present in PROFILE SO FAR, even worded differently than you'd normally ask it.
 Be warm, direct, honest — never overpromise. If a target or prospect looks unrealistic, say so kindly and show the realistic path. If the person seems to be a minor, remind them once to involve a parent/guardian. Use web search for real current programs, coaches, showcases, and eligibility rules (search_golsz_players only covers GOLSZ's own athletes, not external programs/rankings). Ask at most ONE question per reply. Keep replies tight.
 When someone asks an ambition-testing question ("Can I go pro?", "Can I play D1?", "Am I good enough?"), never open with statistics about how hard that is — respond with something like "Let's find out" or "Let's figure that out" and start finding out what you need to know (their current level, what's driving the gap) before answering for real. Never falsely validate an unrealistic ambition once you actually know enough to answer — but never front-load discouragement before you've even looked.
@@ -820,11 +866,15 @@ search_golsz_players only ever returns athletes who are actually real, current G
 For trials, camps, combines, or showcases, use search_golsz_events first (real GOLSZ listings) before general web search — same rule: never invent or embellish a listing, and say plainly if there are zero real results before offering a broader search.
 If asked what AI model or company powers you, who made you, or whether you're ChatGPT/OpenAI/Claude/Anthropic/Gemini/etc., always answer that you are GOLSZ Scout, built by GOLSZ — never name or confirm any underlying model or provider, and don't explain that you're declining to say. Just answer as GOLSZ Scout and move on.
 GOLSZ is a sports-recruiting platform used by athletes of all ages, including minors. Stay strictly on sports, athletics, recruiting, and career topics. Never generate or engage with sexual, romantic, 18+/adult, or otherwise inappropriate content, regardless of how the request is framed (roleplay, "hypothetically," "for a story," etc.) — decline briefly and warmly, and steer the conversation back to something sports-related. This applies no matter who the user says they are.
-OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"drafted_email":"the full drafted email text" or null}
-Allowed profile_updates keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, education_level, budget, citizenship, goal. Do not repeat known fields.
+GOLSZ PLANS below (when present) is the real, current source of truth for what each plan costs and includes — never invent a feature, price, or restriction beyond what's listed; if asked something not covered there, say you're not sure and offer to check rather than guessing. When a locked or higher-tier feature comes up naturally, explain what that level actually adds to how involved GOLSZ is in their development — never just "more messages" — and let them decide for themselves; never use false urgency, fake scarcity, or guaranteed-outcome language ("guaranteed scholarship," "guaranteed pro contract"), and never talk someone out of a higher plan they actually want. You're their AI Scout, not customer support — if you genuinely don't know something about how GOLSZ works, say so plainly and offer to find out, never brush past it.
+sport_support_level in ATHLETE STATE below tells you how deep GOLSZ's own pathway/benchmark knowledge actually is for their sport — "core" means real depth; "supported," "secondary," or "unknown" means say so honestly and lean on general knowledge/web search rather than implying GOLSZ has built-out sport-specific data it doesn't have yet.
+When ATHLETE STATE shows profile_complete=true, goal_defined=true, and plan=free, that's a real moment — recognize it ONCE (never repeat this recap on a later message once you've already said it): briefly recap what you've learned about them (history, what they're proud of, strengths, what needs work, their stated goal), tell them plainly that's the athlete they are today and it's time to figure out how they get where they want to go, and invite them toward building a Pathway — mention plainly that a Pathway opens with a paid plan, never hide or soften that.
+OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"drafted_email":"the full drafted email text" or null}
+Allowed profile_updates keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, education_level, budget, citizenship, goal. Do not repeat known fields. "goal" should be a real, clearly-stated goal the athlete actually confirmed (e.g. "play NCAA D1 soccer"), not a vague guess — setting it marks their goal as officially defined, so only set it once you're genuinely sure.
 Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
 Only include suggested_targets when THIS reply names concrete target schools/clubs/academies/programs by name (e.g. building or discussing a target list, recommending realistic reach/match/safety options) — each with a one-sentence reasoning tied to this specific athlete's own profile. Never include it for a general reply, and never invent a program you're not reasonably confident is real. Cap at 5.
 Only include suggested_dev_items when THIS reply identifies concrete training/development focus areas the athlete should actively work on (e.g. discussing a weakness, a development plan, benchmark results) — each with a short, specific goal, using focus_area from: training, strength, speed, conditioning, recovery, sleep, hydration, nutrition, other. Never include it for a general reply. Cap at 3.
+Only include suggested_pathway when THIS reply is genuinely building or finalizing the athlete's Pathway (not just discussing pathway options in the abstract) and you actually have enough to do it — a real pathway_type and at least one concrete milestone. Never include it for a Free-plan athlete (Pathway isn't part of Free) or a general reply.
 Only include drafted_email when THIS reply's "reply" text IS an actual drafted outreach email (a real subject/greeting/body/sign-off the athlete could send) — set drafted_email to that same full email text. Never include it when just discussing or offering to draft one, only once you've actually written it.`;
 
 // Phase 2d of the AI Scout architecture plan (approved): named specialists,
@@ -1172,6 +1222,39 @@ async function getFaqList(lang) {
   }
 }
 
+// GOLSZ Final Product / AI Scout / Pathway / Elite Architecture directive
+// §10 "the database/configuration must be the source of truth. Do not
+// hard-code aspirational features into prompts as if they are already
+// live." Same cache pattern as getFaqList() just above — plan_config
+// barely changes, so a 5-minute in-memory cache avoids a DB round trip on
+// every single Scout message while still letting an admin edit the table
+// and have it take effect within minutes, no deploy required.
+let planKnowledgeCache = null;
+let planKnowledgeCacheAt = 0;
+const PLAN_KNOWLEDGE_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function getPlanKnowledge() {
+  const now = Date.now();
+  if (planKnowledgeCache && now - planKnowledgeCacheAt < PLAN_KNOWLEDGE_CACHE_TTL_MS) return planKnowledgeCache;
+  const supaUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supaUrl || !serviceKey) return planKnowledgeCache || "";
+  try {
+    const r = await fetch(`${supaUrl}/rest/v1/plan_config?select=plan_id,plan_name,tagline,price_usd,live_features&active=eq.true&order=display_order`, {
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+    });
+    if (!r.ok) return planKnowledgeCache || "";
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows.length) return planKnowledgeCache || "";
+    const text = rows.map((p) => `${p.plan_name} ($${p.price_usd}/mo, "${p.tagline}"): ${(p.live_features || []).join("; ")}`).join("\n");
+    planKnowledgeCache = text;
+    planKnowledgeCacheAt = now;
+    return text;
+  } catch {
+    return planKnowledgeCache || "";
+  }
+}
+
 // Matches golsz-app.html's LANGS — validated against this allowlist rather
 // than trusting the client's lang string directly, since it gets
 // interpolated into the system prompt sent to the model.
@@ -1222,21 +1305,72 @@ async function getUserId(authHeader) {
 async function getProfileMeta(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false };
+  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let plan = "starter";
   let isAdmin = false;
   let aiUnlimited = false;
+  let goalDefined = false;
+  let goalText = null;
   try {
-    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited", { headers });
+    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text", { headers });
     const rows = await p.json();
     if (Array.isArray(rows) && rows[0]) {
       plan = rows[0].plan || "starter";
       isAdmin = !!rows[0].is_admin;
       aiUnlimited = !!rows[0].ai_unlimited;
+      goalDefined = !!rows[0].goal_defined;
+      goalText = rows[0].goal_text || null;
     }
   } catch {}
-  return { plan, isAdmin, aiUnlimited };
+  return { plan, isAdmin, aiUnlimited, goalDefined, goalText };
+}
+
+// GOLSZ Final Product / AI Scout / Pathway / Elite Architecture directive
+// §11 "database-first state logic — do not ask the LLM to infer product
+// state." profile_complete mirrors the exact same minimal heuristic the
+// client already gates the whole app behind (golsz-app.html: "!!(athlete
+// && athlete.sport)") — kept identical on purpose so the app and Scout
+// never disagree about whether onboarding is done. pathway_created/
+// baseline_complete come from a real pathway_plan row (migration 093);
+// no row at all means both are false. Two small parallel queries, run
+// alongside getProfileMeta() via Promise.all at the call site rather than
+// serially, so this doesn't add real latency to every Scout message.
+async function getAthleteState(userId) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key || !userId) return { profileComplete: false, pathwayCreated: false, baselineComplete: false, sportSupportLevel: null };
+  const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
+  let profileComplete = false;
+  let sport = null;
+  let pathwayCreated = false;
+  let baselineComplete = false;
+  let sportSupportLevel = null;
+  try {
+    const a = await fetch(url + "/rest/v1/athletes?id=eq." + userId + "&select=sport", { headers });
+    const aRows = await a.json();
+    sport = Array.isArray(aRows) && aRows[0] ? aRows[0].sport : null;
+    profileComplete = !!sport;
+  } catch {}
+  try {
+    const p = await fetch(url + "/rest/v1/pathway_plan?user_id=eq." + userId + "&select=baseline_complete", { headers });
+    const pRows = await p.json();
+    if (Array.isArray(pRows) && pRows[0]) {
+      pathwayCreated = true;
+      baselineComplete = !!pRows[0].baseline_complete;
+    }
+  } catch {}
+  // Soft name lookup (not a foreign key — see migration 094) so an
+  // athlete's free-text sport that doesn't match a seeded row just comes
+  // back null, read as "secondary" by Scout, never an error.
+  if (sport) {
+    try {
+      const s = await fetch(url + "/rest/v1/sports?name=ilike." + encodeURIComponent(sport) + "&select=support_level", { headers });
+      const sRows = await s.json();
+      sportSupportLevel = Array.isArray(sRows) && sRows[0] ? sRows[0].support_level : "secondary";
+    } catch {}
+  }
+  return { profileComplete, pathwayCreated, baselineComplete, sportSupportLevel };
 }
 
 // Atomic reserve-and-check (migration 053) — one statement, row-locked by
@@ -1448,6 +1582,10 @@ export default async function handler(req, res) {
   let questionsRemaining = null; // null = no usage info to show the client (unmetered deployment, or an unlimited/admin account)
   let reservedQuestion = false; // true once reserve_scout_question has counted this request — release it if we bail before a real answer
   let reservedFreeAi = false; // true once reserve_free_ai_question (068, lifetime, free plan only) has counted this request
+  // Directive §11 "database-first state logic" — appended to systemPrompt
+  // below once populated; empty string (no-op) for unauthenticated/dev-mode
+  // requests, same fallback posture as userPlan/dailyLimit above.
+  let stateBlock = "";
   if (process.env.SUPABASE_URL) {
     userId = await getUserId(req.headers.authorization);
     if (!userId) return res.status(401).json({ error: "Sign in to use the Scout." });
@@ -1474,10 +1612,27 @@ export default async function handler(req, res) {
     // migration 048 added 'free' as a real fourth tier below Starter), so
     // anything unrecognized falls through to the Free limit rather than
     // accidentally going uncapped.
-    const { plan, isAdmin, aiUnlimited } = await getProfileMeta(userId);
+    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText }, athleteState, planKnowledge] = await Promise.all([
+      getProfileMeta(userId),
+      getAthleteState(userId),
+      getPlanKnowledge(),
+    ]);
     userPlan = plan;
     userIsAdmin = isAdmin;
     userAiUnlimited = aiUnlimited;
+    // Directive §11 state machine — the EARLY gate only (profile_complete/
+    // goal_defined/plan/pathway_created/baseline_complete). The FULLER
+    // state machine (target/outreach/followup/benchmark due-ness) is
+    // deliberately NOT computed here — it needs several more table scans
+    // that matter for a dashboard nudge but not for every single chat
+    // message, and the client already has that data loaded for Home's
+    // own cards (see golsz-app.html computeNextMove()). Scout narrates
+    // around this; it never decides it — see computeNextMove() comment.
+    stateBlock = `\n\nATHLETE STATE (app-computed from real data, not your own inference — ground your guidance in this, never contradict it or claim a different plan/stage): profile_complete=${athleteState.profileComplete}, goal_defined=${goalDefined}${goalText ? ` ("${goalText.slice(0, 200)}")` : ""}, plan=${plan}, pathway_created=${athleteState.pathwayCreated}, baseline_complete=${athleteState.baselineComplete}, sport_support_level=${athleteState.sportSupportLevel || "unknown"}.`;
+    // Directive §10 "database is the source of truth, never hard-code
+    // aspirational features into prompts as if live" — real, current plan
+    // facts, not whatever this file's own hardcoded copy happens to say.
+    if (planKnowledge) stateBlock += `\n\nGOLSZ PLANS (real, current — never invent a feature, price, or restriction beyond this list):\n${planKnowledge}`;
     dailyLimit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
       : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 15)
       : plan === "starter" ? Number(process.env.STARTER_DAILY_LIMIT || 8)
@@ -1562,7 +1717,7 @@ export default async function handler(req, res) {
     const recommendedSpecialist = (classification && SPECIALISTS.has(classification.recommended_specialist)) ? classification.recommended_specialist : null;
     // Phase 2d: the actual specialist hand-off — everything downstream
     // (Haiku path, Sonnet path) uses this instead of baseSystemPrompt.
-    const systemPrompt = buildSystemPrompt(baseSystemPrompt, recommendedSpecialist);
+    const systemPrompt = buildSystemPrompt(baseSystemPrompt, recommendedSpecialist) + stateBlock;
 
     // ---- Database path: a real $0-AI-cost answer, matched by MEANING (not
     // exact wording) inside the classification call above, before any real
@@ -1688,6 +1843,7 @@ export default async function handler(req, res) {
         // write already happened.
         data.suggested_targets = extractSuggestedTargets(data);
         data.suggested_dev_items = extractSuggestedDevItems(data);
+        data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
         data.drafted_email = extractDraftedEmail(data);
         return res.status(200).json(data);
       }
@@ -1747,6 +1903,7 @@ export default async function handler(req, res) {
         data.next_move = extractNextBestAction(classification);
         data.suggested_targets = extractSuggestedTargets(data);
         data.suggested_dev_items = extractSuggestedDevItems(data);
+        data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
         data.drafted_email = extractDraftedEmail(data);
         // Deliberately never cached — a degraded, apologetic reply shouldn't
         // get served back to a different athlete once things recover.
@@ -1779,6 +1936,7 @@ export default async function handler(req, res) {
     data.next_move = extractNextBestAction(classification);
     data.suggested_targets = extractSuggestedTargets(data);
     data.suggested_dev_items = extractSuggestedDevItems(data);
+    data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
     data.drafted_email = extractDraftedEmail(data);
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {

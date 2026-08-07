@@ -3948,5 +3948,229 @@ alter table scout_routing_log drop constraint if exists scout_routing_log_answer
 alter table scout_routing_log add constraint scout_routing_log_answered_by_check
   check (answered_by in ('haiku', 'sonnet', 'database', 'failed'));
 
+-- ============================================================
+-- 092 — plan_config: GOLSZ product knowledge, database-first
+-- (GOLSZ Final Product / AI Scout / Pathway / Elite Architecture directive
+-- §10: "AI Scout must understand FREE/BASIC/PRO/ELITE... the database/
+-- configuration must be the source of truth. Do not hard-code aspirational
+-- features into prompts as if they are already live.")
+--
+-- Mirrors the existing scout_model_config pattern (migration 052) — same
+-- service-role-only RLS (no policies at all; api/scout.js reads it with
+-- the service key server-side, same as getModelConfigByTier()). The
+-- client-side PLANS/FEATURE_MIN_PLAN in golsz-app.html are NOT replaced by
+-- this — this table exists so Scout's own context can ground itself in
+-- real, current plan facts instead of whatever the model prompt happens
+-- to say, without needing a deploy to correct a stale claim. Seeded from
+-- the exact live values already in golsz-app.html's PLANS constant and
+-- api/scout.js's *_DAILY_LIMIT / FREE_LIFETIME_LIMIT env vars at the time
+-- of this migration.
+-- ============================================================
+
+create table if not exists plan_config (
+  plan_id text primary key check (plan_id in ('free', 'starter', 'pro', 'elite')),
+  plan_name text not null,
+  tagline text,
+  price_usd numeric not null,
+  display_order int not null,
+  live_features jsonb not null default '[]'::jsonb,
+  coming_soon_features jsonb not null default '[]'::jsonb,
+  ai_daily_question_limit int,
+  ai_lifetime_question_limit int,
+  active boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+
+alter table plan_config enable row level security;
+-- no select/insert/update policy — service-role only, same as scout_model_config
+
+insert into plan_config (plan_id, plan_name, tagline, price_usd, display_order, live_features, ai_daily_question_limit, ai_lifetime_question_limit) values
+  ('free', 'Free', 'Understand me', 0,
+    0,
+    '["Digital Sports Passport", "Profile creation & editing", "Approved media links, achievements, career history", "General AI Scout conversation & athlete discovery", "Basic recruiting/development explanations"]'::jsonb,
+    3, 40),
+  ('starter', 'Basic', 'Build my path', 6,
+    1,
+    '["Everything in Free", "Personalized Pathway", "Baseline assessment", "My Next Move", "Target identification & basic target lists", "Basic outreach strategy", "AI-drafted introduction emails", "Passport PDF export", "Milestones & basic action planning", "Ongoing AI Scout access"]'::jsonb,
+    8, null),
+  ('pro', 'Pro', 'Manage my journey', 14,
+    2,
+    '["Everything in Basic", "Richer target lists & status tracking", "Outreach & follow-up tracking", "Monthly/weekly objectives & reminders", "GOLSZ Readiness", "Progress reviews", "Deeper AI Scout involvement & opportunity research", "Periodic pathway reassessment"]'::jsonb,
+    15, null),
+  ('elite', 'Elite', 'Live the plan', 30,
+    3,
+    '["Everything in Pro", "Training organization", "Performance benchmarks", "Schedule", "Athlete diary", "Recovery, sleep & general nutrition education", "Reminders & push alerts", "Periodic reassessment", "GOLSZ Motion exercise demonstrations"]'::jsonb,
+    20, null)
+on conflict (plan_id) do update set
+  plan_name = excluded.plan_name, tagline = excluded.tagline, price_usd = excluded.price_usd,
+  display_order = excluded.display_order, live_features = excluded.live_features,
+  ai_daily_question_limit = excluded.ai_daily_question_limit,
+  ai_lifetime_question_limit = excluded.ai_lifetime_question_limit,
+  updated_at = now();
+
+-- ============================================================
+-- 093 — goal state (same directive, §11 state machine: GOAL_DEFINED/GOAL)
+-- goal_text is a hard, athlete-confirmed fact (like full_name/sport — see
+-- PROFILE_FIELD_MAP in api/scout.js), distinct from the existing SOFT/
+-- inferred scout_context.dream_outcome and .target_level, which stay
+-- exactly as they are. goal_defined is never set directly by the model —
+-- it's derived server-side the moment goal_text is written (see
+-- persistProfileUpdates in api/scout.js), so the state machine never
+-- depends on the LLM correctly self-reporting a boolean.
+--
+-- baseline_complete lives on pathway_plan rather than profiles: a
+-- "baseline" is meaningless before a Pathway exists to baseline against,
+-- and this avoids a redundant standalone table for a single flag.
+-- ============================================================
+
+alter table profiles add column if not exists goal_defined boolean not null default false;
+alter table profiles add column if not exists goal_text text;
+alter table pathway_plan add column if not exists baseline_complete boolean not null default false;
+
+-- ============================================================
+-- 094 — sports config (same directive: "GOLSZ is multi-sport but not
+-- generic" — CORE sports get real pathway/benchmark/rules depth over
+-- time; SECONDARY sports stay honest about not having that depth yet).
+--
+-- athletes.sport stays free text on purpose (unchanged) — this table is
+-- a soft lookup by name, not a foreign key, so it never breaks on an
+-- existing athlete row whose sport string doesn't exactly match a seeded
+-- name here. Deliberately NOT building sport_positions/sport_benchmarks/
+-- sport_pathway_types/sport_leagues/sport_recruiting_rules yet — those
+-- are premature before any one sport has real authored pathway content;
+-- this table only carries the CORE/SUPPORTED/SECONDARY flag Scout needs
+-- to avoid claiming depth GOLSZ doesn't have.
+-- ============================================================
+
+create table if not exists sports (
+  id text primary key,
+  name text not null,
+  support_level text not null default 'secondary' check (support_level in ('core', 'supported', 'secondary')),
+  team_or_individual text not null check (team_or_individual in ('team', 'individual')),
+  pathway_enabled boolean not null default false,
+  benchmarks_enabled boolean not null default false,
+  display_order int
+);
+
+alter table sports enable row level security;
+-- no select/insert/update policy — service-role only (api/scout.js reads
+-- server-side); the client's existing SPORTS array in golsz-app.html is
+-- untouched and keeps driving the profile-editor sport picker as-is.
+
+insert into sports (id, name, support_level, team_or_individual, pathway_enabled, benchmarks_enabled, display_order) values
+  ('soccer', 'Soccer', 'core', 'team', true, true, 1),
+  ('futsal', 'Futsal', 'core', 'team', true, true, 2),
+  ('american_football', 'American Football', 'core', 'team', true, true, 3),
+  ('baseball', 'Baseball', 'core', 'team', true, true, 4),
+  ('basketball', 'Basketball', 'core', 'team', true, true, 5),
+  ('tennis', 'Tennis', 'core', 'individual', true, true, 6),
+  ('golf', 'Golf', 'core', 'individual', true, true, 7),
+  ('lacrosse', 'Lacrosse', 'core', 'team', true, true, 8),
+  ('handball', 'Handball', 'core', 'team', true, true, 9),
+  ('volleyball', 'Volleyball', 'core', 'team', true, true, 10)
+on conflict (id) do update set
+  support_level = excluded.support_level, pathway_enabled = excluded.pathway_enabled,
+  benchmarks_enabled = excluded.benchmarks_enabled, display_order = excluded.display_order;
+
+-- Every other sport already offered client-side (golsz-app.html's SPORTS
+-- array — Track, Swimming, Wrestling, Boxing, etc.) stays fully usable
+-- for Passport/goals/AI Scout/basic Pathways (directive §"Secondary
+-- sports"), it's just not seeded into this table as 'core' — a lookup
+-- miss here means "secondary" by the default column value, not "blocked."
+
+-- ============================================================
+-- 095 — schema-only shells: GOLSZ Motion, Athlete Schedule, Athlete Diary
+-- (same directive §17/§12/§14 + §27: "create the database space now, do
+-- not build the complete UI/workflow yet"). No client UI reads or writes
+-- these yet — that's explicitly Build Next, not this pass. Self-service
+-- RLS only, same pattern as pathway_plan/development_plan_items (no admin
+-- visibility policy — personal development/health-adjacent data).
+-- ============================================================
+
+create table if not exists golsz_motion_exercises (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text unique not null,
+  category text not null check (category in (
+    'strength', 'speed', 'acceleration', 'agility', 'power', 'endurance',
+    'mobility', 'flexibility', 'balance', 'coordination', 'core',
+    'warmup', 'recovery', 'sport_specific'
+  )),
+  subcategory text,
+  description text,
+  purpose text,
+  instructions text,
+  video_url text,
+  animation_url text,
+  thumbnail_url text,
+  equipment_required text,
+  difficulty text check (difficulty in ('beginner', 'intermediate', 'advanced')),
+  sport_tags text[],
+  position_tags text[],
+  age_guidance text,
+  duration_or_reps_guidance text,
+  common_mistakes text,
+  safety_notes text,
+  contraindication_notes text,
+  active boolean not null default true,
+  approved boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table golsz_motion_exercises enable row level security;
+create policy golsz_motion_exercises_read on golsz_motion_exercises for select using (active and approved);
+-- write is service-role/admin only — no insert/update/delete policy for
+-- regular users; content is curated, never athlete- or AI-authored.
+
+create table if not exists athlete_schedule (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  day_of_week int not null check (day_of_week between 0 and 6),
+  activity_type text not null check (activity_type in (
+    'wake', 'meal', 'school', 'work', 'training', 'gym', 'game',
+    'travel', 'study', 'recovery', 'sleep', 'other'
+  )),
+  title text,
+  start_time time,
+  end_time time,
+  location text,
+  recurrence text,
+  notes text,
+  reminder_enabled boolean not null default false,
+  reminder_offset_minutes int,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+alter table athlete_schedule enable row level security;
+create policy athlete_schedule_rw on athlete_schedule for all using (
+  (user_id = auth.uid()) or is_parent_of(user_id)
+) with check (
+  (user_id = auth.uid()) or is_parent_of(user_id)
+);
+
+create table if not exists athlete_diary_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  entry_date date not null default current_date,
+  training_session text,
+  energy int check (energy between 1 and 10),
+  effort int check (effort between 1 and 10),
+  sleep_hours numeric,
+  sleep_quality int check (sleep_quality between 1 and 10),
+  soreness int check (soreness between 1 and 10),
+  readiness int check (readiness between 1 and 10),
+  nutrition_check boolean,
+  hydration_check boolean,
+  notes text,
+  created_at timestamptz not null default now(),
+  unique(user_id, entry_date)
+);
+alter table athlete_diary_entries enable row level security;
+create policy athlete_diary_entries_rw on athlete_diary_entries for all using (
+  (user_id = auth.uid()) or is_parent_of(user_id)
+) with check (
+  (user_id = auth.uid()) or is_parent_of(user_id)
+);
+
 -- Done.
 -- ============================================================
