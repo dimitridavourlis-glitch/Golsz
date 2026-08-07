@@ -1532,13 +1532,13 @@ function SettingsButton({ openSignal }) {
               <button onClick={() => setTheme("dark")} style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
                 cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
-                background: theme === "dark" ? "#C8F1351a" : C.turf, color: theme === "dark" ? C.lime : C.chalk,
+                background: theme === "dark" ? "#D4AF371a" : C.turf, color: theme === "dark" ? C.lime : C.chalk,
                 border: `1.5px solid ${theme === "dark" ? C.lime : C.line2}`,
               }}><Moon size={16} /> {t("settings_dark")}</button>
               <button onClick={() => setTheme("light")} style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
                 cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
-                background: theme === "light" ? "#C8F1351a" : C.turf, color: theme === "light" ? C.lime : C.chalk,
+                background: theme === "light" ? "#D4AF371a" : C.turf, color: theme === "light" ? C.lime : C.chalk,
                 border: `1.5px solid ${theme === "light" ? C.lime : C.line2}`,
               }}><Sun size={16} /> {t("settings_light")}</button>
             </div>
@@ -1546,7 +1546,7 @@ function SettingsButton({ openSignal }) {
               <div style={{ marginBottom: 18 }}>
                 <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_plan")}</div>
                 {paymentPastDue && (
-                  <div style={{ background: "#C89B3C1a", border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "10px 12px", marginBottom: 10, fontSize: 12, color: C.warnText, lineHeight: 1.4 }}>
+                  <div style={{ background: "#B58A1A1a", border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "10px 12px", marginBottom: 10, fontSize: 12, color: C.warnText, lineHeight: 1.4 }}>
                     {t("settings_payment_past_due")}
                   </div>
                 )}
@@ -1556,7 +1556,7 @@ function SettingsButton({ openSignal }) {
                     return (
                       <button key={pl.id} onClick={() => choosePlan(pl.id)} disabled={planBusy || isCurrent} style={{
                         textAlign: "left", cursor: isCurrent ? "default" : "pointer", fontFamily: "inherit",
-                        background: isCurrent ? "#C8F1351a" : C.turf, border: `1.5px solid ${isCurrent ? C.lime : C.line2}`,
+                        background: isCurrent ? "#D4AF371a" : C.turf, border: `1.5px solid ${isCurrent ? C.lime : C.line2}`,
                         borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
                         opacity: planBusy && !isCurrent ? 0.6 : 1,
                       }}>
@@ -1581,13 +1581,13 @@ function SettingsButton({ openSignal }) {
                   <button onClick={() => toggleNotifs(true)} disabled={notifBusy} style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
                     cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, opacity: notifBusy ? 0.6 : 1,
-                    background: notifEnabled ? "#C8F1351a" : C.turf, color: notifEnabled ? C.lime : C.chalk,
+                    background: notifEnabled ? "#D4AF371a" : C.turf, color: notifEnabled ? C.lime : C.chalk,
                     border: `1.5px solid ${notifEnabled ? C.lime : C.line2}`,
                   }}><Bell size={16} /> {t("settings_notif_on")}</button>
                   <button onClick={() => toggleNotifs(false)} disabled={notifBusy} style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
                     cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, opacity: notifBusy ? 0.6 : 1,
-                    background: !notifEnabled ? "#C8F1351a" : C.turf, color: !notifEnabled ? C.lime : C.chalk,
+                    background: !notifEnabled ? "#D4AF371a" : C.turf, color: !notifEnabled ? C.lime : C.chalk,
                     border: `1.5px solid ${!notifEnabled ? C.lime : C.line2}`,
                   }}>{t("settings_notif_off")}</button>
                 </div>
@@ -1666,7 +1666,7 @@ function SettingsButton({ openSignal }) {
                       padding: "12px 14px", color: C.warnText, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                     }}>{t("settings_delete_account")}</button>
                   ) : (
-                    <div style={{ background: "#C89B3C1a", border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: 14 }}>
+                    <div style={{ background: "#B58A1A1a", border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: 14 }}>
                       <div style={{ fontSize: 12, color: C.warnText, lineHeight: 1.4, marginBottom: 10 }}>{t("settings_delete_warning")}</div>
                       <input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder={t("settings_delete_confirm_ph")}
                         style={{ width: "100%", background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
@@ -1693,7 +1693,7 @@ function SettingsButton({ openSignal }) {
                 <button key={code} onClick={() => setLang(code)} style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 12,
                   cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
-                  background: lang === code ? "#C8F1351a" : C.turf, color: lang === code ? C.lime : C.chalk,
+                  background: lang === code ? "#D4AF371a" : C.turf, color: lang === code ? C.lime : C.chalk,
                   border: `1.5px solid ${lang === code ? C.lime : C.line2}`,
                 }}><Globe size={15} /> {label}</button>
               ))}
@@ -1844,7 +1844,7 @@ function Badge({ label }) {
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 3, fontSize: 9.5, fontWeight: 700,
-      color: C.lime, background: "#C8F1351a", border: `1px solid #C8F13544`,
+      color: C.lime, background: "#D4AF371a", border: `1px solid #D4AF3744`,
       padding: "2px 6px", borderRadius: 5, letterSpacing: "0.04em",
     }}><BadgeCheck size={10} /> {label}</span>
   );
@@ -1873,7 +1873,7 @@ function RestrictedBanner() {
   }, []);
   if (!restricted) return null;
   return (
-    <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+    <div style={{ background: "#B58A1A1a", border: "1px solid #B58A1A44", borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
       <span style={{ fontSize: 18 }}>🔒</span>
       <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.4 }}>
         <b style={{ color: C.amber }}>{t("restricted_title")}</b> {t("restricted_body")}
@@ -2175,7 +2175,7 @@ function Feed({ onMessage, onViewProfile }) {
               <div style={{
                 width: 30, height: 30, borderRadius: "50%", flexShrink: 0, display: "flex",
                 alignItems: "center", justifyContent: "center",
-                background: p.kind === "perf" ? "#C89B3C1a" : "#C8F1351a",
+                background: p.kind === "perf" ? "#B58A1A1a" : "#D4AF371a",
                 border: `1px solid ${p.kind === "perf" ? C.amber : C.lime}44`,
               }}>
                 {p.kind === "commit" && <Trophy size={14} color={C.lime} />}
@@ -2689,8 +2689,8 @@ function Events() {
 function Tag({ children, warn }) {
   return <span style={{
     fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 5,
-    color: warn ? C.amber : C.slate, background: warn ? "#C89B3C1a" : C.turf,
-    border: `1px solid ${warn ? "#C89B3C44" : C.line2}`,
+    color: warn ? C.amber : C.slate, background: warn ? "#B58A1A1a" : C.turf,
+    border: `1px solid ${warn ? "#B58A1A44" : C.line2}`,
   }}>{children}</span>;
 }
 
@@ -4325,7 +4325,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         )}
       </div>
       {shareMsg && (
-        <div style={{ background: "#C8F1351a", border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: C.chalk, wordBreak: "break-all" }}>{shareMsg}</div>
+        <div style={{ background: "#D4AF371a", border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: C.chalk, wordBreak: "break-all" }}>{shareMsg}</div>
       )}
       {/* Revocable share links (migration 078) — each row is its own
           ?share=<token> link the athlete has actually sent out; "Revoke"
@@ -4376,7 +4376,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       )}
 
       {viewingOther && p.occupation && p.occupation !== "Player" && p.verifiedTier === "none" && (
-        <div style={{ background: "#C89B3C1a", border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ background: "#B58A1A1a", border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", alignItems: "flex-start", gap: 10 }}>
           <ShieldAlert size={16} color={C.amber} style={{ flexShrink: 0, marginTop: 1 }} />
           <div style={{ fontSize: 12, color: C.chalk, lineHeight: 1.45 }}>
             {t("passport_unverified_warning").replace("{occupation}", p.occupation)}
@@ -4385,7 +4385,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       )}
 
       {incomplete && (
-        <div onClick={() => setEditing(true)} style={{ background: "#C8F1351a", border: `1px solid ${C.limeBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+        <div onClick={() => setEditing(true)} style={{ background: "#D4AF371a", border: `1px solid ${C.limeBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
           <Pencil size={16} color={C.lime} />
           <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.4 }}>
             <b style={{ color: C.lime }}>{t("passport_finish_bold")}</b>{t("passport_finish_rest")}
@@ -4527,7 +4527,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
                   display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700,
                   padding: "5px 9px", borderRadius: 6, transform: "rotate(-1.5deg)",
                   color: b.on ? C.lime : C.slate,
-                  background: b.on ? "#C8F1351a" : "transparent",
+                  background: b.on ? "#D4AF371a" : "transparent",
                   border: `1.5px solid ${b.on ? C.lime : C.line2}`,
                   opacity: b.on ? 1 : 0.55,
                 }}>
@@ -5698,7 +5698,7 @@ function AdminPanel({ onBack }) {
                   {["none", "pro", "elite"].map((tier) => {
                     const active = (u.verified_tier || "none") === tier;
                     const tierColor = tier === "elite" ? C.elite : tier === "pro" ? C.lime : C.slate;
-                    const tierBg = tier === "elite" ? "#4A9EFF1a" : tier === "pro" ? "#C8F1351a" : "transparent";
+                    const tierBg = tier === "elite" ? "#415A771a" : tier === "pro" ? "#D4AF371a" : "transparent";
                     return (
                       <button key={tier} onClick={() => setUserVerifiedTier(u.id, tier)} style={{
                         fontSize: 10, fontWeight: 700, padding: "5px 8px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
@@ -5710,7 +5710,7 @@ function AdminPanel({ onBack }) {
                 </div>
                 <button onClick={() => toggleUserActivity(u.id)} title={t("admin_view_activity")} style={{
                   display: "flex", alignItems: "center", padding: "5px 7px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                  background: expandedActivityId === u.id ? "#C8F1351a" : "transparent", color: expandedActivityId === u.id ? C.lime : C.slate,
+                  background: expandedActivityId === u.id ? "#D4AF371a" : "transparent", color: expandedActivityId === u.id ? C.lime : C.slate,
                   border: `1px solid ${expandedActivityId === u.id ? C.lime : C.line2}`,
                 }}>{expandedActivityId === u.id ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>
               </div>
@@ -5720,16 +5720,16 @@ function AdminPanel({ onBack }) {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
                     <button onClick={() => setUserAdmin(u.id, !u.is_admin)} style={{
                       fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                      background: u.is_admin ? "#C8F1351a" : "transparent", color: u.is_admin ? C.lime : C.slate, border: `1px solid ${u.is_admin ? C.lime : C.line2}`,
+                      background: u.is_admin ? "#D4AF371a" : "transparent", color: u.is_admin ? C.lime : C.slate, border: `1px solid ${u.is_admin ? C.lime : C.line2}`,
                     }}>{u.is_admin ? t("admin_revoke_admin") : t("admin_make_admin")}</button>
                     <button onClick={() => setUserAiUnlimited(u.id, !u.ai_unlimited)} title={t("admin_ai_unlimited_hint")} style={{
                       fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                      background: u.ai_unlimited ? "#4A9EFF1a" : "transparent", color: u.ai_unlimited ? C.elite : C.slate, border: `1px solid ${u.ai_unlimited ? C.elite : C.line2}`,
+                      background: u.ai_unlimited ? "#415A771a" : "transparent", color: u.ai_unlimited ? C.elite : C.slate, border: `1px solid ${u.ai_unlimited ? C.elite : C.line2}`,
                     }}>{u.ai_unlimited ? t("admin_revoke_ai_unlimited") : t("admin_grant_ai_unlimited")}</button>
                     {u.id !== myUid && (
                       <button onClick={() => setUserBanned(u.id, !u.is_banned)} style={{
                         fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                        background: u.is_banned ? "#C89B3C1a" : "transparent", color: u.is_banned ? C.amber : C.slate, border: `1px solid ${u.is_banned ? C.amber : C.line2}`,
+                        background: u.is_banned ? "#B58A1A1a" : "transparent", color: u.is_banned ? C.amber : C.slate, border: `1px solid ${u.is_banned ? C.amber : C.line2}`,
                       }}>{u.is_banned ? t("admin_unblock_user") : t("admin_block_user")}</button>
                     )}
                     {u.id !== myUid && (
@@ -6708,7 +6708,7 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       </div>
 
       {!showHistory && nextMove && hasFeature(plan, "next_move") && (
-        <div style={{ margin: "10px 12px 0", background: "#C8F1351a", border: `1px solid ${C.limeBorder}`, borderRadius: 12, padding: "10px 12px" }}>
+        <div style={{ margin: "10px 12px 0", background: "#D4AF371a", border: `1px solid ${C.limeBorder}`, borderRadius: 12, padding: "10px 12px" }}>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
             {React.createElement(NEXT_MOVE_ICONS[nextMove.type] || Radar, { size: 15, color: C.lime, style: { marginTop: 1, flexShrink: 0 } })}
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -6871,6 +6871,13 @@ function SectionTitle({ children, noMargin }) {
   return <h2 style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", color: C.slate, textTransform: "uppercase", margin: noMargin ? 0 : "6px 2px 10px" }}>{children}</h2>;
 }
 const card = { background: C.card, border: `1px solid ${C.line}`, borderRadius: 16, padding: 14, marginBottom: 12, boxShadow: "0 6px 18px -12px rgba(0,0,0,0.6)" };
+// Cream "highlight" card (Helios theme) — reserved for the one or two most
+// important cards on a screen (the Readiness composite score, My Next
+// Move), never the default, so it reads as emphasis against the
+// surrounding dark navy cards rather than becoming the new baseline.
+// Text inside must use C.ink (dark), not C.chalk/C.slate — those are the
+// dark-card light-text colors and would be unreadable on this light bg.
+const highlightCard = { background: C.chalk, border: "none", borderRadius: 16, padding: 14, marginBottom: 12, boxShadow: "0 6px 18px -12px rgba(0,0,0,0.6)" };
 const iconBtn = (color) => ({ display: "inline-flex", alignItems: "center", gap: 5, background: "none", border: "none", color, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 0 });
 const bubbleAgent = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: "2px 14px 14px 14px", padding: "10px 13px", margin: "0 30px 12px 0", fontSize: 14, lineHeight: 1.55 };
 const bubbleUser = { background: C.lime, color: C.ink, borderRadius: "14px 2px 14px 14px", padding: "10px 13px", margin: "0 0 12px 30px", fontSize: 14, lineHeight: 1.55, fontWeight: 500 };
@@ -6973,6 +6980,11 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
   const composite = Math.round(READINESS_DIMENSIONS.reduce((sum, d) => sum + subScores[d], 0) / READINESS_DIMENSIONS.length);
   const weakest = READINESS_DIMENSIONS.reduce((min, d) => (subScores[d] < subScores[min] ? d : min), READINESS_DIMENSIONS[0]);
   const compositeColor = composite >= 70 ? C.lime : composite >= 40 ? C.amber : C.slate;
+  // Same 3-tier score color, but readable on the cream highlightCard
+  // background instead of the usual dark card — C.slate (steel blue) has
+  // plenty of contrast on cream already; only the lowest tier needs a
+  // darker swap since C.slate was originally picked for a dark background.
+  const compositeColorOnCream = composite >= 70 ? C.lime : composite >= 40 ? C.amber : C.ink;
 
   return (
     <div style={{ padding: "8px 12px 20px" }}>
@@ -6980,9 +6992,9 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
       <SectionTitle>{t("home_readiness_title")}</SectionTitle>
       {hasFeature(plan, "readiness") ? (
         <>
-          <div style={{ ...card, textAlign: "center", marginBottom: 10 }}>
-            <div style={{ fontSize: 36, fontWeight: 900, color: compositeColor, fontFamily: "'Space Mono', monospace" }}>{composite}</div>
-            <div style={{ fontSize: 10, letterSpacing: "0.14em", color: C.slate, fontWeight: 700, marginTop: 4 }}>{t("home_readiness_composite")}</div>
+          <div style={{ ...highlightCard, textAlign: "center", marginBottom: 10 }}>
+            <div style={{ fontSize: 36, fontWeight: 900, color: compositeColorOnCream, fontFamily: "'Space Mono', monospace" }}>{composite}</div>
+            <div style={{ fontSize: 10, letterSpacing: "0.14em", color: C.ink, opacity: 0.65, fontWeight: 700, marginTop: 4 }}>{t("home_readiness_composite")}</div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <ReadinessCard label={t("home_profile_quality")} score={subScores.profile_quality} sub={quality ? `${quality.filled}/${quality.total}` : ""} />
@@ -7045,9 +7057,9 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
         </div>
       )}
       {nextMove && hasFeature(plan, "next_move") && (
-        <div style={{ ...card, cursor: "pointer" }} onClick={() => onNavigate("scout")}>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("next_move_title")}</div>
-          <div style={{ fontSize: 13.5, fontWeight: 700, color: C.chalk }}>{nextMove.label}</div>
+        <div style={{ ...highlightCard, cursor: "pointer" }} onClick={() => onNavigate("scout")}>
+          <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.ink, opacity: 0.65, fontWeight: 700, marginBottom: 6 }}>{t("next_move_title")}</div>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>{nextMove.label}</div>
         </div>
       )}
       <SectionTitle>{t("home_get_started")}</SectionTitle>
@@ -7640,7 +7652,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
               return (
                 <button key={n.id} onClick={() => go(n.id)} style={{
                   display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 10,
-                  background: active ? "#C8F1351a" : "transparent", border: "none", cursor: locked ? "default" : "pointer", fontFamily: "inherit",
+                  background: active ? "#D4AF371a" : "transparent", border: "none", cursor: locked ? "default" : "pointer", fontFamily: "inherit",
                   color: active ? C.lime : C.chalk, fontSize: 14, fontWeight: active ? 700 : 600, textAlign: "left",
                   opacity: locked ? 0.35 : 1,
                 }}>
@@ -7743,7 +7755,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
             return (
               <button key={n.id} onClick={() => go(n.id)} style={{
                 background: C.lime, color: C.ink, border: `3px solid ${C.pitch}`, borderRadius: "50%",
-                width: 58, height: 58, marginTop: -22, boxShadow: `0 8px 20px -6px #C8F13566`,
+                width: 58, height: 58, marginTop: -22, boxShadow: `0 8px 20px -6px #D4AF3766`,
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                 cursor: locked ? "default" : "pointer", fontFamily: "inherit",
                 opacity: locked ? 0.35 : 1,
@@ -7958,21 +7970,26 @@ const CSS = `
   /* GOLSZ theme tokens — dark is the default/fallback (:root), light
      overrides via [data-theme="light"] on <html> (see useTheme()). */
   :root {
-    --pitch: #0D1210; --turf: #16241C; --card: #121D17; --lime: #C8F135;
-    --chalk: #F2F5F0; --slate: #8DA396; --line: #1F2E25; --line2: #2C4033;
-    --amber: #C89B3C; --body-text: #C9D6CD; --warn-text: #E7C56B; --msg-name: #4A9EFF;
-    --lime-border: rgba(200,241,53,0.35); --amber-border: rgba(200,155,60,0.35);
-    --elite: #4A9EFF; --elite-border: rgba(74,158,255,0.35);
-    --passport-wash: transparent; --passport-strip: rgba(200,241,53,0.1);
+    /* Helios palette — navy/gold/cream, replacing the old lime/"volt" theme.
+       --lime is kept as the variable NAME (hundreds of C.lime references
+       throughout this file) but now holds Helios Gold, not an actual lime
+       green — renaming the token itself would touch every call site for
+       no functional benefit. */
+    --pitch: #0D1210; --turf: #1B263B; --card: #1B263B; --lime: #D4AF37;
+    --chalk: #F7F4EA; --slate: #415A77; --line: #1B263B; --line2: #415A77;
+    --amber: #B58A1A; --body-text: #ECE8DC; --warn-text: #E6C76A; --msg-name: #415A77;
+    --lime-border: rgba(212,175,55,0.35); --amber-border: rgba(181,138,26,0.35);
+    --elite: #415A77; --elite-border: rgba(65,90,119,0.35);
+    --passport-wash: transparent; --passport-strip: rgba(212,175,55,0.1);
   }
   html[data-theme="light"] {
-    --pitch: #F5F7F3; --turf: #EDF0EA; --card: #FFFFFF; --lime: #6B9C1F;
-    --chalk: #14201A; --slate: #5B6B62; --line: #E1E7DE; --line2: #CFD8CA;
-    --amber: #8A6A22; --body-text: #33463A; --warn-text: #8A6A22; --msg-name: #1D5FC4;
-    --lime-border: rgba(107,156,31,0.3); --amber-border: rgba(138,106,34,0.3);
-    --elite: #1D5FC4; --elite-border: rgba(29,95,196,0.3);
-    --passport-wash: linear-gradient(180deg, #E3F1D4 0%, #F5F7F3 340px);
-    --passport-strip: #DCEDC7;
+    --pitch: #FDF9F2; --turf: #ECE8DC; --card: #FFFFFF; --lime: #B58A1A;
+    --chalk: #0D1210; --slate: #415A77; --line: #ECE8DC; --line2: #E6C76A;
+    --amber: #B58A1A; --body-text: #1B263B; --warn-text: #B58A1A; --msg-name: #415A77;
+    --lime-border: rgba(181,138,26,0.3); --amber-border: rgba(181,138,26,0.3);
+    --elite: #415A77; --elite-border: rgba(65,90,119,0.3);
+    --passport-wash: linear-gradient(180deg, #F7F4EA 0%, #FDF9F2 340px);
+    --passport-strip: #F7F4EA;
   }
 
   /* .app-shell sets its own font-family inline, which portaled modals
@@ -8006,7 +8023,7 @@ const CSS = `
   @media (prefers-reduced-motion: reduce){ .msg,.running span{ animation:none } }
   textarea::placeholder, input::placeholder { color: ${C.slate}; }
   button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid ${C.lime}; outline-offset: 2px; }
-  /* logo-mark.png is baked at the dark-theme lime (#C8F135), which reads
+  /* logo-mark.png is baked at the dark-theme gold (#D4AF37), which reads
      fine on a near-black background but washes out against the light
      theme's near-white one — darken/saturate it under data-theme="light"
      so it stays legible, mirroring how --lime itself darkens for that
@@ -8543,7 +8560,7 @@ function Auth({ onDone, paidReturn }) {
           {forgotMode ? (
             resetSent ? (
               <>
-                <div style={{ background: "#C8F1351a", border: "1px solid #C8F13544", borderRadius: 10, padding: "10px 12px", marginBottom: 14 }}>
+                <div style={{ background: "#D4AF371a", border: "1px solid #D4AF3744", borderRadius: 10, padding: "10px 12px", marginBottom: 14 }}>
                   <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
                   <div style={{ color: C.chalk, fontSize: 12.5, lineHeight: 1.4 }}>{t("auth_reset_sent_pre")}{email.trim()}{t("auth_reset_sent_post")}</div>
                 </div>
@@ -8555,7 +8572,7 @@ function Auth({ onDone, paidReturn }) {
                 <div style={{ fontSize: 12.5, color: C.slate, marginBottom: 14, lineHeight: 1.4 }}>{t("auth_reset_desc")}</div>
                 <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth_email")} type="email" style={field} />
                 {err && (
-                  <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+                  <div style={{ background: "#B58A1A1a", border: "1px solid #B58A1A44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
                     <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
                   </div>
                 )}
@@ -8576,7 +8593,7 @@ function Auth({ onDone, paidReturn }) {
                   return (
                     <button key={pl.id} onClick={() => setPlan(pl.id)} style={{
                       textAlign: "left", cursor: "pointer", fontFamily: "inherit", position: "relative",
-                      background: on ? "#C8F1351a" : C.turf, border: `1.5px solid ${on ? C.lime : C.line2}`,
+                      background: on ? "#D4AF371a" : C.turf, border: `1.5px solid ${on ? C.lime : C.line2}`,
                       borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 10,
                     }}>
                       {pl.id === "pro" && (
@@ -8638,7 +8655,7 @@ function Auth({ onDone, paidReturn }) {
                   parent's email" pattern with a hard block + a real path
                   into the parent-creates-the-account flow instead. */}
               {requiresParentAccount && (
-                <div style={{ marginTop: 10, background: "#C89B3C1a", border: `1px solid ${C.amberBorder || "#C89B3C44"}`, borderRadius: 10, padding: "10px 12px" }}>
+                <div style={{ marginTop: 10, background: "#B58A1A1a", border: `1px solid ${C.amberBorder || "#B58A1A44"}`, borderRadius: 10, padding: "10px 12px" }}>
                   <div style={{ fontSize: 12, color: C.warnText, marginBottom: 8, lineHeight: 1.4 }}>{t("auth_under16_notice")}</div>
                   <button onClick={() => { setMode("parent-signup"); setErr(""); setChildName(name); setChildDobDay(dobDay); setChildDobMonth(dobMonth); setChildDobYear(dobYear); setName(""); }} style={{ background: "none", border: "none", color: C.lime, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", padding: 0 }}>{t("auth_switch_to_parent")}</button>
                 </div>
@@ -8673,14 +8690,14 @@ function Auth({ onDone, paidReturn }) {
           {isSignupLike && TURNSTILE_SITE_KEY && <TurnstileWidget onToken={setTurnstileToken} />}
 
           {notice && (
-            <div style={{ background: "#C8F1351a", border: "1px solid #C8F13544", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+            <div style={{ background: "#D4AF371a", border: "1px solid #D4AF3744", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
               <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
               <div style={{ color: C.chalk, fontSize: 12.5, lineHeight: 1.4 }}>{notice}</div>
             </div>
           )}
 
           {err && (
-            <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+            <div style={{ background: "#B58A1A1a", border: "1px solid #B58A1A44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
               <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignupLike ? t("auth_couldnt_signup") : t("auth_couldnt_login")}</div>
               <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
               {unconfirmedEmail && !resendSent && (
@@ -8764,7 +8781,7 @@ function ResetPassword({ onDone }) {
               <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder={t("reset_pw_new_ph")} type="password" style={field} />
               <input value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder={t("reset_pw_confirm_ph")} type="password" style={{ ...field, marginBottom: 14 }} />
               {err && (
-                <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+                <div style={{ background: "#B58A1A1a", border: "1px solid #B58A1A44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
                   <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
                 </div>
               )}
@@ -8933,7 +8950,7 @@ class ErrorBoundary extends React.Component {
         React.createElement("div", { style: { fontSize: 13.5, color: "#9AA39C", maxWidth: 320 } }, "GOLSZ hit an unexpected error. Reloading usually fixes it."),
         React.createElement("button", {
           onClick: () => window.location.reload(),
-          style: { background: "#C8F135", color: "#0B0F0C", border: "none", borderRadius: 12, padding: "12px 22px", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" },
+          style: { background: "#D4AF37", color: "#0B0F0C", border: "none", borderRadius: 12, padding: "12px 22px", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" },
         }, "Reload"),
       );
     }

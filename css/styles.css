@@ -1,25 +1,31 @@
 /* ==========================================================================
    GOLSZ — Global Stylesheet
-   Palette: pitch / turf base, lime accent (matches the GOLSZ app)
+   Palette: Helios — navy base, gold accent, cream highlights (matches the
+   GOLSZ app's own theme tokens in golsz-app.html's :root block).
+   --gold/--gold-bright/--gold-ink are kept as variable NAMES (used
+   throughout this file and every page's markup) even though the values
+   are now real gold rather than the old lime "volt" accent — renaming the
+   tokens themselves would mean touching every call site for no functional
+   benefit.
    Type: Archivo (display + body), Space Mono (data/numeric)
    ========================================================================== */
 
 :root {
   --navy: #0D1210;
   --navy-deep: #090C0A;
-  --charcoal: #16241C;
-  --surface: #121D17;
-  --surface-raised: #17251D;
-  --gold: #C8F135;
-  --gold-bright: #D7F573;
+  --charcoal: #1B263B;
+  --surface: #1B263B;
+  --surface-raised: #263349;
+  --gold: #D4AF37;
+  --gold-bright: #E6C76A;
   --gold-ink: #0D1210;
-  --ink: #F2F5F0;
-  --ink-muted: #8DA396;
-  --ink-faint: #8DA396;
-  --border: #1F2E25;
-  --border-strong: #2C4033;
-  --gold-border: rgba(200, 241, 53, 0.4);
-  --amber: #C89B3C;
+  --ink: #F7F4EA;
+  --ink-muted: #415A77;
+  --ink-faint: #415A77;
+  --border: #1B263B;
+  --border-strong: #415A77;
+  --gold-border: rgba(212, 175, 55, 0.4);
+  --amber: #B58A1A;
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   --radius-sm: 8px;
   --radius-md: 14px;
@@ -332,7 +338,7 @@ textarea:focus-visible,
   background-image:
     linear-gradient(100deg, rgba(9, 12, 10, 0.94) 0%, rgba(9, 12, 10, 0.72) 42%, rgba(9, 12, 10, 0.25) 68%, rgba(9, 12, 10, 0.55) 100%),
     linear-gradient(0deg, rgba(9, 12, 10, 0.9) 0%, transparent 22%),
-    radial-gradient(65% 55% at 80% 15%, rgba(200, 241, 53, 0.14), transparent 60%),
+    radial-gradient(65% 55% at 80% 15%, rgba(212, 175, 55, 0.14), transparent 60%),
     linear-gradient(160deg, var(--charcoal), var(--navy-deep));
   background-size: cover;
   background-position: 50% 12%;
