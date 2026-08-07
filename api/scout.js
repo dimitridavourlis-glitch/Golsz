@@ -1369,6 +1369,8 @@ export default async function handler(req, res) {
   // never a value trusted from the request body.
   let userId = null;
   let userPlan = null; // threaded down to logRouting() below — pure telemetry, no gating logic depends on it yet
+  let userIsAdmin = false; // hoisted so the free-plan tool-block below can exempt admins, same reason userPlan is hoisted
+  let userAiUnlimited = false;
   let dailyLimit = null;
   let questionsRemaining = null; // null = no usage info to show the client (unmetered deployment, or an unlimited/admin account)
   let reservedQuestion = false; // true once reserve_scout_question has counted this request — release it if we bail before a real answer
@@ -1401,6 +1403,8 @@ export default async function handler(req, res) {
     // accidentally going uncapped.
     const { plan, isAdmin, aiUnlimited } = await getProfileMeta(userId);
     userPlan = plan;
+    userIsAdmin = isAdmin;
+    userAiUnlimited = aiUnlimited;
     dailyLimit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
       : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 15)
       : plan === "starter" ? Number(process.env.STARTER_DAILY_LIMIT || 8)
@@ -1506,6 +1510,24 @@ export default async function handler(req, res) {
       return res.status(200).json(payload);
     }
     await logFaqMiss(classification, latestUserText(conversation));
+
+    // ---- Free-plan tool block (brief §12: "Do NOT permit FREE accounts to
+    // perform: deep web research, large school searches... other high-cost
+    // tool calls"). selectModelTier() below deliberately never caps a
+    // tool-requiring question down by plan (that's a correctness need, not
+    // a discretionary depth choice) — so without this check a free account
+    // could still trigger a full-price web_lookup/db_lookup tool call.
+    // Checked here, not inside selectModelTier(), so it can return a clear
+    // 402 with an upgrade message instead of silently downgrading quality. ----
+    if (userPlan === "free" && classification && classification.needs_tool && !userIsAdmin && !userAiUnlimited) {
+      if (reservedQuestion) await releaseScoutQuestion(userId);
+      if (reservedFreeAi) await releaseFreeAiQuestion(userId);
+      return res.status(402).json({
+        error: "Web and player-database search is a Starter+ feature. Upgrade to unlock deeper research from Scout.",
+        code: "free_tool_blocked",
+        scout_usage: { remaining: questionsRemaining, limit: dailyLimit },
+      });
+    }
 
     // ---- Multi-Model tier selection (approved Cost-Control plan) ----
     // Picks economy/standard/advanced/premium on top of the existing,
