@@ -82,6 +82,7 @@ const CalendarPlus = svg('<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" 
 const Target = svg('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>');
 const Mail = svg('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>');
 const Download = svg('<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>');
+const Lock = svg('<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>');
 
 
 
@@ -200,9 +201,10 @@ const I18N = {
     auth_continue_payment: "Continue to payment — ", auth_per_month: "/month",
     auth_couldnt_signup: "COULDN'T COMPLETE SIGNUP", auth_couldnt_login: "COULDN'T LOG IN",
     plan_free_tag: "No card needed", plan_starter_tag: "Get started", plan_pro_tag: "Most popular", plan_elite_tag: "Serious recruits",
-    plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport", plan_free_feat3: "Target school/club tracker", plan_free_feat4: "Performance benchmark tracking", plan_free_feat5: "Identity verification", plan_free_feat6: "PDF Passport export",
+    plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport", plan_free_feat3: "Identity verification",
     conversion_title: "We've learned enough about you — let's build your plan.", conversion_body: "GOLSZ Scout now knows your sport, your goals, and what you're working on. Upgrade to unlock deeper guidance built around your progression — not just more questions.", conversion_dismiss: "Not now",
-    next_move_title: "MY NEXT MOVE", next_move_act: "Do this", next_move_dismiss: "Mark done",
+    feature_lock_body: "This is part of GOLSZ's guided pathway tools.", feature_lock_cta: "Upgrade to unlock",
+    next_move_title: "MY NEXT MOVE", next_move_act: "Do this", next_move_dismiss: "Mark done", next_move_locked: "Scout found your next move — upgrade to see it.",
     next_move_why_ask_scout: "Based on what you told Scout", next_move_why_complete_profile: "Your Passport is missing some basics", next_move_why_share_passport: "You're ready to be seen — share your Passport",
     nav_home: "Home", home_greeting: "Welcome back, {name}.", home_readiness_title: "GOLSZ READINESS", home_profile_quality: "PROFILE QUALITY", home_verification: "VERIFICATION",
     home_verify_status_none: "Not started", home_verify_status_pending: "Pending review", home_verify_status_verified: "Verified",
@@ -211,8 +213,8 @@ const I18N = {
     targets_add: "Add", targets_add_err: "Couldn't add that. Try again.", targets_empty: "No targets yet — add the first school or club you're pursuing.",
     targets_notes_ph: "Notes", targets_draft_ph: "Draft outreach email",
     targets_status_researching: "Researching", targets_status_contacted: "Contacted", targets_status_responded: "Responded", targets_status_follow_up: "Follow up", targets_status_closed: "Closed",
-    plan_starter_feat1: "8 AI Scout questions/day — no lifetime limit", plan_starter_feat2: "Digital Sports Passport", plan_starter_feat3: "Target school/club tracker", plan_starter_feat4: "Performance benchmark tracking", plan_starter_feat5: "Identity verification", plan_starter_feat6: "PDF Passport export",
-    plan_pro_feat1: "15 AI Scout questions/day — no lifetime limit", plan_pro_feat2: "Digital Sports Passport", plan_pro_feat3: "Target school/club tracker", plan_pro_feat4: "Performance benchmark tracking", plan_pro_feat5: "Identity verification", plan_pro_feat6: "PDF Passport export",
+    plan_starter_feat1: "8 AI Scout questions/day — no lifetime limit", plan_starter_feat2: "Digital Sports Passport", plan_starter_feat3: "PDF Passport export", plan_starter_feat4: "Identity verification",
+    plan_pro_feat1: "15 AI Scout questions/day — no lifetime limit", plan_pro_feat2: "Digital Sports Passport + PDF export", plan_pro_feat3: "GOLSZ Readiness & My Next Move", plan_pro_feat4: "Target school/club tracker", plan_pro_feat5: "Performance benchmark tracking", plan_pro_feat6: "Identity verification",
     plan_elite_feat1: "20 AI Scout questions/day — no lifetime limit", plan_elite_feat2: "Everything in Pro",
     feed_title: "Your feed", feed_search: "Search your feed…", feed_share_update: "Share an update…",
     feed_new_post: "NEW POST", feed_whats_happening: "What's happening?", feed_add_details: "Add details (optional)",
@@ -421,9 +423,10 @@ const I18N = {
     auth_continue_payment: "Continuer vers le paiement — ", auth_per_month: "/mois",
     auth_couldnt_signup: "INSCRIPTION IMPOSSIBLE", auth_couldnt_login: "CONNEXION IMPOSSIBLE",
     plan_free_tag: "Sans carte bancaire", plan_starter_tag: "Pour commencer", plan_pro_tag: "Le plus populaire", plan_elite_tag: "Recrues sérieuses",
-    plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique", plan_free_feat3: "Suivi des écoles/clubs ciblés", plan_free_feat4: "Suivi des repères de performance", plan_free_feat5: "Vérification d'identité", plan_free_feat6: "Export PDF du Passeport",
+    plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique", plan_free_feat3: "Vérification d'identité",
     conversion_title: "On en sait assez sur vous — construisons votre plan.", conversion_body: "GOLSZ Scout connaît maintenant votre sport, vos objectifs et ce sur quoi vous travaillez. Passez à un forfait supérieur pour un accompagnement plus poussé, centré sur votre progression — pas seulement plus de questions.", conversion_dismiss: "Pas maintenant",
-    next_move_title: "VOTRE PROCHAINE ÉTAPE", next_move_act: "Faire ça", next_move_dismiss: "Marquer comme fait",
+    feature_lock_body: "Cela fait partie des outils de parcours guidé de GOLSZ.", feature_lock_cta: "Passer à un forfait supérieur",
+    next_move_title: "VOTRE PROCHAINE ÉTAPE", next_move_act: "Faire ça", next_move_dismiss: "Marquer comme fait", next_move_locked: "Scout a trouvé votre prochaine étape — passez à un forfait supérieur pour la voir.",
     next_move_why_ask_scout: "D'après ce que vous avez dit à Scout", next_move_why_complete_profile: "Il manque des informations de base à votre Passeport", next_move_why_share_passport: "Vous êtes prêt à être vu — partagez votre Passeport",
     nav_home: "Accueil", home_greeting: "Bon retour, {name}.", home_readiness_title: "PRÉPARATION GOLSZ", home_profile_quality: "QUALITÉ DU PROFIL", home_verification: "VÉRIFICATION",
     home_verify_status_none: "Non commencé", home_verify_status_pending: "En cours de révision", home_verify_status_verified: "Vérifié",
@@ -432,8 +435,8 @@ const I18N = {
     targets_add: "Ajouter", targets_add_err: "Impossible d'ajouter. Réessayez.", targets_empty: "Aucune cible pour l'instant — ajoutez la première école ou le premier club visé.",
     targets_notes_ph: "Notes", targets_draft_ph: "Brouillon d'email de contact",
     targets_status_researching: "Recherche", targets_status_contacted: "Contacté", targets_status_responded: "Répondu", targets_status_follow_up: "Relance", targets_status_closed: "Clôturé",
-    plan_starter_feat1: "8 questions/jour avec Scout — sans limite à vie", plan_starter_feat2: "Passeport Sportif Numérique", plan_starter_feat3: "Suivi des écoles/clubs ciblés", plan_starter_feat4: "Suivi des repères de performance", plan_starter_feat5: "Vérification d'identité", plan_starter_feat6: "Export PDF du Passeport",
-    plan_pro_feat1: "15 questions/jour avec Scout — sans limite à vie", plan_pro_feat2: "Passeport Sportif Numérique", plan_pro_feat3: "Suivi des écoles/clubs ciblés", plan_pro_feat4: "Suivi des repères de performance", plan_pro_feat5: "Vérification d'identité", plan_pro_feat6: "Export PDF du Passeport",
+    plan_starter_feat1: "8 questions/jour avec Scout — sans limite à vie", plan_starter_feat2: "Passeport Sportif Numérique", plan_starter_feat3: "Export PDF du Passeport", plan_starter_feat4: "Vérification d'identité",
+    plan_pro_feat1: "15 questions/jour avec Scout — sans limite à vie", plan_pro_feat2: "Passeport Sportif Numérique + export PDF", plan_pro_feat3: "GOLSZ Readiness & Ma Prochaine Étape", plan_pro_feat4: "Suivi des écoles/clubs ciblés", plan_pro_feat5: "Suivi des repères de performance", plan_pro_feat6: "Vérification d'identité",
     plan_elite_feat1: "20 questions/jour avec Scout — sans limite à vie", plan_elite_feat2: "Tout ce qui est dans Pro",
     feed_title: "Votre fil", feed_search: "Rechercher dans votre fil…", feed_share_update: "Partager une actualité…",
     feed_new_post: "NOUVELLE PUBLICATION", feed_whats_happening: "Quoi de neuf ?", feed_add_details: "Ajouter des détails (facultatif)",
@@ -642,9 +645,10 @@ const I18N = {
     auth_continue_payment: "Continuar al pago — ", auth_per_month: "/mes",
     auth_couldnt_signup: "NO SE PUDO COMPLETAR EL REGISTRO", auth_couldnt_login: "NO SE PUDO INICIAR SESIÓN",
     plan_free_tag: "Sin tarjeta", plan_starter_tag: "Para empezar", plan_pro_tag: "Más popular", plan_elite_tag: "Reclutas serios",
-    plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital", plan_free_feat3: "Seguimiento de escuelas/clubes objetivo", plan_free_feat4: "Seguimiento de marcas de rendimiento", plan_free_feat5: "Verificación de identidad", plan_free_feat6: "Exportación PDF del Pasaporte",
+    plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital", plan_free_feat3: "Verificación de identidad",
     conversion_title: "Ya sabemos suficiente sobre ti — construyamos tu plan.", conversion_body: "GOLSZ Scout ya conoce tu deporte, tus objetivos y en qué estás trabajando. Mejora tu plan para obtener una guía más profunda centrada en tu progreso, no solo más preguntas.", conversion_dismiss: "Ahora no",
-    next_move_title: "TU PRÓXIMO PASO", next_move_act: "Hacer esto", next_move_dismiss: "Marcar como hecho",
+    feature_lock_body: "Esto forma parte de las herramientas de trayectoria guiada de GOLSZ.", feature_lock_cta: "Mejora tu plan para desbloquear",
+    next_move_title: "TU PRÓXIMO PASO", next_move_act: "Hacer esto", next_move_dismiss: "Marcar como hecho", next_move_locked: "Scout encontró tu próximo paso — mejora tu plan para verlo.",
     next_move_why_ask_scout: "Basado en lo que le contaste a Scout", next_move_why_complete_profile: "A tu Pasaporte le faltan datos básicos", next_move_why_share_passport: "Estás listo para que te vean — comparte tu Pasaporte",
     nav_home: "Inicio", home_greeting: "Bienvenido de nuevo, {name}.", home_readiness_title: "PREPARACIÓN GOLSZ", home_profile_quality: "CALIDAD DEL PERFIL", home_verification: "VERIFICACIÓN",
     home_verify_status_none: "No iniciado", home_verify_status_pending: "En revisión", home_verify_status_verified: "Verificado",
@@ -653,8 +657,8 @@ const I18N = {
     targets_add: "Añadir", targets_add_err: "No se pudo añadir. Inténtalo de nuevo.", targets_empty: "Aún no hay objetivos — añade la primera escuela o club que te interese.",
     targets_notes_ph: "Notas", targets_draft_ph: "Borrador de email de contacto",
     targets_status_researching: "Investigando", targets_status_contacted: "Contactado", targets_status_responded: "Respondido", targets_status_follow_up: "Seguimiento", targets_status_closed: "Cerrado",
-    plan_starter_feat1: "8 preguntas/día con Scout — sin límite de por vida", plan_starter_feat2: "Pasaporte Deportivo Digital", plan_starter_feat3: "Seguimiento de escuelas/clubes objetivo", plan_starter_feat4: "Seguimiento de marcas de rendimiento", plan_starter_feat5: "Verificación de identidad", plan_starter_feat6: "Exportación PDF del Pasaporte",
-    plan_pro_feat1: "15 preguntas/día con Scout — sin límite de por vida", plan_pro_feat2: "Pasaporte Deportivo Digital", plan_pro_feat3: "Seguimiento de escuelas/clubes objetivo", plan_pro_feat4: "Seguimiento de marcas de rendimiento", plan_pro_feat5: "Verificación de identidad", plan_pro_feat6: "Exportación PDF del Pasaporte",
+    plan_starter_feat1: "8 preguntas/día con Scout — sin límite de por vida", plan_starter_feat2: "Pasaporte Deportivo Digital", plan_starter_feat3: "Exportación PDF del Pasaporte", plan_starter_feat4: "Verificación de identidad",
+    plan_pro_feat1: "15 preguntas/día con Scout — sin límite de por vida", plan_pro_feat2: "Pasaporte Deportivo Digital + exportación PDF", plan_pro_feat3: "GOLSZ Readiness y Tu Próximo Paso", plan_pro_feat4: "Seguimiento de escuelas/clubes objetivo", plan_pro_feat5: "Seguimiento de marcas de rendimiento", plan_pro_feat6: "Verificación de identidad",
     plan_elite_feat1: "20 preguntas/día con Scout — sin límite de por vida", plan_elite_feat2: "Todo lo de Pro",
     feed_title: "Tu feed", feed_search: "Buscar en tu feed…", feed_share_update: "Comparte una novedad…",
     feed_new_post: "NUEVA PUBLICACIÓN", feed_whats_happening: "¿Qué está pasando?", feed_add_details: "Añade detalles (opcional)",
@@ -863,9 +867,10 @@ const I18N = {
     auth_continue_payment: "Συνέχεια στην πληρωμή — ", auth_per_month: "/μήνα",
     auth_couldnt_signup: "Η ΕΓΓΡΑΦΗ ΑΠΕΤΥΧΕ", auth_couldnt_login: "Η ΣΥΝΔΕΣΗ ΑΠΕΤΥΧΕ",
     plan_free_tag: "Χωρίς κάρτα", plan_starter_tag: "Ξεκινήστε", plan_pro_tag: "Δημοφιλέστερο", plan_elite_tag: "Σοβαροί υποψήφιοι",
-    plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο", plan_free_feat3: "Παρακολούθηση σχολών/συλλόγων-στόχων", plan_free_feat4: "Παρακολούθηση δεικτών απόδοσης", plan_free_feat5: "Επαλήθευση ταυτότητας", plan_free_feat6: "Εξαγωγή PDF Διαβατηρίου",
+    plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο", plan_free_feat3: "Επαλήθευση ταυτότητας",
     conversion_title: "Μάθαμε αρκετά για εσένα — ας χτίσουμε το πλάνο σου.", conversion_body: "Ο GOLSZ Scout γνωρίζει πλέον το άθλημά σου, τους στόχους σου και τι δουλεύεις. Αναβάθμισε για βαθύτερη καθοδήγηση γύρω από την εξέλιξή σου — όχι απλώς περισσότερες ερωτήσεις.", conversion_dismiss: "Όχι τώρα",
-    next_move_title: "Η ΕΠΟΜΕΝΗ ΣΟΥ ΚΙΝΗΣΗ", next_move_act: "Κάνε το", next_move_dismiss: "Ολοκληρώθηκε",
+    feature_lock_body: "Αυτό αποτελεί μέρος των εργαλείων καθοδηγούμενης πορείας του GOLSZ.", feature_lock_cta: "Αναβάθμισε για ξεκλείδωμα",
+    next_move_title: "Η ΕΠΟΜΕΝΗ ΣΟΥ ΚΙΝΗΣΗ", next_move_act: "Κάνε το", next_move_dismiss: "Ολοκληρώθηκε", next_move_locked: "Ο Scout βρήκε την επόμενή σου κίνηση — αναβάθμισε για να τη δεις.",
     next_move_why_ask_scout: "Με βάση όσα είπες στον Scout", next_move_why_complete_profile: "Στο Διαβατήριό σου λείπουν βασικά στοιχεία", next_move_why_share_passport: "Είσαι έτοιμος να σε δουν — μοιράσου το Διαβατήριό σου",
     nav_home: "Αρχική", home_greeting: "Καλώς όρισες πάλι, {name}.", home_readiness_title: "ΕΤΟΙΜΟΤΗΤΑ GOLSZ", home_profile_quality: "ΠΟΙΟΤΗΤΑ ΠΡΟΦΙΛ", home_verification: "ΕΠΑΛΗΘΕΥΣΗ",
     home_verify_status_none: "Δεν ξεκίνησε", home_verify_status_pending: "Υπό εξέταση", home_verify_status_verified: "Επαληθευμένο",
@@ -874,8 +879,8 @@ const I18N = {
     targets_add: "Προσθήκη", targets_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", targets_empty: "Δεν υπάρχουν στόχοι ακόμα — πρόσθεσε την πρώτη σχολή ή σύλλογο που σε ενδιαφέρει.",
     targets_notes_ph: "Σημειώσεις", targets_draft_ph: "Πρόχειρο email επικοινωνίας",
     targets_status_researching: "Έρευνα", targets_status_contacted: "Επικοινώνησα", targets_status_responded: "Απάντησαν", targets_status_follow_up: "Παρακολούθηση", targets_status_closed: "Έκλεισε",
-    plan_starter_feat1: "8 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_starter_feat2: "Ψηφιακό Αθλητικό Διαβατήριο", plan_starter_feat3: "Παρακολούθηση σχολών/συλλόγων-στόχων", plan_starter_feat4: "Παρακολούθηση δεικτών απόδοσης", plan_starter_feat5: "Επαλήθευση ταυτότητας", plan_starter_feat6: "Εξαγωγή PDF Διαβατηρίου",
-    plan_pro_feat1: "15 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_pro_feat2: "Ψηφιακό Αθλητικό Διαβατήριο", plan_pro_feat3: "Παρακολούθηση σχολών/συλλόγων-στόχων", plan_pro_feat4: "Παρακολούθηση δεικτών απόδοσης", plan_pro_feat5: "Επαλήθευση ταυτότητας", plan_pro_feat6: "Εξαγωγή PDF Διαβατηρίου",
+    plan_starter_feat1: "8 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_starter_feat2: "Ψηφιακό Αθλητικό Διαβατήριο", plan_starter_feat3: "Εξαγωγή PDF Διαβατηρίου", plan_starter_feat4: "Επαλήθευση ταυτότητας",
+    plan_pro_feat1: "15 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_pro_feat2: "Ψηφιακό Αθλητικό Διαβατήριο + εξαγωγή PDF", plan_pro_feat3: "GOLSZ Readiness & Η Επόμενή σου Κίνηση", plan_pro_feat4: "Παρακολούθηση σχολών/συλλόγων-στόχων", plan_pro_feat5: "Παρακολούθηση δεικτών απόδοσης", plan_pro_feat6: "Επαλήθευση ταυτότητας",
     plan_elite_feat1: "20 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_elite_feat2: "Όλα όσα περιλαμβάνει το Pro",
     feed_title: "Η ροή σας", feed_search: "Αναζήτηση στη ροή σας…", feed_share_update: "Μοιραστείτε μια ενημέρωση…",
     feed_new_post: "ΝΕΑ ΑΝΑΡΤΗΣΗ", feed_whats_happening: "Τι συμβαίνει;", feed_add_details: "Προσθήκη λεπτομερειών (προαιρετικό)",
@@ -3458,6 +3463,40 @@ function computeProfileQuality(ath, prof) {
   return { score: total ? Math.round((filled / total) * 100) : 0, filled, total, missing: checks.filter((c) => !c.ok).map((c) => c.label) };
 }
 
+// Plan-gating (brief §13 PAID VALUE LADDER): FREE gets Passport + capped
+// Scout only; these are the features built this session that must not be
+// silently free — pdf_export/outreach are STARTER — BUILD ME, the rest are
+// PRO — GUIDE ME. Anything not listed here (Passport itself, Scout chat)
+// stays ungated — differentiated by usage caps elsewhere, not feature access.
+const PLAN_RANK = { free: 0, starter: 1, pro: 2, elite: 3 };
+const FEATURE_MIN_PLAN = {
+  pdf_export: "starter",
+  readiness: "pro",
+  next_move: "pro",
+  targets: "pro",
+  benchmarks: "pro",
+};
+function hasFeature(plan, feature) {
+  const min = FEATURE_MIN_PLAN[feature];
+  if (!min) return true;
+  return PLAN_RANK[plan || "free"] >= PLAN_RANK[min];
+}
+
+// Reusable "visibly locked" placeholder (brief §11: paywall should show
+// "additional recommendations/features visibly locked", not hide them
+// silently) — swapped in wherever a gated feature's real content would go.
+function FeatureLock({ label, onUpgrade }) {
+  const { t } = useLang();
+  return (
+    <div style={{ background: C.turf, border: `1px dashed ${C.line2}`, borderRadius: 14, padding: "22px 18px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+      <Lock size={20} color={C.slate} />
+      <div style={{ fontSize: 13, fontWeight: 800, color: C.chalk }}>{label}</div>
+      <div style={{ fontSize: 12, color: C.slate, lineHeight: 1.5 }}>{t("feature_lock_body")}</div>
+      <button onClick={onUpgrade} style={{ marginTop: 4, background: C.lime, color: C.pitch, border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{t("feature_lock_cta")}</button>
+    </div>
+  );
+}
+
 /* ============ PROFILE — Digital Sports Passport (signature) ============ */
 /* profiles.full_name + athletes(*) merged into the passport's shape. Real
    numeric/text fields fall back to "—" when unset rather than showing
@@ -3799,7 +3838,7 @@ function ProfileEditor({ initial, locked, onClose, onSaved }) {
   );
 }
 
-function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, onOpenAdmin, viewUserId, onBack, onMessage, onViewProfile }) {
+function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, onOpenAdmin, viewUserId, onBack, onMessage, onViewProfile, plan, onUpgrade }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -4015,7 +4054,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         ) : real ? (
           <div style={{ display: "flex", gap: 14 }}>
             <button onClick={sharePassport} style={{ ...iconBtn(C.chalk), fontSize: 11.5 }}><Share2 size={13} /> {t("passport_share")}</button>
-            <button onClick={() => window.print()} style={{ ...iconBtn(C.chalk), fontSize: 11.5 }}><Download size={13} /> {t("passport_export_pdf")}</button>
+            <button onClick={() => hasFeature(plan, "pdf_export") ? window.print() : onUpgrade()} style={{ ...iconBtn(hasFeature(plan, "pdf_export") ? C.chalk : C.slate), fontSize: 11.5 }}>{hasFeature(plan, "pdf_export") ? <Download size={13} /> : <Lock size={12} />} {t("passport_export_pdf")}</button>
             <button onClick={() => setEditing(true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}><Pencil size={13} /> {t("passport_edit")}</button>
           </div>
         ) : (
@@ -4248,8 +4287,16 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
 
       {/* performance benchmarks — private to the owner, see Benchmarks'
           own comment; still passed viewUserId so it renders nothing
-          rather than erroring when viewing someone else's Passport. */}
-      <Benchmarks viewUserId={viewingOther ? viewUserId : null} />
+          rather than erroring when viewing someone else's Passport.
+          Pro+ (brief §13); shown locked rather than hidden for the owner
+          on Free/Starter, per §11's "visibly locked" paywall language. */}
+      {viewingOther ? (
+        <Benchmarks viewUserId={viewUserId} />
+      ) : hasFeature(plan, "benchmarks") ? (
+        <Benchmarks viewUserId={null} />
+      ) : (
+        <div style={{ marginTop: 16 }}><FeatureLock label={t("benchmarks_title")} onUpgrade={onUpgrade} /></div>
+      )}
 
       {/* Posts grid, Family & Parent Access, Blocked Accounts, and the
           restricted-minor banner are launch-scoped off Passport for now
@@ -5902,7 +5949,7 @@ function newScoutConvId() {
 const NEXT_MOVE_ICONS = { ask_scout: Radar, complete_profile: User, share_passport: Share2 };
 const NEXT_MOVE_WHY_KEY = { ask_scout: "next_move_why_ask_scout", complete_profile: "next_move_why_complete_profile", share_passport: "next_move_why_share_passport" };
 
-function Scout({ onGoToProfile }) {
+function Scout({ onGoToProfile, plan, onUpgrade }) {
   const { t, lang } = useLang();
   const [msgs, setMsgs] = useState(sb ? null : [{ role: "assistant", text: t("scout_greeting") }]);
   const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo greeting immediately
@@ -6318,7 +6365,7 @@ function Scout({ onGoToProfile }) {
         </span>
       </div>
 
-      {!showHistory && nextMove && (
+      {!showHistory && nextMove && hasFeature(plan, "next_move") && (
         <div style={{ margin: "10px 12px 0", background: "#C8F1351a", border: `1px solid ${C.limeBorder}`, borderRadius: 12, padding: "10px 12px" }}>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
             {React.createElement(NEXT_MOVE_ICONS[nextMove.type] || Radar, { size: 15, color: C.lime, style: { marginTop: 1, flexShrink: 0 } })}
@@ -6332,6 +6379,13 @@ function Scout({ onGoToProfile }) {
             <button onClick={actOnNextMove} style={{ ...iconBtn(C.lime), fontSize: 12 }}>{t("next_move_act")}</button>
             <button onClick={dismissNextMove} style={{ ...iconBtn(C.slate), fontSize: 12 }}>{t("next_move_dismiss")}</button>
           </div>
+        </div>
+      )}
+      {!showHistory && nextMove && !hasFeature(plan, "next_move") && (
+        <div style={{ margin: "10px 12px 0", background: C.turf, border: `1px dashed ${C.line2}`, borderRadius: 12, padding: "9px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+          <Lock size={13} color={C.slate} style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: 11.5, color: C.slate, flex: 1 }}>{t("next_move_locked")}</div>
+          <button onClick={onUpgrade} style={{ background: "none", border: "none", color: C.lime, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{t("feature_lock_cta")}</button>
         </div>
       )}
 
@@ -6450,7 +6504,7 @@ function ReadinessCard({ label, score, sub }) {
 // points into Scout/Passport. Its own fetch, not a subscriber to Scout's
 // or Passport's state, since it can be the very first thing a returning
 // athlete sees before either of those mount.
-function HomeTab({ onNavigate }) {
+function HomeTab({ onNavigate, plan, onUpgrade }) {
   const { t } = useLang();
   const [loaded, setLoaded] = useState(!sb);
   const [quality, setQuality] = useState(null);
@@ -6489,10 +6543,14 @@ function HomeTab({ onNavigate }) {
     <div style={{ padding: "8px 12px 20px" }}>
       {name && <div style={{ fontSize: 15, fontWeight: 800, margin: "4px 2px 14px" }}>{t("home_greeting").replace("{name}", name.split(" ")[0])}</div>}
       <SectionTitle>{t("home_readiness_title")}</SectionTitle>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-        <ReadinessCard label={t("home_profile_quality")} score={quality ? quality.score : 0} sub={quality ? `${quality.filled}/${quality.total}` : ""} />
-        <ReadinessCard label={t("home_verification")} score={verification ? verification.score : 0} sub={t("home_verify_status_" + (verification ? verification.status : "none"))} />
-      </div>
+      {hasFeature(plan, "readiness") ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+          <ReadinessCard label={t("home_profile_quality")} score={quality ? quality.score : 0} sub={quality ? `${quality.filled}/${quality.total}` : ""} />
+          <ReadinessCard label={t("home_verification")} score={verification ? verification.score : 0} sub={t("home_verify_status_" + (verification ? verification.status : "none"))} />
+        </div>
+      ) : (
+        <div style={{ marginBottom: 14 }}><FeatureLock label={t("home_readiness_title")} onUpgrade={onUpgrade} /></div>
+      )}
       {quality && quality.missing.length > 0 && (
         <div style={{ ...card }}>
           <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("home_missing_title")}</div>
@@ -6500,7 +6558,7 @@ function HomeTab({ onNavigate }) {
           <button onClick={() => onNavigate("profile")} style={{ ...iconBtn(C.lime), fontSize: 12 }}>{t("home_finish_profile")}</button>
         </div>
       )}
-      {nextMove && (
+      {nextMove && hasFeature(plan, "next_move") && (
         <div style={{ ...card, cursor: "pointer" }} onClick={() => onNavigate("scout")}>
           <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("next_move_title")}</div>
           <div style={{ fontSize: 13.5, fontWeight: 700, color: C.chalk }}>{nextMove.label}</div>
@@ -6522,7 +6580,7 @@ function HomeTab({ onNavigate }) {
 // save on blur (not on every keystroke) to avoid a network round trip per
 // character while still never requiring an explicit "save" click.
 const TARGET_STATUSES = ["researching", "contacted", "responded", "follow_up", "closed"];
-function Targets() {
+function Targets({ plan, onUpgrade }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [items, setItems] = useState([]);
@@ -6579,6 +6637,15 @@ function Targets() {
   }
 
   if (!loaded) return <div style={{ padding: "40px 20px", textAlign: "center", color: C.slate, fontSize: 13 }}>{t("loading")}</div>;
+
+  if (!hasFeature(plan, "targets")) {
+    return (
+      <div style={{ padding: "8px 12px 20px" }}>
+        <SectionTitle>{t("targets_title")}</SectionTitle>
+        <FeatureLock label={t("targets_title")} onUpgrade={onUpgrade} />
+      </div>
+    );
+  }
 
   const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
 
@@ -6690,14 +6757,23 @@ function GolszApp({ onSignOut, startOnboarding }) {
   // a true one-time nudge per account, not a once-per-session popup.
   const [showConversion, setShowConversion] = useState(false);
   const [conversionUid, setConversionUid] = useState(null);
+  // Plan-gating (brief §13, see hasFeature() above): the athlete's own uid
+  // + plan, fetched once alongside the conversion check (same query already
+  // reads profiles.plan) and threaded down to Home/Scout/Targets/Passport
+  // so gated features can check hasFeature(userPlan, "...") at render time.
+  const [userUid, setUserUid] = useState(null);
+  const [userPlan, setUserPlan] = useState(null);
   useEffect(() => {
     if (!sb || profileComplete !== true) return;
     (async () => {
       try {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
+        setUserUid(user.id);
         const { data } = await sb.from("profiles").select("plan, onboarding_conversion_shown, free_ai_lifetime_used").eq("id", user.id).single();
-        if (data && data.plan === "free" && !data.onboarding_conversion_shown && (data.free_ai_lifetime_used || 0) >= 3) {
+        if (!data) return;
+        setUserPlan(data.plan || "free");
+        if (data.plan === "free" && !data.onboarding_conversion_shown && (data.free_ai_lifetime_used || 0) >= 3) {
           setConversionUid(user.id);
           setShowConversion(true);
         }
@@ -6708,6 +6784,12 @@ function GolszApp({ onSignOut, startOnboarding }) {
     setShowConversion(false);
     if (conversionUid) sb.from("profiles").update({ onboarding_conversion_shown: true }).eq("id", conversionUid).then(({ error }) => { if (error) console.error("GOLSZ dismiss-conversion error:", error); });
   };
+  // Manual "Upgrade" trigger for gated-feature CTAs (distinct from the
+  // one-time auto conversion nudge above — dismissing this never touches
+  // onboarding_conversion_shown, since the athlete didn't just finish the
+  // guided assessment, they just tapped a locked feature).
+  const [upgradeUid, setUpgradeUid] = useState(null);
+  const openUpgrade = () => { if (userUid) setUpgradeUid(userUid); };
 
   // Feed/Discover/Events/Messages are launch-scoped off both nav bars —
   // see the "go" function and the route list below, both left fully
@@ -6820,17 +6902,18 @@ function GolszApp({ onSignOut, startOnboarding }) {
           <div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 32px 60px" }}>
             {page === "feed" && <Feed onMessage={openThread} onViewProfile={viewProfile} />}
             {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
-            {page === "home" && <HomeTab onNavigate={go} />}
-            {page === "scout" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout onGoToProfile={() => go("profile")} /></div>}
-            {page === "targets" && <Targets />}
+            {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} />}
+            {page === "scout" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} /></div>}
+            {page === "targets" && <Targets plan={userPlan} onUpgrade={openUpgrade} />}
             {page === "events" && <Events />}
-            {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} />}
+            {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
             {page === "messages" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Messages thread={thread} setThread={setThread} onViewProfile={viewProfile} /></div>}
             {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
           </div>
         </main>
       </div>
       {showConversion && <ConversionScreen uid={conversionUid} onDismiss={dismissConversion} />}
+      {upgradeUid && <ConversionScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
       </>
     );
   }
@@ -6859,11 +6942,11 @@ function GolszApp({ onSignOut, startOnboarding }) {
       <main style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="noscroll">
         {page === "feed" && <Feed onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
-        {page === "home" && <HomeTab onNavigate={go} />}
-        {page === "scout" && <Scout onGoToProfile={() => go("profile")} />}
-        {page === "targets" && <Targets />}
+        {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} />}
+        {page === "scout" && <Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} />}
+        {page === "targets" && <Targets plan={userPlan} onUpgrade={openUpgrade} />}
         {page === "events" && <Events />}
-        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} />}
+        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={viewProfileId} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
         {page === "messages" && <Messages thread={thread} setThread={setThread} onViewProfile={viewProfile} />}
         {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
       </main>
@@ -6902,6 +6985,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
       </nav>
     </div>
     {showConversion && <ConversionScreen uid={conversionUid} onDismiss={dismissConversion} />}
+    {upgradeUid && <ConversionScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
     </>
   );
 }
@@ -7060,16 +7144,16 @@ const VAPID_PUBLIC_KEY = "BNrfmAAoP_PL4FocIjzfw5aaxzHsuCknwUeG5pX21v7cjvMCzt3PL2
 // name is a brand/tier label (like Spotify's "Premium") kept in English across
 // every language; tag + feature bullets are translated via plan_<id>_tag /
 // plan_<id>_featN keys in I18N — see Auth's plan-card rendering.
-// Every plan gets the identical real feature set today (Passport, Targets,
-// Benchmarks, identity verification, PDF export -- none of these are
-// actually plan-gated in the code) — the only real differentiator is AI
-// Scout's daily question volume, plus Free's lifetime cap that paid plans
-// don't have. featKeys reflects that honestly instead of inventing
-// per-tier exclusives that don't exist (see the commit that added this
-// comment for what used to be claimed here).
+// Matches the brief's §13 PAID VALUE LADDER and the real FEATURE_MIN_PLAN
+// gate above: FREE = Passport + capped Scout only. STARTER adds PDF export
+// (its "BUILD ME" differentiator). PRO adds GOLSZ Readiness/My Next Move/
+// target tracker/benchmarks (its "GUIDE ME" differentiator). Elite is the
+// same feature set as Pro today, priced for a higher Scout volume ceiling —
+// no false "advanced research" claim, since tool-call access isn't actually
+// capped differently between Starter/Pro/Elite in api/scout.js yet.
 const PLANS = [
-  { id: "free",    name: "Free",    price: 0,  featKeys: ["plan_free_feat1", "plan_free_feat2", "plan_free_feat3", "plan_free_feat4", "plan_free_feat5", "plan_free_feat6"] },
-  { id: "starter", name: "Starter", price: 6,  featKeys: ["plan_starter_feat1", "plan_starter_feat2", "plan_starter_feat3", "plan_starter_feat4", "plan_starter_feat5", "plan_starter_feat6"] },
+  { id: "free",    name: "Free",    price: 0,  featKeys: ["plan_free_feat1", "plan_free_feat2", "plan_free_feat3"] },
+  { id: "starter", name: "Starter", price: 6,  featKeys: ["plan_starter_feat1", "plan_starter_feat2", "plan_starter_feat3", "plan_starter_feat4"] },
   { id: "pro",   name: "Pro",     price: 14, featKeys: ["plan_pro_feat1", "plan_pro_feat2", "plan_pro_feat3", "plan_pro_feat4", "plan_pro_feat5", "plan_pro_feat6"] },
   { id: "elite", name: "Elite",   price: 30, featKeys: ["plan_elite_feat1", "plan_elite_feat2"] },
 ];
