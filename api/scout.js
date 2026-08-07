@@ -412,14 +412,17 @@ async function logError(source, message, detail) {
   } catch (e) { console.error("GOLSZ error-log write failed:", e); }
 }
 
-// Writes one row to scout_routing_log (migrations 039 + 040 + 044 + 051) per
-// real reply — which model actually answered (haiku/sonnet/database), the
-// classifier's intent/confidence, real token usage, an estimated dollar
-// cost for that one reply, the athlete's subscription tier, (sonnet only)
-// why it escalated past Haiku, and (051, Phase 2f) which provider answered
-// and which specialist persona was in use. Never the question or answer
-// text itself, never a user_id. Powers the Admin Panel's "AI Model Usage"
-// card (admin_scout_model_mix()) and monthly cost cards
+// Writes one row to scout_routing_log (migrations 039 + 040 + 044 + 051 +
+// 082) per real reply (or, since 082, per exhausted-failover failure) —
+// which model actually answered (haiku/sonnet/database), the classifier's
+// intent/confidence, real token usage, an estimated dollar cost for that
+// one reply, the athlete's subscription tier, (sonnet only) why it
+// escalated past Haiku, (051, Phase 2f) which provider answered and which
+// specialist persona was in use, and (082) the literal model version that
+// answered, the client-supplied request id, how long the request took,
+// and whether it actually succeeded. Never the question or answer text
+// itself, never a user_id. Powers the Admin Panel's "AI Model Usage" card
+// (admin_scout_model_mix()) and monthly cost cards
 // (admin_scout_cost_summary()). Self-contained and best-effort, same as
 // logError — a logging failure must never affect the real response.
 async function logRouting(answeredBy, classification, model, usage, extra) {
@@ -447,6 +450,10 @@ async function logRouting(answeredBy, classification, model, usage, extra) {
         // file calls today is Anthropic's regardless of which one answered.
         provider: model ? "anthropic" : null,
         specialist: (extra && extra.specialist) || null,
+        model_version: model || null,
+        request_id: (extra && extra.requestId) || null,
+        response_time_ms: (extra && typeof extra.responseTimeMs === "number") ? extra.responseTimeMs : null,
+        success: !(extra && extra.success === false),
       }),
     });
   } catch (e) { console.error("GOLSZ routing-log write failed:", e); }
@@ -1389,6 +1396,11 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation)
 }
 
 export default async function handler(req, res) {
+  // Handler-entry timestamp for scout_routing_log.response_time_ms (082) —
+  // measured from here rather than just around the model call, so it
+  // reflects what an athlete actually waits (classification, auth/metering
+  // checks, etc. all included), not just raw model latency.
+  const handlerStartMs = Date.now();
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -1429,6 +1441,7 @@ export default async function handler(req, res) {
   // never a value trusted from the request body.
   let userId = null;
   let userPlan = null; // threaded down to logRouting() below — pure telemetry, no gating logic depends on it yet
+  let requestId = null; // hoisted so logRouting() below can persist the same id already used for isDuplicateRequest() idempotency
   let userIsAdmin = false; // hoisted so the free-plan tool-block below can exempt admins, same reason userPlan is hoisted
   let userAiUnlimited = false;
   let dailyLimit = null;
@@ -1443,7 +1456,7 @@ export default async function handler(req, res) {
     // isRateLimited()/isDuplicateRequest() for the honest limits of an
     // in-memory, single-instance check.
     if (isRateLimited(userId)) return res.status(429).json({ error: "Please wait a moment before sending another message." });
-    const requestId = body && typeof body.requestId === "string" ? body.requestId : null;
+    requestId = body && typeof body.requestId === "string" ? body.requestId : null;
     if (isDuplicateRequest(requestId)) return res.status(409).json({ error: "That message is already being processed." });
 
     // Emergency platform-wide spend ceiling — checked before reserving a
@@ -1566,7 +1579,7 @@ export default async function handler(req, res) {
         scout_usage: reservedQuestion ? { remaining: questionsRemaining, limit: dailyLimit } : undefined,
         next_move: extractNextBestAction(classification),
       };
-      await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist });
+      await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs });
       return res.status(200).json(payload);
     }
     await logFaqMiss(classification, latestUserText(conversation));
@@ -1618,7 +1631,7 @@ export default async function handler(req, res) {
       const cached = await getCachedResponse(cacheKey);
       if (cached) {
         console.log("GOLSZ scout cache hit");
-        await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist });
+        await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs });
         cached.scout_summary = updatedSummary;
         if (reservedQuestion) cached.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         cached.next_move = extractNextBestAction(classification);
@@ -1656,7 +1669,7 @@ export default async function handler(req, res) {
         const cost = estimateCost(tierConfig.model_name, data.usage);
         const profileUpdates = extractProfileUpdates(data);
         const scoutContextUpdates = extractScoutContextUpdates(data);
-        await logRouting("haiku", classification, tierConfig.model_name, data.usage, { plan: userPlan, specialist: recommendedSpecialist });
+        await logRouting("haiku", classification, tierConfig.model_name, data.usage, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs });
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, profileUpdates);
         await persistScoutContext(userId, scoutContextUpdates);
@@ -1725,7 +1738,7 @@ export default async function handler(req, res) {
         const data = haikuFallback.data;
         console.log("GOLSZ scout usage check (haiku fallback):", JSON.stringify(data.usage));
         const cost = estimateCost(fastCfg.model_name, data.usage);
-        await logRouting("haiku", classification, fastCfg.model_name, data.usage, { plan: userPlan, escalationReason: "sonnet_provider_failure", specialist: recommendedSpecialist });
+        await logRouting("haiku", classification, fastCfg.model_name, data.usage, { plan: userPlan, escalationReason: "sonnet_provider_failure", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs });
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, extractProfileUpdates(data));
         await persistScoutContext(userId, extractScoutContextUpdates(data));
@@ -1748,12 +1761,16 @@ export default async function handler(req, res) {
       if (reservedQuestion) await releaseScoutQuestion(userId);
       if (reservedFreeAi) await releaseFreeAiQuestion(userId);
       await logError("api/scout.js", "Both Sonnet and Haiku failed (automatic failover exhausted)", { detail: JSON.stringify({ sonnet: sonnetResult.data, haiku: haikuFallback.data }) });
+      // Failover exhausted with no answer produced — still worth a
+      // scout_routing_log row (082) so failure rate is visible in cost/
+      // usage telemetry instead of only showing up in error_log.
+      await logRouting("failed", classification, null, null, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, success: false });
       return res.status(503).json({ error: "Scout is temporarily unavailable. Please try again shortly." });
     }
 
     const data = sonnetResult.data;
     const sonnetCost = estimateCost(deepTierConfig.model_name, data.usage);
-    await logRouting("sonnet", classification, deepTierConfig.model_name, data.usage, { plan: userPlan, escalationReason: haikuFailureReason || escalationReason(classification), specialist: recommendedSpecialist });
+    await logRouting("sonnet", classification, deepTierConfig.model_name, data.usage, { plan: userPlan, escalationReason: haikuFailureReason || escalationReason(classification), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs });
     await recordScoutUsageCost(userId, sonnetCost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
     await persistProfileUpdates(userId, extractProfileUpdates(data));
     await persistScoutContext(userId, extractScoutContextUpdates(data));
