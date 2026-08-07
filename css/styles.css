@@ -335,7 +335,12 @@ textarea:focus-visible,
     radial-gradient(65% 55% at 80% 15%, rgba(200, 241, 53, 0.14), transparent 60%),
     linear-gradient(160deg, var(--charcoal), var(--navy-deep));
   background-size: cover;
-  background-position: center;
+  background-position: 50% 12%;
+  /* Biased toward the top of the frame rather than dead-center — the
+     region photos are a tall crop of several athletes with most faces
+     clustered in their upper third, and "cover" on a wide/short hero
+     box only ever shows a thin horizontal slice of a tall source image,
+     so centering vertically was cropping every face out of frame. */
   /* Region photo (assets/hero-ca.jpg etc.) is layered in via JS once
      /api/geo.js resolves the visitor's region — see js/main.js
      initHeroRegion(). The gradients above are the fallback look before
@@ -346,7 +351,16 @@ textarea:focus-visible,
   position: relative;
   z-index: 1;
   max-width: 620px;
-  padding: clamp(2.5rem, 6vw, 4rem) 0;
+  padding: clamp(2.5rem, 6vw, 4rem) clamp(1.25rem, 4vw, 2rem);
+  margin-left: clamp(-1.25rem, -4vw, -2rem);
+  /* A scrim scoped to just the text column, not the whole hero — the
+     photo behind varies a lot in brightness (a bright lime jersey can
+     sit right under the headline at some viewport widths), so text
+     legibility can't depend on the hero's own broad left-to-right
+     gradient alone. Fades out toward the right so it reads as depth,
+     not a flat box. */
+  background: linear-gradient(100deg, rgba(9, 12, 10, 0.72) 0%, rgba(9, 12, 10, 0.72) 75%, transparent 100%);
+  border-radius: var(--radius-lg);
 }
 
 .hero-mega h1 {
