@@ -3864,5 +3864,28 @@ grant execute on function get_public_passport_by_token(text) to anon, authentica
 
 alter table outreach_targets add column if not exists last_reminded_at timestamptz;
 
+-- ============================================================
+-- 080 — Under-16 parent-managed accounts (corrected pre-launch directive)
+-- Policy: age 16+ may create/control their own account (unchanged, existing
+-- signup flow). Under 16 may NOT independently create or control an
+-- account — a parent/guardian must create it, and the athlete exists as a
+-- profile linked to the parent's account via the EXISTING parent_links
+-- mechanism (301+), not as an independently-controlled account.
+--
+-- No new tables needed — profiles_self ("(id = auth.uid()) OR
+-- is_parent_of(id)") and athletes_rw already grant a parent full read/write
+-- access to a linked child's profile once parent_links.approved_at is set,
+-- confirmed live before writing this migration. This just adds a flag so
+-- the client can tell a parent-created (no independent login) profile
+-- apart from a normal self-registered one — e.g. to hide "change
+-- password"/"change email" self-service for a row nobody will ever log
+-- into directly, and to label it clearly in a parent's "My Athletes" list.
+--
+-- api/create-child-account.js (new) is the only writer of this column,
+-- via the service-role key — never settable by a client update.
+-- ============================================================
+
+alter table profiles add column if not exists parent_managed boolean not null default false;
+
 -- Done.
 -- ============================================================

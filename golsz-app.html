@@ -186,8 +186,14 @@ const I18N = {
     auth_full_name: "Full name", auth_email: "Email", auth_password: "Password",
     auth_forgot: "Forgot password?", auth_dob: "Date of birth",
     auth_occupation: "I am a…", auth_occupation_required: "Pick what best describes you.",
-    auth_minor_notice: "Athletes under 18 need a parent or guardian's approval to unlock the full account. Enter their email — if they already have a GOLSZ account, we'll send a request; your account stays restricted (no public posts, hidden from Discover) until they approve it.",
-    auth_parent_email: "Parent or guardian's email",
+    auth_your_name: "Your name", auth_your_email: "Your email",
+    auth_under16_notice: "GOLSZ requires a parent or guardian to create and manage an account for an athlete under 16.",
+    auth_switch_to_parent: "Sign up as their parent/guardian instead →",
+    auth_signing_up_for_minor: "Signing up for an athlete under 16?",
+    auth_athlete_info: "ATHLETE'S NAME", auth_athlete_name: "Athlete's full name", auth_athlete_dob: "ATHLETE'S DATE OF BIRTH",
+    auth_athlete_16_notice: "This athlete is 16 or older — they can sign up for their own GOLSZ account directly instead.",
+    auth_back_to_athlete_signup: "← Not signing up for a minor? Go back",
+    auth_create_athlete_account: "Create account & add athlete",
     auth_check_email: "CHECK YOUR EMAIL",
     auth_secure_checkout: "Secure checkout by Stripe · billed monthly · cancel anytime",
     auth_already_have: "Already have an account? ", auth_new_to_golsz: "New to GOLSZ? ",
@@ -219,6 +225,7 @@ const I18N = {
     home_readiness_weakest_profile_quality: "Your Passport is the biggest thing holding your score back — fill in the missing fields below.", home_readiness_weakest_verification: "Getting identity-verified would raise your score the most right now.", home_readiness_weakest_performance: "Recording and retesting a few performance benchmarks would raise your score the most right now.", home_readiness_weakest_development: "Adding focus areas to your development plan — and making progress on them — would raise your score the most right now.", home_readiness_weakest_pathway: "Setting a pathway and adding targets would raise your score the most right now.",
     home_this_month_title: "THIS MONTH", home_this_month_dev: "{n} development focus areas in progress.", home_this_month_targets: "{n} targets haven't been touched in a week.", home_this_month_review: "Review",
     home_pathway_progress_title: "PATHWAY PROGRESS", home_benchmark_progress_title: "RECENT BENCHMARK PROGRESS",
+    home_my_athletes_title: "MY ATHLETES", home_my_athletes_unnamed: "Unnamed athlete",
     home_missing_title: "STILL MISSING", home_finish_profile: "Finish your Passport", home_get_started: "GET STARTED",
     nav_targets: "Pathway/Plan", nav_account: "Account", targets_title: "TARGET SCHOOLS & CLUBS", targets_name_ph: "School or club name", targets_contact_name_ph: "Contact name", targets_contact_email_ph: "Contact email",
     targets_add: "Add", targets_add_err: "Couldn't add that. Try again.", targets_empty: "No targets yet — add the first school or club you're pursuing.",
@@ -428,8 +435,14 @@ const I18N = {
     auth_full_name: "Nom complet", auth_email: "E-mail", auth_password: "Mot de passe",
     auth_forgot: "Mot de passe oublié ?", auth_dob: "Date de naissance",
     auth_occupation: "Je suis…", auth_occupation_required: "Choisissez ce qui vous décrit le mieux.",
-    auth_minor_notice: "Les athlètes de moins de 18 ans ont besoin de l'approbation d'un parent ou tuteur pour débloquer le compte complet. Indiquez son e-mail — s'il possède déjà un compte GOLSZ, nous lui enverrons une demande ; votre compte reste restreint (aucune publication publique, masqué de Découvrir) jusqu'à son approbation.",
-    auth_parent_email: "E-mail du parent ou tuteur",
+    auth_your_name: "Votre nom", auth_your_email: "Votre e-mail",
+    auth_under16_notice: "GOLSZ exige qu'un parent ou tuteur crée et gère le compte d'un athlète de moins de 16 ans.",
+    auth_switch_to_parent: "S'inscrire en tant que parent/tuteur à la place →",
+    auth_signing_up_for_minor: "Vous inscrivez un athlète de moins de 16 ans ?",
+    auth_athlete_info: "NOM DE L'ATHLÈTE", auth_athlete_name: "Nom complet de l'athlète", auth_athlete_dob: "DATE DE NAISSANCE DE L'ATHLÈTE",
+    auth_athlete_16_notice: "Cet athlète a 16 ans ou plus — il peut directement créer son propre compte GOLSZ.",
+    auth_back_to_athlete_signup: "← Vous n'inscrivez pas un mineur ? Retour",
+    auth_create_athlete_account: "Créer le compte et ajouter l'athlète",
     auth_check_email: "VÉRIFIEZ VOS E-MAILS",
     auth_secure_checkout: "Paiement sécurisé par Stripe · facturation mensuelle · annulez à tout moment",
     auth_already_have: "Vous avez déjà un compte ? ", auth_new_to_golsz: "Nouveau sur GOLSZ ? ",
@@ -461,6 +474,7 @@ const I18N = {
     home_readiness_weakest_profile_quality: "Votre Passeport est ce qui freine le plus votre score — complétez les champs manquants ci-dessous.", home_readiness_weakest_verification: "Obtenir une vérification d'identité augmenterait le plus votre score en ce moment.", home_readiness_weakest_performance: "Enregistrer et retester quelques repères de performance augmenterait le plus votre score en ce moment.", home_readiness_weakest_development: "Ajouter des axes de travail à votre plan de développement — et progresser dessus — augmenterait le plus votre score en ce moment.", home_readiness_weakest_pathway: "Définir un parcours et ajouter des cibles augmenterait le plus votre score en ce moment.",
     home_this_month_title: "CE MOIS-CI", home_this_month_dev: "{n} axes de développement en cours.", home_this_month_targets: "{n} cibles n'ont pas été touchées depuis une semaine.", home_this_month_review: "Revoir",
     home_pathway_progress_title: "PROGRESSION DU PARCOURS", home_benchmark_progress_title: "PROGRESSION RÉCENTE DES REPÈRES",
+    home_my_athletes_title: "MES ATHLÈTES", home_my_athletes_unnamed: "Athlète sans nom",
     home_missing_title: "IL MANQUE ENCORE", home_finish_profile: "Terminez votre Passeport", home_get_started: "POUR COMMENCER",
     nav_targets: "Parcours/Plan", nav_account: "Compte", targets_title: "ÉCOLES & CLUBS CIBLÉS", targets_name_ph: "Nom de l'école ou du club", targets_contact_name_ph: "Nom du contact", targets_contact_email_ph: "Email du contact",
     targets_add: "Ajouter", targets_add_err: "Impossible d'ajouter. Réessayez.", targets_empty: "Aucune cible pour l'instant — ajoutez la première école ou le premier club visé.",
@@ -670,8 +684,14 @@ const I18N = {
     auth_full_name: "Nombre completo", auth_email: "Correo electrónico", auth_password: "Contraseña",
     auth_forgot: "¿Olvidaste tu contraseña?", auth_dob: "Fecha de nacimiento",
     auth_occupation: "Soy…", auth_occupation_required: "Elige lo que mejor te describe.",
-    auth_minor_notice: "Los deportistas menores de 18 años necesitan la aprobación de un padre, madre o tutor para desbloquear la cuenta completa. Introduce su correo electrónico — si ya tiene una cuenta de GOLSZ, le enviaremos una solicitud; tu cuenta permanecerá restringida (sin publicaciones públicas, oculta en Descubrir) hasta que la apruebe.",
-    auth_parent_email: "Correo del padre, madre o tutor",
+    auth_your_name: "Tu nombre", auth_your_email: "Tu correo electrónico",
+    auth_under16_notice: "GOLSZ requiere que un padre, madre o tutor cree y gestione la cuenta de un deportista menor de 16 años.",
+    auth_switch_to_parent: "Regístrate como su padre/madre o tutor en su lugar →",
+    auth_signing_up_for_minor: "¿Te registras para un deportista menor de 16 años?",
+    auth_athlete_info: "NOMBRE DEL DEPORTISTA", auth_athlete_name: "Nombre completo del deportista", auth_athlete_dob: "FECHA DE NACIMIENTO DEL DEPORTISTA",
+    auth_athlete_16_notice: "Este deportista tiene 16 años o más — puede crear su propia cuenta de GOLSZ directamente.",
+    auth_back_to_athlete_signup: "← ¿No te registras para un menor? Volver",
+    auth_create_athlete_account: "Crear cuenta y añadir deportista",
     auth_check_email: "REVISA TU CORREO",
     auth_secure_checkout: "Pago seguro con Stripe · facturación mensual · cancela cuando quieras",
     auth_already_have: "¿Ya tienes una cuenta? ", auth_new_to_golsz: "¿Nuevo en GOLSZ? ",
@@ -703,6 +723,7 @@ const I18N = {
     home_readiness_weakest_profile_quality: "Tu Pasaporte es lo que más frena tu puntuación — completa los campos que faltan abajo.", home_readiness_weakest_verification: "Verificar tu identidad es lo que más aumentaría tu puntuación ahora mismo.", home_readiness_weakest_performance: "Registrar y volver a probar algunas marcas de rendimiento es lo que más aumentaría tu puntuación ahora mismo.", home_readiness_weakest_development: "Añadir áreas de enfoque a tu plan de desarrollo — y avanzar en ellas — es lo que más aumentaría tu puntuación ahora mismo.", home_readiness_weakest_pathway: "Definir una trayectoria y añadir objetivos es lo que más aumentaría tu puntuación ahora mismo.",
     home_this_month_title: "ESTE MES", home_this_month_dev: "{n} áreas de desarrollo en curso.", home_this_month_targets: "{n} objetivos no se han tocado en una semana.", home_this_month_review: "Revisar",
     home_pathway_progress_title: "PROGRESO DE LA TRAYECTORIA", home_benchmark_progress_title: "PROGRESO RECIENTE DE MARCAS",
+    home_my_athletes_title: "MIS DEPORTISTAS", home_my_athletes_unnamed: "Deportista sin nombre",
     home_missing_title: "AÚN FALTA", home_finish_profile: "Termina tu Pasaporte", home_get_started: "PARA EMPEZAR",
     nav_targets: "Trayectoria/Plan", nav_account: "Cuenta", targets_title: "ESCUELAS Y CLUBES OBJETIVO", targets_name_ph: "Nombre de la escuela o club", targets_contact_name_ph: "Nombre del contacto", targets_contact_email_ph: "Email del contacto",
     targets_add: "Añadir", targets_add_err: "No se pudo añadir. Inténtalo de nuevo.", targets_empty: "Aún no hay objetivos — añade la primera escuela o club que te interese.",
@@ -912,8 +933,14 @@ const I18N = {
     auth_full_name: "Ονοματεπώνυμο", auth_email: "Email", auth_password: "Κωδικός πρόσβασης",
     auth_forgot: "Ξεχάσατε τον κωδικό;", auth_dob: "Ημερομηνία γέννησης",
     auth_occupation: "Είμαι…", auth_occupation_required: "Επιλέξτε αυτό που σας περιγράφει καλύτερα.",
-    auth_minor_notice: "Οι αθλητές κάτω των 18 ετών χρειάζονται την έγκριση γονέα ή κηδεμόνα για να ξεκλειδώσουν τον πλήρη λογαριασμό. Εισαγάγετε το email του — αν έχει ήδη λογαριασμό GOLSZ, θα του στείλουμε αίτημα· ο λογαριασμός σας παραμένει περιορισμένος (χωρίς δημόσιες αναρτήσεις, κρυφός από την Ανακάλυψη) μέχρι να το εγκρίνει.",
-    auth_parent_email: "Email γονέα ή κηδεμόνα",
+    auth_your_name: "Το όνομά σου", auth_your_email: "Το email σου",
+    auth_under16_notice: "Το GOLSZ απαιτεί έναν γονέα ή κηδεμόνα να δημιουργήσει και να διαχειρίζεται τον λογαριασμό για αθλητή κάτω των 16 ετών.",
+    auth_switch_to_parent: "Εγγραφή ως γονέας/κηδεμόνας αντ' αυτού →",
+    auth_signing_up_for_minor: "Εγγράφεις αθλητή κάτω των 16 ετών;",
+    auth_athlete_info: "ΟΝΟΜΑ ΑΘΛΗΤΗ", auth_athlete_name: "Πλήρες όνομα αθλητή", auth_athlete_dob: "ΗΜΕΡΟΜΗΝΙΑ ΓΕΝΝΗΣΗΣ ΑΘΛΗΤΗ",
+    auth_athlete_16_notice: "Αυτός ο αθλητής είναι 16 ετών ή μεγαλύτερος — μπορεί να εγγραφεί απευθείας για δικό του λογαριασμό GOLSZ.",
+    auth_back_to_athlete_signup: "← Δεν εγγράφεις ανήλικο; Επιστροφή",
+    auth_create_athlete_account: "Δημιουργία λογαριασμού και προσθήκη αθλητή",
     auth_check_email: "ΕΛΕΓΞΤΕ ΤΟ EMAIL ΣΑΣ",
     auth_secure_checkout: "Ασφαλής πληρωμή μέσω Stripe · μηνιαία χρέωση · ακύρωση οποτεδήποτε",
     auth_already_have: "Έχετε ήδη λογαριασμό; ", auth_new_to_golsz: "Νέος στο GOLSZ; ",
@@ -945,6 +972,7 @@ const I18N = {
     home_readiness_weakest_profile_quality: "Το Διαβατήριό σου είναι αυτό που περιορίζει περισσότερο τη βαθμολογία σου — συμπλήρωσε τα πεδία που λείπουν παρακάτω.", home_readiness_weakest_verification: "Η επαλήθευση ταυτότητας θα αύξανε περισσότερο τη βαθμολογία σου αυτή τη στιγμή.", home_readiness_weakest_performance: "Η καταγραφή και επανεξέταση μερικών δεικτών απόδοσης θα αύξανε περισσότερο τη βαθμολογία σου αυτή τη στιγμή.", home_readiness_weakest_development: "Η προσθήκη τομέων εστίασης στο πλάνο ανάπτυξής σου — και η πρόοδος σε αυτούς — θα αύξανε περισσότερο τη βαθμολογία σου αυτή τη στιγμή.", home_readiness_weakest_pathway: "Ο καθορισμός πορείας και η προσθήκη στόχων θα αύξανε περισσότερο τη βαθμολογία σου αυτή τη στιγμή.",
     home_this_month_title: "ΑΥΤΟΝ ΤΟΝ ΜΗΝΑ", home_this_month_dev: "{n} τομείς ανάπτυξης σε εξέλιξη.", home_this_month_targets: "{n} στόχοι δεν έχουν αγγιχτεί εδώ και μια εβδομάδα.", home_this_month_review: "Έλεγχος",
     home_pathway_progress_title: "ΠΡΟΟΔΟΣ ΠΟΡΕΙΑΣ", home_benchmark_progress_title: "ΠΡΟΣΦΑΤΗ ΠΡΟΟΔΟΣ ΔΕΙΚΤΩΝ",
+    home_my_athletes_title: "ΟΙ ΑΘΛΗΤΕΣ ΜΟΥ", home_my_athletes_unnamed: "Αθλητής χωρίς όνομα",
     home_missing_title: "ΛΕΙΠΟΥΝ ΑΚΟΜΑ", home_finish_profile: "Ολοκλήρωσε το Διαβατήριό σου", home_get_started: "ΞΕΚΙΝΑ",
     nav_targets: "Πορεία/Πλάνο", nav_account: "Λογαριασμός", targets_title: "ΣΧΟΛΕΣ & ΣΥΛΛΟΓΟΙ-ΣΤΟΧΟΙ", targets_name_ph: "Όνομα σχολής ή συλλόγου", targets_contact_name_ph: "Όνομα επαφής", targets_contact_email_ph: "Email επαφής",
     targets_add: "Προσθήκη", targets_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", targets_empty: "Δεν υπάρχουν στόχοι ακόμα — πρόσθεσε την πρώτη σχολή ή σύλλογο που σε ενδιαφέρει.",
@@ -7333,6 +7361,39 @@ function GolszApp({ onSignOut, startOnboarding }) {
   const isDesktop = useIsDesktop();
   const { t } = useLang();
 
+  // Corrected pre-launch directive: parent-signup mode (Auth) can't always
+  // call createChildAccount() synchronously — if the parent's own email
+  // needed confirmation first, the athlete's info was stashed in
+  // sessionStorage instead (see Auth's submit()). Picked up here, once,
+  // the first time this parent is actually signed in and mounted. Also
+  // loads any already-linked children (from this or an earlier session)
+  // so the "My Athletes" entry point below always reflects real state.
+  const [linkedChildren, setLinkedChildren] = useState(null);
+  useEffect(() => {
+    if (!sb) return;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        let pending = null;
+        try { const raw = sessionStorage.getItem("golsz_pending_child"); if (raw) pending = JSON.parse(raw); } catch (e) {}
+        if (pending && pending.childName && pending.childDobIso) {
+          try { await createChildAccount(pending.childName, pending.childDobIso); }
+          catch (e) { console.error("GOLSZ pending child creation error:", e); }
+          finally { try { sessionStorage.removeItem("golsz_pending_child"); } catch (e2) {} }
+        }
+        const { data: links } = await sb.from("parent_links").select("athlete_id").eq("parent_id", user.id).not("approved_at", "is", null);
+        if (links && links.length) {
+          const ids = links.map((l) => l.athlete_id);
+          const { data: childProfiles } = await sb.from("profiles").select("id, full_name").in("id", ids);
+          setLinkedChildren(childProfiles || []);
+        } else {
+          setLinkedChildren([]);
+        }
+      } catch (e) { console.error("GOLSZ linked-children load error:", e); }
+    })();
+  }, []);
+
   useEffect(() => {
     if (!sb) { setProfileComplete(true); return; } // preview mode, nothing to gate
     (async () => {
@@ -7517,6 +7578,16 @@ function GolszApp({ onSignOut, startOnboarding }) {
         {/* main content */}
         <main style={{ flex: 1, overflowY: "auto" }} className="noscroll">
           <div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 32px 60px" }}>
+            {page === "home" && linkedChildren && linkedChildren.length > 0 && (
+              <div style={{ ...card, marginBottom: 16 }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("home_my_athletes_title")}</div>
+                {linkedChildren.map((c) => (
+                  <button key={c.id} onClick={() => viewProfile(c.id)} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: "none", color: C.chalk, fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", padding: "6px 0", textAlign: "left" }}>
+                    <User size={15} color={C.lime} /> {c.full_name || t("home_my_athletes_unnamed")}
+                  </button>
+                ))}
+              </div>
+            )}
             {page === "feed" && <Feed onMessage={openThread} onViewProfile={viewProfile} />}
             {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
             {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} />}
@@ -7557,6 +7628,18 @@ function GolszApp({ onSignOut, startOnboarding }) {
 
       {/* body */}
       <main style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }} className="noscroll">
+        {page === "home" && linkedChildren && linkedChildren.length > 0 && (
+          <div style={{ padding: "8px 12px 0" }}>
+            <div style={{ ...card }}>
+              <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("home_my_athletes_title")}</div>
+              {linkedChildren.map((c) => (
+                <button key={c.id} onClick={() => viewProfile(c.id)} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: "none", color: C.chalk, fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer", padding: "6px 0", textAlign: "left" }}>
+                  <User size={15} color={C.lime} /> {c.full_name || t("home_my_athletes_unnamed")}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {page === "feed" && <Feed onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} />}
@@ -7994,6 +8077,37 @@ function TurnstileWidget({ onToken }) {
   return <div ref={ref} style={{ margin: "4px 0 12px" }} />;
 }
 
+// Shared by Auth's own-DOB check and its child-DOB check (parent-signup
+// mode) — full year/month/day comparison, not a naive year-subtraction,
+// so a birthday later this calendar year doesn't undercount by one.
+// Mirrors api/create-child-account.js's ageFromDob() exactly; keep both
+// in sync if this ever changes.
+function ageFromDobIso(dobIso) {
+  const today = new Date(); const b = new Date(dobIso);
+  let a = today.getFullYear() - b.getFullYear();
+  const notYet = (today.getMonth() < b.getMonth()) || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate());
+  if (notYet) a--;
+  return a;
+}
+
+// Shared by Auth's parent-signup flow and Settings' "add another athlete"
+// (both create a managed child account the same way) — calls
+// api/create-child-account.js with the CURRENT session's token. Throws
+// with a real message on failure; caller decides how to surface it.
+async function createChildAccount(childFullName, childDobIso) {
+  const { data: sessionData } = await sb.auth.getSession();
+  const token = sessionData && sessionData.session && sessionData.session.access_token;
+  if (!token) throw new Error("Sign in first.");
+  const res = await fetch("/api/create-child-account", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+    body: JSON.stringify({ childFullName, childDob: childDobIso }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data && data.error) || "Couldn't create the athlete's account.");
+  return data;
+}
+
 function Auth({ onDone, paidReturn }) {
   const isDesktop = useIsDesktop();
   const { t } = useLang();
@@ -8005,7 +8119,16 @@ function Auth({ onDone, paidReturn }) {
   const [dobDay, setDobDay] = useState("");
   const [dobMonth, setDobMonth] = useState("");
   const [dobYear, setDobYear] = useState("");
-  const [parentEmail, setParentEmail] = useState("");
+  // Parent/guardian signup mode (corrected pre-launch directive): an
+  // athlete under 16 may not create/control their own account, so a
+  // parent creating one on their behalf needs the athlete's own name/DOB
+  // collected separately from the parent's own name/email/password above —
+  // never reusing the same fields for two different people.
+  const [childName, setChildName] = useState("");
+  const [childDobDay, setChildDobDay] = useState("");
+  const [childDobMonth, setChildDobMonth] = useState("");
+  const [childDobYear, setChildDobYear] = useState("");
+  const [childCreateErr, setChildCreateErr] = useState("");
   const [website, setWebsite] = useState(""); // honeypot — real users never see or fill this field, only bots that auto-fill every input do
   const [turnstileToken, setTurnstileToken] = useState(""); // Cloudflare Turnstile — see TurnstileWidget/TURNSTILE_SITE_KEY above; stays "" (harmless) whenever Turnstile isn't configured
   const [busy, setBusy] = useState(false);
@@ -8103,18 +8226,29 @@ function Auth({ onDone, paidReturn }) {
     && dobNum.m >= 1 && dobNum.m <= 12
     && String(dobYear).length === 4 && dobNum.y >= 1900 && dobNum.y <= new Date().getFullYear();
   const dobIso = dobOk ? `${dobYear}-${String(dobNum.m).padStart(2, "0")}-${String(dobNum.d).padStart(2, "0")}` : "";
-  const age = dobOk ? (() => {
-    const today = new Date(); const b = new Date(dobIso);
-    let a = today.getFullYear() - b.getFullYear();
-    const notYet = (today.getMonth() < b.getMonth()) || (today.getMonth() === b.getMonth() && today.getDate() < b.getDate());
-    if (notYet) a--;
-    return a;
-  })() : null;
-  const isMinor = age !== null && age < 18;
-  const parentEmailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail.trim());
+  const age = dobOk ? ageFromDobIso(dobIso) : null;
+  // Corrected pre-launch directive: 16+ signs up and controls their own
+  // account (unchanged below); under 16 may NOT — self-signup is blocked
+  // outright and routed to parent-signup mode instead (see the JSX below
+  // and api/create-child-account.js for why a parent creates that account,
+  // not the child).
+  const requiresParentAccount = age !== null && age < 16;
+
+  const isParentSignup = mode === "parent-signup";
+  const isSignupLike = isSignup || isParentSignup; // shared fields (honeypot, Turnstile) render for both real signup flows
+  const childDobNum = { d: parseInt(childDobDay, 10), m: parseInt(childDobMonth, 10), y: parseInt(childDobYear, 10) };
+  const childDobOk = childDobDay && childDobMonth && childDobYear
+    && childDobNum.d >= 1 && childDobNum.d <= 31
+    && childDobNum.m >= 1 && childDobNum.m <= 12
+    && String(childDobYear).length === 4 && childDobNum.y >= 1900 && childDobNum.y <= new Date().getFullYear();
+  const childDobIso = childDobOk ? `${childDobYear}-${String(childDobNum.m).padStart(2, "0")}-${String(childDobNum.d).padStart(2, "0")}` : "";
+  const childAge = childDobOk ? ageFromDobIso(childDobIso) : null;
+  const childAgeOk = childAge !== null && childAge < 16;
 
   const turnstileOk = !TURNSTILE_SITE_KEY || !isSignup || !!turnstileToken;
-  const ok = email.trim() && pw.trim() && turnstileOk && (!isSignup || (name.trim() && dobOk && (!isMinor || parentEmailOk)));
+  const ok = isParentSignup
+    ? (email.trim() && pw.trim() && turnstileOk && name.trim() && childName.trim() && childDobOk && childAgeOk)
+    : (email.trim() && pw.trim() && turnstileOk && (!isSignup || (name.trim() && dobOk && !requiresParentAccount)));
   const selected = PLANS.find((p) => p.id === plan) || PLANS[0];
   const field = { width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 12, color: C.chalk, padding: "13px 14px", fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 12, boxSizing: "border-box" };
   const dobField = { ...field, marginBottom: 0, textAlign: "center" };
@@ -8185,7 +8319,6 @@ function Auth({ onDone, paidReturn }) {
         const signupPw = pw;
         const { data, error } = await sb.auth.signUp({ email: signupEmail, password: signupPw, options: { data: {
           full_name: name.trim(), plan: selected.id, date_of_birth: dobIso,
-          parent_email: isMinor ? parentEmail.trim() : "",
           hp: website.trim(),
         } } });
         if (error) throw error;
@@ -8218,6 +8351,55 @@ function Auth({ onDone, paidReturn }) {
         } else {
           setNotice("Account created — check " + signupEmail + " for a confirmation link. This page will sign you in automatically once you confirm it — no need to come back and log in by hand.");
           startConfirmPolling(signupEmail, signupPw);
+        }
+      } else if (isParentSignup) {
+        // Corrected pre-launch directive: the PARENT'S account is created
+        // here (normal signUp, no date_of_birth — this is the parent's own
+        // adult account); the athlete's own account only gets created
+        // server-side, by api/create-child-account.js, once this parent
+        // account is real and (if needed) confirmed — see createChildAccount
+        // above and the sessionStorage fallback below for why this can't
+        // always happen in the same breath as signUp.
+        try { const guardRes = await fetch("/api/signup-guard", { method: "POST", headers: { "Content-Type": "application/json" } });
+          const guardData = await guardRes.json().catch(() => ({ allowed: true }));
+          if (guardData && guardData.allowed === false) throw new Error("Too many signup attempts from this network. Please try again later.");
+        } catch (e) {
+          if (e instanceof Error && e.message.startsWith("Too many signup attempts")) throw e;
+        }
+        if (TURNSTILE_SITE_KEY) {
+          const verifyRes = await fetch("/api/verify-turnstile", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: turnstileToken }),
+          });
+          const verifyData = await verifyRes.json().catch(() => ({}));
+          if (!verifyRes.ok || !verifyData.success) throw new Error("Verification failed — please retry the challenge below and try again.");
+        }
+        const parentEmail = email.trim();
+        const parentPw = pw;
+        const { data, error } = await sb.auth.signUp({ email: parentEmail, password: parentPw, options: { data: {
+          full_name: name.trim(), hp: website.trim(),
+        } } });
+        if (error) throw error;
+        if (data.session) {
+          try {
+            await createChildAccount(childName.trim(), childDobIso);
+            onDone(true);
+          } catch (childErr) {
+            // The parent's own account is real either way — surface the
+            // failure but still let them into the app; they can add the
+            // athlete again from Account (see Settings' own "add athlete"
+            // form, which calls the same createChildAccount()).
+            setChildCreateErr((childErr && childErr.message) || "Couldn't add your athlete — you can try again from Account.");
+            onDone(true);
+          }
+        } else {
+          // Email confirmation required — can't call create-child-account
+          // without a real session yet. Stashed here and picked up by
+          // GolszApp's own mount effect once this parent is actually
+          // signed in (see that effect's own comment for why).
+          try { sessionStorage.setItem("golsz_pending_child", JSON.stringify({ childName: childName.trim(), childDobIso })); } catch (e) {}
+          setNotice("Account created — check " + parentEmail + " for a confirmation link. Once confirmed, we'll finish setting up " + childName.trim() + "'s profile automatically.");
+          startConfirmPolling(parentEmail, parentPw);
         }
       } else {
         const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password: pw });
@@ -8253,6 +8435,7 @@ function Auth({ onDone, paidReturn }) {
 
   const cta = confirmPolling ? "Waiting for you to confirm your email…"
     : busy ? t("auth_working")
+    : isParentSignup ? t("auth_create_athlete_account")
     : !isSignup ? t("auth_login")
     : selected.price === 0 ? t("auth_create_free")
     : t("auth_continue_payment") + "$" + selected.price + t("auth_per_month");
@@ -8343,17 +8526,17 @@ function Auth({ onDone, paidReturn }) {
             </div>
           )}
 
-          {isSignup && (
+          {isSignupLike && (
             <input
               value={website} onChange={(e) => setWebsite(e.target.value)}
               name="website" autoComplete="off" tabIndex={-1} aria-hidden="true"
               style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
             />
           )}
-          {isSignup && <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("auth_full_name")} style={field} />}
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth_email")} type="email" style={field} />
-          <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder={t("auth_password")} type="password" style={{ ...field, marginBottom: isSignup ? 12 : 4 }} />
-          {!isSignup && (
+          {isSignupLike && <input value={name} onChange={(e) => setName(e.target.value)} placeholder={isParentSignup ? t("auth_your_name") : t("auth_full_name")} style={field} />}
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={isParentSignup ? t("auth_your_email") : t("auth_email")} type="email" style={field} />
+          <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder={t("auth_password")} type="password" style={{ ...field, marginBottom: isSignupLike ? 12 : 4 }} />
+          {!isSignupLike && (
             <div style={{ textAlign: "right", marginBottom: 10 }}>
               <span onClick={() => { setForgotMode(true); setErr(""); setResetSent(false); }} style={{ color: C.slate, fontSize: 12, cursor: "pointer" }}>{t("auth_forgot")}</span>
             </div>
@@ -8367,18 +8550,44 @@ function Auth({ onDone, paidReturn }) {
                 <input value={dobMonth} onChange={(e) => setDobMonth(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="MM" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
                 <input value={dobYear} onChange={(e) => setDobYear(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} placeholder="YYYY" inputMode="numeric" maxLength={4} style={{ ...dobField, flex: 1.4 }} />
               </div>
-              {isMinor && (
-                <div style={{ marginTop: 10 }}>
-                  <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8, lineHeight: 1.4 }}>
-                    {t("auth_minor_notice")}
-                  </div>
-                  <input value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} placeholder={t("auth_parent_email")} type="email" style={{ ...field, marginBottom: 0 }} />
+              {/* Corrected pre-launch directive: under 16 cannot self-signup
+                  at all — this replaces the old "self-signup + note a
+                  parent's email" pattern with a hard block + a real path
+                  into the parent-creates-the-account flow instead. */}
+              {requiresParentAccount && (
+                <div style={{ marginTop: 10, background: "#C89B3C1a", border: `1px solid ${C.amberBorder || "#C89B3C44"}`, borderRadius: 10, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 12, color: C.warnText, marginBottom: 8, lineHeight: 1.4 }}>{t("auth_under16_notice")}</div>
+                  <button onClick={() => { setMode("parent-signup"); setErr(""); setChildName(name); setChildDobDay(dobDay); setChildDobMonth(dobMonth); setChildDobYear(dobYear); setName(""); }} style={{ background: "none", border: "none", color: C.lime, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", padding: 0 }}>{t("auth_switch_to_parent")}</button>
+                </div>
+              )}
+              {!requiresParentAccount && (
+                <div style={{ marginTop: 8, textAlign: "right" }}>
+                  <span onClick={() => { setMode("parent-signup"); setErr(""); }} style={{ color: C.slate, fontSize: 11.5, cursor: "pointer" }}>{t("auth_signing_up_for_minor")}</span>
                 </div>
               )}
             </div>
           )}
 
-          {isSignup && TURNSTILE_SITE_KEY && <TurnstileWidget onToken={setTurnstileToken} />}
+          {isParentSignup && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("auth_athlete_info")}</div>
+              <input value={childName} onChange={(e) => setChildName(e.target.value)} placeholder={t("auth_athlete_name")} style={field} />
+              <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("auth_athlete_dob")}</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={childDobDay} onChange={(e) => setChildDobDay(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="DD" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
+                <input value={childDobMonth} onChange={(e) => setChildDobMonth(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="MM" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
+                <input value={childDobYear} onChange={(e) => setChildDobYear(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} placeholder="YYYY" inputMode="numeric" maxLength={4} style={{ ...dobField, flex: 1.4 }} />
+              </div>
+              {childDobOk && !childAgeOk && (
+                <div style={{ marginTop: 8, fontSize: 11.5, color: C.amber, lineHeight: 1.4 }}>{t("auth_athlete_16_notice")}</div>
+              )}
+              <div style={{ marginTop: 10, textAlign: "right" }}>
+                <span onClick={() => { setMode("signup"); setErr(""); }} style={{ color: C.slate, fontSize: 11.5, cursor: "pointer" }}>{t("auth_back_to_athlete_signup")}</span>
+              </div>
+            </div>
+          )}
+
+          {isSignupLike && TURNSTILE_SITE_KEY && <TurnstileWidget onToken={setTurnstileToken} />}
 
           {notice && (
             <div style={{ background: "#C8F1351a", border: "1px solid #C8F13544", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
@@ -8389,7 +8598,7 @@ function Auth({ onDone, paidReturn }) {
 
           {err && (
             <div style={{ background: "#C89B3C1a", border: "1px solid #C89B3C44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
-              <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignup ? t("auth_couldnt_signup") : t("auth_couldnt_login")}</div>
+              <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignupLike ? t("auth_couldnt_signup") : t("auth_couldnt_login")}</div>
               <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
               {unconfirmedEmail && !resendSent && (
                 <button onClick={resendConfirmation} disabled={resendBusy} style={{
