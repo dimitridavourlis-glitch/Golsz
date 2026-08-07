@@ -1,4 +1,7 @@
 {
+  "crons": [
+    { "path": "/api/target-followup-reminders", "schedule": "0 13 * * *" }
+  ],
   "headers": [
     {
       "source": "/((?!api/).*)",
