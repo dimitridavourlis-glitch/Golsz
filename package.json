@@ -4,5 +4,10 @@
   "type": "module",
   "dependencies": {
     "web-push": "^3.6.7"
+  },
+  "scripts": {
+    "test": "node tests/run-all.cjs",
+    "check": "node --check api/scout.js && node --check api/moderate.js && node tests/run-all.cjs",
+    "deploy": "npm run check && npx vercel --prod --yes"
   }
 }
