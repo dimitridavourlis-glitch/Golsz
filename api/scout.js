@@ -1345,7 +1345,7 @@ async function searchEvents(input) {
 // same as every other caching claim in this file — don't just trust that
 // adding content worked.
 const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent, separately check it against the FAQ list appended below, and maintain a running conversation summary plus four routing hints. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false,"faq_id":null-or-a-number,"summary_so_far":"...","missing_information":[...],"recommended_specialist":null-or-"...","conversation_stage":"...","next_best_action":{"type":"ask_scout|complete_profile|share_passport|none","label":"...","params":{}}}
-SUMMARY: the message may open with a "CONVERSATION SUMMARY SO FAR: ..." section describing everything discussed before this turn (empty/absent on a conversation's first message — that's normal, not an error). Produce an updated "summary_so_far": ONE short sentence, 25 words max, covering the prior summary plus what this new message adds — never just repeat the input back, never a numbered list, never multiple sentences. If there's no prior summary and this message alone isn't summary-worthy yet (a greeting, "thanks", etc.), a few words is fine — it does not need to be a full sentence. Never include a literal "}" character anywhere in summary_so_far — it would cut this response off early.
+SUMMARY: the message may open with a "CONVERSATION SUMMARY SO FAR: ..." section describing everything discussed before this turn (empty/absent on a conversation's first message — that's normal, not an error). Produce an updated "summary_so_far": ONE short sentence, 25 words max, covering the prior summary plus what this new message adds — never just repeat the input back, never a numbered list, never multiple sentences. If there's no prior summary and this message alone isn't summary-worthy yet (a greeting, "thanks", etc.), a few words is fine — it does not need to be a full sentence.
 ATHLETE CONTEXT: the message may also include a "PROFILE SO FAR: {...}" section (hard facts already on file) and a "SCOUT CONTEXT SO FAR: {...}" section (softer qualification facts already captured — dream/goal, target level, gap, urgency, interest flags, etc.). Use both plus the summary to fill in:
 - "missing_information": an array of up to 3 field names, chosen only from this list, that are NOT already present in either section and would meaningfully help right now: dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need. Use an empty array if nothing important is missing, or the conversation doesn't call for asking right now (e.g. off_topic, or the athlete is mid-thought on something else).
 - "recommended_specialist": which specialist should likely handle THIS message — one of "college" (NCAA/NAIA/JUCO, scholarships, school fit), "pro_pathway" (professional clubs, trials, agents), "development" (training, skill gaps, performance, nutrition, recovery), "eligibility" (NCAA rules, amateurism, compliance) — or null when the general Scout persona is clearly still right (most messages). Base this only on what the current message is actually asking, not the athlete's whole history.
@@ -1436,7 +1436,7 @@ async function classifyIntent(key, conversation, faqList, authoritativeBlock) {
   // pivot back?" as a vague question, when against known home/current
   // locations it is a concrete multi-country pathway decision that must go
   // to the strong model. Hard-capped so it can't push the 4.5s budget.
-  const factPreamble = authoritativeBlock ? clampBlock(authoritativeBlock, 700) + "\n\n" : "";
+  const factPreamble = authoritativeBlock ? clampBlock(authoritativeBlock, 300) + "\n\n" : "";
   try {
     const { ok, data } = await callAnthropic(key, {
       model: MODEL_REGISTRY.FAST_CHAT.model,
@@ -1445,7 +1445,7 @@ async function classifyIntent(key, conversation, faqList, authoritativeBlock) {
       // (conversation_stage, next_best_action) to the JSON contract, which
       // need a little more room than the 300 budget that was tuned for the
       // previous (smaller) schema.
-      maxTokens: 400,
+      maxTokens: 300,
       // NO stop sequence. There used to be stopSequences: ["}"], justified by
       // "the schema is always a flat, single-level object — exactly one
       // closing brace". That stopped being true when next_best_action was
@@ -2741,7 +2741,14 @@ export default async function handler(req, res) {
 
   try {
     const faqList = await getFaqList(faqLang);
-    // 4.5s cap (was 3.5s — raised after real traffic showed the classifier
+    // 7s cap (4.5s before; 3.5s before that) — raised again after production
+    // logs showed repeated "routing: null". A timeout is expensive twice
+    // over: classification goes null, which both routes the request to the
+    // dearer tier and loses summary_so_far, so the running conversation
+    // summary silently stops advancing. Paired with a smaller output budget
+    // and a shorter fact preamble so the call is genuinely quicker, not just
+    // given longer to be slow.
+    // Original note (was 3.5s — raised after real traffic showed the classifier
     // timing out often enough to matter for cost: adding summary_so_far/
     // missing_information/recommended_specialist this session made it do
     // more work per call, and every timeout falls through to a full Sonnet
@@ -2760,7 +2767,7 @@ export default async function handler(req, res) {
     // rejecting athlete-scoped entries whose stored state digest has moved.
     const topicKey = researchTopicKey(latestUserText(conversation), athleteSport, athleteCountry);
     const [classification, golszKnowledge, priorResearch] = await Promise.all([
-      withTimeout(classifyIntent(key, conversation, faqList, authoritativeBlock), 4500),
+      withTimeout(classifyIntent(key, conversation, faqList, authoritativeBlock), 7000),
       getGolszKnowledge(athleteSport, athleteCountry, latestUserText(conversation)),
       getResearchCache(userId, topicKey, stateDigest),
     ]);
