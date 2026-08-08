@@ -6812,7 +6812,14 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       // the database — the exact confusion this whole pass fixed. Benchmarks
       // and the running summary still come from here: neither is an identity
       // fact, and neither is loaded server-side yet.
-      const promptText = `${benchmarksLine ? benchmarksLine.trim() + "\n\n" : ""}CONVERSATION SUMMARY SO FAR: ${summary || "(none yet)"}\n\n${speakerLabel}: ${content}`;
+      // The running summary is NO LONGER pasted in here. It used to sit in
+      // the user message, so Scout read its own note as something the
+      // athlete had just said — and in production answered "that summary
+      // doesn't match what we've actually discussed", arguing with a
+      // message nobody sent. It still goes to the server in the request
+      // body (`summary`), which now injects it into the system prompt,
+      // clearly labelled as Scout's own note.
+      const promptText = `${benchmarksLine ? benchmarksLine.trim() + "\n\n" : ""}${speakerLabel}: ${content}`;
       api[api.length - 1] = attached
         ? { role: "user", content: [
             { type: "image", source: { type: "base64", media_type: attached.mediaType, data: attached.data } },
