@@ -2151,6 +2151,88 @@ function detectConflicts(athlete, memories) {
   return out.slice(0, 4);
 }
 
+// ============================================================
+// SCOUT STATE MACHINE + WEIGHTED READINESS (migration 107)
+//
+// Scout behaved like a chatbot because nothing constrained WHEN it could do
+// WHAT — it planned before it understood. conversation_stage existed but was
+// the classifier's guess, written to ai_meta and never read back.
+//
+// State is derived here from REAL data, never from model self-report, the
+// same discipline as computeNextMove(). "X FIELDS ON FILE" is replaced by
+// weighted completeness: some facts matter far more than others, and a naive
+// count let an athlete look complete while missing their goal.
+// ============================================================
+const CRITICAL_FIELDS = [
+  ["sport", (a) => !!(a && a.sport)],
+  ["age", (a) => !!(a && (a.dob || a.age_reported))],
+  ["position", (a) => !!(a && a.position)],
+  ["current club or training environment", (a) => !!(a && a.club_name)],
+  ["current level", (a) => !!(a && a.recruiting_status)],
+];
+const HIGH_VALUE_FIELDS = [
+  ["where they are now", (a) => !!(a && (a.current_city || a.country))],
+  ["where they are from", (a) => !!(a && (a.home_city || a.home_country))],
+  ["playing history", (a) => !!(a && Array.isArray(a.previous_clubs) && a.previous_clubs.length)],
+  ["graduation year", (a) => !!(a && a.grad_year)],
+  ["measurements", (a) => !!(a && (a.height_cm || a.weight_kg))],
+  ["citizenship / eligibility", (a) => !!(a && a.citizenship)],
+];
+
+// Weighted 0-100. Critical is 60% of the score, high-value 25%, the goal 15% —
+// the goal is deliberately its own band because an athlete with every field
+// filled and no stated goal cannot be advised at all.
+function scoutReadiness(athlete, goalDefined) {
+  const crit = CRITICAL_FIELDS.filter(([, has]) => has(athlete));
+  const high = HIGH_VALUE_FIELDS.filter(([, has]) => has(athlete));
+  const score = Math.round(
+    (crit.length / CRITICAL_FIELDS.length) * 60 +
+    (high.length / HIGH_VALUE_FIELDS.length) * 25 +
+    (goalDefined ? 15 : 0),
+  );
+  return {
+    score,
+    missingCritical: CRITICAL_FIELDS.filter(([, has]) => !has(athlete)).map(([label]) => label),
+    missingHighValue: HIGH_VALUE_FIELDS.filter(([, has]) => !has(athlete)).map(([label]) => label),
+    goalDefined: !!goalDefined,
+    // Ready when every critical fact AND the goal are known, plus at least
+    // half the high-value ones. Not a question count — §12/§24.
+    ready: crit.length === CRITICAL_FIELDS.length && !!goalDefined && high.length >= Math.ceil(HIGH_VALUE_FIELDS.length / 2),
+  };
+}
+
+const SCOUT_STATES = ["NEW", "TRIAGE", "PROFILE_READY", "ASSESSED", "GUIDED", "DEVELOPING"];
+
+// Existing athletes are not dragged back through onboarding: a real pathway
+// row means they are already being guided, so they resume at 4/5 regardless
+// of how complete their record looks on paper.
+function deriveScoutState(athlete, readiness, meta, athleteState) {
+  if (athleteState && athleteState.pathwayCreated) return athleteState.baselineComplete ? 5 : 4;
+  if (!athlete || !athlete.sport) return 0;
+  if (!readiness.ready) return 1;
+  if (!meta || !meta.profileConfirmedAt) return 2;
+  return 3;
+}
+
+// What Scout may and may not do at this state (§10). Enforced as prompt
+// instruction backed by the capability manifest, not left to the model's mood.
+function stateDirective(state, readiness) {
+  if (state >= 4) return "";
+  if (state <= 1) {
+    const next = readiness.missingCritical[0] || (!readiness.goalDefined ? "their goal — what they are actually aiming for" : readiness.missingHighValue[0]);
+    return `\n\nSCOUT STATE: LEARNING THIS ATHLETE (${readiness.score}% understood).\n`
+      + `You are still building your understanding. You may answer general questions, explain leagues, NCAA/NAIA/JUCO, eligibility and pathways in general terms — be genuinely useful.\n`
+      + `Do NOT yet produce a definitive personalised career roadmap, target school/club list, recruitment strategy, outreach campaign or personalised development programme. You have not finished assessing them.\n`
+      + (next ? `HIGHEST-VALUE THING YOU STILL DON'T KNOW: ${next}. Work toward it naturally — one question, in conversation, never a questionnaire. Acknowledge what they just told you first.\n` : "")
+      + `If they ask for a plan now, say plainly that you can absolutely build it and you want a little more about their situation first — then ask the next useful thing. Never sound like a paywall.`;
+  }
+  if (state === 2) {
+    return `\n\nSCOUT STATE: PROFILE READY (${readiness.score}%).\n`
+      + `You now know enough to be useful. Give them a short, natural summary of how you understand them — who they are, where they are, what they're aiming for, what stands out, what's still thin — and ask them to confirm or correct it. Do this ONCE, conversationally, not as a form.`;
+  }
+  return `\n\nSCOUT STATE: ASSESSED (${readiness.score}%). They have confirmed your understanding. Personalised planning is unlocked subject to their plan — see GOLSZ CAPABILITIES.`;
+}
+
 async function buildAuthoritativeContext(userId) {
   const supaUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
@@ -2298,15 +2380,17 @@ async function getUserId(authHeader) {
 async function getProfileMeta(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null };
+  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null, profileConfirmedAt: null, storedState: 0 };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let plan = "starter";
   let isAdmin = false;
   let aiUnlimited = false;
   let goalDefined = false;
   let goalText = null;
+  let profileConfirmedAt = null;
+  let storedState = 0;
   try {
-    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text", { headers });
+    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text,scout_state,scout_profile_ready,scout_profile_confirmed_at", { headers });
     const rows = await p.json();
     if (Array.isArray(rows) && rows[0]) {
       plan = rows[0].plan || "starter";
@@ -2314,9 +2398,11 @@ async function getProfileMeta(userId) {
       aiUnlimited = !!rows[0].ai_unlimited;
       goalDefined = !!rows[0].goal_defined;
       goalText = rows[0].goal_text || null;
+      profileConfirmedAt = rows[0].scout_profile_confirmed_at || null;
+      storedState = Number.isInteger(rows[0].scout_state) ? rows[0].scout_state : 0;
     }
   } catch {}
-  return { plan, isAdmin, aiUnlimited, goalDefined, goalText };
+  return { plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState };
 }
 
 // GOLSZ Final Product / AI Scout / Pathway / Elite Architecture directive
@@ -2694,6 +2780,7 @@ export default async function handler(req, res) {
   // for treating a "go back"-style question as a real relocation decision.
   let athleteHome = null;
   let athleteHere = null;
+  let scoutState = 0;
   const priorSummaryForPrompt = (body && typeof body.summary === "string") ? body.summary.trim() : "";
   // Step 8 telemetry, threaded into every logRouting() call below so a
   // degraded reply is never recorded as a clean one.
@@ -2749,7 +2836,7 @@ export default async function handler(req, res) {
     // getCapabilityKnowledge is global and cached. The GOLSZ Core lookup
     // can't run here because it needs athleteState.sport, so it runs
     // alongside the classifier below instead.
-    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
+    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
       getProfileMeta(userId),
       getAthleteState(userId),
       getPlanKnowledge(),
@@ -2790,6 +2877,22 @@ export default async function handler(req, res) {
     // memory yet should get no MEMORY section at all, not one saying "none".
     if (capabilityKnowledge) sharedBlock += `\n\nGOLSZ CAPABILITIES (real, current — the product does exactly this and nothing more):\n${capabilityKnowledge}`;
     if (authoritativeBlock) athleteBlock += `\n\n${authoritativeBlock}`;
+    // §7/§12/§24 — weighted readiness and the authoritative state, both from
+    // real data. The directive is what actually stops Scout planning before it
+    // understands the athlete.
+    const readiness = scoutReadiness(authContext && authContext.athlete, goalDefined);
+    scoutState = deriveScoutState(authContext && authContext.athlete, readiness, { profileConfirmedAt }, athleteState);
+    athleteBlock += stateDirective(scoutState, readiness);
+    // Persist only when it actually changes, so a normal turn adds no write.
+    if (scoutState !== storedState || readiness.ready !== undefined) {
+      const svcKey = process.env.SUPABASE_SERVICE_KEY;
+      fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
+        method: "PATCH",
+        headers: { apikey: svcKey, Authorization: "Bearer " + svcKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ scout_state: scoutState, scout_profile_ready: readiness.ready }),
+      }).catch((e) => console.error("GOLSZ scout state persist failed:", e));
+    }
+    console.log("GOLSZ scout state:", JSON.stringify({ state: scoutState, label: SCOUT_STATES[scoutState], readiness: readiness.score, ready: readiness.ready, missingCritical: readiness.missingCritical }));
     // Scout's own running note on the conversation. Labelled explicitly
     // because it used to be pasted into the USER message by the client, so
     // the model read it as something the athlete had just said — and in
