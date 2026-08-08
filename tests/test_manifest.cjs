@@ -85,6 +85,26 @@ ck("requires_fields still bites regardless of state — a named missing field is
      [{key:"x",label:"Compare you",available:true,plan_min:null,min_scout_state:0,requires_profile_ready:false,requires_fields:["grad_year"]}],
      {entitlementPlan:"starter",scoutState:4,profileReady:false,athlete:{}})), true);
 
+console.log("\n-- BUDGET: found by rendering the REAL 19 production rows --");
+// The manifest was being cut mid-list at 1400 chars, silently dropping
+// whichever section came last. First the prohibitions went (the only thing
+// stopping Scout offering agent introductions or a diary that does not
+// exist), then after reserving room for those, the plan-locked section went
+// instead — which is the §21B line the whole rewrite exists to produce.
+// A realistic-size manifest must fit with every section intact.
+const MANY = [];
+for (let i = 0; i < 12; i += 1) MANY.push({ key: "a"+i, label: "Available capability number " + i, notes: "A sentence of explanation about it.", available: true, plan_min: null, min_scout_state: 0, requires_profile_ready: false, requires_fields: [] });
+MANY.push({ key: "dev", label: "Training & development plan", available: true, plan_min: "pro", min_scout_state: 3, requires_profile_ready: true, requires_fields: [], safety_note: "Sports development only. Never diagnose or prescribe rehabilitation." });
+for (let i = 0; i < 5; i += 1) MANY.push({ key: "g"+i, label: "Removed feature number " + i, notes: "REMOVED from the product.", available: false, plan_min: null, min_scout_state: 0, requires_profile_ready: false, requires_fields: [] });
+const big = renderCapabilities(MANY, { entitlementPlan:"starter", scoutState:4, profileReady:false, athlete:{} });
+ck("nothing is truncated at production scale", /truncated/.test(big), false);
+ck("the available list survives", big.includes("Available capability number 11"), true);
+ck("the plan-locked line survives, with its tier", /Training & development plan.*on the pro plan/s.test(big), true);
+ck("its safety note survives", big.includes("Never diagnose"), true);
+ck("every prohibition survives", (big.match(/Removed feature number/g)||[]).length, 5);
+ck("prohibitions are last, so they are what Scout reads most recently",
+   big.lastIndexOf("NOT part of GOLSZ") > big.lastIndexOf("higher plan than theirs"), true);
+
 console.log("\n-- misc --");
 ck("safety notes ride along with the capability", renderCapabilities(ROWS,{entitlementPlan:"starter",scoutState:3,profileReady:true,athlete:{}}).includes("[SAFETY: Never diagnose"), true);
 ck("no rows -> empty string, not a heading", renderCapabilities([], {}), "");

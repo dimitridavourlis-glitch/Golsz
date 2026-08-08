@@ -1741,7 +1741,12 @@ async function getPlanKnowledge() {
 // silently drops the athlete from Sonnet to Haiku. Retrieval must never be
 // able to spend the reply's own model quality. Budgets below total ~2,900
 // chars (~725 tokens) worst case across all four blocks.
-const RETRIEVAL_BUDGET = { capabilities: 1400, memory: 900, knowledge: 700, research: 900 };
+// capabilities raised 1400 -> 2600 after checking the REAL production rows:
+// 19 capabilities overflowed 1400 and the manifest was being cut mid-list,
+// which silently dropped whichever section came last. It lands in the CACHED
+// system prefix, so the marginal cost is ~0.1x input on a few hundred tokens
+// — far cheaper than Scout misdescribing what GOLSZ sells.
+const RETRIEVAL_BUDGET = { capabilities: 2600, memory: 900, knowledge: 700, research: 900 };
 
 function clampBlock(text, maxChars) {
   const t = String(text || "");
@@ -1798,6 +1803,10 @@ async function getCapabilityRows() {
 // goes in the data bucket. Charging an athlete for a plan we could not build
 // yet is the single worst outcome here, so the data gap is always named
 // first and the upsell waits until it is genuinely the only thing in the way.
+// Characters held back for the "not part of GOLSZ" list, out of
+// RETRIEVAL_BUDGET.capabilities. Sized to fit the current disowned set with
+// room to grow; the rest of the manifest gets what remains.
+const RESERVED_FOR_PROHIBITIONS = 600;
 const PLAN_RANK = { free: 0, starter: 1, pro: 2, elite: 3 };
 function planRank(p) {
   const r = PLAN_RANK[String(p || "").toLowerCase()];
@@ -1843,6 +1852,19 @@ function renderCapabilities(rows, ctx) {
     }
   }
 
+  // The prohibition list is assembled FIRST and given its own guaranteed
+  // slice of the budget, because it is last in reading order and was being
+  // truncated away on real production data — 19 capability rows overflow
+  // 1400 characters, and clampBlock cuts from the end. Losing the section
+  // that says "never suggest these" is the single worst thing to lose here:
+  // it is the only defence against Scout offering agent introductions or a
+  // diary feature that does not exist. Everything else degrading to a
+  // shorter list is survivable; that is not.
+  const gone = goneList.length
+    ? `NOT part of GOLSZ — never suggest, imply, or offer these, and never tell an athlete to find or contact someone through them:\n${goneList.join("\n")}`
+    : "";
+  const goneText = clampBlock(gone, Math.min(gone.length, RESERVED_FOR_PROHIBITIONS));
+
   let text = "";
   if (nowList.length) {
     text += `You can do these for this athlete RIGHT NOW:\n${nowList.join("\n")}`;
@@ -1853,10 +1875,10 @@ function renderCapabilities(rows, ctx) {
   if (needPlanList.length) {
     text += `${text ? "\n" : ""}REAL, but on a higher plan than theirs. When one of these is genuinely what this athlete needs next, name it, say in one line what it would do for THIS situation, and name the tier. Only ever point upward:\n${needPlanList.join("\n")}`;
   }
-  if (goneList.length) {
-    text += `${text ? "\n" : ""}NOT part of GOLSZ — never suggest, imply, or offer these, and never tell an athlete to find or contact someone through them:\n${goneList.join("\n")}`;
-  }
-  return clampBlock(text, RETRIEVAL_BUDGET.capabilities);
+
+  const room = Math.max(RETRIEVAL_BUDGET.capabilities - goneText.length - 1, 200);
+  const head = clampBlock(text, room);
+  return goneText ? `${head}${head ? "\n" : ""}${goneText}` : head;
 }
 
 // GOLSZ Core lookup. Goes through the search_golsz_knowledge() RPC rather
