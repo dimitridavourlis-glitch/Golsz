@@ -1043,6 +1043,41 @@ function deriveReplyText(data) {
   return null;
 }
 
+// Scout kept ending EVERY reply with a question — four, five in a row reads
+// like an intake form rather than a conversation. The prompt rule was ignored,
+// so this enforces it instead of asking: a question is only removed when the
+// PREVIOUS reply also ended in one. A single question is normal human
+// back-and-forth and is always left alone.
+function endsWithQuestion(text) {
+  return /\?["')\]]*\s*$/.test(String(text || "").trim());
+}
+
+// Drops the trailing question sentence(s) only. Bails out rather than
+// mangling: a reply that is ONE sentence, or that would be gutted to a stub,
+// keeps its question — better a second question than a truncated answer.
+function stripTrailingQuestion(text) {
+  const t = String(text || "").trimEnd();
+  if (!endsWithQuestion(t)) return text;
+  const parts = t.match(/[^.!?]+[.!?]+[\s]*/g);
+  if (!parts || parts.length < 2) return text;
+  const kept = parts.slice();
+  while (kept.length > 1 && endsWithQuestion(kept[kept.length - 1])) kept.pop();
+  const joined = kept.join("").trimEnd();
+  return joined.length >= 80 ? joined : text;
+}
+
+// conversation is the real transcript (client sends the recent window), so the
+// previous assistant turn is the right thing to check.
+function softenQuestionStreak(replyText, conversation) {
+  if (!replyText || !endsWithQuestion(replyText)) return replyText;
+  const priorAssistant = [...(conversation || [])].reverse()
+    .find((m) => m && m.role === "assistant" && typeof m.content === "string");
+  if (!priorAssistant || !endsWithQuestion(priorAssistant.content)) return replyText;
+  const stripped = stripTrailingQuestion(replyText);
+  if (stripped !== replyText) console.log("GOLSZ dropped a back-to-back closing question");
+  return stripped;
+}
+
 function extractMemoryWrites(data) {
   let writes;
   try {
@@ -3037,7 +3072,7 @@ export default async function handler(req, res) {
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache.
         if (requestId) await setCachedResponse(`req:${requestId}`, "replay", "n/a", data);
-        data.reply_text = deriveReplyText(data);
+        data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
     data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         // next_move is THIS request's own classification result, not a fact
@@ -3128,7 +3163,7 @@ export default async function handler(req, res) {
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache.
         if (requestId) await setCachedResponse(`req:${requestId}`, "replay", "n/a", data);
-        data.reply_text = deriveReplyText(data);
+        data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
     data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         data.next_move = extractNextBestAction(classification);
@@ -3184,7 +3219,7 @@ export default async function handler(req, res) {
     // exact reply rather than re-asking the athlete (and re-charging them).
     // Short TTL: this is crash recovery, not a semantic cache.
     if (requestId) await setCachedResponse(`req:${requestId}`, "replay", "n/a", data);
-    data.reply_text = deriveReplyText(data);
+    data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
     data.scout_summary = updatedSummary;
     if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
     data.next_move = extractNextBestAction(classification);
