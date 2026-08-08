@@ -76,6 +76,8 @@ const Globe = svg('<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 
 const ImageIcon = svg('<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>');
 const Sun = svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>');
 const Moon = svg('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>');
+// Retry arrow for a failed Scout message (lucide "rotate-ccw").
+const RotateCcw = svg('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>');
 const Trash2 = svg('<path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>');
 const Plus = svg('<path d="M5 12h14"/><path d="M12 5v14"/>');
 const History = svg('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>');
@@ -197,7 +199,7 @@ const I18N = {
     auth_couldnt_signup: "COULDN'T COMPLETE SIGNUP", auth_couldnt_login: "COULDN'T LOG IN",
     plan_free_tag: "No card needed", plan_starter_tag: "Get started", plan_pro_tag: "Most popular", plan_elite_tag: "It's GOLSZ Time",
     plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport — profile, achievements & career history", plan_free_feat3: "AI Scout athlete intake & goal discovery", plan_free_feat4: "GOLSZ Readiness score & My Next Move",
-    conversion_title: "We've learned enough about you — let's build your plan.", conversion_body: "GOLSZ Scout now knows your sport, your goals, and what you're working on. Upgrade to unlock deeper guidance built around your progression — not just more questions.", conversion_dismiss: "Not now", update_available: "A new version of GOLSZ is ready.", update_refresh: "Refresh", update_dismiss: "Dismiss", trial_ended_title: "Your trial has finished.", trial_ended_body: "Scout keeps everything you built together — your profile, your goal, its read on you. What stops is the deeper work: the personalised plan, the target list, and the research behind them. Pick a plan and carry on from exactly where you are.",
+    conversion_title: "We've learned enough about you — let's build your plan.", conversion_body: "GOLSZ Scout now knows your sport, your goals, and what you're working on. Upgrade to unlock deeper guidance built around your progression — not just more questions.", conversion_dismiss: "Not now", update_available: "A new version of GOLSZ is ready.", scout_try_again: "Try again", update_refresh: "Refresh", update_dismiss: "Dismiss", trial_ended_title: "Your trial has finished.", trial_ended_body: "Scout keeps everything you built together — your profile, your goal, its read on you. What stops is the deeper work: the personalised plan, the target list, and the research behind them. Pick a plan and carry on from exactly where you are.",
     feature_lock_body: "This is part of GOLSZ's guided pathway tools.", feature_lock_cta: "Upgrade to unlock",
     guided_step_goal: "Understanding your goal: {goal}", guided_step_goal_fallback: "Getting to know what you're working toward.",
     guided_step_passport: "Analyzing your Passport — {score}% complete.", guided_step_missing: "Missing: {list}.", guided_step_missing_none: "Your Passport basics are all filled in.",
@@ -221,7 +223,7 @@ const I18N = {
     home_greeting_morning: "Good morning,", home_greeting_afternoon: "Good afternoon,", home_greeting_evening: "Good evening,", home_grad_prefix: "Grad ",
     home_path_title: "YOUR PATH", home_path_you: "YOU", home_path_now: "NOW", home_path_developing: "Developing", home_path_goal_placeholder: "Set your goal",
     home_readiness_row_profile: "PROFILE", home_readiness_row_film: "FILM", home_readiness_row_performance: "PERFORMANCE", home_readiness_row_pathway: "PATHWAY",
-    home_readiness_status_profile_ok: "Complete", home_readiness_status_profile_no: "Needed", home_readiness_status_film_ok: "Added", home_readiness_status_film_no: "Needed",
+    home_readiness_status_profile_ok: "Strong", home_readiness_status_profile_no: "Needed", home_readiness_status_film_ok: "Added", home_readiness_status_film_no: "Needed",
     home_readiness_status_performance_ok: "Tracked", home_readiness_status_performance_no: "Building", home_readiness_status_pathway_ok: "Active", home_readiness_status_pathway_no: "Not set",
     home_readiness_teaser_profile_quality: "Upgrade to see exactly which Passport fields are holding your Readiness back, and by how much.", home_readiness_teaser_verification: "Upgrade to see how much identity verification would raise your Readiness.", home_readiness_teaser_performance: "Upgrade to see your performance trend across every benchmark you've recorded.", home_readiness_teaser_development: "Upgrade to see how your development plan is actually moving your Readiness.", home_readiness_teaser_pathway: "Upgrade to see exactly what your Pathway and targets are contributing to your Readiness.",
     home_scout_ask_ph: "Ask Scout anything…",
@@ -300,7 +302,7 @@ const I18N = {
     family_disclaimer: "The account owner must approve before a parent can see their private data. This confirms mutual consent — it isn't independent identity verification.",
     family_sent_msg: "Request sent — waiting on their approval.", family_not_found_msg: "No GOLSZ account found with that email.",
     family_couldnt_send: "Couldn't send request.",
-    passport_strip_highlights: "Highlights", passport_verified_label: "Verified", passport_member_strip: "VERIFIED GOLSZ MEMBER", passport_strip_videos: "videos", passport_strip_recorded: "recorded", passport_strip_focus: "focus areas", passport_strip_entries: "entries", passport_strip_benchmarks: "Benchmarks", passport_strip_development: "Development", passport_strip_timeline: "Timeline",
+    passport_strip_highlights: "Highlights", passport_verified_label: "Verified", passport_member_strip: "VERIFIED GOLSZ MEMBER", passport_member_strip_unverified: "GOLSZ MEMBER", passport_strip_videos: "videos", passport_strip_recorded: "recorded", passport_strip_focus: "focus areas", passport_strip_entries: "entries", passport_strip_benchmarks: "Benchmarks", passport_strip_development: "Development", passport_strip_timeline: "Timeline",
     highlights_title: "VERIFIED MEDIA", highlights_title_unverified: "MEDIA", highlights_empty: "No highlights yet.",
     passport_posts_title: "POSTS", passport_posts_empty: "No posts yet.",
     highlights_title_ph: "Highlight title (e.g. Full match vs Montreal)", highlights_link_ph: "Link (YouTube, Veo, Hudl…)",
@@ -420,7 +422,7 @@ const I18N = {
     banned_title: "Account suspended", banned_message: "Your GOLSZ account has been suspended. If you think this is a mistake, contact support.",
     appeal_start: "Appeal this suspension", appeal_placeholder: "Explain why you think this suspension is a mistake…", appeal_submit: "Submit appeal", appeal_submitted: "Your appeal has been submitted. A moderator will review it.",
     verify_title: "Get verified", verify_desc: "Request identity verification for your role. Optionally include a link to supporting proof (e.g. a club or federation profile).", verify_proof_placeholder: "Proof URL (optional)", verify_submit: "Request verification", verify_pending: "Your verification request is pending review.", verify_submitted: "Verification request submitted.",
-    scout_header: "AI SCOUT", scout_profile_built: "PROFILE BUILT", scout_trial_left: "TRIAL — {n} LEFT", scout_trial_days: "TRIAL ENDS IN {d}D", scout_live_agent: "LIVE AGENT", scout_questions_left: "QUESTIONS LEFT TODAY",
+    scout_header: "AI SCOUT", scout_trial_left: "TRIAL — {n} LEFT", scout_trial_days: "TRIAL ENDS IN {d}D", scout_live_agent: "LIVE AGENT", scout_questions_left: "QUESTIONS LEFT TODAY",
     scout_history_title: "History", scout_new_chat: "New chat", scout_no_past: "No past conversations yet.",
     scout_new_conversation: "New conversation", scout_ago_messages: " messages", scout_delete_conv: "Delete conversation",
     scout_scout_label: "SCOUT", scout_input_ph: "Talk to your scout…",
@@ -486,7 +488,7 @@ const I18N = {
     auth_couldnt_signup: "INSCRIPTION IMPOSSIBLE", auth_couldnt_login: "CONNEXION IMPOSSIBLE",
     plan_free_tag: "Sans carte bancaire", plan_starter_tag: "Pour commencer", plan_pro_tag: "Le plus populaire", plan_elite_tag: "C'est l'heure GOLSZ",
     plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique — profil, palmarès & parcours", plan_free_feat3: "Découverte de l'athlète & de vos objectifs avec Scout", plan_free_feat4: "Score GOLSZ Readiness & Ma Prochaine Étape",
-    conversion_title: "On en sait assez sur vous — construisons votre plan.", conversion_body: "GOLSZ Scout connaît maintenant votre sport, vos objectifs et ce sur quoi vous travaillez. Passez à un forfait supérieur pour un accompagnement plus poussé, centré sur votre progression — pas seulement plus de questions.", conversion_dismiss: "Pas maintenant", update_available: "Une nouvelle version de GOLSZ est prête.", update_refresh: "Actualiser", update_dismiss: "Ignorer", trial_ended_title: "Votre essai est terminé.", trial_ended_body: "Scout conserve tout ce que vous avez construit ensemble — votre profil, votre objectif, son analyse de vous. Ce qui s'arrête, c'est le travail de fond : le plan personnalisé, la liste de cibles et les recherches associées. Choisissez un forfait et reprenez exactement où vous en êtes.",
+    conversion_title: "On en sait assez sur vous — construisons votre plan.", conversion_body: "GOLSZ Scout connaît maintenant votre sport, vos objectifs et ce sur quoi vous travaillez. Passez à un forfait supérieur pour un accompagnement plus poussé, centré sur votre progression — pas seulement plus de questions.", conversion_dismiss: "Pas maintenant", update_available: "Une nouvelle version de GOLSZ est prête.", scout_try_again: "Réessayer", update_refresh: "Actualiser", update_dismiss: "Ignorer", trial_ended_title: "Votre essai est terminé.", trial_ended_body: "Scout conserve tout ce que vous avez construit ensemble — votre profil, votre objectif, son analyse de vous. Ce qui s'arrête, c'est le travail de fond : le plan personnalisé, la liste de cibles et les recherches associées. Choisissez un forfait et reprenez exactement où vous en êtes.",
     feature_lock_body: "Cela fait partie des outils de parcours guidé de GOLSZ.", feature_lock_cta: "Passer à un forfait supérieur",
     guided_step_goal: "Compréhension de votre objectif : {goal}", guided_step_goal_fallback: "Nous apprenons ce vers quoi vous travaillez.",
     guided_step_passport: "Analyse de votre Passeport — {score}% complété.", guided_step_missing: "Manquant : {list}.", guided_step_missing_none: "Les bases de votre Passeport sont toutes remplies.",
@@ -510,7 +512,7 @@ const I18N = {
     home_greeting_morning: "Bonjour,", home_greeting_afternoon: "Bon après-midi,", home_greeting_evening: "Bonsoir,", home_grad_prefix: "Promo ",
     home_path_title: "VOTRE PARCOURS", home_path_you: "VOUS", home_path_now: "MAINTENANT", home_path_developing: "En développement", home_path_goal_placeholder: "Définissez votre objectif",
     home_readiness_row_profile: "PROFIL", home_readiness_row_film: "VIDÉOS", home_readiness_row_performance: "PERFORMANCE", home_readiness_row_pathway: "PARCOURS",
-    home_readiness_status_profile_ok: "Complet", home_readiness_status_profile_no: "À faire", home_readiness_status_film_ok: "Ajoutées", home_readiness_status_film_no: "À faire",
+    home_readiness_status_profile_ok: "Solide", home_readiness_status_profile_no: "À faire", home_readiness_status_film_ok: "Ajoutées", home_readiness_status_film_no: "À faire",
     home_readiness_status_performance_ok: "Suivie", home_readiness_status_performance_no: "En cours", home_readiness_status_pathway_ok: "Actif", home_readiness_status_pathway_no: "Non défini",
     home_readiness_teaser_profile_quality: "Passez à un forfait supérieur pour voir exactement quels champs du Passeport freinent votre Readiness, et de combien.", home_readiness_teaser_verification: "Passez à un forfait supérieur pour voir de combien la vérification d'identité augmenterait votre Readiness.", home_readiness_teaser_performance: "Passez à un forfait supérieur pour voir votre progression sur chaque repère de performance enregistré.", home_readiness_teaser_development: "Passez à un forfait supérieur pour voir comment votre plan de développement fait évoluer votre Readiness.", home_readiness_teaser_pathway: "Passez à un forfait supérieur pour voir exactement ce que votre Parcours et vos cibles apportent à votre Readiness.",
     home_scout_ask_ph: "Demandez n'importe quoi à Scout…",
@@ -589,7 +591,7 @@ const I18N = {
     family_disclaimer: "Le titulaire du compte doit approuver avant qu'un parent puisse voir ses données privées. Ceci confirme un consentement mutuel — ce n'est pas une vérification d'identité indépendante.",
     family_sent_msg: "Demande envoyée — en attente de son approbation.", family_not_found_msg: "Aucun compte GOLSZ trouvé avec cet e-mail.",
     family_couldnt_send: "Impossible d'envoyer la demande.",
-    passport_strip_highlights: "Temps forts", passport_verified_label: "Vérifié", passport_member_strip: "MEMBRE GOLSZ VÉRIFIÉ", passport_strip_videos: "vidéos", passport_strip_recorded: "enregistrés", passport_strip_focus: "axes", passport_strip_entries: "entrées", passport_strip_benchmarks: "Repères", passport_strip_development: "Développement", passport_strip_timeline: "Parcours",
+    passport_strip_highlights: "Temps forts", passport_verified_label: "Vérifié", passport_member_strip: "MEMBRE GOLSZ VÉRIFIÉ", passport_member_strip_unverified: "MEMBRE GOLSZ", passport_strip_videos: "vidéos", passport_strip_recorded: "enregistrés", passport_strip_focus: "axes", passport_strip_entries: "entrées", passport_strip_benchmarks: "Repères", passport_strip_development: "Développement", passport_strip_timeline: "Parcours",
     highlights_title: "MÉDIAS VÉRIFIÉS", highlights_title_unverified: "MÉDIAS", highlights_empty: "Aucun temps fort pour l'instant.",
     passport_posts_title: "PUBLICATIONS", passport_posts_empty: "Aucune publication pour l'instant.",
     highlights_title_ph: "Titre du temps fort (ex. Match complet vs Montréal)", highlights_link_ph: "Lien (YouTube, Veo, Hudl…)",
@@ -709,7 +711,7 @@ const I18N = {
     verify_title: "Se faire vérifier", verify_desc: "Demandez une vérification d'identité pour votre rôle. Vous pouvez inclure un lien vers une preuve (profil de club ou de fédération, par exemple).", verify_proof_placeholder: "Lien de preuve (facultatif)", verify_submit: "Demander la vérification", verify_pending: "Votre demande de vérification est en cours d'examen.", verify_submitted: "Demande de vérification envoyée.",
     admin_add_event: "AJOUTER UN ÉVÉNEMENT", admin_title_ph: "Titre", admin_location_ph: "Lieu", admin_level_ph: "Niveau",
     admin_spots_ph: "Places disponibles", admin_create_event: "Créer l'événement",
-    scout_header: "AI SCOUT", scout_profile_built: "PROFIL CONSTRUIT", scout_trial_left: "ESSAI — {n} RESTANTS", scout_trial_days: "ESSAI SE TERMINE DANS {d}J", scout_live_agent: "AGENT EN DIRECT", scout_questions_left: "QUESTIONS RESTANTES AUJOURD'HUI",
+    scout_header: "AI SCOUT", scout_trial_left: "ESSAI — {n} RESTANTS", scout_trial_days: "ESSAI SE TERMINE DANS {d}J", scout_live_agent: "AGENT EN DIRECT", scout_questions_left: "QUESTIONS RESTANTES AUJOURD'HUI",
     scout_history_title: "Historique", scout_new_chat: "Nouvelle discussion", scout_no_past: "Aucune conversation passée.",
     scout_new_conversation: "Nouvelle conversation", scout_ago_messages: " messages", scout_delete_conv: "Supprimer la conversation",
     scout_scout_label: "SCOUT", scout_input_ph: "Parlez à votre agent…",
@@ -775,7 +777,7 @@ const I18N = {
     auth_couldnt_signup: "NO SE PUDO COMPLETAR EL REGISTRO", auth_couldnt_login: "NO SE PUDO INICIAR SESIÓN",
     plan_free_tag: "Sin tarjeta", plan_starter_tag: "Para empezar", plan_pro_tag: "Más popular", plan_elite_tag: "Es hora de GOLSZ",
     plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital — perfil, logros y trayectoria", plan_free_feat3: "Descubrimiento del atleta y tus objetivos con Scout", plan_free_feat4: "Puntuación GOLSZ Readiness y Tu Próximo Paso",
-    conversion_title: "Ya sabemos suficiente sobre ti — construyamos tu plan.", conversion_body: "GOLSZ Scout ya conoce tu deporte, tus objetivos y en qué estás trabajando. Mejora tu plan para obtener una guía más profunda centrada en tu progreso, no solo más preguntas.", conversion_dismiss: "Ahora no", update_available: "Hay una nueva versión de GOLSZ.", update_refresh: "Actualizar", update_dismiss: "Descartar", trial_ended_title: "Tu prueba ha terminado.", trial_ended_body: "Scout conserva todo lo que construyeron juntos: tu perfil, tu objetivo y su lectura de ti. Lo que se detiene es el trabajo profundo: el plan personalizado, la lista de objetivos y la investigación detrás. Elige un plan y continúa justo donde estás.",
+    conversion_title: "Ya sabemos suficiente sobre ti — construyamos tu plan.", conversion_body: "GOLSZ Scout ya conoce tu deporte, tus objetivos y en qué estás trabajando. Mejora tu plan para obtener una guía más profunda centrada en tu progreso, no solo más preguntas.", conversion_dismiss: "Ahora no", update_available: "Hay una nueva versión de GOLSZ.", scout_try_again: "Reintentar", update_refresh: "Actualizar", update_dismiss: "Descartar", trial_ended_title: "Tu prueba ha terminado.", trial_ended_body: "Scout conserva todo lo que construyeron juntos: tu perfil, tu objetivo y su lectura de ti. Lo que se detiene es el trabajo profundo: el plan personalizado, la lista de objetivos y la investigación detrás. Elige un plan y continúa justo donde estás.",
     feature_lock_body: "Esto forma parte de las herramientas de trayectoria guiada de GOLSZ.", feature_lock_cta: "Mejora tu plan para desbloquear",
     guided_step_goal: "Entendiendo tu objetivo: {goal}", guided_step_goal_fallback: "Conociendo hacia qué estás trabajando.",
     guided_step_passport: "Analizando tu Pasaporte — {score}% completo.", guided_step_missing: "Falta: {list}.", guided_step_missing_none: "Los datos básicos de tu Pasaporte están completos.",
@@ -799,7 +801,7 @@ const I18N = {
     home_greeting_morning: "Buenos días,", home_greeting_afternoon: "Buenas tardes,", home_greeting_evening: "Buenas noches,", home_grad_prefix: "Promo ",
     home_path_title: "TU CAMINO", home_path_you: "TÚ", home_path_now: "AHORA", home_path_developing: "En desarrollo", home_path_goal_placeholder: "Define tu objetivo",
     home_readiness_row_profile: "PERFIL", home_readiness_row_film: "VÍDEOS", home_readiness_row_performance: "RENDIMIENTO", home_readiness_row_pathway: "CAMINO",
-    home_readiness_status_profile_ok: "Completo", home_readiness_status_profile_no: "Pendiente", home_readiness_status_film_ok: "Añadidos", home_readiness_status_film_no: "Pendiente",
+    home_readiness_status_profile_ok: "Sólido", home_readiness_status_profile_no: "Pendiente", home_readiness_status_film_ok: "Añadidos", home_readiness_status_film_no: "Pendiente",
     home_readiness_status_performance_ok: "Registrado", home_readiness_status_performance_no: "En proceso", home_readiness_status_pathway_ok: "Activo", home_readiness_status_pathway_no: "Sin definir",
     home_readiness_teaser_profile_quality: "Mejora tu plan para ver exactamente qué campos del Pasaporte están frenando tu Readiness, y cuánto.", home_readiness_teaser_verification: "Mejora tu plan para ver cuánto aumentaría tu Readiness la verificación de identidad.", home_readiness_teaser_performance: "Mejora tu plan para ver tu progreso en cada marca de rendimiento registrada.", home_readiness_teaser_development: "Mejora tu plan para ver cómo tu plan de desarrollo mueve tu Readiness.", home_readiness_teaser_pathway: "Mejora tu plan para ver exactamente qué aportan tu Camino y tus objetivos a tu Readiness.",
     home_scout_ask_ph: "Pregúntale lo que sea a Scout…",
@@ -878,7 +880,7 @@ const I18N = {
     family_disclaimer: "El titular de la cuenta debe aprobar antes de que un padre o madre pueda ver sus datos privados. Esto confirma el consentimiento mutuo — no es una verificación de identidad independiente.",
     family_sent_msg: "Solicitud enviada — esperando su aprobación.", family_not_found_msg: "No se encontró ninguna cuenta de GOLSZ con ese correo.",
     family_couldnt_send: "No se pudo enviar la solicitud.",
-    passport_strip_highlights: "Momentos", passport_verified_label: "Verificado", passport_member_strip: "MIEMBRO GOLSZ VERIFICADO", passport_strip_videos: "vídeos", passport_strip_recorded: "registradas", passport_strip_focus: "áreas", passport_strip_entries: "entradas", passport_strip_benchmarks: "Marcas", passport_strip_development: "Desarrollo", passport_strip_timeline: "Trayectoria",
+    passport_strip_highlights: "Momentos", passport_verified_label: "Verificado", passport_member_strip: "MIEMBRO GOLSZ VERIFICADO", passport_member_strip_unverified: "MIEMBRO GOLSZ", passport_strip_videos: "vídeos", passport_strip_recorded: "registradas", passport_strip_focus: "áreas", passport_strip_entries: "entradas", passport_strip_benchmarks: "Marcas", passport_strip_development: "Desarrollo", passport_strip_timeline: "Trayectoria",
     highlights_title: "MEDIOS VERIFICADOS", highlights_title_unverified: "MEDIOS", highlights_empty: "Aún no hay mejores jugadas.",
     passport_posts_title: "PUBLICACIONES", passport_posts_empty: "Aún no hay publicaciones.",
     highlights_title_ph: "Título de la jugada (ej. Partido completo vs Montreal)", highlights_link_ph: "Enlace (YouTube, Veo, Hudl…)",
@@ -998,7 +1000,7 @@ const I18N = {
     verify_title: "Verificarse", verify_desc: "Solicita la verificación de identidad para tu rol. Puedes incluir un enlace de prueba (por ejemplo, un perfil de club o federación).", verify_proof_placeholder: "Enlace de prueba (opcional)", verify_submit: "Solicitar verificación", verify_pending: "Tu solicitud de verificación está pendiente de revisión.", verify_submitted: "Solicitud de verificación enviada.",
     admin_add_event: "AÑADIR EVENTO", admin_title_ph: "Título", admin_location_ph: "Ubicación", admin_level_ph: "Nivel",
     admin_spots_ph: "Plazas disponibles", admin_create_event: "Crear evento",
-    scout_header: "AI SCOUT", scout_profile_built: "PERFIL COMPLETADO", scout_trial_left: "PRUEBA — {n} RESTANTES", scout_trial_days: "LA PRUEBA TERMINA EN {d}D", scout_live_agent: "AGENTE EN VIVO", scout_questions_left: "PREGUNTAS RESTANTES HOY",
+    scout_header: "AI SCOUT", scout_trial_left: "PRUEBA — {n} RESTANTES", scout_trial_days: "LA PRUEBA TERMINA EN {d}D", scout_live_agent: "AGENTE EN VIVO", scout_questions_left: "PREGUNTAS RESTANTES HOY",
     scout_history_title: "Historial", scout_new_chat: "Nuevo chat", scout_no_past: "Aún no hay conversaciones pasadas.",
     scout_new_conversation: "Nueva conversación", scout_ago_messages: " mensajes", scout_delete_conv: "Eliminar conversación",
     scout_scout_label: "SCOUT", scout_input_ph: "Habla con tu agente…",
@@ -1064,7 +1066,7 @@ const I18N = {
     auth_couldnt_signup: "Η ΕΓΓΡΑΦΗ ΑΠΕΤΥΧΕ", auth_couldnt_login: "Η ΣΥΝΔΕΣΗ ΑΠΕΤΥΧΕ",
     plan_free_tag: "Χωρίς κάρτα", plan_starter_tag: "Ξεκινήστε", plan_pro_tag: "Δημοφιλέστερο", plan_elite_tag: "Είναι ώρα για GOLSZ",
     plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο — προφίλ, διακρίσεις & πορεία", plan_free_feat3: "Γνωριμία με τον αθλητή & τους στόχους σου μέσω του Scout", plan_free_feat4: "Βαθμολογία GOLSZ Readiness & Η Επόμενή σου Κίνηση",
-    conversion_title: "Μάθαμε αρκετά για εσένα — ας χτίσουμε το πλάνο σου.", conversion_body: "Ο GOLSZ Scout γνωρίζει πλέον το άθλημά σου, τους στόχους σου και τι δουλεύεις. Αναβάθμισε για βαθύτερη καθοδήγηση γύρω από την εξέλιξή σου — όχι απλώς περισσότερες ερωτήσεις.", conversion_dismiss: "Όχι τώρα", update_available: "Νέα έκδοση του GOLSZ είναι έτοιμη.", update_refresh: "Ανανέωση", update_dismiss: "Απόρριψη", trial_ended_title: "Η δοκιμή σου ολοκληρώθηκε.", trial_ended_body: "Ο Scout κρατά όλα όσα χτίσατε μαζί — το προφίλ σου, τον στόχο σου, την εκτίμησή του για σένα. Αυτό που σταματά είναι η βαθύτερη δουλειά: το εξατομικευμένο πλάνο, η λίστα στόχων και η έρευνα πίσω από αυτά. Διάλεξε πλάνο και συνέχισε ακριβώς από εκεί που είσαι.",
+    conversion_title: "Μάθαμε αρκετά για εσένα — ας χτίσουμε το πλάνο σου.", conversion_body: "Ο GOLSZ Scout γνωρίζει πλέον το άθλημά σου, τους στόχους σου και τι δουλεύεις. Αναβάθμισε για βαθύτερη καθοδήγηση γύρω από την εξέλιξή σου — όχι απλώς περισσότερες ερωτήσεις.", conversion_dismiss: "Όχι τώρα", update_available: "Νέα έκδοση του GOLSZ είναι έτοιμη.", scout_try_again: "Δοκίμασε ξανά", update_refresh: "Ανανέωση", update_dismiss: "Απόρριψη", trial_ended_title: "Η δοκιμή σου ολοκληρώθηκε.", trial_ended_body: "Ο Scout κρατά όλα όσα χτίσατε μαζί — το προφίλ σου, τον στόχο σου, την εκτίμησή του για σένα. Αυτό που σταματά είναι η βαθύτερη δουλειά: το εξατομικευμένο πλάνο, η λίστα στόχων και η έρευνα πίσω από αυτά. Διάλεξε πλάνο και συνέχισε ακριβώς από εκεί που είσαι.",
     feature_lock_body: "Αυτό αποτελεί μέρος των εργαλείων καθοδηγούμενης πορείας του GOLSZ.", feature_lock_cta: "Αναβάθμισε για ξεκλείδωμα",
     guided_step_goal: "Κατανοώντας τον στόχο σου: {goal}", guided_step_goal_fallback: "Μαθαίνουμε προς τι δουλεύεις.",
     guided_step_passport: "Ανάλυση του Διαβατηρίου σου — {score}% ολοκληρωμένο.", guided_step_missing: "Λείπει: {list}.", guided_step_missing_none: "Τα βασικά στοιχεία του Διαβατηρίου σου είναι πλήρη.",
@@ -1088,7 +1090,7 @@ const I18N = {
     home_greeting_morning: "Καλημέρα,", home_greeting_afternoon: "Καλό απόγευμα,", home_greeting_evening: "Καλησπέρα,", home_grad_prefix: "Απόφοιτος ",
     home_path_title: "ΤΟ ΜΟΝΟΠΑΤΙ ΣΟΥ", home_path_you: "ΕΣΥ", home_path_now: "ΤΩΡΑ", home_path_developing: "Σε ανάπτυξη", home_path_goal_placeholder: "Όρισε τον στόχο σου",
     home_readiness_row_profile: "ΠΡΟΦΙΛ", home_readiness_row_film: "ΒΙΝΤΕΟ", home_readiness_row_performance: "ΑΠΟΔΟΣΗ", home_readiness_row_pathway: "ΜΟΝΟΠΑΤΙ",
-    home_readiness_status_profile_ok: "Ολοκληρωμένο", home_readiness_status_profile_no: "Εκκρεμεί", home_readiness_status_film_ok: "Προστέθηκαν", home_readiness_status_film_no: "Εκκρεμεί",
+    home_readiness_status_profile_ok: "Δυνατό", home_readiness_status_profile_no: "Εκκρεμεί", home_readiness_status_film_ok: "Προστέθηκαν", home_readiness_status_film_no: "Εκκρεμεί",
     home_readiness_status_performance_ok: "Καταγράφεται", home_readiness_status_performance_no: "Σε εξέλιξη", home_readiness_status_pathway_ok: "Ενεργό", home_readiness_status_pathway_no: "Δεν έχει οριστεί",
     home_readiness_teaser_profile_quality: "Αναβάθμισε για να δεις ακριβώς ποια πεδία του Διαβατηρίου περιορίζουν το Readiness σου, και κατά πόσο.", home_readiness_teaser_verification: "Αναβάθμισε για να δεις πόσο θα αύξανε το Readiness σου η επαλήθευση ταυτότητας.", home_readiness_teaser_performance: "Αναβάθμισε για να δεις την πρόοδό σου σε κάθε δείκτη απόδοσης που έχεις καταγράψει.", home_readiness_teaser_development: "Αναβάθμισε για να δεις πώς το πλάνο ανάπτυξής σου επηρεάζει το Readiness σου.", home_readiness_teaser_pathway: "Αναβάθμισε για να δεις τι ακριβώς προσφέρουν το Μονοπάτι και οι στόχοι σου στο Readiness σου.",
     home_scout_ask_ph: "Ρώτησε οτιδήποτε τον Scout…",
@@ -1167,7 +1169,7 @@ const I18N = {
     family_disclaimer: "Ο κάτοχος του λογαριασμού πρέπει να εγκρίνει πριν ένας γονέας δει τα ιδιωτικά του δεδομένα. Αυτό επιβεβαιώνει αμοιβαία συναίνεση — δεν αποτελεί ανεξάρτητη επαλήθευση ταυτότητας.",
     family_sent_msg: "Το αίτημα στάλθηκε — αναμονή έγκρισης.", family_not_found_msg: "Δεν βρέθηκε λογαριασμός GOLSZ με αυτό το email.",
     family_couldnt_send: "Δεν ήταν δυνατή η αποστολή του αιτήματος.",
-    passport_strip_highlights: "Στιγμιότυπα", passport_verified_label: "Επαληθευμένο", passport_member_strip: "ΕΠΑΛΗΘΕΥΜΕΝΟ ΜΕΛΟΣ GOLSZ", passport_strip_videos: "βίντεο", passport_strip_recorded: "καταγραφές", passport_strip_focus: "τομείς", passport_strip_entries: "καταχωρήσεις", passport_strip_benchmarks: "Δείκτες", passport_strip_development: "Ανάπτυξη", passport_strip_timeline: "Πορεία",
+    passport_strip_highlights: "Στιγμιότυπα", passport_verified_label: "Επαληθευμένο", passport_member_strip: "ΕΠΑΛΗΘΕΥΜΕΝΟ ΜΕΛΟΣ GOLSZ", passport_member_strip_unverified: "ΜΕΛΟΣ GOLSZ", passport_strip_videos: "βίντεο", passport_strip_recorded: "καταγραφές", passport_strip_focus: "τομείς", passport_strip_entries: "καταχωρήσεις", passport_strip_benchmarks: "Δείκτες", passport_strip_development: "Ανάπτυξη", passport_strip_timeline: "Πορεία",
     highlights_title: "ΕΠΑΛΗΘΕΥΜΕΝΑ ΜΕΣΑ", highlights_title_unverified: "ΜΕΣΑ", highlights_empty: "Δεν υπάρχουν highlights ακόμα.",
     passport_posts_title: "ΑΝΑΡΤΗΣΕΙΣ", passport_posts_empty: "Δεν υπάρχουν αναρτήσεις ακόμα.",
     highlights_title_ph: "Τίτλος highlight (π.χ. Πλήρης αγώνας εναντίον Μόντρεαλ)", highlights_link_ph: "Σύνδεσμος (YouTube, Veo, Hudl…)",
@@ -1287,7 +1289,7 @@ const I18N = {
     verify_title: "Λάβετε επαλήθευση", verify_desc: "Ζητήστε επαλήθευση ταυτότητας για τον ρόλο σας. Προαιρετικά, προσθέστε έναν σύνδεσμο απόδειξης (π.χ. προφίλ συλλόγου ή ομοσπονδίας).", verify_proof_placeholder: "Σύνδεσμος απόδειξης (προαιρετικό)", verify_submit: "Αίτημα επαλήθευσης", verify_pending: "Το αίτημα επαλήθευσής σας εκκρεμεί προς έλεγχο.", verify_submitted: "Το αίτημα επαλήθευσης υποβλήθηκε.",
     admin_add_event: "ΠΡΟΣΘΗΚΗ ΕΚΔΗΛΩΣΗΣ", admin_title_ph: "Τίτλος", admin_location_ph: "Τοποθεσία", admin_level_ph: "Επίπεδο",
     admin_spots_ph: "Διαθέσιμες θέσεις", admin_create_event: "Δημιουργία εκδήλωσης",
-    scout_header: "AI SCOUT", scout_profile_built: "ΠΡΟΦΙΛ ΟΛΟΚΛΗΡΩΜΕΝΟ", scout_trial_left: "ΔΟΚΙΜΗ — ΑΠΟΜΕΝΟΥΝ {n}", scout_trial_days: "Η ΔΟΚΙΜΗ ΛΗΓΕΙ ΣΕ {d}Η", scout_live_agent: "ΖΩΝΤΑΝΟΣ ΠΡΑΚΤΟΡΑΣ", scout_questions_left: "ΕΡΩΤΗΣΕΙΣ ΠΟΥ ΑΠΟΜΕΝΟΥΝ ΣΗΜΕΡΑ",
+    scout_header: "AI SCOUT", scout_trial_left: "ΔΟΚΙΜΗ — ΑΠΟΜΕΝΟΥΝ {n}", scout_trial_days: "Η ΔΟΚΙΜΗ ΛΗΓΕΙ ΣΕ {d}Η", scout_live_agent: "ΖΩΝΤΑΝΟΣ ΠΡΑΚΤΟΡΑΣ", scout_questions_left: "ΕΡΩΤΗΣΕΙΣ ΠΟΥ ΑΠΟΜΕΝΟΥΝ ΣΗΜΕΡΑ",
     scout_history_title: "Ιστορικό", scout_new_chat: "Νέα συνομιλία", scout_no_past: "Δεν υπάρχουν προηγούμενες συνομιλίες ακόμα.",
     scout_new_conversation: "Νέα συνομιλία", scout_ago_messages: " μηνύματα", scout_delete_conv: "Διαγραφή συνομιλίας",
     scout_scout_label: "SCOUT", scout_input_ph: "Μιλήστε στον σκάουτ σας…",
@@ -4783,9 +4785,17 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
             pattern — decorative, not a scannable code, and labelled as a
             member strip rather than implying it encodes anything scannable. */}
         <div style={{ background: C.pitch, borderTop: `1px solid ${C.line2}`, padding: "10px 12px" }}>
+          {/* Said "VERIFIED GOLSZ MEMBER" for EVERY athlete, verified or
+              not — directly under a Verified badge that IS correctly gated on
+              profiles.identity_verified. On a shared Passport a scout would
+              read that as a verification claim about an athlete nobody has
+              verified. The badge stays gated; this strip now only says
+              "verified" when that is true. */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
-            <Shield size={12} color={C.lime} />
-            <span style={{ fontSize: 8.5, letterSpacing: "0.16em", fontWeight: 800, color: C.lime }}>{t("passport_member_strip")}</span>
+            <Shield size={12} color={identityVerified ? C.lime : C.slate} />
+            <span style={{ fontSize: 8.5, letterSpacing: "0.16em", fontWeight: 800, color: identityVerified ? C.lime : C.slate }}>
+              {identityVerified ? t("passport_member_strip") : t("passport_member_strip_unverified")}
+            </span>
           </div>
           <div aria-hidden="true" style={{ display: "flex", alignItems: "flex-end", gap: 1, height: 26, marginBottom: 6 }}>
             {(() => {
@@ -6713,14 +6723,6 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
   // reply/limit-reached response arrives, or forever null for an admin/
   // unlimited account (server omits scout_usage in that case).
   const [scoutUsage, setScoutUsage] = useState(null);
-  // Weighted profile readiness, computed SERVER-side (scoutReadiness in
-  // api/scout.js) and sent as data.scout_profile. It deliberately replaces
-  // the old `known.length` count of non-empty keys: that number could read
-  // "11 FIELDS ON FILE" for an athlete whose goal, level and club Scout
-  // still did not know, so it overstated how well Scout understood them.
-  // Null until the first reply of the session, in which case the header
-  // falls back to the plain LIVE AGENT label rather than guessing.
-  const [scoutProfileMeta, setScoutProfileMeta] = useState(null);
   // §14 — trial state, server-authoritative (api/scout.js reserves against a
   // row lock and reports what is actually left). The client never computes
   // days or counts itself: a stale local guess telling an athlete they have
@@ -7061,9 +7063,11 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       // limit-reached (402) responses — capture it either way so the
       // header's "questions left today" count updates even on a refusal.
       if (data && data.scout_usage && typeof data.scout_usage === "object") setScoutUsage(data.scout_usage);
-      if (data && data.scout_profile && typeof data.scout_profile === "object") {
-        setScoutProfileMeta(data.scout_profile);
-        if (Number.isInteger(data.scout_profile.state)) setScoutState(data.scout_profile.state);
+      // Only the STATE is kept: it drives which action chips are offered.
+      // The readiness score deliberately stays server-side — see the Scout
+      // header comment for why a third percentage on screen was a problem.
+      if (data && data.scout_profile && Number.isInteger(data.scout_profile.state)) {
+        setScoutState(data.scout_profile.state);
       }
       if (data && data.scout_trial && typeof data.scout_trial === "object") {
         setScoutTrial(data.scout_trial);
@@ -7135,7 +7139,13 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       const msg = e && e.code === "SCOUT_HTTP_ERROR" ? e.message
         : isTimeout ? t("scout_timed_out")
         : t("scout_connection_dropped");
-      setMsgs((m) => [...m, { role: "assistant", text: msg, at: Date.now() }]);
+      // failedInput carries the athlete's own text so the bubble can offer a
+      // retry. Without it a failure was a dead end: three "Upstream model
+      // call failed" bubbles in a row on 2026-08-08, and the only way
+      // forward was retyping the question. A photo is deliberately not
+      // retried — it is no longer in scope by then, and silently sending
+      // the text without the image would be worse than making them redo it.
+      setMsgs((m) => [...m, { role: "assistant", text: msg, at: Date.now(), failedInput: photo ? null : content }]);
       // Persist the fallback the same way a real reply is persisted below —
       // without this, a failed call left the user's own message logged
       // (logTurn above, before the request even went out) with no trace of
@@ -7160,6 +7170,15 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
     if (nextMove.type === "ask_scout" && nextMove.params && nextMove.params.prompt) setInput(nextMove.params.prompt);
     else if ((nextMove.type === "complete_profile" || nextMove.type === "share_passport") && onGoToProfile) onGoToProfile();
   }
+  // Drops the failure bubble and sends the same text again. The bubble is
+  // removed first so a second failure does not stack — the athlete should
+  // see one error at a time, not a growing wall of them.
+  function retryFailed(msgIndex, text) {
+    if (!text || pending || sendingRef.current) return;
+    setMsgs((m) => m.filter((_, i) => i !== msgIndex));
+    send(text);
+  }
+
   // Clears server-side too (dismiss_next_move, migration 070) so a stale
   // suggestion doesn't just reappear on the next reload — see nextMove's
   // own comment above for why a plain client-side hide isn't enough.
@@ -7291,12 +7310,19 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
           )}
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             <span style={{ fontSize: 9, color: C.slate, fontFamily: "'Space Mono', monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {/* Deliberately does NOT show Scout's own readiness score. That
+                  number is real and drives Scout's behaviour, but putting it
+                  here meant an athlete saw THREE different percentages about
+                  themselves — GOLSZ Readiness on Home, Passport quality, and
+                  this — which disagreed because they measure different
+                  things. GOLSZ Readiness on Home is the one athlete-facing
+                  completeness number; scoutReadiness stays internal, where it
+                  gates behaviour and cannot contradict anything on screen. */}
               {scoutTrial && scoutTrial.active
                 ? (scoutTrial.days_left <= 1
                     ? t("scout_trial_days").replace("{d}", String(scoutTrial.days_left))
                     : t("scout_trial_left").replace("{n}", String(scoutTrial.remaining)))
                 : scoutUsage ? `${scoutUsage.remaining} ${t("scout_questions_left")}`
-                : scoutProfileMeta && typeof scoutProfileMeta.readiness === "number" ? `${scoutProfileMeta.readiness}% ${t("scout_profile_built")}`
                 : t("scout_live_agent")}
             </span>
             <button onClick={openHistory} title={t("scout_history_title")} style={iconBtn(showHistory ? C.lime : C.slate)}><History size={15} /></button>
@@ -7355,6 +7381,15 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
             <div key={i} className="msg" style={m.role === "user" ? bubbleUser : bubbleAgent}>
               {m.photo && <img src={m.photo} style={{ display: "block", maxWidth: "100%", borderRadius: 10, marginBottom: m.text ? 6 : 0 }} />}
               {m.text && <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>}
+              {m.failedInput && (
+                <button
+                  onClick={() => retryFailed(i, m.failedInput)}
+                  disabled={pending}
+                  style={{ marginTop: 8, background: "transparent", border: `1px solid ${C.lime}`, color: C.lime, borderRadius: 9, padding: "6px 12px", fontWeight: 800, fontSize: 12, cursor: pending ? "default" : "pointer", fontFamily: "inherit", opacity: pending ? 0.5 : 1, display: "flex", alignItems: "center", gap: 6 }}
+                >
+                  <RotateCcw size={13} /> {t("scout_try_again")}
+                </button>
+              )}
               {m.suggestedTargets && m.suggestedTargets.length > 0 && (
                 hasFeature(plan, "targets") ? (
                   <button onClick={() => addSuggestedTargets(i, m.suggestedTargets)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
@@ -7708,6 +7743,10 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
   // objects directly.
   const filmAdded = !!(athlete && Array.isArray(athlete.highlights) && athlete.highlights.length > 0);
   const readinessStatus = [
+    // "Strong", not "Complete". The threshold is 70% of Passport quality, so
+    // an athlete could see PROFILE: Complete on Home while Scout was still
+    // saying it did not know their age — which was live on 2026-08-08 and is
+    // the kind of contradiction that makes both numbers untrustworthy.
     { key: "profile", ok: !!(quality && quality.score >= 70) },
     { key: "film", ok: filmAdded },
     { key: "performance", ok: !!(performance && performance.metricsTracked > 0) },
@@ -7920,8 +7959,8 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
       </div>
 
       <div style={{ display: "flex", gap: 18, padding: "0 2px" }}>
-        <button onClick={() => onNavigate("profile")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 5 }}><User size={14} color={C.lime} />{t("nav_profile")}</button>
-        <button onClick={() => onNavigate("targets")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 5 }}><Target size={14} color={C.lime} />{t("nav_targets")}</button>
+        <button onClick={() => onNavigate("profile")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 5 }}><User size={14} color={C.lime} />{t("nav_passport")}</button>
+        <button onClick={() => onNavigate("targets")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 5 }}><Target size={14} color={C.lime} />{t("nav_plan")}</button>
       </div>
     </div>
   );
@@ -8809,7 +8848,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
     { id: "home", icon: Home, label: t("nav_home") },
     { id: "scout", icon: Radar, label: t("nav_ai_scout") },
     { id: "targets", icon: Share, label: t("nav_plan") },
-    { id: "profile", icon: User, label: t("nav_profile") },
+    { id: "profile", icon: User, label: t("nav_passport") },   // the page is titled SPORTS PASSPORT — match it
   ];
 
   const go = (id) => {
