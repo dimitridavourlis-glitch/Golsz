@@ -924,6 +924,56 @@ const MEMORY_ASSERTED_TYPES = new Set(["FACT", "USER_STATED"]);
 // drafted_email and research_note together -- the athlete's stated facts
 // were being dropped exactly when the reply was richest. Strict parse first
 // (the normal path), then rebuild from the fields that did survive.
+// Salvages ONE top-level value out of a JSON object that may be truncated.
+// A long researched reply can hit max_output_tokens mid-object, and strict
+// JSON.parse then throws away the whole payload — including fields that were
+// emitted completely before the cut. Scans from the key with a
+// bracket/string-aware counter and returns the balanced substring, so an
+// early field survives a severed tail. This is why memory_writes was moved to
+// second position in the contract.
+function salvageJsonValue(raw, key) {
+  const at = raw.indexOf(`"${key}"`);
+  if (at < 0) return undefined;
+  let i = raw.indexOf(":", at + key.length + 2);
+  if (i < 0) return undefined;
+  i += 1;
+  while (i < raw.length && /\s/.test(raw[i])) i += 1;
+  const open = raw[i];
+  if (open === '"') {
+    // String value: walk to the closing quote, honouring escapes. A severed
+    // string is unrecoverable and correctly yields undefined.
+    let esc = false;
+    for (let j = i + 1; j < raw.length; j += 1) {
+      const c = raw[j];
+      if (esc) { esc = false; continue; }
+      if (c === "\\") { esc = true; continue; }
+      if (c === '"') { try { return JSON.parse(raw.slice(i, j + 1)); } catch { return undefined; } }
+    }
+    return undefined;
+  }
+  if (open !== "[" && open !== "{") return undefined;
+  const close = open === "[" ? "]" : "}";
+  let depth = 0, inStr = false, esc = false;
+  for (let j = i; j < raw.length; j += 1) {
+    const c = raw[j];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === "\\") esc = true;
+      else if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') { inStr = true; continue; }
+    if (c === open) depth += 1;
+    else if (c === close) {
+      depth -= 1;
+      if (depth === 0) {
+        try { return JSON.parse(raw.slice(i, j + 1)); } catch { return undefined; }
+      }
+    }
+  }
+  return undefined;
+}
+
 const REPLY_FIELDS = [
   "reply", "memory_writes", "research_note", "profile_updates",
   "scout_context_updates", "suggested_targets", "suggested_dev_items",
