@@ -969,7 +969,14 @@ function salvageJsonValue(raw, key) {
     }
     return undefined;
   }
-  if (open !== "[" && open !== "{") return undefined;
+  if (open !== "[" && open !== "{") {
+    // Literal: true / false / null / a number. Only strings, arrays and
+    // objects were salvageable before, so a boolean field in a truncated
+    // reply was silently lost even though it is trivially recoverable.
+    const lit = /^(true|false|null|-?\d+(?:\.\d+)?)/.exec(raw.slice(i));
+    if (!lit) return undefined;
+    try { return JSON.parse(lit[1]); } catch { return undefined; }
+  }
   const close = open === "[" ? "]" : "}";
   let depth = 0, inStr = false, esc = false;
   for (let j = i; j < raw.length; j += 1) {
@@ -995,7 +1002,7 @@ function salvageJsonValue(raw, key) {
 const REPLY_FIELDS = [
   "reply", "memory_writes", "research_note", "profile_updates",
   "scout_context_updates", "suggested_targets", "suggested_dev_items",
-  "suggested_pathway", "drafted_email",
+  "suggested_pathway", "drafted_email", "profile_confirmed",
 ];
 
 function parseReplyObject(clean) {
@@ -1291,7 +1298,7 @@ Be honest before you are encouraging. If something is unrealistic, say so kindly
 SCOUT MEMORY (when present in the message) is your own durable memory of this athlete from earlier conversations, already split by trust: things they TOLD you are confirmed and must never be re-asked; things you INFERRED are not confirmed, so confirm one in passing before you build advice on it. "Still unknown" lists what you'd most benefit from learning — prefer those over generic questions.
 GOLSZ KNOWLEDGE (when present) is GOLSZ's own verified, curated reference on sport/eligibility/pathway rules. Prefer it over your own recollection and over a web result when they disagree, and cite it naturally ("GOLSZ's eligibility reference says..."). If it's absent or doesn't cover the question, say what you actually know and use web search — never invent a GOLSZ rule.
 GOLSZ CAPABILITIES (when present) is the real, current list of what the product can and cannot do. Anything listed as NOT part of GOLSZ does not exist — never suggest it, never imply it's coming, and never tell an athlete to find or contact someone through it. When a task needs something GOLSZ doesn't do, say plainly that GOLSZ doesn't do it and give them the real off-platform way to do it themselves.
-OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","memory_writes":[{"type":"...","subject":"...","content":"...","source":"athlete_stated|ai_inferred","confidence":0-1,"importance":1-5}],"research_note":{"summary":"...","confidence":0-1,"valid_days":N} or null,"profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"drafted_email":"the full drafted email text" or null}
+OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","memory_writes":[{"type":"...","subject":"...","content":"...","source":"athlete_stated|ai_inferred","confidence":0-1,"importance":1-5}],"research_note":{"summary":"...","confidence":0-1,"valid_days":N} or null,"profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"drafted_email":"the full drafted email text" or null,"profile_confirmed":true ONLY on the turn where the athlete confirms your summary of them is right, else null}
 Allowed profile_updates keys: name, age, dob, occupation, sport, position, secondary_position, home_city, home_country, current_city, current_country, citizenship, club, previous_clubs, level, grad_year, gpa, license, looking_for_players, education_level, goal. Location is FOUR separate things and you must never merge them: home_city/home_country are where they are FROM, current_city/current_country are where they are NOW, citizenship is the passport they hold. Only set the one they actually told you about — setting the wrong one corrupts the record. previous_clubs is an array of {"name","from","to","level"} for clubs they have LEFT; the club they are at now goes in "club". Prefer dob (YYYY-MM-DD) over age when you know it. Do not repeat known fields. "goal" should be a real, clearly-stated goal the athlete actually confirmed (e.g. "play NCAA D1 soccer"), not a vague guess — setting it marks their goal as officially defined, so only set it once you're genuinely sure.
 Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need, budget. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
 Only include research_note when THIS reply actually used web search to establish reusable factual findings (a league structure, an eligibility rule, a transfer window, a country's pathway, position benchmarks). Write summary as standalone reference notes that would still be correct and useful for a DIFFERENT athlete asking the same question — plain facts and figures, no advice, no "you"/"your", no reference to this athlete's own situation. valid_days is how long the finding stays trustworthy: 7 for anything with an active deadline or window, 30-90 for stable rules and structures. Omit entirely when you answered from your own knowledge, from PRIOR RESEARCH, or from GOLSZ KNOWLEDGE without searching.
@@ -2228,9 +2235,52 @@ function stateDirective(state, readiness) {
   }
   if (state === 2) {
     return `\n\nSCOUT STATE: PROFILE READY (${readiness.score}%).\n`
-      + `You now know enough to be useful. Give them a short, natural summary of how you understand them — who they are, where they are, what they're aiming for, what stands out, what's still thin — and ask them to confirm or correct it. Do this ONCE, conversationally, not as a form.`;
+      + `You now know enough to be useful. Give them a short, natural summary of how you understand them — who they are, where they are, what they're aiming for, what stands out, what's still thin — and ask them to confirm or correct it. Do this ONCE, conversationally, not as a form.\n`
+      + `When they confirm it is right, set "profile_confirmed":true on THAT reply. If they correct you, update the profile instead and leave it null.`;
   }
   return `\n\nSCOUT STATE: ASSESSED (${readiness.score}%). They have confirmed your understanding. Personalised planning is unlocked subject to their plan — see GOLSZ CAPABILITIES.`;
+}
+
+// State 2 -> 3 is the one transition that cannot be derived from data alone:
+// it needs the athlete to say "yes, that's right". So it is the one place the
+// model's own output is allowed to move the state — and it is fenced in hard.
+//
+// The write only happens when the SERVER already derived state 2, which means
+// scoutReadiness() independently confirmed every critical field, the goal and
+// half the high-value fields are present. The model cannot skip TRIAGE by
+// claiming a confirmation, cannot re-confirm an already-confirmed athlete,
+// and cannot set any other state. All it can do is report the one fact only
+// the conversation carries.
+//
+// Best-effort and never awaited into the response path: a failed write means
+// Scout asks for confirmation once more next turn, which is recoverable. A
+// blocked reply is not.
+async function recordProfileConfirmation(userId, scoutState, data) {
+  if (scoutState !== 2 || !userId || !data) return false;
+  // The flag lives inside the model's JSON reply, not on the API response
+  // object — same extraction the other suggested_* extractors use.
+  let flag;
+  try {
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
+    const parsed = parseReplyObject(raw.replace(/```json|```/g, "").trim());
+    flag = parsed && parsed.profile_confirmed;
+  } catch { return false; }
+  if (!(flag === true || flag === "true" || flag === "yes")) return false;
+  const svcKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!svcKey || !process.env.SUPABASE_URL) return false;
+  try {
+    const r = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&scout_profile_confirmed_at=is.null`, {
+      method: "PATCH",
+      headers: { apikey: svcKey, Authorization: "Bearer " + svcKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ scout_profile_confirmed_at: new Date().toISOString(), scout_state: 3 }),
+    });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    console.log("GOLSZ scout profile confirmed:", JSON.stringify({ userId, state: 3 }));
+    return true;
+  } catch (e) {
+    console.error("GOLSZ profile confirmation persist failed:", e);
+    return false;
+  }
 }
 
 async function buildAuthoritativeContext(userId) {
@@ -3188,6 +3238,9 @@ export default async function handler(req, res) {
     data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         data.scout_profile = scoutProfile;
+        if (await recordProfileConfirmation(userId, scoutState, data)) {
+          data.scout_profile = { ...scoutProfile, state: 3, label: SCOUT_STATES[3] };
+        }
         // next_move is THIS request's own classification result, not a fact
         // about the shared cached answer — attached only after
         // setCachedResponse's JSON.stringify has already run (synchronously,
@@ -3280,6 +3333,9 @@ export default async function handler(req, res) {
     data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         data.scout_profile = scoutProfile;
+        if (await recordProfileConfirmation(userId, scoutState, data)) {
+          data.scout_profile = { ...scoutProfile, state: 3, label: SCOUT_STATES[3] };
+        }
         data.next_move = extractNextBestAction(classification);
         data.suggested_targets = extractSuggestedTargets(data);
         data.suggested_dev_items = extractSuggestedDevItems(data);
