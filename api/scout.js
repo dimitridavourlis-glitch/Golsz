@@ -1759,34 +1759,95 @@ const CAPABILITY_CACHE_TTL_MS = 5 * 60 * 1000;
 // good value, never throw into the request path). Splits on `available`
 // because the unavailable rows are the ones that actually change behavior —
 // `notes` carries the "never suggest this" instruction the admin wrote.
-async function getCapabilityKnowledge() {
+async function getCapabilityRows() {
   const now = Date.now();
   if (capabilityCache && now - capabilityCacheAt < CAPABILITY_CACHE_TTL_MS) return capabilityCache;
   const supaUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
-  if (!supaUrl || !serviceKey) return capabilityCache || "";
+  if (!supaUrl || !serviceKey) return capabilityCache || [];
   try {
-    const r = await fetch(`${supaUrl}/rest/v1/product_capabilities?select=key,label,available,plan_min,notes&order=key`, {
+    const r = await fetch(`${supaUrl}/rest/v1/product_capabilities?select=key,label,available,plan_min,notes,requires_profile_ready,min_scout_state,requires_fields,safety_note&order=key`, {
       headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
     });
-    if (!r.ok) return capabilityCache || "";
+    if (!r.ok) return capabilityCache || [];
     const rows = await r.json();
-    if (!Array.isArray(rows) || !rows.length) return capabilityCache || "";
-    const live = rows.filter((c) => c.available);
-    const gone = rows.filter((c) => !c.available);
-    let text = "";
-    if (live.length) {
-      text += "Available on GOLSZ today:\n" + live.map((c) => `- ${c.label}${c.plan_min ? ` (from the ${c.plan_min} plan)` : ""}${c.notes ? ` — ${c.notes}` : ""}`).join("\n");
-    }
-    if (gone.length) {
-      text += `${text ? "\n" : ""}NOT part of GOLSZ — never suggest, imply, or offer these, and never tell an athlete to find or contact someone through them:\n` + gone.map((c) => `- ${c.label}${c.notes ? ` — ${c.notes}` : ""}`).join("\n");
-    }
-    capabilityCache = clampBlock(text, RETRIEVAL_BUDGET.capabilities);
+    if (!Array.isArray(rows) || !rows.length) return capabilityCache || [];
+    capabilityCache = rows;
     capabilityCacheAt = now;
-    return capabilityCache;
+    return rows;
   } catch {
-    return capabilityCache || "";
+    return capabilityCache || [];
   }
+}
+
+// §21B/§21D/§21E — the manifest is rendered PER ATHLETE, not once globally.
+//
+// The old version emitted two buckets, available and not-available, which
+// left Scout unable to distinguish three completely different situations
+// that all felt like "no" to an athlete:
+//
+//   * we do this, but I need to know more about you first
+//   * we do this, but it is on a higher plan
+//   * we genuinely do not do this
+//
+// Collapsing those is what made Scout tell athletes GOLSZ "can't" do things
+// GOLSZ does, and made it sell upgrades for features it could not have
+// personalised anyway. Migration 107 added the columns; this reads them.
+//
+// ORDER MATTERS: when something needs BOTH more data and a higher plan it
+// goes in the data bucket. Charging an athlete for a plan we could not build
+// yet is the single worst outcome here, so the data gap is always named
+// first and the upsell waits until it is genuinely the only thing in the way.
+const PLAN_RANK = { free: 0, starter: 1, pro: 2, elite: 3 };
+function planRank(p) {
+  const r = PLAN_RANK[String(p || "").toLowerCase()];
+  return Number.isInteger(r) ? r : 0;
+}
+
+function renderCapabilities(rows, ctx) {
+  if (!Array.isArray(rows) || !rows.length) return "";
+  const { entitlementPlan, scoutState, profileReady, athlete } = ctx || {};
+  const myRank = planRank(entitlementPlan);
+  const st = Number.isInteger(scoutState) ? scoutState : 0;
+
+  const nowList = [], needDataList = [], needPlanList = [], goneList = [];
+
+  for (const c of rows) {
+    const line = `- ${c.label}${c.notes ? ` — ${c.notes}` : ""}${c.safety_note ? ` [SAFETY: ${c.safety_note}]` : ""}`;
+    if (!c.available) { goneList.push(line); continue; }
+
+    const needsReady = c.requires_profile_ready === true && !profileReady;
+    const needsState = Number.isInteger(c.min_scout_state) && st < c.min_scout_state;
+    const missingFields = (Array.isArray(c.requires_fields) ? c.requires_fields : [])
+      .filter((f) => !(athlete && athlete[f] !== null && athlete[f] !== undefined && athlete[f] !== ""));
+    const planLocked = planRank(c.plan_min) > myRank;
+
+    if (needsReady || needsState || missingFields.length) {
+      const why = missingFields.length
+        ? `still need: ${missingFields.join(", ")}`
+        : "need to finish understanding them first";
+      needDataList.push(`${line} (${why})`);
+    } else if (planLocked) {
+      needPlanList.push(`${line} (on the ${c.plan_min} plan)`);
+    } else {
+      nowList.push(line);
+    }
+  }
+
+  let text = "";
+  if (nowList.length) {
+    text += `You can do these for this athlete RIGHT NOW:\n${nowList.join("\n")}`;
+  }
+  if (needDataList.length) {
+    text += `${text ? "\n" : ""}REAL, AND THEY ALREADY QUALIFY — you just do not know enough yet. Never present these as locked or as a reason to upgrade; say plainly that you can do it and what you need from them first:\n${needDataList.join("\n")}`;
+  }
+  if (needPlanList.length) {
+    text += `${text ? "\n" : ""}REAL, but on a higher plan than theirs. When one of these is genuinely what this athlete needs next, name it, say in one line what it would do for THIS situation, and name the tier. Only ever point upward:\n${needPlanList.join("\n")}`;
+  }
+  if (goneList.length) {
+    text += `${text ? "\n" : ""}NOT part of GOLSZ — never suggest, imply, or offer these, and never tell an athlete to find or contact someone through them:\n${goneList.join("\n")}`;
+  }
+  return clampBlock(text, RETRIEVAL_BUDGET.capabilities);
 }
 
 // GOLSZ Core lookup. Goes through the search_golsz_knowledge() RPC rather
@@ -3000,12 +3061,12 @@ export default async function handler(req, res) {
     // getCapabilityKnowledge is global and cached. The GOLSZ Core lookup
     // can't run here because it needs athleteState.sport, so it runs
     // alongside the classifier below instead.
-    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady, trialStartedAt, trialUsed, storedAssessment }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
+    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady, trialStartedAt, trialUsed, storedAssessment }, athleteState, planKnowledge, authContext, capabilityRows] = await Promise.all([
       getProfileMeta(userId),
       getAthleteState(userId),
       getPlanKnowledge(),
       buildAuthoritativeContext(userId),
-      getCapabilityKnowledge(),
+      getCapabilityRows(),
     ]);
     // Rendered once, here, and reused verbatim by every downstream path so no
     // model can receive a materially different version of the athlete's facts.
@@ -3040,7 +3101,6 @@ export default async function handler(req, res) {
     // athlete instead of rediscovering them. Both are omitted entirely when
     // empty rather than sent as an empty heading — a new athlete with no
     // memory yet should get no MEMORY section at all, not one saying "none".
-    if (capabilityKnowledge) sharedBlock += `\n\nGOLSZ CAPABILITIES (real, current — the product does exactly this and nothing more):\n${capabilityKnowledge}`;
     if (authoritativeBlock) athleteBlock += `\n\n${authoritativeBlock}`;
     // §7/§12/§24 — weighted readiness and the authoritative state, both from
     // real data. The directive is what actually stops Scout planning before it
@@ -3163,6 +3223,19 @@ export default async function handler(req, res) {
         }
       }
     }
+
+    // Rendered LAST in this block, not in the Promise.all above: it depends
+    // on this athlete's state, readiness AND entitlement, and entitlement is
+    // only final once the trial reservation above has run. Rendering earlier
+    // would show a trialling athlete as free and have Scout tell them to
+    // upgrade for something their trial had already unlocked.
+    const capabilityKnowledge = renderCapabilities(capabilityRows, {
+      entitlementPlan: entitlementPlan || plan,
+      scoutState,
+      profileReady: readiness.ready,
+      athlete: authContext && authContext.athlete,
+    });
+    if (capabilityKnowledge) sharedBlock += `\n\nGOLSZ CAPABILITIES (real, current — the product does exactly this and nothing more):\n${capabilityKnowledge}`;
   }
 
   // ---- route (classify — with the FAQ list embedded — then decide the model) ----
