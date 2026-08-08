@@ -2430,7 +2430,7 @@ async function getUserId(authHeader) {
 async function getProfileMeta(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null, profileConfirmedAt: null, storedState: 0, storedReady: false };
+  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null, profileConfirmedAt: null, storedState: 0, storedReady: false, trialStartedAt: null, trialUsed: 0 };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let plan = "starter";
   let isAdmin = false;
@@ -2440,8 +2440,10 @@ async function getProfileMeta(userId) {
   let profileConfirmedAt = null;
   let storedState = 0;
   let storedReady = false;
+  let trialStartedAt = null;
+  let trialUsed = 0;
   try {
-    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text,scout_state,scout_profile_ready,scout_profile_confirmed_at", { headers });
+    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text,scout_state,scout_profile_ready,scout_profile_confirmed_at,scout_trial_started_at,scout_trial_used", { headers });
     const rows = await p.json();
     if (Array.isArray(rows) && rows[0]) {
       plan = rows[0].plan || "starter";
@@ -2452,9 +2454,11 @@ async function getProfileMeta(userId) {
       profileConfirmedAt = rows[0].scout_profile_confirmed_at || null;
       storedState = Number.isInteger(rows[0].scout_state) ? rows[0].scout_state : 0;
       storedReady = rows[0].scout_profile_ready === true;
+      trialStartedAt = rows[0].scout_trial_started_at || null;
+      trialUsed = Number(rows[0].scout_trial_used) || 0;
     }
   } catch {}
-  return { plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady };
+  return { plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady, trialStartedAt, trialUsed };
 }
 
 // GOLSZ Final Product / AI Scout / Pathway / Elite Architecture directive
@@ -2584,6 +2588,46 @@ async function releaseFreeAiQuestion(userId) {
       body: JSON.stringify({ p_user: userId }),
     });
   } catch (e) { console.error("GOLSZ release_free_ai_question failed:", e); }
+}
+
+// §14 — the capped trial. Three independent bounds (days, daily, total); see
+// migration 108. This call both STARTS the trial (first time) and consumes
+// one message, atomically, so there is no window where a started trial has
+// no counter and no way for two concurrent requests to both spend the last
+// message.
+//
+// Fails CLOSED, unlike most helpers here: an unreachable database means we
+// cannot prove the athlete has trial left, and guessing "yes" is unbounded
+// spend. The caller falls through to the ordinary free-plan budget, so the
+// athlete still gets an answer — just on free-tier terms.
+async function reserveTrialQuestion(userId, totalLimit, trialDays) {
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key || !userId) return { allowed: false, reason: "unavailable" };
+  try {
+    const r = await fetch(url + "/rest/v1/rpc/reserve_trial_question", {
+      method: "POST",
+      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_user: userId, p_total_limit: totalLimit, p_trial_days: trialDays }),
+    });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    return j && typeof j === "object" ? j : { allowed: false, reason: "bad_response" };
+  } catch (e) {
+    console.error("GOLSZ reserve_trial_question failed:", e);
+    return { allowed: false, reason: "unavailable" };
+  }
+}
+
+async function releaseTrialQuestion(userId) {
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key || !userId) return;
+  try {
+    await fetch(url + "/rest/v1/rpc/release_trial_question", {
+      method: "POST",
+      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_user: userId }),
+    });
+  } catch (e) { console.error("GOLSZ release_trial_question failed:", e); }
 }
 
 // Adds the real token/cost numbers to today's scout_daily_usage row once a
@@ -2811,6 +2855,13 @@ export default async function handler(req, res) {
   let questionsRemaining = null; // null = no usage info to show the client (unmetered deployment, or an unlimited/admin account)
   let reservedQuestion = false; // true once reserve_scout_question has counted this request — release it if we bail before a real answer
   let reservedFreeAi = false; // true once reserve_free_ai_question (068, lifetime, free plan only) has counted this request
+  let reservedTrial = false;  // true once reserve_trial_question (108, capped trial) has counted this request
+  // The plan whose ENTITLEMENTS apply to this turn. Equal to the real plan
+  // except during an active trial, when a free athlete is treated as Starter
+  // so they experience the actual product. userPlan stays the real plan so
+  // telemetry and billing analysis are never distorted by trial traffic.
+  let entitlementPlan = null;
+  let trialInfo = null;
   // Directive §11 "database-first state logic" — appended to systemPrompt
   // below once populated; empty string (no-op) for unauthenticated/dev-mode
   // requests, same fallback posture as userPlan/dailyLimit above.
@@ -2892,7 +2943,7 @@ export default async function handler(req, res) {
     // getCapabilityKnowledge is global and cached. The GOLSZ Core lookup
     // can't run here because it needs athleteState.sport, so it runs
     // alongside the classifier below instead.
-    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
+    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady, trialStartedAt, trialUsed }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
       getProfileMeta(userId),
       getAthleteState(userId),
       getPlanKnowledge(),
@@ -2912,6 +2963,7 @@ export default async function handler(req, res) {
     athleteCountry = athleteState.country;
     stateDigest = athleteStateDigest(athleteState, plan, goalDefined);
     userPlan = plan;
+    if (!entitlementPlan) entitlementPlan = plan;
     userIsAdmin = isAdmin;
     userAiUnlimited = aiUnlimited;
     // Directive §11 state machine — the EARLY gate only (profile_complete/
@@ -2958,7 +3010,18 @@ export default async function handler(req, res) {
     if (priorSummaryForPrompt) {
       athleteBlock += `\n\nCONVERSATION SO FAR (YOUR OWN running note from earlier turns — context only. The athlete did NOT say this and cannot see it. Never quote it back, never argue with it, never treat it as their latest message):\n${clampBlock(priorSummaryForPrompt, 700)}`;
     }
-    dailyLimit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
+    // §14 — is this athlete inside a live trial? Read from real columns, the
+    // same discipline as scout state: the RPC re-checks every bound under a
+    // row lock, so this is only deciding which DAILY cap to reserve against.
+    const trialDays = Number(process.env.TRIAL_DAYS || 5);
+    const trialTotal = Number(process.env.TRIAL_TOTAL_LIMIT || 30);
+    const trialExpiresAt = trialStartedAt ? new Date(trialStartedAt).getTime() + trialDays * 86400000 : null;
+    const trialLive = plan === "free" && !isAdmin && !aiUnlimited
+      && trialUsed < trialTotal
+      && (trialExpiresAt === null || Date.now() <= trialExpiresAt);
+
+    dailyLimit = trialLive ? Number(process.env.TRIAL_DAILY_LIMIT || 8)
+      : plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
       : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 15)
       : plan === "starter" ? Number(process.env.STARTER_DAILY_LIMIT || 8)
       : Number(process.env.FREE_DAILY_LIMIT || 3);
@@ -2987,7 +3050,36 @@ export default async function handler(req, res) {
       // athlete to solve. Model tier is already capped to Haiku-equivalent
       // for free plan by PLAN_MODEL_ACCESS below; this only bounds HOW MANY
       // of those cheap replies a free account ever gets, not just per day.
-      if (plan === "free") {
+      // Trial first: a trial message must not also cost the athlete one of
+      // their lifetime free questions (that would make the trial a hidden
+      // charge against the tier they land on afterwards). If the RPC refuses
+      // -- expired, exhausted, or the database is unreachable -- we fall
+      // straight through to the ordinary free budget below, so the athlete
+      // still gets an answer.
+      if (trialLive) {
+        const t = await reserveTrialQuestion(userId, trialTotal, trialDays);
+        if (t && t.allowed) {
+          reservedTrial = true;
+          entitlementPlan = "starter";
+          const msLeft = t.expires_at ? new Date(t.expires_at).getTime() - Date.now() : 0;
+          trialInfo = {
+            active: true,
+            days_left: Math.max(Math.ceil(msLeft / 86400000), 0),
+            remaining: Number(t.remaining) || 0,
+            total: Number(t.total) || trialTotal,
+          };
+          console.log("GOLSZ scout trial:", JSON.stringify({ used: t.used, total: t.total, days_left: trialInfo.days_left }));
+          // ATHLETE STATE above reports plan=free, which is true for billing
+          // and false for what they can actually do right now. Without this
+          // Scout would refuse things the athlete can see working, or sell
+          // them a tier they are already sitting inside.
+          athleteBlock += `\n\nTRIAL: this athlete is inside their free trial — ${trialInfo.days_left} day(s) and ${trialInfo.remaining} message(s) left. Treat them as a BASIC member for what you can do. Do not tell them they need to upgrade to use something the trial already covers. As the trial gets close to running out, be straight with them: name what you have built together and what specifically stops working when it ends. Do not nag every reply.`;
+        } else if (t && (t.reason === "trial_expired" || t.reason === "trial_exhausted")) {
+          trialInfo = { active: false, reason: t.reason };
+        }
+      }
+
+      if (plan === "free" && !reservedTrial) {
         const freeLifetimeLimit = Number(process.env.FREE_LIFETIME_LIMIT || 40);
         const freeReservation = await reserveFreeAiQuestion(userId, freeLifetimeLimit);
         reservedFreeAi = true;
@@ -3115,6 +3207,7 @@ export default async function handler(req, res) {
         scout_summary: updatedSummary,
         scout_usage: reservedQuestion ? { remaining: questionsRemaining, limit: dailyLimit } : undefined,
         scout_profile: scoutProfile,
+        scout_trial: trialInfo || undefined,
         next_move: extractNextBestAction(classification),
       };
       await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
@@ -3130,9 +3223,10 @@ export default async function handler(req, res) {
     // could still trigger a full-price web_lookup/db_lookup tool call.
     // Checked here, not inside selectModelTier(), so it can return a clear
     // 402 with an upgrade message instead of silently downgrading quality. ----
-    if (userPlan === "free" && classification && classification.needs_tool && !userIsAdmin && !userAiUnlimited) {
+    if (entitlementPlan === "free" && classification && classification.needs_tool && !userIsAdmin && !userAiUnlimited) {
       if (reservedQuestion) await releaseScoutQuestion(userId);
       if (reservedFreeAi) await releaseFreeAiQuestion(userId);
+      if (reservedTrial) await releaseTrialQuestion(userId);
       return res.status(402).json({
         error: "Web and player-database search is a Starter+ feature. Upgrade to unlock deeper research from Scout.",
         code: "free_tool_blocked",
@@ -3184,6 +3278,7 @@ export default async function handler(req, res) {
         cached.scout_summary = updatedSummary;
         if (reservedQuestion) cached.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         cached.scout_profile = scoutProfile;
+        if (trialInfo) cached.scout_trial = trialInfo;
         cached.next_move = extractNextBestAction(classification);
         return res.status(200).json(cached);
       }
@@ -3238,6 +3333,7 @@ export default async function handler(req, res) {
     data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         data.scout_profile = scoutProfile;
+        if (trialInfo) data.scout_trial = trialInfo;
         if (await recordProfileConfirmation(userId, scoutState, data)) {
           data.scout_profile = { ...scoutProfile, state: 3, label: SCOUT_STATES[3] };
         }
@@ -3254,7 +3350,7 @@ export default async function handler(req, res) {
         // write already happened.
         data.suggested_targets = extractSuggestedTargets(data);
         data.suggested_dev_items = extractSuggestedDevItems(data);
-        data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
+        data.suggested_pathway = entitlementPlan === "free" ? null : extractSuggestedPathway(data);
         data.drafted_email = extractDraftedEmail(data);
         return res.status(200).json(data);
       }
@@ -3333,13 +3429,14 @@ export default async function handler(req, res) {
     data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         data.scout_profile = scoutProfile;
+        if (trialInfo) data.scout_trial = trialInfo;
         if (await recordProfileConfirmation(userId, scoutState, data)) {
           data.scout_profile = { ...scoutProfile, state: 3, label: SCOUT_STATES[3] };
         }
         data.next_move = extractNextBestAction(classification);
         data.suggested_targets = extractSuggestedTargets(data);
         data.suggested_dev_items = extractSuggestedDevItems(data);
-        data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
+        data.suggested_pathway = entitlementPlan === "free" ? null : extractSuggestedPathway(data);
         data.drafted_email = extractDraftedEmail(data);
         // Deliberately never cached — a degraded, apologetic reply shouldn't
         // get served back to a different athlete once things recover.
@@ -3353,6 +3450,7 @@ export default async function handler(req, res) {
       console.log("GOLSZ haiku fallback also failed:", JSON.stringify(haikuFallback.data));
       if (reservedQuestion) await releaseScoutQuestion(userId);
       if (reservedFreeAi) await releaseFreeAiQuestion(userId);
+      if (reservedTrial) await releaseTrialQuestion(userId);
       await logError("api/scout.js", "Both Sonnet and Haiku failed (automatic failover exhausted)", { detail: JSON.stringify({ sonnet: sonnetResult.data, haiku: haikuFallback.data }) });
       // Failover exhausted with no answer produced — still worth a
       // scout_routing_log row (082) so failure rate is visible in cost/
@@ -3395,12 +3493,13 @@ export default async function handler(req, res) {
     data.next_move = extractNextBestAction(classification);
     data.suggested_targets = extractSuggestedTargets(data);
     data.suggested_dev_items = extractSuggestedDevItems(data);
-    data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
+    data.suggested_pathway = entitlementPlan === "free" ? null : extractSuggestedPathway(data);
     data.drafted_email = extractDraftedEmail(data);
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
     if (reservedQuestion) await releaseScoutQuestion(userId);
     if (reservedFreeAi) await releaseFreeAiQuestion(userId);
+    if (reservedTrial) await releaseTrialQuestion(userId);
     await logError("api/scout.js", "Upstream model call failed", { detail: String(e) });
     return res.status(502).json({ error: "Upstream model call failed", detail: String(e) });
   }
