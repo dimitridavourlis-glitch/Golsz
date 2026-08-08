@@ -1816,7 +1816,16 @@ function renderCapabilities(rows, ctx) {
     const line = `- ${c.label}${c.notes ? ` — ${c.notes}` : ""}${c.safety_note ? ` [SAFETY: ${c.safety_note}]` : ""}`;
     if (!c.available) { goneList.push(line); continue; }
 
-    const needsReady = c.requires_profile_ready === true && !profileReady;
+    // STATE is the authority, not the readiness score. An athlete at state 3+
+    // has already been understood and confirmed — re-gating them because the
+    // weighted score dipped (a new, stricter measure than anything they were
+    // onboarded against) drags an established athlete back into intake and
+    // makes Scout answer "I need to know more first" to questions it can
+    // already answer. That is the exact rule deriveScoutState() follows about
+    // never re-onboarding an existing athlete, and this is where it was
+    // broken in production.
+    const effectiveReady = profileReady || st >= 3;
+    const needsReady = c.requires_profile_ready === true && !effectiveReady;
     const needsState = Number.isInteger(c.min_scout_state) && st < c.min_scout_state;
     const missingFields = (Array.isArray(c.requires_fields) ? c.requires_fields : [])
       .filter((f) => !(athlete && athlete[f] !== null && athlete[f] !== undefined && athlete[f] !== ""));
