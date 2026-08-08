@@ -649,7 +649,7 @@ const PROFILE_FIELD_MAP = {
 // itself has to act on profile_updates, not just the client.
 function extractProfileUpdates(data) {
   try {
-    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
     const clean = raw.replace(/```json|```/g, "").trim();
     const parsed = parseReplyObject(clean);
     return parsed && typeof parsed.profile_updates === "object" ? parsed.profile_updates : null;
@@ -755,7 +755,7 @@ const SCOUT_CONTEXT_KEYS = new Set([
 // instead of profile_updates out of the same parsed reply.
 function extractScoutContextUpdates(data) {
   try {
-    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
     const clean = raw.replace(/```json|```/g, "").trim();
     const parsed = parseReplyObject(clean);
     return parsed && typeof parsed.scout_context_updates === "object" ? parsed.scout_context_updates : null;
@@ -773,7 +773,7 @@ function extractScoutContextUpdates(data) {
 // client-side bulk-insert unfiltered.
 function extractSuggestedTargets(data) {
   try {
-    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
     const clean = raw.replace(/```json|```/g, "").trim();
     const parsed = parseReplyObject(clean);
     if (!parsed || !Array.isArray(parsed.suggested_targets)) return null;
@@ -792,7 +792,7 @@ function extractSuggestedTargets(data) {
 const DEV_FOCUS_AREA_SET = new Set(["training", "strength", "speed", "conditioning", "recovery", "sleep", "hydration", "nutrition", "other"]);
 function extractSuggestedDevItems(data) {
   try {
-    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
     const clean = raw.replace(/```json|```/g, "").trim();
     const parsed = parseReplyObject(clean);
     if (!parsed || !Array.isArray(parsed.suggested_dev_items)) return null;
@@ -818,7 +818,7 @@ const PATHWAY_TYPE_SET = new Set([
 ]);
 function extractSuggestedPathway(data) {
   try {
-    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
     const clean = raw.replace(/```json|```/g, "").trim();
     const parsed = parseReplyObject(clean);
     const p = parsed && parsed.suggested_pathway;
@@ -843,7 +843,7 @@ function extractSuggestedPathway(data) {
 // (migration 072/077) instead of requiring manual copy-paste.
 function extractDraftedEmail(data) {
   try {
-    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
     const clean = raw.replace(/```json|```/g, "").trim();
     const parsed = parseReplyObject(clean);
     return (parsed && typeof parsed.drafted_email === "string" && parsed.drafted_email.trim()) ? parsed.drafted_email.trim().slice(0, 4000) : null;
@@ -998,7 +998,7 @@ function parseReplyObject(clean) {
 function extractMemoryWrites(data) {
   let writes;
   try {
-    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
     const clean = raw.replace(/```json|```/g, "").trim();
     try {
       const parsed = parseReplyObject(clean);
@@ -1835,7 +1835,7 @@ const RESEARCH_TTL_DEFAULT_DAYS = 14;
 
 function extractResearchNote(data) {
   try {
-    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
     const clean = raw.replace(/```json|```/g, "").trim();
     const parsed = parseReplyObject(clean);
     const note = parsed && parsed.research_note;
@@ -2391,8 +2391,19 @@ async function recordScoutUsageCost(userId, cost, inputTokens, outputTokens) {
 // Bounded: at most 2 continuations, and never started without real time left
 // in the request budget — a truncated-but-salvageable reply beats a killed
 // request. This is why salvageJsonValue() stays as the backstop.
+// Joined with "" and NOT "\n". When a reply uses web search, the assistant
+// text comes back as SEVERAL text blocks that are contiguous segments of one
+// output stream, split at citation boundaries — not as separate lines. Joining
+// them with a newline injects characters that were never generated, and a
+// split landing inside a JSON string produces a literal newline in that
+// string, which is invalid JSON. That corrupted our own payload and was being
+// misread as truncation: strict parse failed, salvage fired, and on the haiku
+// path the reply reached the extractors mangled even though the model had
+// finished cleanly (stop_reason end_turn, not max_tokens). Reproduced
+// directly: the same blocks joined with "\n" throw "Bad control character in
+// string literal", joined with "" they parse.
 function replyTextOf(data) {
-  return ((data && data.content) || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+  return ((data && data.content) || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
 }
 
 function sumUsage(a, b) {
