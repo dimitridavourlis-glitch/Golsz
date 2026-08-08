@@ -6767,6 +6767,16 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
     } catch (e) {
       const msg = e && e.code === "SCOUT_HTTP_ERROR" ? e.message : t("scout_connection_dropped");
       setMsgs((m) => [...m, { role: "assistant", text: msg }]);
+      // Persist the fallback the same way a real reply is persisted below —
+      // without this, a failed call left the user's own message logged
+      // (logTurn above, before the request even went out) with no trace of
+      // Scout's side, so scout_history had one dangling user-only row
+      // forever. On the next load, "does scout_history have any rows?"
+      // (the greeting-vs-restore check further up) said yes, so the app
+      // restored that orphaned question instead of ever greeting properly
+      // again — the user saw their own message sitting there with total
+      // silence, permanently, no matter how many times they reloaded.
+      logTurn("assistant", msg);
     }
     } finally { setBusy(false); setPending(false); sendingRef.current = false; }
   }
