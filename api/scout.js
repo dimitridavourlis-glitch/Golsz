@@ -2674,7 +2674,17 @@ export default async function handler(req, res) {
     const athleteContextTurn = [athleteBlock, knowledgeBlock, researchBlock].filter(Boolean).join("");
     const conversationForModel = athleteContextTurn
       ? [{ role: "user", content: athleteContextTurn.trim() },
-         { role: "assistant", content: "Understood — I have their current record and will not contradict or re-ask any of it." },
+         // MUST be a valid instance of the JSON output contract, not prose.
+         // When this was a plain-English sentence, the model copied the
+         // pattern of its own most recent turn and answered the real question
+         // in prose too — stop_reason end_turn, a single text block, no JSON
+         // envelope at all. That silently broke EVERY structured extraction
+         // (memory_writes, profile_updates, scout_context_updates,
+         // suggested_targets, drafted_email), which is why scout_memory
+         // stayed empty no matter how the memory rules were reworded. The
+         // acknowledgement now demonstrates the required shape instead of
+         // contradicting it.
+         { role: "assistant", content: '{"reply":"Understood — I have their current record and will not contradict or re-ask any of it.","memory_writes":[]}' },
          ...conversation]
       : conversation;
 
