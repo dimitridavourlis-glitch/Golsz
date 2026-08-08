@@ -52,6 +52,7 @@ const MessageSquare = svg('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h
 const BadgeCheck = svg('<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/>');
 const MapPin = svg('<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>');
 const ChevronLeft = svg('<path d="m15 18-6-6 6-6"/>');
+const ChevronRight = svg('<path d="m9 18 6-6-6-6"/>');
 const Share2 = svg('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>');
 const ChevronDown = svg('<path d="m6 9 6 6 6-6"/>');
 const ChevronUp = svg('<path d="m18 15-6-6-6 6"/>');
@@ -82,6 +83,8 @@ const CalendarPlus = svg('<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" 
 const Target = svg('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>');
 const Star = svg('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>');
 const GitBranch = svg('<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>');
+const Shield = svg('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>');
+const GraduationCap = svg('<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>');
 const Mail = svg('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>');
 const Download = svg('<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>');
 const Lock = svg('<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>');
@@ -231,7 +234,7 @@ const I18N = {
     home_pathway_progress_title: "PATHWAY PROGRESS", home_benchmark_progress_title: "RECENT BENCHMARK PROGRESS",
     home_my_athletes_title: "MY ATHLETES", home_my_athletes_unnamed: "Unnamed athlete",
     home_missing_title: "STILL MISSING", home_finish_profile: "Finish your Passport", home_get_started: "GET STARTED",
-    home_greeting_morning: "Good morning,", home_greeting_afternoon: "Good afternoon,", home_greeting_evening: "Good evening,",
+    home_greeting_morning: "Good morning,", home_greeting_afternoon: "Good afternoon,", home_greeting_evening: "Good evening,", home_grad_prefix: "Grad ",
     home_path_title: "YOUR PATH", home_path_you: "YOU", home_path_developing: "Developing", home_path_goal_placeholder: "Set your goal",
     home_readiness_row_profile: "PROFILE", home_readiness_row_film: "FILM", home_readiness_row_performance: "PERFORMANCE", home_readiness_row_pathway: "PATHWAY",
     home_readiness_status_profile_ok: "Complete", home_readiness_status_profile_no: "Needed", home_readiness_status_film_ok: "Added", home_readiness_status_film_no: "Needed",
@@ -313,6 +316,7 @@ const I18N = {
     family_disclaimer: "The account owner must approve before a parent can see their private data. This confirms mutual consent — it isn't independent identity verification.",
     family_sent_msg: "Request sent — waiting on their approval.", family_not_found_msg: "No GOLSZ account found with that email.",
     family_couldnt_send: "Couldn't send request.",
+    passport_strip_highlights: "Highlights", passport_strip_benchmarks: "Benchmarks", passport_strip_development: "Development", passport_strip_timeline: "Timeline",
     highlights_title: "VERIFIED MEDIA", highlights_title_unverified: "MEDIA", highlights_empty: "No highlights yet.",
     passport_posts_title: "POSTS", passport_posts_empty: "No posts yet.",
     highlights_title_ph: "Highlight title (e.g. Full match vs Montreal)", highlights_link_ph: "Link (YouTube, Veo, Hudl…)",
@@ -325,6 +329,9 @@ const I18N = {
     dev_plan_status_active: "Active", dev_plan_status_done: "Done", dev_plan_status_paused: "Paused",
     dev_plan_focus_training: "Training", dev_plan_focus_strength: "Strength", dev_plan_focus_speed: "Speed", dev_plan_focus_conditioning: "Conditioning", dev_plan_focus_recovery: "Recovery", dev_plan_focus_sleep: "Sleep", dev_plan_focus_hydration: "Hydration", dev_plan_focus_nutrition: "Nutrition", dev_plan_focus_other: "Other",
     pathway_plan_title: "PATHWAY PLAN", pathway_timeline_ph: "Target timeline (e.g. Fall 2027)", pathway_save: "Save pathway", pathway_notes_ph: "Notes (optional)",
+    plan_primary_goal: "PRIMARY GOAL", plan_secondary_goal: "SECONDARY GOAL",
+    plan_next_30_title: "NEXT 30 DAYS", plan_next_90_title: "NEXT 90 DAYS", plan_season_title: "THIS SEASON",
+    plan_next30_profile: "Complete your Passport", plan_next30_film: "Upload match footage", plan_next30_benchmark: "Record a performance benchmark",
     pathway_milestones_title: "Milestones", pathway_milestones_empty: "No milestones yet.", pathway_milestone_ph: "Add a milestone", pathway_milestone_add: "Add",
     pathway_type_ncaa: "NCAA", pathway_type_naia: "NAIA", pathway_type_juco: "JUCO", pathway_type_canadian_university: "Canadian university", pathway_type_academy: "Academy", pathway_type_european_club: "European club pathway", pathway_type_professional: "Professional pathway", pathway_type_development: "Development", pathway_type_agent_representation: "Agent representation", pathway_type_trainer_performance: "Trainer / performance development", pathway_type_other: "Other",
     pathway_collapse: "Collapse", pathway_edit_goal: "Edit pathway", pathway_alt_branch_note: "{branch} is a common parallel route for this sport too.",
@@ -440,6 +447,9 @@ const I18N = {
     scout_attach_photo: "Attach a photo", scout_photo_attached: "Photo attached — Scout will take a look.",
     scout_connection_dropped: "Connection dropped mid-play. Send that again and I'm on it.",
     scout_greeting: "I'm your GOLSZ Scout.\n\nTell me about yourself like you'd tell a scout — age, sport, position, where you play, and where you want to end up. I'll build your path from there.",
+    scout_topic_situation: "My current situation", scout_topic_situation_prompt: "Let's talk through my current situation as an athlete.",
+    scout_topic_goals: "My goals & preferences", scout_topic_goals_prompt: "I want to talk about my goals and what I'm looking for.",
+    scout_topic_game: "My game & performance", scout_topic_game_prompt: "Let's talk about my game and my performance.",
     scout_chip1: "Build my target school list", scout_chip2: "Create my career roadmap",
     scout_chip3: "Draft an email to a coach", scout_chip4: "What should I do this month?",
     scout_np_chip1: "Find players for my team", scout_np_chip2: "Search top prospects",
@@ -509,7 +519,7 @@ const I18N = {
     home_pathway_progress_title: "PROGRESSION DU PARCOURS", home_benchmark_progress_title: "PROGRESSION RÉCENTE DES REPÈRES",
     home_my_athletes_title: "MES ATHLÈTES", home_my_athletes_unnamed: "Athlète sans nom",
     home_missing_title: "IL MANQUE ENCORE", home_finish_profile: "Terminez votre Passeport", home_get_started: "POUR COMMENCER",
-    home_greeting_morning: "Bonjour,", home_greeting_afternoon: "Bon après-midi,", home_greeting_evening: "Bonsoir,",
+    home_greeting_morning: "Bonjour,", home_greeting_afternoon: "Bon après-midi,", home_greeting_evening: "Bonsoir,", home_grad_prefix: "Promo ",
     home_path_title: "VOTRE PARCOURS", home_path_you: "VOUS", home_path_developing: "En développement", home_path_goal_placeholder: "Définissez votre objectif",
     home_readiness_row_profile: "PROFIL", home_readiness_row_film: "VIDÉOS", home_readiness_row_performance: "PERFORMANCE", home_readiness_row_pathway: "PARCOURS",
     home_readiness_status_profile_ok: "Complet", home_readiness_status_profile_no: "À faire", home_readiness_status_film_ok: "Ajoutées", home_readiness_status_film_no: "À faire",
@@ -591,6 +601,7 @@ const I18N = {
     family_disclaimer: "Le titulaire du compte doit approuver avant qu'un parent puisse voir ses données privées. Ceci confirme un consentement mutuel — ce n'est pas une vérification d'identité indépendante.",
     family_sent_msg: "Demande envoyée — en attente de son approbation.", family_not_found_msg: "Aucun compte GOLSZ trouvé avec cet e-mail.",
     family_couldnt_send: "Impossible d'envoyer la demande.",
+    passport_strip_highlights: "Temps forts", passport_strip_benchmarks: "Repères", passport_strip_development: "Développement", passport_strip_timeline: "Parcours",
     highlights_title: "MÉDIAS VÉRIFIÉS", highlights_title_unverified: "MÉDIAS", highlights_empty: "Aucun temps fort pour l'instant.",
     passport_posts_title: "PUBLICATIONS", passport_posts_empty: "Aucune publication pour l'instant.",
     highlights_title_ph: "Titre du temps fort (ex. Match complet vs Montréal)", highlights_link_ph: "Lien (YouTube, Veo, Hudl…)",
@@ -603,6 +614,9 @@ const I18N = {
     dev_plan_status_active: "Actif", dev_plan_status_done: "Terminé", dev_plan_status_paused: "En pause",
     dev_plan_focus_training: "Entraînement", dev_plan_focus_strength: "Force", dev_plan_focus_speed: "Vitesse", dev_plan_focus_conditioning: "Endurance", dev_plan_focus_recovery: "Récupération", dev_plan_focus_sleep: "Sommeil", dev_plan_focus_hydration: "Hydratation", dev_plan_focus_nutrition: "Nutrition", dev_plan_focus_other: "Autre",
     pathway_plan_title: "PLAN DE PARCOURS", pathway_timeline_ph: "Échéance visée (ex. automne 2027)", pathway_save: "Enregistrer le parcours", pathway_notes_ph: "Notes (facultatif)",
+    plan_primary_goal: "OBJECTIF PRINCIPAL", plan_secondary_goal: "OBJECTIF SECONDAIRE",
+    plan_next_30_title: "PROCHAINS 30 JOURS", plan_next_90_title: "PROCHAINS 90 JOURS", plan_season_title: "CETTE SAISON",
+    plan_next30_profile: "Complétez votre Passeport", plan_next30_film: "Ajoutez des vidéos de match", plan_next30_benchmark: "Enregistrez un repère de performance",
     pathway_milestones_title: "Étapes clés", pathway_milestones_empty: "Aucune étape pour l'instant.", pathway_milestone_ph: "Ajouter une étape", pathway_milestone_add: "Ajouter",
     pathway_type_ncaa: "NCAA", pathway_type_naia: "NAIA", pathway_type_juco: "JUCO", pathway_type_canadian_university: "Université canadienne", pathway_type_academy: "Académie", pathway_type_european_club: "Parcours club européen", pathway_type_professional: "Parcours professionnel", pathway_type_development: "Développement", pathway_type_agent_representation: "Représentation par un agent", pathway_type_trainer_performance: "Entraîneur / développement de la performance", pathway_type_other: "Autre",
     pathway_collapse: "Réduire", pathway_edit_goal: "Modifier le parcours", pathway_alt_branch_note: "{branch} est aussi une voie parallèle courante pour ce sport.",
@@ -718,6 +732,9 @@ const I18N = {
     scout_attach_photo: "Joindre une photo", scout_photo_attached: "Photo jointe — votre agent va y jeter un œil.",
     scout_connection_dropped: "Connexion interrompue en plein jeu. Renvoyez ça et je m'en occupe.",
     scout_greeting: "Je suis votre Agent GOLSZ.\n\nParlez-moi de vous comme vous le feriez à un recruteur — âge, sport, poste, où vous jouez, et où vous voulez aller. Je construirai votre parcours à partir de là.",
+    scout_topic_situation: "Ma situation actuelle", scout_topic_situation_prompt: "Parlons de ma situation actuelle en tant qu'athlète.",
+    scout_topic_goals: "Mes objectifs & préférences", scout_topic_goals_prompt: "Je veux parler de mes objectifs et de ce que je recherche.",
+    scout_topic_game: "Mon jeu & ma performance", scout_topic_game_prompt: "Parlons de mon jeu et de ma performance.",
     scout_chip1: "Créer ma liste d'écoles cibles", scout_chip2: "Créer ma feuille de route de carrière",
     scout_chip3: "Rédiger un e-mail à un entraîneur", scout_chip4: "Que devrais-je faire ce mois-ci ?",
     scout_np_chip1: "Trouver des joueurs pour mon équipe", scout_np_chip2: "Rechercher les meilleurs prospects",
@@ -787,7 +804,7 @@ const I18N = {
     home_pathway_progress_title: "PROGRESO DE LA TRAYECTORIA", home_benchmark_progress_title: "PROGRESO RECIENTE DE MARCAS",
     home_my_athletes_title: "MIS DEPORTISTAS", home_my_athletes_unnamed: "Deportista sin nombre",
     home_missing_title: "AÚN FALTA", home_finish_profile: "Termina tu Pasaporte", home_get_started: "PARA EMPEZAR",
-    home_greeting_morning: "Buenos días,", home_greeting_afternoon: "Buenas tardes,", home_greeting_evening: "Buenas noches,",
+    home_greeting_morning: "Buenos días,", home_greeting_afternoon: "Buenas tardes,", home_greeting_evening: "Buenas noches,", home_grad_prefix: "Promo ",
     home_path_title: "TU CAMINO", home_path_you: "TÚ", home_path_developing: "En desarrollo", home_path_goal_placeholder: "Define tu objetivo",
     home_readiness_row_profile: "PERFIL", home_readiness_row_film: "VÍDEOS", home_readiness_row_performance: "RENDIMIENTO", home_readiness_row_pathway: "CAMINO",
     home_readiness_status_profile_ok: "Completo", home_readiness_status_profile_no: "Pendiente", home_readiness_status_film_ok: "Añadidos", home_readiness_status_film_no: "Pendiente",
@@ -869,6 +886,7 @@ const I18N = {
     family_disclaimer: "El titular de la cuenta debe aprobar antes de que un padre o madre pueda ver sus datos privados. Esto confirma el consentimiento mutuo — no es una verificación de identidad independiente.",
     family_sent_msg: "Solicitud enviada — esperando su aprobación.", family_not_found_msg: "No se encontró ninguna cuenta de GOLSZ con ese correo.",
     family_couldnt_send: "No se pudo enviar la solicitud.",
+    passport_strip_highlights: "Momentos", passport_strip_benchmarks: "Marcas", passport_strip_development: "Desarrollo", passport_strip_timeline: "Trayectoria",
     highlights_title: "MEDIOS VERIFICADOS", highlights_title_unverified: "MEDIOS", highlights_empty: "Aún no hay mejores jugadas.",
     passport_posts_title: "PUBLICACIONES", passport_posts_empty: "Aún no hay publicaciones.",
     highlights_title_ph: "Título de la jugada (ej. Partido completo vs Montreal)", highlights_link_ph: "Enlace (YouTube, Veo, Hudl…)",
@@ -881,6 +899,9 @@ const I18N = {
     dev_plan_status_active: "Activo", dev_plan_status_done: "Completado", dev_plan_status_paused: "En pausa",
     dev_plan_focus_training: "Entrenamiento", dev_plan_focus_strength: "Fuerza", dev_plan_focus_speed: "Velocidad", dev_plan_focus_conditioning: "Resistencia", dev_plan_focus_recovery: "Recuperación", dev_plan_focus_sleep: "Sueño", dev_plan_focus_hydration: "Hidratación", dev_plan_focus_nutrition: "Nutrición", dev_plan_focus_other: "Otro",
     pathway_plan_title: "PLAN DE TRAYECTORIA", pathway_timeline_ph: "Plazo objetivo (ej. otoño 2027)", pathway_save: "Guardar trayectoria", pathway_notes_ph: "Notas (opcional)",
+    plan_primary_goal: "OBJETIVO PRINCIPAL", plan_secondary_goal: "OBJETIVO SECUNDARIO",
+    plan_next_30_title: "PRÓXIMOS 30 DÍAS", plan_next_90_title: "PRÓXIMOS 90 DÍAS", plan_season_title: "ESTA TEMPORADA",
+    plan_next30_profile: "Completa tu Pasaporte", plan_next30_film: "Sube vídeos de partidos", plan_next30_benchmark: "Registra una marca de rendimiento",
     pathway_milestones_title: "Hitos", pathway_milestones_empty: "Aún no hay hitos.", pathway_milestone_ph: "Añadir un hito", pathway_milestone_add: "Añadir",
     pathway_type_ncaa: "NCAA", pathway_type_naia: "NAIA", pathway_type_juco: "JUCO", pathway_type_canadian_university: "Universidad canadiense", pathway_type_academy: "Academia", pathway_type_european_club: "Trayectoria en club europeo", pathway_type_professional: "Trayectoria profesional", pathway_type_development: "Desarrollo", pathway_type_agent_representation: "Representación por agente", pathway_type_trainer_performance: "Entrenador / desarrollo del rendimiento", pathway_type_other: "Otro",
     pathway_collapse: "Contraer", pathway_edit_goal: "Editar camino", pathway_alt_branch_note: "{branch} también es una vía paralela común para este deporte.",
@@ -996,6 +1017,9 @@ const I18N = {
     scout_attach_photo: "Adjuntar una foto", scout_photo_attached: "Foto adjunta — tu agente le echará un vistazo.",
     scout_connection_dropped: "Se perdió la conexión a mitad de la jugada. Envíalo de nuevo y me encargo.",
     scout_greeting: "Soy tu Agente GOLSZ.\n\nCuéntame sobre ti como se lo contarías a un ojeador — edad, deporte, posición, dónde juegas y a dónde quieres llegar. Construiré tu camino a partir de ahí.",
+    scout_topic_situation: "Mi situación actual", scout_topic_situation_prompt: "Hablemos de mi situación actual como atleta.",
+    scout_topic_goals: "Mis objetivos y preferencias", scout_topic_goals_prompt: "Quiero hablar sobre mis objetivos y lo que busco.",
+    scout_topic_game: "Mi juego y rendimiento", scout_topic_game_prompt: "Hablemos de mi juego y mi rendimiento.",
     scout_chip1: "Crear mi lista de escuelas objetivo", scout_chip2: "Crear mi hoja de ruta profesional",
     scout_chip3: "Redactar un correo a un entrenador", scout_chip4: "¿Qué debería hacer este mes?",
     scout_np_chip1: "Encontrar jugadores para mi equipo", scout_np_chip2: "Buscar los mejores prospectos",
@@ -1065,7 +1089,7 @@ const I18N = {
     home_pathway_progress_title: "ΠΡΟΟΔΟΣ ΠΟΡΕΙΑΣ", home_benchmark_progress_title: "ΠΡΟΣΦΑΤΗ ΠΡΟΟΔΟΣ ΔΕΙΚΤΩΝ",
     home_my_athletes_title: "ΟΙ ΑΘΛΗΤΕΣ ΜΟΥ", home_my_athletes_unnamed: "Αθλητής χωρίς όνομα",
     home_missing_title: "ΛΕΙΠΟΥΝ ΑΚΟΜΑ", home_finish_profile: "Ολοκλήρωσε το Διαβατήριό σου", home_get_started: "ΞΕΚΙΝΑ",
-    home_greeting_morning: "Καλημέρα,", home_greeting_afternoon: "Καλό απόγευμα,", home_greeting_evening: "Καλησπέρα,",
+    home_greeting_morning: "Καλημέρα,", home_greeting_afternoon: "Καλό απόγευμα,", home_greeting_evening: "Καλησπέρα,", home_grad_prefix: "Απόφοιτος ",
     home_path_title: "ΤΟ ΜΟΝΟΠΑΤΙ ΣΟΥ", home_path_you: "ΕΣΥ", home_path_developing: "Σε ανάπτυξη", home_path_goal_placeholder: "Όρισε τον στόχο σου",
     home_readiness_row_profile: "ΠΡΟΦΙΛ", home_readiness_row_film: "ΒΙΝΤΕΟ", home_readiness_row_performance: "ΑΠΟΔΟΣΗ", home_readiness_row_pathway: "ΜΟΝΟΠΑΤΙ",
     home_readiness_status_profile_ok: "Ολοκληρωμένο", home_readiness_status_profile_no: "Εκκρεμεί", home_readiness_status_film_ok: "Προστέθηκαν", home_readiness_status_film_no: "Εκκρεμεί",
@@ -1147,6 +1171,7 @@ const I18N = {
     family_disclaimer: "Ο κάτοχος του λογαριασμού πρέπει να εγκρίνει πριν ένας γονέας δει τα ιδιωτικά του δεδομένα. Αυτό επιβεβαιώνει αμοιβαία συναίνεση — δεν αποτελεί ανεξάρτητη επαλήθευση ταυτότητας.",
     family_sent_msg: "Το αίτημα στάλθηκε — αναμονή έγκρισης.", family_not_found_msg: "Δεν βρέθηκε λογαριασμός GOLSZ με αυτό το email.",
     family_couldnt_send: "Δεν ήταν δυνατή η αποστολή του αιτήματος.",
+    passport_strip_highlights: "Στιγμιότυπα", passport_strip_benchmarks: "Δείκτες", passport_strip_development: "Ανάπτυξη", passport_strip_timeline: "Πορεία",
     highlights_title: "ΕΠΑΛΗΘΕΥΜΕΝΑ ΜΕΣΑ", highlights_title_unverified: "ΜΕΣΑ", highlights_empty: "Δεν υπάρχουν highlights ακόμα.",
     passport_posts_title: "ΑΝΑΡΤΗΣΕΙΣ", passport_posts_empty: "Δεν υπάρχουν αναρτήσεις ακόμα.",
     highlights_title_ph: "Τίτλος highlight (π.χ. Πλήρης αγώνας εναντίον Μόντρεαλ)", highlights_link_ph: "Σύνδεσμος (YouTube, Veo, Hudl…)",
@@ -1159,6 +1184,9 @@ const I18N = {
     dev_plan_status_active: "Ενεργό", dev_plan_status_done: "Ολοκληρώθηκε", dev_plan_status_paused: "Σε παύση",
     dev_plan_focus_training: "Προπόνηση", dev_plan_focus_strength: "Δύναμη", dev_plan_focus_speed: "Ταχύτητα", dev_plan_focus_conditioning: "Αντοχή", dev_plan_focus_recovery: "Αποκατάσταση", dev_plan_focus_sleep: "Ύπνος", dev_plan_focus_hydration: "Ενυδάτωση", dev_plan_focus_nutrition: "Διατροφή", dev_plan_focus_other: "Άλλο",
     pathway_plan_title: "ΠΛΑΝΟ ΠΟΡΕΙΑΣ", pathway_timeline_ph: "Στοχευμένο χρονοδιάγραμμα (π.χ. Φθινόπωρο 2027)", pathway_save: "Αποθήκευση πορείας", pathway_notes_ph: "Σημειώσεις (προαιρετικό)",
+    plan_primary_goal: "ΚΥΡΙΟΣ ΣΤΟΧΟΣ", plan_secondary_goal: "ΔΕΥΤΕΡΕΥΩΝ ΣΤΟΧΟΣ",
+    plan_next_30_title: "ΕΠΟΜΕΝΕΣ 30 ΜΕΡΕΣ", plan_next_90_title: "ΕΠΟΜΕΝΕΣ 90 ΜΕΡΕΣ", plan_season_title: "ΑΥΤΗ Η ΣΕΖΟΝ",
+    plan_next30_profile: "Ολοκλήρωσε το Διαβατήριό σου", plan_next30_film: "Ανέβασε βίντεο αγώνων", plan_next30_benchmark: "Κατέγραψε έναν δείκτη απόδοσης",
     pathway_milestones_title: "Ορόσημα", pathway_milestones_empty: "Δεν υπάρχουν ορόσημα ακόμα.", pathway_milestone_ph: "Προσθήκη οροσήμου", pathway_milestone_add: "Προσθήκη",
     pathway_type_ncaa: "NCAA", pathway_type_naia: "NAIA", pathway_type_juco: "JUCO", pathway_type_canadian_university: "Καναδικό πανεπιστήμιο", pathway_type_academy: "Ακαδημία", pathway_type_european_club: "Πορεία σε ευρωπαϊκό σύλλογο", pathway_type_professional: "Επαγγελματική πορεία", pathway_type_development: "Ανάπτυξη", pathway_type_agent_representation: "Εκπροσώπηση από ατζέντη", pathway_type_trainer_performance: "Προπονητής / ανάπτυξη απόδοσης", pathway_type_other: "Άλλο",
     pathway_collapse: "Σύμπτυξη", pathway_edit_goal: "Επεξεργασία μονοπατιού", pathway_alt_branch_note: "Το {branch} είναι επίσης μια συνηθισμένη παράλληλη διαδρομή για αυτό το άθλημα.",
@@ -1274,6 +1302,9 @@ const I18N = {
     scout_attach_photo: "Επισύναψη φωτογραφίας", scout_photo_attached: "Η φωτογραφία επισυνάφθηκε — ο σκάουτ θα τη δει.",
     scout_connection_dropped: "Η σύνδεση διακόπηκε στη μέση. Στείλτε το ξανά και θα το αναλάβω.",
     scout_greeting: "Είμαι ο GOLSZ Σκάουτ σας.\n\nΠείτε μου για εσάς όπως θα λέγατε σε έναν σκάουτ — ηλικία, άθλημα, θέση, πού παίζετε και πού θέλετε να καταλήξετε. Θα χτίσω τη διαδρομή σας από εκεί.",
+    scout_topic_situation: "Η τρέχουσα κατάστασή μου", scout_topic_situation_prompt: "Ας μιλήσουμε για την τρέχουσα κατάστασή μου ως αθλητή.",
+    scout_topic_goals: "Οι στόχοι & προτιμήσεις μου", scout_topic_goals_prompt: "Θέλω να μιλήσω για τους στόχους μου και τι ψάχνω.",
+    scout_topic_game: "Το παιχνίδι & η απόδοσή μου", scout_topic_game_prompt: "Ας μιλήσουμε για το παιχνίδι και την απόδοσή μου.",
     scout_chip1: "Δημιουργία λίστας σχολών-στόχων", scout_chip2: "Δημιουργία οδικού χάρτη καριέρας",
     scout_chip3: "Σύνταξη email σε προπονητή", scout_chip4: "Τι πρέπει να κάνω αυτόν τον μήνα;",
     scout_np_chip1: "Εύρεση παικτών για την ομάδα μου", scout_np_chip2: "Αναζήτηση κορυφαίων ταλέντων",
@@ -3832,6 +3863,14 @@ function computeNextMove({ profileComplete, goalDefined, plan, baselineComplete,
 // is the right destination for anything conversational (goal-setting,
 // baseline, Pathway-building), Targets for target/outreach work, Profile
 // for finishing the Passport itself.
+// Icon per deterministic type, purely presentational (Master UX/UI
+// redesign — the Next Move card should carry a visible icon + explicit
+// button, not just be a clickable card with no affordance).
+const NEXT_MOVE_TYPE_ICON = {
+  COMPLETE_PROFILE: User, DEFINE_GOAL: Radar, INVITE_TO_PATHWAY: Compass,
+  ESTABLISH_BASELINE: Radar, BUILD_PATHWAY: Compass, TARGET_WORK: Target,
+  FOLLOW_UP: Mail, RETEST: Flame, REVIEW_PROGRESS: BadgeCheck,
+};
 const NEXT_MOVE_TYPE_TARGET_PAGE = {
   COMPLETE_PROFILE: "profile", DEFINE_GOAL: "scout", INVITE_TO_PATHWAY: "scout",
   ESTABLISH_BASELINE: "scout", BUILD_PATHWAY: "scout", TARGET_WORK: "targets",
@@ -4250,6 +4289,12 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const [followedByThem, setFollowedByThem] = useState(false);
   const [followers, setFollowers] = useState(null);
   const [followingList, setFollowingList] = useState(null);
+  // Icon+count summary strip (Master UX/UI redesign) — Highlights/Timeline
+  // come straight off the athletes.* row already fetched below; Benchmarks/
+  // Development are separate tables, so this pair of count-only queries
+  // (own profile only, never for a viewed passport) is the only addition.
+  const [benchmarkCount, setBenchmarkCount] = useState(0);
+  const [devItemCount, setDevItemCount] = useState(0);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarErr, setAvatarErr] = useState("");
   const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo immediately
@@ -4389,6 +4434,12 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         setProfile(prof || null);
         setAthlete(ath || null);
         if (autoEdit) { setEditing(true); onAutoEditConsumed && onAutoEditConsumed(); }
+        const [{ count: bCount }, { count: dCount }] = await Promise.all([
+          sb.from("athlete_benchmarks").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+          sb.from("development_plan_items").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        ]);
+        setBenchmarkCount(bCount || 0);
+        setDevItemCount(dCount || 0);
       }
 
       const [{ data: followerRows }, { data: followingRows }] = await Promise.all([
@@ -4709,6 +4760,28 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           color: C.slate, wordBreak: "break-all", lineHeight: 1.7,
         }}>{mrz}</div>
       </div>
+
+      {/* Icon+count summary strip (Master UX/UI redesign) — real counts
+          only, never shown for a viewed-other Passport since Benchmarks/
+          Development are private-to-owner data (see their own gating
+          below). Purely informative — no scroll-to-section wiring, the
+          real sections are a short scroll away regardless. */}
+      {!viewingOther && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, margin: "10px 0" }}>
+          {[
+            [ImageIcon, t("passport_strip_highlights"), Array.isArray(athlete && athlete.highlights) ? athlete.highlights.length : 0],
+            [Flame, t("passport_strip_benchmarks"), benchmarkCount],
+            [Compass, t("passport_strip_development"), devItemCount],
+            [History, t("passport_strip_timeline"), Array.isArray(athlete && athlete.timeline) ? athlete.timeline.length : 0],
+          ].map(([Icon, label, count]) => (
+            <div key={label} style={{ ...card, margin: 0, padding: "10px 6px", textAlign: "center" }}>
+              <Icon size={16} color={C.lime} style={{ marginBottom: 4 }} />
+              <div style={{ fontSize: 13, fontWeight: 900, color: C.chalk, fontFamily: "'Space Mono', monospace" }}>{count}</div>
+              <div style={{ fontSize: 8, letterSpacing: "0.05em", color: C.slate, fontWeight: 700 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* bio */}
       <div style={{ ...card, marginTop: 14 }}>
@@ -6876,18 +6949,34 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
   const known = Object.keys(profile).filter((k) => profile[k]);
   const isPlayerChat = !profile.occupation || profile.occupation === "Player";
   const CHIPS = chipsFor(t, isPlayerChat);
+  // Topic rows (Master UX/UI redesign — "Scout should be visually the
+  // CLEANEST section") replace the old 2x2 icon-chip grid for the very
+  // first empty state only; the horizontal scrolling CHIPS row further
+  // down (ongoing conversations) is untouched. Each row sends a natural
+  // topic-starter sentence, same send() path a typed message uses.
+  const TOPICS = [
+    { Icon: SlidersHorizontal, label: t("scout_topic_situation"), prompt: t("scout_topic_situation_prompt") },
+    { Icon: Target, label: t("scout_topic_goals"), prompt: t("scout_topic_goals_prompt") },
+    { Icon: Flame, label: t("scout_topic_game"), prompt: t("scout_topic_game_prompt") },
+  ];
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.line}`, display: "flex", alignItems: "center", gap: 8 }}>
-        <Radar size={18} color={C.lime} />
-        <span style={{ fontWeight: 800, letterSpacing: "0.04em" }}>{t("scout_header")}</span>
-        <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ padding: "12px 14px 10px", borderBottom: `1px solid ${C.line}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
           <span style={{ fontSize: 10, color: C.slate, fontFamily: "'Space Mono', monospace" }}>
             {scoutUsage ? `${scoutUsage.remaining} ${t("scout_questions_left")}` : known.length ? `${known.length} ${t("scout_fields_on_file")}` : t("scout_live_agent")}
           </span>
-          <button onClick={openHistory} title={t("scout_history_title")} style={iconBtn(showHistory ? C.lime : C.slate)}><History size={16} /></button>
-          <button onClick={newChat} title={t("scout_new_chat")} style={iconBtn(C.lime)}><Plus size={17} /></button>
-        </span>
+          <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={openHistory} title={t("scout_history_title")} style={iconBtn(showHistory ? C.lime : C.slate)}><History size={16} /></button>
+            <button onClick={newChat} title={t("scout_new_chat")} style={iconBtn(C.lime)}><Plus size={17} /></button>
+          </span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 99, border: `2px solid ${C.lime}`, background: "#D4AF371a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Radar size={22} color={C.lime} />
+          </div>
+          <span style={{ fontWeight: 800, letterSpacing: "0.1em", fontSize: 12.5 }}>{t("scout_header")}</span>
+        </div>
       </div>
 
       {!showHistory && nextMove && hasFeature(plan, "next_move") && (
@@ -7003,20 +7092,18 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
             </div>
           ))}
           {loaded && !pending && msgs && msgs.length <= 1 && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 6 }}>
-              {CHIPS.map((q, i) => {
-                const Icon = CHIP_ICONS[i];
-                return (
-                  <button key={q} onClick={() => send(q)} style={{
-                    display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8, textAlign: "left",
-                    background: C.card, border: `1px solid ${C.line2}`, borderRadius: 12, padding: 12,
-                    cursor: "pointer", fontFamily: "inherit", color: C.chalk,
-                  }}>
-                    <Icon size={17} color={C.lime} />
-                    <span style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.3 }}>{q}</span>
-                  </button>
-                );
-              })}
+            <div style={{ marginTop: 6 }}>
+              {TOPICS.map((tp) => (
+                <button key={tp.label} onClick={() => send(tp.prompt)} style={{
+                  display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left",
+                  background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "12px 14px",
+                  marginBottom: 8, cursor: "pointer", fontFamily: "inherit", color: C.chalk,
+                }}>
+                  <tp.Icon size={16} color={C.lime} style={{ flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>{tp.label}</span>
+                  <ChevronRight size={15} color={C.slate} style={{ flexShrink: 0 }} />
+                </button>
+              ))}
             </div>
           )}
           {busy && <div style={bubbleAgent}><div className="running"><span /><span /><span /></div></div>}
@@ -7097,6 +7184,9 @@ function ReadinessCard({ label, score, sub }) {
 // can be the very first thing a returning athlete sees before either of
 // those mount.
 const READINESS_DIMENSIONS = ["profile_quality", "verification", "performance", "development", "pathway"];
+// Icon per Free-tier categorical Readiness row (see readinessStatus in
+// HomeTab) — purely presentational, same 4 real signals as before.
+const READINESS_STATUS_ICON = { profile: User, film: Video, performance: Flame, pathway: Compass };
 // Compact "YOUR PATH" strip (Master UX/UI redesign §5) — a snapshot, not
 // the full branching map (that lives on the Plan tab's PathwayMap, §8/§9).
 // Built entirely from data Home already fetches: no new schema. "Current"
@@ -7104,24 +7194,43 @@ const READINESS_DIMENSIONS = ["profile_quality", "verification", "performance", 
 // status (a category) over a plain "Developing" fallback so it never
 // shows an empty node. The goal node stays muted/tappable-to-Scout when
 // no pathway exists yet, rather than inventing a fake goal.
+// Icon per node role (Master UX/UI redesign visual reference) — Home icon
+// for the athlete's current position, Shield for their club/organization,
+// Star for the stated goal, GraduationCap for the alternate branch (NCAA
+// in practice, but driven by SPORT_PATHWAY_STAGES' altBranch, not
+// hardcoded). Purely presentational — same underlying data as before.
+function PathNode({ Icon, label, filled, onClick, size }) {
+  return (
+    <div onClick={onClick} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 0, cursor: onClick ? "pointer" : "default", flexShrink: 0 }}>
+      <div style={{ width: size || 30, height: size || 30, borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center", background: filled ? "#D4AF371a" : "transparent", border: `2px solid ${filled ? C.lime : C.line2}` }}>
+        <Icon size={(size || 30) * 0.52} color={filled ? C.lime : C.slate} />
+      </div>
+      <div style={{ fontSize: 10.5, fontWeight: 700, color: filled ? C.chalk : C.slate, textAlign: "center", maxWidth: 84, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</div>
+    </div>
+  );
+}
 function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
   const current = (athlete && (athlete.club_name || athlete.recruiting_status)) || t("home_path_developing");
   const hasGoal = !!pathwayRow;
   const goalLabel = hasGoal ? t("pathway_type_" + pathwayRow.pathway_type) : t("home_path_goal_placeholder");
-  const Node = ({ label, filled, onClick }) => (
-    <div onClick={onClick} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 0, cursor: onClick ? "pointer" : "default" }}>
-      <div style={{ width: 10, height: 10, borderRadius: 99, background: filled ? C.lime : "transparent", border: `2px solid ${filled ? C.lime : C.line2}`, flexShrink: 0 }} />
-      <div style={{ fontSize: 10.5, fontWeight: 700, color: filled ? C.chalk : C.slate, textAlign: "center", maxWidth: 84, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</div>
-    </div>
-  );
-  const Line = () => <div style={{ flex: 1, height: 2, background: C.line2, marginBottom: 16, minWidth: 12 }} />;
+  const config = SPORT_PATHWAY_STAGES[athlete && athlete.sport] || SPORT_PATHWAY_STAGES.__default;
+  const showAltBranch = config.altBranch && (!hasGoal || pathwayRow.pathway_type !== config.altBranch);
+  const Line = () => <div style={{ flex: 1, height: 2, background: C.line2, marginTop: 15, minWidth: 12 }} />;
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", padding: "6px 4px 14px" }}>
-      <Node label={t("home_path_you")} filled />
-      <Line />
-      <Node label={current} filled={!!(athlete && athlete.club_name)} />
-      <Line />
-      <Node label={goalLabel} filled={hasGoal} onClick={hasGoal ? undefined : () => onNavigate("scout")} />
+    <div style={{ padding: "6px 4px 14px" }}>
+      <div style={{ display: "flex", alignItems: "flex-start" }}>
+        <PathNode Icon={Home} label={t("home_path_you")} filled />
+        <Line />
+        <PathNode Icon={Shield} label={current} filled={!!(athlete && athlete.club_name)} />
+        <Line />
+        <PathNode Icon={Star} label={goalLabel} filled={hasGoal} onClick={hasGoal ? undefined : () => onNavigate("scout")} />
+      </div>
+      {showAltBranch && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 2 }}>
+          <div style={{ width: 30, borderLeft: `2px dashed ${C.line2}`, borderBottom: `2px dashed ${C.line2}`, height: 16, marginRight: 15 }} />
+          <div style={{ marginTop: -2 }}><PathNode Icon={GraduationCap} label={t("pathway_type_" + config.altBranch)} filled={hasGoal && pathwayRow.pathway_type === config.altBranch} size={26} /></div>
+        </div>
+      )}
     </div>
   );
 }
@@ -7140,6 +7249,7 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
   const [monthly, setMonthly] = useState(null);
   const [nextMove, setNextMove] = useState(null);
   const [name, setName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
   // Deterministic state-machine inputs (directive §11) — profileComplete
   // mirrors the exact same minimal heuristic GolszApp already gates the
   // whole app behind (!!athlete.sport), goalDefined comes straight off
@@ -7155,7 +7265,7 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
         if (!user) { setLoaded(true); return; }
         const [{ data: prof }, { data: ath }, { data: reqs }, { data: benchmarks }, { data: devItems }, { data: pathwayRow }, { data: targets }] = await Promise.all([
           sb.from("profiles").select("full_name, occupation, avatar_url, identity_verified, goal_defined, plan").eq("id", user.id).single(),
-          sb.from("athletes").select("sport, position, club_name, grad_year, country, recruiting_status, bio, highlights, timeline, scout_context").eq("id", user.id).single(),
+          sb.from("athletes").select("sport, position, club_name, grad_year, height_cm, weight_kg, country, recruiting_status, bio, highlights, timeline, scout_context").eq("id", user.id).single(),
           sb.from("verification_requests").select("status").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
           sb.from("athlete_benchmarks").select("metric, value, unit, recorded_date").eq("user_id", user.id).order("recorded_date", { ascending: false }),
           sb.from("development_plan_items").select("status").eq("user_id", user.id),
@@ -7163,6 +7273,7 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
           sb.from("outreach_targets").select("id, status, updated_at").eq("user_id", user.id),
         ]);
         if (prof && prof.full_name) setName(prof.full_name);
+        if (prof && prof.avatar_url) setAvatarUrl(prof.avatar_url);
         setAthlete(ath || null);
         setProfileComplete(!!(ath && ath.sport));
         setGoalDefined(!!(prof && prof.goal_defined));
@@ -7252,14 +7363,28 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
   return (
     <div style={{ padding: "8px 12px 20px" }}>
       {name && (
-        <div style={{ margin: "4px 2px 4px" }}>
+        <div style={{ margin: "4px 2px 10px" }}>
           <div style={{ fontSize: 12, color: C.slate, fontWeight: 700 }}>{t(greetingKey)}</div>
           <div style={{ fontSize: 22, fontWeight: 900 }}>{name.split(" ")[0]}</div>
         </div>
       )}
       {athlete && (athlete.sport || athlete.club_name) && (
-        <div style={{ fontSize: 12, color: C.slate, margin: "0 2px 14px" }}>
-          {[athlete.sport, athlete.position, athlete.club_name].filter(Boolean).join(" · ")}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 2px 16px" }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0, overflow: "hidden", border: `1.5px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg, ${C.turf}, ${C.line2})`, fontWeight: 800, fontSize: 17, color: C.lime, fontFamily: "'Space Mono', monospace" }}>
+            {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(name || "?")}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: C.chalk, display: "flex", alignItems: "center", gap: 5 }}>
+              {name}{verification && verification.status === "verified" && <BadgeCheck size={14} color={C.lime} />}
+            </div>
+            <div style={{ fontSize: 11.5, color: C.slate, lineHeight: 1.5 }}>
+              {[athlete.sport, athlete.position].filter(Boolean).join(" · ")}
+              {athlete.club_name && <><br />{athlete.club_name}</>}
+              {(athlete.height_cm || athlete.weight_kg || athlete.grad_year) && <><br />
+                {[athlete.height_cm && `${athlete.height_cm} cm`, athlete.weight_kg && `${athlete.weight_kg} kg`, athlete.grad_year && t("home_grad_prefix") + athlete.grad_year].filter(Boolean).join(" · ")}
+              </>}
+            </div>
+          </div>
         </div>
       )}
 
@@ -7270,21 +7395,42 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
           §5: "what should I do next" is Home's job for everyone, not a
           paywalled add-on). Deterministic type drives WHAT/WHERE; Scout's
           own last suggestion, when present, supplies the wording. */}
-      <div style={{ ...highlightCard, cursor: "pointer" }} onClick={() => onNavigate(NEXT_MOVE_TYPE_TARGET_PAGE[deterministicType] || "scout")}>
-        <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.ink, opacity: 0.65, fontWeight: 700, marginBottom: 6 }}>{t("next_move_title")}</div>
-        <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>{nextMoveLabel}</div>
-      </div>
+      {(() => {
+        const NextIcon = NEXT_MOVE_TYPE_ICON[deterministicType] || Radar;
+        return (
+          <div style={{ ...highlightCard, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: "#0D12101a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <NextIcon size={18} color={C.ink} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.ink, opacity: 0.65, fontWeight: 700, marginBottom: 4 }}>{t("next_move_title")}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, lineHeight: 1.35 }}>{nextMoveLabel}</div>
+            </div>
+            <button onClick={() => onNavigate(NEXT_MOVE_TYPE_TARGET_PAGE[deterministicType] || "scout")} style={{ flexShrink: 0, background: C.ink, color: C.chalk, border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.03em", cursor: "pointer", fontFamily: "inherit" }}>{t("next_move_act")}</button>
+          </div>
+        );
+      })()}
 
       <SectionTitle>{t("home_readiness_title")}</SectionTitle>
-      <div style={{ ...card, display: "flex", alignItems: "center", gap: 16, marginBottom: 10 }}>
-        <div style={{ fontSize: 34, fontWeight: 900, color: compositeColor, fontFamily: "'Space Mono', monospace", flexShrink: 0 }}>{composite}%</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 14px", flex: 1, minWidth: 0 }}>
-          {readinessStatus.map((s) => (
-            <div key={s.key} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-              <span style={{ fontSize: 10.5, color: C.slate, fontWeight: 700, letterSpacing: "0.04em" }}>{t("home_readiness_row_" + s.key)}</span>
-              <span style={{ fontSize: 10.5, fontWeight: 800, color: s.ok ? C.lime : C.slate }}>{t("home_readiness_status_" + s.key + "_" + (s.ok ? "ok" : "no"))}</span>
-            </div>
-          ))}
+      <div style={{ ...card, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+          <span style={{ fontSize: 26, fontWeight: 900, color: compositeColor, fontFamily: "'Space Mono', monospace" }}>{composite}%</span>
+          <span style={{ fontSize: 9, letterSpacing: "0.14em", color: C.slate, fontWeight: 700 }}>{t("home_readiness_composite")}</span>
+        </div>
+        <div style={{ height: 6, borderRadius: 99, background: C.turf, overflow: "hidden", marginBottom: 16 }}>
+          <div style={{ height: "100%", width: `${composite}%`, borderRadius: 99, background: compositeColor, transition: "width .3s ease" }} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
+          {readinessStatus.map((s) => {
+            const Icon = READINESS_STATUS_ICON[s.key];
+            return (
+              <div key={s.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, textAlign: "center" }}>
+                <Icon size={17} color={s.ok ? C.lime : C.slate} />
+                <span style={{ fontSize: 9, color: C.slate, fontWeight: 700, letterSpacing: "0.03em" }}>{t("home_readiness_row_" + s.key)}</span>
+                <span style={{ fontSize: 9.5, fontWeight: 800, color: s.ok ? C.lime : C.slate }}>{t("home_readiness_status_" + s.key + "_" + (s.ok ? "ok" : "no"))}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -7372,6 +7518,24 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
 // save on blur (not on every keystroke) to avoid a network round trip per
 // character while still never requiring an explicit "save" click.
 const TARGET_STATUSES = ["researching", "preparing", "contacted", "responded", "follow_up", "opportunity"];
+// Collapsible counter row (Master UX/UI redesign §9 — "NEXT 30 DAYS ...
+// 0/3" style rows) — a thin header that expands to reveal real content,
+// reused for all four Plan-tab sections instead of four separate
+// always-open cards.
+function CollapsibleRow({ title, count, total, expanded, onToggle, children }) {
+  return (
+    <div style={{ ...card, marginBottom: 10 }}>
+      <div onClick={onToggle} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+        <span style={{ fontSize: 9, letterSpacing: "0.14em", color: C.slate, fontWeight: 700 }}>{title}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {total != null && <span style={{ fontSize: 11, fontWeight: 800, color: C.lime, fontFamily: "'Space Mono', monospace" }}>{count != null ? `${count}/${total}` : total}</span>}
+          {expanded ? <ChevronUp size={15} color={C.slate} /> : <ChevronDown size={15} color={C.slate} />}
+        </div>
+      </div>
+      {expanded && <div style={{ marginTop: 12 }}>{children}</div>}
+    </div>
+  );
+}
 function Targets({ plan, onUpgrade }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
@@ -7387,6 +7551,20 @@ function Targets({ plan, onUpgrade }) {
   // CRM contact form immediately." Collapsed by default; opens on tap,
   // closes itself after a successful add.
   const [showAddTarget, setShowAddTarget] = useState(false);
+  // Goal-summary cards + Season counter mirror PathwayPlan's own state
+  // (see that component's onChange) rather than a second, independently
+  // fetched copy of the same row.
+  const [pathwayState, setPathwayState] = useState({ pathwayType: null, milestones: [], athlete: null });
+  // "NEXT 30 DAYS" is deliberately the SAME readiness-gap signals Home
+  // already computes (missing Passport fields, no highlights, no
+  // benchmarks) — real data, not an invented task list. "NEXT 90 DAYS"
+  // reuses development_plan_items. Own fetch here since Targets mounts
+  // independently of Home.
+  const [quality, setQuality] = useState(null);
+  const [filmAdded, setFilmAdded] = useState(false);
+  const [benchmarkCount, setBenchmarkCount] = useState(0);
+  const [devItems, setDevItems] = useState([]);
+  const [expandedSection, setExpandedSection] = useState(null);
 
   useEffect(() => {
     if (!sb) { setLoaded(true); return; }
@@ -7395,9 +7573,19 @@ function Targets({ plan, onUpgrade }) {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) { setLoaded(true); return; }
         setUid(user.id);
-        const { data, error } = await sb.from("outreach_targets").select("id, name, contact_name, contact_email, status, notes, draft_email, fit_reasoning, created_at").eq("user_id", user.id).order("created_at", { ascending: false });
+        const [{ data: targetsData, error }, { data: prof }, { data: ath }, { data: benchmarks }, { data: devItemsData }] = await Promise.all([
+          sb.from("outreach_targets").select("id, name, contact_name, contact_email, status, notes, draft_email, fit_reasoning, created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
+          sb.from("profiles").select("full_name, occupation, avatar_url").eq("id", user.id).single(),
+          sb.from("athletes").select("sport, position, club_name, grad_year, country, recruiting_status, bio, highlights, timeline").eq("id", user.id).single(),
+          sb.from("athlete_benchmarks").select("id").eq("user_id", user.id),
+          sb.from("development_plan_items").select("id, focus_area, goal, status").eq("user_id", user.id),
+        ]);
         if (error) throw error;
-        setItems(data || []);
+        setItems(targetsData || []);
+        setQuality(computeProfileQuality(ath, prof));
+        setFilmAdded(!!(ath && Array.isArray(ath.highlights) && ath.highlights.length > 0));
+        setBenchmarkCount((benchmarks || []).length);
+        setDevItems(devItemsData || []);
       } catch (e) { console.error("GOLSZ targets load error:", e); }
       setLoaded(true);
     })();
@@ -7445,63 +7633,127 @@ function Targets({ plan, onUpgrade }) {
   }
 
   const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
+  const sport = pathwayState.athlete && pathwayState.athlete.sport;
+  const sportConfig = SPORT_PATHWAY_STAGES[sport] || SPORT_PATHWAY_STAGES.__default;
+  const hasPrimaryGoal = !!pathwayState.pathwayType;
+  const hasSecondaryGoal = sportConfig.altBranch && pathwayState.pathwayType !== sportConfig.altBranch;
+  const next30 = [
+    { key: "profile", done: !!(quality && quality.score >= 70), label: t("plan_next30_profile") },
+    { key: "film", done: filmAdded, label: t("plan_next30_film") },
+    { key: "benchmark", done: benchmarkCount > 0, label: t("plan_next30_benchmark") },
+  ];
+  const next30Done = next30.filter((i) => i.done).length;
+  const next90Done = devItems.filter((i) => i.status === "done").length;
+  const seasonMilestones = pathwayState.milestones || [];
+  const seasonDone = seasonMilestones.filter((m) => m.done).length;
 
   return (
     <div style={{ padding: "8px 12px 20px" }}>
+      {/* Primary/secondary goal summary (Master UX/UI redesign §8) —
+          mirrors PathwayPlan's own state (see its onChange), never a
+          second fetch of the same row. */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <div style={{ ...card, flex: 1, margin: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+            <Trophy size={13} color={C.lime} />
+            <span style={{ fontSize: 8.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700 }}>{t("plan_primary_goal")}</span>
+          </div>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: C.chalk }}>{hasPrimaryGoal ? t("pathway_type_" + pathwayState.pathwayType) : t("home_path_goal_placeholder")}</div>
+        </div>
+        {hasSecondaryGoal && (
+          <div style={{ ...card, flex: 1, margin: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+              <GraduationCap size={13} color={C.lime} />
+              <span style={{ fontSize: 8.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700 }}>{t("plan_secondary_goal")}</span>
+            </div>
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: C.chalk }}>{t("pathway_type_" + sportConfig.altBranch)}</div>
+          </div>
+        )}
+      </div>
+
       {/* Pathway plan (migration 076) lives on this same "Pathway/Plan" nav
           destination now (brief §14's nav concept) rather than buried on
           Passport — pathway_plan and targets share the same Pro+ minimum
           plan, so the page-level gate above already covers both. */}
-      <SectionTitle>{t("pathway_plan_title")}</SectionTitle>
-      <PathwayPlan viewUserId={null} />
+      <PathwayPlan viewUserId={null} onChange={setPathwayState} />
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "6px 2px 10px" }}>
-        <SectionTitle noMargin>{t("targets_title")}</SectionTitle>
-        {!showAddTarget && <button onClick={() => setShowAddTarget(true)} style={{ ...iconBtn(C.lime), fontSize: 12 }}><Plus size={13} /> {t("targets_add")}</button>}
-      </div>
-      {showAddTarget && (
-        <div style={{ ...card }}>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={t("targets_name_ph")} style={{ flex: "1 1 160px", ...inputStyle }} />
-            <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder={t("targets_contact_name_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
-            <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder={t("targets_contact_email_ph")} type="email" style={{ flex: "1 1 140px", ...inputStyle }} />
-            <button onClick={addTarget} disabled={!name.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!name.trim() || busy) ? 0.5 : 1 }}>
-              {busy ? "…" : t("targets_add")}
-            </button>
-            <button onClick={() => setShowAddTarget(false)} style={{ ...iconBtn(C.slate), fontSize: 12.5 }}>{t("pathway_collapse")}</button>
+      <CollapsibleRow title={t("plan_next_30_title")} count={next30Done} total={next30.length} expanded={expandedSection === "30"} onToggle={() => setExpandedSection(expandedSection === "30" ? null : "30")}>
+        {next30.map((i) => (
+          <div key={i.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0" }}>
+            {i.done ? <BadgeCheck size={15} color={C.lime} /> : <div style={{ width: 14, height: 14, borderRadius: 4, border: `1.5px solid ${C.line2}`, flexShrink: 0 }} />}
+            <span style={{ fontSize: 12.5, color: i.done ? C.slate : C.chalk, textDecoration: i.done ? "line-through" : "none" }}>{i.label}</span>
           </div>
-          {err && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 6 }}>{err}</div>}
-        </div>
-      )}
+        ))}
+      </CollapsibleRow>
 
-      {items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, padding: "10px 2px" }}>{t("targets_empty")}</div>}
-
-      {items.map((it) => (
-        <div key={it.id} style={{ ...card }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>{it.name}</div>
-              {(it.contact_name || it.contact_email) && <div style={{ fontSize: 11.5, color: C.slate }}>{[it.contact_name, it.contact_email].filter(Boolean).join(" · ")}</div>}
-              {it.fit_reasoning && <div style={{ fontSize: 11, color: C.lime, marginTop: 2 }}>{it.fit_reasoning}</div>}
-            </div>
-            <select value={it.status} onChange={(e) => updateTarget(it.id, { status: e.target.value })} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "6px 8px", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
-              {TARGET_STATUSES.map((s) => <option key={s} value={s}>{t("targets_status_" + s)}</option>)}
-            </select>
-            <button onClick={() => setExpandedId(expandedId === it.id ? null : it.id)} style={{ ...iconBtn(C.slate), flexShrink: 0 }}>{expandedId === it.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>
-            <button onClick={() => removeTarget(it.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><X size={14} /></button>
+      <CollapsibleRow title={t("plan_next_90_title")} count={next90Done} total={devItems.length} expanded={expandedSection === "90"} onToggle={() => setExpandedSection(expandedSection === "90" ? null : "90")}>
+        {devItems.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("dev_plan_empty")}</div>}
+        {devItems.map((i) => (
+          <div key={i.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0" }}>
+            {i.status === "done" ? <BadgeCheck size={15} color={C.lime} /> : <div style={{ width: 14, height: 14, borderRadius: 4, border: `1.5px solid ${C.line2}`, flexShrink: 0 }} />}
+            <span style={{ fontSize: 12.5, color: i.status === "done" ? C.slate : C.chalk, textDecoration: i.status === "done" ? "line-through" : "none" }}>{i.goal}</span>
           </div>
-          {expandedId === it.id && (
-            <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
-              <textarea defaultValue={it.fit_reasoning || ""} onBlur={(e) => updateTarget(it.id, { fit_reasoning: e.target.value })} placeholder={t("targets_fit_reasoning_ph")}
-                style={{ width: "100%", minHeight: 40, resize: "vertical", marginBottom: 8, ...inputStyle }} />
-              <textarea defaultValue={it.notes || ""} onBlur={(e) => updateTarget(it.id, { notes: e.target.value })} placeholder={t("targets_notes_ph")}
-                style={{ width: "100%", minHeight: 50, resize: "vertical", marginBottom: 8, ...inputStyle }} />
-              <textarea defaultValue={it.draft_email || ""} onBlur={(e) => updateTarget(it.id, { draft_email: e.target.value })} placeholder={t("targets_draft_ph")}
-                style={{ width: "100%", minHeight: 80, resize: "vertical", ...inputStyle }} />
-            </div>
-          )}
+        ))}
+      </CollapsibleRow>
+
+      <CollapsibleRow title={t("plan_season_title")} count={seasonDone} total={seasonMilestones.length} expanded={expandedSection === "season"} onToggle={() => setExpandedSection(expandedSection === "season" ? null : "season")}>
+        {seasonMilestones.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("pathway_milestones_empty")}</div>}
+        {seasonMilestones.map((m) => (
+          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0" }}>
+            {m.done ? <BadgeCheck size={15} color={C.lime} /> : <div style={{ width: 14, height: 14, borderRadius: 4, border: `1.5px solid ${C.line2}`, flexShrink: 0 }} />}
+            <span style={{ fontSize: 12.5, color: m.done ? C.slate : C.chalk, textDecoration: m.done ? "line-through" : "none" }}>{m.label}</span>
+          </div>
+        ))}
+      </CollapsibleRow>
+
+      <CollapsibleRow title={t("targets_title")} count={null} total={items.length} expanded={expandedSection === "targets"} onToggle={() => setExpandedSection(expandedSection === "targets" ? null : "targets")}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          {!showAddTarget && <button onClick={() => setShowAddTarget(true)} style={{ ...iconBtn(C.lime), fontSize: 12 }}><Plus size={13} /> {t("targets_add")}</button>}
         </div>
-      ))}
+        {showAddTarget && (
+          <div style={{ ...card }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={t("targets_name_ph")} style={{ flex: "1 1 160px", ...inputStyle }} />
+              <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder={t("targets_contact_name_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
+              <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder={t("targets_contact_email_ph")} type="email" style={{ flex: "1 1 140px", ...inputStyle }} />
+              <button onClick={addTarget} disabled={!name.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!name.trim() || busy) ? 0.5 : 1 }}>
+                {busy ? "…" : t("targets_add")}
+              </button>
+              <button onClick={() => setShowAddTarget(false)} style={{ ...iconBtn(C.slate), fontSize: 12.5 }}>{t("pathway_collapse")}</button>
+            </div>
+            {err && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 6 }}>{err}</div>}
+          </div>
+        )}
+
+        {items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, padding: "10px 2px" }}>{t("targets_empty")}</div>}
+
+        {items.map((it) => (
+          <div key={it.id} style={{ ...card }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>{it.name}</div>
+                {(it.contact_name || it.contact_email) && <div style={{ fontSize: 11.5, color: C.slate }}>{[it.contact_name, it.contact_email].filter(Boolean).join(" · ")}</div>}
+                {it.fit_reasoning && <div style={{ fontSize: 11, color: C.lime, marginTop: 2 }}>{it.fit_reasoning}</div>}
+              </div>
+              <select value={it.status} onChange={(e) => updateTarget(it.id, { status: e.target.value })} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "6px 8px", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
+                {TARGET_STATUSES.map((s) => <option key={s} value={s}>{t("targets_status_" + s)}</option>)}
+              </select>
+              <button onClick={() => setExpandedId(expandedId === it.id ? null : it.id)} style={{ ...iconBtn(C.slate), flexShrink: 0 }}>{expandedId === it.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>
+              <button onClick={() => removeTarget(it.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><X size={14} /></button>
+            </div>
+            {expandedId === it.id && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
+                <textarea defaultValue={it.fit_reasoning || ""} onBlur={(e) => updateTarget(it.id, { fit_reasoning: e.target.value })} placeholder={t("targets_fit_reasoning_ph")}
+                  style={{ width: "100%", minHeight: 40, resize: "vertical", marginBottom: 8, ...inputStyle }} />
+                <textarea defaultValue={it.notes || ""} onBlur={(e) => updateTarget(it.id, { notes: e.target.value })} placeholder={t("targets_notes_ph")}
+                  style={{ width: "100%", minHeight: 50, resize: "vertical", marginBottom: 8, ...inputStyle }} />
+                <textarea defaultValue={it.draft_email || ""} onBlur={(e) => updateTarget(it.id, { draft_email: e.target.value })} placeholder={t("targets_draft_ph")}
+                  style={{ width: "100%", minHeight: 80, resize: "vertical", ...inputStyle }} />
+              </div>
+            )}
+          </div>
+        ))}
+      </CollapsibleRow>
     </div>
   );
 }
@@ -7660,6 +7912,15 @@ function currentStageIndex(athlete, stageCount) {
 // that branch. Presentational only — PathwayPlan below still owns all
 // the actual data/save logic; this just gives it a real map to sit under
 // instead of a dropdown being the first thing an athlete sees.
+// Icon per stage-sequence position: first = Home (starting point), last
+// real stage before the athlete's own goal = Trophy (top of the generic
+// pipeline), everything between = Shield (club/organization). Purely
+// presentational, same SPORT_PATHWAY_STAGES data as before.
+function stageIcon(i, total) {
+  if (i === 0) return Home;
+  if (i === total - 1) return Trophy;
+  return Shield;
+}
 function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal }) {
   const config = SPORT_PATHWAY_STAGES[sport] || SPORT_PATHWAY_STAGES.__default;
   const stages = config.stages;
@@ -7671,26 +7932,21 @@ function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal }) {
       <div style={{ display: "flex", alignItems: "flex-start", overflowX: "auto", paddingBottom: 4 }}>
         {stages.map((stageKey, i) => {
           const reached = i <= curIdx;
+          const Icon = stageIcon(i, stages.length);
           return (
             <React.Fragment key={stageKey}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 64, flexShrink: 0 }}>
-                <div style={{ width: 12, height: 12, borderRadius: 99, background: reached ? C.lime : "transparent", border: `2px solid ${reached ? C.lime : C.line2}`, flexShrink: 0 }} />
-                <div style={{ fontSize: 10, fontWeight: 700, color: reached ? C.chalk : C.slate, textAlign: "center", lineHeight: 1.3 }}>{t("pathway_stage_" + stageKey)}</div>
-                {i === curIdx && <div style={{ fontSize: 8.5, fontWeight: 800, color: C.lime, letterSpacing: "0.08em" }}>{t("home_path_you")}</div>}
-              </div>
-              {i < stages.length - 1 && <div style={{ flex: 1, height: 2, background: i < curIdx ? C.lime : C.line2, marginTop: 5, minWidth: 20 }} />}
+              <PathNode Icon={Icon} label={t("pathway_stage_" + stageKey)} filled={reached} />
+              {i < stages.length - 1 && <div style={{ flex: 1, height: 2, background: i < curIdx ? C.lime : C.line2, marginTop: 15, minWidth: 20 }} />}
             </React.Fragment>
           );
         })}
-        <div style={{ flex: 1, height: 2, background: C.line2, marginTop: 5, minWidth: 20 }} />
-        <div onClick={onEditGoal} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 84, flexShrink: 0, cursor: "pointer" }}>
-          <Star size={16} color={hasGoal ? C.lime : C.line2} fill={hasGoal ? C.lime : "none"} />
-          <div style={{ fontSize: 10, fontWeight: 800, color: hasGoal ? C.lime : C.slate, textAlign: "center", lineHeight: 1.3 }}>{hasGoal ? t("pathway_type_" + pathwayType) : t("home_path_goal_placeholder")}</div>
-        </div>
+        <div style={{ flex: 1, height: 2, background: C.line2, marginTop: 15, minWidth: 20 }} />
+        <PathNode Icon={Star} label={hasGoal ? t("pathway_type_" + pathwayType) : t("home_path_goal_placeholder")} filled={hasGoal} onClick={onEditGoal} />
       </div>
       {showAltBranch && (
-        <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}`, fontSize: 11, color: C.slate, display: "flex", alignItems: "center", gap: 6 }}>
-          <GitBranch size={12} color={C.slate} /> {t("pathway_alt_branch_note").replace("{branch}", t("pathway_type_" + config.altBranch))}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 2 }}>
+          <div style={{ width: 30, borderLeft: `2px dashed ${C.line2}`, borderBottom: `2px dashed ${C.line2}`, height: 16, marginRight: 15 }} />
+          <div style={{ marginTop: -2 }}><PathNode Icon={GraduationCap} label={t("pathway_type_" + config.altBranch)} filled={hasGoal && pathwayType === config.altBranch} onClick={onEditGoal} size={26} /></div>
         </div>
       )}
     </div>
@@ -7703,7 +7959,7 @@ function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal }) {
 // than inserted-many like Targets/Benchmarks/DevelopmentPlan. Private to
 // the owner, same viewUserId convention as those.
 const PATHWAY_TYPES = ["ncaa", "naia", "juco", "canadian_university", "academy", "european_club", "professional", "development", "agent_representation", "trainer_performance", "other"];
-function PathwayPlan({ viewUserId }) {
+function PathwayPlan({ viewUserId, onChange }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [loaded, setLoaded] = useState(false);
@@ -7715,6 +7971,12 @@ function PathwayPlan({ viewUserId }) {
   const [newMilestone, setNewMilestone] = useState("");
   const [exists, setExists] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Mirrors this component's own state up to Targets (the "Pathway/Plan"
+  // page) for the goal-summary cards and the Season milestone counter,
+  // without lifting the actual fetch/save logic out of this component —
+  // avoids a second, independently-fetched (and therefore staleness-prone)
+  // copy of the same pathway_plan row.
+  useEffect(() => { if (onChange) onChange({ pathwayType: exists ? pathwayType : null, milestones, athlete }); }, [pathwayType, milestones, exists, athlete]);
   // Master UX/UI redesign §8/§9 — the map is the primary surface now, the
   // dropdown/timeline/notes controls that used to be the WHOLE component
   // are collapsed behind this toggle. Starts open only when there's
