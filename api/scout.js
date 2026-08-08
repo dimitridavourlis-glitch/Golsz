@@ -2404,6 +2404,72 @@ async function recordScoutUsageCost(userId, cost, inputTokens, outputTokens) {
 // subsequent retry to trip over. Returns the same {ok, data} shape as
 // callAnthropic()/adapter.generate() so the handler's retry/fallback logic
 // can treat a whole-reply attempt uniformly.
+// A reply must never reach the athlete cut off mid-sentence. The output
+// ceiling cannot simply be raised: with the cache-aware budget gate there is
+// only ~780 output tokens of room before a Starter athlete is downgraded off
+// the Sonnet tier, so a bigger ceiling would buy completeness by taking away
+// reasoning quality. Instead, when a response stops because it hit the
+// ceiling (stop_reason "max_tokens"), continue it.
+//
+// Uses assistant prefill: the partial text is handed back as the start of the
+// assistant turn and the model carries on from exactly that point. The API
+// rejects a prefill with trailing whitespace, hence the trim. Token usage is
+// summed across the parts so cost accounting and the routing log stay honest,
+// and the merged text is reassembled into a single text block so every
+// downstream extractor sees one complete JSON object.
+//
+// Bounded: at most 2 continuations, and never started without real time left
+// in the request budget — a truncated-but-salvageable reply beats a killed
+// request. This is why salvageJsonValue() stays as the backstop.
+function replyTextOf(data) {
+  return ((data && data.content) || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+}
+
+function sumUsage(a, b) {
+  const k = ["input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"];
+  const out = { ...(a || {}) };
+  for (const key of k) out[key] = ((a && a[key]) || 0) + ((b && b[key]) || 0);
+  return out;
+}
+
+async function continueIfTruncated(key, cfg, systemPrompt, baseMessages, data, deadlineMs) {
+  let out = data;
+  for (let i = 0; i < 2; i += 1) {
+    if (!out || out.stop_reason !== "max_tokens") break;
+    if (deadlineMs && deadlineMs - Date.now() < 8000) {
+      console.log("GOLSZ reply truncated but no budget left to continue; falling back to salvage");
+      break;
+    }
+    // The API rejects a prefill ending in whitespace, so it has to be
+    // trimmed — but that whitespace was real text. Dropping it fuses the last
+    // word of part one onto the first word of part two ("first halfand the").
+    // Keep it and re-insert on merge, unless the continuation already starts
+    // with its own whitespace.
+    const fullSoFar = replyTextOf(out);
+    const partial = fullSoFar.replace(/\s+$/, "");
+    const trimmedWs = fullSoFar.slice(partial.length);
+    if (!partial) break;
+    console.log("GOLSZ continuing truncated reply, part", i + 2);
+    const cont = await callAnthropic(key, {
+      model: cfg.model_name || MODEL_REGISTRY.DEEP_SCOUT.model,
+      thinking: { type: "disabled" },
+      system: systemPrompt,
+      messages: [...baseMessages, { role: "assistant", content: partial }],
+      maxTokens: cfg.max_output_tokens,
+    });
+    if (!cont.ok) break;
+    const contText = replyTextOf(cont.data);
+    const joiner = /^\s/.test(contText) ? "" : trimmedWs;
+    const merged = partial + joiner + contText;
+    out = {
+      ...cont.data,
+      content: [{ type: "text", text: merged }],
+      usage: sumUsage(out.usage, cont.data.usage),
+    };
+  }
+  return out;
+}
+
 async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation, deadlineMs) {
   const conversation = baseConversation.slice();
   const MAX_TOOL_TURNS = 4;
@@ -2873,7 +2939,9 @@ export default async function handler(req, res) {
     let haikuFailureReason = null;
     if (useHaiku) {
       const adapter = adapterFor(tierConfig.provider);
-      const { ok, data } = await adapter.generate({
+      // `data` is reassigned by the truncation continuation below, so it
+      // cannot be destructured as const.
+      let { ok, data } = await adapter.generate({
         apiKey: key,
         model: tierConfig.model_name || MODEL_REGISTRY.FAST_CHAT.model,
         system: systemPrompt,
@@ -2881,6 +2949,9 @@ export default async function handler(req, res) {
         maxTokens: tierConfig.max_output_tokens,
         tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL, SEARCH_EVENTS_TOOL],
       });
+      if (ok && data.stop_reason === "max_tokens") {
+        data = await continueIfTruncated(key, tierConfig, systemPrompt, conversationForModel, data, handlerStartMs + SCOUT_BUDGET_MS);
+      }
       if (ok && data.stop_reason !== "tool_use") {
         console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
         const cost = estimateCost(tierConfig.model_name, data.usage);
@@ -3015,7 +3086,7 @@ export default async function handler(req, res) {
       return res.status(503).json({ error: "Scout is temporarily unavailable. Please try again shortly." });
     }
 
-    const data = sonnetResult.data;
+    const data = await continueIfTruncated(key, deepTierConfig, systemPrompt, conversationForModel, sonnetResult.data, scoutDeadline);
     if (sonnetResult.toolBudgetExhausted && timeoutReason === "none") timeoutReason = "tool_budget_exhausted";
     const sonnetCost = estimateCost(deepTierConfig.model_name, data.usage);
     await logRouting("sonnet", classification, deepTierConfig.model_name, data.usage, { plan: userPlan, escalationReason: haikuFailureReason || escalationReason(classification), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
