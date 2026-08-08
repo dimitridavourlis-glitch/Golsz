@@ -1013,6 +1013,36 @@ function parseReplyObject(clean) {
   return found ? out : null;
 }
 
+// The athlete must NEVER see the JSON envelope. This derives the clean,
+// human-readable reply ONCE on the server and ships it as data.reply_text, so
+// the client just renders a string instead of re-implementing parsing (which
+// it did, and which failed in production: a reply with any preamble before
+// the "{" slipped past the client guard and the whole object was rendered
+// into the chat bubble).
+//
+// Four fallbacks, in order, because a reply is worthless if it is unreadable:
+//   1. strict/salvaged parse -> .reply            (the normal path)
+//   2. salvage just the "reply" value             (truncated object)
+//   3. strip the JSON block out and keep any real prose around it
+//   4. null -> the client shows honest error copy, never braces
+function deriveReplyText(data) {
+  const raw = ((data && data.content) || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
+  const clean = raw.replace(/```json|```/g, "").trim();
+  const parsed = parseReplyObject(clean);
+  if (parsed && typeof parsed.reply === "string" && parsed.reply.trim()) return parsed.reply.trim();
+  const salvaged = salvageJsonValue(clean, "reply");
+  if (typeof salvaged === "string" && salvaged.trim()) return salvaged.trim();
+  // No recoverable "reply". Drop everything from the first "{" onward and see
+  // if the model wrote anything usable before it.
+  const brace = clean.indexOf("{");
+  const prose = (brace >= 0 ? clean.slice(0, brace) : clean).trim();
+  // Threshold is low on purpose: a short real sentence ("Here is what I found
+  // about the window.") is 38 chars and must not be thrown away. The '":'
+  // check is what actually rejects JSON fragments, not the length.
+  if (prose.length > 15 && !prose.includes('":')) return prose;
+  return null;
+}
+
 function extractMemoryWrites(data) {
   let writes;
   try {
@@ -2984,7 +3014,8 @@ export default async function handler(req, res) {
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache.
         if (requestId) await setCachedResponse(`req:${requestId}`, "replay", "n/a", data);
-        data.scout_summary = updatedSummary;
+        data.reply_text = deriveReplyText(data);
+    data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         // next_move is THIS request's own classification result, not a fact
         // about the shared cached answer — attached only after
@@ -3074,7 +3105,8 @@ export default async function handler(req, res) {
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache.
         if (requestId) await setCachedResponse(`req:${requestId}`, "replay", "n/a", data);
-        data.scout_summary = updatedSummary;
+        data.reply_text = deriveReplyText(data);
+    data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         data.next_move = extractNextBestAction(classification);
         data.suggested_targets = extractSuggestedTargets(data);
@@ -3129,6 +3161,7 @@ export default async function handler(req, res) {
     // exact reply rather than re-asking the athlete (and re-charging them).
     // Short TTL: this is crash recovery, not a semantic cache.
     if (requestId) await setCachedResponse(`req:${requestId}`, "replay", "n/a", data);
+    data.reply_text = deriveReplyText(data);
     data.scout_summary = updatedSummary;
     if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
     data.next_move = extractNextBestAction(classification);
