@@ -6816,7 +6816,15 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       const api = next.slice(-RECENT_TURNS).map((m) => ({ role: m.role, content: m.text }));
       const speakerLabel = profile.occupation && profile.occupation !== "Player" ? profile.occupation.toUpperCase() : "ATHLETE";
       const benchmarksLine = Object.keys(benchmarkSummary).length ? `\n\nLATEST RECORDED BENCHMARKS: ${JSON.stringify(benchmarkSummary)}` : "";
-      const promptText = `PROFILE SO FAR: ${JSON.stringify(profile)}\n\nSCOUT CONTEXT SO FAR: ${JSON.stringify(scoutContext)}${benchmarksLine}\n\nCONVERSATION SUMMARY SO FAR: ${summary || "(none yet)"}\n\n${speakerLabel}: ${content}`;
+      // PROFILE SO FAR / SCOUT CONTEXT SO FAR are deliberately NOT sent any
+      // more. api/scout.js now builds an AUTHORITATIVE ATHLETE STATE block
+      // server-side from the database (buildAuthoritativeContext) and treats
+      // it as the record. Sending a second, client-assembled copy of the
+      // same facts was how a stale or partial client view could contradict
+      // the database — the exact confusion this whole pass fixed. Benchmarks
+      // and the running summary still come from here: neither is an identity
+      // fact, and neither is loaded server-side yet.
+      const promptText = `${benchmarksLine ? benchmarksLine.trim() + "\n\n" : ""}CONVERSATION SUMMARY SO FAR: ${summary || "(none yet)"}\n\n${speakerLabel}: ${content}`;
       api[api.length - 1] = attached
         ? { role: "user", content: [
             { type: "image", source: { type: "base64", media_type: attached.mediaType, data: attached.data } },
