@@ -80,6 +80,8 @@ const History = svg('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
 const Search = svg('<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>');
 const CalendarPlus = svg('<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M10 16h4"/><path d="M12 14v4"/>');
 const Target = svg('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>');
+const Star = svg('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>');
+const GitBranch = svg('<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>');
 const Mail = svg('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>');
 const Download = svg('<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>');
 const Lock = svg('<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>');
@@ -207,7 +209,7 @@ const I18N = {
     auth_continue_payment: "Continue to payment — ", auth_per_month: "/month",
     auth_couldnt_signup: "COULDN'T COMPLETE SIGNUP", auth_couldnt_login: "COULDN'T LOG IN",
     plan_free_tag: "No card needed", plan_starter_tag: "Get started", plan_pro_tag: "Most popular", plan_elite_tag: "It's GOLSZ Time",
-    plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport — profile, achievements & career history", plan_free_feat3: "AI Scout athlete intake & goal discovery",
+    plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport — profile, achievements & career history", plan_free_feat3: "AI Scout athlete intake & goal discovery", plan_free_feat4: "GOLSZ Readiness score & My Next Move",
     conversion_title: "We've learned enough about you — let's build your plan.", conversion_body: "GOLSZ Scout now knows your sport, your goals, and what you're working on. Upgrade to unlock deeper guidance built around your progression — not just more questions.", conversion_dismiss: "Not now",
     feature_lock_body: "This is part of GOLSZ's guided pathway tools.", feature_lock_cta: "Upgrade to unlock",
     guided_step_goal: "Understanding your goal: {goal}", guided_step_goal_fallback: "Getting to know what you're working toward.",
@@ -229,7 +231,15 @@ const I18N = {
     home_pathway_progress_title: "PATHWAY PROGRESS", home_benchmark_progress_title: "RECENT BENCHMARK PROGRESS",
     home_my_athletes_title: "MY ATHLETES", home_my_athletes_unnamed: "Unnamed athlete",
     home_missing_title: "STILL MISSING", home_finish_profile: "Finish your Passport", home_get_started: "GET STARTED",
+    home_greeting_morning: "Good morning,", home_greeting_afternoon: "Good afternoon,", home_greeting_evening: "Good evening,",
+    home_path_title: "YOUR PATH", home_path_you: "YOU", home_path_developing: "Developing", home_path_goal_placeholder: "Set your goal",
+    home_readiness_row_profile: "PROFILE", home_readiness_row_film: "FILM", home_readiness_row_performance: "PERFORMANCE", home_readiness_row_pathway: "PATHWAY",
+    home_readiness_status_profile_ok: "Complete", home_readiness_status_profile_no: "Needed", home_readiness_status_film_ok: "Added", home_readiness_status_film_no: "Needed",
+    home_readiness_status_performance_ok: "Tracked", home_readiness_status_performance_no: "Building", home_readiness_status_pathway_ok: "Active", home_readiness_status_pathway_no: "Not set",
+    home_readiness_teaser_profile_quality: "Upgrade to see exactly which Passport fields are holding your Readiness back, and by how much.", home_readiness_teaser_verification: "Upgrade to see how much identity verification would raise your Readiness.", home_readiness_teaser_performance: "Upgrade to see your performance trend across every benchmark you've recorded.", home_readiness_teaser_development: "Upgrade to see how your development plan is actually moving your Readiness.", home_readiness_teaser_pathway: "Upgrade to see exactly what your Pathway and targets are contributing to your Readiness.",
+    home_scout_ask_ph: "Ask Scout anything…",
     nav_targets: "Pathway/Plan", nav_account: "Account", targets_title: "TARGET SCHOOLS & CLUBS", targets_name_ph: "School or club name", targets_contact_name_ph: "Contact name", targets_contact_email_ph: "Contact email",
+    targets_locked_teaser: "Upgrade to build your visual Pathway, set targets and track outreach — GOLSZ Scout will help you build the first list.",
     targets_add: "Add", targets_add_err: "Couldn't add that. Try again.", targets_empty: "No targets yet — add the first school or club you're pursuing.",
     targets_notes_ph: "Notes", targets_draft_ph: "Draft outreach email",
     targets_status_researching: "Researching", targets_status_preparing: "Preparing", targets_status_contacted: "Contacted", targets_status_responded: "Responded", targets_status_follow_up: "Follow up", targets_status_opportunity: "Opportunity", targets_fit_reasoning_ph: "Why this is a good fit (optional)",
@@ -309,12 +319,26 @@ const I18N = {
     highlights_add: "Add", highlights_invalid_url: "Enter a valid video link (starting with https://).",
     timeline_title: "CAREER TIMELINE", timeline_empty: "No milestones yet.", timeline_year_ph: "Year", timeline_text_ph: "e.g. Committed to Tusculum University", timeline_add: "Add", timeline_add_err: "Couldn't add that. Try again.",
     benchmarks_title: "PERFORMANCE BENCHMARKS", benchmarks_empty: "No benchmarks recorded yet.", benchmarks_metric_ph: "Metric (e.g. 40-yard dash)", benchmarks_value_ph: "Value", benchmarks_unit_ph: "Unit", benchmarks_add: "Record", benchmarks_add_err: "Couldn't record that. Try again.", benchmarks_invalid_value: "Enter a number for the value.",
+    benchmarks_locked_teaser: "Upgrade to record and track your sport-specific benchmarks over time, with retest history and progress trends.",
     dev_plan_title: "DEVELOPMENT PLAN", dev_plan_empty: "No focus areas yet.", dev_plan_goal_ph: "What are you working on?", dev_plan_add: "Add", dev_plan_add_err: "Couldn't add that. Try again.", dev_plan_notes_ph: "Notes (optional)",
+    dev_plan_locked_teaser: "Upgrade to build an active training/development plan with GOLSZ Scout, tracked against your Readiness.",
     dev_plan_status_active: "Active", dev_plan_status_done: "Done", dev_plan_status_paused: "Paused",
     dev_plan_focus_training: "Training", dev_plan_focus_strength: "Strength", dev_plan_focus_speed: "Speed", dev_plan_focus_conditioning: "Conditioning", dev_plan_focus_recovery: "Recovery", dev_plan_focus_sleep: "Sleep", dev_plan_focus_hydration: "Hydration", dev_plan_focus_nutrition: "Nutrition", dev_plan_focus_other: "Other",
     pathway_plan_title: "PATHWAY PLAN", pathway_timeline_ph: "Target timeline (e.g. Fall 2027)", pathway_save: "Save pathway", pathway_notes_ph: "Notes (optional)",
     pathway_milestones_title: "Milestones", pathway_milestones_empty: "No milestones yet.", pathway_milestone_ph: "Add a milestone", pathway_milestone_add: "Add",
     pathway_type_ncaa: "NCAA", pathway_type_naia: "NAIA", pathway_type_juco: "JUCO", pathway_type_canadian_university: "Canadian university", pathway_type_academy: "Academy", pathway_type_european_club: "European club pathway", pathway_type_professional: "Professional pathway", pathway_type_development: "Development", pathway_type_agent_representation: "Agent representation", pathway_type_trainer_performance: "Trainer / performance development", pathway_type_other: "Other",
+    pathway_collapse: "Collapse", pathway_edit_goal: "Edit pathway", pathway_alt_branch_note: "{branch} is a common parallel route for this sport too.",
+    pathway_stage_academy: "Academy", pathway_stage_u19_u21: "U19/U21", pathway_stage_senior: "Senior", pathway_stage_professional: "Professional",
+    pathway_stage_senior_futsal: "Senior Futsal", pathway_stage_professional_futsal: "Pro Futsal",
+    pathway_stage_high_school: "High School", pathway_stage_ncaa_football: "NCAA", pathway_stage_professional_football: "NFL / Pro",
+    pathway_stage_academy_hs: "Academy / HS", pathway_stage_ncaa_juco: "NCAA / JUCO", pathway_stage_minor_league: "Minor League", pathway_stage_professional_baseball: "MLB / Pro",
+    pathway_stage_ncaa_basketball: "NCAA", pathway_stage_professional_basketball: "Pro",
+    pathway_stage_junior: "Junior", pathway_stage_itf: "ITF", pathway_stage_challenger: "Challenger", pathway_stage_pro_tour: "ATP/WTA",
+    pathway_stage_junior_golf: "Junior Golf", pathway_stage_college_golf: "College Golf", pathway_stage_developmental_tour: "Development Tour", pathway_stage_professional_golf: "Pro Tour",
+    pathway_stage_club_hs: "Club / HS", pathway_stage_ncaa_lacrosse: "NCAA", pathway_stage_professional_lacrosse: "Pro",
+    pathway_stage_youth_club: "Youth Club", pathway_stage_senior_club: "Senior Club", pathway_stage_professional_handball: "Pro",
+    pathway_stage_ncaa_volleyball: "NCAA", pathway_stage_professional_volleyball: "Pro",
+    pathway_stage_developing: "Developing", pathway_stage_competing: "Competing", pathway_stage_advancing: "Advancing",
     highlights_add_err: "Couldn't add that link.", highlights_watch: "Watch highlight",
     editor_title: "Build your profile", editor_name_label: "FULL NAME", editor_name_ph: "Your name",
     editor_sport_label: "SPORT", editor_select: "Select…", editor_position_label: "POSITION",
@@ -463,7 +487,7 @@ const I18N = {
     auth_continue_payment: "Continuer vers le paiement — ", auth_per_month: "/mois",
     auth_couldnt_signup: "INSCRIPTION IMPOSSIBLE", auth_couldnt_login: "CONNEXION IMPOSSIBLE",
     plan_free_tag: "Sans carte bancaire", plan_starter_tag: "Pour commencer", plan_pro_tag: "Le plus populaire", plan_elite_tag: "C'est l'heure GOLSZ",
-    plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique — profil, palmarès & parcours", plan_free_feat3: "Découverte de l'athlète & de vos objectifs avec Scout",
+    plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique — profil, palmarès & parcours", plan_free_feat3: "Découverte de l'athlète & de vos objectifs avec Scout", plan_free_feat4: "Score GOLSZ Readiness & Ma Prochaine Étape",
     conversion_title: "On en sait assez sur vous — construisons votre plan.", conversion_body: "GOLSZ Scout connaît maintenant votre sport, vos objectifs et ce sur quoi vous travaillez. Passez à un forfait supérieur pour un accompagnement plus poussé, centré sur votre progression — pas seulement plus de questions.", conversion_dismiss: "Pas maintenant",
     feature_lock_body: "Cela fait partie des outils de parcours guidé de GOLSZ.", feature_lock_cta: "Passer à un forfait supérieur",
     guided_step_goal: "Compréhension de votre objectif : {goal}", guided_step_goal_fallback: "Nous apprenons ce vers quoi vous travaillez.",
@@ -485,7 +509,15 @@ const I18N = {
     home_pathway_progress_title: "PROGRESSION DU PARCOURS", home_benchmark_progress_title: "PROGRESSION RÉCENTE DES REPÈRES",
     home_my_athletes_title: "MES ATHLÈTES", home_my_athletes_unnamed: "Athlète sans nom",
     home_missing_title: "IL MANQUE ENCORE", home_finish_profile: "Terminez votre Passeport", home_get_started: "POUR COMMENCER",
+    home_greeting_morning: "Bonjour,", home_greeting_afternoon: "Bon après-midi,", home_greeting_evening: "Bonsoir,",
+    home_path_title: "VOTRE PARCOURS", home_path_you: "VOUS", home_path_developing: "En développement", home_path_goal_placeholder: "Définissez votre objectif",
+    home_readiness_row_profile: "PROFIL", home_readiness_row_film: "VIDÉOS", home_readiness_row_performance: "PERFORMANCE", home_readiness_row_pathway: "PARCOURS",
+    home_readiness_status_profile_ok: "Complet", home_readiness_status_profile_no: "À faire", home_readiness_status_film_ok: "Ajoutées", home_readiness_status_film_no: "À faire",
+    home_readiness_status_performance_ok: "Suivie", home_readiness_status_performance_no: "En cours", home_readiness_status_pathway_ok: "Actif", home_readiness_status_pathway_no: "Non défini",
+    home_readiness_teaser_profile_quality: "Passez à un forfait supérieur pour voir exactement quels champs du Passeport freinent votre Readiness, et de combien.", home_readiness_teaser_verification: "Passez à un forfait supérieur pour voir de combien la vérification d'identité augmenterait votre Readiness.", home_readiness_teaser_performance: "Passez à un forfait supérieur pour voir votre progression sur chaque repère de performance enregistré.", home_readiness_teaser_development: "Passez à un forfait supérieur pour voir comment votre plan de développement fait évoluer votre Readiness.", home_readiness_teaser_pathway: "Passez à un forfait supérieur pour voir exactement ce que votre Parcours et vos cibles apportent à votre Readiness.",
+    home_scout_ask_ph: "Demandez n'importe quoi à Scout…",
     nav_targets: "Parcours/Plan", nav_account: "Compte", targets_title: "ÉCOLES & CLUBS CIBLÉS", targets_name_ph: "Nom de l'école ou du club", targets_contact_name_ph: "Nom du contact", targets_contact_email_ph: "Email du contact",
+    targets_locked_teaser: "Passez à un forfait supérieur pour construire votre Parcours visuel, définir des cibles et suivre vos démarches — GOLSZ Scout vous aide à créer la première liste.",
     targets_add: "Ajouter", targets_add_err: "Impossible d'ajouter. Réessayez.", targets_empty: "Aucune cible pour l'instant — ajoutez la première école ou le premier club visé.",
     targets_notes_ph: "Notes", targets_draft_ph: "Brouillon d'email de contact",
     targets_status_researching: "Recherche", targets_status_preparing: "Préparation", targets_status_contacted: "Contacté", targets_status_responded: "Répondu", targets_status_follow_up: "Relance", targets_status_opportunity: "Opportunité", targets_fit_reasoning_ph: "Pourquoi c'est un bon choix (facultatif)",
@@ -565,12 +597,26 @@ const I18N = {
     highlights_add: "Ajouter", highlights_invalid_url: "Indiquez un lien vidéo valide (commençant par https://).",
     timeline_title: "PARCOURS SPORTIF", timeline_empty: "Aucune étape pour l'instant.", timeline_year_ph: "Année", timeline_text_ph: "ex. Engagement à Tusculum University", timeline_add: "Ajouter", timeline_add_err: "Impossible d'ajouter. Réessayez.",
     benchmarks_title: "REPÈRES DE PERFORMANCE", benchmarks_empty: "Aucun repère enregistré pour l'instant.", benchmarks_metric_ph: "Mesure (ex. 40 yards)", benchmarks_value_ph: "Valeur", benchmarks_unit_ph: "Unité", benchmarks_add: "Enregistrer", benchmarks_add_err: "Impossible d'enregistrer. Réessayez.", benchmarks_invalid_value: "Entrez un nombre pour la valeur.",
+    benchmarks_locked_teaser: "Passez à un forfait supérieur pour enregistrer et suivre vos repères de performance dans le temps, avec historique et tendances.",
     dev_plan_title: "PLAN DE DÉVELOPPEMENT", dev_plan_empty: "Aucun axe de travail pour l'instant.", dev_plan_goal_ph: "Sur quoi travaillez-vous ?", dev_plan_add: "Ajouter", dev_plan_add_err: "Impossible d'ajouter. Réessayez.", dev_plan_notes_ph: "Notes (facultatif)",
+    dev_plan_locked_teaser: "Passez à un forfait supérieur pour construire un plan de développement actif avec GOLSZ Scout, suivi selon votre Readiness.",
     dev_plan_status_active: "Actif", dev_plan_status_done: "Terminé", dev_plan_status_paused: "En pause",
     dev_plan_focus_training: "Entraînement", dev_plan_focus_strength: "Force", dev_plan_focus_speed: "Vitesse", dev_plan_focus_conditioning: "Endurance", dev_plan_focus_recovery: "Récupération", dev_plan_focus_sleep: "Sommeil", dev_plan_focus_hydration: "Hydratation", dev_plan_focus_nutrition: "Nutrition", dev_plan_focus_other: "Autre",
     pathway_plan_title: "PLAN DE PARCOURS", pathway_timeline_ph: "Échéance visée (ex. automne 2027)", pathway_save: "Enregistrer le parcours", pathway_notes_ph: "Notes (facultatif)",
     pathway_milestones_title: "Étapes clés", pathway_milestones_empty: "Aucune étape pour l'instant.", pathway_milestone_ph: "Ajouter une étape", pathway_milestone_add: "Ajouter",
     pathway_type_ncaa: "NCAA", pathway_type_naia: "NAIA", pathway_type_juco: "JUCO", pathway_type_canadian_university: "Université canadienne", pathway_type_academy: "Académie", pathway_type_european_club: "Parcours club européen", pathway_type_professional: "Parcours professionnel", pathway_type_development: "Développement", pathway_type_agent_representation: "Représentation par un agent", pathway_type_trainer_performance: "Entraîneur / développement de la performance", pathway_type_other: "Autre",
+    pathway_collapse: "Réduire", pathway_edit_goal: "Modifier le parcours", pathway_alt_branch_note: "{branch} est aussi une voie parallèle courante pour ce sport.",
+    pathway_stage_academy: "Académie", pathway_stage_u19_u21: "U19/U21", pathway_stage_senior: "Senior", pathway_stage_professional: "Professionnel",
+    pathway_stage_senior_futsal: "Senior Futsal", pathway_stage_professional_futsal: "Pro Futsal",
+    pathway_stage_high_school: "Lycée", pathway_stage_ncaa_football: "NCAA", pathway_stage_professional_football: "NFL / Pro",
+    pathway_stage_academy_hs: "Académie / Lycée", pathway_stage_ncaa_juco: "NCAA / JUCO", pathway_stage_minor_league: "Ligue mineure", pathway_stage_professional_baseball: "MLB / Pro",
+    pathway_stage_ncaa_basketball: "NCAA", pathway_stage_professional_basketball: "Pro",
+    pathway_stage_junior: "Junior", pathway_stage_itf: "ITF", pathway_stage_challenger: "Challenger", pathway_stage_pro_tour: "ATP/WTA",
+    pathway_stage_junior_golf: "Golf Junior", pathway_stage_college_golf: "Golf universitaire", pathway_stage_developmental_tour: "Circuit de développement", pathway_stage_professional_golf: "Circuit Pro",
+    pathway_stage_club_hs: "Club / Lycée", pathway_stage_ncaa_lacrosse: "NCAA", pathway_stage_professional_lacrosse: "Pro",
+    pathway_stage_youth_club: "Club Jeunes", pathway_stage_senior_club: "Club Senior", pathway_stage_professional_handball: "Pro",
+    pathway_stage_ncaa_volleyball: "NCAA", pathway_stage_professional_volleyball: "Pro",
+    pathway_stage_developing: "En développement", pathway_stage_competing: "En compétition", pathway_stage_advancing: "En progression",
     highlights_add_err: "Impossible d'ajouter ce lien.", highlights_watch: "Voir le temps fort",
     editor_title: "Créez votre profil", editor_name_label: "NOM COMPLET", editor_name_ph: "Votre nom",
     editor_sport_label: "SPORT", editor_select: "Sélectionner…", editor_position_label: "POSTE",
@@ -719,7 +765,7 @@ const I18N = {
     auth_continue_payment: "Continuar al pago — ", auth_per_month: "/mes",
     auth_couldnt_signup: "NO SE PUDO COMPLETAR EL REGISTRO", auth_couldnt_login: "NO SE PUDO INICIAR SESIÓN",
     plan_free_tag: "Sin tarjeta", plan_starter_tag: "Para empezar", plan_pro_tag: "Más popular", plan_elite_tag: "Es hora de GOLSZ",
-    plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital — perfil, logros y trayectoria", plan_free_feat3: "Descubrimiento del atleta y tus objetivos con Scout",
+    plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital — perfil, logros y trayectoria", plan_free_feat3: "Descubrimiento del atleta y tus objetivos con Scout", plan_free_feat4: "Puntuación GOLSZ Readiness y Tu Próximo Paso",
     conversion_title: "Ya sabemos suficiente sobre ti — construyamos tu plan.", conversion_body: "GOLSZ Scout ya conoce tu deporte, tus objetivos y en qué estás trabajando. Mejora tu plan para obtener una guía más profunda centrada en tu progreso, no solo más preguntas.", conversion_dismiss: "Ahora no",
     feature_lock_body: "Esto forma parte de las herramientas de trayectoria guiada de GOLSZ.", feature_lock_cta: "Mejora tu plan para desbloquear",
     guided_step_goal: "Entendiendo tu objetivo: {goal}", guided_step_goal_fallback: "Conociendo hacia qué estás trabajando.",
@@ -741,7 +787,15 @@ const I18N = {
     home_pathway_progress_title: "PROGRESO DE LA TRAYECTORIA", home_benchmark_progress_title: "PROGRESO RECIENTE DE MARCAS",
     home_my_athletes_title: "MIS DEPORTISTAS", home_my_athletes_unnamed: "Deportista sin nombre",
     home_missing_title: "AÚN FALTA", home_finish_profile: "Termina tu Pasaporte", home_get_started: "PARA EMPEZAR",
+    home_greeting_morning: "Buenos días,", home_greeting_afternoon: "Buenas tardes,", home_greeting_evening: "Buenas noches,",
+    home_path_title: "TU CAMINO", home_path_you: "TÚ", home_path_developing: "En desarrollo", home_path_goal_placeholder: "Define tu objetivo",
+    home_readiness_row_profile: "PERFIL", home_readiness_row_film: "VÍDEOS", home_readiness_row_performance: "RENDIMIENTO", home_readiness_row_pathway: "CAMINO",
+    home_readiness_status_profile_ok: "Completo", home_readiness_status_profile_no: "Pendiente", home_readiness_status_film_ok: "Añadidos", home_readiness_status_film_no: "Pendiente",
+    home_readiness_status_performance_ok: "Registrado", home_readiness_status_performance_no: "En proceso", home_readiness_status_pathway_ok: "Activo", home_readiness_status_pathway_no: "Sin definir",
+    home_readiness_teaser_profile_quality: "Mejora tu plan para ver exactamente qué campos del Pasaporte están frenando tu Readiness, y cuánto.", home_readiness_teaser_verification: "Mejora tu plan para ver cuánto aumentaría tu Readiness la verificación de identidad.", home_readiness_teaser_performance: "Mejora tu plan para ver tu progreso en cada marca de rendimiento registrada.", home_readiness_teaser_development: "Mejora tu plan para ver cómo tu plan de desarrollo mueve tu Readiness.", home_readiness_teaser_pathway: "Mejora tu plan para ver exactamente qué aportan tu Camino y tus objetivos a tu Readiness.",
+    home_scout_ask_ph: "Pregúntale lo que sea a Scout…",
     nav_targets: "Trayectoria/Plan", nav_account: "Cuenta", targets_title: "ESCUELAS Y CLUBES OBJETIVO", targets_name_ph: "Nombre de la escuela o club", targets_contact_name_ph: "Nombre del contacto", targets_contact_email_ph: "Email del contacto",
+    targets_locked_teaser: "Mejora tu plan para construir tu Camino visual, definir objetivos y hacer seguimiento — GOLSZ Scout te ayuda a crear la primera lista.",
     targets_add: "Añadir", targets_add_err: "No se pudo añadir. Inténtalo de nuevo.", targets_empty: "Aún no hay objetivos — añade la primera escuela o club que te interese.",
     targets_notes_ph: "Notas", targets_draft_ph: "Borrador de email de contacto",
     targets_status_researching: "Investigando", targets_status_preparing: "Preparando", targets_status_contacted: "Contactado", targets_status_responded: "Respondido", targets_status_follow_up: "Seguimiento", targets_status_opportunity: "Oportunidad", targets_fit_reasoning_ph: "Por qué encaja bien (opcional)",
@@ -821,12 +875,26 @@ const I18N = {
     highlights_add: "Añadir", highlights_invalid_url: "Introduce un enlace de vídeo válido (que empiece por https://).",
     timeline_title: "TRAYECTORIA DEPORTIVA", timeline_empty: "Aún no hay hitos.", timeline_year_ph: "Año", timeline_text_ph: "ej. Compromiso con Tusculum University", timeline_add: "Añadir", timeline_add_err: "No se pudo añadir. Inténtalo de nuevo.",
     benchmarks_title: "MARCAS DE RENDIMIENTO", benchmarks_empty: "Aún no hay marcas registradas.", benchmarks_metric_ph: "Prueba (ej. 40 yardas)", benchmarks_value_ph: "Valor", benchmarks_unit_ph: "Unidad", benchmarks_add: "Registrar", benchmarks_add_err: "No se pudo registrar. Inténtalo de nuevo.", benchmarks_invalid_value: "Introduce un número para el valor.",
+    benchmarks_locked_teaser: "Mejora tu plan para registrar y seguir tus marcas de rendimiento en el tiempo, con historial y tendencias de progreso.",
     dev_plan_title: "PLAN DE DESARROLLO", dev_plan_empty: "Aún no hay áreas de enfoque.", dev_plan_goal_ph: "¿En qué estás trabajando?", dev_plan_add: "Añadir", dev_plan_add_err: "No se pudo añadir. Inténtalo de nuevo.", dev_plan_notes_ph: "Notas (opcional)",
+    dev_plan_locked_teaser: "Mejora tu plan para construir un plan de desarrollo activo con GOLSZ Scout, en función de tu Readiness.",
     dev_plan_status_active: "Activo", dev_plan_status_done: "Completado", dev_plan_status_paused: "En pausa",
     dev_plan_focus_training: "Entrenamiento", dev_plan_focus_strength: "Fuerza", dev_plan_focus_speed: "Velocidad", dev_plan_focus_conditioning: "Resistencia", dev_plan_focus_recovery: "Recuperación", dev_plan_focus_sleep: "Sueño", dev_plan_focus_hydration: "Hidratación", dev_plan_focus_nutrition: "Nutrición", dev_plan_focus_other: "Otro",
     pathway_plan_title: "PLAN DE TRAYECTORIA", pathway_timeline_ph: "Plazo objetivo (ej. otoño 2027)", pathway_save: "Guardar trayectoria", pathway_notes_ph: "Notas (opcional)",
     pathway_milestones_title: "Hitos", pathway_milestones_empty: "Aún no hay hitos.", pathway_milestone_ph: "Añadir un hito", pathway_milestone_add: "Añadir",
     pathway_type_ncaa: "NCAA", pathway_type_naia: "NAIA", pathway_type_juco: "JUCO", pathway_type_canadian_university: "Universidad canadiense", pathway_type_academy: "Academia", pathway_type_european_club: "Trayectoria en club europeo", pathway_type_professional: "Trayectoria profesional", pathway_type_development: "Desarrollo", pathway_type_agent_representation: "Representación por agente", pathway_type_trainer_performance: "Entrenador / desarrollo del rendimiento", pathway_type_other: "Otro",
+    pathway_collapse: "Contraer", pathway_edit_goal: "Editar camino", pathway_alt_branch_note: "{branch} también es una vía paralela común para este deporte.",
+    pathway_stage_academy: "Academia", pathway_stage_u19_u21: "U19/U21", pathway_stage_senior: "Sénior", pathway_stage_professional: "Profesional",
+    pathway_stage_senior_futsal: "Sénior Futsal", pathway_stage_professional_futsal: "Pro Futsal",
+    pathway_stage_high_school: "Instituto", pathway_stage_ncaa_football: "NCAA", pathway_stage_professional_football: "NFL / Pro",
+    pathway_stage_academy_hs: "Academia / Instituto", pathway_stage_ncaa_juco: "NCAA / JUCO", pathway_stage_minor_league: "Ligas menores", pathway_stage_professional_baseball: "MLB / Pro",
+    pathway_stage_ncaa_basketball: "NCAA", pathway_stage_professional_basketball: "Pro",
+    pathway_stage_junior: "Junior", pathway_stage_itf: "ITF", pathway_stage_challenger: "Challenger", pathway_stage_pro_tour: "ATP/WTA",
+    pathway_stage_junior_golf: "Golf Junior", pathway_stage_college_golf: "Golf universitario", pathway_stage_developmental_tour: "Circuito de desarrollo", pathway_stage_professional_golf: "Circuito Pro",
+    pathway_stage_club_hs: "Club / Instituto", pathway_stage_ncaa_lacrosse: "NCAA", pathway_stage_professional_lacrosse: "Pro",
+    pathway_stage_youth_club: "Club Juvenil", pathway_stage_senior_club: "Club Sénior", pathway_stage_professional_handball: "Pro",
+    pathway_stage_ncaa_volleyball: "NCAA", pathway_stage_professional_volleyball: "Pro",
+    pathway_stage_developing: "En desarrollo", pathway_stage_competing: "Compitiendo", pathway_stage_advancing: "Avanzando",
     highlights_add_err: "No se pudo añadir ese enlace.", highlights_watch: "Ver la jugada",
     editor_title: "Crea tu perfil", editor_name_label: "NOMBRE COMPLETO", editor_name_ph: "Tu nombre",
     editor_sport_label: "DEPORTE", editor_select: "Seleccionar…", editor_position_label: "POSICIÓN",
@@ -975,7 +1043,7 @@ const I18N = {
     auth_continue_payment: "Συνέχεια στην πληρωμή — ", auth_per_month: "/μήνα",
     auth_couldnt_signup: "Η ΕΓΓΡΑΦΗ ΑΠΕΤΥΧΕ", auth_couldnt_login: "Η ΣΥΝΔΕΣΗ ΑΠΕΤΥΧΕ",
     plan_free_tag: "Χωρίς κάρτα", plan_starter_tag: "Ξεκινήστε", plan_pro_tag: "Δημοφιλέστερο", plan_elite_tag: "Είναι ώρα για GOLSZ",
-    plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο — προφίλ, διακρίσεις & πορεία", plan_free_feat3: "Γνωριμία με τον αθλητή & τους στόχους σου μέσω του Scout",
+    plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο — προφίλ, διακρίσεις & πορεία", plan_free_feat3: "Γνωριμία με τον αθλητή & τους στόχους σου μέσω του Scout", plan_free_feat4: "Βαθμολογία GOLSZ Readiness & Η Επόμενή σου Κίνηση",
     conversion_title: "Μάθαμε αρκετά για εσένα — ας χτίσουμε το πλάνο σου.", conversion_body: "Ο GOLSZ Scout γνωρίζει πλέον το άθλημά σου, τους στόχους σου και τι δουλεύεις. Αναβάθμισε για βαθύτερη καθοδήγηση γύρω από την εξέλιξή σου — όχι απλώς περισσότερες ερωτήσεις.", conversion_dismiss: "Όχι τώρα",
     feature_lock_body: "Αυτό αποτελεί μέρος των εργαλείων καθοδηγούμενης πορείας του GOLSZ.", feature_lock_cta: "Αναβάθμισε για ξεκλείδωμα",
     guided_step_goal: "Κατανοώντας τον στόχο σου: {goal}", guided_step_goal_fallback: "Μαθαίνουμε προς τι δουλεύεις.",
@@ -997,7 +1065,15 @@ const I18N = {
     home_pathway_progress_title: "ΠΡΟΟΔΟΣ ΠΟΡΕΙΑΣ", home_benchmark_progress_title: "ΠΡΟΣΦΑΤΗ ΠΡΟΟΔΟΣ ΔΕΙΚΤΩΝ",
     home_my_athletes_title: "ΟΙ ΑΘΛΗΤΕΣ ΜΟΥ", home_my_athletes_unnamed: "Αθλητής χωρίς όνομα",
     home_missing_title: "ΛΕΙΠΟΥΝ ΑΚΟΜΑ", home_finish_profile: "Ολοκλήρωσε το Διαβατήριό σου", home_get_started: "ΞΕΚΙΝΑ",
+    home_greeting_morning: "Καλημέρα,", home_greeting_afternoon: "Καλό απόγευμα,", home_greeting_evening: "Καλησπέρα,",
+    home_path_title: "ΤΟ ΜΟΝΟΠΑΤΙ ΣΟΥ", home_path_you: "ΕΣΥ", home_path_developing: "Σε ανάπτυξη", home_path_goal_placeholder: "Όρισε τον στόχο σου",
+    home_readiness_row_profile: "ΠΡΟΦΙΛ", home_readiness_row_film: "ΒΙΝΤΕΟ", home_readiness_row_performance: "ΑΠΟΔΟΣΗ", home_readiness_row_pathway: "ΜΟΝΟΠΑΤΙ",
+    home_readiness_status_profile_ok: "Ολοκληρωμένο", home_readiness_status_profile_no: "Εκκρεμεί", home_readiness_status_film_ok: "Προστέθηκαν", home_readiness_status_film_no: "Εκκρεμεί",
+    home_readiness_status_performance_ok: "Καταγράφεται", home_readiness_status_performance_no: "Σε εξέλιξη", home_readiness_status_pathway_ok: "Ενεργό", home_readiness_status_pathway_no: "Δεν έχει οριστεί",
+    home_readiness_teaser_profile_quality: "Αναβάθμισε για να δεις ακριβώς ποια πεδία του Διαβατηρίου περιορίζουν το Readiness σου, και κατά πόσο.", home_readiness_teaser_verification: "Αναβάθμισε για να δεις πόσο θα αύξανε το Readiness σου η επαλήθευση ταυτότητας.", home_readiness_teaser_performance: "Αναβάθμισε για να δεις την πρόοδό σου σε κάθε δείκτη απόδοσης που έχεις καταγράψει.", home_readiness_teaser_development: "Αναβάθμισε για να δεις πώς το πλάνο ανάπτυξής σου επηρεάζει το Readiness σου.", home_readiness_teaser_pathway: "Αναβάθμισε για να δεις τι ακριβώς προσφέρουν το Μονοπάτι και οι στόχοι σου στο Readiness σου.",
+    home_scout_ask_ph: "Ρώτησε οτιδήποτε τον Scout…",
     nav_targets: "Πορεία/Πλάνο", nav_account: "Λογαριασμός", targets_title: "ΣΧΟΛΕΣ & ΣΥΛΛΟΓΟΙ-ΣΤΟΧΟΙ", targets_name_ph: "Όνομα σχολής ή συλλόγου", targets_contact_name_ph: "Όνομα επαφής", targets_contact_email_ph: "Email επαφής",
+    targets_locked_teaser: "Αναβάθμισε για να χτίσεις το οπτικό σου Μονοπάτι, να ορίσεις στόχους και να παρακολουθείς την προσέγγισή σου — ο GOLSZ Scout θα σε βοηθήσει να φτιάξεις την πρώτη λίστα.",
     targets_add: "Προσθήκη", targets_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", targets_empty: "Δεν υπάρχουν στόχοι ακόμα — πρόσθεσε την πρώτη σχολή ή σύλλογο που σε ενδιαφέρει.",
     targets_notes_ph: "Σημειώσεις", targets_draft_ph: "Πρόχειρο email επικοινωνίας",
     targets_status_researching: "Έρευνα", targets_status_preparing: "Προετοιμασία", targets_status_contacted: "Επικοινώνησα", targets_status_responded: "Απάντησαν", targets_status_follow_up: "Παρακολούθηση", targets_status_opportunity: "Ευκαιρία", targets_fit_reasoning_ph: "Γιατί ταιριάζει καλά (προαιρετικό)",
@@ -1077,12 +1153,26 @@ const I18N = {
     highlights_add: "Προσθήκη", highlights_invalid_url: "Εισαγάγετε έγκυρο σύνδεσμο βίντεο (που να ξεκινά με https://).",
     timeline_title: "ΑΘΛΗΤΙΚΗ ΠΟΡΕΙΑ", timeline_empty: "Δεν υπάρχουν σταθμοί ακόμα.", timeline_year_ph: "Έτος", timeline_text_ph: "π.χ. Δέσμευση στο Tusculum University", timeline_add: "Προσθήκη", timeline_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.",
     benchmarks_title: "ΔΕΙΚΤΕΣ ΑΠΟΔΟΣΗΣ", benchmarks_empty: "Δεν έχουν καταγραφεί δείκτες ακόμα.", benchmarks_metric_ph: "Δείκτης (π.χ. σπριντ 40 yards)", benchmarks_value_ph: "Τιμή", benchmarks_unit_ph: "Μονάδα", benchmarks_add: "Καταγραφή", benchmarks_add_err: "Δεν καταγράφηκε. Δοκιμάστε ξανά.", benchmarks_invalid_value: "Εισάγετε έναν αριθμό για την τιμή.",
+    benchmarks_locked_teaser: "Αναβάθμισε για να καταγράφεις και να παρακολουθείς τους δείκτες απόδοσής σου με την πάροδο του χρόνου, με ιστορικό και τάσεις προόδου.",
     dev_plan_title: "ΠΛΑΝΟ ΑΝΑΠΤΥΞΗΣ", dev_plan_empty: "Δεν υπάρχουν ακόμα τομείς εστίασης.", dev_plan_goal_ph: "Σε τι δουλεύεις;", dev_plan_add: "Προσθήκη", dev_plan_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", dev_plan_notes_ph: "Σημειώσεις (προαιρετικό)",
+    dev_plan_locked_teaser: "Αναβάθμισε για να χτίσεις ένα ενεργό πλάνο ανάπτυξης με τον GOLSZ Scout, βασισμένο στο Readiness σου.",
     dev_plan_status_active: "Ενεργό", dev_plan_status_done: "Ολοκληρώθηκε", dev_plan_status_paused: "Σε παύση",
     dev_plan_focus_training: "Προπόνηση", dev_plan_focus_strength: "Δύναμη", dev_plan_focus_speed: "Ταχύτητα", dev_plan_focus_conditioning: "Αντοχή", dev_plan_focus_recovery: "Αποκατάσταση", dev_plan_focus_sleep: "Ύπνος", dev_plan_focus_hydration: "Ενυδάτωση", dev_plan_focus_nutrition: "Διατροφή", dev_plan_focus_other: "Άλλο",
     pathway_plan_title: "ΠΛΑΝΟ ΠΟΡΕΙΑΣ", pathway_timeline_ph: "Στοχευμένο χρονοδιάγραμμα (π.χ. Φθινόπωρο 2027)", pathway_save: "Αποθήκευση πορείας", pathway_notes_ph: "Σημειώσεις (προαιρετικό)",
     pathway_milestones_title: "Ορόσημα", pathway_milestones_empty: "Δεν υπάρχουν ορόσημα ακόμα.", pathway_milestone_ph: "Προσθήκη οροσήμου", pathway_milestone_add: "Προσθήκη",
     pathway_type_ncaa: "NCAA", pathway_type_naia: "NAIA", pathway_type_juco: "JUCO", pathway_type_canadian_university: "Καναδικό πανεπιστήμιο", pathway_type_academy: "Ακαδημία", pathway_type_european_club: "Πορεία σε ευρωπαϊκό σύλλογο", pathway_type_professional: "Επαγγελματική πορεία", pathway_type_development: "Ανάπτυξη", pathway_type_agent_representation: "Εκπροσώπηση από ατζέντη", pathway_type_trainer_performance: "Προπονητής / ανάπτυξη απόδοσης", pathway_type_other: "Άλλο",
+    pathway_collapse: "Σύμπτυξη", pathway_edit_goal: "Επεξεργασία μονοπατιού", pathway_alt_branch_note: "Το {branch} είναι επίσης μια συνηθισμένη παράλληλη διαδρομή για αυτό το άθλημα.",
+    pathway_stage_academy: "Ακαδημία", pathway_stage_u19_u21: "U19/U21", pathway_stage_senior: "Ανδρών/Γυναικών", pathway_stage_professional: "Επαγγελματικό",
+    pathway_stage_senior_futsal: "Futsal Ανδρών/Γυναικών", pathway_stage_professional_futsal: "Επαγγελματικό Futsal",
+    pathway_stage_high_school: "Λύκειο", pathway_stage_ncaa_football: "NCAA", pathway_stage_professional_football: "NFL / Επαγγελματικό",
+    pathway_stage_academy_hs: "Ακαδημία / Λύκειο", pathway_stage_ncaa_juco: "NCAA / JUCO", pathway_stage_minor_league: "Minor League", pathway_stage_professional_baseball: "MLB / Επαγγελματικό",
+    pathway_stage_ncaa_basketball: "NCAA", pathway_stage_professional_basketball: "Επαγγελματικό",
+    pathway_stage_junior: "Νέων", pathway_stage_itf: "ITF", pathway_stage_challenger: "Challenger", pathway_stage_pro_tour: "ATP/WTA",
+    pathway_stage_junior_golf: "Golf Νέων", pathway_stage_college_golf: "Πανεπιστημιακό Golf", pathway_stage_developmental_tour: "Development Tour", pathway_stage_professional_golf: "Επαγγελματικό Tour",
+    pathway_stage_club_hs: "Σύλλογος / Λύκειο", pathway_stage_ncaa_lacrosse: "NCAA", pathway_stage_professional_lacrosse: "Επαγγελματικό",
+    pathway_stage_youth_club: "Σύλλογος Νέων", pathway_stage_senior_club: "Σύλλογος Ανδρών/Γυναικών", pathway_stage_professional_handball: "Επαγγελματικό",
+    pathway_stage_ncaa_volleyball: "NCAA", pathway_stage_professional_volleyball: "Επαγγελματικό",
+    pathway_stage_developing: "Σε ανάπτυξη", pathway_stage_competing: "Σε αγώνες", pathway_stage_advancing: "Σε πρόοδο",
     highlights_add_err: "Δεν ήταν δυνατή η προσθήκη αυτού του συνδέσμου.", highlights_watch: "Δείτε το highlight",
     editor_title: "Δημιουργήστε το προφίλ σας", editor_name_label: "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", editor_name_ph: "Το όνομά σας",
     editor_sport_label: "ΑΘΛΗΜΑ", editor_select: "Επιλέξτε…", editor_position_label: "ΘΕΣΗ",
@@ -3765,8 +3855,14 @@ const NEXT_MOVE_TYPE_TARGET_PAGE = {
 const PLAN_RANK = { free: 0, starter: 1, pro: 2, elite: 3 };
 const FEATURE_MIN_PLAN = {
   pdf_export: "starter",
+  // Master UX/UI redesign §5/§12: "what should I do next" is Home's core
+  // job for every athlete, not a paywalled add-on — Free must never feel
+  // like a crippled demo. readiness stays Pro+ for the DEEP numeric
+  // sub-score breakdown + "why this score" reasoning, but the composite
+  // score + plain-language status words now render for every plan (see
+  // HomeTab) — hasFeature(plan, "readiness") below only gates the deeper
+  // interpretation layer, not Readiness itself existing.
   readiness: "pro",
-  next_move: "starter",
   targets: "starter",
   benchmarks: "starter",
   development_plan: "pro",
@@ -3781,13 +3877,18 @@ function hasFeature(plan, feature) {
 // Reusable "visibly locked" placeholder (brief §11: paywall should show
 // "additional recommendations/features visibly locked", not hide them
 // silently) — swapped in wherever a gated feature's real content would go.
-function FeatureLock({ label, onUpgrade }) {
+// Master UX/UI redesign §14: "avoid stacking large UPGRADE TO UNLOCK
+// cards... demonstrate value first." teaser is optional, specific copy
+// about what THIS feature would actually show; falls back to the old
+// generic body text at call sites that don't pass one yet rather than
+// forcing every one of them to change at once.
+function FeatureLock({ label, teaser, onUpgrade }) {
   const { t } = useLang();
   return (
     <div style={{ background: C.turf, border: `1px dashed ${C.line2}`, borderRadius: 14, padding: "22px 18px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
       <Lock size={20} color={C.slate} />
       <div style={{ fontSize: 13, fontWeight: 800, color: C.chalk }}>{label}</div>
-      <div style={{ fontSize: 12, color: C.slate, lineHeight: 1.5 }}>{t("feature_lock_body")}</div>
+      <div style={{ fontSize: 12, color: C.slate, lineHeight: 1.5 }}>{teaser || t("feature_lock_body")}</div>
       <button onClick={onUpgrade} style={{ marginTop: 4, background: C.lime, color: C.pitch, border: "none", borderRadius: 10, padding: "8px 16px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{t("feature_lock_cta")}</button>
     </div>
   );
@@ -4634,7 +4735,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       ) : hasFeature(plan, "benchmarks") ? (
         <Benchmarks viewUserId={null} />
       ) : (
-        <div style={{ marginTop: 16 }}><FeatureLock label={t("benchmarks_title")} onUpgrade={onUpgrade} /></div>
+        <div style={{ marginTop: 16 }}><FeatureLock label={t("benchmarks_title")} teaser={t("benchmarks_locked_teaser")} onUpgrade={onUpgrade} /></div>
       )}
 
       {/* development/preparedness plan — same private-to-owner + Pro+
@@ -4644,7 +4745,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       ) : hasFeature(plan, "development_plan") ? (
         <div style={{ marginTop: 16 }}><DevelopmentPlan viewUserId={null} /></div>
       ) : (
-        <div style={{ marginTop: 16 }}><FeatureLock label={t("dev_plan_title")} onUpgrade={onUpgrade} /></div>
+        <div style={{ marginTop: 16 }}><FeatureLock label={t("dev_plan_title")} teaser={t("dev_plan_locked_teaser")} onUpgrade={onUpgrade} /></div>
       )}
 
       {/* Posts grid, Family & Parent Access, Blocked Accounts, and the
@@ -6986,9 +7087,39 @@ function ReadinessCard({ label, score, sub }) {
 // can be the very first thing a returning athlete sees before either of
 // those mount.
 const READINESS_DIMENSIONS = ["profile_quality", "verification", "performance", "development", "pathway"];
+// Compact "YOUR PATH" strip (Master UX/UI redesign §5) — a snapshot, not
+// the full branching map (that lives on the Plan tab's PathwayMap, §8/§9).
+// Built entirely from data Home already fetches: no new schema. "Current"
+// prefers the athlete's own club (a real, stated fact) over recruiting
+// status (a category) over a plain "Developing" fallback so it never
+// shows an empty node. The goal node stays muted/tappable-to-Scout when
+// no pathway exists yet, rather than inventing a fake goal.
+function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
+  const current = (athlete && (athlete.club_name || athlete.recruiting_status)) || t("home_path_developing");
+  const hasGoal = !!pathwayRow;
+  const goalLabel = hasGoal ? t("pathway_type_" + pathwayRow.pathway_type) : t("home_path_goal_placeholder");
+  const Node = ({ label, filled, onClick }) => (
+    <div onClick={onClick} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 0, cursor: onClick ? "pointer" : "default" }}>
+      <div style={{ width: 10, height: 10, borderRadius: 99, background: filled ? C.lime : "transparent", border: `2px solid ${filled ? C.lime : C.line2}`, flexShrink: 0 }} />
+      <div style={{ fontSize: 10.5, fontWeight: 700, color: filled ? C.chalk : C.slate, textAlign: "center", maxWidth: 84, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</div>
+    </div>
+  );
+  const Line = () => <div style={{ flex: 1, height: 2, background: C.line2, marginBottom: 16, minWidth: 12 }} />;
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", padding: "6px 4px 14px" }}>
+      <Node label={t("home_path_you")} filled />
+      <Line />
+      <Node label={current} filled={!!(athlete && athlete.club_name)} />
+      <Line />
+      <Node label={goalLabel} filled={hasGoal} onClick={hasGoal ? undefined : () => onNavigate("scout")} />
+    </div>
+  );
+}
+
 function HomeTab({ onNavigate, plan, onUpgrade }) {
   const { t } = useLang();
   const [loaded, setLoaded] = useState(!sb);
+  const [athlete, setAthlete] = useState(null);
   const [quality, setQuality] = useState(null);
   const [verification, setVerification] = useState(null);
   const [performance, setPerformance] = useState(null);
@@ -7022,6 +7153,7 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
           sb.from("outreach_targets").select("id, status, updated_at").eq("user_id", user.id),
         ]);
         if (prof && prof.full_name) setName(prof.full_name);
+        setAthlete(ath || null);
         setProfileComplete(!!(ath && ath.sport));
         setGoalDefined(!!(prof && prof.goal_defined));
         setQuality(computeProfileQuality(ath, prof));
@@ -7057,7 +7189,10 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
 
   if (!loaded) return <div style={{ padding: "40px 20px", textAlign: "center", color: C.slate, fontSize: 13 }}>{t("loading")}</div>;
 
-  const entryCard = { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, background: C.card, border: `1px solid ${C.line2}`, borderRadius: 14, padding: "18px 10px", cursor: "pointer", fontFamily: "inherit", color: C.chalk, fontSize: 12.5, fontWeight: 700 };
+  // Time-of-day greeting ("Good morning, Harry" — §5) — local device time,
+  // no server round trip needed for something this low-stakes.
+  const greetingHour = new Date().getHours();
+  const greetingKey = greetingHour < 12 ? "home_greeting_morning" : greetingHour < 18 ? "home_greeting_afternoon" : "home_greeting_evening";
   // Composite GOLSZ Readiness — a plain average of the 5 named sub-scores,
   // shown alongside its own breakdown (never just the number alone) so it
   // stays explainable per brief §6's "WHY IS MY SCORE 72? / HOW DO I
@@ -7078,16 +7213,73 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
   // darker swap since C.slate was originally picked for a dark background.
   const compositeColorOnCream = composite >= 70 ? C.lime : composite >= 40 ? C.amber : C.ink;
 
+  // Categorical Readiness (Master UX/UI redesign §5/§12) — every plan,
+  // including Free, sees the composite number and four plain-language
+  // status words. Never "LOCK / UPGRADE TO UNLOCK" as the primary Free
+  // experience. All four derive from data already fetched here, nothing
+  // invented: FILM reuses profile_quality's own "Highlights" check
+  // (athlete.highlights), the other three reuse their existing sub-score
+  // objects directly.
+  const filmAdded = !!(athlete && Array.isArray(athlete.highlights) && athlete.highlights.length > 0);
+  const readinessStatus = [
+    { key: "profile", ok: !!(quality && quality.score >= 70) },
+    { key: "film", ok: filmAdded },
+    { key: "performance", ok: !!(performance && performance.metricsTracked > 0) },
+    { key: "pathway", ok: !!(pathway && pathway.hasPathway) },
+  ];
+  const deterministicType = computeNextMove({
+    profileComplete, goalDefined, plan, baselineComplete: !!(pathwayRow && pathwayRow.baseline_complete),
+    pathwayCreated: !!pathwayRow, targetsCount: pathway ? pathway.targetsCount : 0,
+    staleTargets: monthly ? monthly.staleTargets : 0,
+    mostRecentBenchmarkDate: recentBenchmarks[0] ? recentBenchmarks[0].recorded_date : null,
+  });
+  // computeNextMove() returns UPPER_SNAKE (also used as-is to key
+  // NEXT_MOVE_TYPE_TARGET_PAGE below) but next_move_type_* i18n keys are
+  // lower_snake — lowercase only at this one translation call site rather
+  // than changing the shared return values everyone else keys off of.
+  const nextMoveLabel = nextMove && nextMove.label ? nextMove.label : t("next_move_type_" + deterministicType.toLowerCase());
+
   return (
     <div style={{ padding: "8px 12px 20px" }}>
-      {name && <div style={{ fontSize: 15, fontWeight: 800, margin: "4px 2px 14px" }}>{t("home_greeting").replace("{name}", name.split(" ")[0])}</div>}
+      {name && (
+        <div style={{ margin: "4px 2px 4px" }}>
+          <div style={{ fontSize: 12, color: C.slate, fontWeight: 700 }}>{t(greetingKey)}</div>
+          <div style={{ fontSize: 22, fontWeight: 900 }}>{name.split(" ")[0]}</div>
+        </div>
+      )}
+      {athlete && (athlete.sport || athlete.club_name) && (
+        <div style={{ fontSize: 12, color: C.slate, margin: "0 2px 14px" }}>
+          {[athlete.sport, athlete.position, athlete.club_name].filter(Boolean).join(" · ")}
+        </div>
+      )}
+
+      <SectionTitle>{t("home_path_title")}</SectionTitle>
+      <PathwayStrip athlete={athlete} pathwayRow={pathwayRow} t={t} onNavigate={onNavigate} />
+
+      {/* My Next Move — every plan, Free included (Master UX/UI redesign
+          §5: "what should I do next" is Home's job for everyone, not a
+          paywalled add-on). Deterministic type drives WHAT/WHERE; Scout's
+          own last suggestion, when present, supplies the wording. */}
+      <div style={{ ...highlightCard, cursor: "pointer" }} onClick={() => onNavigate(NEXT_MOVE_TYPE_TARGET_PAGE[deterministicType] || "scout")}>
+        <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.ink, opacity: 0.65, fontWeight: 700, marginBottom: 6 }}>{t("next_move_title")}</div>
+        <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>{nextMoveLabel}</div>
+      </div>
+
       <SectionTitle>{t("home_readiness_title")}</SectionTitle>
+      <div style={{ ...card, display: "flex", alignItems: "center", gap: 16, marginBottom: 10 }}>
+        <div style={{ fontSize: 34, fontWeight: 900, color: compositeColor, fontFamily: "'Space Mono', monospace", flexShrink: 0 }}>{composite}%</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 14px", flex: 1, minWidth: 0 }}>
+          {readinessStatus.map((s) => (
+            <div key={s.key} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+              <span style={{ fontSize: 10.5, color: C.slate, fontWeight: 700, letterSpacing: "0.04em" }}>{t("home_readiness_row_" + s.key)}</span>
+              <span style={{ fontSize: 10.5, fontWeight: 800, color: s.ok ? C.lime : C.slate }}>{t("home_readiness_status_" + s.key + "_" + (s.ok ? "ok" : "no"))}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {hasFeature(plan, "readiness") ? (
         <>
-          <div style={{ ...highlightCard, textAlign: "center", marginBottom: 10 }}>
-            <div style={{ fontSize: 36, fontWeight: 900, color: compositeColorOnCream, fontFamily: "'Space Mono', monospace" }}>{composite}</div>
-            <div style={{ fontSize: 10, letterSpacing: "0.14em", color: C.ink, opacity: 0.65, fontWeight: 700, marginTop: 4 }}>{t("home_readiness_composite")}</div>
-          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <ReadinessCard label={t("home_profile_quality")} score={subScores.profile_quality} sub={quality ? `${quality.filled}/${quality.total}` : ""} />
             <ReadinessCard label={t("home_verification")} score={subScores.verification} sub={t("home_verify_status_" + (verification ? verification.status : "none"))} />
@@ -7104,7 +7296,8 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
           </div>
 
           {/* Command-center enrichment (brief §14: "pathway progress",
-              "recent benchmark progress", "monthly actions" on Home). */}
+              "recent benchmark progress", "monthly actions" on Home) —
+              the deeper interpretation layer, stays Pro+. */}
           {monthly && (monthly.activeDevItems > 0 || monthly.staleTargets > 0) && (
             <div style={{ ...card, marginBottom: 10 }}>
               <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("home_this_month_title")}</div>
@@ -7114,15 +7307,6 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
                   <span>{t("home_this_month_targets").replace("{n}", monthly.staleTargets)}</span>
                   <button onClick={() => onNavigate("targets")} style={{ ...iconBtn(C.amber), fontSize: 11, flexShrink: 0 }}>{t("home_this_month_review")}</button>
                 </div>
-              )}
-            </div>
-          )}
-          {pathwayRow && (
-            <div style={{ ...card, marginBottom: 10, cursor: "pointer" }} onClick={() => onNavigate("targets")}>
-              <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("home_pathway_progress_title")}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.chalk, marginBottom: 2 }}>{t("pathway_type_" + pathwayRow.pathway_type)}</div>
-              {Array.isArray(pathwayRow.milestones) && pathwayRow.milestones.length > 0 && (
-                <div style={{ fontSize: 11.5, color: C.slate }}>{t("pathway_milestones_title")}: {pathwayRow.milestones.filter((m) => m.done).length}/{pathwayRow.milestones.length}</div>
               )}
             </div>
           )}
@@ -7139,8 +7323,15 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
           )}
         </>
       ) : (
-        <div style={{ marginBottom: 14 }}><FeatureLock label={t("home_readiness_title")} onUpgrade={onUpgrade} /></div>
+        // Value-first, not a blank lock box (§14): names the SPECIFIC
+        // deeper thing paid unlocks, using the athlete's own weakest real
+        // dimension rather than generic "upgrade" copy.
+        <div onClick={onUpgrade} style={{ ...card, cursor: "pointer", marginBottom: 14, borderStyle: "dashed" }}>
+          <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.6, marginBottom: 8 }}>{t("home_readiness_teaser_" + weakest)}</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: C.lime }}>{t("feature_lock_cta")} →</div>
+        </div>
       )}
+
       {quality && quality.missing.length > 0 && (
         <div style={{ ...card }}>
           <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("home_missing_title")}</div>
@@ -7148,32 +7339,18 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
           <button onClick={() => onNavigate("profile")} style={{ ...iconBtn(C.lime), fontSize: 12 }}>{t("home_finish_profile")}</button>
         </div>
       )}
-      {hasFeature(plan, "next_move") && (() => {
-        // Deterministic type (directive §11) drives WHAT to show and
-        // WHERE it navigates; nextMove.label (Scout's own most recent
-        // suggestion, when present) is used as the more specific/current
-        // wording for that same moment — falls back to a static
-        // translated label per type when Scout hasn't said anything yet.
-        // The TYPE itself is never taken from the AI.
-        const deterministicType = computeNextMove({
-          profileComplete, goalDefined, plan, baselineComplete: !!(pathwayRow && pathwayRow.baseline_complete),
-          pathwayCreated: !!pathwayRow, targetsCount: pathway ? pathway.targetsCount : 0,
-          staleTargets: monthly ? monthly.staleTargets : 0,
-          mostRecentBenchmarkDate: recentBenchmarks[0] ? recentBenchmarks[0].recorded_date : null,
-        });
-        const label = nextMove && nextMove.label ? nextMove.label : t("next_move_type_" + deterministicType);
-        return (
-          <div style={{ ...highlightCard, cursor: "pointer" }} onClick={() => onNavigate(NEXT_MOVE_TYPE_TARGET_PAGE[deterministicType] || "scout")}>
-            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.ink, opacity: 0.65, fontWeight: 700, marginBottom: 6 }}>{t("next_move_title")}</div>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>{label}</div>
-          </div>
-        );
-      })()}
-      <SectionTitle>{t("home_get_started")}</SectionTitle>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-        <button onClick={() => onNavigate("scout")} style={entryCard}><Radar size={20} color={C.lime} />{t("nav_ai_scout")}</button>
-        <button onClick={() => onNavigate("profile")} style={entryCard}><User size={20} color={C.lime} />{t("nav_profile")}</button>
-        <button onClick={() => onNavigate("targets")} style={entryCard}><Target size={20} color={C.lime} />{t("nav_targets")}</button>
+
+      {/* Scout entry (§5: "[ Ask Scout anything... ]") — a tappable field-
+          styled row, not another square tile, so it reads as "type here"
+          the way the real composer on Scout itself does. */}
+      <div onClick={() => onNavigate("scout")} style={{ display: "flex", alignItems: "center", gap: 10, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, padding: "12px 14px", marginTop: 6, marginBottom: 14, cursor: "pointer" }}>
+        <Radar size={16} color={C.lime} style={{ flexShrink: 0 }} />
+        <span style={{ fontSize: 13, color: C.slate }}>{t("home_scout_ask_ph")}</span>
+      </div>
+
+      <div style={{ display: "flex", gap: 18, padding: "0 2px" }}>
+        <button onClick={() => onNavigate("profile")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 5 }}><User size={14} color={C.lime} />{t("nav_profile")}</button>
+        <button onClick={() => onNavigate("targets")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 5 }}><Target size={14} color={C.lime} />{t("nav_targets")}</button>
       </div>
     </div>
   );
@@ -7196,6 +7373,10 @@ function Targets({ plan, onUpgrade }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [expandedId, setExpandedId] = useState(null);
+  // Master UX/UI redesign §9 — "+ ADD TARGET rather than exposing a large
+  // CRM contact form immediately." Collapsed by default; opens on tap,
+  // closes itself after a successful add.
+  const [showAddTarget, setShowAddTarget] = useState(false);
 
   useEffect(() => {
     if (!sb) { setLoaded(true); return; }
@@ -7224,6 +7405,7 @@ function Targets({ plan, onUpgrade }) {
       if (error) throw error;
       setItems((prev) => [data, ...prev]);
       setName(""); setContactName(""); setContactEmail("");
+      setShowAddTarget(false);
     } catch (e) {
       setErr((e && e.message) || t("targets_add_err"));
     } finally { setBusy(false); }
@@ -7247,7 +7429,7 @@ function Targets({ plan, onUpgrade }) {
     return (
       <div style={{ padding: "8px 12px 20px" }}>
         <SectionTitle>{t("nav_targets")}</SectionTitle>
-        <FeatureLock label={t("nav_targets")} onUpgrade={onUpgrade} />
+        <FeatureLock label={t("nav_targets")} teaser={t("targets_locked_teaser")} onUpgrade={onUpgrade} />
       </div>
     );
   }
@@ -7263,18 +7445,24 @@ function Targets({ plan, onUpgrade }) {
       <SectionTitle>{t("pathway_plan_title")}</SectionTitle>
       <PathwayPlan viewUserId={null} />
 
-      <SectionTitle>{t("targets_title")}</SectionTitle>
-      <div style={{ ...card }}>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("targets_name_ph")} style={{ flex: "1 1 160px", ...inputStyle }} />
-          <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder={t("targets_contact_name_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
-          <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder={t("targets_contact_email_ph")} type="email" style={{ flex: "1 1 140px", ...inputStyle }} />
-          <button onClick={addTarget} disabled={!name.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!name.trim() || busy) ? 0.5 : 1 }}>
-            {busy ? "…" : t("targets_add")}
-          </button>
-        </div>
-        {err && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 6 }}>{err}</div>}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "6px 2px 10px" }}>
+        <SectionTitle noMargin>{t("targets_title")}</SectionTitle>
+        {!showAddTarget && <button onClick={() => setShowAddTarget(true)} style={{ ...iconBtn(C.lime), fontSize: 12 }}><Plus size={13} /> {t("targets_add")}</button>}
       </div>
+      {showAddTarget && (
+        <div style={{ ...card }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={t("targets_name_ph")} style={{ flex: "1 1 160px", ...inputStyle }} />
+            <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder={t("targets_contact_name_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
+            <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder={t("targets_contact_email_ph")} type="email" style={{ flex: "1 1 140px", ...inputStyle }} />
+            <button onClick={addTarget} disabled={!name.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!name.trim() || busy) ? 0.5 : 1 }}>
+              {busy ? "…" : t("targets_add")}
+            </button>
+            <button onClick={() => setShowAddTarget(false)} style={{ ...iconBtn(C.slate), fontSize: 12.5 }}>{t("pathway_collapse")}</button>
+          </div>
+          {err && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 6 }}>{err}</div>}
+        </div>
+      )}
 
       {items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, padding: "10px 2px" }}>{t("targets_empty")}</div>}
 
@@ -7414,6 +7602,91 @@ function DevelopmentPlan({ viewUserId }) {
   );
 }
 
+// Master UX/UI redesign §10 — sport-specific pathway STAGES (the visual
+// map's spine), deliberately separate from PATHWAY_TYPES below (the
+// athlete's own stated GOAL/destination, e.g. "ncaa" or "professional").
+// A stage sequence is what's typical for that sport; pathway_type is
+// where THIS athlete says they're headed — the map shows both: the real
+// stage spine plus the athlete's chosen goal as its own highlighted node,
+// with an alternate branch (almost always NCAA) where that's a genuinely
+// common parallel route for the sport, not the only one. Client-side
+// lookup, not a new table (§7 of the original architecture review:
+// reversible, no schema risk) — covers the 10 CORE sports named in the
+// sports table (migration 094); everything else falls through to
+// __default, a generic 3-stage arc that stays honest rather than
+// pretending equal depth for a sport GOLSZ hasn't built real pathway
+// content for yet.
+const SPORT_PATHWAY_STAGES = {
+  "Soccer": { stages: ["academy", "u19_u21", "senior", "professional"], altBranch: "ncaa" },
+  "Futsal": { stages: ["academy", "u19_u21", "senior_futsal", "professional_futsal"], altBranch: null },
+  "American Football": { stages: ["high_school", "ncaa_football", "professional_football"], altBranch: null },
+  "Baseball": { stages: ["academy_hs", "ncaa_juco", "minor_league", "professional_baseball"], altBranch: null },
+  "Basketball": { stages: ["academy_hs", "ncaa_basketball", "professional_basketball"], altBranch: null },
+  "Tennis": { stages: ["junior", "itf", "challenger", "pro_tour"], altBranch: "ncaa" },
+  "Golf": { stages: ["junior_golf", "college_golf", "developmental_tour", "professional_golf"], altBranch: null },
+  "Lacrosse": { stages: ["club_hs", "ncaa_lacrosse", "professional_lacrosse"], altBranch: null },
+  "Handball": { stages: ["youth_club", "senior_club", "professional_handball"], altBranch: null },
+  "Volleyball": { stages: ["club_hs", "ncaa_volleyball", "professional_volleyball"], altBranch: null },
+  "__default": { stages: ["developing", "competing", "advancing"], altBranch: null },
+};
+// Heuristic current-stage index — real signals already on the athlete
+// record (recruiting_status, club_name), never invented. Deliberately
+// coarse (3-4 buckets, not a precise index) since GOLSZ doesn't track a
+// literal "which stage" field — see the directive's own note that a
+// perfectly precise corporate flowchart isn't the goal here.
+function currentStageIndex(athlete, stageCount) {
+  const status = (athlete && athlete.recruiting_status) || "";
+  if (status === "Signed") return stageCount - 1;
+  if (status === "Committed" || status === "In contact") return Math.min(stageCount - 2, Math.max(1, stageCount - 2));
+  if (athlete && athlete.club_name) return Math.min(1, stageCount - 1);
+  return 0;
+}
+
+// The visual pathway map itself (§8/§9 — "the visual showpiece") — nodes
+// and connecting lines for the sport's real stage sequence, the athlete's
+// current position highlighted, and their stated goal (pathway_type) as
+// its own gold "target" node, with an alt-branch chip (e.g. NCAA) shown
+// alongside when the sport has one and the athlete's goal isn't already
+// that branch. Presentational only — PathwayPlan below still owns all
+// the actual data/save logic; this just gives it a real map to sit under
+// instead of a dropdown being the first thing an athlete sees.
+function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal }) {
+  const config = SPORT_PATHWAY_STAGES[sport] || SPORT_PATHWAY_STAGES.__default;
+  const stages = config.stages;
+  const curIdx = currentStageIndex(athlete, stages.length);
+  const hasGoal = !!pathwayType;
+  const showAltBranch = config.altBranch && pathwayType !== config.altBranch;
+  return (
+    <div style={{ ...card }}>
+      <div style={{ display: "flex", alignItems: "flex-start", overflowX: "auto", paddingBottom: 4 }}>
+        {stages.map((stageKey, i) => {
+          const reached = i <= curIdx;
+          return (
+            <React.Fragment key={stageKey}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 64, flexShrink: 0 }}>
+                <div style={{ width: 12, height: 12, borderRadius: 99, background: reached ? C.lime : "transparent", border: `2px solid ${reached ? C.lime : C.line2}`, flexShrink: 0 }} />
+                <div style={{ fontSize: 10, fontWeight: 700, color: reached ? C.chalk : C.slate, textAlign: "center", lineHeight: 1.3 }}>{t("pathway_stage_" + stageKey)}</div>
+                {i === curIdx && <div style={{ fontSize: 8.5, fontWeight: 800, color: C.lime, letterSpacing: "0.08em" }}>{t("home_path_you")}</div>}
+              </div>
+              {i < stages.length - 1 && <div style={{ flex: 1, height: 2, background: i < curIdx ? C.lime : C.line2, marginTop: 5, minWidth: 20 }} />}
+            </React.Fragment>
+          );
+        })}
+        <div style={{ flex: 1, height: 2, background: C.line2, marginTop: 5, minWidth: 20 }} />
+        <div onClick={onEditGoal} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 84, flexShrink: 0, cursor: "pointer" }}>
+          <Star size={16} color={hasGoal ? C.lime : C.line2} fill={hasGoal ? C.lime : "none"} />
+          <div style={{ fontSize: 10, fontWeight: 800, color: hasGoal ? C.lime : C.slate, textAlign: "center", lineHeight: 1.3 }}>{hasGoal ? t("pathway_type_" + pathwayType) : t("home_path_goal_placeholder")}</div>
+        </div>
+      </div>
+      {showAltBranch && (
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}`, fontSize: 11, color: C.slate, display: "flex", alignItems: "center", gap: 6 }}>
+          <GitBranch size={12} color={C.slate} /> {t("pathway_alt_branch_note").replace("{branch}", t("pathway_type_" + config.altBranch))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Pathway plan (migration 076) — brief §7: GOLSZ must never brand itself
 // NCAA-only, so pathway_type spans the full set the brief lists. One row
 // per athlete (not a list) — this is THE stated pathway, upserted rather
@@ -7424,6 +7697,7 @@ function PathwayPlan({ viewUserId }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  const [athlete, setAthlete] = useState(null);
   const [pathwayType, setPathwayType] = useState(PATHWAY_TYPES[0]);
   const [timeline, setTimeline] = useState("");
   const [notes, setNotes] = useState("");
@@ -7431,6 +7705,13 @@ function PathwayPlan({ viewUserId }) {
   const [newMilestone, setNewMilestone] = useState("");
   const [exists, setExists] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Master UX/UI redesign §8/§9 — the map is the primary surface now, the
+  // dropdown/timeline/notes controls that used to be the WHOLE component
+  // are collapsed behind this toggle. Starts open only when there's
+  // nothing to show a map for yet (no pathway saved), so a first-time
+  // athlete lands straight in the controls instead of an empty map with
+  // no obvious way to set a goal.
+  const [editingGoal, setEditingGoal] = useState(false);
 
   useEffect(() => {
     if (!sb || viewUserId) return;
@@ -7439,14 +7720,19 @@ function PathwayPlan({ viewUserId }) {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
         setUid(user.id);
-        const { data, error } = await sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, notes").eq("user_id", user.id).maybeSingle();
-        if (error) throw error;
+        const [{ data }, { data: ath }] = await Promise.all([
+          sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, notes").eq("user_id", user.id).maybeSingle(),
+          sb.from("athletes").select("sport, club_name, recruiting_status").eq("id", user.id).single(),
+        ]);
+        setAthlete(ath || null);
         if (data) {
           setExists(true);
           setPathwayType(data.pathway_type);
           setTimeline(data.target_timeline || "");
           setNotes(data.notes || "");
           setMilestones(Array.isArray(data.milestones) ? data.milestones : []);
+        } else {
+          setEditingGoal(true);
         }
       } catch (e) { console.error("GOLSZ pathway plan load error:", e); }
       setLoaded(true);
@@ -7493,22 +7779,34 @@ function PathwayPlan({ viewUserId }) {
   const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
 
   return (
-    <div style={{ ...card }}>
-      <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("pathway_plan_title")}</div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-        <select value={pathwayType} onChange={(e) => { setPathwayType(e.target.value); }} onBlur={() => save({ pathway_type: pathwayType })} style={{ flex: "1 1 160px", ...inputStyle }}>
-          {PATHWAY_TYPES.map((p) => <option key={p} value={p}>{t("pathway_type_" + p)}</option>)}
-        </select>
-        <input value={timeline} onChange={(e) => setTimeline(e.target.value)} onBlur={() => save({})} placeholder={t("pathway_timeline_ph")} style={{ flex: "1 1 140px", ...inputStyle }} />
-      </div>
-      {/* select's onChange alone won't fire a save (no blur on programmatic
-          value change) — this button covers the common case of just
-          changing the dropdown without touching the timeline field too. */}
-      {exists === false && (
-        <button onClick={() => save({})} disabled={busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 14px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>{t("pathway_save")}</button>
+    <>
+      <PathwayMap sport={athlete && athlete.sport} athlete={athlete} pathwayType={exists ? pathwayType : null} t={t} onEditGoal={() => setEditingGoal((v) => !v)} />
+
+      {editingGoal ? (
+        <div style={{ ...card }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700 }}>{t("pathway_plan_title")}</div>
+            {exists && <button onClick={() => setEditingGoal(false)} style={{ ...iconBtn(C.slate), fontSize: 11 }}>{t("pathway_collapse")}</button>}
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+            <select value={pathwayType} onChange={(e) => { setPathwayType(e.target.value); }} onBlur={() => save({ pathway_type: pathwayType })} style={{ flex: "1 1 160px", ...inputStyle }}>
+              {PATHWAY_TYPES.map((p) => <option key={p} value={p}>{t("pathway_type_" + p)}</option>)}
+            </select>
+            <input value={timeline} onChange={(e) => setTimeline(e.target.value)} onBlur={() => save({})} placeholder={t("pathway_timeline_ph")} style={{ flex: "1 1 140px", ...inputStyle }} />
+          </div>
+          {/* select's onChange alone won't fire a save (no blur on
+              programmatic value change) — this button covers the common
+              case of just changing the dropdown without touching timeline. */}
+          <button onClick={() => save({})} disabled={busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 14px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>{t("pathway_save")}</button>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => save({})} placeholder={t("pathway_notes_ph")}
+            style={{ width: "100%", minHeight: 50, resize: "vertical", ...inputStyle }} />
+        </div>
+      ) : (
+        <button onClick={() => setEditingGoal(true)} style={{ ...iconBtn(C.lime), fontSize: 12, margin: "0 0 12px 2px" }}><Pencil size={12} /> {t("pathway_edit_goal")}</button>
       )}
-      <div style={{ marginTop: 10 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: C.chalk, marginBottom: 6 }}>{t("pathway_milestones_title")}</div>
+
+      <div style={{ ...card }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.chalk, marginBottom: 6 }}>{t("pathway_milestones_title")}{milestones.length > 0 ? ` · ${milestones.filter((m) => m.done).length}/${milestones.length}` : ""}</div>
         {milestones.length === 0 && <div style={{ fontSize: 12, color: C.slate, marginBottom: 6 }}>{t("pathway_milestones_empty")}</div>}
         {milestones.map((m) => (
           <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
@@ -7522,9 +7820,7 @@ function PathwayPlan({ viewUserId }) {
           <button onClick={addMilestone} disabled={!newMilestone.trim()} style={{ background: C.turf, color: C.chalk, border: `1px solid ${C.line2}`, borderRadius: 9, padding: "8px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", opacity: !newMilestone.trim() ? 0.5 : 1 }}>{t("pathway_milestone_add")}</button>
         </div>
       </div>
-      <textarea value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => save({})} placeholder={t("pathway_notes_ph")}
-        style={{ width: "100%", minHeight: 50, resize: "vertical", marginTop: 10, ...inputStyle }} />
-    </div>
+    </>
   );
 }
 
@@ -8127,16 +8423,26 @@ const CSS = `
   /* GOLSZ theme tokens — dark is the default/fallback (:root), light
      overrides via [data-theme="light"] on <html> (see useTheme()). */
   :root {
-    /* Helios palette — navy/gold/cream, replacing the old lime/"volt" theme.
+    /* Master UX/UI redesign — "premium sports intelligence, not a navy
+       SaaS dashboard." Previously --turf and --card were the SAME navy
+       (#1B263B), so every stacked card blended into one undifferentiated
+       navy field with no true black anywhere. Now: --pitch is genuine
+       near-black (page background, the dominant surface), --card is a
+       near-black elevated panel just one step lighter than pitch (not
+       navy), and --turf is the only surface still using real navy —
+       reserved for secondary/input surfaces (form fields, nested rows)
+       so navy reads as an intentional, occasional choice rather than the
+       whole app's base color. --line/--line2 move from solid navy to
+       translucent cream hairlines — thin separators instead of another
+       filled box, per the brief's "reduce reliance on cards" instruction.
        --lime is kept as the variable NAME (hundreds of C.lime references
-       throughout this file) but now holds Helios Gold, not an actual lime
-       green — renaming the token itself would touch every call site for
-       no functional benefit. */
-    --pitch: #0D1210; --turf: #1B263B; --card: #1B263B; --lime: #D4AF37;
-    --chalk: #F7F4EA; --slate: #415A77; --line: #1B263B; --line2: #415A77;
-    --amber: #B58A1A; --body-text: #ECE8DC; --warn-text: #E6C76A; --msg-name: #415A77;
+       throughout this file) but holds Helios Gold — used selectively
+       (nav, verification, milestones), not as a wash over the app. */
+    --pitch: #0A0A0A; --turf: #1B263B; --card: #131519; --lime: #D4AF37;
+    --chalk: #F7F4EA; --slate: #8B96A8; --line: rgba(247,244,234,0.08); --line2: rgba(247,244,234,0.16);
+    --amber: #B58A1A; --body-text: #ECE8DC; --warn-text: #E6C76A; --msg-name: #8B96A8;
     --lime-border: rgba(212,175,55,0.35); --amber-border: rgba(181,138,26,0.35);
-    --elite: #415A77; --elite-border: rgba(65,90,119,0.35);
+    --elite: #6B84A3; --elite-border: rgba(107,132,163,0.35);
     --passport-wash: transparent; --passport-strip: rgba(212,175,55,0.1);
   }
   html[data-theme="light"] {
@@ -8251,7 +8557,7 @@ const VAPID_PUBLIC_KEY = "BNrfmAAoP_PL4FocIjzfw5aaxzHsuCknwUeG5pX21v7cjvMCzt3PL2
 // shipped UI yet, so per §10 ("never promise future features as live") the
 // pricing copy does not list them until they're real.
 const PLANS = [
-  { id: "free",    name: "Free",    price: 0,  featKeys: ["plan_free_feat1", "plan_free_feat2", "plan_free_feat3"] },
+  { id: "free",    name: "Free",    price: 0,  featKeys: ["plan_free_feat1", "plan_free_feat2", "plan_free_feat3", "plan_free_feat4"] },
   { id: "starter", name: "Basic",   price: 6,  featKeys: ["plan_starter_feat1", "plan_starter_feat2", "plan_starter_feat3", "plan_starter_feat4"] },
   { id: "pro",   name: "Pro",     price: 14, featKeys: ["plan_pro_feat1", "plan_pro_feat2", "plan_pro_feat3", "plan_pro_feat4", "plan_pro_feat5", "plan_pro_feat6"] },
   { id: "elite", name: "Elite",   price: 30, featKeys: ["plan_elite_feat1", "plan_elite_feat2"] },
