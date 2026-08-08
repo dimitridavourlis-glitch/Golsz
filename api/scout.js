@@ -1433,6 +1433,22 @@ async function getPlanKnowledge() {
 // serially, so retrieval doesn't add a round trip to every message.
 // ============================================================
 
+// Every retrieved block is hard-capped. budgetGate() downgrades the model
+// tier once estimated input cost gets too high, so an unbounded MEMORY or
+// PRIOR RESEARCH block doesn't just cost tokens — past a threshold it
+// silently drops the athlete from Sonnet to Haiku. Retrieval must never be
+// able to spend the reply's own model quality. Budgets below total ~2,900
+// chars (~725 tokens) worst case across all four blocks.
+const RETRIEVAL_BUDGET = { capabilities: 1400, memory: 900, knowledge: 700, research: 900 };
+
+function clampBlock(text, maxChars) {
+  const t = String(text || "");
+  if (t.length <= maxChars) return t;
+  const cut = t.slice(0, maxChars);
+  const lastLine = cut.lastIndexOf("\n");
+  return (lastLine > maxChars * 0.5 ? cut.slice(0, lastLine) : cut) + "\n…(truncated)";
+}
+
 let capabilityCache = null;
 let capabilityCacheAt = 0;
 const CAPABILITY_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -1463,9 +1479,9 @@ async function getCapabilityKnowledge() {
     if (gone.length) {
       text += `${text ? "\n" : ""}NOT part of GOLSZ — never suggest, imply, or offer these, and never tell an athlete to find or contact someone through them:\n` + gone.map((c) => `- ${c.label}${c.notes ? ` — ${c.notes}` : ""}`).join("\n");
     }
-    capabilityCache = text;
+    capabilityCache = clampBlock(text, RETRIEVAL_BUDGET.capabilities);
     capabilityCacheAt = now;
-    return text;
+    return capabilityCache;
   } catch {
     return capabilityCache || "";
   }
@@ -1488,7 +1504,7 @@ async function getScoutMemory(userId) {
   if (!supaUrl || !serviceKey || !userId) return "";
   try {
     const r = await fetch(
-      `${supaUrl}/rest/v1/scout_memory?athlete_id=eq.${userId}&active=is.true&select=type,subject,content,confidence,source,importance&order=importance.desc,updated_at.desc&limit=30`,
+      `${supaUrl}/rest/v1/scout_memory?athlete_id=eq.${userId}&active=is.true&select=type,subject,content,confidence,source,importance&order=importance.desc,updated_at.desc&limit=12`,
       { headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey } },
     );
     if (!r.ok) return "";
@@ -1507,7 +1523,7 @@ async function getScoutMemory(userId) {
     if (stated.length) text += `Things this athlete has TOLD you (treat as confirmed, never re-ask):\n${stated.join("\n")}`;
     if (inferred.length) text += `${text ? "\n" : ""}Things YOU inferred earlier (NOT confirmed — if one of these matters to the advice you're about to give, confirm it in passing rather than asserting it back to them as fact):\n${inferred.join("\n")}`;
     if (open.length) text += `${text ? "\n" : ""}Still unknown / worth learning next:\n${open.join("\n")}`;
-    return text;
+    return clampBlock(text, RETRIEVAL_BUDGET.memory);
   } catch {
     return "";
   }
@@ -1536,7 +1552,7 @@ async function getGolszKnowledge(sport, country, query) {
     if (!r.ok) return "";
     const rows = await r.json();
     if (!Array.isArray(rows) || !rows.length) return "";
-    return rows.map((k) => `- ${k.subject}: ${k.content}${k.source ? ` (source: ${k.source})` : ""}`).join("\n");
+    return clampBlock(rows.map((k) => `- ${k.subject}: ${k.content}${k.source ? ` (source: ${k.source})` : ""}`).join("\n"), RETRIEVAL_BUDGET.knowledge);
   } catch {
     return "";
   }
@@ -1628,7 +1644,7 @@ async function getResearchCache(userId, topicKey, stateDigest) {
     }).catch(() => {});
     const srcs = Array.isArray(usable.sources) ? usable.sources.slice(0, 5).map((s) => s && s.url).filter(Boolean) : [];
     const age = Math.max(0, Math.round((Date.now() - new Date(usable.created_at).getTime()) / 86400000));
-    return `${usable.summary}${srcs.length ? `\nSources: ${srcs.join(", ")}` : ""}\n(researched ${age} day${age === 1 ? "" : "s"} ago, confidence ${usable.confidence})`;
+    return clampBlock(`${usable.summary}${srcs.length ? `\nSources: ${srcs.join(", ")}` : ""}\n(researched ${age} day${age === 1 ? "" : "s"} ago, confidence ${usable.confidence})`, RETRIEVAL_BUDGET.research);
   } catch {
     return "";
   }
@@ -1668,7 +1684,7 @@ function extractResearchNote(data) {
     const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
     const note = parsed && parsed.research_note;
     if (!note || typeof note !== "object") return null;
-    const summary = typeof note.summary === "string" ? note.summary.trim().slice(0, 4000) : "";
+    const summary = typeof note.summary === "string" ? note.summary.trim().slice(0, 1200) : "";
     if (summary.length < 20) return null;
     let confidence = typeof note.confidence === "number" ? note.confidence : 0.6;
     if (!(confidence >= 0 && confidence <= 1)) confidence = 0.6;
