@@ -1002,9 +1002,11 @@ When ATHLETE STATE shows profile_complete=true, goal_defined=true, and plan=free
 SCOUT MEMORY (when present in the message) is your own durable memory of this athlete from earlier conversations, already split by trust: things they TOLD you are confirmed and must never be re-asked; things you INFERRED are not confirmed, so confirm one in passing before you build advice on it. "Still unknown" lists what you'd most benefit from learning — prefer those over generic questions.
 GOLSZ KNOWLEDGE (when present) is GOLSZ's own verified, curated reference on sport/eligibility/pathway rules. Prefer it over your own recollection and over a web result when they disagree, and cite it naturally ("GOLSZ's eligibility reference says..."). If it's absent or doesn't cover the question, say what you actually know and use web search — never invent a GOLSZ rule.
 GOLSZ CAPABILITIES (when present) is the real, current list of what the product can and cannot do. Anything listed as NOT part of GOLSZ does not exist — never suggest it, never imply it's coming, and never tell an athlete to find or contact someone through it. When a task needs something GOLSZ doesn't do, say plainly that GOLSZ doesn't do it and give them the real off-platform way to do it themselves.
-OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"memory_writes":[{"type":"...","subject":"...","content":"...","source":"athlete_stated|ai_inferred","confidence":0-1,"importance":1-5}] or null,"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"drafted_email":"the full drafted email text" or null}
+OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"memory_writes":[{"type":"...","subject":"...","content":"...","source":"athlete_stated|ai_inferred","confidence":0-1,"importance":1-5}] or null,"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"research_note":{"summary":"...","confidence":0-1,"valid_days":N} or null,"drafted_email":"the full drafted email text" or null}
 Allowed profile_updates keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, education_level, budget, citizenship, goal. Do not repeat known fields. "goal" should be a real, clearly-stated goal the athlete actually confirmed (e.g. "play NCAA D1 soccer"), not a vague guess — setting it marks their goal as officially defined, so only set it once you're genuinely sure.
 Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
+Only include research_note when THIS reply actually used web search to establish reusable factual findings (a league structure, an eligibility rule, a transfer window, a country's pathway, position benchmarks). Write summary as standalone reference notes that would still be correct and useful for a DIFFERENT athlete asking the same question — plain facts and figures, no advice, no "you"/"your", no reference to this athlete's own situation. valid_days is how long the finding stays trustworthy: 7 for anything with an active deadline or window, 30-90 for stable rules and structures. Omit entirely when you answered from your own knowledge, from PRIOR RESEARCH, or from GOLSZ KNOWLEDGE without searching.
+PRIOR RESEARCH (when present) is research you already did on this exact question, with its age and sources. Trust it and answer from it rather than searching again — unless it's old enough that it could plausibly have changed (deadlines, rosters, windows, rankings), in which case search to confirm and say briefly what changed.
 Only include memory_writes for something durable you learned THIS reply that is worth remembering months from now — not small talk, not a restatement of PROFILE SO FAR or SCOUT MEMORY you were just given. type is one of: FACT, USER_STATED, SCOUT_INFERENCE, GOAL, PREFERENCE, CONCERN, UNKNOWN, NEXT_DATA_NEEDED, ASSESSMENT, DECISION, PATHWAY_CONSIDERED, PATHWAY_REJECTED, PATHWAY_ACTIVE, MILESTONE. Use source "athlete_stated" ONLY when they said it in plain words this conversation, and "ai_inferred" for anything you concluded, judged, or read between the lines — an assessment of their level, a guess at their motivation, or anything a third party reportedly said all count as ai_inferred, never athlete_stated. "subject" is a short stable label you'd reuse if this same thing changed later (e.g. "current club", "target level", "biggest gap") — reusing the same subject is how a corrected fact replaces the old one instead of contradicting it. Use UNKNOWN/NEXT_DATA_NEEDED to record what you still need to find out. Something the athlete reports about ANOTHER person (a teammate, a relative, a club official) is a claim about a third party: record it as ai_inferred at low confidence if it matters to their own path, and never treat it as an established fact about that person. Cap at 8.
 Only include suggested_targets when THIS reply names concrete target schools/clubs/academies/programs by name (e.g. building or discussing a target list, recommending realistic reach/match/safety options) — each with a one-sentence reasoning tied to this specific athlete's own profile. Never include it for a general reply, and never invent a program you're not reasonably confident is real. Cap at 5.
 Only include suggested_dev_items when THIS reply identifies concrete training/development focus areas the athlete should actively work on (e.g. discussing a weakness, a development plan, benchmark results) — each with a short, specific goal, using focus_area from: training, strength, speed, conditioning, recovery, sleep, hydration, nutrition, other. Never include it for a general reply. Cap at 3.
@@ -1524,6 +1526,170 @@ async function getGolszKnowledge(sport, country, query) {
   }
 }
 
+// ============================================================
+// Scout Intelligence Architecture — SCOUT CACHE (migration 098)
+// "Don't research the same thing repeatedly."
+//
+// Spec ordering, implemented in the handler below:
+//   1. Search GOLSZ Core        (getGolszKnowledge, above)
+//   2. Search valid Scout Cache (getResearchCache, here)
+//   3. Decide whether the athlete's circumstances materially changed
+//      (athleteStateDigest — a cached finding computed for a Free-plan
+//      athlete with no pathway is not automatically still right once they
+//      have a goal and a pathway, so the entry is skipped, not served.)
+//
+// Both feed the prompt BEFORE the model reasons, so the saving is that the
+// model doesn't need to run web search again — not that we skip the reply.
+//
+// PRIVACY DECISION: model-derived entries are only ever written at
+// scope='athlete'. A scope='global' row is, by definition, served to other
+// users, and the spec is explicit that free-text conversation content must
+// never be automatically promoted into shared knowledge. Global rows stay
+// admin-seeded, exactly like golsz_knowledge. Reads accept both, so seeded
+// global research is used when it exists. Migration 098's CHECK constraint
+// enforces the scope/athlete_id shape at the database level regardless.
+// ============================================================
+
+// Deliberately aggressive: word order, filler and punctuation shouldn't
+// produce a cache miss for what is plainly the same question ("what are the
+// NCAA eligibility rules" vs "NCAA rules for eligibility?"). Sorting the
+// token set is what buys that. Not a security boundary — a collision just
+// means Scout is handed prior research on a near-identical topic.
+const TOPIC_STOPWORDS = new Set([
+  "a","an","and","are","as","at","be","but","by","can","could","do","does","for","from","get","got","how","i","if","in","is","it","its","me","my","of","on","or","should","so","that","the","their","them","there","they","this","to","was","we","what","when","where","which","who","why","will","with","would","you","your","about","any","need","want","tell","know","much","many","some","just","like","really","please",
+]);
+
+function researchTopicKey(text, sport, country) {
+  const tokens = String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !TOPIC_STOPWORDS.has(w));
+  const uniq = Array.from(new Set(tokens)).sort().slice(0, 12);
+  if (!uniq.length) return null;
+  return [String(sport || "any").toLowerCase(), String(country || "any").toLowerCase(), uniq.join("-")].join(":").slice(0, 400);
+}
+
+// A compact, READABLE digest rather than a hash — this lands in a text
+// column an admin may well want to eyeball when a cache entry looks wrong,
+// and it isn't a security value. Only material facts belong here: things
+// that would genuinely change the answer to a research question.
+function athleteStateDigest(state, plan, goalDefined) {
+  return [
+    String((state && state.sport) || "?"),
+    String((state && state.country) || "?"),
+    String(plan || "?"),
+    goalDefined ? "goal" : "nogoal",
+    state && state.pathwayCreated ? "pathway" : "nopathway",
+    state && state.baselineComplete ? "baseline" : "nobaseline",
+  ].join("|");
+}
+
+// Returns the cached summary text, or "" — never throws into the request
+// path. Athlete-scoped rows whose stored state digest no longer matches are
+// treated as stale and skipped (spec step 3). hit_count is bumped
+// best-effort and deliberately not awaited into the critical path.
+async function getResearchCache(userId, topicKey, stateDigest) {
+  const supaUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supaUrl || !serviceKey || !topicKey) return "";
+  const headers = { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" };
+  try {
+    const scopeFilter = userId ? `&or=(scope.eq.global,athlete_id.eq.${userId})` : "&scope=eq.global";
+    const r = await fetch(
+      `${supaUrl}/rest/v1/scout_research_cache?topic_key=eq.${encodeURIComponent(topicKey)}&valid_until=gte.${encodeURIComponent(new Date().toISOString())}${scopeFilter}&select=id,scope,summary,sources,confidence,athlete_state_hash,hit_count,created_at&order=scope.asc,created_at.desc&limit=4`,
+      { headers },
+    );
+    if (!r.ok) return "";
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows.length) return "";
+    // Prefer an athlete-scoped hit whose state still matches; otherwise fall
+    // back to a global row, which by construction isn't athlete-specific.
+    const usable = rows.find((c) => c.scope === "athlete" && c.athlete_state_hash === stateDigest) || rows.find((c) => c.scope === "global");
+    if (!usable) return "";
+    fetch(`${supaUrl}/rest/v1/scout_research_cache?id=eq.${usable.id}`, {
+      method: "PATCH", headers, body: JSON.stringify({ hit_count: (Number(usable.hit_count) || 0) + 1 }),
+    }).catch(() => {});
+    const srcs = Array.isArray(usable.sources) ? usable.sources.slice(0, 5).map((s) => s && s.url).filter(Boolean) : [];
+    const age = Math.max(0, Math.round((Date.now() - new Date(usable.created_at).getTime()) / 86400000));
+    return `${usable.summary}${srcs.length ? `\nSources: ${srcs.join(", ")}` : ""}\n(researched ${age} day${age === 1 ? "" : "s"} ago, confidence ${usable.confidence})`;
+  } catch {
+    return "";
+  }
+}
+
+// Only web search counts as "expensive research" worth caching — the GOLSZ
+// player/event lookups are single indexed queries against our own database
+// and are cheaper to redo than to cache.
+function usedWebSearch(data) {
+  return (data && Array.isArray(data.content) ? data.content : []).some(
+    (b) => b && (b.type === "web_search_tool_result" || (b.type === "server_tool_use" && b.name === "web_search")),
+  );
+}
+
+// Sources are read out of the ACTUAL tool-result blocks, never from the
+// model's own account of what it read. Same provenance discipline as
+// memory_writes: the model supplies the summary, the runtime supplies the
+// evidence of where it came from.
+function extractSearchSources(data) {
+  const out = [];
+  for (const b of (data && Array.isArray(data.content) ? data.content : [])) {
+    if (!b || b.type !== "web_search_tool_result") continue;
+    for (const r of (Array.isArray(b.content) ? b.content : [])) {
+      if (r && typeof r.url === "string") out.push({ url: r.url.slice(0, 500), title: typeof r.title === "string" ? r.title.slice(0, 200) : null });
+      if (out.length >= 8) return out;
+    }
+  }
+  return out;
+}
+
+const RESEARCH_TTL_DEFAULT_DAYS = 14;
+
+function extractResearchNote(data) {
+  try {
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    const note = parsed && parsed.research_note;
+    if (!note || typeof note !== "object") return null;
+    const summary = typeof note.summary === "string" ? note.summary.trim().slice(0, 4000) : "";
+    if (summary.length < 20) return null;
+    let confidence = typeof note.confidence === "number" ? note.confidence : 0.6;
+    if (!(confidence >= 0 && confidence <= 1)) confidence = 0.6;
+    let validDays = Number.isInteger(note.valid_days) ? note.valid_days : RESEARCH_TTL_DEFAULT_DAYS;
+    if (validDays < 1 || validDays > 90) validDays = RESEARCH_TTL_DEFAULT_DAYS;
+    return { summary, confidence, validDays };
+  } catch {
+    return null;
+  }
+}
+
+async function persistResearchCache(userId, topicKey, stateDigest, note, sources, modelUsed, sport, country) {
+  const supaUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supaUrl || !serviceKey || !userId || !topicKey || !note) return;
+  try {
+    const r = await fetch(`${supaUrl}/rest/v1/scout_research_cache`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({
+        topic_key: topicKey,
+        scope: "athlete", // never 'global' from model output — see the block comment above
+        athlete_id: userId,
+        sport: sport || null,
+        country: country || null,
+        summary: note.summary,
+        sources: sources || [],
+        confidence: note.confidence,
+        model_used: modelUsed || null,
+        athlete_state_hash: stateDigest,
+        valid_until: new Date(Date.now() + note.validDays * 86400000).toISOString(),
+      }),
+    });
+    if (!r.ok) console.error("GOLSZ scout research cache write failed:", r.status, await r.text());
+  } catch (e) { console.error("GOLSZ scout research cache write failed:", e); }
+}
+
 // Matches golsz-app.html's LANGS — validated against this allowlist rather
 // than trusting the client's lang string directly, since it gets
 // interpolated into the system prompt sent to the model.
@@ -1874,6 +2040,10 @@ export default async function handler(req, res) {
   // sport/country to scope eligibility and pathway rules.
   let athleteSport = null;
   let athleteCountry = null;
+  // Scout Cache: the athlete-state digest is computed once here (it needs
+  // plan + goal + pathway state) and used both to select a still-valid
+  // cache entry and to stamp any entry written this turn.
+  let stateDigest = null;
   if (process.env.SUPABASE_URL) {
     userId = await getUserId(req.headers.authorization);
     if (!userId) return res.status(401).json({ error: "Sign in to use the Scout." });
@@ -1914,6 +2084,7 @@ export default async function handler(req, res) {
     ]);
     athleteSport = athleteState.sport;
     athleteCountry = athleteState.country;
+    stateDigest = athleteStateDigest(athleteState, plan, goalDefined);
     userPlan = plan;
     userIsAdmin = isAdmin;
     userAiUnlimited = aiUnlimited;
@@ -2001,10 +2172,17 @@ export default async function handler(req, res) {
     // no added wall-clock time — the classifier's 4.5s cap dominates. It has
     // no timeout of its own because it's a single indexed RPC that fails soft
     // to "" rather than throwing.
-    const [classification, golszKnowledge] = await Promise.all([
+    // Spec ordering, both concurrent with the classifier so neither costs
+    // wall-clock time: (1) GOLSZ Core, (2) valid Scout Cache. The cache
+    // lookup applies (3) "have circumstances materially changed" itself, by
+    // rejecting athlete-scoped entries whose stored state digest has moved.
+    const topicKey = researchTopicKey(latestUserText(conversation), athleteSport, athleteCountry);
+    const [classification, golszKnowledge, priorResearch] = await Promise.all([
       withTimeout(classifyIntent(key, conversation, faqList), 4500),
       getGolszKnowledge(athleteSport, athleteCountry, latestUserText(conversation)),
+      getResearchCache(userId, topicKey, stateDigest),
     ]);
+    if (priorResearch) console.log("GOLSZ scout research cache HIT:", topicKey);
     console.log("GOLSZ scout routing:", JSON.stringify(classification));
 
     // Phase 2b: the classifier call above also maintains a running
@@ -2030,7 +2208,10 @@ export default async function handler(req, res) {
     const knowledgeBlock = golszKnowledge
       ? `\n\nGOLSZ KNOWLEDGE (verified GOLSZ reference relevant to this athlete — prefer this over your own recollection):\n${golszKnowledge}`
       : "";
-    const systemPrompt = buildSystemPrompt(baseSystemPrompt, recommendedSpecialist) + stateBlock + knowledgeBlock;
+    const researchBlock = priorResearch
+      ? `\n\nPRIOR RESEARCH (you already researched this exact question — answer from it instead of searching again unless it's old enough to have changed):\n${priorResearch}`
+      : "";
+    const systemPrompt = buildSystemPrompt(baseSystemPrompt, recommendedSpecialist) + stateBlock + knowledgeBlock + researchBlock;
 
     // ---- Database path: a real $0-AI-cost answer, matched by MEANING (not
     // exact wording) inside the classification call above, before any real
@@ -2257,6 +2438,19 @@ export default async function handler(req, res) {
     await persistProfileUpdates(userId, extractProfileUpdates(data));
     await persistScoutContext(userId, extractScoutContextUpdates(data));
     await persistMemoryWrites(userId, extractMemoryWrites(data));
+    // Scout Cache write. Gated on the reply having ACTUALLY run web search
+    // (checked against the response's tool-result blocks, not the model's
+    // word for it) — this is the only path with the web_search tool, and
+    // caching a reply that did no research would just serve stale opinion
+    // back later. Skipped entirely on a cache hit, so a served entry never
+    // rewrites itself and resets its own TTL.
+    if (!priorResearch && usedWebSearch(data)) {
+      const note = extractResearchNote(data);
+      if (note) {
+        await persistResearchCache(userId, topicKey, stateDigest, note, extractSearchSources(data), deepTierConfig.model_name, athleteSport, athleteCountry);
+        console.log("GOLSZ scout research cached:", topicKey, "valid_days:", note.validDays);
+      }
+    }
     data.scout_summary = updatedSummary;
     if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
     data.next_move = extractNextBestAction(classification);
