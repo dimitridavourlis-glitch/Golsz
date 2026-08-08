@@ -651,7 +651,7 @@ function extractProfileUpdates(data) {
   try {
     const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
     const clean = raw.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    const parsed = parseReplyObject(clean);
     return parsed && typeof parsed.profile_updates === "object" ? parsed.profile_updates : null;
   } catch {
     return null;
@@ -757,7 +757,7 @@ function extractScoutContextUpdates(data) {
   try {
     const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
     const clean = raw.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    const parsed = parseReplyObject(clean);
     return parsed && typeof parsed.scout_context_updates === "object" ? parsed.scout_context_updates : null;
   } catch {
     return null;
@@ -775,7 +775,7 @@ function extractSuggestedTargets(data) {
   try {
     const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
     const clean = raw.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    const parsed = parseReplyObject(clean);
     if (!parsed || !Array.isArray(parsed.suggested_targets)) return null;
     const clean2 = parsed.suggested_targets
       .filter((t) => t && typeof t.name === "string" && t.name.trim())
@@ -794,7 +794,7 @@ function extractSuggestedDevItems(data) {
   try {
     const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
     const clean = raw.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    const parsed = parseReplyObject(clean);
     if (!parsed || !Array.isArray(parsed.suggested_dev_items)) return null;
     const clean2 = parsed.suggested_dev_items
       .filter((i) => i && typeof i.goal === "string" && i.goal.trim())
@@ -820,7 +820,7 @@ function extractSuggestedPathway(data) {
   try {
     const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
     const clean = raw.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    const parsed = parseReplyObject(clean);
     const p = parsed && parsed.suggested_pathway;
     if (!p || !PATHWAY_TYPE_SET.has(p.pathway_type)) return null;
     const milestones = Array.isArray(p.milestones)
@@ -845,7 +845,7 @@ function extractDraftedEmail(data) {
   try {
     const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
     const clean = raw.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    const parsed = parseReplyObject(clean);
     return (parsed && typeof parsed.drafted_email === "string" && parsed.drafted_email.trim()) ? parsed.drafted_email.trim().slice(0, 4000) : null;
   } catch {
     return null;
@@ -933,15 +933,15 @@ function logReplyShape(tag, data) {
     let keys = null, mw = null;
     try {
       const clean = raw.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+      const parsed = parseReplyObject(clean);
       keys = Object.keys(parsed);
-      mw = parsed.memory_writes === undefined ? "ABSENT" : JSON.stringify(parsed.memory_writes).slice(0, 300);
+      mw = parsed.memory_writes === undefined ? "ABSENT" : `${(parsed.memory_writes || []).length} entries`;
     } catch (e) { keys = "PARSE_FAILED: " + String(e).slice(0, 120); }
     console.log(`GOLSZ reply shape [${tag}]:`, JSON.stringify({
       stop_reason: data.stop_reason,
       blocks: (data.content || []).map((b) => b && b.type),
-      rawHead: raw.slice(0, 220),
-      rawTail: raw.slice(-160),
+      rawLen: raw.length,
+      startsWithBrace: raw.trim().startsWith("{"),
       keys,
       memory_writes: mw,
       extracted: extractMemoryWrites(data).length,
@@ -964,6 +964,18 @@ function salvageJsonValue(raw, key) {
   i += 1;
   while (i < raw.length && /\s/.test(raw[i])) i += 1;
   const open = raw[i];
+  if (open === '"') {
+    // String value: walk to the closing quote, honouring escapes. A severed
+    // string is unrecoverable and correctly yields undefined.
+    let esc = false;
+    for (let j = i + 1; j < raw.length; j += 1) {
+      const c = raw[j];
+      if (esc) { esc = false; continue; }
+      if (c === "\\") { esc = true; continue; }
+      if (c === '"') { try { return JSON.parse(raw.slice(i, j + 1)); } catch { return undefined; } }
+    }
+    return undefined;
+  }
   if (open !== "[" && open !== "{") return undefined;
   const close = open === "[" ? "]" : "}";
   let depth = 0, inStr = false, esc = false;
@@ -987,13 +999,39 @@ function salvageJsonValue(raw, key) {
   return undefined;
 }
 
+// Every extractor used its own strict JSON.parse, so ONE truncated reply
+// silently discarded profile_updates, scout_context_updates, suggested_*,
+// drafted_email and research_note together -- the athlete's stated facts
+// were being dropped exactly when the reply was richest. Strict parse first
+// (the normal path), then rebuild from the fields that did survive.
+const REPLY_FIELDS = [
+  "reply", "memory_writes", "research_note", "profile_updates",
+  "scout_context_updates", "suggested_targets", "suggested_dev_items",
+  "suggested_pathway", "drafted_email",
+];
+
+function parseReplyObject(clean) {
+  try {
+    const strict = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    if (strict && typeof strict === "object") return strict;
+  } catch {}
+  const out = {};
+  let found = false;
+  for (const k of REPLY_FIELDS) {
+    const v = salvageJsonValue(clean, k);
+    if (v !== undefined) { out[k] = v; found = true; }
+  }
+  if (found) console.log("GOLSZ salvaged truncated reply, fields:", Object.keys(out).join(","));
+  return found ? out : null;
+}
+
 function extractMemoryWrites(data) {
   let writes;
   try {
     const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
     const clean = raw.replace(/```json|```/g, "").trim();
     try {
-      const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+      const parsed = parseReplyObject(clean);
       writes = parsed && Array.isArray(parsed.memory_writes) ? parsed.memory_writes : null;
     } catch {
       // Truncated reply — recover the array on its own.
@@ -1829,7 +1867,7 @@ function extractResearchNote(data) {
   try {
     const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
     const clean = raw.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    const parsed = parseReplyObject(clean);
     const note = parsed && parsed.research_note;
     if (!note || typeof note !== "object") return null;
     const summary = typeof note.summary === "string" ? note.summary.trim().slice(0, 1200) : "";

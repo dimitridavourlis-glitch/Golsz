@@ -6870,11 +6870,63 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       }
       const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
       let reply = raw, updates = null, contextUpdates = null;
+      // Salvages one top-level value from a JSON object that may be cut off.
+      // A long researched reply can hit the model's output ceiling mid-object,
+      // and strict JSON.parse then throws — which used to fall through to
+      // `reply = raw` and show the athlete the RAW JSON in the chat bubble.
+      // "reply" is the FIRST field in the contract, so it is complete in
+      // essentially any truncation. Mirrors salvageJsonValue() in api/scout.js.
+      const salvage = (src, key) => {
+        const at = src.indexOf('"' + key + '"');
+        if (at < 0) return undefined;
+        let i = src.indexOf(":", at + key.length + 2);
+        if (i < 0) return undefined;
+        i += 1;
+        while (i < src.length && /\s/.test(src[i])) i += 1;
+        const open = src[i];
+        if (open === '"') {
+          let esc = false;
+          for (let j = i + 1; j < src.length; j++) {
+            const c = src[j];
+            if (esc) { esc = false; continue; }
+            if (c === "\\") { esc = true; continue; }
+            if (c === '"') { try { return JSON.parse(src.slice(i, j + 1)); } catch { return undefined; } }
+          }
+          return undefined;
+        }
+        if (open !== "[" && open !== "{") return undefined;
+        const close = open === "[" ? "]" : "}";
+        let depth = 0, inStr = false, esc2 = false;
+        for (let j = i; j < src.length; j++) {
+          const c = src[j];
+          if (inStr) {
+            if (esc2) esc2 = false;
+            else if (c === "\\") esc2 = true;
+            else if (c === '"') inStr = false;
+            continue;
+          }
+          if (c === '"') { inStr = true; continue; }
+          if (c === open) depth++;
+          else if (c === close) { depth--; if (depth === 0) { try { return JSON.parse(src.slice(i, j + 1)); } catch { return undefined; } } }
+        }
+        return undefined;
+      };
+      const clean = raw.replace(/```json|```/g, "").trim();
       try {
-        const clean = raw.replace(/```json|```/g, "").trim();
         const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
         reply = parsed.reply || raw; updates = parsed.profile_updates || null; contextUpdates = parsed.scout_context_updates || null;
-      } catch { /* raw */ }
+      } catch {
+        const salvagedReply = salvage(clean, "reply");
+        if (typeof salvagedReply === "string" && salvagedReply.trim()) {
+          reply = salvagedReply;
+          updates = salvage(clean, "profile_updates") || null;
+          contextUpdates = salvage(clean, "scout_context_updates") || null;
+        } else if (clean.startsWith("{")) {
+          // JSON we could not recover at all — never show the athlete a wall
+          // of braces. An honest short message beats leaking the envelope.
+          reply = t("scout_connection_dropped");
+        }
+      }
       if (updates && typeof updates === "object") setProfile((p) => ({ ...p, ...updates }));
       if (contextUpdates && typeof contextUpdates === "object") {
         // Same flatten-to-plain-value logic as the mount-time load above —
