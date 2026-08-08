@@ -1247,25 +1247,41 @@ async function classifyIntent(key, conversation, faqList) {
       // (conversation_stage, next_best_action) to the JSON contract, which
       // need a little more room than the 300 budget that was tuned for the
       // previous (smaller) schema.
-      maxTokens: 350,
-      // Real traffic showed Haiku sometimes treating the classification
-      // request as a conversation to actually help with, rambling on past
-      // the JSON (e.g. "...}```\n\nI can help you draft that email...").
-      // The schema is always a flat, single-level object — exactly one
-      // closing brace — so stopping generation right there is a hard
-      // guarantee against trailing chatter, not just a prompt request.
-      stopSequences: ["}"],
+      maxTokens: 400,
+      // NO stop sequence. There used to be stopSequences: ["}"], justified by
+      // "the schema is always a flat, single-level object — exactly one
+      // closing brace". That stopped being true when next_best_action was
+      // added as a NESTED object ending in "params":{} — generation then
+      // halted at the brace closing `params`, the old code appended a single
+      // "}", and the result was still two braces short, so EVERY
+      // classification with that field failed JSON.parse and fell through to
+      // { raw }. Confirmed in production logs: raw text ending at
+      // '"next_best_action": {"type": "none","label": "","params": {'.
+      //
+      // The blast radius was much wider than routing: intent, needs_tool,
+      // confidence, recommended_specialist AND summary_so_far were all
+      // silently discarded every turn — so the running conversation summary
+      // never advanced, and needs_tool never reached selectModelTier, which
+      // is why genuine web_lookup questions were being answered without the
+      // web_search tool.
+      //
+      // The original concern (Haiku rambling past the JSON) is handled where
+      // it should be — at parse time, by taking only the outermost {...}
+      // substring, exactly like extractProfileUpdates() and friends already
+      // do. That tolerates a leading ```json fence and trailing chatter
+      // without constraining the schema's shape.
       system: buildClassifierSystem(faqList),
       messages: [{ role: "user", content: text.slice(0, 2000) }],
     });
     if (!ok) return { error: data };
     const block = (data.content || []).find((b) => b.type === "text");
     if (!block) return null;
-    // Also strip a leading ```json fence — the stop_sequence prevents
-    // trailing garbage, but Haiku still sometimes opens with a fence.
-    const cleaned = block.text.trim().replace(/^```(?:json)?\s*/i, "") + "}";
+    const cleaned = block.text.replace(/```json|```/g, "").trim();
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start < 0 || end <= start) return { raw: block.text };
     let parsed;
-    try { parsed = JSON.parse(cleaned); } catch { return { raw: block.text }; }
+    try { parsed = JSON.parse(cleaned.slice(start, end + 1)); } catch { return { raw: block.text }; }
     return { ...parsed, usage: data.usage };
   } catch (e) {
     return { error: String(e) };
