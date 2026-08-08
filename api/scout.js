@@ -919,6 +919,36 @@ const MEMORY_TYPES = new Set([
 // thing.
 const MEMORY_ASSERTED_TYPES = new Set(["FACT", "USER_STATED"]);
 
+// One-shot diagnostic: scout_memory has stayed empty across every live test
+// even on turns that plainly contained durable facts, and no write error is
+// logged, which means extractMemoryWrites() is returning []. That has three
+// possible causes and the Vercel logs cannot currently tell them apart:
+// the reply isn't valid JSON at all, it is JSON but has no memory_writes
+// key, or the key is there and something in the validation drops every
+// entry. This logs the raw text prefix plus the parsed top-level keys so the
+// next real turn answers it outright.
+function logReplyShape(tag, data) {
+  try {
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    let keys = null, mw = null;
+    try {
+      const clean = raw.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+      keys = Object.keys(parsed);
+      mw = parsed.memory_writes === undefined ? "ABSENT" : JSON.stringify(parsed.memory_writes).slice(0, 300);
+    } catch (e) { keys = "PARSE_FAILED: " + String(e).slice(0, 120); }
+    console.log(`GOLSZ reply shape [${tag}]:`, JSON.stringify({
+      stop_reason: data.stop_reason,
+      blocks: (data.content || []).map((b) => b && b.type),
+      rawHead: raw.slice(0, 220),
+      rawTail: raw.slice(-160),
+      keys,
+      memory_writes: mw,
+      extracted: extractMemoryWrites(data).length,
+    }));
+  } catch (e) { console.error("logReplyShape failed:", e); }
+}
+
 function extractMemoryWrites(data) {
   let writes;
   try {
@@ -2768,7 +2798,9 @@ export default async function handler(req, res) {
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, profileUpdates);
         await persistScoutContext(userId, scoutContextUpdates);
-        await persistMemoryWrites(userId, extractMemoryWrites(data));
+        logReplyShape("haiku", data);
+        logReplyShape("sonnet", data);
+    await persistMemoryWrites(userId, extractMemoryWrites(data));
         // Keyed by requestId so a client-side timeout retry can recover this
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache.
@@ -2857,7 +2889,9 @@ export default async function handler(req, res) {
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, extractProfileUpdates(data));
         await persistScoutContext(userId, extractScoutContextUpdates(data));
-        await persistMemoryWrites(userId, extractMemoryWrites(data));
+        logReplyShape("haiku", data);
+        logReplyShape("sonnet", data);
+    await persistMemoryWrites(userId, extractMemoryWrites(data));
         // Keyed by requestId so a client-side timeout retry can recover this
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache.
@@ -2896,6 +2930,7 @@ export default async function handler(req, res) {
     await recordScoutUsageCost(userId, sonnetCost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
     await persistProfileUpdates(userId, extractProfileUpdates(data));
     await persistScoutContext(userId, extractScoutContextUpdates(data));
+    logReplyShape("sonnet", data);
     await persistMemoryWrites(userId, extractMemoryWrites(data));
     // Scout Cache write. Gated on the reply having ACTUALLY run web search
     // (checked against the response's tool-result blocks, not the model's
