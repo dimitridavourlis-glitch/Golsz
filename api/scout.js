@@ -2169,7 +2169,7 @@ async function buildAuthoritativeContext(userId) {
   if (!supaUrl || !serviceKey || !userId) return null;
   const headers = { apikey: serviceKey, Authorization: "Bearer " + serviceKey };
   try {
-    const cols = "sport,position,secondary_position,foot,club_name,previous_clubs,recruiting_status,grad_year,education_level,height_cm,weight_kg,gpa,home_city,home_country,current_city,country,citizenship,dob,age_reported,age_reported_at,scout_context";
+    const cols = "sport,position,secondary_position,foot,club_name,previous_clubs,recruiting_status,grad_year,education_level,height_cm,weight_kg,gpa,home_city,home_country,current_city,country,citizenship,dob,age_reported,age_reported_at,scout_context,bio";
     const [aRes, mRes] = await Promise.all([
       fetch(`${supaUrl}/rest/v1/athletes?id=eq.${userId}&select=${cols}`, { headers }),
       fetch(`${supaUrl}/rest/v1/scout_memory?athlete_id=eq.${userId}&active=is.true&select=type,subject,content,confidence,source,importance,updated_at&order=importance.desc,updated_at.desc&limit=20`, { headers }),
@@ -2226,6 +2226,14 @@ function renderAuthoritativeContext(ctx) {
 
   let out = "AUTHORITATIVE ATHLETE STATE — this is the record, loaded from the database this turn. It OUTRANKS anything you infer from the wording of the latest message, and it outranks the PROFILE SO FAR text in the message body. Never contradict it, never re-ask anything it already answers.";
   out += facts.length ? `\n\nVERIFIED PROFILE (highest authority):\n${facts.join("\n")}` : "\n\nVERIFIED PROFILE: nothing on file yet.";
+  // The athlete's own Passport bio — free text in their own words, capped at
+  // 600 chars client-side. Rendered as its own paragraph rather than folded
+  // into the bullet facts above: it is prose self-description (how they'd
+  // introduce themselves), not a discrete fact, and deserves to be read that
+  // way rather than mined for individual data points.
+  if (athlete && athlete.bio && athlete.bio.trim()) {
+    out += `\n\nTHEIR OWN PASSPORT BIO (in their own words — read for who they are, not just facts to extract):\n"${athlete.bio.trim().slice(0, 600)}"`;
+  }
   if (stated.length) out += `\n\nTHINGS THE ATHLETE HAS STATED (confirmed — treat as fact, never re-ask):\n${stated.join("\n")}`;
   if (inferred.length) out += `\n\nYOUR EARLIER INFERENCES (NOT facts — never assert these back as things they told you; confirm in passing if one matters):\n${inferred.join("\n")}`;
   if (unknowns.length) out += `\n\nKNOWN UNKNOWNS (ask about these before anything generic):\n${unknowns.join("\n")}`;

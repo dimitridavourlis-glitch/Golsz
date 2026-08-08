@@ -114,5 +114,21 @@ const empty = renderAuthoritativeContext({ athlete: null, memories: [], conflict
 ck("says nothing on file rather than inventing", /nothing on file yet/.test(empty));
 ck("no 'back' resolution when locations unknown", !/RESOLVING/.test(empty));
 
+console.log("\n=== the Passport bio reaches Scout ===");
+// Real gap found 2026-08-09: athletes.bio (up to 600 chars, shown on the
+// Passport) was never selected by buildAuthoritativeContext and never
+// rendered — Scout genuinely could not see it. Fixed by adding it to the
+// select list and giving it its own labelled paragraph.
+const withBio = renderAuthoritativeContext({ ...ctx, athlete: { ...ATHLETE, bio: "Box-to-box winger, grew up playing futsal in Montreal before the move." } });
+ck("the bio text itself is present", withBio.includes("Box-to-box winger, grew up playing futsal in Montreal"), true);
+ck("labelled as the athlete's own words, not a bullet fact", /THEIR OWN PASSPORT BIO/.test(withBio), true);
+const noBio = renderAuthoritativeContext({ ...ctx, athlete: { ...ATHLETE, bio: null } });
+ck("no bio on file -> no section at all, never a placeholder", !/PASSPORT BIO/.test(noBio), true);
+const blankBio = renderAuthoritativeContext({ ...ctx, athlete: { ...ATHLETE, bio: "   " } });
+ck("whitespace-only bio is treated as absent", !/PASSPORT BIO/.test(blankBio), true);
+const longBio = renderAuthoritativeContext({ ...ctx, athlete: { ...ATHLETE, bio: "x".repeat(900) } });
+ck("an oversized bio is capped at 600 chars even if it reached the server that way",
+   (longBio.match(/x+/) || [""])[0].length <= 600, true);
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
