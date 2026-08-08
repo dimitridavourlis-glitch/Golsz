@@ -446,6 +446,7 @@ const I18N = {
     scout_save_email: "Save this email to a Target", scout_save_email_locked: "Save to a Target — Basic", scout_save_email_pick: "Choose a target…", scout_save_email_confirm: "Save", scout_save_email_cancel: "Cancel", scout_save_email_no_targets: "You don't have any targets yet — add one first.", scout_email_saved: "Saved to your target.",
     scout_attach_photo: "Attach a photo", scout_photo_attached: "Photo attached — Scout will take a look.",
     scout_connection_dropped: "Connection dropped mid-play. Send that again and I'm on it.",
+    scout_timed_out: "That one took me too long to work through. Send it again — or try asking it a bit more specifically.",
     scout_greeting: "I'm your GOLSZ Scout.\n\nTell me about yourself like you'd tell a scout — age, sport, position, where you play, and where you want to end up. I'll build your path from there.",
     scout_topic_situation: "My current situation", scout_topic_situation_prompt: "Let's talk through my current situation as an athlete.",
     scout_topic_goals: "My goals & preferences", scout_topic_goals_prompt: "I want to talk about my goals and what I'm looking for.",
@@ -731,6 +732,7 @@ const I18N = {
     scout_save_email: "Enregistrer cet e-mail sur une Cible", scout_save_email_locked: "Enregistrer sur une Cible — Basic", scout_save_email_pick: "Choisissez une cible…", scout_save_email_confirm: "Enregistrer", scout_save_email_cancel: "Annuler", scout_save_email_no_targets: "Vous n'avez pas encore de cibles — ajoutez-en une d'abord.", scout_email_saved: "Enregistré sur votre cible.",
     scout_attach_photo: "Joindre une photo", scout_photo_attached: "Photo jointe — votre agent va y jeter un œil.",
     scout_connection_dropped: "Connexion interrompue en plein jeu. Renvoyez ça et je m'en occupe.",
+    scout_timed_out: "Celle-là m'a pris trop de temps à traiter. Renvoyez-la — ou essayez de la poser un peu plus précisément.",
     scout_greeting: "Je suis votre Agent GOLSZ.\n\nParlez-moi de vous comme vous le feriez à un recruteur — âge, sport, poste, où vous jouez, et où vous voulez aller. Je construirai votre parcours à partir de là.",
     scout_topic_situation: "Ma situation actuelle", scout_topic_situation_prompt: "Parlons de ma situation actuelle en tant qu'athlète.",
     scout_topic_goals: "Mes objectifs & préférences", scout_topic_goals_prompt: "Je veux parler de mes objectifs et de ce que je recherche.",
@@ -1016,6 +1018,7 @@ const I18N = {
     scout_save_email: "Guardar este correo en un Objetivo", scout_save_email_locked: "Guardar en un Objetivo — Basic", scout_save_email_pick: "Elige un objetivo…", scout_save_email_confirm: "Guardar", scout_save_email_cancel: "Cancelar", scout_save_email_no_targets: "Aún no tienes objetivos — añade uno primero.", scout_email_saved: "Guardado en tu objetivo.",
     scout_attach_photo: "Adjuntar una foto", scout_photo_attached: "Foto adjunta — tu agente le echará un vistazo.",
     scout_connection_dropped: "Se perdió la conexión a mitad de la jugada. Envíalo de nuevo y me encargo.",
+    scout_timed_out: "Esa me llevó demasiado tiempo procesarla. Envíala de nuevo — o intenta plantearla de forma algo más concreta.",
     scout_greeting: "Soy tu Agente GOLSZ.\n\nCuéntame sobre ti como se lo contarías a un ojeador — edad, deporte, posición, dónde juegas y a dónde quieres llegar. Construiré tu camino a partir de ahí.",
     scout_topic_situation: "Mi situación actual", scout_topic_situation_prompt: "Hablemos de mi situación actual como atleta.",
     scout_topic_goals: "Mis objetivos y preferencias", scout_topic_goals_prompt: "Quiero hablar sobre mis objetivos y lo que busco.",
@@ -1301,6 +1304,7 @@ const I18N = {
     scout_save_email: "Αποθήκευση αυτού του email σε Στόχο", scout_save_email_locked: "Αποθήκευση σε Στόχο — Basic", scout_save_email_pick: "Επίλεξε έναν στόχο…", scout_save_email_confirm: "Αποθήκευση", scout_save_email_cancel: "Ακύρωση", scout_save_email_no_targets: "Δεν έχεις ακόμα στόχους — πρόσθεσε έναν πρώτα.", scout_email_saved: "Αποθηκεύτηκε στον στόχο σου.",
     scout_attach_photo: "Επισύναψη φωτογραφίας", scout_photo_attached: "Η φωτογραφία επισυνάφθηκε — ο σκάουτ θα τη δει.",
     scout_connection_dropped: "Η σύνδεση διακόπηκε στη μέση. Στείλτε το ξανά και θα το αναλάβω.",
+    scout_timed_out: "Αυτό μου πήρε πολλή ώρα να το επεξεργαστώ. Στείλ' το ξανά — ή δοκίμασε να το ρωτήσεις πιο συγκεκριμένα.",
     scout_greeting: "Είμαι ο GOLSZ Σκάουτ σας.\n\nΠείτε μου για εσάς όπως θα λέγατε σε έναν σκάουτ — ηλικία, άθλημα, θέση, πού παίζετε και πού θέλετε να καταλήξετε. Θα χτίσω τη διαδρομή σας από εκεί.",
     scout_topic_situation: "Η τρέχουσα κατάστασή μου", scout_topic_situation_prompt: "Ας μιλήσουμε για την τρέχουσα κατάστασή μου ως αθλητή.",
     scout_topic_goals: "Οι στόχοι & προτιμήσεις μου", scout_topic_goals_prompt: "Θέλω να μιλήσω για τους στόχους μου και τι ψάχνω.",
@@ -6787,8 +6791,17 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       // model/system/tools are NOT sent — api/scout.js owns the model
       // choice, the real SYSTEM_PROMPT, and tool wiring server-side; the
       // client only ever supplies the conversation itself.
+      // Give the request a real ceiling slightly ABOVE the server's own
+      // budget (SCOUT_BUDGET_MS in api/scout.js, 50s, inside its 60s
+      // maxDuration) so the server always gets the chance to answer for
+      // itself first — this only fires if the request is genuinely stuck
+      // (dropped connection, dead tunnel), and it turns an indefinite spinner
+      // into an honest message the athlete can act on. Falls back to no
+      // timeout on the rare browser without AbortSignal.timeout.
+      const timeoutSignal = (typeof AbortSignal !== "undefined" && AbortSignal.timeout) ? AbortSignal.timeout(58000) : undefined;
       const res = await fetch(SCOUT_ENDPOINT, {
         method: "POST", headers: _hdr,
+        signal: timeoutSignal,
         body: JSON.stringify({ messages: api, lang, conversationId, summary, requestId }),
       });
       const data = await res.json();
@@ -6838,7 +6851,14 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       setMsgs((m) => [...m, { role: "assistant", text: reply, suggestedTargets: data.suggested_targets || null, suggestedDevItems: data.suggested_dev_items || null, suggestedPathway: data.suggested_pathway || null, draftedEmail: data.drafted_email || null }]);
       logTurn("assistant", reply);
     } catch (e) {
-      const msg = e && e.code === "SCOUT_HTTP_ERROR" ? e.message : t("scout_connection_dropped");
+      // TimeoutError/AbortError come from the AbortSignal.timeout above —
+      // "took too long" is the honest description there; "connection
+      // dropped" would be actively misleading since the request did reach
+      // the server, it just never came back in time.
+      const isTimeout = e && (e.name === "TimeoutError" || e.name === "AbortError");
+      const msg = e && e.code === "SCOUT_HTTP_ERROR" ? e.message
+        : isTimeout ? t("scout_timed_out")
+        : t("scout_connection_dropped");
       setMsgs((m) => [...m, { role: "assistant", text: msg }]);
       // Persist the fallback the same way a real reply is persisted below —
       // without this, a failed call left the user's own message logged

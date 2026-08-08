@@ -34,7 +34,35 @@
 // lands where it does.
 // ============================================================
 
+// THE fix for "Connection dropped mid-play." A single Scout message is not
+// one model call — it's a classifier call (bounded at 4.5s below), then
+// runDeepReply()'s tool loop, which can legitimately make up to 4 Sonnet
+// calls with server-side web search plus a 5th forced final answer, and on
+// a provider failure the whole thing retries once. Without this export,
+// Vercel applied its DEFAULT function timeout (10s), so the platform killed
+// the function mid-flight on any reply that needed real search — the client
+// saw the fetch fail and showed the generic "connection dropped" fallback,
+// even though nothing was actually wrong with the connection OR the model
+// (server logs showed the Anthropic calls succeeding right up to the kill).
+// 60s is the Hobby-plan ceiling and is valid on every paid plan too.
+// SCOUT_BUDGET_MS below keeps our own work inside this window so we always
+// return a real reply rather than relying on the platform limit as a
+// backstop.
+export const config = { maxDuration: 60 };
+
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+
+// Total server-side wall-clock budget for one Scout request, kept safely
+// under `maxDuration` above so we finish and respond ourselves instead of
+// being killed. runDeepReply() checks the remaining budget before starting
+// another tool turn (and the handler before spending it on a retry), so a
+// slow/greedy tool loop degrades into "answer with what you have now"
+// rather than into a dead request.
+const SCOUT_BUDGET_MS = 50000;
+// Don't start another tool turn unless there's plausibly room for it plus
+// the forced final answer — a Sonnet call with web search commonly runs
+// 8-12s, so below this we stop looping and go straight to the final answer.
+const TOOL_TURN_MIN_MS = 14000;
 
 // Phase 2e of the AI Scout architecture plan (approved): a small registry
 // mapping capability role -> {provider, model} instead of scattering model
@@ -1473,11 +1501,20 @@ async function recordScoutUsageCost(userId, cost, inputTokens, outputTokens) {
 // subsequent retry to trip over. Returns the same {ok, data} shape as
 // callAnthropic()/adapter.generate() so the handler's retry/fallback logic
 // can treat a whole-reply attempt uniformly.
-async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation) {
+async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation, deadlineMs) {
   const conversation = baseConversation.slice();
   const MAX_TOOL_TURNS = 4;
+  const budgetLeft = () => (deadlineMs ? deadlineMs - Date.now() : Infinity);
   let data;
   for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
+    // Stop looping once there isn't plausibly room for another search turn
+    // plus the forced final answer below — see SCOUT_BUDGET_MS. Breaking
+    // here (rather than starting a turn we can't finish) is what turns a
+    // would-be killed request into a real, if less-researched, reply.
+    if (turn > 0 && budgetLeft() < TOOL_TURN_MIN_MS) {
+      console.log("GOLSZ scout tool loop stopping early, budget left ms:", budgetLeft());
+      break;
+    }
     const result = await callAnthropic(key, {
       model: deepTierConfig.model_name || MODEL_REGISTRY.DEEP_SCOUT.model,
       // Sonnet 5 runs adaptive thinking by default when this is omitted —
@@ -1866,13 +1903,23 @@ export default async function handler(req, res) {
     // standard have no Sonnet-side row of their own).
     const deepTierConfig = useHaiku ? (byTier.advanced || ANTHROPIC_DEFAULTS.advanced) : tierConfig;
 
-    let sonnetResult = await runDeepReply(key, deepTierConfig, systemPrompt, conversation);
+    const scoutDeadline = handlerStartMs + SCOUT_BUDGET_MS;
+    let sonnetResult = await runDeepReply(key, deepTierConfig, systemPrompt, conversation, scoutDeadline);
     if (!sonnetResult.ok) {
       // Automatic failover, step 1: retry the WHOLE reply once, from a fresh
       // conversation copy (runDeepReply never mutates the caller's array) —
-      // never resume mid-tool-exchange after a failure.
-      console.log("GOLSZ sonnet call failed, retrying once:", JSON.stringify(sonnetResult.data));
-      sonnetResult = await runDeepReply(key, deepTierConfig, systemPrompt, conversation);
+      // never resume mid-tool-exchange after a failure. Skipped when the
+      // budget can't absorb a second full attempt, so we fall straight
+      // through to the cheap no-tools Haiku fallback below instead of
+      // starting a retry the platform would kill mid-flight (the original
+      // "connection dropped" path).
+      const retryRoom = scoutDeadline - Date.now();
+      if (retryRoom >= TOOL_TURN_MIN_MS) {
+        console.log("GOLSZ sonnet call failed, retrying once:", JSON.stringify(sonnetResult.data));
+        sonnetResult = await runDeepReply(key, deepTierConfig, systemPrompt, conversation, scoutDeadline);
+      } else {
+        console.log("GOLSZ sonnet call failed, skipping retry (budget left ms:", retryRoom, "):", JSON.stringify(sonnetResult.data));
+      }
     }
 
     if (!sonnetResult.ok) {
