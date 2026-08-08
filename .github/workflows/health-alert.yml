@@ -1,0 +1,43 @@
+# Production health check for GOLSZ Scout.
+#
+# This runs here rather than as a Vercel Cron for one reason: the project is
+# on a Vercel Hobby plan, which only permits DAILY cron schedules. A daily
+# health check cannot catch an outage — the 2026-08-08 incident lasted about
+# an hour and was found by a human looking at his phone. GitHub Actions gives
+# us a 15-minute cadence at no cost.
+#
+# It does nothing but call the endpoint; every threshold and the push itself
+# live in api/health-alert.js, so this file never needs to change.
+#
+# Requires ONE repository secret:
+#   CRON_SECRET  — must match the CRON_SECRET env var set in Vercel.
+#
+# Note: GitHub's scheduled runs are best-effort and can be delayed under load,
+# which is fine here — api/health-alert.js looks at a 20-minute window against
+# a 15-minute schedule, so a late run still sees the failure.
+name: health-alert
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}   # so it can be triggered by hand while debugging
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the health endpoint
+        run: |
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "CRON_SECRET is not set as a repository secret — the endpoint will 401."
+            exit 1
+          fi
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://golsz.vercel.app/api/health-alert)
+          echo "HTTP $code"
+          cat /tmp/out.json
+          echo
+          # A non-200 here means the MONITOR is broken, which matters as much
+          # as the thing it monitors — fail the workflow so it surfaces.
+          [ "$code" = "200" ]
