@@ -250,23 +250,52 @@ const HARD_MAX_COST_PER_REQUEST = {
   elite: Number(process.env.SCOUT_HARD_MAX_COST_ELITE || 0.08),
 };
 
-function estimateTierCost(tierConfig, estimatedInputTokens, outputTokens) {
-  const inputCost = (estimatedInputTokens * (tierConfig.input_cost_per_million || 0)) / 1e6;
+// Cache-read rate. scout_model_config.cached_input_cost_per_million is
+// seeded for the Anthropic rows ($0.30/M against $3/M base) but left null on
+// the dormant provider rows, so fall back to the documented ~10% of base
+// rather than to zero — a null must never make a tier look free.
+function cachedInputRate(cfg) {
+  const explicit = cfg.cached_input_cost_per_million;
+  return explicit === null || explicit === undefined ? (cfg.input_cost_per_million || 0) * 0.1 : explicit;
+}
+
+// Prices the two halves of input separately, because they genuinely cost
+// different amounts. callAnthropic() puts cache_control: ephemeral on the
+// whole system block, so on any turn after the first in a conversation the
+// entire system prompt is served as a cache READ at ~10% of base input
+// price — confirmed in production logs as cache_read_input_tokens ≈ 6329,
+// exactly the system prompt size. Only the conversation messages are fresh.
+//
+// This previously charged the full uncached rate for ALL input, which
+// overstated a real Sonnet reply by roughly 8x and, via budgetGate(), was
+// silently downgrading every plan off the Sonnet tiers. The post-hoc
+// estimateCost() above has always modelled cache reads correctly; this just
+// stops the pre-flight gate from disagreeing with it.
+//
+// Known limitation, deliberately accepted: the FIRST turn of a conversation
+// is a cache WRITE, which costs ~1.25x base input rather than 0.1x, so a
+// cold request can exceed this estimate. It is amortised across every
+// subsequent turn in the 5-minute window, and aggregate spend is backstopped
+// by SCOUT_DAILY_SPEND_LIMIT / SCOUT_MONTHLY_SPEND_LIMIT, which are enforced
+// before a question is ever reserved.
+function estimateTierCost(tierConfig, freshInputTokens, cachedInputTokens, outputTokens) {
+  const freshCost = (freshInputTokens * (tierConfig.input_cost_per_million || 0)) / 1e6;
+  const cachedCost = (cachedInputTokens * cachedInputRate(tierConfig)) / 1e6;
   const outputCost = (outputTokens * (tierConfig.output_cost_per_million || 0)) / 1e6;
-  return inputCost + outputCost;
+  return freshCost + cachedCost + outputCost;
 }
 
 // Downgrades (never upgrades) a tier if its OWN worst-case cost — using that
 // tier's max_output_tokens as the output ceiling, since real output length
 // isn't known until after the call — would exceed this plan's hard
 // per-request ceiling. Never silently upgrades past what was selected.
-async function budgetGate(tier, plan, estimatedInputTokens) {
+async function budgetGate(tier, plan, freshInputTokens, cachedInputTokens) {
   const byTier = await getModelConfigByTier();
   const hardMax = HARD_MAX_COST_PER_REQUEST[plan] || HARD_MAX_COST_PER_REQUEST.free;
   let idx = TIER_ORDER.indexOf(tier);
   while (idx > 0) {
     const cfg = byTier[TIER_ORDER[idx]];
-    if (estimateTierCost(cfg, estimatedInputTokens, cfg.max_output_tokens) <= hardMax) break;
+    if (estimateTierCost(cfg, freshInputTokens, cachedInputTokens, cfg.max_output_tokens) <= hardMax) break;
     idx -= 1;
   }
   return TIER_ORDER[idx];
@@ -2297,8 +2326,12 @@ export default async function handler(req, res) {
     const complexity = complexityScore({ text: latestText, classification });
     let modelTier = selectModelTier({ plan: planForRouting, classification, score: complexity }).tier;
     if (modelTier === "premium" && !SCOUT_PREMIUM_ENABLED) modelTier = "advanced";
-    const estimatedInputTokens = Math.ceil((JSON.stringify(conversation).length + systemPrompt.length) / 4);
-    modelTier = await budgetGate(modelTier, planForRouting, estimatedInputTokens);
+    // Split, not summed: the system prompt is the cache_control'd block and
+    // is re-read at the cached rate on every turn after the first, while the
+    // conversation messages are always fresh input. See estimateTierCost().
+    const cachedInputTokens = Math.ceil(systemPrompt.length / 4);
+    const freshInputTokens = Math.ceil(JSON.stringify(conversation).length / 4);
+    modelTier = await budgetGate(modelTier, planForRouting, freshInputTokens, cachedInputTokens);
     const byTier = await getModelConfigByTier();
     const tierConfig = byTier[modelTier] || ANTHROPIC_DEFAULTS[modelTier];
     const useHaiku = modelTier === "economy" || modelTier === "standard";
