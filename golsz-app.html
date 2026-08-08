@@ -115,25 +115,6 @@ const C = {
   ink: "#0D1210",
 };
 
-/* ============ mock data ============ */
-const PASSPORT = {
-  name: "Dimitri K.", handle: "@dimitri.k", id: "GLS·CA·2027·04418",
-  sport: "Soccer", position: "Left Back", positionLabel: "POSITION", nat: "🇨🇦 Canada", foot: "Right",
-  height: "5'11\"", grad: "2027", club: "Toronto FC Academy", level: "NCAA-track",
-  gpa: "3.8", pace: "34.1 km/h", initials: "DK",
-  badges: [
-    { label: "Identity", on: true }, { label: "Club", on: true },
-    { label: "Academic", on: true }, { label: "Performance", on: true },
-    { label: "Coach", on: false },
-  ],
-  bio: "Left back with a high defensive line motor. Two-footed distribution, overlaps into the final third. Building a path to NCAA Division I.",
-  timeline: [
-    { yr: "2026", txt: "Named academy captain, Toronto FC U19" },
-    { yr: "2025", txt: "Provincial team call-up · Ontario Soccer" },
-    { yr: "2024", txt: "Joined Toronto FC Academy" },
-  ],
-};
-
 /* ============ Supabase data helpers (Feed/Discover/Events/Messages) ============
    Everything here is always real data, fetched fresh on every visit — no
    hardcoded demo fallback anywhere anymore (the last of it, THREADS, was
@@ -4504,10 +4485,17 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     } catch (e) { console.error("GOLSZ profile report error:", e); }
   }
 
-  const p = real ? toPassport(profile, athlete, viewingOther ? viewUserId : uid, t) : PASSPORT;
-  const mrz = real
-    ? `${p.id.replace(/[·]/g, "<")}<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<<<<<<<<<<<<<<<<<<<<<<<<<<<`
-    : `GLS<CAN<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<LEFTBACK<<<<<${p.id.replace(/[·]/g, "")}<2027CA`;
+  // NEVER fall back to fabricated data. This used to be
+  //   real ? toPassport(...) : PASSPORT
+  // where PASSPORT was a hardcoded "Dimitri K." with a fake club, GPA, pace,
+  // passport number and career timeline. Any visitor who reached this tab
+  // before uid resolved — including someone arriving from the marketing
+  // site's "Launch the app" — was shown an invented athlete presented as
+  // their own Passport. toPassport() is fully null-safe (every field dashes,
+  // name falls back to a generic label), so the honest empty state costs
+  // nothing.
+  const p = toPassport(profile, athlete, viewingOther ? viewUserId : uid, t);
+  const mrz = `${p.id.replace(/[·]/g, "<")}<${p.name.replace(/[^A-Za-z]/g, "").toUpperCase()}<<<<<<<<<<<<<<<<<<<<<<<<<<<<`;
   const occupationSet = !!(profile && profile.occupation);
   const isPlayerProfile = !occupationSet || profile.occupation === "Player";
   const isParentProfile = occupationSet && profile.occupation === "Parent";
@@ -4692,7 +4680,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
                 </button>
               )}
             </div>
-            <div style={{ textAlign: "center", fontSize: 8.5, color: C.slate, marginTop: 5, fontFamily: "'Space Mono', monospace" }}>{real ? t("passport_member") : "VERIFIED PHOTO"}</div>
+            <div style={{ textAlign: "center", fontSize: 8.5, color: C.slate, marginTop: 5, fontFamily: "'Space Mono', monospace" }}>{t("passport_member")}</div>
             {!viewingOther && real && (
               <div style={{ fontSize: 9, color: C.slate, marginTop: 6, maxWidth: 84, textAlign: "center", lineHeight: 1.3 }}>{t("passport_photo_tip")}</div>
             )}
