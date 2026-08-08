@@ -2320,7 +2320,7 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation,
       // ~4,287 tokens, comfortably over Sonnet 5's 1,024-token minimum,
       // with real cache reads confirmed via response.usage.cache_read_input_tokens.
       system: systemPrompt,
-      messages: conversationForModel,
+      messages: conversation,
       maxTokens: deepTierConfig.max_output_tokens,
       tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL, SEARCH_EVENTS_TOOL],
     });
@@ -2348,7 +2348,7 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation,
       model: deepTierConfig.model_name || MODEL_REGISTRY.DEEP_SCOUT.model,
       thinking: { type: "disabled" },
       system: systemPrompt,
-      messages: conversationForModel,
+      messages: conversation,
       maxTokens: deepTierConfig.max_output_tokens,
     });
     if (!result.ok) return { ok: false, data: result.data, toolBudgetExhausted };
