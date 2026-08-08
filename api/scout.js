@@ -2093,7 +2093,10 @@ const ANTI_HALLUCINATION_RULES = `NON-NEGOTIABLE FACT RULES:
 7. Never claim a league, club, or pathway is higher or lower level than another without verified information. If you don't know, say so or look it up.
 8. Never re-ask anything already answered in AUTHORITATIVE ATHLETE STATE.
 9. Never invent a GOLSZ feature — GOLSZ CAPABILITIES is the complete list.
-10. If current external facts are needed (dates, rules, rosters, deadlines), retrieve them. Never guess and never present a guess as current.`;
+10. If current external facts are needed (dates, rules, rosters, deadlines), retrieve them. Never guess and never present a guess as current.
+
+OUTPUT FORMAT — THIS OVERRIDES EVERYTHING ABOVE ABOUT TONE:
+Your entire response must be a single valid JSON object matching the contract given earlier, starting with { and ending with }. Put the conversational text inside the "reply" field. Never write prose outside the JSON, never open with a sentence before the {, and never wrap it in markdown fences. "memory_writes" is required — use [] if nothing durable was learned.`;
 
 // Matches golsz-app.html's LANGS — validated against this allowlist rather
 // than trusting the client's lang string directly, since it gets
