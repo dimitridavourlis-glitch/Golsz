@@ -919,86 +919,6 @@ const MEMORY_TYPES = new Set([
 // thing.
 const MEMORY_ASSERTED_TYPES = new Set(["FACT", "USER_STATED"]);
 
-// One-shot diagnostic: scout_memory has stayed empty across every live test
-// even on turns that plainly contained durable facts, and no write error is
-// logged, which means extractMemoryWrites() is returning []. That has three
-// possible causes and the Vercel logs cannot currently tell them apart:
-// the reply isn't valid JSON at all, it is JSON but has no memory_writes
-// key, or the key is there and something in the validation drops every
-// entry. This logs the raw text prefix plus the parsed top-level keys so the
-// next real turn answers it outright.
-function logReplyShape(tag, data) {
-  try {
-    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
-    let keys = null, mw = null;
-    try {
-      const clean = raw.replace(/```json|```/g, "").trim();
-      const parsed = parseReplyObject(clean);
-      keys = Object.keys(parsed);
-      mw = parsed.memory_writes === undefined ? "ABSENT" : `${(parsed.memory_writes || []).length} entries`;
-    } catch (e) { keys = "PARSE_FAILED: " + String(e).slice(0, 120); }
-    console.log(`GOLSZ reply shape [${tag}]:`, JSON.stringify({
-      stop_reason: data.stop_reason,
-      blocks: (data.content || []).map((b) => b && b.type),
-      rawLen: raw.length,
-      startsWithBrace: raw.trim().startsWith("{"),
-      keys,
-      memory_writes: mw,
-      extracted: extractMemoryWrites(data).length,
-    }));
-  } catch (e) { console.error("logReplyShape failed:", e); }
-}
-
-// Salvages ONE top-level value out of a JSON object that may be truncated.
-// A long researched reply can hit max_output_tokens mid-object
-// (stop_reason "max_tokens"), and strict JSON.parse then throws away the
-// whole payload — including fields that were emitted completely before the
-// cut. Scans from the key with a bracket/string-aware counter and returns
-// the balanced substring, so an early field survives a severed tail. This is
-// why memory_writes was moved to second position in the contract.
-function salvageJsonValue(raw, key) {
-  const at = raw.indexOf(`"${key}"`);
-  if (at < 0) return undefined;
-  let i = raw.indexOf(":", at + key.length + 2);
-  if (i < 0) return undefined;
-  i += 1;
-  while (i < raw.length && /\s/.test(raw[i])) i += 1;
-  const open = raw[i];
-  if (open === '"') {
-    // String value: walk to the closing quote, honouring escapes. A severed
-    // string is unrecoverable and correctly yields undefined.
-    let esc = false;
-    for (let j = i + 1; j < raw.length; j += 1) {
-      const c = raw[j];
-      if (esc) { esc = false; continue; }
-      if (c === "\\") { esc = true; continue; }
-      if (c === '"') { try { return JSON.parse(raw.slice(i, j + 1)); } catch { return undefined; } }
-    }
-    return undefined;
-  }
-  if (open !== "[" && open !== "{") return undefined;
-  const close = open === "[" ? "]" : "}";
-  let depth = 0, inStr = false, esc = false;
-  for (let j = i; j < raw.length; j += 1) {
-    const c = raw[j];
-    if (inStr) {
-      if (esc) esc = false;
-      else if (c === "\\") esc = true;
-      else if (c === '"') inStr = false;
-      continue;
-    }
-    if (c === '"') { inStr = true; continue; }
-    if (c === open) depth += 1;
-    else if (c === close) {
-      depth -= 1;
-      if (depth === 0) {
-        try { return JSON.parse(raw.slice(i, j + 1)); } catch { return undefined; }
-      }
-    }
-  }
-  return undefined;
-}
-
 // Every extractor used its own strict JSON.parse, so ONE truncated reply
 // silently discarded profile_updates, scout_context_updates, suggested_*,
 // drafted_email and research_note together -- the athlete's stated facts
@@ -2961,9 +2881,7 @@ export default async function handler(req, res) {
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, profileUpdates);
         await persistScoutContext(userId, scoutContextUpdates);
-        logReplyShape("haiku", data);
-        logReplyShape("sonnet", data);
-    await persistMemoryWrites(userId, extractMemoryWrites(data));
+        await persistMemoryWrites(userId, extractMemoryWrites(data));
         // Keyed by requestId so a client-side timeout retry can recover this
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache.
@@ -3052,9 +2970,7 @@ export default async function handler(req, res) {
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, extractProfileUpdates(data));
         await persistScoutContext(userId, extractScoutContextUpdates(data));
-        logReplyShape("haiku", data);
-        logReplyShape("sonnet", data);
-    await persistMemoryWrites(userId, extractMemoryWrites(data));
+        await persistMemoryWrites(userId, extractMemoryWrites(data));
         // Keyed by requestId so a client-side timeout retry can recover this
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache.
@@ -3093,7 +3009,6 @@ export default async function handler(req, res) {
     await recordScoutUsageCost(userId, sonnetCost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
     await persistProfileUpdates(userId, extractProfileUpdates(data));
     await persistScoutContext(userId, extractScoutContextUpdates(data));
-    logReplyShape("sonnet", data);
     await persistMemoryWrites(userId, extractMemoryWrites(data));
     // Scout Cache write. Gated on the reply having ACTUALLY run web search
     // (checked against the response's tool-result blocks, not the model's
@@ -3101,16 +3016,8 @@ export default async function handler(req, res) {
     // caching a reply that did no research would just serve stale opinion
     // back later. Skipped entirely on a cache hit, so a served entry never
     // rewrites itself and resets its own TTL.
-    // Logged unconditionally (not only on the happy path) because a missing
-    // cache write has three very different causes — the reply never searched,
-    // the model omitted research_note, or there was no usable topic_key — and
-    // guessing between them from token counts alone is not possible.
     const searched = usedWebSearch(data);
     const note = searched ? extractResearchNote(data) : null;
-    console.log("GOLSZ scout research cache decision:", JSON.stringify({
-      hit: !!priorResearch, searched, hasNote: !!note, topicKey: topicKey || null,
-      blocks: (data.content || []).map((b) => b && b.type),
-    }));
     if (!priorResearch && searched && note) {
       const searchSources = extractSearchSources(data);
       await persistResearchCache(userId, topicKey, stateDigest, note, searchSources, deepTierConfig.model_name, athleteSport, athleteCountry);
