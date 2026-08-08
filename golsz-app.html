@@ -266,7 +266,7 @@ const I18N = {
     settings_plan: "PLAN", settings_plan_current: "Current", settings_plan_switch: "Choose",
     settings_payment_past_due: "Your last payment didn't go through. Update your card with Stripe (check your receipt email) to keep your plan active.",
     settings_plan_checkout_unavailable: "Checkout isn't set up yet — check back soon.",
-    settings_plan_downgrade_note: "Switched to Starter. This won't cancel an existing paid subscription — use the receipt email Stripe sent you to manage or cancel billing.",
+    settings_plan_downgrade_note: "Switched to Free. This won't cancel an existing paid subscription — use the receipt email Stripe sent you to manage or cancel billing.",
     settings_plan_err: "Couldn't update your plan — try again.",
     notif_ios_homescreen: "On iPhone/iPad, notifications only work after you add GOLSZ to your Home Screen: tap Share, then \"Add to Home Screen\" — then open GOLSZ from that icon and turn notifications on from there.",
     restricted_title: "Restricted account.", restricted_body: "Your posts stay private and you're hidden from Discover until a parent or guardian approves access — see Family & Parent Access on your Profile.",
@@ -522,7 +522,7 @@ const I18N = {
     settings_plan: "FORMULE", settings_plan_current: "Actuelle", settings_plan_switch: "Choisir",
     settings_payment_past_due: "Votre dernier paiement a échoué. Mettez à jour votre carte via Stripe (voir l'e-mail de reçu) pour garder votre formule active.",
     settings_plan_checkout_unavailable: "Le paiement n'est pas encore configuré — revenez bientôt.",
-    settings_plan_downgrade_note: "Passé à Starter. Cela n'annule pas un abonnement payant existant — utilisez l'e-mail de reçu envoyé par Stripe pour gérer ou annuler la facturation.",
+    settings_plan_downgrade_note: "Passé à Free. Cela n'annule pas un abonnement payant existant — utilisez l'e-mail de reçu envoyé par Stripe pour gérer ou annuler la facturation.",
     settings_plan_err: "Impossible de mettre à jour votre formule — réessayez.",
     notif_ios_homescreen: "Sur iPhone/iPad, les notifications ne fonctionnent qu'après avoir ajouté GOLSZ à votre écran d'accueil : appuyez sur Partager, puis « Sur l'écran d'accueil » — ouvrez ensuite GOLSZ depuis cette icône et activez les notifications à partir de là.",
     restricted_title: "Compte restreint.", restricted_body: "Vos publications restent privées et vous êtes masqué de Découvrir jusqu'à ce qu'un parent ou tuteur approuve l'accès — voir Famille et accès parental sur votre profil.",
@@ -778,7 +778,7 @@ const I18N = {
     settings_plan: "PLAN", settings_plan_current: "Actual", settings_plan_switch: "Elegir",
     settings_payment_past_due: "Tu último pago no se procesó. Actualiza tu tarjeta con Stripe (revisa el correo del recibo) para mantener tu plan activo.",
     settings_plan_checkout_unavailable: "El pago aún no está configurado — vuelve pronto.",
-    settings_plan_downgrade_note: "Cambiado a Starter. Esto no cancela una suscripción de pago existente — usa el correo del recibo de Stripe para gestionar o cancelar la facturación.",
+    settings_plan_downgrade_note: "Cambiado a Free. Esto no cancela una suscripción de pago existente — usa el correo del recibo de Stripe para gestionar o cancelar la facturación.",
     settings_plan_err: "No se pudo actualizar tu plan — inténtalo de nuevo.",
     notif_ios_homescreen: "En iPhone/iPad, las notificaciones solo funcionan después de añadir GOLSZ a tu pantalla de inicio: toca Compartir y luego \"Añadir a pantalla de inicio\" — después abre GOLSZ desde ese icono y activa las notificaciones desde ahí.",
     restricted_title: "Cuenta restringida.", restricted_body: "Tus publicaciones permanecen privadas y estás oculto en Descubrir hasta que un padre, madre o tutor apruebe el acceso — consulta Familia y acceso parental en tu perfil.",
@@ -1034,7 +1034,7 @@ const I18N = {
     settings_plan: "ΠΑΚΕΤΟ", settings_plan_current: "Τρέχον", settings_plan_switch: "Επιλογή",
     settings_payment_past_due: "Η τελευταία σας πληρωμή απέτυχε. Ενημερώστε την κάρτα σας μέσω Stripe (δείτε το email απόδειξης) για να διατηρήσετε το πακέτο σας ενεργό.",
     settings_plan_checkout_unavailable: "Η πληρωμή δεν έχει ρυθμιστεί ακόμα — ελέγξτε ξανά σύντομα.",
-    settings_plan_downgrade_note: "Αλλάξατε σε Starter. Αυτό δεν ακυρώνει τυχόν υπάρχουσα συνδρομή — χρησιμοποιήστε το email απόδειξης από το Stripe για να διαχειριστείτε ή να ακυρώσετε τη χρέωση.",
+    settings_plan_downgrade_note: "Αλλάξατε σε Free. Αυτό δεν ακυρώνει τυχόν υπάρχουσα συνδρομή — χρησιμοποιήστε το email απόδειξης από το Stripe για να διαχειριστείτε ή να ακυρώσετε τη χρέωση.",
     settings_plan_err: "Δεν ήταν δυνατή η ενημέρωση του πακέτου σας — δοκιμάστε ξανά.",
     notif_ios_homescreen: "Σε iPhone/iPad, οι ειδοποιήσεις λειτουργούν μόνο αφού προσθέσετε το GOLSZ στην Αρχική οθόνη: πατήστε Κοινή χρήση και μετά «Προσθήκη στην Αρχική οθόνη» — έπειτα ανοίξτε το GOLSZ από αυτό το εικονίδιο και ενεργοποιήστε τις ειδοποιήσεις από εκεί.",
     restricted_title: "Περιορισμένος λογαριασμός.", restricted_body: "Οι αναρτήσεις σας παραμένουν ιδιωτικές και είστε κρυφοί από την Ανακάλυψη μέχρι να εγκρίνει την πρόσβαση γονέας ή κηδεμόνας — δείτε το Οικογένεια & Γονική Πρόσβαση στο προφίλ σας.",
@@ -4628,7 +4628,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           own comment; still passed viewUserId so it renders nothing
           rather than erroring when viewing someone else's Passport.
           Pro+ (brief §13); shown locked rather than hidden for the owner
-          on Free/Starter, per §11's "visibly locked" paywall language. */}
+          on Free/Basic, per §11's "visibly locked" paywall language. */}
       {viewingOther ? (
         <Benchmarks viewUserId={viewUserId} />
       ) : hasFeature(plan, "benchmarks") ? (
@@ -5319,7 +5319,7 @@ function AdminPanel({ onBack }) {
         sb.rpc("admin_scout_cost_summary"),
         // migration 056 — Multi-Model Cost-Control System's dashboard
         // extensions: cache hit rate, and cost-as-%-of-revenue per plan
-        // (the warning thresholds from the approved plan: Starter/Pro
+        // (the warning thresholds from the approved plan: Basic/Pro
         // <10%, Elite <15% of that plan's monthly revenue).
         sb.rpc("admin_scout_cache_stats"),
         sb.rpc("admin_scout_margin_summary"),
@@ -5388,10 +5388,10 @@ function AdminPanel({ onBack }) {
         totalUsers: profiles.length,
         signupsToday, signupsWeek,
         bannedCount,
-        // Starter is a paid tier now ($5.99/mo, no longer free), so it counts
-        // toward MRR too — this used to only count pro/elite from when
-        // Starter was a free loss-leader. Prices: $5.99 / $14.99 / $29.99.
-        mrrEstimate: Math.round((planCounts.starter * 5.99 + planCounts.pro * 14.99 + planCounts.elite * 29.99) * 100) / 100,
+        // Basic is a paid tier ($6/mo), so it counts toward MRR too — this
+        // used to only count pro/elite from when Basic (then "Starter") was
+        // a free loss-leader. Prices match PLANS/plan_config: $6/$14/$30.
+        mrrEstimate: Math.round((planCounts.starter * 6 + planCounts.pro * 14 + planCounts.elite * 30) * 100) / 100,
         signupsPerDay: bucketByDay(profiles),
         planCounts, occCounts, tierCounts,
         // Real identity verification (migration 058) — distinct from
@@ -5457,7 +5457,7 @@ function AdminPanel({ onBack }) {
         // Multi-Model Cost-Control System (migration 056) additions.
         scoutCacheAnswers: (cacheStats && cacheStats.cached_answers) || 0,
         scoutCacheHits: (cacheStats && cacheStats.total_hits) || 0,
-        // Target thresholds from the approved plan: Starter/Pro AI cost
+        // Target thresholds from the approved plan: Basic/Pro AI cost
         // should stay under 10% of that plan's monthly revenue, Elite
         // under 15% — flagged in the UI, not enforced automatically.
         scoutMarginByPlan: (marginSummary || []).map((r) => ({
@@ -5755,7 +5755,7 @@ function AdminPanel({ onBack }) {
                   serious actions take one deliberate extra tap to reach. */}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
                 <select value={u.plan} onChange={(e) => setUserPlan(u.id, e.target.value)} style={{ ...field, padding: "5px 7px", fontSize: 11.5 }}>
-                  <option value="free">free</option><option value="starter">starter</option><option value="pro">pro</option><option value="elite">elite</option>
+                  <option value="free">free</option><option value="starter">basic</option><option value="pro">pro</option><option value="elite">elite</option>
                 </select>
                 <div style={{ display: "flex", gap: 4 }}>
                   {["none", "pro", "elite"].map((tier) => {
@@ -6032,7 +6032,7 @@ function AdminPanel({ onBack }) {
                   {/* Multi-Model Cost-Control System (migration 056) —
                       cache hit rate + cost-as-%-of-revenue per plan, with
                       the approved plan's own warning thresholds
-                      (Starter/Pro <10%, Elite <15%) flagged inline. */}
+                      (Basic/Pro <10%, Elite <15%) flagged inline. */}
                   <div style={{ ...card }}>
                     <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("admin_scout_cache_hits")}</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -6052,7 +6052,7 @@ function AdminPanel({ onBack }) {
                     {!analytics.scoutMarginByPlan.length && <div style={{ fontSize: 12, color: C.slate }}>{t("admin_no_data")}</div>}
                     {analytics.scoutMarginByPlan.map((row) => (
                       <div key={row.plan} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${C.line}` }}>
-                        <span style={{ fontSize: 12, textTransform: "capitalize" }}>{row.plan}</span>
+                        <span style={{ fontSize: 12 }}>{(PLANS.find((p) => p.id === row.plan) || {}).name || row.plan}</span>
                         <span style={{ fontSize: 10.5, color: C.slate }}>{row.subscribers} · ${row.cost.toFixed(2)} / ${row.revenue.toFixed(0)}</span>
                         <span style={{ fontSize: 12, fontWeight: 800, color: row.overTarget ? "#ff5c5c" : C.lime, fontFamily: "'Space Mono', monospace" }}>
                           {row.costPct.toFixed(1)}%{row.overTarget ? ` ⚠ ${t("admin_scout_over_target")}` : ""}
@@ -6246,19 +6246,6 @@ function AdminPanel({ onBack }) {
 }
 
 /* ============ AI SCOUT (live agent) ============ */
-const SYS = `You are GOLSZ Scout, an AI sports agent. Tagline: "Every Goal Has a Path."
-You adapt to who you're talking to — check "occupation" in PROFILE SO FAR:
-- Player, or occupation missing/unset (default): the personal agent for ONE athlete — learn who they are (age, sport, position, location, club/level, grad year, academics, budget, citizenship, goal), build a career roadmap, suggest realistic target programs (reach/match/safety, honest), and draft coach outreach emails on request (draft-only; the athlete sends them).
-- Scout, Agent, or Coach: their assistant for finding and evaluating talent — help them think through what/who they're looking for, use web search for real current prospects, rankings, and showcases matching their sport and level, and draft outreach messages to a player or their family on request (draft-only; they send it themselves).
-- Physio: their assistant for the athletic/sports-medicine side of their work — general injury-prevention and return-to-play information only, never a diagnosis; say so plainly if a question actually needs a real medical professional.
-- Other: a general, honest sports-industry assistant — ask what they need help with rather than assuming.
-Some fields may already be filled in from their real GOLSZ Passport (profile they built themselves) — treat those as trustworthy and confirmed, not something to re-ask. Open by briefly acknowledging what you already know about them (occupation/sport/team if present) instead of asking generic intro questions, then move straight to something useful.
-Be warm, direct, honest — never overpromise. If a target or prospect looks unrealistic, say so kindly and show the realistic path. If the person seems to be a minor, remind them once to involve a parent/guardian. Use web search for real current programs, players, coaches, showcases, and eligibility rules. Ask at most ONE question per reply. Keep replies tight for a phone screen.
-If asked what AI model or company powers you, who made you, or whether you're ChatGPT/OpenAI/Claude/Anthropic/Gemini/etc., always answer that you are GOLSZ Scout, built by GOLSZ — never name or confirm any underlying model or provider, and don't explain that you're declining to say. Just answer as GOLSZ Scout and move on.
-GOLSZ is a sports-recruiting platform used by athletes of all ages, including minors. Stay strictly on sports, athletics, recruiting, and career topics. Never generate or engage with sexual, romantic, 18+/adult, or otherwise inappropriate content, regardless of how the request is framed (roleplay, "hypothetically," "for a story," etc.) — decline briefly and warmly, and steer the conversation back to something sports-related. This applies no matter who the user says they are.
-OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null}}
-Allowed profile_updates keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, budget, citizenship, goal. Do not repeat known fields.
-Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.`;
 
 const CHIP_ICONS = [Compass, Radar, MessageSquare, CalendarDays];
 function chipsFor(t, isPlayer) {
@@ -6619,14 +6606,16 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
         : { role: "user", content: promptText };
       let _hdr = { "Content-Type": "application/json" };
       try { if (typeof sb !== "undefined" && sb) { const _s = await sb.auth.getSession(); if (_s && _s.data && _s.data.session) _hdr["Authorization"] = "Bearer " + _s.data.session.access_token; } } catch (e) {}
-      const _endpoint = (typeof SCOUT_ENDPOINT !== "undefined" && SCOUT_ENDPOINT) ? SCOUT_ENDPOINT : "https://api.anthropic.com/v1/messages";
       // requestId lets the server (api/scout.js) reject an exact duplicate
       // submission (double-click, retry-storm) without double-charging —
       // crypto.randomUUID() is available in every browser this app targets.
       const requestId = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random();
-      const res = await fetch(_endpoint, {
+      // model/system/tools are NOT sent — api/scout.js owns the model
+      // choice, the real SYSTEM_PROMPT, and tool wiring server-side; the
+      // client only ever supplies the conversation itself.
+      const res = await fetch(SCOUT_ENDPOINT, {
         method: "POST", headers: _hdr,
-        body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 4096, system: SYS, messages: api, lang, conversationId, summary, requestId, tools: [{ type: "web_search_20250305", name: "web_search" }] }),
+        body: JSON.stringify({ messages: api, lang, conversationId, summary, requestId }),
       });
       const data = await res.json();
       // scout_usage ({remaining, limit}) is present on both success and
