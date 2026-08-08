@@ -374,7 +374,7 @@ const I18N = {
     admin_checking: "Checking access…", admin_only: "Admins only.", admin_title: "Admin panel",
     admin_stat_users: "USERS", admin_stat_posts: "POSTS", admin_stat_events: "EVENTS", admin_stat_pending: "PENDING",
     admin_stat_verified: "VERIFIED", admin_stat_pending_verification: "PENDING VERIF.", admin_stat_pending_appeals: "PENDING APPEALS",
-    admin_tab_reports: "Reports", admin_tab_users: "Users", admin_tab_analytics: "Analytics", admin_tab_audit: "Audit log", admin_tab_moderation: "Moderation", admin_tab_errors: "Errors", admin_tab_system: "System", admin_view_auto_queue: "Auto Queue",
+    admin_tab_reports: "Reports", admin_tab_users: "Users", admin_tab_analytics: "Analytics", admin_tab_audit: "Audit log", admin_tab_moderation: "Moderation", admin_tab_errors: "Errors", admin_tab_scout_debug: "Scout", admin_tab_system: "System", admin_scout_debug_hint: "Counts and derived state only — Scout memory is the athlete's private file and is never shown here.", admin_scout_lookup: "Athlete user ID", admin_scout_load: "Inspect", admin_scout_not_found: "No profile with that ID.", admin_scout_reset: "Reset Scout intelligence", admin_scout_reset_confirm: "Clear this athlete's Scout memory, history, research cache, state, trial and goal? Their account, login and Passport are NOT touched.", admin_scout_reset_confirm2: "This cannot be undone. Continue?", admin_view_auto_queue: "Auto Queue",
     admin_no_moderation_items: "Nothing flagged yet.", admin_minor_safety: "MINOR SAFETY", admin_confidence: "confidence",
     admin_no_errors: "No errors logged. All quiet.",
     admin_no_reports: "No reports yet.", admin_reported_by: "Reported by ", admin_post_removed: "Post already removed.",
@@ -660,7 +660,7 @@ const I18N = {
     admin_checking: "Vérification de l'accès…", admin_only: "Réservé aux administrateurs.", admin_title: "Panneau d'administration",
     admin_stat_users: "UTILISATEURS", admin_stat_posts: "PUBLICATIONS", admin_stat_events: "ÉVÉNEMENTS", admin_stat_pending: "EN ATTENTE",
     admin_stat_verified: "VÉRIFIÉS", admin_stat_pending_verification: "VÉRIF. EN ATTENTE", admin_stat_pending_appeals: "APPELS EN ATTENTE",
-    admin_tab_reports: "Signalements", admin_tab_users: "Utilisateurs", admin_tab_analytics: "Analytique", admin_tab_audit: "Journal d'audit", admin_tab_moderation: "Modération", admin_tab_errors: "Erreurs", admin_tab_system: "Système", admin_view_auto_queue: "File automatique",
+    admin_tab_reports: "Signalements", admin_tab_users: "Utilisateurs", admin_tab_analytics: "Analytique", admin_tab_audit: "Journal d'audit", admin_tab_moderation: "Modération", admin_tab_errors: "Erreurs", admin_tab_scout_debug: "Scout", admin_tab_system: "Système", admin_scout_debug_hint: "Compteurs et état dérivé uniquement — la mémoire de Scout est le dossier privé de l'athlète et n'est jamais affichée ici.", admin_scout_lookup: "ID utilisateur de l'athlète", admin_scout_load: "Inspecter", admin_scout_not_found: "Aucun profil avec cet ID.", admin_scout_reset: "Réinitialiser l'intelligence Scout", admin_scout_reset_confirm: "Effacer la mémoire, l'historique, le cache de recherche, l'état, l'essai et l'objectif Scout de cet athlète ? Son compte, sa connexion et son Passeport ne sont PAS touchés.", admin_scout_reset_confirm2: "Ceci est irréversible. Continuer ?", admin_view_auto_queue: "File automatique",
     admin_no_moderation_items: "Rien de signalé pour l'instant.", admin_minor_safety: "SÉCURITÉ MINEUR", admin_confidence: "confiance",
     admin_no_errors: "Aucune erreur enregistrée. Tout va bien.",
     admin_no_reports: "Aucun signalement pour l'instant.", admin_reported_by: "Signalé par ", admin_post_removed: "Publication déjà supprimée.",
@@ -946,7 +946,7 @@ const I18N = {
     admin_checking: "Comprobando acceso…", admin_only: "Solo administradores.", admin_title: "Panel de administración",
     admin_stat_users: "USUARIOS", admin_stat_posts: "PUBLICACIONES", admin_stat_events: "EVENTOS", admin_stat_pending: "PENDIENTES",
     admin_stat_verified: "VERIFICADOS", admin_stat_pending_verification: "VERIF. PENDIENTE", admin_stat_pending_appeals: "APELACIONES PENDIENTES",
-    admin_tab_reports: "Reportes", admin_tab_users: "Usuarios", admin_tab_analytics: "Analítica", admin_tab_audit: "Registro de auditoría", admin_tab_moderation: "Moderación", admin_tab_errors: "Errores", admin_tab_system: "Sistema", admin_view_auto_queue: "Cola automática",
+    admin_tab_reports: "Reportes", admin_tab_users: "Usuarios", admin_tab_analytics: "Analítica", admin_tab_audit: "Registro de auditoría", admin_tab_moderation: "Moderación", admin_tab_errors: "Errores", admin_tab_scout_debug: "Scout", admin_tab_system: "Sistema", admin_scout_debug_hint: "Solo recuentos y estado derivado — la memoria de Scout es el archivo privado del atleta y nunca se muestra aquí.", admin_scout_lookup: "ID de usuario del atleta", admin_scout_load: "Inspeccionar", admin_scout_not_found: "No hay perfil con ese ID.", admin_scout_reset: "Restablecer inteligencia de Scout", admin_scout_reset_confirm: "¿Borrar la memoria, el historial, la caché de investigación, el estado, la prueba y el objetivo de Scout de este atleta? Su cuenta, acceso y Pasaporte NO se tocan.", admin_scout_reset_confirm2: "Esto no se puede deshacer. ¿Continuar?", admin_view_auto_queue: "Cola automática",
     admin_no_moderation_items: "Nada marcado todavía.", admin_minor_safety: "SEGURIDAD MENOR", admin_confidence: "confianza",
     admin_no_errors: "No hay errores registrados. Todo tranquilo.",
     admin_no_reports: "Aún no hay reportes.", admin_reported_by: "Reportado por ", admin_post_removed: "Publicación ya eliminada.",
@@ -1232,7 +1232,7 @@ const I18N = {
     admin_checking: "Έλεγχος πρόσβασης…", admin_only: "Μόνο για διαχειριστές.", admin_title: "Πίνακας διαχείρισης",
     admin_stat_users: "ΧΡΗΣΤΕΣ", admin_stat_posts: "ΑΝΑΡΤΗΣΕΙΣ", admin_stat_events: "ΕΚΔΗΛΩΣΕΙΣ", admin_stat_pending: "ΕΚΚΡΕΜΗ",
     admin_stat_verified: "ΕΠΑΛΗΘΕΥΜΕΝΟΙ", admin_stat_pending_verification: "ΕΚΚΡ. ΕΠΑΛΗΘΕΥΣΗ", admin_stat_pending_appeals: "ΕΚΚΡ. ΕΝΣΤΑΣΕΙΣ",
-    admin_tab_reports: "Αναφορές", admin_tab_users: "Χρήστες", admin_tab_analytics: "Αναλυτικά", admin_tab_audit: "Αρχείο καταγραφής", admin_tab_moderation: "Συντονισμός", admin_tab_errors: "Σφάλματα", admin_tab_system: "Σύστημα", admin_view_auto_queue: "Αυτόματη ουρά",
+    admin_tab_reports: "Αναφορές", admin_tab_users: "Χρήστες", admin_tab_analytics: "Αναλυτικά", admin_tab_audit: "Αρχείο καταγραφής", admin_tab_moderation: "Συντονισμός", admin_tab_errors: "Σφάλματα", admin_tab_scout_debug: "Scout", admin_tab_system: "Σύστημα", admin_scout_debug_hint: "Μόνο μετρήσεις και παραγόμενη κατάσταση — η μνήμη του Scout είναι ιδιωτικό αρχείο του αθλητή και δεν εμφανίζεται ποτέ εδώ.", admin_scout_lookup: "ID χρήστη αθλητή", admin_scout_load: "Έλεγχος", admin_scout_not_found: "Δεν υπάρχει προφίλ με αυτό το ID.", admin_scout_reset: "Επαναφορά νοημοσύνης Scout", admin_scout_reset_confirm: "Να διαγραφούν μνήμη, ιστορικό, cache έρευνας, κατάσταση, δοκιμή και στόχος του Scout; Ο λογαριασμός και το Διαβατήριο ΔΕΝ θίγονται.", admin_scout_reset_confirm2: "Δεν αναιρείται. Συνέχεια;", admin_view_auto_queue: "Αυτόματη ουρά",
     admin_no_moderation_items: "Τίποτα επισημασμένο ακόμα.", admin_minor_safety: "ΑΣΦΑΛΕΙΑ ΑΝΗΛΙΚΩΝ", admin_confidence: "βεβαιότητα",
     admin_no_errors: "Δεν έχουν καταγραφεί σφάλματα. Όλα ήσυχα.",
     admin_no_reports: "Δεν υπάρχουν αναφορές ακόμα.", admin_reported_by: "Αναφέρθηκε από ", admin_post_removed: "Η ανάρτηση έχει ήδη αφαιρεθεί.",
@@ -5164,7 +5164,10 @@ function AdminPanel({ onBack }) {
   // Feed is off and nothing new lands there — "queue" is the new default
   // landing view instead of the now-unreachable "reports".
   const [moderationView, setModerationView] = useState("queue");
-  const [systemView, setSystemView] = useState("audit"); // "audit" | "errors"
+  const [systemView, setSystemView] = useState("audit"); // "audit" | "errors" | "scout"
+  const [scoutDebugId, setScoutDebugId] = useState("");
+  const [scoutDebug, setScoutDebug] = useState(null);
+  const [scoutDebugBusy, setScoutDebugBusy] = useState(false);
   const [stats, setStats] = useState(null);
   const [reports, setReports] = useState(null);
   const [users, setUsers] = useState(null);
@@ -5189,6 +5192,45 @@ function AdminPanel({ onBack }) {
   // swapped for stats that actually map to the two Moderation sub-tabs
   // still live (Verification, Appeals) now that Feed/Events/Reports are
   // launch-scoped off along with their own admin tools below.
+  // §26 — the developer harness. Reads admin_scout_debug(), which returns
+  // counts and derived state only: scout_memory has no admin read policy and
+  // this does not add one. If you need to know WHAT an athlete told Scout,
+  // ask the athlete.
+  async function loadScoutDebug(uid) {
+    const id = (uid || "").trim();
+    if (!id) return;
+    setScoutDebugBusy(true);
+    try {
+      const { data, error } = await sb.rpc("admin_scout_debug", { p_user: id });
+      if (error) throw error;
+      setScoutDebug(data || { found: false });
+    } catch (e) {
+      console.error("GOLSZ admin_scout_debug error:", e);
+      setScoutDebug({ error: e.message || String(e) });
+    } finally { setScoutDebugBusy(false); }
+  }
+
+  // §25 — clears what SCOUT derived (memory, history, research cache,
+  // context, state, trial, goal). Deliberately does NOT touch authentication,
+  // the account, or any Passport data; the RPC enforces that, not this
+  // button. Confirmed twice because it is not undoable.
+  async function resetScoutIntelligence(uid) {
+    const id = (uid || "").trim();
+    if (!id) return;
+    if (!window.confirm(t("admin_scout_reset_confirm"))) return;
+    if (!window.confirm(t("admin_scout_reset_confirm2"))) return;
+    setScoutDebugBusy(true);
+    try {
+      const { data, error } = await sb.rpc("reset_scout_intelligence", { p_user: id });
+      if (error) throw error;
+      window.alert(String(data || "done"));
+      await loadScoutDebug(id);
+    } catch (e) {
+      console.error("GOLSZ reset_scout_intelligence error:", e);
+      window.alert(e.message || String(e));
+    } finally { setScoutDebugBusy(false); }
+  }
+
   async function loadStats() {
     try {
       const [{ count: userCount }, { count: verifiedCount }, { count: pendingVerification }, { count: pendingAppeals }] = await Promise.all([
@@ -6399,7 +6441,106 @@ function AdminPanel({ onBack }) {
           {subNav([
             ["audit", t("admin_tab_audit")],
             ["errors", t("admin_tab_errors")],
+            ["scout", t("admin_tab_scout_debug")],
           ], systemView, setSystemView)}
+
+          {systemView === "scout" && (
+            <div>
+              <div style={{ ...card, background: "transparent", boxShadow: "none" }}>
+                <div style={{ fontSize: 11, color: C.slate, lineHeight: 1.5, marginBottom: 10 }}>{t("admin_scout_debug_hint")}</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    value={scoutDebugId}
+                    onChange={(e) => setScoutDebugId(e.target.value)}
+                    placeholder={t("admin_scout_lookup")}
+                    style={{ ...field, flex: 1, fontFamily: "'Space Mono', monospace", fontSize: 11.5 }}
+                  />
+                  <button
+                    onClick={() => loadScoutDebug(scoutDebugId)}
+                    disabled={scoutDebugBusy || !scoutDebugId.trim()}
+                    style={{ background: C.lime, color: "#0B0B0C", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 12, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", opacity: scoutDebugBusy || !scoutDebugId.trim() ? 0.5 : 1 }}
+                  >{t("admin_scout_load")}</button>
+                </div>
+              </div>
+
+              {scoutDebug && scoutDebug.error && (
+                <div style={{ ...card, color: "#FF6B6B", fontSize: 12 }}>{scoutDebug.error}</div>
+              )}
+              {scoutDebug && scoutDebug.found === false && (
+                <div style={{ ...card, color: C.slate, fontSize: 12.5 }}>{t("admin_scout_not_found")}</div>
+              )}
+
+              {scoutDebug && scoutDebug.found && (() => {
+                // SCOUT_STATES in api/scout.js. Kept as a literal here rather
+                // than fetched: this is a developer view, and a label drifting
+                // is visible and harmless, unlike the state itself which is
+                // always server-derived.
+                const STATES = ["NEW", "TRIAGE", "PROFILE_READY", "ASSESSED", "GUIDED", "DEVELOPING"];
+                const f = scoutDebug.fields || {};
+                const row = (label, value) => (
+                  <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "5px 0", borderBottom: `1px solid ${C.line}`, fontSize: 12 }}>
+                    <span style={{ color: C.slate }}>{label}</span>
+                    <span style={{ fontFamily: "'Space Mono', monospace", textAlign: "right", wordBreak: "break-word" }}>
+                      {value === true ? "yes" : value === false ? "no" : value === null || value === undefined || value === "" ? "—" : String(value)}
+                    </span>
+                  </div>
+                );
+                const mem = scoutDebug.memory_by_type || {};
+                const memKeys = Object.keys(mem).sort();
+                return (
+                  <div>
+                    <div style={card}>
+                      <div style={{ fontSize: 10.5, letterSpacing: "0.09em", color: C.slate, fontWeight: 800, marginBottom: 8 }}>STATE</div>
+                      {row("scout_state", `${scoutDebug.scout_state} ${STATES[scoutDebug.scout_state] || "?"}`)}
+                      {row("profile_ready", scoutDebug.scout_profile_ready)}
+                      {row("confirmed_at", scoutDebug.scout_profile_confirmed_at)}
+                      {row("goal_defined", scoutDebug.goal_defined)}
+                      {row("goal_text", scoutDebug.goal_text)}
+                    </div>
+
+                    <div style={card}>
+                      <div style={{ fontSize: 10.5, letterSpacing: "0.09em", color: C.slate, fontWeight: 800, marginBottom: 8 }}>CRITICAL FIELDS</div>
+                      {row("sport", f.sport)}
+                      {row("position", f.position)}
+                      {row("club", f.club_name)}
+                      {row("level", f.recruiting_status)}
+                      {row("age", f.has_age)}
+                      <div style={{ fontSize: 10.5, letterSpacing: "0.09em", color: C.slate, fontWeight: 800, margin: "12px 0 8px" }}>HIGH VALUE</div>
+                      {row("where now", f.has_current)}
+                      {row("where from", f.has_home)}
+                      {row("playing history", f.has_history)}
+                      {row("grad year", f.has_grad_year)}
+                      {row("measurements", f.has_measurements)}
+                      {row("citizenship", f.has_citizenship)}
+                    </div>
+
+                    <div style={card}>
+                      <div style={{ fontSize: 10.5, letterSpacing: "0.09em", color: C.slate, fontWeight: 800, marginBottom: 8 }}>MEMORY &amp; CACHE</div>
+                      {row("memories (active)", scoutDebug.memory_total)}
+                      {memKeys.map((k) => row(`  ${k}`, mem[k]))}
+                      {row("research cache rows", scoutDebug.research_cache_rows)}
+                    </div>
+
+                    <div style={card}>
+                      <div style={{ fontSize: 10.5, letterSpacing: "0.09em", color: C.slate, fontWeight: 800, marginBottom: 8 }}>ENTITLEMENT</div>
+                      {row("plan", scoutDebug.plan)}
+                      {row("is_admin", scoutDebug.is_admin)}
+                      {row("ai_unlimited", scoutDebug.ai_unlimited)}
+                      {row("trial started", scoutDebug.trial_started_at)}
+                      {row("trial used", scoutDebug.trial_used)}
+                      {row("free AI lifetime used", scoutDebug.free_ai_lifetime_used)}
+                    </div>
+
+                    <button
+                      onClick={() => resetScoutIntelligence(scoutDebugId)}
+                      disabled={scoutDebugBusy}
+                      style={{ width: "100%", background: "transparent", color: "#FF6B6B", border: "1px solid #FF6B6B55", borderRadius: 12, padding: "11px 14px", fontSize: 12.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", opacity: scoutDebugBusy ? 0.5 : 1 }}
+                    >{t("admin_scout_reset")}</button>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
           {systemView === "audit" && (
             <div>
