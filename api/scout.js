@@ -2509,12 +2509,19 @@ export default async function handler(req, res) {
     // caching a reply that did no research would just serve stale opinion
     // back later. Skipped entirely on a cache hit, so a served entry never
     // rewrites itself and resets its own TTL.
-    if (!priorResearch && usedWebSearch(data)) {
-      const note = extractResearchNote(data);
-      if (note) {
-        await persistResearchCache(userId, topicKey, stateDigest, note, extractSearchSources(data), deepTierConfig.model_name, athleteSport, athleteCountry);
-        console.log("GOLSZ scout research cached:", topicKey, "valid_days:", note.validDays);
-      }
+    // Logged unconditionally (not only on the happy path) because a missing
+    // cache write has three very different causes — the reply never searched,
+    // the model omitted research_note, or there was no usable topic_key — and
+    // guessing between them from token counts alone is not possible.
+    const searched = usedWebSearch(data);
+    const note = searched ? extractResearchNote(data) : null;
+    console.log("GOLSZ scout research cache decision:", JSON.stringify({
+      hit: !!priorResearch, searched, hasNote: !!note, topicKey: topicKey || null,
+      blocks: (data.content || []).map((b) => b && b.type),
+    }));
+    if (!priorResearch && searched && note) {
+      await persistResearchCache(userId, topicKey, stateDigest, note, extractSearchSources(data), deepTierConfig.model_name, athleteSport, athleteCountry);
+      console.log("GOLSZ scout research cached:", topicKey, "valid_days:", note.validDays);
     }
     data.scout_summary = updatedSummary;
     if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
