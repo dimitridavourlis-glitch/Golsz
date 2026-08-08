@@ -2668,28 +2668,24 @@ export default async function handler(req, res) {
     const researchBlock = priorResearch
       ? `\n\nPRIOR RESEARCH (you already researched this exact question — answer from it instead of searching again unless it's old enough to have changed):\n${priorResearch}`
       : "";
-    const systemPrompt = buildSystemPrompt(baseSystemPrompt, recommendedSpecialist) + sharedBlock
-      + (authoritativeBlock ? `\n\n${ANTI_HALLUCINATION_RULES}` : "");
-    // Per-athlete facts ride as a leading user turn, not in the cached
-    // system prefix. Same content, same authority (the block says so
-    // explicitly), but the system prompt is now identical for every athlete
-    // on this language+specialist and caches across all of them.
     const athleteContextTurn = [athleteBlock, knowledgeBlock, researchBlock].filter(Boolean).join("");
-    const conversationForModel = athleteContextTurn
-      ? [{ role: "user", content: athleteContextTurn.trim() },
-         // MUST be a valid instance of the JSON output contract, not prose.
-         // When this was a plain-English sentence, the model copied the
-         // pattern of its own most recent turn and answered the real question
-         // in prose too — stop_reason end_turn, a single text block, no JSON
-         // envelope at all. That silently broke EVERY structured extraction
-         // (memory_writes, profile_updates, scout_context_updates,
-         // suggested_targets, drafted_email), which is why scout_memory
-         // stayed empty no matter how the memory rules were reworded. The
-         // acknowledgement now demonstrates the required shape instead of
-         // contradicting it.
-         { role: "assistant", content: '{"reply":"Understood — I have their current record and will not contradict or re-ask any of it.","memory_writes":[]}' },
-         ...conversation]
-      : conversation;
+    const systemPrompt = buildSystemPrompt(baseSystemPrompt, recommendedSpecialist) + sharedBlock + athleteContextTurn
+      + (authoritativeBlock ? `\n\n${ANTI_HALLUCINATION_RULES}` : "");
+    // REVERTED from the "context as a leading user turn" experiment. Moving
+    // per-athlete state into the messages array made the model treat the
+    // exchange as a free-flowing conversation and answer in PROSE, with no
+    // JSON envelope at all (stop_reason end_turn, PARSE_FAILED on every
+    // turn). That silently broke every structured extraction — memory_writes,
+    // profile_updates, scout_context_updates, suggested_*, drafted_email —
+    // which is why scout_memory never filled. Making the synthetic
+    // acknowledgement valid JSON and restating the contract last both failed
+    // to bring it back; the interaction SHAPE was the cause.
+    //
+    // Shared prompt caching across athletes is worth far less than structured
+    // output working at all, so the per-athlete blocks go back into the
+    // system prompt where they were. The cached prefix is per-athlete again;
+    // that is the accepted cost.
+    const conversationForModel = conversation;
 
     // ---- Database path: a real $0-AI-cost answer, matched by MEANING (not
     // exact wording) inside the classification call above, before any real
