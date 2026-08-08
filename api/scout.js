@@ -780,6 +780,108 @@ async function persistScoutContext(userId, updates) {
   } catch (e) { console.error("GOLSZ scout context persist failed:", e); }
 }
 
+// ============================================================
+// Scout Intelligence Architecture — EXTRACTION layer ("REMEMBER after it
+// LEARNS"). The counterpart to getScoutMemory() above.
+//
+// Deliberate design choice: memory_writes rides along on the reply JSON the
+// model already returns, rather than being a second follow-up Haiku call.
+// The spec sketched a separate cheap extraction call, skipped when nothing
+// durable was learned; piggybacking is strictly better on both axes it cares
+// about — zero extra tokens, zero extra latency, and "nothing was learned"
+// is expressed by simply omitting the key. The trade-off is that a turn
+// answered from the FAQ/cache path writes no memory, which is correct
+// anyway: those paths didn't learn anything about this athlete.
+//
+// The 14 types come from migration 097's CHECK constraint. Keeping this set
+// in sync with that constraint matters — an unlisted type would be rejected
+// by Postgres, so filtering here turns a hard 400 into a quiet skip.
+const MEMORY_TYPES = new Set([
+  "FACT", "USER_STATED", "SCOUT_INFERENCE", "GOAL", "PREFERENCE", "CONCERN",
+  "UNKNOWN", "NEXT_DATA_NEEDED", "ASSESSMENT", "DECISION",
+  "PATHWAY_CONSIDERED", "PATHWAY_REJECTED", "PATHWAY_ACTIVE", "MILESTONE",
+]);
+
+// Types that assert something as established fact. The model is NOT trusted
+// to self-certify these: if it labels a write FACT/USER_STATED but doesn't
+// also mark source athlete_stated, the type is downgraded to
+// SCOUT_INFERENCE. Same discipline persistScoutContext() applies to
+// scout_context.source, and the reason is the spec's own rule that user
+// claims and model inferences must never be recorded as the same kind of
+// thing.
+const MEMORY_ASSERTED_TYPES = new Set(["FACT", "USER_STATED"]);
+
+function extractMemoryWrites(data) {
+  let writes;
+  try {
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("\n");
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean.slice(clean.indexOf("{"), clean.lastIndexOf("}") + 1));
+    writes = parsed && Array.isArray(parsed.memory_writes) ? parsed.memory_writes : null;
+  } catch {
+    return [];
+  }
+  if (!writes) return [];
+  const out = [];
+  for (const raw of writes.slice(0, 8)) {
+    if (!raw || typeof raw !== "object") continue;
+    const subject = typeof raw.subject === "string" ? raw.subject.trim().slice(0, 120) : "";
+    const content = typeof raw.content === "string" ? raw.content.trim().slice(0, 1000) : "";
+    if (!subject || !content) continue;
+    let type = typeof raw.type === "string" ? raw.type.trim().toUpperCase() : "";
+    if (!MEMORY_TYPES.has(type)) continue;
+    // Server-side source sanitisation — 'verified' is never reachable from
+    // model output, only athlete_stated / ai_inferred.
+    const source = raw.source === "athlete_stated" ? "athlete_stated" : "ai_inferred";
+    if (MEMORY_ASSERTED_TYPES.has(type) && source !== "athlete_stated") type = "SCOUT_INFERENCE";
+    let confidence = typeof raw.confidence === "number" ? raw.confidence : 0.6;
+    if (!(confidence >= 0 && confidence <= 1)) confidence = 0.6;
+    let importance = Number.isInteger(raw.importance) ? raw.importance : 3;
+    if (importance < 1 || importance > 5) importance = 3;
+    out.push({ type, subject, content, confidence, source, importance });
+  }
+  return out;
+}
+
+// One supersede_scout_memory() call per write. That function inserts the new
+// row and flips any prior active row with the same (athlete, type, subject)
+// to active = false with superseded_by pointing at the new id — so a
+// contradiction supersedes rather than accumulating two conflicting
+// memories, and the old value stays auditable instead of being destroyed.
+//
+// Note what is deliberately NOT here: nothing in this path ever writes to
+// golsz_knowledge. That is the structural enforcement of "USER CLAIMS ARE
+// NOT GLOBAL FACTS / SCOUT INFERENCES ARE NOT GLOBAL FACTS / UNVERIFIED
+// MODEL OUTPUT IS NOT GLOBAL FACT" — a third-party claim an athlete makes in
+// chat lands only in that athlete's own RLS-protected row and can never
+// become platform knowledge for anyone else. Promotion into golsz_knowledge
+// stays an admin-curated action (migration 096's admin-only write policy).
+async function persistMemoryWrites(userId, writes) {
+  if (!userId || !writes || !writes.length) return;
+  const supaUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supaUrl || !serviceKey) return;
+  const headers = { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" };
+  await Promise.all(writes.map(async (m) => {
+    try {
+      const r = await fetch(`${supaUrl}/rest/v1/rpc/supersede_scout_memory`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          p_athlete: userId,
+          p_type: m.type,
+          p_subject: m.subject,
+          p_content: m.content,
+          p_confidence: m.confidence,
+          p_source: m.source,
+          p_importance: m.importance,
+        }),
+      });
+      if (!r.ok) console.error("GOLSZ scout memory write failed:", m.type, m.subject, r.status, await r.text());
+    } catch (e) { console.error("GOLSZ scout memory write failed:", e); }
+  }));
+}
+
 // Loose validation only — real security here is that this is a best-effort,
 // service-role, non-user-content write; a malformed conversationId just
 // fails the uuid column insert and gets caught below. Matches this file's
@@ -897,9 +999,13 @@ GOLSZ is a sports-recruiting platform used by athletes of all ages, including mi
 GOLSZ PLANS below (when present) is the real, current source of truth for what each plan costs and includes — never invent a feature, price, or restriction beyond what's listed; if asked something not covered there, say you're not sure and offer to check rather than guessing. When a locked or higher-tier feature comes up naturally, explain what that level actually adds to how involved GOLSZ is in their development — never just "more messages" — and let them decide for themselves; never use false urgency, fake scarcity, or guaranteed-outcome language ("guaranteed scholarship," "guaranteed pro contract"), and never talk someone out of a higher plan they actually want. You're their AI Scout, not customer support — if you genuinely don't know something about how GOLSZ works, say so plainly and offer to find out, never brush past it.
 sport_support_level in ATHLETE STATE below tells you how deep GOLSZ's own pathway/benchmark knowledge actually is for their sport — "core" means real depth; "supported," "secondary," or "unknown" means say so honestly and lean on general knowledge/web search rather than implying GOLSZ has built-out sport-specific data it doesn't have yet.
 When ATHLETE STATE shows profile_complete=true, goal_defined=true, and plan=free, that's a real moment — recognize it ONCE (never repeat this recap on a later message once you've already said it): briefly recap what you've learned about them (history, what they're proud of, strengths, what needs work, their stated goal), tell them plainly that's the athlete they are today and it's time to figure out how they get where they want to go, and invite them toward building a Pathway — mention plainly that a Pathway opens with a paid plan, never hide or soften that.
-OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"drafted_email":"the full drafted email text" or null}
+SCOUT MEMORY (when present in the message) is your own durable memory of this athlete from earlier conversations, already split by trust: things they TOLD you are confirmed and must never be re-asked; things you INFERRED are not confirmed, so confirm one in passing before you build advice on it. "Still unknown" lists what you'd most benefit from learning — prefer those over generic questions.
+GOLSZ KNOWLEDGE (when present) is GOLSZ's own verified, curated reference on sport/eligibility/pathway rules. Prefer it over your own recollection and over a web result when they disagree, and cite it naturally ("GOLSZ's eligibility reference says..."). If it's absent or doesn't cover the question, say what you actually know and use web search — never invent a GOLSZ rule.
+GOLSZ CAPABILITIES (when present) is the real, current list of what the product can and cannot do. Anything listed as NOT part of GOLSZ does not exist — never suggest it, never imply it's coming, and never tell an athlete to find or contact someone through it. When a task needs something GOLSZ doesn't do, say plainly that GOLSZ doesn't do it and give them the real off-platform way to do it themselves.
+OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"memory_writes":[{"type":"...","subject":"...","content":"...","source":"athlete_stated|ai_inferred","confidence":0-1,"importance":1-5}] or null,"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"drafted_email":"the full drafted email text" or null}
 Allowed profile_updates keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, education_level, budget, citizenship, goal. Do not repeat known fields. "goal" should be a real, clearly-stated goal the athlete actually confirmed (e.g. "play NCAA D1 soccer"), not a vague guess — setting it marks their goal as officially defined, so only set it once you're genuinely sure.
 Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
+Only include memory_writes for something durable you learned THIS reply that is worth remembering months from now — not small talk, not a restatement of PROFILE SO FAR or SCOUT MEMORY you were just given. type is one of: FACT, USER_STATED, SCOUT_INFERENCE, GOAL, PREFERENCE, CONCERN, UNKNOWN, NEXT_DATA_NEEDED, ASSESSMENT, DECISION, PATHWAY_CONSIDERED, PATHWAY_REJECTED, PATHWAY_ACTIVE, MILESTONE. Use source "athlete_stated" ONLY when they said it in plain words this conversation, and "ai_inferred" for anything you concluded, judged, or read between the lines — an assessment of their level, a guess at their motivation, or anything a third party reportedly said all count as ai_inferred, never athlete_stated. "subject" is a short stable label you'd reuse if this same thing changed later (e.g. "current club", "target level", "biggest gap") — reusing the same subject is how a corrected fact replaces the old one instead of contradicting it. Use UNKNOWN/NEXT_DATA_NEEDED to record what you still need to find out. Something the athlete reports about ANOTHER person (a teammate, a relative, a club official) is a claim about a third party: record it as ai_inferred at low confidence if it matters to their own path, and never treat it as an established fact about that person. Cap at 8.
 Only include suggested_targets when THIS reply names concrete target schools/clubs/academies/programs by name (e.g. building or discussing a target list, recommending realistic reach/match/safety options) — each with a one-sentence reasoning tied to this specific athlete's own profile. Never include it for a general reply, and never invent a program you're not reasonably confident is real. Cap at 5.
 Only include suggested_dev_items when THIS reply identifies concrete training/development focus areas the athlete should actively work on (e.g. discussing a weakness, a development plan, benchmark results) — each with a short, specific goal, using focus_area from: training, strength, speed, conditioning, recovery, sleep, hydration, nutrition, other. Never include it for a general reply. Cap at 3.
 Only include suggested_pathway when THIS reply is genuinely building or finalizing the athlete's Pathway (not just discussing pathway options in the abstract) and you actually have enough to do it — a real pathway_type and at least one concrete milestone. Never include it for a Free-plan athlete (Pathway isn't part of Free) or a general reply.
@@ -1283,6 +1389,141 @@ async function getPlanKnowledge() {
   }
 }
 
+// ============================================================
+// Scout Intelligence Architecture — RETRIEVAL layer
+// "Scout should RETRIEVE before it REASONS and REMEMBER after it LEARNS."
+//
+// Three stores, deliberately kept separate because they carry different
+// trust levels and different privacy rules:
+//
+//   product_capabilities (099) — what GOLSZ can actually do. Global,
+//     admin-curated. This is what lets Scout know that Discover and
+//     user-to-user messaging were REMOVED from the product rather than
+//     merely unmentioned, so it stops suggesting them.
+//   golsz_knowledge (096) — GOLSZ Core: curated sport / eligibility /
+//     pathway facts. Read through search_golsz_knowledge(), which returns
+//     only rows whose verification_status is 'verified' or 'active' and
+//     whose recheck_after hasn't passed. Model output NEVER writes here —
+//     see persistMemoryWrites() below for why.
+//   scout_memory (097) — this ONE athlete's durable memory, RLS'd to
+//     owner-or-guardian, carrying an explicit type + source + confidence so
+//     a thing the athlete SAID is never confused with a thing Scout GUESSED.
+//
+// Every read goes through the service key and is scoped by athlete_id, so
+// one athlete's memory can never be assembled into another's prompt. These
+// run inside the existing Promise.all / alongside the classifier rather than
+// serially, so retrieval doesn't add a round trip to every message.
+// ============================================================
+
+let capabilityCache = null;
+let capabilityCacheAt = 0;
+const CAPABILITY_CACHE_TTL_MS = 5 * 60 * 1000;
+
+// Mirrors getPlanKnowledge()'s shape exactly (cache + fail-soft to the last
+// good value, never throw into the request path). Splits on `available`
+// because the unavailable rows are the ones that actually change behavior —
+// `notes` carries the "never suggest this" instruction the admin wrote.
+async function getCapabilityKnowledge() {
+  const now = Date.now();
+  if (capabilityCache && now - capabilityCacheAt < CAPABILITY_CACHE_TTL_MS) return capabilityCache;
+  const supaUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supaUrl || !serviceKey) return capabilityCache || "";
+  try {
+    const r = await fetch(`${supaUrl}/rest/v1/product_capabilities?select=key,label,available,plan_min,notes&order=key`, {
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+    });
+    if (!r.ok) return capabilityCache || "";
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows.length) return capabilityCache || "";
+    const live = rows.filter((c) => c.available);
+    const gone = rows.filter((c) => !c.available);
+    let text = "";
+    if (live.length) {
+      text += "Available on GOLSZ today:\n" + live.map((c) => `- ${c.label}${c.plan_min ? ` (from the ${c.plan_min} plan)` : ""}${c.notes ? ` — ${c.notes}` : ""}`).join("\n");
+    }
+    if (gone.length) {
+      text += `${text ? "\n" : ""}NOT part of GOLSZ — never suggest, imply, or offer these, and never tell an athlete to find or contact someone through them:\n` + gone.map((c) => `- ${c.label}${c.notes ? ` — ${c.notes}` : ""}`).join("\n");
+    }
+    capabilityCache = text;
+    capabilityCacheAt = now;
+    return text;
+  } catch {
+    return capabilityCache || "";
+  }
+}
+
+// Grouped by TRUST LEVEL, not by recency, because the whole point of
+// scout_memory carrying `source` is that the prompt must not flatten a
+// stated fact and an inference into one undifferentiated list. The spec
+// calls that distinction critical and athletes/scout_context (050) already
+// established it; this keeps the same discipline for durable memory.
+//
+// Ordered by importance then recency and hard-capped, so a long-lived
+// account's memory can't grow the prompt without bound.
+const MEMORY_STATED_TYPES = new Set(["FACT", "USER_STATED", "GOAL", "PREFERENCE", "CONCERN", "DECISION", "MILESTONE", "PATHWAY_CONSIDERED", "PATHWAY_REJECTED", "PATHWAY_ACTIVE"]);
+const MEMORY_OPEN_TYPES = new Set(["UNKNOWN", "NEXT_DATA_NEEDED"]);
+
+async function getScoutMemory(userId) {
+  const supaUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supaUrl || !serviceKey || !userId) return "";
+  try {
+    const r = await fetch(
+      `${supaUrl}/rest/v1/scout_memory?athlete_id=eq.${userId}&active=is.true&select=type,subject,content,confidence,source,importance&order=importance.desc,updated_at.desc&limit=30`,
+      { headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey } },
+    );
+    if (!r.ok) return "";
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows.length) return "";
+    const stated = [];
+    const inferred = [];
+    const open = [];
+    for (const m of rows) {
+      const line = `- [${m.type}] ${m.subject}: ${m.content}`;
+      if (MEMORY_OPEN_TYPES.has(m.type)) open.push(`- ${m.subject}: ${m.content}`);
+      else if (m.source === "athlete_stated" && MEMORY_STATED_TYPES.has(m.type)) stated.push(line);
+      else inferred.push(`${line} (confidence ${m.confidence})`);
+    }
+    let text = "";
+    if (stated.length) text += `Things this athlete has TOLD you (treat as confirmed, never re-ask):\n${stated.join("\n")}`;
+    if (inferred.length) text += `${text ? "\n" : ""}Things YOU inferred earlier (NOT confirmed — if one of these matters to the advice you're about to give, confirm it in passing rather than asserting it back to them as fact):\n${inferred.join("\n")}`;
+    if (open.length) text += `${text ? "\n" : ""}Still unknown / worth learning next:\n${open.join("\n")}`;
+    return text;
+  } catch {
+    return "";
+  }
+}
+
+// GOLSZ Core lookup. Goes through the search_golsz_knowledge() RPC rather
+// than selecting from golsz_knowledge directly, so the verification_status
+// and recheck_after filtering lives in one place (the function) and can't
+// drift between callers. Empty is a perfectly good answer — the table starts
+// empty, and returning nothing is strictly better than inventing a rule.
+async function getGolszKnowledge(sport, country, query) {
+  const supaUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supaUrl || !serviceKey) return "";
+  try {
+    const r = await fetch(`${supaUrl}/rest/v1/rpc/search_golsz_knowledge`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        p_query: query && query.length > 2 ? query.slice(0, 200) : null,
+        p_sport: sport || null,
+        p_country: country || null,
+        p_limit: 5,
+      }),
+    });
+    if (!r.ok) return "";
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows.length) return "";
+    return rows.map((k) => `- ${k.subject}: ${k.content}${k.source ? ` (source: ${k.source})` : ""}`).join("\n");
+  } catch {
+    return "";
+  }
+}
+
 // Matches golsz-app.html's LANGS — validated against this allowlist rather
 // than trusting the client's lang string directly, since it gets
 // interpolated into the system prompt sent to the model.
@@ -1367,17 +1608,22 @@ async function getProfileMeta(userId) {
 async function getAthleteState(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { profileComplete: false, pathwayCreated: false, baselineComplete: false, sportSupportLevel: null };
+  if (!url || !key || !userId) return { profileComplete: false, pathwayCreated: false, baselineComplete: false, sportSupportLevel: null, sport: null, country: null };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let profileComplete = false;
   let sport = null;
+  // Only used to scope the GOLSZ Core knowledge lookup below (eligibility and
+  // pathway rules are country-specific). Never echoed back into a reply, and
+  // never used to look up anyone but this athlete.
+  let country = null;
   let pathwayCreated = false;
   let baselineComplete = false;
   let sportSupportLevel = null;
   try {
-    const a = await fetch(url + "/rest/v1/athletes?id=eq." + userId + "&select=sport", { headers });
+    const a = await fetch(url + "/rest/v1/athletes?id=eq." + userId + "&select=sport,country", { headers });
     const aRows = await a.json();
     sport = Array.isArray(aRows) && aRows[0] ? aRows[0].sport : null;
+    country = Array.isArray(aRows) && aRows[0] ? aRows[0].country : null;
     profileComplete = !!sport;
   } catch {}
   try {
@@ -1398,7 +1644,7 @@ async function getAthleteState(userId) {
       sportSupportLevel = Array.isArray(sRows) && sRows[0] ? sRows[0].support_level : "secondary";
     } catch {}
   }
-  return { profileComplete, pathwayCreated, baselineComplete, sportSupportLevel };
+  return { profileComplete, pathwayCreated, baselineComplete, sportSupportLevel, sport, country };
 }
 
 // Atomic reserve-and-check (migration 053) — one statement, row-locked by
@@ -1623,6 +1869,11 @@ export default async function handler(req, res) {
   // below once populated; empty string (no-op) for unauthenticated/dev-mode
   // requests, same fallback posture as userPlan/dailyLimit above.
   let stateBlock = "";
+  // Hoisted for the GOLSZ Core knowledge lookup, which runs alongside the
+  // classifier below (outside this block) because it needs the athlete's
+  // sport/country to scope eligibility and pathway rules.
+  let athleteSport = null;
+  let athleteCountry = null;
   if (process.env.SUPABASE_URL) {
     userId = await getUserId(req.headers.authorization);
     if (!userId) return res.status(401).json({ error: "Sign in to use the Scout." });
@@ -1649,11 +1900,20 @@ export default async function handler(req, res) {
     // migration 048 added 'free' as a real fourth tier below Starter), so
     // anything unrecognized falls through to the Free limit rather than
     // accidentally going uncapped.
-    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText }, athleteState, planKnowledge] = await Promise.all([
+    // Scout Intelligence Architecture: retrieval joins the existing parallel
+    // fan-out rather than adding round trips. getScoutMemory is athlete-
+    // scoped; getCapabilityKnowledge is global and cached. The GOLSZ Core
+    // lookup can't run here because it needs athleteState.sport, so it runs
+    // alongside the classifier below instead.
+    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText }, athleteState, planKnowledge, scoutMemory, capabilityKnowledge] = await Promise.all([
       getProfileMeta(userId),
       getAthleteState(userId),
       getPlanKnowledge(),
+      getScoutMemory(userId),
+      getCapabilityKnowledge(),
     ]);
+    athleteSport = athleteState.sport;
+    athleteCountry = athleteState.country;
     userPlan = plan;
     userIsAdmin = isAdmin;
     userAiUnlimited = aiUnlimited;
@@ -1670,6 +1930,12 @@ export default async function handler(req, res) {
     // aspirational features into prompts as if live" — real, current plan
     // facts, not whatever this file's own hardcoded copy happens to say.
     if (planKnowledge) stateBlock += `\n\nGOLSZ PLANS (real, current — never invent a feature, price, or restriction beyond this list):\n${planKnowledge}`;
+    // Retrieved BEFORE the model reasons, so Scout opens already knowing this
+    // athlete instead of rediscovering them. Both are omitted entirely when
+    // empty rather than sent as an empty heading — a new athlete with no
+    // memory yet should get no MEMORY section at all, not one saying "none".
+    if (capabilityKnowledge) stateBlock += `\n\nGOLSZ CAPABILITIES (real, current — the product does exactly this and nothing more):\n${capabilityKnowledge}`;
+    if (scoutMemory) stateBlock += `\n\nSCOUT MEMORY (what you already know about this athlete from earlier conversations):\n${scoutMemory}`;
     dailyLimit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
       : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 15)
       : plan === "starter" ? Number(process.env.STARTER_DAILY_LIMIT || 8)
@@ -1731,7 +1997,14 @@ export default async function handler(req, res) {
     // classification is null and shouldRouteToHaiku(null) safely falls
     // through to the proven Sonnet path below — this is a latency budget
     // increase, not a behavior change.
-    const classification = await withTimeout(classifyIntent(key, conversation, faqList), 4500);
+    // GOLSZ Core retrieval runs concurrently with the classifier so it costs
+    // no added wall-clock time — the classifier's 4.5s cap dominates. It has
+    // no timeout of its own because it's a single indexed RPC that fails soft
+    // to "" rather than throwing.
+    const [classification, golszKnowledge] = await Promise.all([
+      withTimeout(classifyIntent(key, conversation, faqList), 4500),
+      getGolszKnowledge(athleteSport, athleteCountry, latestUserText(conversation)),
+    ]);
     console.log("GOLSZ scout routing:", JSON.stringify(classification));
 
     // Phase 2b: the classifier call above also maintains a running
@@ -1754,7 +2027,10 @@ export default async function handler(req, res) {
     const recommendedSpecialist = (classification && SPECIALISTS.has(classification.recommended_specialist)) ? classification.recommended_specialist : null;
     // Phase 2d: the actual specialist hand-off — everything downstream
     // (Haiku path, Sonnet path) uses this instead of baseSystemPrompt.
-    const systemPrompt = buildSystemPrompt(baseSystemPrompt, recommendedSpecialist) + stateBlock;
+    const knowledgeBlock = golszKnowledge
+      ? `\n\nGOLSZ KNOWLEDGE (verified GOLSZ reference relevant to this athlete — prefer this over your own recollection):\n${golszKnowledge}`
+      : "";
+    const systemPrompt = buildSystemPrompt(baseSystemPrompt, recommendedSpecialist) + stateBlock + knowledgeBlock;
 
     // ---- Database path: a real $0-AI-cost answer, matched by MEANING (not
     // exact wording) inside the classification call above, before any real
@@ -1865,6 +2141,7 @@ export default async function handler(req, res) {
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, profileUpdates);
         await persistScoutContext(userId, scoutContextUpdates);
+        await persistMemoryWrites(userId, extractMemoryWrites(data));
         data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         // next_move is THIS request's own classification result, not a fact
@@ -1945,6 +2222,7 @@ export default async function handler(req, res) {
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, extractProfileUpdates(data));
         await persistScoutContext(userId, extractScoutContextUpdates(data));
+        await persistMemoryWrites(userId, extractMemoryWrites(data));
         data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         data.next_move = extractNextBestAction(classification);
@@ -1978,6 +2256,7 @@ export default async function handler(req, res) {
     await recordScoutUsageCost(userId, sonnetCost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
     await persistProfileUpdates(userId, extractProfileUpdates(data));
     await persistScoutContext(userId, extractScoutContextUpdates(data));
+    await persistMemoryWrites(userId, extractMemoryWrites(data));
     data.scout_summary = updatedSummary;
     if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
     data.next_move = extractNextBestAction(classification);
