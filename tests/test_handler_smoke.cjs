@@ -10,6 +10,15 @@
 // This runs the real exported handler with fetch mocked, so scope errors,
 // TDZ errors and undefined-function calls surface as failures instead of as
 // "Upstream model call failed" on someone's phone.
+//
+// Reverted 2026-08-09: the state machine, capability manifest re-gating,
+// trial system and assessment generation that this file used to exercise
+// were all removed in the same revert (see that commit). Scenarios below
+// were cut back to what's actually still in api/scout.js — plan-based
+// daily/lifetime limits, the two-bucket capability manifest, and the
+// authoritative/memory context — but the handler-level shape of this test
+// (real fetch mock, real exported handler, assert past-auth + no 502 + a
+// real reply) is exactly what caught the original bug and stays as-is.
 
 const REPO = require("path").join(__dirname, "..");
 const path = REPO + "/api/scout.js";
@@ -28,7 +37,7 @@ const ck = (l, a, e) => {
 // ---- the athlete under test, controllable per scenario ----
 let PROFILE = {};
 let ATHLETE = {};
-let PATHWAY = [];        // rows from pathway_plan -> drives pathwayCreated -> state 4/5
+let PATHWAY = [];        // rows from pathway_plan -> feeds ATHLETE STATE's pathway_created/baseline_complete
 let UID = "u1";          // distinct per scenario: the rate limiter keys on it
 
 function anthropicReply(obj) {
@@ -68,11 +77,10 @@ global.fetch = async (url, opts) => {
   if (u.includes("/rest/v1/pathway_plan")) return { ok: true, status: 200, json: async () => PATHWAY, text: async () => "" };
   if (u.includes("/rest/v1/athletes")) return { ok: true, status: 200, json: async () => [ATHLETE], text: async () => "" };
   if (u.includes("/rest/v1/product_capabilities")) return { ok: true, status: 200, json: async () => ([
-    { key: "faq", label: "Answer questions", available: true, plan_min: null, min_scout_state: 0, requires_profile_ready: false, requires_fields: [] },
-    { key: "targets", label: "Build a target school list", available: true, plan_min: "pro", min_scout_state: 3, requires_profile_ready: true, requires_fields: [] },
+    { key: "faq", label: "Answer questions", available: true, plan_min: null, notes: null },
+    { key: "targets", label: "Build a target school list", available: true, plan_min: "pro", notes: null },
   ]), text: async () => "" };
   if (u.includes("/rest/v1/rpc/reserve_scout_question")) return { ok: true, status: 200, json: async () => ({ allowed: true, used: 1 }), text: async () => "" };
-  if (u.includes("/rest/v1/rpc/reserve_trial_question")) return { ok: true, status: 200, json: async () => ({ allowed: true, used: 1, total: 30, remaining: 29, expires_at: new Date(Date.now() + 4 * 86400000).toISOString() }), text: async () => "" };
   if (u.includes("/rest/v1/rpc/reserve_free_ai_question")) return { ok: true, status: 200, json: async () => ({ allowed: true }), text: async () => "" };
   if (u.includes("/rest/v1/rpc/")) return { ok: true, status: 200, json: async () => ({}), text: async () => "" };
   return { ok: true, status: 200, json: async () => [], text: async () => "" };
@@ -111,37 +119,29 @@ async function run(label, profile, athlete, pathway) {
   const BASE_ATHLETE = { sport: "Soccer", position: "Right Back", club_name: "Tusculum", recruiting_status: "Open",
     dob: "2005-03-01", country: "USA", current_city: "Greeneville", grad_year: 2026 };
 
-  console.log("-- the exact production shape: state 4, no assessment stored --");
-  const r1 = await run("state4", { id: "u1", plan: "starter", is_admin: false, ai_unlimited: false,
-    goal_defined: true, goal_text: "NCAA D2", scout_state: 4, scout_profile_ready: false,
-    scout_profile_confirmed_at: null, scout_trial_started_at: null, scout_trial_used: 0,
-    scout_assessment: null }, BASE_ATHLETE, [{ baseline_complete: false }]);
+  console.log("-- an established starter-plan athlete with a pathway --");
+  const r1 = await run("starter", { id: "u1", plan: "starter", is_admin: false, ai_unlimited: false,
+    goal_defined: true, goal_text: "NCAA D2" }, BASE_ATHLETE, [{ baseline_complete: false }]);
   ck("handler did not throw", !!r1.threw, false);
   console.log("   status:", r1.res.statusCode, "| body keys:", r1.res.body ? Object.keys(r1.res.body).join(",") : "none");
   ck("got past auth (401 here would make this test meaningless)", r1.res.statusCode !== 401, true);
   ck("did not 502", r1.res.statusCode === 502, false);
-  ck("reached the state-4 branch that crashed in production", r1.res.body && r1.res.body.scout_profile && r1.res.body.scout_profile.state >= 3, true);
   ck("returned a real reply", !!(r1.res.body && r1.res.body.reply_text), true);
   if (r1.res.statusCode === 502) console.log("   detail:", r1.res.body && r1.res.body.detail);
 
-  console.log("\n-- state 3 with an assessment already stored (the other branch) --");
-  const r2 = await run("state3", { id: "u1", plan: "pro", is_admin: false, ai_unlimited: false,
-    goal_defined: true, goal_text: "NCAA D1", scout_state: 3, scout_profile_ready: true,
-    scout_profile_confirmed_at: "2026-01-01T00:00:00Z", scout_trial_started_at: null, scout_trial_used: 0,
-    scout_assessment: { strengths: ["quick"], gaps: ["aerial"], realistic_level: "D2", created_at: "2026-02-01T00:00:00Z" } }, BASE_ATHLETE, [{ baseline_complete: true }]);
+  console.log("\n-- an established pro-plan athlete --");
+  const r2 = await run("pro", { id: "u1", plan: "pro", is_admin: false, ai_unlimited: false,
+    goal_defined: true, goal_text: "NCAA D1" }, BASE_ATHLETE, [{ baseline_complete: true }]);
   ck("handler did not throw", !!r2.threw, false);
   console.log("   status:", r2.res.statusCode, "| body keys:", r2.res.body ? Object.keys(r2.res.body).join(",") : "none");
   ck("got past auth", r2.res.statusCode !== 401, true);
   ck("did not 502", r2.res.statusCode === 502, false);
-  ck("reached the stored-assessment branch", r2.res.body && r2.res.body.scout_profile && r2.res.body.scout_profile.has_assessment === true, true);
   ck("returned a real reply", !!(r2.res.body && r2.res.body.reply_text), true);
   if (r2.res.statusCode === 502) console.log("   detail:", r2.res.body && r2.res.body.detail);
 
-  console.log("\n-- a brand-new free athlete (short-circuits the assessment branch) --");
-  const r3 = await run("state0", { id: "u1", plan: "free", is_admin: false, ai_unlimited: false,
-    goal_defined: false, goal_text: null, scout_state: 0, scout_profile_ready: false,
-    scout_profile_confirmed_at: null, scout_trial_started_at: null, scout_trial_used: 0,
-    scout_assessment: null }, {});
+  console.log("\n-- a brand-new free athlete --");
+  const r3 = await run("free", { id: "u1", plan: "free", is_admin: false, ai_unlimited: false,
+    goal_defined: false, goal_text: null }, {});
   ck("handler did not throw", !!r3.threw, false);
   console.log("   status:", r3.res.statusCode, "| body keys:", r3.res.body ? Object.keys(r3.res.body).join(",") : "none");
   ck("got past auth", r3.res.statusCode !== 401, true);

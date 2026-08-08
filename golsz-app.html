@@ -6625,27 +6625,10 @@ function AdminPanel({ onBack }) {
 /* ============ AI SCOUT (live agent) ============ */
 
 const CHIP_ICONS = [Compass, Radar, MessageSquare, CalendarDays];
-// §11 — the chips have to agree with the state machine, or the UI invites
-// exactly what the backend refuses. A NEW athlete used to be offered "Create
-// my career roadmap"; stateDirective() in api/scout.js explicitly forbids
-// producing one before Scout understands them, so tapping it earned a polite
-// deferral. That reads as the product not working.
-//
-// States 0-1 (NEW / TRIAGE) therefore offer chips that MOVE THE PROFILE
-// FORWARD plus a genuinely-answerable general question — Scout is allowed to
-// explain leagues and pathways at any state, it just can't personalise yet.
-// State 2 offers confirm/correct, which is the only thing that state is
-// waiting on. State 3+ gets the original planning chips, which by then Scout
-// can actually deliver.
-//
-// Non-players (scouts, agents, coaches) are unaffected: they have no athlete
-// profile to build, so their chips never depended on readiness.
-function chipsFor(t, isPlayer, scoutState) {
-  if (!isPlayer) return [t("scout_np_chip1"), t("scout_np_chip2"), t("scout_np_chip3"), t("scout_np_chip4")];
-  const st = typeof scoutState === "number" ? scoutState : 0;
-  if (st <= 1) return [t("scout_chip_early1"), t("scout_chip_early2"), t("scout_chip_early3"), t("scout_chip_early4")];
-  if (st === 2) return [t("scout_chip_confirm1"), t("scout_chip_confirm2"), t("scout_chip_early3"), t("scout_chip_early4")];
-  return [t("scout_chip1"), t("scout_chip2"), t("scout_chip3"), t("scout_chip4")];
+function chipsFor(t, isPlayer) {
+  return isPlayer
+    ? [t("scout_chip1"), t("scout_chip2"), t("scout_chip3"), t("scout_chip4")]
+    : [t("scout_np_chip1"), t("scout_np_chip2"), t("scout_np_chip3"), t("scout_np_chip4")];
 }
 
 function scoutGreetingFor(seeded, t) {
@@ -6723,24 +6706,6 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
   // reply/limit-reached response arrives, or forever null for an admin/
   // unlimited account (server omits scout_usage in that case).
   const [scoutUsage, setScoutUsage] = useState(null);
-  // §14 — trial state, server-authoritative (api/scout.js reserves against a
-  // row lock and reports what is actually left). The client never computes
-  // days or counts itself: a stale local guess telling an athlete they have
-  // trial left when they do not is worse than showing nothing.
-  const [scoutTrial, setScoutTrial] = useState(null);
-  // Mirrors profiles.scout_state. Only ever set from the database or from a
-  // server reply — never inferred client-side, for the same reason
-  // deriveScoutState() ignores the model's self-report.
-  const [scoutState, setScoutState] = useState(null);
-  // The trial ending is the moment the whole trial exists for, and until now
-  // it passed silently: the server reported {active:false} and the client
-  // rendered nothing, so an athlete just quietly dropped back to free terms
-  // mid-conversation with no explanation and no offer.
-  //
-  // Shown ONCE per session and dismissible. A wall that reappears every turn
-  // would punish the athlete for the trial having worked.
-  const [trialEndedShown, setTrialEndedShown] = useState(false);
-  const [showTrialEnded, setShowTrialEnded] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState(null);
   const [photo, setPhoto] = useState(null); // { dataUrl, mediaType, data } — one pending attachment
@@ -6772,7 +6737,7 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
         uidRef.current = user.id;
 
         const [{ data: prof }, { data: ath }, { data: benchmarks }] = await Promise.all([
-          sb.from("profiles").select("full_name, dob, occupation, scout_state").eq("id", user.id).single(),
+          sb.from("profiles").select("full_name, dob, occupation").eq("id", user.id).single(),
           sb.from("athletes").select("sport, position, grad_year, gpa, country, club_name, recruiting_status, license, looking_for_players, education_level, scout_context").eq("id", user.id).single(),
           sb.from("athlete_benchmarks").select("metric, value, unit, recorded_date").eq("user_id", user.id).order("recorded_date", { ascending: false }),
         ]);
@@ -6784,11 +6749,6 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
           for (const b of benchmarks) if (!latest[b.metric]) latest[b.metric] = `${b.value}${b.unit ? " " + b.unit : ""}`;
           setBenchmarkSummary(latest);
         }
-        // Seeded from the stored state so an athlete who is already GUIDED
-        // never gets dragged back to discovery chips for one turn while
-        // waiting on the first reply of the session. The server remains
-        // authoritative — its scout_profile on every reply overwrites this.
-        if (prof && Number.isInteger(prof.scout_state)) setScoutState(prof.scout_state);
         const seeded = {};
         if (prof && prof.full_name) seeded.name = prof.full_name;
         if (prof && prof.occupation) seeded.occupation = prof.occupation;
@@ -7063,18 +7023,6 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       // limit-reached (402) responses — capture it either way so the
       // header's "questions left today" count updates even on a refusal.
       if (data && data.scout_usage && typeof data.scout_usage === "object") setScoutUsage(data.scout_usage);
-      // Only the STATE is kept: it drives which action chips are offered.
-      // The readiness score deliberately stays server-side — see the Scout
-      // header comment for why a third percentage on screen was a problem.
-      if (data && data.scout_profile && Number.isInteger(data.scout_profile.state)) {
-        setScoutState(data.scout_profile.state);
-      }
-      if (data && data.scout_trial && typeof data.scout_trial === "object") {
-        setScoutTrial(data.scout_trial);
-        const ended = data.scout_trial.active === false
-          && (data.scout_trial.reason === "trial_expired" || data.scout_trial.reason === "trial_exhausted");
-        if (ended && !trialEndedShown) { setTrialEndedShown(true); setShowTrialEnded(true); }
-      }
       // A non-2xx response (rate limit, auth hiccup, upstream 5xx) still
       // arrives here as valid JSON — without this check data.content is
       // undefined, raw ends up "", and an empty assistant bubble gets
@@ -7262,7 +7210,7 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
   }
 
   const isPlayerChat = !profile.occupation || profile.occupation === "Player";
-  const CHIPS = chipsFor(t, isPlayerChat, scoutState);
+  const CHIPS = chipsFor(t, isPlayerChat);
   // Topic rows (Master UX/UI redesign — "Scout should be visually the
   // CLEANEST section") replace the old 2x2 icon-chip grid for the very
   // first empty state only; the horizontal scrolling CHIPS row further
@@ -7275,18 +7223,6 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
   ];
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* The trial's ending. Reuses UpgradeScreen rather than introducing a
-          second upgrade surface — same sheet, same plan list, different copy,
-          because the athlete's question here is "what did I just lose" not
-          "what is GOLSZ". */}
-      {showTrialEnded && uidRef.current && (
-        <UpgradeScreen
-          uid={uidRef.current}
-          title={t("trial_ended_title")}
-          body={t("trial_ended_body")}
-          onDismiss={() => setShowTrialEnded(false)}
-        />
-      )}
       {/* One compact row. This was a stacked column — 48px ring, wordmark,
           then a 200px waveform — roughly 130px of chrome above the first
           message, which on a phone ate about half the visible conversation.
@@ -7310,20 +7246,7 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
           )}
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             <span style={{ fontSize: 9, color: C.slate, fontFamily: "'Space Mono', monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {/* Deliberately does NOT show Scout's own readiness score. That
-                  number is real and drives Scout's behaviour, but putting it
-                  here meant an athlete saw THREE different percentages about
-                  themselves — GOLSZ Readiness on Home, Passport quality, and
-                  this — which disagreed because they measure different
-                  things. GOLSZ Readiness on Home is the one athlete-facing
-                  completeness number; scoutReadiness stays internal, where it
-                  gates behaviour and cannot contradict anything on screen. */}
-              {scoutTrial && scoutTrial.active
-                ? (scoutTrial.days_left <= 1
-                    ? t("scout_trial_days").replace("{d}", String(scoutTrial.days_left))
-                    : t("scout_trial_left").replace("{n}", String(scoutTrial.remaining)))
-                : scoutUsage ? `${scoutUsage.remaining} ${t("scout_questions_left")}`
-                : t("scout_live_agent")}
+              {scoutUsage ? `${scoutUsage.remaining} ${t("scout_questions_left")}` : t("scout_live_agent")}
             </span>
             <button onClick={openHistory} title={t("scout_history_title")} style={iconBtn(showHistory ? C.lime : C.slate)}><History size={15} /></button>
             <button onClick={newChat} title={t("scout_new_chat")} style={iconBtn(C.lime)}><Plus size={16} /></button>
@@ -7650,11 +7573,6 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
   // the new profiles.goal_defined column (migration 093).
   const [profileComplete, setProfileComplete] = useState(false);
   const [goalDefined, setGoalDefined] = useState(false);
-  // Scout's written read of this athlete (profiles.scout_assessment, written
-  // once at state 3). It was being stored and fed back into Scout's own
-  // prompts while the athlete themselves only ever saw it as prose in a
-  // single reply they had to scroll back to find. This surfaces it.
-  const [assessment, setAssessment] = useState(null);
 
   useEffect(() => {
     if (!sb) return;
@@ -7663,7 +7581,7 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) { setLoaded(true); return; }
         const [{ data: prof }, { data: ath }, { data: reqs }, { data: benchmarks }, { data: devItems }, { data: pathwayRow }, { data: targets }] = await Promise.all([
-          sb.from("profiles").select("full_name, occupation, avatar_url, identity_verified, goal_defined, plan, scout_assessment").eq("id", user.id).single(),
+          sb.from("profiles").select("full_name, occupation, avatar_url, identity_verified, goal_defined, plan").eq("id", user.id).single(),
           sb.from("athletes").select("sport, position, club_name, grad_year, height_cm, weight_kg, country, recruiting_status, bio, highlights, timeline, scout_context").eq("id", user.id).single(),
           sb.from("verification_requests").select("status").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
           sb.from("athlete_benchmarks").select("metric, value, unit, recorded_date").eq("user_id", user.id).order("recorded_date", { ascending: false }),
@@ -7676,7 +7594,6 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
         setAthlete(ath || null);
         setProfileComplete(!!(ath && ath.sport));
         setGoalDefined(!!(prof && prof.goal_defined));
-        if (prof && prof.scout_assessment && typeof prof.scout_assessment === "object") setAssessment(prof.scout_assessment);
         setQuality(computeProfileQuality(ath, prof));
         const pendingReq = !!(reqs && reqs[0] && reqs[0].status === "pending");
         const isVerified = !!(prof && prof.identity_verified);
@@ -7814,56 +7731,6 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
           </div>
         );
       })()}
-
-      {assessment && (assessment.strengths || []).length + (assessment.gaps || []).length + (assessment.realistic_level ? 1 : 0) > 0 && (
-        <>
-          <SectionTitle>{t("home_assessment_title")}</SectionTitle>
-          <div style={{ ...card, marginBottom: 10 }}>
-            {assessment.realistic_level && (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.14em", color: C.slate, fontWeight: 700, marginBottom: 4 }}>{t("home_assessment_level")}</div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: C.ink, lineHeight: 1.4 }}>{assessment.realistic_level}</div>
-              </div>
-            )}
-            {(assessment.strengths || []).length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.14em", color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("home_assessment_strengths")}</div>
-                {assessment.strengths.map((x, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 4 }}>
-                    <span style={{ color: C.lime, fontSize: 13, lineHeight: 1.45 }}>+</span>
-                    <span style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.45 }}>{x}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {(assessment.gaps || []).length > 0 && (
-              <div style={{ marginBottom: assessment.focus_next_90_days ? 12 : 0 }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.14em", color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("home_assessment_gaps")}</div>
-                {assessment.gaps.map((x, i) => (
-                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 4 }}>
-                    <span style={{ color: C.slate, fontSize: 13, lineHeight: 1.45 }}>−</span>
-                    <span style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.45 }}>{x}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {assessment.focus_next_90_days && (
-              <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: 10 }}>
-                <div style={{ fontSize: 9, letterSpacing: "0.14em", color: C.slate, fontWeight: 700, marginBottom: 4 }}>{t("home_assessment_focus")}</div>
-                <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.45 }}>{assessment.focus_next_90_days}</div>
-              </div>
-            )}
-            {/* Dated, because an assessment that silently ages is the thing
-                storing it was meant to prevent. If it looks stale to the
-                athlete, that is correct and they can ask Scout to revisit it. */}
-            {assessment.created_at && (
-              <div style={{ fontSize: 9.5, color: C.slate, marginTop: 10 }}>
-                {t("home_assessment_dated")} {new Date(assessment.created_at).toLocaleDateString()}
-              </div>
-            )}
-          </div>
-        </>
-      )}
 
       <SectionTitle>{t("home_readiness_title")}</SectionTitle>
       <div style={{ ...card, marginBottom: 10 }}>

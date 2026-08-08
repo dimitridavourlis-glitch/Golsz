@@ -1002,7 +1002,7 @@ function salvageJsonValue(raw, key) {
 const REPLY_FIELDS = [
   "reply", "memory_writes", "research_note", "profile_updates",
   "scout_context_updates", "suggested_targets", "suggested_dev_items",
-  "suggested_pathway", "drafted_email", "profile_confirmed", "assessment",
+  "suggested_pathway", "drafted_email",
 ];
 
 function parseReplyObject(clean) {
@@ -1298,7 +1298,7 @@ Be honest before you are encouraging. If something is unrealistic, say so kindly
 SCOUT MEMORY (when present in the message) is your own durable memory of this athlete from earlier conversations, already split by trust: things they TOLD you are confirmed and must never be re-asked; things you INFERRED are not confirmed, so confirm one in passing before you build advice on it. "Still unknown" lists what you'd most benefit from learning — prefer those over generic questions.
 GOLSZ KNOWLEDGE (when present) is GOLSZ's own verified, curated reference on sport/eligibility/pathway rules. Prefer it over your own recollection and over a web result when they disagree, and cite it naturally ("GOLSZ's eligibility reference says..."). If it's absent or doesn't cover the question, say what you actually know and use web search — never invent a GOLSZ rule.
 GOLSZ CAPABILITIES (when present) is the real, current list of what the product can and cannot do. Anything listed as NOT part of GOLSZ does not exist — never suggest it, never imply it's coming, and never tell an athlete to find or contact someone through it. When a task needs something GOLSZ doesn't do, say plainly that GOLSZ doesn't do it and give them the real off-platform way to do it themselves.
-OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","memory_writes":[{"type":"...","subject":"...","content":"...","source":"athlete_stated|ai_inferred","confidence":0-1,"importance":1-5}],"research_note":{"summary":"...","confidence":0-1,"valid_days":N} or null,"profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"drafted_email":"the full drafted email text" or null,"profile_confirmed":true ONLY on the turn where the athlete confirms your summary of them is right, else null,"assessment":{"strengths":["..."],"gaps":["..."],"realistic_level":"the level they can realistically reach and by when","focus_next_90_days":"..."} ONLY when explicitly asked for below, else null}
+OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","memory_writes":[{"type":"...","subject":"...","content":"...","source":"athlete_stated|ai_inferred","confidence":0-1,"importance":1-5}],"research_note":{"summary":"...","confidence":0-1,"valid_days":N} or null,"profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"drafted_email":"the full drafted email text" or null}
 Allowed profile_updates keys: name, age, dob, occupation, sport, position, secondary_position, home_city, home_country, current_city, current_country, citizenship, club, previous_clubs, level, grad_year, gpa, license, looking_for_players, education_level, goal. Location is FOUR separate things and you must never merge them: home_city/home_country are where they are FROM, current_city/current_country are where they are NOW, citizenship is the passport they hold. Only set the one they actually told you about — setting the wrong one corrupts the record. previous_clubs is an array of {"name","from","to","level"} for clubs they have LEFT; the club they are at now goes in "club". Prefer dob (YYYY-MM-DD) over age when you know it. Do not repeat known fields. "goal" should be a real, clearly-stated goal the athlete actually confirmed (e.g. "play NCAA D1 soccer"), not a vague guess — setting it marks their goal as officially defined, so only set it once you're genuinely sure.
 Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need, budget. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
 Only include research_note when THIS reply actually used web search to establish reusable factual findings (a league structure, an eligibility rule, a transfer window, a country's pathway, position benchmarks). Write summary as standalone reference notes that would still be correct and useful for a DIFFERENT athlete asking the same question — plain facts and figures, no advice, no "you"/"your", no reference to this athlete's own situation. valid_days is how long the finding stays trustworthy: 7 for anything with an active deadline or window, 30-90 for stable rules and structures. Omit entirely when you answered from your own knowledge, from PRIOR RESEARCH, or from GOLSZ KNOWLEDGE without searching.
@@ -1760,125 +1760,38 @@ let capabilityCache = null;
 let capabilityCacheAt = 0;
 const CAPABILITY_CACHE_TTL_MS = 5 * 60 * 1000;
 
-// Mirrors getPlanKnowledge()'s shape exactly (cache + fail-soft to the last
-// good value, never throw into the request path). Splits on `available`
-// because the unavailable rows are the ones that actually change behavior —
-// `notes` carries the "never suggest this" instruction the admin wrote.
-async function getCapabilityRows() {
+// Two buckets: available / not available. Mirrors getPlanKnowledge()'s shape
+// exactly (cache + fail-soft to the last good value, never throw into the
+// request path). `notes` on an unavailable row carries the "never suggest
+// this" instruction the admin wrote.
+async function getCapabilityKnowledge() {
   const now = Date.now();
   if (capabilityCache && now - capabilityCacheAt < CAPABILITY_CACHE_TTL_MS) return capabilityCache;
   const supaUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
-  if (!supaUrl || !serviceKey) return capabilityCache || [];
+  if (!supaUrl || !serviceKey) return capabilityCache || "";
   try {
-    const r = await fetch(`${supaUrl}/rest/v1/product_capabilities?select=key,label,available,plan_min,notes,requires_profile_ready,min_scout_state,requires_fields,safety_note&order=key`, {
+    const r = await fetch(`${supaUrl}/rest/v1/product_capabilities?select=key,label,available,plan_min,notes&order=key`, {
       headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
     });
-    if (!r.ok) return capabilityCache || [];
+    if (!r.ok) return capabilityCache || "";
     const rows = await r.json();
-    if (!Array.isArray(rows) || !rows.length) return capabilityCache || [];
-    capabilityCache = rows;
-    capabilityCacheAt = now;
-    return rows;
-  } catch {
-    return capabilityCache || [];
-  }
-}
-
-// §21B/§21D/§21E — the manifest is rendered PER ATHLETE, not once globally.
-//
-// The old version emitted two buckets, available and not-available, which
-// left Scout unable to distinguish three completely different situations
-// that all felt like "no" to an athlete:
-//
-//   * we do this, but I need to know more about you first
-//   * we do this, but it is on a higher plan
-//   * we genuinely do not do this
-//
-// Collapsing those is what made Scout tell athletes GOLSZ "can't" do things
-// GOLSZ does, and made it sell upgrades for features it could not have
-// personalised anyway. Migration 107 added the columns; this reads them.
-//
-// ORDER MATTERS: when something needs BOTH more data and a higher plan it
-// goes in the data bucket. Charging an athlete for a plan we could not build
-// yet is the single worst outcome here, so the data gap is always named
-// first and the upsell waits until it is genuinely the only thing in the way.
-// Characters held back for the "not part of GOLSZ" list, out of
-// RETRIEVAL_BUDGET.capabilities. Sized to fit the current disowned set with
-// room to grow; the rest of the manifest gets what remains.
-const RESERVED_FOR_PROHIBITIONS = 600;
-const PLAN_RANK = { free: 0, starter: 1, pro: 2, elite: 3 };
-function planRank(p) {
-  const r = PLAN_RANK[String(p || "").toLowerCase()];
-  return Number.isInteger(r) ? r : 0;
-}
-
-function renderCapabilities(rows, ctx) {
-  if (!Array.isArray(rows) || !rows.length) return "";
-  const { entitlementPlan, scoutState, profileReady, athlete } = ctx || {};
-  const myRank = planRank(entitlementPlan);
-  const st = Number.isInteger(scoutState) ? scoutState : 0;
-
-  const nowList = [], needDataList = [], needPlanList = [], goneList = [];
-
-  for (const c of rows) {
-    const line = `- ${c.label}${c.notes ? ` — ${c.notes}` : ""}${c.safety_note ? ` [SAFETY: ${c.safety_note}]` : ""}`;
-    if (!c.available) { goneList.push(line); continue; }
-
-    // STATE is the authority, not the readiness score. An athlete at state 3+
-    // has already been understood and confirmed — re-gating them because the
-    // weighted score dipped (a new, stricter measure than anything they were
-    // onboarded against) drags an established athlete back into intake and
-    // makes Scout answer "I need to know more first" to questions it can
-    // already answer. That is the exact rule deriveScoutState() follows about
-    // never re-onboarding an existing athlete, and this is where it was
-    // broken in production.
-    const effectiveReady = profileReady || st >= 3;
-    const needsReady = c.requires_profile_ready === true && !effectiveReady;
-    const needsState = Number.isInteger(c.min_scout_state) && st < c.min_scout_state;
-    const missingFields = (Array.isArray(c.requires_fields) ? c.requires_fields : [])
-      .filter((f) => !(athlete && athlete[f] !== null && athlete[f] !== undefined && athlete[f] !== ""));
-    const planLocked = planRank(c.plan_min) > myRank;
-
-    if (needsReady || needsState || missingFields.length) {
-      const why = missingFields.length
-        ? `still need: ${missingFields.join(", ")}`
-        : "need to finish understanding them first";
-      needDataList.push(`${line} (${why})`);
-    } else if (planLocked) {
-      needPlanList.push(`${line} (on the ${c.plan_min} plan)`);
-    } else {
-      nowList.push(line);
+    if (!Array.isArray(rows) || !rows.length) return capabilityCache || "";
+    const live = rows.filter((c) => c.available);
+    const gone = rows.filter((c) => !c.available);
+    let text = "";
+    if (live.length) {
+      text += "Available on GOLSZ today:\n" + live.map((c) => `- ${c.label}${c.plan_min ? ` (from the ${c.plan_min} plan)` : ""}${c.notes ? ` — ${c.notes}` : ""}`).join("\n");
     }
+    if (gone.length) {
+      text += `${text ? "\n" : ""}NOT part of GOLSZ — never suggest, imply, or offer these, and never tell an athlete to find or contact someone through them:\n` + gone.map((c) => `- ${c.label}${c.notes ? ` — ${c.notes}` : ""}`).join("\n");
+    }
+    capabilityCache = clampBlock(text, RETRIEVAL_BUDGET.capabilities);
+    capabilityCacheAt = now;
+    return capabilityCache;
+  } catch {
+    return capabilityCache || "";
   }
-
-  // The prohibition list is assembled FIRST and given its own guaranteed
-  // slice of the budget, because it is last in reading order and was being
-  // truncated away on real production data — 19 capability rows overflow
-  // 1400 characters, and clampBlock cuts from the end. Losing the section
-  // that says "never suggest these" is the single worst thing to lose here:
-  // it is the only defence against Scout offering agent introductions or a
-  // diary feature that does not exist. Everything else degrading to a
-  // shorter list is survivable; that is not.
-  const gone = goneList.length
-    ? `NOT part of GOLSZ — never suggest, imply, or offer these, and never tell an athlete to find or contact someone through them:\n${goneList.join("\n")}`
-    : "";
-  const goneText = clampBlock(gone, Math.min(gone.length, RESERVED_FOR_PROHIBITIONS));
-
-  let text = "";
-  if (nowList.length) {
-    text += `You can do these for this athlete RIGHT NOW:\n${nowList.join("\n")}`;
-  }
-  if (needDataList.length) {
-    text += `${text ? "\n" : ""}REAL, AND THEY ALREADY QUALIFY — you just do not know enough yet. Never present these as locked or as a reason to upgrade; say plainly that you can do it and what you need from them first:\n${needDataList.join("\n")}`;
-  }
-  if (needPlanList.length) {
-    text += `${text ? "\n" : ""}REAL, but on a higher plan than theirs. When one of these is genuinely what this athlete needs next, name it, say in one line what it would do for THIS situation, and name the tier. Only ever point upward:\n${needPlanList.join("\n")}`;
-  }
-
-  const room = Math.max(RETRIEVAL_BUDGET.capabilities - goneText.length - 1, 200);
-  const head = clampBlock(text, room);
-  return goneText ? `${head}${head ? "\n" : ""}${goneText}` : head;
 }
 
 // GOLSZ Core lookup. Goes through the search_golsz_knowledge() RPC rather
@@ -2250,186 +2163,6 @@ function detectConflicts(athlete, memories) {
   return out.slice(0, 4);
 }
 
-// ============================================================
-// SCOUT STATE MACHINE + WEIGHTED READINESS (migration 107)
-//
-// Scout behaved like a chatbot because nothing constrained WHEN it could do
-// WHAT — it planned before it understood. conversation_stage existed but was
-// the classifier's guess, written to ai_meta and never read back.
-//
-// State is derived here from REAL data, never from model self-report, the
-// same discipline as computeNextMove(). "X FIELDS ON FILE" is replaced by
-// weighted completeness: some facts matter far more than others, and a naive
-// count let an athlete look complete while missing their goal.
-// ============================================================
-const CRITICAL_FIELDS = [
-  ["sport", (a) => !!(a && a.sport)],
-  ["age", (a) => !!(a && (a.dob || a.age_reported))],
-  ["position", (a) => !!(a && a.position)],
-  ["current club or training environment", (a) => !!(a && a.club_name)],
-  ["current level", (a) => !!(a && a.recruiting_status)],
-];
-const HIGH_VALUE_FIELDS = [
-  ["where they are now", (a) => !!(a && (a.current_city || a.country))],
-  ["where they are from", (a) => !!(a && (a.home_city || a.home_country))],
-  ["playing history", (a) => !!(a && Array.isArray(a.previous_clubs) && a.previous_clubs.length)],
-  ["graduation year", (a) => !!(a && a.grad_year)],
-  ["measurements", (a) => !!(a && (a.height_cm || a.weight_kg))],
-  ["citizenship / eligibility", (a) => !!(a && a.citizenship)],
-];
-
-// Weighted 0-100. Critical is 60% of the score, high-value 25%, the goal 15% —
-// the goal is deliberately its own band because an athlete with every field
-// filled and no stated goal cannot be advised at all.
-function scoutReadiness(athlete, goalDefined) {
-  const crit = CRITICAL_FIELDS.filter(([, has]) => has(athlete));
-  const high = HIGH_VALUE_FIELDS.filter(([, has]) => has(athlete));
-  const score = Math.round(
-    (crit.length / CRITICAL_FIELDS.length) * 60 +
-    (high.length / HIGH_VALUE_FIELDS.length) * 25 +
-    (goalDefined ? 15 : 0),
-  );
-  return {
-    score,
-    missingCritical: CRITICAL_FIELDS.filter(([, has]) => !has(athlete)).map(([label]) => label),
-    missingHighValue: HIGH_VALUE_FIELDS.filter(([, has]) => !has(athlete)).map(([label]) => label),
-    goalDefined: !!goalDefined,
-    // Ready when every critical fact AND the goal are known, plus at least
-    // half the high-value ones. Not a question count — §12/§24.
-    ready: crit.length === CRITICAL_FIELDS.length && !!goalDefined && high.length >= Math.ceil(HIGH_VALUE_FIELDS.length / 2),
-  };
-}
-
-const SCOUT_STATES = ["NEW", "TRIAGE", "PROFILE_READY", "ASSESSED", "GUIDED", "DEVELOPING"];
-
-// Existing athletes are not dragged back through onboarding: a real pathway
-// row means they are already being guided, so they resume at 4/5 regardless
-// of how complete their record looks on paper.
-function deriveScoutState(athlete, readiness, meta, athleteState) {
-  if (athleteState && athleteState.pathwayCreated) return athleteState.baselineComplete ? 5 : 4;
-  if (!athlete || !athlete.sport) return 0;
-  if (!readiness.ready) return 1;
-  if (!meta || !meta.profileConfirmedAt) return 2;
-  return 3;
-}
-
-// What Scout may and may not do at this state (§10). Enforced as prompt
-// instruction backed by the capability manifest, not left to the model's mood.
-function stateDirective(state, readiness) {
-  if (state >= 4) return "";
-  if (state <= 1) {
-    const next = readiness.missingCritical[0] || (!readiness.goalDefined ? "their goal — what they are actually aiming for" : readiness.missingHighValue[0]);
-    return `\n\nSCOUT STATE: LEARNING THIS ATHLETE (${readiness.score}% understood).\n`
-      + `You are still building your understanding. You may answer general questions, explain leagues, NCAA/NAIA/JUCO, eligibility and pathways in general terms — be genuinely useful.\n`
-      + `Do NOT yet produce a definitive personalised career roadmap, target school/club list, recruitment strategy, outreach campaign or personalised development programme. You have not finished assessing them.\n`
-      + (next ? `HIGHEST-VALUE THING YOU STILL DON'T KNOW: ${next}. Work toward it naturally — one question, in conversation, never a questionnaire. Acknowledge what they just told you first.\n` : "")
-      + `If they ask for a plan now, say plainly that you can absolutely build it and you want a little more about their situation first — then ask the next useful thing. Never sound like a paywall.`;
-  }
-  if (state === 2) {
-    return `\n\nSCOUT STATE: PROFILE READY (${readiness.score}%).\n`
-      + `You now know enough to be useful. Give them a short, natural summary of how you understand them — who they are, where they are, what they're aiming for, what stands out, what's still thin — and ask them to confirm or correct it. Do this ONCE, conversationally, not as a form.\n`
-      + `When they confirm it is right, set "profile_confirmed":true on THAT reply. If they correct you, update the profile instead and leave it null.`;
-  }
-  return `\n\nSCOUT STATE: ASSESSED (${readiness.score}%). They have confirmed your understanding. Personalised planning is unlocked subject to their plan — see GOLSZ CAPABILITIES.`;
-}
-
-// State 2 -> 3 is the one transition that cannot be derived from data alone:
-// it needs the athlete to say "yes, that's right". So it is the one place the
-// model's own output is allowed to move the state — and it is fenced in hard.
-//
-// The write only happens when the SERVER already derived state 2, which means
-// scoutReadiness() independently confirmed every critical field, the goal and
-// half the high-value fields are present. The model cannot skip TRIAGE by
-// claiming a confirmation, cannot re-confirm an already-confirmed athlete,
-// and cannot set any other state. All it can do is report the one fact only
-// the conversation carries.
-//
-// Best-effort and never awaited into the response path: a failed write means
-// Scout asks for confirmation once more next turn, which is recoverable. A
-// blocked reply is not.
-async function recordProfileConfirmation(userId, scoutState, data) {
-  if (scoutState !== 2 || !userId || !data) return false;
-  // The flag lives inside the model's JSON reply, not on the API response
-  // object — same extraction the other suggested_* extractors use.
-  let flag;
-  try {
-    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
-    const parsed = parseReplyObject(raw.replace(/```json|```/g, "").trim());
-    flag = parsed && parsed.profile_confirmed;
-  } catch { return false; }
-  if (!(flag === true || flag === "true" || flag === "yes")) return false;
-  const svcKey = process.env.SUPABASE_SERVICE_KEY;
-  if (!svcKey || !process.env.SUPABASE_URL) return false;
-  try {
-    const r = await fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&scout_profile_confirmed_at=is.null`, {
-      method: "PATCH",
-      headers: { apikey: svcKey, Authorization: "Bearer " + svcKey, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({ scout_profile_confirmed_at: new Date().toISOString(), scout_state: 3 }),
-    });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    console.log("GOLSZ scout profile confirmed:", JSON.stringify({ userId, state: 3 }));
-    return true;
-  } catch (e) {
-    console.error("GOLSZ profile confirmation persist failed:", e);
-    return false;
-  }
-}
-
-// State 3 is called ASSESSED, so an assessment has to actually exist. This
-// writes it ONCE, the first time an athlete reaches state 3, and it is then
-// read back into every later prompt — so Scout's read of an athlete is a
-// stable thing it committed to, not something silently re-derived (and
-// quietly drifting) on every session.
-//
-// Bounded hard on the way in: 5 strengths, 5 gaps, short strings. The model
-// is asked for this on exactly one turn, so a runaway object cannot become a
-// permanent fixture of every future prompt.
-function extractAssessment(data) {
-  try {
-    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
-    const parsed = parseReplyObject(raw.replace(/```json|```/g, "").trim());
-    const a = parsed && parsed.assessment;
-    if (!a || typeof a !== "object" || Array.isArray(a)) return null;
-    const list = (v) => (Array.isArray(v) ? v : [])
-      .filter((x) => typeof x === "string" && x.trim())
-      .slice(0, 5)
-      .map((x) => x.trim().slice(0, 200));
-    const str = (v) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 300) : null);
-    const out = {
-      strengths: list(a.strengths),
-      gaps: list(a.gaps),
-      realistic_level: str(a.realistic_level),
-      focus_next_90_days: str(a.focus_next_90_days),
-      created_at: new Date().toISOString(),
-    };
-    // An assessment with nothing in it is not an assessment. Returning null
-    // here means the athlete simply gets asked again next turn, rather than
-    // an empty object being stored and never revisited.
-    if (!out.strengths.length && !out.gaps.length && !out.realistic_level) return null;
-    return out;
-  } catch { return null; }
-}
-
-async function persistAssessment(userId, assessment) {
-  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId || !assessment) return false;
-  try {
-    // is.null guard: first assessment wins, so a later turn cannot silently
-    // overwrite what the athlete was already told.
-    const r = await fetch(`${url}/rest/v1/profiles?id=eq.${userId}&scout_assessment=is.null`, {
-      method: "PATCH",
-      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({ scout_assessment: assessment }),
-    });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    console.log("GOLSZ scout assessment stored:", JSON.stringify({ strengths: assessment.strengths.length, gaps: assessment.gaps.length }));
-    return true;
-  } catch (e) {
-    console.error("GOLSZ persist assessment failed:", e);
-    return false;
-  }
-}
-
 async function buildAuthoritativeContext(userId) {
   const supaUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
@@ -2577,21 +2310,15 @@ async function getUserId(authHeader) {
 async function getProfileMeta(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null, profileConfirmedAt: null, storedState: 0, storedReady: false, trialStartedAt: null, trialUsed: 0, storedAssessment: null };
+  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let plan = "starter";
   let isAdmin = false;
   let aiUnlimited = false;
   let goalDefined = false;
   let goalText = null;
-  let profileConfirmedAt = null;
-  let storedState = 0;
-  let storedReady = false;
-  let trialStartedAt = null;
-  let trialUsed = 0;
-  let storedAssessment = null;
   try {
-    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text,scout_state,scout_profile_ready,scout_profile_confirmed_at,scout_trial_started_at,scout_trial_used,scout_assessment", { headers });
+    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text", { headers });
     const rows = await p.json();
     if (Array.isArray(rows) && rows[0]) {
       plan = rows[0].plan || "starter";
@@ -2599,15 +2326,9 @@ async function getProfileMeta(userId) {
       aiUnlimited = !!rows[0].ai_unlimited;
       goalDefined = !!rows[0].goal_defined;
       goalText = rows[0].goal_text || null;
-      profileConfirmedAt = rows[0].scout_profile_confirmed_at || null;
-      storedState = Number.isInteger(rows[0].scout_state) ? rows[0].scout_state : 0;
-      storedReady = rows[0].scout_profile_ready === true;
-      trialStartedAt = rows[0].scout_trial_started_at || null;
-      trialUsed = Number(rows[0].scout_trial_used) || 0;
-      storedAssessment = rows[0].scout_assessment || null;
     }
   } catch {}
-  return { plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady, trialStartedAt, trialUsed, storedAssessment };
+  return { plan, isAdmin, aiUnlimited, goalDefined, goalText };
 }
 
 // GOLSZ Final Product / AI Scout / Pathway / Elite Architecture directive
@@ -2737,46 +2458,6 @@ async function releaseFreeAiQuestion(userId) {
       body: JSON.stringify({ p_user: userId }),
     });
   } catch (e) { console.error("GOLSZ release_free_ai_question failed:", e); }
-}
-
-// §14 — the capped trial. Three independent bounds (days, daily, total); see
-// migration 108. This call both STARTS the trial (first time) and consumes
-// one message, atomically, so there is no window where a started trial has
-// no counter and no way for two concurrent requests to both spend the last
-// message.
-//
-// Fails CLOSED, unlike most helpers here: an unreachable database means we
-// cannot prove the athlete has trial left, and guessing "yes" is unbounded
-// spend. The caller falls through to the ordinary free-plan budget, so the
-// athlete still gets an answer — just on free-tier terms.
-async function reserveTrialQuestion(userId, totalLimit, trialDays) {
-  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { allowed: false, reason: "unavailable" };
-  try {
-    const r = await fetch(url + "/rest/v1/rpc/reserve_trial_question", {
-      method: "POST",
-      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
-      body: JSON.stringify({ p_user: userId, p_total_limit: totalLimit, p_trial_days: trialDays }),
-    });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const j = await r.json();
-    return j && typeof j === "object" ? j : { allowed: false, reason: "bad_response" };
-  } catch (e) {
-    console.error("GOLSZ reserve_trial_question failed:", e);
-    return { allowed: false, reason: "unavailable" };
-  }
-}
-
-async function releaseTrialQuestion(userId) {
-  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return;
-  try {
-    await fetch(url + "/rest/v1/rpc/release_trial_question", {
-      method: "POST",
-      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
-      body: JSON.stringify({ p_user: userId }),
-    });
-  } catch (e) { console.error("GOLSZ release_trial_question failed:", e); }
 }
 
 // Adds the real token/cost numbers to today's scout_daily_usage row once a
@@ -3004,13 +2685,6 @@ export default async function handler(req, res) {
   let questionsRemaining = null; // null = no usage info to show the client (unmetered deployment, or an unlimited/admin account)
   let reservedQuestion = false; // true once reserve_scout_question has counted this request — release it if we bail before a real answer
   let reservedFreeAi = false; // true once reserve_free_ai_question (068, lifetime, free plan only) has counted this request
-  let reservedTrial = false;  // true once reserve_trial_question (108, capped trial) has counted this request
-  // The plan whose ENTITLEMENTS apply to this turn. Equal to the real plan
-  // except during an active trial, when a free athlete is treated as Starter
-  // so they experience the actual product. userPlan stays the real plan so
-  // telemetry and billing analysis are never distorted by trial traffic.
-  let entitlementPlan = null;
-  let trialInfo = null;
   // Directive §11 "database-first state logic" — appended to systemPrompt
   // below once populated; empty string (no-op) for unauthenticated/dev-mode
   // requests, same fallback posture as userPlan/dailyLimit above.
@@ -3032,17 +2706,6 @@ export default async function handler(req, res) {
   // for treating a "go back"-style question as a real relocation decision.
   let athleteHome = null;
   let athleteHere = null;
-  let scoutState = 0;
-  // §24 — sent to the client so the Scout header can show real understanding
-  // ("PROFILE 62%") instead of the old naive count of non-empty keys, which
-  // let an athlete look complete while Scout still had no idea of their goal.
-  let scoutProfile = null;
-  // Hoisted, NOT left on the Promise.all destructure inside the if (userId)
-  // block: the reply paths below are outside that block and read it. Getting
-  // this wrong 502'd every state-3+ athlete in production — node --check
-  // cannot see it, because a ReferenceError is a runtime fact, not a syntax
-  // one.
-  let storedAssessment = null;
   const priorSummaryForPrompt = (body && typeof body.summary === "string") ? body.summary.trim() : "";
   // Step 8 telemetry, threaded into every logRouting() call below so a
   // degraded reply is never recorded as a clean one.
@@ -3098,12 +2761,12 @@ export default async function handler(req, res) {
     // getCapabilityKnowledge is global and cached. The GOLSZ Core lookup
     // can't run here because it needs athleteState.sport, so it runs
     // alongside the classifier below instead.
-    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady, trialStartedAt, trialUsed, storedAssessment: loadedAssessment }, athleteState, planKnowledge, authContext, capabilityRows] = await Promise.all([
+    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
       getProfileMeta(userId),
       getAthleteState(userId),
       getPlanKnowledge(),
       buildAuthoritativeContext(userId),
-      getCapabilityRows(),
+      getCapabilityKnowledge(),
     ]);
     // Rendered once, here, and reused verbatim by every downstream path so no
     // model can receive a materially different version of the athlete's facts.
@@ -3117,19 +2780,18 @@ export default async function handler(req, res) {
     athleteSport = athleteState.sport;
     athleteCountry = athleteState.country;
     stateDigest = athleteStateDigest(athleteState, plan, goalDefined);
-    storedAssessment = loadedAssessment;
     userPlan = plan;
-    if (!entitlementPlan) entitlementPlan = plan;
     userIsAdmin = isAdmin;
     userAiUnlimited = aiUnlimited;
-    // Directive §11 state machine — the EARLY gate only (profile_complete/
-    // goal_defined/plan/pathway_created/baseline_complete). The FULLER
-    // state machine (target/outreach/followup/benchmark due-ness) is
-    // deliberately NOT computed here — it needs several more table scans
-    // that matter for a dashboard nudge but not for every single chat
-    // message, and the client already has that data loaded for Home's
-    // own cards (see golsz-app.html computeNextMove()). Scout narrates
-    // around this; it never decides it — see computeNextMove() comment.
+    // Directive §11 "database-first state logic" — profile_complete/
+    // goal_defined/plan/pathway_created/baseline_complete, all real data, not
+    // model self-report. The FULLER state machine (target/outreach/followup/
+    // benchmark due-ness) is deliberately NOT computed here — it needs
+    // several more table scans that matter for a dashboard nudge but not for
+    // every single chat message, and the client already has that data loaded
+    // for Home's own cards (see golsz-app.html computeNextMove()). Scout
+    // narrates around this; it never decides it — see computeNextMove()
+    // comment.
     athleteBlock = `\n\nATHLETE STATE (app-computed from real data, not your own inference — ground your guidance in this, never contradict it or claim a different plan/stage): profile_complete=${athleteState.profileComplete}, goal_defined=${goalDefined}${goalText ? ` ("${goalText.slice(0, 200)}")` : ""}, plan=${plan}, pathway_created=${athleteState.pathwayCreated}, baseline_complete=${athleteState.baselineComplete}, sport_support_level=${athleteState.sportSupportLevel || "unknown"}.`;
     // Directive §10 "database is the source of truth, never hard-code
     // aspirational features into prompts as if live" — real, current plan
@@ -3140,35 +2802,7 @@ export default async function handler(req, res) {
     // empty rather than sent as an empty heading — a new athlete with no
     // memory yet should get no MEMORY section at all, not one saying "none".
     if (authoritativeBlock) athleteBlock += `\n\n${authoritativeBlock}`;
-    // §7/§12/§24 — weighted readiness and the authoritative state, both from
-    // real data. The directive is what actually stops Scout planning before it
-    // understands the athlete.
-    const readiness = scoutReadiness(authContext && authContext.athlete, goalDefined);
-    scoutState = deriveScoutState(authContext && authContext.athlete, readiness, { profileConfirmedAt }, athleteState);
-    athleteBlock += stateDirective(scoutState, readiness);
-    // Persist only when it actually changes, so a normal turn adds no write.
-    if (scoutState !== storedState || readiness.ready !== storedReady) {
-      const svcKey = process.env.SUPABASE_SERVICE_KEY;
-      fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
-        method: "PATCH",
-        headers: { apikey: svcKey, Authorization: "Bearer " + svcKey, "Content-Type": "application/json", Prefer: "return=minimal" },
-        body: JSON.stringify({ scout_state: scoutState, scout_profile_ready: readiness.ready }),
-      }).catch((e) => console.error("GOLSZ scout state persist failed:", e));
-    }
-    // Ask for the assessment on the first turn at state 3+, then stop asking
-    // and start telling. Two different jobs, so two different blocks.
-    if (scoutState >= 3 && !storedAssessment) {
-      athleteBlock += `\n\nASSESSMENT DUE: you now understand this athlete and they have confirmed it. Alongside your normal reply, fill in "assessment" this once — your honest read of their strengths, their real gaps, the level you believe they can realistically reach and by when, and what the next 90 days should be about. Be straight with them in the reply itself too; this is the moment they find out whether you are worth listening to.`;
-    } else if (storedAssessment) {
-      const a = storedAssessment;
-      athleteBlock += `\n\nYOUR EARLIER ASSESSMENT OF THIS ATHLETE (you committed to this — build on it, and say so plainly if new evidence changes it):`
-        + (a.strengths && a.strengths.length ? `\nStrengths: ${a.strengths.join("; ")}` : "")
-        + (a.gaps && a.gaps.length ? `\nGaps: ${a.gaps.join("; ")}` : "")
-        + (a.realistic_level ? `\nRealistic level: ${a.realistic_level}` : "")
-        + (a.focus_next_90_days ? `\nNext 90 days: ${a.focus_next_90_days}` : "");
-    }
-    scoutProfile = { state: scoutState, label: SCOUT_STATES[scoutState], readiness: readiness.score, ready: readiness.ready, has_assessment: !!storedAssessment };
-    console.log("GOLSZ scout state:", JSON.stringify({ state: scoutState, label: SCOUT_STATES[scoutState], readiness: readiness.score, ready: readiness.ready, missingCritical: readiness.missingCritical }));
+    if (capabilityKnowledge) sharedBlock += `\n\nGOLSZ CAPABILITIES (real, current — the product does exactly this and nothing more):\n${capabilityKnowledge}`;
     // Scout's own running note on the conversation. Labelled explicitly
     // because it used to be pasted into the USER message by the client, so
     // the model read it as something the athlete had just said — and in
@@ -3177,18 +2811,8 @@ export default async function handler(req, res) {
     if (priorSummaryForPrompt) {
       athleteBlock += `\n\nCONVERSATION SO FAR (YOUR OWN running note from earlier turns — context only. The athlete did NOT say this and cannot see it. Never quote it back, never argue with it, never treat it as their latest message):\n${clampBlock(priorSummaryForPrompt, 700)}`;
     }
-    // §14 — is this athlete inside a live trial? Read from real columns, the
-    // same discipline as scout state: the RPC re-checks every bound under a
-    // row lock, so this is only deciding which DAILY cap to reserve against.
-    const trialDays = Number(process.env.TRIAL_DAYS || 5);
-    const trialTotal = Number(process.env.TRIAL_TOTAL_LIMIT || 30);
-    const trialExpiresAt = trialStartedAt ? new Date(trialStartedAt).getTime() + trialDays * 86400000 : null;
-    const trialLive = plan === "free" && !isAdmin && !aiUnlimited
-      && trialUsed < trialTotal
-      && (trialExpiresAt === null || Date.now() <= trialExpiresAt);
 
-    dailyLimit = trialLive ? Number(process.env.TRIAL_DAILY_LIMIT || 8)
-      : plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
+    dailyLimit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
       : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 15)
       : plan === "starter" ? Number(process.env.STARTER_DAILY_LIMIT || 8)
       : Number(process.env.FREE_DAILY_LIMIT || 3);
@@ -3217,36 +2841,7 @@ export default async function handler(req, res) {
       // athlete to solve. Model tier is already capped to Haiku-equivalent
       // for free plan by PLAN_MODEL_ACCESS below; this only bounds HOW MANY
       // of those cheap replies a free account ever gets, not just per day.
-      // Trial first: a trial message must not also cost the athlete one of
-      // their lifetime free questions (that would make the trial a hidden
-      // charge against the tier they land on afterwards). If the RPC refuses
-      // -- expired, exhausted, or the database is unreachable -- we fall
-      // straight through to the ordinary free budget below, so the athlete
-      // still gets an answer.
-      if (trialLive) {
-        const t = await reserveTrialQuestion(userId, trialTotal, trialDays);
-        if (t && t.allowed) {
-          reservedTrial = true;
-          entitlementPlan = "starter";
-          const msLeft = t.expires_at ? new Date(t.expires_at).getTime() - Date.now() : 0;
-          trialInfo = {
-            active: true,
-            days_left: Math.max(Math.ceil(msLeft / 86400000), 0),
-            remaining: Number(t.remaining) || 0,
-            total: Number(t.total) || trialTotal,
-          };
-          console.log("GOLSZ scout trial:", JSON.stringify({ used: t.used, total: t.total, days_left: trialInfo.days_left }));
-          // ATHLETE STATE above reports plan=free, which is true for billing
-          // and false for what they can actually do right now. Without this
-          // Scout would refuse things the athlete can see working, or sell
-          // them a tier they are already sitting inside.
-          athleteBlock += `\n\nTRIAL: this athlete is inside their free trial — ${trialInfo.days_left} day(s) and ${trialInfo.remaining} message(s) left. Treat them as a BASIC member for what you can do. Do not tell them they need to upgrade to use something the trial already covers. As the trial gets close to running out, be straight with them: name what you have built together and what specifically stops working when it ends. Do not nag every reply.`;
-        } else if (t && (t.reason === "trial_expired" || t.reason === "trial_exhausted")) {
-          trialInfo = { active: false, reason: t.reason };
-        }
-      }
-
-      if (plan === "free" && !reservedTrial) {
+      if (plan === "free") {
         const freeLifetimeLimit = Number(process.env.FREE_LIFETIME_LIMIT || 40);
         const freeReservation = await reserveFreeAiQuestion(userId, freeLifetimeLimit);
         reservedFreeAi = true;
@@ -3261,19 +2856,6 @@ export default async function handler(req, res) {
         }
       }
     }
-
-    // Rendered LAST in this block, not in the Promise.all above: it depends
-    // on this athlete's state, readiness AND entitlement, and entitlement is
-    // only final once the trial reservation above has run. Rendering earlier
-    // would show a trialling athlete as free and have Scout tell them to
-    // upgrade for something their trial had already unlocked.
-    const capabilityKnowledge = renderCapabilities(capabilityRows, {
-      entitlementPlan: entitlementPlan || plan,
-      scoutState,
-      profileReady: readiness.ready,
-      athlete: authContext && authContext.athlete,
-    });
-    if (capabilityKnowledge) sharedBlock += `\n\nGOLSZ CAPABILITIES (real, current — the product does exactly this and nothing more):\n${capabilityKnowledge}`;
   }
 
   // ---- route (classify — with the FAQ list embedded — then decide the model) ----
@@ -3386,8 +2968,6 @@ export default async function handler(req, res) {
         stop_reason: "end_turn",
         scout_summary: updatedSummary,
         scout_usage: reservedQuestion ? { remaining: questionsRemaining, limit: dailyLimit } : undefined,
-        scout_profile: scoutProfile,
-        scout_trial: trialInfo || undefined,
         next_move: extractNextBestAction(classification),
       };
       await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
@@ -3403,10 +2983,9 @@ export default async function handler(req, res) {
     // could still trigger a full-price web_lookup/db_lookup tool call.
     // Checked here, not inside selectModelTier(), so it can return a clear
     // 402 with an upgrade message instead of silently downgrading quality. ----
-    if (entitlementPlan === "free" && classification && classification.needs_tool && !userIsAdmin && !userAiUnlimited) {
+    if (userPlan === "free" && classification && classification.needs_tool && !userIsAdmin && !userAiUnlimited) {
       if (reservedQuestion) await releaseScoutQuestion(userId);
       if (reservedFreeAi) await releaseFreeAiQuestion(userId);
-      if (reservedTrial) await releaseTrialQuestion(userId);
       return res.status(402).json({
         error: "Web and player-database search is a Starter+ feature. Upgrade to unlock deeper research from Scout.",
         code: "free_tool_blocked",
@@ -3457,8 +3036,6 @@ export default async function handler(req, res) {
         await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
         cached.scout_summary = updatedSummary;
         if (reservedQuestion) cached.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
-        cached.scout_profile = scoutProfile;
-        if (trialInfo) cached.scout_trial = trialInfo;
         cached.next_move = extractNextBestAction(classification);
         return res.status(200).json(cached);
       }
@@ -3512,15 +3089,6 @@ export default async function handler(req, res) {
         data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
     data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
-        data.scout_profile = scoutProfile;
-        if (trialInfo) data.scout_trial = trialInfo;
-        if (await recordProfileConfirmation(userId, scoutState, data)) {
-          data.scout_profile = { ...scoutProfile, state: 3, label: SCOUT_STATES[3] };
-        }
-        if (scoutState >= 3 && !storedAssessment) {
-          const assessment = extractAssessment(data);
-          if (assessment) await persistAssessment(userId, assessment);
-        }
         // next_move is THIS request's own classification result, not a fact
         // about the shared cached answer — attached only after
         // setCachedResponse's JSON.stringify has already run (synchronously,
@@ -3534,7 +3102,7 @@ export default async function handler(req, res) {
         // write already happened.
         data.suggested_targets = extractSuggestedTargets(data);
         data.suggested_dev_items = extractSuggestedDevItems(data);
-        data.suggested_pathway = entitlementPlan === "free" ? null : extractSuggestedPathway(data);
+        data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
         data.drafted_email = extractDraftedEmail(data);
         return res.status(200).json(data);
       }
@@ -3612,19 +3180,10 @@ export default async function handler(req, res) {
         data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
     data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
-        data.scout_profile = scoutProfile;
-        if (trialInfo) data.scout_trial = trialInfo;
-        if (await recordProfileConfirmation(userId, scoutState, data)) {
-          data.scout_profile = { ...scoutProfile, state: 3, label: SCOUT_STATES[3] };
-        }
-        if (scoutState >= 3 && !storedAssessment) {
-          const assessment = extractAssessment(data);
-          if (assessment) await persistAssessment(userId, assessment);
-        }
         data.next_move = extractNextBestAction(classification);
         data.suggested_targets = extractSuggestedTargets(data);
         data.suggested_dev_items = extractSuggestedDevItems(data);
-        data.suggested_pathway = entitlementPlan === "free" ? null : extractSuggestedPathway(data);
+        data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
         data.drafted_email = extractDraftedEmail(data);
         // Deliberately never cached — a degraded, apologetic reply shouldn't
         // get served back to a different athlete once things recover.
@@ -3638,7 +3197,6 @@ export default async function handler(req, res) {
       console.log("GOLSZ haiku fallback also failed:", JSON.stringify(haikuFallback.data));
       if (reservedQuestion) await releaseScoutQuestion(userId);
       if (reservedFreeAi) await releaseFreeAiQuestion(userId);
-      if (reservedTrial) await releaseTrialQuestion(userId);
       await logError("api/scout.js", "Both Sonnet and Haiku failed (automatic failover exhausted)", { detail: JSON.stringify({ sonnet: sonnetResult.data, haiku: haikuFallback.data }) });
       // Failover exhausted with no answer produced — still worth a
       // scout_routing_log row (082) so failure rate is visible in cost/
@@ -3681,13 +3239,12 @@ export default async function handler(req, res) {
     data.next_move = extractNextBestAction(classification);
     data.suggested_targets = extractSuggestedTargets(data);
     data.suggested_dev_items = extractSuggestedDevItems(data);
-    data.suggested_pathway = entitlementPlan === "free" ? null : extractSuggestedPathway(data);
+    data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
     data.drafted_email = extractDraftedEmail(data);
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
     if (reservedQuestion) await releaseScoutQuestion(userId);
     if (reservedFreeAi) await releaseFreeAiQuestion(userId);
-    if (reservedTrial) await releaseTrialQuestion(userId);
     await logError("api/scout.js", "Upstream model call failed", { detail: String(e) });
     return res.status(502).json({ error: "Upstream model call failed", detail: String(e) });
   }
