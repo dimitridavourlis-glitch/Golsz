@@ -1,0 +1,40 @@
+-- Migration 103 — make recompute_trust_score() service-role-only
+--
+-- Found by the SECURITY DEFINER grant audit that followed migration 102.
+--
+-- recompute_trust_score(p_user uuid) is SECURITY DEFINER, writes
+-- profiles.trust_score, takes the target user id as a caller-supplied
+-- parameter, and performs NO authorization check of its own -- it never
+-- consults auth.uid() or is_admin(). Migration 057 additionally granted it
+-- to `authenticated`, and PostgreSQL's default PUBLIC grant left it open to
+-- `anon` as well.
+--
+-- Verified live before this fix, with only the public anon key:
+--     POST /rest/v1/rpc/recompute_trust_score {"p_user":"<any uuid>"}
+--     -> HTTP 200, returned 50
+--
+-- So any unauthenticated caller could force a trust-score recomputation for
+-- an arbitrary user id. The recomputed value is derived from real underlying
+-- data, so an attacker cannot set a score of their choosing -- the practical
+-- risks are (a) an unauthenticated write primitive against profiles, (b) an
+-- unmetered compute amplifier, since each call runs several aggregate
+-- subqueries and nothing rate-limits it, and (c) silently overwriting any
+-- manual/admin trust adjustment.
+--
+-- Nothing legitimate needs the grant. Confirmed by inspection:
+--   * golsz-app.html      -- no reference to recompute_trust_score
+--   * api/                -- no call (only a comment in api/moderate.js)
+--   * supabase-schema.sql -- the only real callers are
+--                            `perform recompute_trust_score(v_user)` inside
+--                            admin_review_verification() and
+--                            admin_review_appeal(), both SECURITY DEFINER.
+--
+-- Those internal callers execute as the function owner (postgres), which
+-- keeps EXECUTE, so revoking from public/anon/authenticated does not break
+-- them. service_role likewise retains access for server-side use.
+--
+-- If a client-facing need for this ever appears, it should go through a
+-- wrapper that derives the subject from auth.uid() rather than trusting a
+-- caller-supplied uuid -- the same pattern ensure_message_request() uses.
+
+revoke execute on function recompute_trust_score(uuid) from public, anon, authenticated;
