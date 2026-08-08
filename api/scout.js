@@ -2380,7 +2380,7 @@ async function getUserId(authHeader) {
 async function getProfileMeta(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null, profileConfirmedAt: null, storedState: 0 };
+  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null, profileConfirmedAt: null, storedState: 0, storedReady: false };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let plan = "starter";
   let isAdmin = false;
@@ -2389,6 +2389,7 @@ async function getProfileMeta(userId) {
   let goalText = null;
   let profileConfirmedAt = null;
   let storedState = 0;
+  let storedReady = false;
   try {
     const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text,scout_state,scout_profile_ready,scout_profile_confirmed_at", { headers });
     const rows = await p.json();
@@ -2400,9 +2401,10 @@ async function getProfileMeta(userId) {
       goalText = rows[0].goal_text || null;
       profileConfirmedAt = rows[0].scout_profile_confirmed_at || null;
       storedState = Number.isInteger(rows[0].scout_state) ? rows[0].scout_state : 0;
+      storedReady = rows[0].scout_profile_ready === true;
     }
   } catch {}
-  return { plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState };
+  return { plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady };
 }
 
 // GOLSZ Final Product / AI Scout / Pathway / Elite Architecture directive
@@ -2781,6 +2783,10 @@ export default async function handler(req, res) {
   let athleteHome = null;
   let athleteHere = null;
   let scoutState = 0;
+  // §24 — sent to the client so the Scout header can show real understanding
+  // ("PROFILE 62%") instead of the old naive count of non-empty keys, which
+  // let an athlete look complete while Scout still had no idea of their goal.
+  let scoutProfile = null;
   const priorSummaryForPrompt = (body && typeof body.summary === "string") ? body.summary.trim() : "";
   // Step 8 telemetry, threaded into every logRouting() call below so a
   // degraded reply is never recorded as a clean one.
@@ -2836,7 +2842,7 @@ export default async function handler(req, res) {
     // getCapabilityKnowledge is global and cached. The GOLSZ Core lookup
     // can't run here because it needs athleteState.sport, so it runs
     // alongside the classifier below instead.
-    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
+    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
       getProfileMeta(userId),
       getAthleteState(userId),
       getPlanKnowledge(),
@@ -2884,7 +2890,7 @@ export default async function handler(req, res) {
     scoutState = deriveScoutState(authContext && authContext.athlete, readiness, { profileConfirmedAt }, athleteState);
     athleteBlock += stateDirective(scoutState, readiness);
     // Persist only when it actually changes, so a normal turn adds no write.
-    if (scoutState !== storedState || readiness.ready !== undefined) {
+    if (scoutState !== storedState || readiness.ready !== storedReady) {
       const svcKey = process.env.SUPABASE_SERVICE_KEY;
       fetch(`${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}`, {
         method: "PATCH",
@@ -2892,6 +2898,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({ scout_state: scoutState, scout_profile_ready: readiness.ready }),
       }).catch((e) => console.error("GOLSZ scout state persist failed:", e));
     }
+    scoutProfile = { state: scoutState, label: SCOUT_STATES[scoutState], readiness: readiness.score, ready: readiness.ready };
     console.log("GOLSZ scout state:", JSON.stringify({ state: scoutState, label: SCOUT_STATES[scoutState], readiness: readiness.score, ready: readiness.ready, missingCritical: readiness.missingCritical }));
     // Scout's own running note on the conversation. Labelled explicitly
     // because it used to be pasted into the USER message by the client, so
@@ -3057,6 +3064,7 @@ export default async function handler(req, res) {
         stop_reason: "end_turn",
         scout_summary: updatedSummary,
         scout_usage: reservedQuestion ? { remaining: questionsRemaining, limit: dailyLimit } : undefined,
+        scout_profile: scoutProfile,
         next_move: extractNextBestAction(classification),
       };
       await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
@@ -3125,6 +3133,7 @@ export default async function handler(req, res) {
         await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
         cached.scout_summary = updatedSummary;
         if (reservedQuestion) cached.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
+        cached.scout_profile = scoutProfile;
         cached.next_move = extractNextBestAction(classification);
         return res.status(200).json(cached);
       }
@@ -3178,6 +3187,7 @@ export default async function handler(req, res) {
         data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
     data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
+        data.scout_profile = scoutProfile;
         // next_move is THIS request's own classification result, not a fact
         // about the shared cached answer — attached only after
         // setCachedResponse's JSON.stringify has already run (synchronously,
@@ -3269,6 +3279,7 @@ export default async function handler(req, res) {
         data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
     data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
+        data.scout_profile = scoutProfile;
         data.next_move = extractNextBestAction(classification);
         data.suggested_targets = extractSuggestedTargets(data);
         data.suggested_dev_items = extractSuggestedDevItems(data);

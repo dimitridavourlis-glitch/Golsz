@@ -420,7 +420,7 @@ const I18N = {
     banned_title: "Account suspended", banned_message: "Your GOLSZ account has been suspended. If you think this is a mistake, contact support.",
     appeal_start: "Appeal this suspension", appeal_placeholder: "Explain why you think this suspension is a mistake…", appeal_submit: "Submit appeal", appeal_submitted: "Your appeal has been submitted. A moderator will review it.",
     verify_title: "Get verified", verify_desc: "Request identity verification for your role. Optionally include a link to supporting proof (e.g. a club or federation profile).", verify_proof_placeholder: "Proof URL (optional)", verify_submit: "Request verification", verify_pending: "Your verification request is pending review.", verify_submitted: "Verification request submitted.",
-    scout_header: "AI SCOUT", scout_fields_on_file: "FIELDS ON FILE", scout_live_agent: "LIVE AGENT", scout_questions_left: "QUESTIONS LEFT TODAY",
+    scout_header: "AI SCOUT", scout_profile_built: "PROFILE BUILT", scout_live_agent: "LIVE AGENT", scout_questions_left: "QUESTIONS LEFT TODAY",
     scout_history_title: "History", scout_new_chat: "New chat", scout_no_past: "No past conversations yet.",
     scout_new_conversation: "New conversation", scout_ago_messages: " messages", scout_delete_conv: "Delete conversation",
     scout_scout_label: "SCOUT", scout_input_ph: "Talk to your scout…",
@@ -706,7 +706,7 @@ const I18N = {
     verify_title: "Se faire vérifier", verify_desc: "Demandez une vérification d'identité pour votre rôle. Vous pouvez inclure un lien vers une preuve (profil de club ou de fédération, par exemple).", verify_proof_placeholder: "Lien de preuve (facultatif)", verify_submit: "Demander la vérification", verify_pending: "Votre demande de vérification est en cours d'examen.", verify_submitted: "Demande de vérification envoyée.",
     admin_add_event: "AJOUTER UN ÉVÉNEMENT", admin_title_ph: "Titre", admin_location_ph: "Lieu", admin_level_ph: "Niveau",
     admin_spots_ph: "Places disponibles", admin_create_event: "Créer l'événement",
-    scout_header: "AI SCOUT", scout_fields_on_file: "CHAMPS ENREGISTRÉS", scout_live_agent: "AGENT EN DIRECT", scout_questions_left: "QUESTIONS RESTANTES AUJOURD'HUI",
+    scout_header: "AI SCOUT", scout_profile_built: "PROFIL CONSTRUIT", scout_live_agent: "AGENT EN DIRECT", scout_questions_left: "QUESTIONS RESTANTES AUJOURD'HUI",
     scout_history_title: "Historique", scout_new_chat: "Nouvelle discussion", scout_no_past: "Aucune conversation passée.",
     scout_new_conversation: "Nouvelle conversation", scout_ago_messages: " messages", scout_delete_conv: "Supprimer la conversation",
     scout_scout_label: "SCOUT", scout_input_ph: "Parlez à votre agent…",
@@ -992,7 +992,7 @@ const I18N = {
     verify_title: "Verificarse", verify_desc: "Solicita la verificación de identidad para tu rol. Puedes incluir un enlace de prueba (por ejemplo, un perfil de club o federación).", verify_proof_placeholder: "Enlace de prueba (opcional)", verify_submit: "Solicitar verificación", verify_pending: "Tu solicitud de verificación está pendiente de revisión.", verify_submitted: "Solicitud de verificación enviada.",
     admin_add_event: "AÑADIR EVENTO", admin_title_ph: "Título", admin_location_ph: "Ubicación", admin_level_ph: "Nivel",
     admin_spots_ph: "Plazas disponibles", admin_create_event: "Crear evento",
-    scout_header: "AI SCOUT", scout_fields_on_file: "CAMPOS REGISTRADOS", scout_live_agent: "AGENTE EN VIVO", scout_questions_left: "PREGUNTAS RESTANTES HOY",
+    scout_header: "AI SCOUT", scout_profile_built: "PERFIL COMPLETADO", scout_live_agent: "AGENTE EN VIVO", scout_questions_left: "PREGUNTAS RESTANTES HOY",
     scout_history_title: "Historial", scout_new_chat: "Nuevo chat", scout_no_past: "Aún no hay conversaciones pasadas.",
     scout_new_conversation: "Nueva conversación", scout_ago_messages: " mensajes", scout_delete_conv: "Eliminar conversación",
     scout_scout_label: "SCOUT", scout_input_ph: "Habla con tu agente…",
@@ -1278,7 +1278,7 @@ const I18N = {
     verify_title: "Λάβετε επαλήθευση", verify_desc: "Ζητήστε επαλήθευση ταυτότητας για τον ρόλο σας. Προαιρετικά, προσθέστε έναν σύνδεσμο απόδειξης (π.χ. προφίλ συλλόγου ή ομοσπονδίας).", verify_proof_placeholder: "Σύνδεσμος απόδειξης (προαιρετικό)", verify_submit: "Αίτημα επαλήθευσης", verify_pending: "Το αίτημα επαλήθευσής σας εκκρεμεί προς έλεγχο.", verify_submitted: "Το αίτημα επαλήθευσης υποβλήθηκε.",
     admin_add_event: "ΠΡΟΣΘΗΚΗ ΕΚΔΗΛΩΣΗΣ", admin_title_ph: "Τίτλος", admin_location_ph: "Τοποθεσία", admin_level_ph: "Επίπεδο",
     admin_spots_ph: "Διαθέσιμες θέσεις", admin_create_event: "Δημιουργία εκδήλωσης",
-    scout_header: "AI SCOUT", scout_fields_on_file: "ΠΕΔΙΑ ΚΑΤΑΧΩΡΗΜΕΝΑ", scout_live_agent: "ΖΩΝΤΑΝΟΣ ΠΡΑΚΤΟΡΑΣ", scout_questions_left: "ΕΡΩΤΗΣΕΙΣ ΠΟΥ ΑΠΟΜΕΝΟΥΝ ΣΗΜΕΡΑ",
+    scout_header: "AI SCOUT", scout_profile_built: "ΠΡΟΦΙΛ ΟΛΟΚΛΗΡΩΜΕΝΟ", scout_live_agent: "ΖΩΝΤΑΝΟΣ ΠΡΑΚΤΟΡΑΣ", scout_questions_left: "ΕΡΩΤΗΣΕΙΣ ΠΟΥ ΑΠΟΜΕΝΟΥΝ ΣΗΜΕΡΑ",
     scout_history_title: "Ιστορικό", scout_new_chat: "Νέα συνομιλία", scout_no_past: "Δεν υπάρχουν προηγούμενες συνομιλίες ακόμα.",
     scout_new_conversation: "Νέα συνομιλία", scout_ago_messages: " μηνύματα", scout_delete_conv: "Διαγραφή συνομιλίας",
     scout_scout_label: "SCOUT", scout_input_ph: "Μιλήστε στον σκάουτ σας…",
@@ -6536,6 +6536,14 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
   // reply/limit-reached response arrives, or forever null for an admin/
   // unlimited account (server omits scout_usage in that case).
   const [scoutUsage, setScoutUsage] = useState(null);
+  // Weighted profile readiness, computed SERVER-side (scoutReadiness in
+  // api/scout.js) and sent as data.scout_profile. It deliberately replaces
+  // the old `known.length` count of non-empty keys: that number could read
+  // "11 FIELDS ON FILE" for an athlete whose goal, level and club Scout
+  // still did not know, so it overstated how well Scout understood them.
+  // Null until the first reply of the session, in which case the header
+  // falls back to the plain LIVE AGENT label rather than guessing.
+  const [scoutProfileMeta, setScoutProfileMeta] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState(null);
   const [photo, setPhoto] = useState(null); // { dataUrl, mediaType, data } — one pending attachment
@@ -6853,6 +6861,7 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       // limit-reached (402) responses — capture it either way so the
       // header's "questions left today" count updates even on a refusal.
       if (data && data.scout_usage && typeof data.scout_usage === "object") setScoutUsage(data.scout_usage);
+      if (data && data.scout_profile && typeof data.scout_profile === "object") setScoutProfileMeta(data.scout_profile);
       // A non-2xx response (rate limit, auth hiccup, upstream 5xx) still
       // arrives here as valid JSON — without this check data.content is
       // undefined, raw ends up "", and an empty assistant bubble gets
@@ -7024,7 +7033,6 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
     } catch (e) { console.error("GOLSZ save drafted email error:", e); }
   }
 
-  const known = Object.keys(profile).filter((k) => profile[k]);
   const isPlayerChat = !profile.occupation || profile.occupation === "Player";
   const CHIPS = chipsFor(t, isPlayerChat);
   // Topic rows (Master UX/UI redesign — "Scout should be visually the
@@ -7062,7 +7070,7 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
           )}
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             <span style={{ fontSize: 9, color: C.slate, fontFamily: "'Space Mono', monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {scoutUsage ? `${scoutUsage.remaining} ${t("scout_questions_left")}` : known.length ? `${known.length} ${t("scout_fields_on_file")}` : t("scout_live_agent")}
+              {scoutUsage ? `${scoutUsage.remaining} ${t("scout_questions_left")}` : scoutProfileMeta && typeof scoutProfileMeta.readiness === "number" ? `${scoutProfileMeta.readiness}% ${t("scout_profile_built")}` : t("scout_live_agent")}
             </span>
             <button onClick={openHistory} title={t("scout_history_title")} style={iconBtn(showHistory ? C.lime : C.slate)}><History size={15} /></button>
             <button onClick={newChat} title={t("scout_new_chat")} style={iconBtn(C.lime)}><Plus size={16} /></button>
