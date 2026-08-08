@@ -46,7 +46,8 @@ begin
 
   select plan, is_admin, ai_unlimited, goal_defined, goal_text,
          scout_state, scout_profile_ready, scout_profile_confirmed_at,
-         scout_trial_started_at, scout_trial_used, free_ai_lifetime_used
+         scout_trial_started_at, scout_trial_used, free_ai_lifetime_used,
+         scout_assessment
     into v_profile from profiles where id = p_user;
 
   if not found then return jsonb_build_object('found', false); end if;
@@ -88,7 +89,12 @@ begin
     'fields', to_jsonb(v_athlete),
     'memory_by_type', v_mem,
     'memory_total', v_mem_total,
-    'research_cache_rows', v_research
+    'research_cache_rows', v_research,
+    -- Existence and date only, never the text. The assessment is Scout's
+    -- written read of one athlete (strengths, gaps, the level it thinks they
+    -- can reach) -- the same category as scout_memory, so the same rule.
+    'has_assessment', (v_profile.scout_assessment is not null),
+    'assessment_at', v_profile.scout_assessment->>'created_at'
   );
 end;
 $$;

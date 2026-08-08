@@ -6508,6 +6508,13 @@ function AdminPanel({ onBack }) {
                       {row("confirmed_at", scoutDebug.scout_profile_confirmed_at)}
                       {row("goal_defined", scoutDebug.goal_defined)}
                       {row("goal_text", scoutDebug.goal_text)}
+                      {/* Existence and date only. The assessment is Scout's
+                          written read of one specific athlete — strengths,
+                          gaps, the level it thinks they can reach — which is
+                          the same category of thing as scout_memory, so the
+                          same rule applies: staff can see THAT it exists,
+                          not what it says. */}
+                      {row("assessment", scoutDebug.assessment_at || (scoutDebug.has_assessment ? "yes" : false))}
                     </div>
 
                     <div style={card}>

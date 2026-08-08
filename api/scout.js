@@ -1002,7 +1002,7 @@ function salvageJsonValue(raw, key) {
 const REPLY_FIELDS = [
   "reply", "memory_writes", "research_note", "profile_updates",
   "scout_context_updates", "suggested_targets", "suggested_dev_items",
-  "suggested_pathway", "drafted_email", "profile_confirmed",
+  "suggested_pathway", "drafted_email", "profile_confirmed", "assessment",
 ];
 
 function parseReplyObject(clean) {
@@ -1298,7 +1298,7 @@ Be honest before you are encouraging. If something is unrealistic, say so kindly
 SCOUT MEMORY (when present in the message) is your own durable memory of this athlete from earlier conversations, already split by trust: things they TOLD you are confirmed and must never be re-asked; things you INFERRED are not confirmed, so confirm one in passing before you build advice on it. "Still unknown" lists what you'd most benefit from learning — prefer those over generic questions.
 GOLSZ KNOWLEDGE (when present) is GOLSZ's own verified, curated reference on sport/eligibility/pathway rules. Prefer it over your own recollection and over a web result when they disagree, and cite it naturally ("GOLSZ's eligibility reference says..."). If it's absent or doesn't cover the question, say what you actually know and use web search — never invent a GOLSZ rule.
 GOLSZ CAPABILITIES (when present) is the real, current list of what the product can and cannot do. Anything listed as NOT part of GOLSZ does not exist — never suggest it, never imply it's coming, and never tell an athlete to find or contact someone through it. When a task needs something GOLSZ doesn't do, say plainly that GOLSZ doesn't do it and give them the real off-platform way to do it themselves.
-OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","memory_writes":[{"type":"...","subject":"...","content":"...","source":"athlete_stated|ai_inferred","confidence":0-1,"importance":1-5}],"research_note":{"summary":"...","confidence":0-1,"valid_days":N} or null,"profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"drafted_email":"the full drafted email text" or null,"profile_confirmed":true ONLY on the turn where the athlete confirms your summary of them is right, else null}
+OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","memory_writes":[{"type":"...","subject":"...","content":"...","source":"athlete_stated|ai_inferred","confidence":0-1,"importance":1-5}],"research_note":{"summary":"...","confidence":0-1,"valid_days":N} or null,"profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"drafted_email":"the full drafted email text" or null,"profile_confirmed":true ONLY on the turn where the athlete confirms your summary of them is right, else null,"assessment":{"strengths":["..."],"gaps":["..."],"realistic_level":"the level they can realistically reach and by when","focus_next_90_days":"..."} ONLY when explicitly asked for below, else null}
 Allowed profile_updates keys: name, age, dob, occupation, sport, position, secondary_position, home_city, home_country, current_city, current_country, citizenship, club, previous_clubs, level, grad_year, gpa, license, looking_for_players, education_level, goal. Location is FOUR separate things and you must never merge them: home_city/home_country are where they are FROM, current_city/current_country are where they are NOW, citizenship is the passport they hold. Only set the one they actually told you about — setting the wrong one corrupts the record. previous_clubs is an array of {"name","from","to","level"} for clubs they have LEFT; the club they are at now goes in "club". Prefer dob (YYYY-MM-DD) over age when you know it. Do not repeat known fields. "goal" should be a real, clearly-stated goal the athlete actually confirmed (e.g. "play NCAA D1 soccer"), not a vague guess — setting it marks their goal as officially defined, so only set it once you're genuinely sure.
 Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need, budget. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
 Only include research_note when THIS reply actually used web search to establish reusable factual findings (a league structure, an eligibility rule, a transfer window, a country's pathway, position benchmarks). Write summary as standalone reference notes that would still be correct and useful for a DIFFERENT athlete asking the same question — plain facts and figures, no advice, no "you"/"your", no reference to this athlete's own situation. valid_days is how long the finding stays trustworthy: 7 for anything with an active deadline or window, 30-90 for stable rules and structures. Omit entirely when you answered from your own knowledge, from PRIOR RESEARCH, or from GOLSZ KNOWLEDGE without searching.
@@ -2283,6 +2283,61 @@ async function recordProfileConfirmation(userId, scoutState, data) {
   }
 }
 
+// State 3 is called ASSESSED, so an assessment has to actually exist. This
+// writes it ONCE, the first time an athlete reaches state 3, and it is then
+// read back into every later prompt — so Scout's read of an athlete is a
+// stable thing it committed to, not something silently re-derived (and
+// quietly drifting) on every session.
+//
+// Bounded hard on the way in: 5 strengths, 5 gaps, short strings. The model
+// is asked for this on exactly one turn, so a runaway object cannot become a
+// permanent fixture of every future prompt.
+function extractAssessment(data) {
+  try {
+    const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
+    const parsed = parseReplyObject(raw.replace(/```json|```/g, "").trim());
+    const a = parsed && parsed.assessment;
+    if (!a || typeof a !== "object" || Array.isArray(a)) return null;
+    const list = (v) => (Array.isArray(v) ? v : [])
+      .filter((x) => typeof x === "string" && x.trim())
+      .slice(0, 5)
+      .map((x) => x.trim().slice(0, 200));
+    const str = (v) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 300) : null);
+    const out = {
+      strengths: list(a.strengths),
+      gaps: list(a.gaps),
+      realistic_level: str(a.realistic_level),
+      focus_next_90_days: str(a.focus_next_90_days),
+      created_at: new Date().toISOString(),
+    };
+    // An assessment with nothing in it is not an assessment. Returning null
+    // here means the athlete simply gets asked again next turn, rather than
+    // an empty object being stored and never revisited.
+    if (!out.strengths.length && !out.gaps.length && !out.realistic_level) return null;
+    return out;
+  } catch { return null; }
+}
+
+async function persistAssessment(userId, assessment) {
+  const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key || !userId || !assessment) return false;
+  try {
+    // is.null guard: first assessment wins, so a later turn cannot silently
+    // overwrite what the athlete was already told.
+    const r = await fetch(`${url}/rest/v1/profiles?id=eq.${userId}&scout_assessment=is.null`, {
+      method: "PATCH",
+      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ scout_assessment: assessment }),
+    });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    console.log("GOLSZ scout assessment stored:", JSON.stringify({ strengths: assessment.strengths.length, gaps: assessment.gaps.length }));
+    return true;
+  } catch (e) {
+    console.error("GOLSZ persist assessment failed:", e);
+    return false;
+  }
+}
+
 async function buildAuthoritativeContext(userId) {
   const supaUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
@@ -2430,7 +2485,7 @@ async function getUserId(authHeader) {
 async function getProfileMeta(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null, profileConfirmedAt: null, storedState: 0, storedReady: false, trialStartedAt: null, trialUsed: 0 };
+  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null, profileConfirmedAt: null, storedState: 0, storedReady: false, trialStartedAt: null, trialUsed: 0, storedAssessment: null };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let plan = "starter";
   let isAdmin = false;
@@ -2442,8 +2497,9 @@ async function getProfileMeta(userId) {
   let storedReady = false;
   let trialStartedAt = null;
   let trialUsed = 0;
+  let storedAssessment = null;
   try {
-    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text,scout_state,scout_profile_ready,scout_profile_confirmed_at,scout_trial_started_at,scout_trial_used", { headers });
+    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text,scout_state,scout_profile_ready,scout_profile_confirmed_at,scout_trial_started_at,scout_trial_used,scout_assessment", { headers });
     const rows = await p.json();
     if (Array.isArray(rows) && rows[0]) {
       plan = rows[0].plan || "starter";
@@ -2456,9 +2512,10 @@ async function getProfileMeta(userId) {
       storedReady = rows[0].scout_profile_ready === true;
       trialStartedAt = rows[0].scout_trial_started_at || null;
       trialUsed = Number(rows[0].scout_trial_used) || 0;
+      storedAssessment = rows[0].scout_assessment || null;
     }
   } catch {}
-  return { plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady, trialStartedAt, trialUsed };
+  return { plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady, trialStartedAt, trialUsed, storedAssessment };
 }
 
 // GOLSZ Final Product / AI Scout / Pathway / Elite Architecture directive
@@ -2943,7 +3000,7 @@ export default async function handler(req, res) {
     // getCapabilityKnowledge is global and cached. The GOLSZ Core lookup
     // can't run here because it needs athleteState.sport, so it runs
     // alongside the classifier below instead.
-    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady, trialStartedAt, trialUsed }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
+    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady, trialStartedAt, trialUsed, storedAssessment }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
       getProfileMeta(userId),
       getAthleteState(userId),
       getPlanKnowledge(),
@@ -3000,7 +3057,19 @@ export default async function handler(req, res) {
         body: JSON.stringify({ scout_state: scoutState, scout_profile_ready: readiness.ready }),
       }).catch((e) => console.error("GOLSZ scout state persist failed:", e));
     }
-    scoutProfile = { state: scoutState, label: SCOUT_STATES[scoutState], readiness: readiness.score, ready: readiness.ready };
+    // Ask for the assessment on the first turn at state 3+, then stop asking
+    // and start telling. Two different jobs, so two different blocks.
+    if (scoutState >= 3 && !storedAssessment) {
+      athleteBlock += `\n\nASSESSMENT DUE: you now understand this athlete and they have confirmed it. Alongside your normal reply, fill in "assessment" this once — your honest read of their strengths, their real gaps, the level you believe they can realistically reach and by when, and what the next 90 days should be about. Be straight with them in the reply itself too; this is the moment they find out whether you are worth listening to.`;
+    } else if (storedAssessment) {
+      const a = storedAssessment;
+      athleteBlock += `\n\nYOUR EARLIER ASSESSMENT OF THIS ATHLETE (you committed to this — build on it, and say so plainly if new evidence changes it):`
+        + (a.strengths && a.strengths.length ? `\nStrengths: ${a.strengths.join("; ")}` : "")
+        + (a.gaps && a.gaps.length ? `\nGaps: ${a.gaps.join("; ")}` : "")
+        + (a.realistic_level ? `\nRealistic level: ${a.realistic_level}` : "")
+        + (a.focus_next_90_days ? `\nNext 90 days: ${a.focus_next_90_days}` : "");
+    }
+    scoutProfile = { state: scoutState, label: SCOUT_STATES[scoutState], readiness: readiness.score, ready: readiness.ready, has_assessment: !!storedAssessment };
     console.log("GOLSZ scout state:", JSON.stringify({ state: scoutState, label: SCOUT_STATES[scoutState], readiness: readiness.score, ready: readiness.ready, missingCritical: readiness.missingCritical }));
     // Scout's own running note on the conversation. Labelled explicitly
     // because it used to be pasted into the USER message by the client, so
@@ -3337,6 +3406,10 @@ export default async function handler(req, res) {
         if (await recordProfileConfirmation(userId, scoutState, data)) {
           data.scout_profile = { ...scoutProfile, state: 3, label: SCOUT_STATES[3] };
         }
+        if (scoutState >= 3 && !storedAssessment) {
+          const assessment = extractAssessment(data);
+          if (assessment) await persistAssessment(userId, assessment);
+        }
         // next_move is THIS request's own classification result, not a fact
         // about the shared cached answer — attached only after
         // setCachedResponse's JSON.stringify has already run (synchronously,
@@ -3432,6 +3505,10 @@ export default async function handler(req, res) {
         if (trialInfo) data.scout_trial = trialInfo;
         if (await recordProfileConfirmation(userId, scoutState, data)) {
           data.scout_profile = { ...scoutProfile, state: 3, label: SCOUT_STATES[3] };
+        }
+        if (scoutState >= 3 && !storedAssessment) {
+          const assessment = extractAssessment(data);
+          if (assessment) await persistAssessment(userId, assessment);
         }
         data.next_move = extractNextBestAction(classification);
         data.suggested_targets = extractSuggestedTargets(data);
