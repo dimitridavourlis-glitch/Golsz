@@ -3829,56 +3829,6 @@ function computePathwayScore(pathway, targetsCount) {
   return { score: Math.min(100, score), hasPathway: !!pathway, milestonesDone: milestones.filter((m) => m.done).length, milestonesTotal: milestones.length, targetsCount };
 }
 
-// GOLSZ Final Product / AI Scout / Pathway / Elite Architecture directive
-// §11 "database-first state logic — do not ask the LLM to infer product
-// state." Pure, deterministic, no AI call — this is the authoritative
-// "what should this athlete do right now" decision for the Home dashboard;
-// Scout (see api/scout.js stateBlock) narrates around the SAME early
-// stages (profile/goal/plan/baseline/pathway) but never decides them, and
-// this function is the one place the fuller ladder (target/follow-up/
-// benchmark staleness) is computed at all — deliberately only here, not
-// re-run on every Scout message, since it needs data (all targets, all
-// benchmarks) that's already loaded for Home's own cards but would be
-// wasteful to re-fetch per chat message for a dashboard-level nudge.
-// TARGET_WORK/FOLLOW_UP is a deliberate merge of the directive's separate
-// "TARGET_WORK"/"OUTREACH"/"FOLLOW_UP" states into two: GOLSZ doesn't
-// currently track a distinct "identified but not yet contacted" outreach
-// stage separately from "stuck in an active status too long" (monthly's
-// existing staleTargets signal, same 7-day threshold
-// api/target-followup-reminders.js already uses) — reusing that one real
-// signal is more honest than inventing a third derived state with no
-// backing data behind it.
-const BENCHMARK_RETEST_DAYS = 60;
-function computeNextMove({ profileComplete, goalDefined, plan, baselineComplete, pathwayCreated, targetsCount, staleTargets, mostRecentBenchmarkDate }) {
-  if (!profileComplete) return "COMPLETE_PROFILE";
-  if (!goalDefined) return "DEFINE_GOAL";
-  if (plan === "free") return "INVITE_TO_PATHWAY";
-  if (!baselineComplete) return "ESTABLISH_BASELINE";
-  if (!pathwayCreated) return "BUILD_PATHWAY";
-  if (!targetsCount) return "TARGET_WORK";
-  if (staleTargets > 0) return "FOLLOW_UP";
-  if (!mostRecentBenchmarkDate || (Date.now() - new Date(mostRecentBenchmarkDate).getTime()) > BENCHMARK_RETEST_DAYS * 24 * 60 * 60 * 1000) return "RETEST";
-  return "REVIEW_PROGRESS";
-}
-// Where the "act on this" button for each deterministic type should send
-// the athlete — every type funnels to a real, already-built page; Scout
-// is the right destination for anything conversational (goal-setting,
-// baseline, Pathway-building), Targets for target/outreach work, Profile
-// for finishing the Passport itself.
-// Icon per deterministic type, purely presentational (Master UX/UI
-// redesign — the Next Move card should carry a visible icon + explicit
-// button, not just be a clickable card with no affordance).
-const NEXT_MOVE_TYPE_ICON = {
-  COMPLETE_PROFILE: User, DEFINE_GOAL: Radar, INVITE_TO_PATHWAY: Compass,
-  ESTABLISH_BASELINE: Radar, BUILD_PATHWAY: Compass, TARGET_WORK: Target,
-  FOLLOW_UP: Mail, RETEST: Flame, REVIEW_PROGRESS: BadgeCheck,
-};
-const NEXT_MOVE_TYPE_TARGET_PAGE = {
-  COMPLETE_PROFILE: "profile", DEFINE_GOAL: "scout", INVITE_TO_PATHWAY: "scout",
-  ESTABLISH_BASELINE: "scout", BUILD_PATHWAY: "scout", TARGET_WORK: "targets",
-  FOLLOW_UP: "targets", RETEST: "profile", REVIEW_PROGRESS: "scout",
-};
-
 // Plan-gating — re-mapped per the GOLSZ Final Product / AI Scout / Pathway
 // / Elite Architecture directive §5/§6: FREE = "understand me" (Passport +
 // capped Scout only, unchanged). BASIC = "build my path" — Pathway, My
@@ -6655,12 +6605,6 @@ function newScoutConvId() {
   return (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
 }
 
-// "My Next Move" (see extractNextBestAction in api/scout.js) — icon + "why"
-// copy per type, keyed the same as the server's NEXT_ACTION_TYPES so an
-// unrecognized/legacy type just falls back to the ask_scout treatment
-// rather than rendering blank.
-const NEXT_MOVE_ICONS = { ask_scout: Radar, complete_profile: User, share_passport: Share2 };
-const NEXT_MOVE_WHY_KEY = { ask_scout: "next_move_why_ask_scout", complete_profile: "next_move_why_complete_profile", share_passport: "next_move_why_share_passport" };
 
 function Scout({ onGoToProfile, plan, onUpgrade }) {
   const { t, lang } = useLang();
@@ -6678,13 +6622,6 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
   // mount alongside profile/scout_context; never refreshed mid-
   // conversation since Scout itself doesn't write to this table.
   const [benchmarkSummary, setBenchmarkSummary] = useState({});
-  // { type, label, params } | null — "My Next Move" (see extractNextBestAction
-  // in api/scout.js). A real, persistent, explainable UI object rather than
-  // one more chat bubble: loaded from the last conversation's ai_meta on
-  // mount, refreshed from every reply's next_move field, cleared server-side
-  // (dismiss_next_move RPC, migration 070) on "mark done" so a stale
-  // suggestion doesn't reappear on reload.
-  const [nextMove, setNextMove] = useState(null);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   // Separate from `busy`: `busy` drives the in-chat "thinking" bubble, which
@@ -6786,8 +6723,6 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
             if (v != null && v !== "") flatContext[k] = v;
           }
           if (Object.keys(flatContext).length) setScoutContext(flatContext);
-          const aiMeta = ath.scout_context.ai_meta;
-          if (aiMeta && aiMeta.next_best_action && typeof aiMeta.next_best_action === "object") setNextMove(aiMeta.next_best_action);
         }
 
         const { data, error } = await sb
@@ -7071,7 +7006,6 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
         });
       }
       if (typeof data.scout_summary === "string") setSummary(data.scout_summary);
-      if (Object.prototype.hasOwnProperty.call(data, "next_move")) setNextMove(data.next_move || null);
       // suggested_targets/suggested_dev_items (brief §2B "persistent
       // actions") are already server-validated/capped — attached straight
       // to this specific message so the "add these" buttons render right
@@ -7108,16 +7042,6 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
     } finally { setBusy(false); setPending(false); sendingRef.current = false; }
   }
 
-  // "ask_scout" pre-fills the composer rather than auto-sending — the
-  // athlete should always see and can edit what's about to be sent, same
-  // as tapping a chip. "complete_profile"/"share_passport" hand off to
-  // Passport via the same onGoToProfile GolszApp already uses for its own
-  // nav — Scout has no navigation state of its own.
-  function actOnNextMove() {
-    if (!nextMove) return;
-    if (nextMove.type === "ask_scout" && nextMove.params && nextMove.params.prompt) setInput(nextMove.params.prompt);
-    else if ((nextMove.type === "complete_profile" || nextMove.type === "share_passport") && onGoToProfile) onGoToProfile();
-  }
   // Drops the failure bubble and sends the same text again. The bubble is
   // removed first so a second failure does not stack — the athlete should
   // see one error at a time, not a growing wall of them.
@@ -7125,16 +7049,6 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
     if (!text || pending || sendingRef.current) return;
     setMsgs((m) => m.filter((_, i) => i !== msgIndex));
     send(text);
-  }
-
-  // Clears server-side too (dismiss_next_move, migration 070) so a stale
-  // suggestion doesn't just reappear on the next reload — see nextMove's
-  // own comment above for why a plain client-side hide isn't enough.
-  async function dismissNextMove() {
-    setNextMove(null);
-    if (!sb) return;
-    try { const { error } = await sb.rpc("dismiss_next_move"); if (error) throw error; }
-    catch (e) { console.error("GOLSZ dismiss next-move error:", e); }
   }
 
   // Brief §2B "persistent actions": one tap turns Scout's suggested_targets/
@@ -7253,30 +7167,6 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
           </span>
         </div>
       </div>
-
-      {!showHistory && nextMove && hasFeature(plan, "next_move") && (
-        <div style={{ margin: "10px 12px 0", background: "#D4AF371a", border: `1px solid ${C.limeBorder}`, borderRadius: 12, padding: "10px 12px" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-            {React.createElement(NEXT_MOVE_ICONS[nextMove.type] || Radar, { size: 15, color: C.lime, style: { marginTop: 1, flexShrink: 0 } })}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 9, letterSpacing: "0.14em", color: C.slate, fontWeight: 700, marginBottom: 3 }}>{t("next_move_title")}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.chalk, marginBottom: 2 }}>{nextMove.label}</div>
-              <div style={{ fontSize: 11, color: C.slate }}>{t(NEXT_MOVE_WHY_KEY[nextMove.type] || "next_move_why_ask_scout")}</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
-            <button onClick={actOnNextMove} style={{ ...iconBtn(C.lime), fontSize: 12 }}>{t("next_move_act")}</button>
-            <button onClick={dismissNextMove} style={{ ...iconBtn(C.slate), fontSize: 12 }}>{t("next_move_dismiss")}</button>
-          </div>
-        </div>
-      )}
-      {!showHistory && nextMove && !hasFeature(plan, "next_move") && (
-        <div style={{ margin: "10px 12px 0", background: C.turf, border: `1px dashed ${C.line2}`, borderRadius: 12, padding: "9px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-          <Lock size={13} color={C.slate} style={{ flexShrink: 0 }} />
-          <div style={{ fontSize: 11.5, color: C.slate, flex: 1 }}>{t("next_move_locked")}</div>
-          <button onClick={onUpgrade} style={{ background: "none", border: "none", color: C.lime, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{t("feature_lock_cta")}</button>
-        </div>
-      )}
 
       {showHistory ? (
         <div style={{ flex: 1, overflowY: "auto", padding: "14px 12px 6px" }}>
@@ -7564,7 +7454,6 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
   const [pathwayRow, setPathwayRow] = useState(null);
   const [recentBenchmarks, setRecentBenchmarks] = useState([]);
   const [monthly, setMonthly] = useState(null);
-  const [nextMove, setNextMove] = useState(null);
   const [name, setName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   // Deterministic state-machine inputs (directive §11) — profileComplete
@@ -7618,8 +7507,6 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
         const followUpStatuses = new Set(["preparing", "contacted", "follow_up"]);
         const staleTargets = (targets || []).filter((tg) => followUpStatuses.has(tg.status) && new Date(tg.updated_at).getTime() < staleCutoff).length;
         setMonthly({ activeDevItems: (devItems || []).filter((i) => i.status === "active").length, staleTargets });
-        const aiMeta = ath && ath.scout_context && ath.scout_context.ai_meta;
-        if (aiMeta && aiMeta.next_best_action && typeof aiMeta.next_best_action === "object") setNextMove(aiMeta.next_best_action);
       } catch (e) { console.error("GOLSZ home load error:", e); }
       setLoaded(true);
     })();
@@ -7669,18 +7556,6 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
     { key: "performance", ok: !!(performance && performance.metricsTracked > 0) },
     { key: "pathway", ok: !!(pathway && pathway.hasPathway) },
   ];
-  const deterministicType = computeNextMove({
-    profileComplete, goalDefined, plan, baselineComplete: !!(pathwayRow && pathwayRow.baseline_complete),
-    pathwayCreated: !!pathwayRow, targetsCount: pathway ? pathway.targetsCount : 0,
-    staleTargets: monthly ? monthly.staleTargets : 0,
-    mostRecentBenchmarkDate: recentBenchmarks[0] ? recentBenchmarks[0].recorded_date : null,
-  });
-  // computeNextMove() returns UPPER_SNAKE (also used as-is to key
-  // NEXT_MOVE_TYPE_TARGET_PAGE below) but next_move_type_* i18n keys are
-  // lower_snake — lowercase only at this one translation call site rather
-  // than changing the shared return values everyone else keys off of.
-  const nextMoveLabel = nextMove && nextMove.label ? nextMove.label : t("next_move_type_" + deterministicType.toLowerCase());
-
   return (
     <div style={{ padding: "8px 12px 20px" }}>
       {name && (
@@ -7711,26 +7586,6 @@ function HomeTab({ onNavigate, plan, onUpgrade }) {
 
       <SectionTitle>{t("home_path_title")}</SectionTitle>
       <PathwayStrip athlete={athlete} pathwayRow={pathwayRow} t={t} onNavigate={onNavigate} />
-
-      {/* My Next Move — every plan, Free included (Master UX/UI redesign
-          §5: "what should I do next" is Home's job for everyone, not a
-          paywalled add-on). Deterministic type drives WHAT/WHERE; Scout's
-          own last suggestion, when present, supplies the wording. */}
-      {(() => {
-        const NextIcon = NEXT_MOVE_TYPE_ICON[deterministicType] || Radar;
-        return (
-          <div style={{ ...highlightCard, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: "#0D12101a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <NextIcon size={18} color={C.ink} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.ink, opacity: 0.65, fontWeight: 700, marginBottom: 4 }}>{t("next_move_title")}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, lineHeight: 1.35 }}>{nextMoveLabel}</div>
-            </div>
-            <button onClick={() => onNavigate(NEXT_MOVE_TYPE_TARGET_PAGE[deterministicType] || "scout")} style={{ flexShrink: 0, background: C.ink, color: C.chalk, border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 10.5, fontWeight: 800, letterSpacing: "0.03em", cursor: "pointer", fontFamily: "inherit" }}>{t("next_move_act")}</button>
-          </div>
-        );
-      })()}
 
       <SectionTitle>{t("home_readiness_title")}</SectionTitle>
       <div style={{ ...card, marginBottom: 10 }}>
