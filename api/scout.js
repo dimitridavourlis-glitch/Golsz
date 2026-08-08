@@ -3015,6 +3015,12 @@ export default async function handler(req, res) {
   // ("PROFILE 62%") instead of the old naive count of non-empty keys, which
   // let an athlete look complete while Scout still had no idea of their goal.
   let scoutProfile = null;
+  // Hoisted, NOT left on the Promise.all destructure inside the if (userId)
+  // block: the reply paths below are outside that block and read it. Getting
+  // this wrong 502'd every state-3+ athlete in production — node --check
+  // cannot see it, because a ReferenceError is a runtime fact, not a syntax
+  // one.
+  let storedAssessment = null;
   const priorSummaryForPrompt = (body && typeof body.summary === "string") ? body.summary.trim() : "";
   // Step 8 telemetry, threaded into every logRouting() call below so a
   // degraded reply is never recorded as a clean one.
@@ -3070,7 +3076,7 @@ export default async function handler(req, res) {
     // getCapabilityKnowledge is global and cached. The GOLSZ Core lookup
     // can't run here because it needs athleteState.sport, so it runs
     // alongside the classifier below instead.
-    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady, trialStartedAt, trialUsed, storedAssessment }, athleteState, planKnowledge, authContext, capabilityRows] = await Promise.all([
+    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, profileConfirmedAt, storedState, storedReady, trialStartedAt, trialUsed, storedAssessment: loadedAssessment }, athleteState, planKnowledge, authContext, capabilityRows] = await Promise.all([
       getProfileMeta(userId),
       getAthleteState(userId),
       getPlanKnowledge(),
@@ -3089,6 +3095,7 @@ export default async function handler(req, res) {
     athleteSport = athleteState.sport;
     athleteCountry = athleteState.country;
     stateDigest = athleteStateDigest(athleteState, plan, goalDefined);
+    storedAssessment = loadedAssessment;
     userPlan = plan;
     if (!entitlementPlan) entitlementPlan = plan;
     userIsAdmin = isAdmin;
