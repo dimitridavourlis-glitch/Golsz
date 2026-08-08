@@ -151,7 +151,7 @@ function capTier(tier, plan) {
 // message, per the plan's "don't spend money on an additional AI
 // classification call" instruction. Reuses signals already computed for
 // free (classifier intent/needs_tool) plus cheap, local text heuristics.
-function complexityScore({ text, classification }) {
+function complexityScore({ text, classification, context }) {
   let score = 10; // floor — even the simplest real question isn't 0
   const len = (text || "").length;
   if (len > 600) score += 25;
@@ -172,6 +172,22 @@ function complexityScore({ text, classification }) {
   // against this exact worked example in a one-off test harness.
   if (/\b(strategy|long[- ]term|multi[- ]year|roadmap|comprehensive)\b/i.test(text || "")) score += 30;
   if (/\b([2-9]|\d{2,})\s*[- ]?years?\b/i.test(text || "")) score += 15;
+
+  // Step 5 — categories the directive names as requiring the strong model:
+  // career decisions, pathway comparisons, multi-country options,
+  // professional-readiness, NCAA/eligibility interpretation, and ambiguous
+  // situations involving multiple known facts.
+  if (/\b(pathway|options?|realistic|should i|worth it|better (off|to)|compare|versus|vs\.?|instead of|pivot|transfer|move (back|to)|go back|return)\b/i.test(text || "")) score += 20;
+  if (/\b(ncaa|naia|juco|eligibility|amateurism|clearinghouse|visa|work permit|citizenship|passport)\b/i.test(text || "")) score += 20;
+  if (/\b(pro|professional|trial|academy|contract|scout(ed|ing)?|signed)\b/i.test(text || "")) score += 10;
+
+  // A deictic relocation question ("if I go back", "my options here") is
+  // genuinely ambiguous cheap-model territory UNLESS the server already knows
+  // both places — at which point it is a concrete multi-country decision and
+  // belongs on the strong model. Same for an unresolved fact conflict, which
+  // needs careful handling rather than a fast guess.
+  if (context && context.twoLocationsKnown && /\b(back|home|return|here|there|move|relocat)\w*\b/i.test(text || "")) score += 25;
+  if (context && context.hasConflicts) score += 25;
 
   return Math.max(0, Math.min(100, score));
 }
@@ -575,8 +591,23 @@ const PROFILE_FIELD_MAP = {
   occupation: { table: "profiles", column: "occupation" },
   sport: { table: "athletes", column: "sport" },
   position: { table: "athletes", column: "position" },
-  location: { table: "athletes", column: "country" },
-  citizenship: { table: "athletes", column: "country" },
+  // Migration 105 split what used to be a single overloaded `country`
+  // column. `location` and `citizenship` BOTH pointed at it, so "I'm from
+  // Montreal" / "I moved to Cyprus" / "I'm Canadian" each silently
+  // overwrote the last — the direct cause of Scout confusing home location
+  // with current location. Each now has its own column.
+  home_city: { table: "athletes", column: "home_city" },
+  home_country: { table: "athletes", column: "home_country" },
+  current_city: { table: "athletes", column: "current_city" },
+  current_country: { table: "athletes", column: "country" },
+  citizenship: { table: "athletes", column: "citizenship" },
+  // Kept as a backward-compatible alias: older conversations (and any
+  // client still on the previous prompt) emit `location` meaning "where I
+  // am now". Routing it to current_city preserves that meaning instead of
+  // letting it clobber home or citizenship the way it used to.
+  location: { table: "athletes", column: "current_city" },
+  dob: { table: "athletes", column: "dob" },
+  secondary_position: { table: "athletes", column: "secondary_position" },
   club: { table: "athletes", column: "club_name" },
   level: { table: "athletes", column: "recruiting_status" },
   grad_year: { table: "athletes", column: "grad_year" },
@@ -639,6 +670,41 @@ async function persistProfileUpdates(userId, updates) {
   // correctly reporting a separate boolean it could just as easily forget.
   if (patches.profiles.goal_text) patches.profiles.goal_defined = true;
 
+  // `age` was listed in SYSTEM_PROMPT as an allowed profile_updates key but
+  // had no PROFILE_FIELD_MAP entry, so every age Scout ever learned was
+  // silently discarded — and then re-asked next session, which reads to the
+  // athlete as Scout forgetting. It can't be a plain column either: "16"
+  // stored forever is wrong within a year. Stored as the reported value plus
+  // the date it was reported (migration 105) so buildAuthoritativeContext()
+  // can age it forward. dob, when known, always wins over this.
+  const rawAge = updates.age;
+  const parsedAge = typeof rawAge === "number" ? rawAge : parseInt(String(rawAge ?? ""), 10);
+  if (Number.isInteger(parsedAge) && parsedAge >= 5 && parsedAge <= 80) {
+    patches.athletes.age_reported = parsedAge;
+    patches.athletes.age_reported_at = new Date().toISOString().slice(0, 10);
+  }
+  // previous_clubs is append-only: a newly-named former club must never
+  // wipe the ones already recorded. Merged read-modify-write, deduped on
+  // lowercased name, capped so a looping model can't grow the row forever.
+  if (Array.isArray(updates.previous_clubs) && updates.previous_clubs.length) {
+    try {
+      const r = await fetch(`${supaUrl}/rest/v1/athletes?id=eq.${userId}&select=previous_clubs`, {
+        headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+      });
+      const rows = await r.json();
+      const existing = Array.isArray(rows) && rows[0] && Array.isArray(rows[0].previous_clubs) ? rows[0].previous_clubs : [];
+      const seen = new Set(existing.map((c) => String(c && c.name || "").toLowerCase()).filter(Boolean));
+      const merged = existing.slice();
+      for (const c of updates.previous_clubs) {
+        const name = c && typeof c.name === "string" ? c.name.trim().slice(0, 120) : "";
+        if (!name || seen.has(name.toLowerCase())) continue;
+        seen.add(name.toLowerCase());
+        merged.push({ name, from: c.from || null, to: c.to || null, level: c.level || null });
+      }
+      if (merged.length !== existing.length) patches.athletes.previous_clubs = merged.slice(0, 20);
+    } catch (e) { console.error("GOLSZ previous_clubs merge failed:", e); }
+  }
+
   const headers = { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" };
   for (const table of ["profiles", "athletes"]) {
     if (!Object.keys(patches[table]).length) continue;
@@ -670,6 +736,7 @@ const SCOUT_CONTEXT_KEYS = new Set([
   "confidence", "professional_interest", "college_interest", "trial_interest",
   "height", "weight", "dominant_side", "preferred_countries",
   "secondary_goal", "secondary_gaps", "scholarship_interest", "transfer_interest", "exposure_need",
+  "budget",
 ]);
 
 // Same extraction shape as extractProfileUpdates(), pulling scout_context_updates
@@ -811,7 +878,7 @@ async function persistScoutContext(userId, updates) {
 
 // ============================================================
 // Scout Intelligence Architecture — EXTRACTION layer ("REMEMBER after it
-// LEARNS"). The counterpart to getScoutMemory() above.
+// LEARNS"). The counterpart to buildAuthoritativeContext() above.
 //
 // Deliberate design choice: memory_writes rides along on the reply JSON the
 // model already returns, rather than being a second follow-up Haiku call.
@@ -1028,12 +1095,13 @@ GOLSZ is a sports-recruiting platform used by athletes of all ages, including mi
 GOLSZ PLANS below (when present) is the real, current source of truth for what each plan costs and includes — never invent a feature, price, or restriction beyond what's listed; if asked something not covered there, say you're not sure and offer to check rather than guessing. When a locked or higher-tier feature comes up naturally, explain what that level actually adds to how involved GOLSZ is in their development — never just "more messages" — and let them decide for themselves; never use false urgency, fake scarcity, or guaranteed-outcome language ("guaranteed scholarship," "guaranteed pro contract"), and never talk someone out of a higher plan they actually want. You're their AI Scout, not customer support — if you genuinely don't know something about how GOLSZ works, say so plainly and offer to find out, never brush past it.
 sport_support_level in ATHLETE STATE below tells you how deep GOLSZ's own pathway/benchmark knowledge actually is for their sport — "core" means real depth; "supported," "secondary," or "unknown" means say so honestly and lean on general knowledge/web search rather than implying GOLSZ has built-out sport-specific data it doesn't have yet.
 When ATHLETE STATE shows profile_complete=true, goal_defined=true, and plan=free, that's a real moment — recognize it ONCE (never repeat this recap on a later message once you've already said it): briefly recap what you've learned about them (history, what they're proud of, strengths, what needs work, their stated goal), tell them plainly that's the athlete they are today and it's time to figure out how they get where they want to go, and invite them toward building a Pathway — mention plainly that a Pathway opens with a paid plan, never hide or soften that.
+RESPONSE STYLE: be concise and intelligent. Do NOT recap the athlete's whole story back to them, and do not open by restating what you already know beyond one short clause. No theatrical or motivational language ("that's huge", "you've bet everything on this"), no invented emotion, no long generic coaching speeches, no clarifying question you could answer from AUTHORITATIVE ATHLETE STATE. Structure a substantive reply around what is already known, what is still genuinely missing, and the realistic next move.
 SCOUT MEMORY (when present in the message) is your own durable memory of this athlete from earlier conversations, already split by trust: things they TOLD you are confirmed and must never be re-asked; things you INFERRED are not confirmed, so confirm one in passing before you build advice on it. "Still unknown" lists what you'd most benefit from learning — prefer those over generic questions.
 GOLSZ KNOWLEDGE (when present) is GOLSZ's own verified, curated reference on sport/eligibility/pathway rules. Prefer it over your own recollection and over a web result when they disagree, and cite it naturally ("GOLSZ's eligibility reference says..."). If it's absent or doesn't cover the question, say what you actually know and use web search — never invent a GOLSZ rule.
 GOLSZ CAPABILITIES (when present) is the real, current list of what the product can and cannot do. Anything listed as NOT part of GOLSZ does not exist — never suggest it, never imply it's coming, and never tell an athlete to find or contact someone through it. When a task needs something GOLSZ doesn't do, say plainly that GOLSZ doesn't do it and give them the real off-platform way to do it themselves.
 OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"memory_writes":[{"type":"...","subject":"...","content":"...","source":"athlete_stated|ai_inferred","confidence":0-1,"importance":1-5}] or null,"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"research_note":{"summary":"...","confidence":0-1,"valid_days":N} or null,"drafted_email":"the full drafted email text" or null}
-Allowed profile_updates keys: name, age, occupation, sport, position, location, club, level, grad_year, gpa, license, looking_for_players, education_level, budget, citizenship, goal. Do not repeat known fields. "goal" should be a real, clearly-stated goal the athlete actually confirmed (e.g. "play NCAA D1 soccer"), not a vague guess — setting it marks their goal as officially defined, so only set it once you're genuinely sure.
-Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
+Allowed profile_updates keys: name, age, dob, occupation, sport, position, secondary_position, home_city, home_country, current_city, current_country, citizenship, club, previous_clubs, level, grad_year, gpa, license, looking_for_players, education_level, goal. Location is FOUR separate things and you must never merge them: home_city/home_country are where they are FROM, current_city/current_country are where they are NOW, citizenship is the passport they hold. Only set the one they actually told you about — setting the wrong one corrupts the record. previous_clubs is an array of {"name","from","to","level"} for clubs they have LEFT; the club they are at now goes in "club". Prefer dob (YYYY-MM-DD) over age when you know it. Do not repeat known fields. "goal" should be a real, clearly-stated goal the athlete actually confirmed (e.g. "play NCAA D1 soccer"), not a vague guess — setting it marks their goal as officially defined, so only set it once you're genuinely sure.
+Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need, budget. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
 Only include research_note when THIS reply actually used web search to establish reusable factual findings (a league structure, an eligibility rule, a transfer window, a country's pathway, position benchmarks). Write summary as standalone reference notes that would still be correct and useful for a DIFFERENT athlete asking the same question — plain facts and figures, no advice, no "you"/"your", no reference to this athlete's own situation. valid_days is how long the finding stays trustworthy: 7 for anything with an active deadline or window, 30-90 for stable rules and structures. Omit entirely when you answered from your own knowledge, from PRIOR RESEARCH, or from GOLSZ KNOWLEDGE without searching.
 PRIOR RESEARCH (when present) is research you already did on this exact question, with its age and sources. Trust it and answer from it rather than searching again — unless it's old enough that it could plausibly have changed (deadlines, rosters, windows, rankings), in which case search to confirm and say briefly what changed.
 Only include memory_writes for something durable you learned THIS reply that is worth remembering months from now — not small talk, not a restatement of PROFILE SO FAR or SCOUT MEMORY you were just given. type is one of: FACT, USER_STATED, SCOUT_INFERENCE, GOAL, PREFERENCE, CONCERN, UNKNOWN, NEXT_DATA_NEEDED, ASSESSMENT, DECISION, PATHWAY_CONSIDERED, PATHWAY_REJECTED, PATHWAY_ACTIVE, MILESTONE. Use source "athlete_stated" ONLY when they said it in plain words this conversation, and "ai_inferred" for anything you concluded, judged, or read between the lines — an assessment of their level, a guess at their motivation, or anything a third party reportedly said all count as ai_inferred, never athlete_stated. "subject" is a short stable label you'd reuse if this same thing changed later (e.g. "current club", "target level", "biggest gap") — reusing the same subject is how a corrected fact replaces the old one instead of contradicting it. Use UNKNOWN/NEXT_DATA_NEEDED to record what you still need to find out. Something the athlete reports about ANOTHER person (a teammate, a relative, a club official) is a claim about a third party: record it as ai_inferred at low confidence if it matters to their own path, and never treat it as an established fact about that person. Cap at 8.
@@ -1265,9 +1333,15 @@ function latestUserText(conversation) {
   return "";
 }
 
-async function classifyIntent(key, conversation, faqList) {
+async function classifyIntent(key, conversation, faqList, authoritativeBlock) {
   const text = latestUserText(conversation);
   if (!text) return null;
+  // Step 4: classification happens AFTER authoritative context exists, and
+  // sees it. Without this the classifier scores "what are my options if I
+  // pivot back?" as a vague question, when against known home/current
+  // locations it is a concrete multi-country pathway decision that must go
+  // to the strong model. Hard-capped so it can't push the 4.5s budget.
+  const factPreamble = authoritativeBlock ? clampBlock(authoritativeBlock, 700) + "\n\n" : "";
   try {
     const { ok, data } = await callAnthropic(key, {
       model: MODEL_REGISTRY.FAST_CHAT.model,
@@ -1300,7 +1374,7 @@ async function classifyIntent(key, conversation, faqList) {
       // do. That tolerates a leading ```json fence and trailing chatter
       // without constraining the schema's shape.
       system: buildClassifierSystem(faqList),
-      messages: [{ role: "user", content: text.slice(0, 2000) }],
+      messages: [{ role: "user", content: factPreamble + text.slice(0, 2000) }],
     });
     if (!ok) return { error: data };
     const block = (data.content || []).find((b) => b.type === "text");
@@ -1516,48 +1590,6 @@ async function getCapabilityKnowledge() {
   }
 }
 
-// Grouped by TRUST LEVEL, not by recency, because the whole point of
-// scout_memory carrying `source` is that the prompt must not flatten a
-// stated fact and an inference into one undifferentiated list. The spec
-// calls that distinction critical and athletes/scout_context (050) already
-// established it; this keeps the same discipline for durable memory.
-//
-// Ordered by importance then recency and hard-capped, so a long-lived
-// account's memory can't grow the prompt without bound.
-const MEMORY_STATED_TYPES = new Set(["FACT", "USER_STATED", "GOAL", "PREFERENCE", "CONCERN", "DECISION", "MILESTONE", "PATHWAY_CONSIDERED", "PATHWAY_REJECTED", "PATHWAY_ACTIVE"]);
-const MEMORY_OPEN_TYPES = new Set(["UNKNOWN", "NEXT_DATA_NEEDED"]);
-
-async function getScoutMemory(userId) {
-  const supaUrl = process.env.SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
-  if (!supaUrl || !serviceKey || !userId) return "";
-  try {
-    const r = await fetch(
-      `${supaUrl}/rest/v1/scout_memory?athlete_id=eq.${userId}&active=is.true&select=type,subject,content,confidence,source,importance&order=importance.desc,updated_at.desc&limit=12`,
-      { headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey } },
-    );
-    if (!r.ok) return "";
-    const rows = await r.json();
-    if (!Array.isArray(rows) || !rows.length) return "";
-    const stated = [];
-    const inferred = [];
-    const open = [];
-    for (const m of rows) {
-      const line = `- [${m.type}] ${m.subject}: ${m.content}`;
-      if (MEMORY_OPEN_TYPES.has(m.type)) open.push(`- ${m.subject}: ${m.content}`);
-      else if (m.source === "athlete_stated" && MEMORY_STATED_TYPES.has(m.type)) stated.push(line);
-      else inferred.push(`${line} (confidence ${m.confidence})`);
-    }
-    let text = "";
-    if (stated.length) text += `Things this athlete has TOLD you (treat as confirmed, never re-ask):\n${stated.join("\n")}`;
-    if (inferred.length) text += `${text ? "\n" : ""}Things YOU inferred earlier (NOT confirmed — if one of these matters to the advice you're about to give, confirm it in passing rather than asserting it back to them as fact):\n${inferred.join("\n")}`;
-    if (open.length) text += `${text ? "\n" : ""}Still unknown / worth learning next:\n${open.join("\n")}`;
-    return clampBlock(text, RETRIEVAL_BUDGET.memory);
-  } catch {
-    return "";
-  }
-}
-
 // GOLSZ Core lookup. Goes through the search_golsz_knowledge() RPC rather
 // than selecting from golsz_knowledge directly, so the verification_status
 // and recheck_after filtering lives in one place (the function) and can't
@@ -1750,6 +1782,201 @@ async function persistResearchCache(userId, topicKey, stateDigest, note, sources
     if (!r.ok) console.error("GOLSZ scout research cache write failed:", r.status, await r.text());
   } catch (e) { console.error("GOLSZ scout research cache write failed:", e); }
 }
+
+// ============================================================
+// AUTHORITATIVE ATHLETE CONTEXT
+//
+// Before this existed, the athlete's biographical facts reached the model
+// ONLY as client-built free text: golsz-app.html assembles
+// "PROFILE SO FAR: {...}" and embeds it in the last user message. The server
+// contributed product state (plan, pathway_created) but never identity. So
+// the model was inferring who the athlete is from prose it was handed by the
+// client, with anything older than the 6-turn window surviving only inside a
+// Haiku-written summary. That is why Scout confused home with current
+// location, re-asked answered questions, and invented history.
+//
+// This builds ONE server-side object from the database, before any model is
+// called, and renders it as the single factual block every path shares. The
+// client's PROFILE SO FAR is now redundant narration, not the source of
+// truth — it is deliberately left in place for one release so client and
+// server don't have to change in the same deploy.
+//
+// PRECEDENCE (highest first), enforced here in code rather than asked for in
+// prose:
+//   1. verified structured profile columns  (athletes/profiles)
+//   2. explicit recent user correction      (newest athlete_stated memory)
+//   3. durable Scout Memory                 (older athlete_stated)
+//   4. older conversation context           (the summary, lowest-trust text)
+//   5. model inference                      (ai_inferred memory — labelled,
+//                                            never allowed to present as fact)
+// A level-5 item can never overwrite 1-4: inferences are rendered in their
+// own clearly-marked section and never merged into the fact list.
+// ============================================================
+
+// Canonical identity fields, in the order they should be read. Kept
+// deliberately small: this is the set whose confusion actually produced
+// wrong answers, not every column on the table.
+const IDENTITY_FIELDS = [
+  ["home_city", "home city (where they are FROM)"],
+  ["home_country", "home country (where they are FROM)"],
+  ["current_city", "current city (where they are NOW)"],
+  ["country", "current country (where they are NOW)"],
+  ["citizenship", "citizenship / passport"],
+  ["sport", "sport"],
+  ["position", "position"],
+  ["secondary_position", "secondary position"],
+  ["foot", "preferred foot/hand"],
+  ["club_name", "current club / training environment"],
+  ["recruiting_status", "current competition level / recruiting status"],
+  ["grad_year", "graduation year"],
+  ["education_level", "education level"],
+  ["height_cm", "height (cm)"],
+  ["weight_kg", "weight (kg)"],
+  ["gpa", "GPA"],
+];
+
+// dob always wins; a bare "I'm 16" is aged forward from when it was said
+// rather than believed verbatim forever.
+function resolveAge(a) {
+  if (!a) return null;
+  if (a.dob) {
+    const d = new Date(a.dob);
+    if (!isNaN(d)) {
+      const now = new Date();
+      let age = now.getFullYear() - d.getFullYear();
+      const m = now.getMonth() - d.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age -= 1;
+      if (age >= 0 && age < 120) return { age, basis: "date of birth" };
+    }
+  }
+  if (Number.isInteger(a.age_reported) && a.age_reported_at) {
+    const said = new Date(a.age_reported_at);
+    if (!isNaN(said)) {
+      const years = Math.floor((Date.now() - said.getTime()) / (365.25 * 86400000));
+      const age = a.age_reported + Math.max(0, years);
+      return { age, basis: years > 0 ? `stated ${a.age_reported} on ${a.age_reported_at}` : "athlete stated" };
+    }
+  }
+  if (Number.isInteger(a.age_reported)) return { age: a.age_reported, basis: "athlete stated" };
+  return null;
+}
+
+// Conflict detection (Step 7). A durable athlete_stated memory whose subject
+// names one of these concepts is compared against the authoritative column.
+// If both exist and neither contains the other, that is a real contradiction
+// and Scout is told to ask ONE clarification rather than silently pick a
+// side or invent a reconciliation.
+const CONFLICT_SUBJECTS = [
+  [/home\s*(city|town)|hometown|from/i, "home_city"],
+  [/home\s*country/i, "home_country"],
+  [/current\s*(city|location)|living|based/i, "current_city"],
+  [/current\s*country/i, "country"],
+  [/citizenship|passport/i, "citizenship"],
+  [/current\s*club|club|team|academy/i, "club_name"],
+  [/position/i, "position"],
+];
+
+function detectConflicts(athlete, memories) {
+  const out = [];
+  for (const m of memories) {
+    if (m.source !== "athlete_stated" || !m.active) continue;
+    for (const [re, col] of CONFLICT_SUBJECTS) {
+      if (!re.test(m.subject || "")) continue;
+      const colVal = athlete && athlete[col];
+      if (!colVal) break;
+      const a = String(colVal).toLowerCase();
+      const b = String(m.content || "").toLowerCase();
+      if (a && b && !b.includes(a) && !a.includes(b)) {
+        out.push(`${col}: profile says "${colVal}", but you were told "${m.content}"`);
+      }
+      break;
+    }
+  }
+  return out.slice(0, 4);
+}
+
+async function buildAuthoritativeContext(userId) {
+  const supaUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  if (!supaUrl || !serviceKey || !userId) return null;
+  const headers = { apikey: serviceKey, Authorization: "Bearer " + serviceKey };
+  try {
+    const cols = "sport,position,secondary_position,foot,club_name,previous_clubs,recruiting_status,grad_year,education_level,height_cm,weight_kg,gpa,home_city,home_country,current_city,country,citizenship,dob,age_reported,age_reported_at,scout_context";
+    const [aRes, mRes] = await Promise.all([
+      fetch(`${supaUrl}/rest/v1/athletes?id=eq.${userId}&select=${cols}`, { headers }),
+      fetch(`${supaUrl}/rest/v1/scout_memory?athlete_id=eq.${userId}&active=is.true&select=type,subject,content,confidence,source,importance,updated_at&order=importance.desc,updated_at.desc&limit=20`, { headers }),
+    ]);
+    const aRows = aRes.ok ? await aRes.json() : [];
+    const mRows = mRes.ok ? await mRes.json() : [];
+    const athlete = Array.isArray(aRows) && aRows[0] ? aRows[0] : null;
+    const memories = (Array.isArray(mRows) ? mRows : []).map((m) => ({ ...m, active: true }));
+    if (!athlete && !memories.length) return null;
+    return { athlete, memories, conflicts: detectConflicts(athlete, memories), age: resolveAge(athlete) };
+  } catch {
+    return null;
+  }
+}
+
+// Renders the object above into the one factual block every model path
+// shares. Facts, inferences and unknowns are kept in SEPARATE sections on
+// purpose — collapsing them into one list is precisely how an inference gets
+// restated later as a fact.
+function renderAuthoritativeContext(ctx) {
+  if (!ctx) return "";
+  const { athlete, memories, conflicts, age } = ctx;
+  const facts = [];
+  if (age) facts.push(`- age: ${age.age} (${age.basis})`);
+  if (athlete) {
+    for (const [col, label] of IDENTITY_FIELDS) {
+      const v = athlete[col];
+      if (v === null || v === undefined || v === "") continue;
+      facts.push(`- ${label}: ${v}`);
+    }
+    if (Array.isArray(athlete.previous_clubs) && athlete.previous_clubs.length) {
+      facts.push(`- previous clubs: ${athlete.previous_clubs.map((c) => c && c.name).filter(Boolean).join(", ")}`);
+    }
+  }
+  const stated = [];
+  const inferred = [];
+  const unknowns = [];
+  for (const m of memories) {
+    if (m.type === "UNKNOWN" || m.type === "NEXT_DATA_NEEDED") unknowns.push(`- ${m.subject}: ${m.content}`);
+    else if (m.source === "athlete_stated") stated.push(`- [${m.type}] ${m.subject}: ${m.content}`);
+    else inferred.push(`- [${m.type}] ${m.subject}: ${m.content} (confidence ${m.confidence})`);
+  }
+
+  let out = "AUTHORITATIVE ATHLETE STATE — this is the record, loaded from the database this turn. It OUTRANKS anything you infer from the wording of the latest message, and it outranks the PROFILE SO FAR text in the message body. Never contradict it, never re-ask anything it already answers.";
+  out += facts.length ? `\n\nVERIFIED PROFILE (highest authority):\n${facts.join("\n")}` : "\n\nVERIFIED PROFILE: nothing on file yet.";
+  if (stated.length) out += `\n\nTHINGS THE ATHLETE HAS STATED (confirmed — treat as fact, never re-ask):\n${stated.join("\n")}`;
+  if (inferred.length) out += `\n\nYOUR EARLIER INFERENCES (NOT facts — never assert these back as things they told you; confirm in passing if one matters):\n${inferred.join("\n")}`;
+  if (unknowns.length) out += `\n\nKNOWN UNKNOWNS (ask about these before anything generic):\n${unknowns.join("\n")}`;
+  if (conflicts.length) {
+    out += `\n\nCONFLICTS — two authoritative sources disagree. Do NOT guess, do NOT silently pick one, do NOT invent a story that reconciles them. Ask ONE short clarifying question:\n${conflicts.map((c) => `- ${c}`).join("\n")}`;
+  }
+  // Deictic resolution (Step 2's worked example): "back" / "home" / "return"
+  // are ambiguous only if you don't know both places. We do.
+  if (athlete && (athlete.home_city || athlete.home_country) && (athlete.current_city || athlete.country)) {
+    const home = [athlete.home_city, athlete.home_country].filter(Boolean).join(", ");
+    const here = [athlete.current_city, athlete.country].filter(Boolean).join(", ");
+    out += `\n\nRESOLVING "back"/"home"/"return"/"go there": the athlete is FROM ${home} and is CURRENTLY IN ${here}. Read "back"/"home"/"return" as ${home} unless the message clearly says otherwise. If genuinely ambiguous, ask ONE short question — never assume the wrong one and build advice on it.`;
+  }
+  return out;
+}
+
+// Step 3 — hard anti-hallucination rules. These are last in the prompt on
+// purpose (recency) and are deliberately blunt. They are NOT the fix on
+// their own; they sit on top of the structural work above.
+const ANTI_HALLUCINATION_RULES = `NON-NEGOTIABLE FACT RULES:
+1. Never invent a biographical fact. If it isn't in AUTHORITATIVE ATHLETE STATE or this conversation, you do not know it.
+2. Never invent an agent, coach, club conversation, family situation, injury prognosis, offer, trial, scout interest, or historical event. If the athlete has not mentioned one, it does not exist.
+3. Never convert an inference into a fact. Anything under YOUR EARLIER INFERENCES stays an inference until they confirm it.
+4. If information is missing, say it is unknown, or ask. Do not fill the gap with something plausible.
+5. If the athlete corrects a fact, the correction wins immediately — use it for the rest of this reply and record it.
+6. Do not embellish emotion, stakes, or circumstances beyond what they actually said. No "you've bet everything on this".
+7. Never claim a league, club, or pathway is higher or lower level than another without verified information. If you don't know, say so or look it up.
+8. Never re-ask anything already answered in AUTHORITATIVE ATHLETE STATE.
+9. Never invent a GOLSZ feature — GOLSZ CAPABILITIES is the complete list.
+10. If current external facts are needed (dates, rules, rosters, deadlines), retrieve them. Never guess and never present a guess as current.`;
 
 // Matches golsz-app.html's LANGS — validated against this allowlist rather
 // than trusting the client's lang string directly, since it gets
@@ -2101,6 +2328,14 @@ export default async function handler(req, res) {
   // sport/country to scope eligibility and pathway rules.
   let athleteSport = null;
   let athleteCountry = null;
+  // The single rendered factual block. Shared by the classifier, both answer
+  // paths and the failover, so provider/tier can never change the facts.
+  let authoritativeBlock = "";
+  let hasConflicts = false;
+  // Whether BOTH origin and current location are known — the precondition
+  // for treating a "go back"-style question as a real relocation decision.
+  let athleteHome = null;
+  let athleteHere = null;
   // Scout Cache: the athlete-state digest is computed once here (it needs
   // plan + goal + pathway state) and used both to select a still-valid
   // cache entry and to stamp any entry written this turn.
@@ -2132,17 +2367,27 @@ export default async function handler(req, res) {
     // anything unrecognized falls through to the Free limit rather than
     // accidentally going uncapped.
     // Scout Intelligence Architecture: retrieval joins the existing parallel
-    // fan-out rather than adding round trips. getScoutMemory is athlete-
-    // scoped; getCapabilityKnowledge is global and cached. The GOLSZ Core
-    // lookup can't run here because it needs athleteState.sport, so it runs
+    // fan-out rather than adding round trips. buildAuthoritativeContext is
+    // athlete-scoped (profile columns + Scout Memory in one pass);
+    // getCapabilityKnowledge is global and cached. The GOLSZ Core lookup
+    // can't run here because it needs athleteState.sport, so it runs
     // alongside the classifier below instead.
-    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText }, athleteState, planKnowledge, scoutMemory, capabilityKnowledge] = await Promise.all([
+    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
       getProfileMeta(userId),
       getAthleteState(userId),
       getPlanKnowledge(),
-      getScoutMemory(userId),
+      buildAuthoritativeContext(userId),
       getCapabilityKnowledge(),
     ]);
+    // Rendered once, here, and reused verbatim by every downstream path so no
+    // model can receive a materially different version of the athlete's facts.
+    authoritativeBlock = renderAuthoritativeContext(authContext);
+    hasConflicts = !!(authContext && authContext.conflicts && authContext.conflicts.length);
+    if (authContext && authContext.athlete) {
+      const a = authContext.athlete;
+      athleteHome = a.home_city || a.home_country || null;
+      athleteHere = a.current_city || a.country || null;
+    }
     athleteSport = athleteState.sport;
     athleteCountry = athleteState.country;
     stateDigest = athleteStateDigest(athleteState, plan, goalDefined);
@@ -2167,7 +2412,7 @@ export default async function handler(req, res) {
     // empty rather than sent as an empty heading — a new athlete with no
     // memory yet should get no MEMORY section at all, not one saying "none".
     if (capabilityKnowledge) stateBlock += `\n\nGOLSZ CAPABILITIES (real, current — the product does exactly this and nothing more):\n${capabilityKnowledge}`;
-    if (scoutMemory) stateBlock += `\n\nSCOUT MEMORY (what you already know about this athlete from earlier conversations):\n${scoutMemory}`;
+    if (authoritativeBlock) stateBlock += `\n\n${authoritativeBlock}`;
     dailyLimit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
       : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 15)
       : plan === "starter" ? Number(process.env.STARTER_DAILY_LIMIT || 8)
@@ -2239,7 +2484,7 @@ export default async function handler(req, res) {
     // rejecting athlete-scoped entries whose stored state digest has moved.
     const topicKey = researchTopicKey(latestUserText(conversation), athleteSport, athleteCountry);
     const [classification, golszKnowledge, priorResearch] = await Promise.all([
-      withTimeout(classifyIntent(key, conversation, faqList), 4500),
+      withTimeout(classifyIntent(key, conversation, faqList, authoritativeBlock), 4500),
       getGolszKnowledge(athleteSport, athleteCountry, latestUserText(conversation)),
       getResearchCache(userId, topicKey, stateDigest),
     ]);
@@ -2272,7 +2517,8 @@ export default async function handler(req, res) {
     const researchBlock = priorResearch
       ? `\n\nPRIOR RESEARCH (you already researched this exact question — answer from it instead of searching again unless it's old enough to have changed):\n${priorResearch}`
       : "";
-    const systemPrompt = buildSystemPrompt(baseSystemPrompt, recommendedSpecialist) + stateBlock + knowledgeBlock + researchBlock;
+    const systemPrompt = buildSystemPrompt(baseSystemPrompt, recommendedSpecialist) + stateBlock + knowledgeBlock + researchBlock
+      + (authoritativeBlock ? `\n\n${ANTI_HALLUCINATION_RULES}` : "");
 
     // ---- Database path: a real $0-AI-cost answer, matched by MEANING (not
     // exact wording) inside the classification call above, before any real
@@ -2323,7 +2569,14 @@ export default async function handler(req, res) {
     // enforcement at all doesn't silently start capping quality either.
     const planForRouting = userPlan || "elite";
     const latestText = latestUserText(conversation);
-    const complexity = complexityScore({ text: latestText, classification });
+    const complexity = complexityScore({
+      text: latestText,
+      classification,
+      context: {
+        twoLocationsKnown: !!(athleteHome && athleteHere),
+        hasConflicts,
+      },
+    });
     let modelTier = selectModelTier({ plan: planForRouting, classification, score: complexity }).tier;
     if (modelTier === "premium" && !SCOUT_PREMIUM_ENABLED) modelTier = "advanced";
     // Split, not summed: the system prompt is the cache_control'd block and
