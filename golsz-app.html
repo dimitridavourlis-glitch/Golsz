@@ -435,6 +435,9 @@ const I18N = {
     scout_topic_situation: "My current situation", scout_topic_situation_prompt: "Let's talk through my current situation as an athlete.",
     scout_topic_goals: "My goals & preferences", scout_topic_goals_prompt: "I want to talk about my goals and what I'm looking for.",
     scout_topic_game: "My game & performance", scout_topic_game_prompt: "Let's talk about my game and my performance.",
+    scout_chip_early1: "Where I'm playing right now", scout_chip_early2: "What I'm aiming for",
+    scout_chip_early3: "How does GOLSZ actually work?", scout_chip_early4: "Explain the pathways to me",
+    scout_chip_confirm1: "Yes, that's me", scout_chip_confirm2: "Not quite — let me correct that",
     scout_chip1: "Build my target school list", scout_chip2: "Create my career roadmap",
     scout_chip3: "Draft an email to a coach", scout_chip4: "What should I do this month?",
     scout_np_chip1: "Find players for my team", scout_np_chip2: "Search top prospects",
@@ -721,6 +724,9 @@ const I18N = {
     scout_topic_situation: "Ma situation actuelle", scout_topic_situation_prompt: "Parlons de ma situation actuelle en tant qu'athlète.",
     scout_topic_goals: "Mes objectifs & préférences", scout_topic_goals_prompt: "Je veux parler de mes objectifs et de ce que je recherche.",
     scout_topic_game: "Mon jeu & ma performance", scout_topic_game_prompt: "Parlons de mon jeu et de ma performance.",
+    scout_chip_early1: "Où je joue en ce moment", scout_chip_early2: "Ce que je vise",
+    scout_chip_early3: "Comment fonctionne GOLSZ ?", scout_chip_early4: "Explique-moi les parcours",
+    scout_chip_confirm1: "Oui, c'est bien moi", scout_chip_confirm2: "Pas tout à fait — je corrige",
     scout_chip1: "Créer ma liste d'écoles cibles", scout_chip2: "Créer ma feuille de route de carrière",
     scout_chip3: "Rédiger un e-mail à un entraîneur", scout_chip4: "Que devrais-je faire ce mois-ci ?",
     scout_np_chip1: "Trouver des joueurs pour mon équipe", scout_np_chip2: "Rechercher les meilleurs prospects",
@@ -1007,6 +1013,9 @@ const I18N = {
     scout_topic_situation: "Mi situación actual", scout_topic_situation_prompt: "Hablemos de mi situación actual como atleta.",
     scout_topic_goals: "Mis objetivos y preferencias", scout_topic_goals_prompt: "Quiero hablar sobre mis objetivos y lo que busco.",
     scout_topic_game: "Mi juego y rendimiento", scout_topic_game_prompt: "Hablemos de mi juego y mi rendimiento.",
+    scout_chip_early1: "Dónde juego ahora mismo", scout_chip_early2: "Lo que quiero conseguir",
+    scout_chip_early3: "¿Cómo funciona GOLSZ?", scout_chip_early4: "Explícame las rutas",
+    scout_chip_confirm1: "Sí, ese soy yo", scout_chip_confirm2: "No exactamente — lo corrijo",
     scout_chip1: "Crear mi lista de escuelas objetivo", scout_chip2: "Crear mi hoja de ruta profesional",
     scout_chip3: "Redactar un correo a un entrenador", scout_chip4: "¿Qué debería hacer este mes?",
     scout_np_chip1: "Encontrar jugadores para mi equipo", scout_np_chip2: "Buscar los mejores prospectos",
@@ -1293,6 +1302,9 @@ const I18N = {
     scout_topic_situation: "Η τρέχουσα κατάστασή μου", scout_topic_situation_prompt: "Ας μιλήσουμε για την τρέχουσα κατάστασή μου ως αθλητή.",
     scout_topic_goals: "Οι στόχοι & προτιμήσεις μου", scout_topic_goals_prompt: "Θέλω να μιλήσω για τους στόχους μου και τι ψάχνω.",
     scout_topic_game: "Το παιχνίδι & η απόδοσή μου", scout_topic_game_prompt: "Ας μιλήσουμε για το παιχνίδι και την απόδοσή μου.",
+    scout_chip_early1: "Πού παίζω τώρα", scout_chip_early2: "Τι στοχεύω",
+    scout_chip_early3: "Πώς λειτουργεί το GOLSZ;", scout_chip_early4: "Εξήγησέ μου τις διαδρομές",
+    scout_chip_confirm1: "Ναι, αυτός είμαι", scout_chip_confirm2: "Όχι ακριβώς — να το διορθώσω",
     scout_chip1: "Δημιουργία λίστας σχολών-στόχων", scout_chip2: "Δημιουργία οδικού χάρτη καριέρας",
     scout_chip3: "Σύνταξη email σε προπονητή", scout_chip4: "Τι πρέπει να κάνω αυτόν τον μήνα;",
     scout_np_chip1: "Εύρεση παικτών για την ομάδα μου", scout_np_chip2: "Αναζήτηση κορυφαίων ταλέντων",
@@ -6596,10 +6608,27 @@ function AdminPanel({ onBack }) {
 /* ============ AI SCOUT (live agent) ============ */
 
 const CHIP_ICONS = [Compass, Radar, MessageSquare, CalendarDays];
-function chipsFor(t, isPlayer) {
-  return isPlayer
-    ? [t("scout_chip1"), t("scout_chip2"), t("scout_chip3"), t("scout_chip4")]
-    : [t("scout_np_chip1"), t("scout_np_chip2"), t("scout_np_chip3"), t("scout_np_chip4")];
+// §11 — the chips have to agree with the state machine, or the UI invites
+// exactly what the backend refuses. A NEW athlete used to be offered "Create
+// my career roadmap"; stateDirective() in api/scout.js explicitly forbids
+// producing one before Scout understands them, so tapping it earned a polite
+// deferral. That reads as the product not working.
+//
+// States 0-1 (NEW / TRIAGE) therefore offer chips that MOVE THE PROFILE
+// FORWARD plus a genuinely-answerable general question — Scout is allowed to
+// explain leagues and pathways at any state, it just can't personalise yet.
+// State 2 offers confirm/correct, which is the only thing that state is
+// waiting on. State 3+ gets the original planning chips, which by then Scout
+// can actually deliver.
+//
+// Non-players (scouts, agents, coaches) are unaffected: they have no athlete
+// profile to build, so their chips never depended on readiness.
+function chipsFor(t, isPlayer, scoutState) {
+  if (!isPlayer) return [t("scout_np_chip1"), t("scout_np_chip2"), t("scout_np_chip3"), t("scout_np_chip4")];
+  const st = typeof scoutState === "number" ? scoutState : 0;
+  if (st <= 1) return [t("scout_chip_early1"), t("scout_chip_early2"), t("scout_chip_early3"), t("scout_chip_early4")];
+  if (st === 2) return [t("scout_chip_confirm1"), t("scout_chip_confirm2"), t("scout_chip_early3"), t("scout_chip_early4")];
+  return [t("scout_chip1"), t("scout_chip2"), t("scout_chip3"), t("scout_chip4")];
 }
 
 function scoutGreetingFor(seeded, t) {
@@ -6690,6 +6719,10 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
   // days or counts itself: a stale local guess telling an athlete they have
   // trial left when they do not is worse than showing nothing.
   const [scoutTrial, setScoutTrial] = useState(null);
+  // Mirrors profiles.scout_state. Only ever set from the database or from a
+  // server reply — never inferred client-side, for the same reason
+  // deriveScoutState() ignores the model's self-report.
+  const [scoutState, setScoutState] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState(null);
   const [photo, setPhoto] = useState(null); // { dataUrl, mediaType, data } — one pending attachment
@@ -6721,7 +6754,7 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
         uidRef.current = user.id;
 
         const [{ data: prof }, { data: ath }, { data: benchmarks }] = await Promise.all([
-          sb.from("profiles").select("full_name, dob, occupation").eq("id", user.id).single(),
+          sb.from("profiles").select("full_name, dob, occupation, scout_state").eq("id", user.id).single(),
           sb.from("athletes").select("sport, position, grad_year, gpa, country, club_name, recruiting_status, license, looking_for_players, education_level, scout_context").eq("id", user.id).single(),
           sb.from("athlete_benchmarks").select("metric, value, unit, recorded_date").eq("user_id", user.id).order("recorded_date", { ascending: false }),
         ]);
@@ -6733,6 +6766,11 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
           for (const b of benchmarks) if (!latest[b.metric]) latest[b.metric] = `${b.value}${b.unit ? " " + b.unit : ""}`;
           setBenchmarkSummary(latest);
         }
+        // Seeded from the stored state so an athlete who is already GUIDED
+        // never gets dragged back to discovery chips for one turn while
+        // waiting on the first reply of the session. The server remains
+        // authoritative — its scout_profile on every reply overwrites this.
+        if (prof && Number.isInteger(prof.scout_state)) setScoutState(prof.scout_state);
         const seeded = {};
         if (prof && prof.full_name) seeded.name = prof.full_name;
         if (prof && prof.occupation) seeded.occupation = prof.occupation;
@@ -7007,7 +7045,10 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
       // limit-reached (402) responses — capture it either way so the
       // header's "questions left today" count updates even on a refusal.
       if (data && data.scout_usage && typeof data.scout_usage === "object") setScoutUsage(data.scout_usage);
-      if (data && data.scout_profile && typeof data.scout_profile === "object") setScoutProfileMeta(data.scout_profile);
+      if (data && data.scout_profile && typeof data.scout_profile === "object") {
+        setScoutProfileMeta(data.scout_profile);
+        if (Number.isInteger(data.scout_profile.state)) setScoutState(data.scout_profile.state);
+      }
       if (data && data.scout_trial && typeof data.scout_trial === "object") setScoutTrial(data.scout_trial);
       // A non-2xx response (rate limit, auth hiccup, upstream 5xx) still
       // arrives here as valid JSON — without this check data.content is
@@ -7181,7 +7222,7 @@ function Scout({ onGoToProfile, plan, onUpgrade }) {
   }
 
   const isPlayerChat = !profile.occupation || profile.occupation === "Player";
-  const CHIPS = chipsFor(t, isPlayerChat);
+  const CHIPS = chipsFor(t, isPlayerChat, scoutState);
   // Topic rows (Master UX/UI redesign — "Scout should be visually the
   // CLEANEST section") replace the old 2x2 icon-chip grid for the very
   // first empty state only; the horizontal scrolling CHIPS row further
