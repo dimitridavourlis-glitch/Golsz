@@ -81,8 +81,26 @@ const MODEL_REGISTRY = {
 // forced no-tools Sonnet/DEEP_SCOUT reply. The Sonnet tool-loop below calls
 // the API directly instead, since it needs to inspect stop_reason and push
 // new turns between calls, not just get one reply back.
-async function callAnthropic(apiKey, { model, system, messages, tools, thinking, maxTokens, stopSequences }) {
-  const body = { model, max_tokens: maxTokens || 4096, system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }], messages };
+// `system` is the STATIC prefix and carries the cache breakpoint; the optional
+// `systemDynamic` is appended as a second, UNCACHED system block.
+//
+// Why: cache_control used to wrap the entire system prompt, which contains the
+// athlete's own record — so every athlete had a unique prefix and each
+// conversation paid to WRITE ~9-20k tokens (billed at 1.25x input) that were
+// then read only a handful of times. Measured on real traffic: cache writes
+// were ~85% of the cost of a Sonnet reply, avg $0.086 and up to $0.40.
+// Splitting the breakpoint lets the persona/capabilities/plan prefix be cached
+// ONCE and shared by every athlete on the same language+specialist, while the
+// per-athlete part is simply sent fresh.
+//
+// The model still receives one continuous system prompt, byte-for-byte
+// identical in content and order. This is a billing boundary, not a context
+// one — unlike the earlier attempt that moved athlete state into `messages`,
+// which changed the interaction shape and broke JSON output entirely.
+async function callAnthropic(apiKey, { model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences }) {
+  const systemBlocks = [{ type: "text", text: system, cache_control: { type: "ephemeral" } }];
+  if (systemDynamic) systemBlocks.push({ type: "text", text: systemDynamic });
+  const body = { model, max_tokens: maxTokens || 4096, system: systemBlocks, messages };
   if (tools) body.tools = tools;
   if (thinking) body.thinking = thinking;
   if (stopSequences) body.stop_sequences = stopSequences;
@@ -334,7 +352,7 @@ async function budgetGate(tier, plan, freshInputTokens, cachedInputTokens) {
 // change, once a real key and a benchmark pass exist.
 const anthropicAdapter = {
   provider: "anthropic",
-  async generate({ apiKey, model, system, messages, tools, thinking, maxTokens, stopSequences }) {
+  async generate({ apiKey, model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences }) {
     return callAnthropic(apiKey, { model, system, messages, tools, thinking, maxTokens, stopSequences });
   },
 };
@@ -2413,7 +2431,7 @@ function sumUsage(a, b) {
   return out;
 }
 
-async function continueIfTruncated(key, cfg, systemPrompt, baseMessages, data, deadlineMs) {
+async function continueIfTruncated(key, cfg, systemPrompt, systemDynamic, baseMessages, data, deadlineMs) {
   let out = data;
   for (let i = 0; i < 2; i += 1) {
     if (!out || out.stop_reason !== "max_tokens") break;
@@ -2435,6 +2453,7 @@ async function continueIfTruncated(key, cfg, systemPrompt, baseMessages, data, d
       model: cfg.model_name || MODEL_REGISTRY.DEEP_SCOUT.model,
       thinking: { type: "disabled" },
       system: systemPrompt,
+      systemDynamic,
       messages: [...baseMessages, { role: "assistant", content: partial }],
       maxTokens: cfg.max_output_tokens,
     });
@@ -2451,7 +2470,7 @@ async function continueIfTruncated(key, cfg, systemPrompt, baseMessages, data, d
   return out;
 }
 
-async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation, deadlineMs) {
+async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, baseConversation, deadlineMs) {
   const conversation = baseConversation.slice();
   const MAX_TOOL_TURNS = 4;
   // Surfaced to the caller so a reply that was cut short by the request
@@ -2483,6 +2502,7 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation,
       // ~4,287 tokens, comfortably over Sonnet 5's 1,024-token minimum,
       // with real cache reads confirmed via response.usage.cache_read_input_tokens.
       system: systemPrompt,
+      systemDynamic,
       messages: conversation,
       maxTokens: deepTierConfig.max_output_tokens,
       tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL, SEARCH_EVENTS_TOOL],
@@ -2511,6 +2531,7 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation,
       model: deepTierConfig.model_name || MODEL_REGISTRY.DEEP_SCOUT.model,
       thinking: { type: "disabled" },
       system: systemPrompt,
+      systemDynamic,
       messages: conversation,
       maxTokens: deepTierConfig.max_output_tokens,
     });
@@ -2805,9 +2826,17 @@ export default async function handler(req, res) {
     const researchBlock = priorResearch
       ? `\n\nPRIOR RESEARCH (you already researched this exact question — answer from it instead of searching again unless it's old enough to have changed):\n${priorResearch}`
       : "";
-    const athleteContextTurn = [athleteBlock, knowledgeBlock, researchBlock].filter(Boolean).join("");
-    const systemPrompt = buildSystemPrompt(baseSystemPrompt, recommendedSpecialist) + sharedBlock + athleteContextTurn
+    // STATIC prefix — identical for every athlete on this language+specialist,
+    // so it caches once and is shared. Carries the cache breakpoint.
+    const systemStatic = buildSystemPrompt(baseSystemPrompt, recommendedSpecialist) + sharedBlock;
+    // PER-ATHLETE remainder, sent fresh. Order is unchanged from when this was
+    // one string: athlete record, then knowledge, then prior research, then
+    // the fact rules last (recency, and they reassert the JSON contract).
+    const systemDynamic = [athleteBlock, knowledgeBlock, researchBlock].filter(Boolean).join("")
       + (authoritativeBlock ? `\n\n${ANTI_HALLUCINATION_RULES}` : "");
+    // Concatenation of the two IS the old single string, byte for byte. Kept
+    // for token estimation and anything that wants the whole prompt.
+    const systemPrompt = systemStatic + systemDynamic;
     // REVERTED from the "context as a leading user turn" experiment. Moving
     // per-athlete state into the messages array made the model treat the
     // exchange as a free-flowing conversation and answer in PROSE, with no
@@ -2886,8 +2915,8 @@ export default async function handler(req, res) {
     // Split, not summed: the system prompt is the cache_control'd block and
     // is re-read at the cached rate on every turn after the first, while the
     // conversation messages are always fresh input. See estimateTierCost().
-    const cachedInputTokens = Math.ceil(systemPrompt.length / 4);
-    const freshInputTokens = Math.ceil(JSON.stringify(conversation).length / 4);
+    const cachedInputTokens = Math.ceil(systemStatic.length / 4);
+    const freshInputTokens = Math.ceil((systemDynamic.length + JSON.stringify(conversation).length) / 4);
     modelTier = await budgetGate(modelTier, planForRouting, freshInputTokens, cachedInputTokens);
     const byTier = await getModelConfigByTier();
     const tierConfig = byTier[modelTier] || ANTHROPIC_DEFAULTS[modelTier];
@@ -2932,13 +2961,14 @@ export default async function handler(req, res) {
       let { ok, data } = await adapter.generate({
         apiKey: key,
         model: tierConfig.model_name || MODEL_REGISTRY.FAST_CHAT.model,
-        system: systemPrompt,
+        system: systemStatic,
+        systemDynamic,
         messages: conversationForModel,
         maxTokens: tierConfig.max_output_tokens,
         tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL, SEARCH_EVENTS_TOOL],
       });
       if (ok && data.stop_reason === "max_tokens") {
-        data = await continueIfTruncated(key, tierConfig, systemPrompt, conversationForModel, data, handlerStartMs + SCOUT_BUDGET_MS);
+        data = await continueIfTruncated(key, tierConfig, systemStatic, systemDynamic, conversationForModel, data, handlerStartMs + SCOUT_BUDGET_MS);
       }
       if (ok && data.stop_reason !== "tool_use") {
         console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
@@ -2993,7 +3023,7 @@ export default async function handler(req, res) {
     const deepTierConfig = useHaiku ? (byTier.advanced || ANTHROPIC_DEFAULTS.advanced) : tierConfig;
 
     const scoutDeadline = handlerStartMs + SCOUT_BUDGET_MS;
-    let sonnetResult = await runDeepReply(key, deepTierConfig, systemPrompt, conversationForModel, scoutDeadline);
+    let sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline);
     if (!sonnetResult.ok) {
       // Automatic failover, step 1: retry the WHOLE reply once, from a fresh
       // conversation copy (runDeepReply never mutates the caller's array) —
@@ -3007,7 +3037,7 @@ export default async function handler(req, res) {
         console.log("GOLSZ sonnet call failed, retrying once:", JSON.stringify(sonnetResult.data));
         if (timeoutReason === "none") timeoutReason = "provider_error";
         fallbackUsed = "sonnet_retry";
-        sonnetResult = await runDeepReply(key, deepTierConfig, systemPrompt, conversationForModel, scoutDeadline);
+        sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline);
       } else {
         console.log("GOLSZ sonnet call failed, skipping retry (budget left ms:", retryRoom, "):", JSON.stringify(sonnetResult.data));
         timeoutReason = "retry_skipped";
@@ -3021,12 +3051,13 @@ export default async function handler(req, res) {
       // a transparent message rather than inventing current information").
       console.log("GOLSZ sonnet retry also failed, falling back to haiku:", JSON.stringify(sonnetResult.data));
       fallbackUsed = "haiku_cross_model";
-      const fallbackSystem = systemPrompt + "\n\nNOTE: Live database/web search is temporarily unavailable. Give the best general guidance you can and say plainly that real-time GOLSZ search isn't available right now — never invent specific results, listings, or players.";
+      const fallbackSystem = systemDynamic + "\n\nNOTE: Live database/web search is temporarily unavailable. Give the best general guidance you can and say plainly that real-time GOLSZ search isn't available right now — never invent specific results, listings, or players.";
       const fastCfg = byTier.economy || ANTHROPIC_DEFAULTS.economy;
       const haikuFallback = await adapterFor(fastCfg.provider).generate({
         apiKey: key,
         model: fastCfg.model_name || MODEL_REGISTRY.FAST_CHAT.model,
-        system: fallbackSystem,
+        system: systemStatic,
+        systemDynamic: fallbackSystem,
         messages: conversationForModel,
         maxTokens: fastCfg.max_output_tokens,
       });
@@ -3070,7 +3101,7 @@ export default async function handler(req, res) {
       return res.status(503).json({ error: "Scout is temporarily unavailable. Please try again shortly." });
     }
 
-    const data = await continueIfTruncated(key, deepTierConfig, systemPrompt, conversationForModel, sonnetResult.data, scoutDeadline);
+    const data = await continueIfTruncated(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, sonnetResult.data, scoutDeadline);
     if (sonnetResult.toolBudgetExhausted && timeoutReason === "none") timeoutReason = "tool_budget_exhausted";
     const sonnetCost = estimateCost(deepTierConfig.model_name, data.usage);
     await logRouting("sonnet", classification, deepTierConfig.model_name, data.usage, { plan: userPlan, escalationReason: haikuFailureReason || escalationReason(classification), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
