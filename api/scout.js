@@ -523,6 +523,11 @@ async function logRouting(answeredBy, classification, model, usage, extra) {
         // file calls today is Anthropic's regardless of which one answered.
         provider: model ? "anthropic" : null,
         specialist: (extra && extra.specialist) || null,
+        // Step 8 telemetry (migration 106). Default to the explicit "none"
+        // rather than null on a real reply: null means "this row predates
+        // the concept", which is a different fact from "nothing went wrong".
+        timeout_reason: (extra && extra.timeoutReason) || "none",
+        fallback_used: (extra && extra.fallbackUsed) || "none",
         model_version: model || null,
         request_id: (extra && extra.requestId) || null,
         response_time_ms: (extra && typeof extra.responseTimeMs === "number") ? extra.responseTimeMs : null,
@@ -2204,6 +2209,9 @@ async function recordScoutUsageCost(userId, cost, inputTokens, outputTokens) {
 async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation, deadlineMs) {
   const conversation = baseConversation.slice();
   const MAX_TOOL_TURNS = 4;
+  // Surfaced to the caller so a reply that was cut short by the request
+  // budget is logged as degraded rather than as a clean success.
+  let toolBudgetExhausted = false;
   const budgetLeft = () => (deadlineMs ? deadlineMs - Date.now() : Infinity);
   let data;
   for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
@@ -2213,6 +2221,7 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation,
     // would-be killed request into a real, if less-researched, reply.
     if (turn > 0 && budgetLeft() < TOOL_TURN_MIN_MS) {
       console.log("GOLSZ scout tool loop stopping early, budget left ms:", budgetLeft());
+      toolBudgetExhausted = true;
       break;
     }
     const result = await callAnthropic(key, {
@@ -2234,11 +2243,11 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation,
       tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL, SEARCH_EVENTS_TOOL],
     });
     data = result.data;
-    if (!result.ok) return { ok: false, data };
+    if (!result.ok) return { ok: false, data, toolBudgetExhausted };
     console.log("GOLSZ scout usage check:", JSON.stringify(data.usage));
 
     const searchCalls = (data.content || []).filter((b) => b.type === "tool_use" && (b.name === "search_golsz_players" || b.name === "search_golsz_events"));
-    if (data.stop_reason !== "tool_use" || !searchCalls.length) return { ok: true, data };
+    if (data.stop_reason !== "tool_use" || !searchCalls.length) return { ok: true, data, toolBudgetExhausted };
 
     conversation.push({ role: "assistant", content: data.content });
     const results = await Promise.all(searchCalls.map(async (call) => ({
@@ -2260,10 +2269,10 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, baseConversation,
       messages: conversation,
       maxTokens: deepTierConfig.max_output_tokens,
     });
-    if (!result.ok) return { ok: false, data: result.data };
+    if (!result.ok) return { ok: false, data: result.data, toolBudgetExhausted };
     data = result.data;
   }
-  return { ok: true, data };
+  return { ok: true, data, toolBudgetExhausted };
 }
 
 export default async function handler(req, res) {
@@ -2336,6 +2345,10 @@ export default async function handler(req, res) {
   // for treating a "go back"-style question as a real relocation decision.
   let athleteHome = null;
   let athleteHere = null;
+  // Step 8 telemetry, threaded into every logRouting() call below so a
+  // degraded reply is never recorded as a clean one.
+  let timeoutReason = "none";
+  let fallbackUsed = "none";
   // Scout Cache: the athlete-state digest is computed once here (it needs
   // plan + goal + pathway state) and used both to select a still-valid
   // cache entry and to stamp any entry written this turn.
@@ -2489,6 +2502,11 @@ export default async function handler(req, res) {
       getResearchCache(userId, topicKey, stateDigest),
     ]);
     if (priorResearch) console.log("GOLSZ scout research cache HIT:", topicKey);
+    // withTimeout() resolves to null on expiry; classifyIntent() returns
+    // {error}/{raw} for a provider or parse failure. Distinguishing them
+    // matters: one is a latency problem, the other is a contract problem.
+    if (classification === null) timeoutReason = "classifier_timeout";
+    else if (classification && classification.error) timeoutReason = "provider_error";
     console.log("GOLSZ scout routing:", JSON.stringify(classification));
 
     // Phase 2b: the classifier call above also maintains a running
@@ -2535,7 +2553,7 @@ export default async function handler(req, res) {
         scout_usage: reservedQuestion ? { remaining: questionsRemaining, limit: dailyLimit } : undefined,
         next_move: extractNextBestAction(classification),
       };
-      await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs });
+      await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
       return res.status(200).json(payload);
     }
     await logFaqMiss(classification, latestUserText(conversation));
@@ -2598,7 +2616,7 @@ export default async function handler(req, res) {
       const cached = await getCachedResponse(cacheKey);
       if (cached) {
         console.log("GOLSZ scout cache hit");
-        await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs });
+        await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
         cached.scout_summary = updatedSummary;
         if (reservedQuestion) cached.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         cached.next_move = extractNextBestAction(classification);
@@ -2636,7 +2654,7 @@ export default async function handler(req, res) {
         const cost = estimateCost(tierConfig.model_name, data.usage);
         const profileUpdates = extractProfileUpdates(data);
         const scoutContextUpdates = extractScoutContextUpdates(data);
-        await logRouting("haiku", classification, tierConfig.model_name, data.usage, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs });
+        await logRouting("haiku", classification, tierConfig.model_name, data.usage, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, profileUpdates);
         await persistScoutContext(userId, scoutContextUpdates);
@@ -2692,9 +2710,12 @@ export default async function handler(req, res) {
       const retryRoom = scoutDeadline - Date.now();
       if (retryRoom >= TOOL_TURN_MIN_MS) {
         console.log("GOLSZ sonnet call failed, retrying once:", JSON.stringify(sonnetResult.data));
+        if (timeoutReason === "none") timeoutReason = "provider_error";
+        fallbackUsed = "sonnet_retry";
         sonnetResult = await runDeepReply(key, deepTierConfig, systemPrompt, conversation, scoutDeadline);
       } else {
         console.log("GOLSZ sonnet call failed, skipping retry (budget left ms:", retryRoom, "):", JSON.stringify(sonnetResult.data));
+        timeoutReason = "retry_skipped";
       }
     }
 
@@ -2704,6 +2725,7 @@ export default async function handler(req, res) {
       // degraded — explicitly told to say so plainly instead (spec: "return
       // a transparent message rather than inventing current information").
       console.log("GOLSZ sonnet retry also failed, falling back to haiku:", JSON.stringify(sonnetResult.data));
+      fallbackUsed = "haiku_cross_model";
       const fallbackSystem = systemPrompt + "\n\nNOTE: Live database/web search is temporarily unavailable. Give the best general guidance you can and say plainly that real-time GOLSZ search isn't available right now — never invent specific results, listings, or players.";
       const fastCfg = byTier.economy || ANTHROPIC_DEFAULTS.economy;
       const haikuFallback = await adapterFor(fastCfg.provider).generate({
@@ -2717,7 +2739,7 @@ export default async function handler(req, res) {
         const data = haikuFallback.data;
         console.log("GOLSZ scout usage check (haiku fallback):", JSON.stringify(data.usage));
         const cost = estimateCost(fastCfg.model_name, data.usage);
-        await logRouting("haiku", classification, fastCfg.model_name, data.usage, { plan: userPlan, escalationReason: "sonnet_provider_failure", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs });
+        await logRouting("haiku", classification, fastCfg.model_name, data.usage, { plan: userPlan, escalationReason: "sonnet_provider_failure", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, extractProfileUpdates(data));
         await persistScoutContext(userId, extractScoutContextUpdates(data));
@@ -2745,13 +2767,14 @@ export default async function handler(req, res) {
       // Failover exhausted with no answer produced — still worth a
       // scout_routing_log row (082) so failure rate is visible in cost/
       // usage telemetry instead of only showing up in error_log.
-      await logRouting("failed", classification, null, null, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, success: false });
+      await logRouting("failed", classification, null, null, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, success: false, timeoutReason, fallbackUsed });
       return res.status(503).json({ error: "Scout is temporarily unavailable. Please try again shortly." });
     }
 
     const data = sonnetResult.data;
+    if (sonnetResult.toolBudgetExhausted && timeoutReason === "none") timeoutReason = "tool_budget_exhausted";
     const sonnetCost = estimateCost(deepTierConfig.model_name, data.usage);
-    await logRouting("sonnet", classification, deepTierConfig.model_name, data.usage, { plan: userPlan, escalationReason: haikuFailureReason || escalationReason(classification), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs });
+    await logRouting("sonnet", classification, deepTierConfig.model_name, data.usage, { plan: userPlan, escalationReason: haikuFailureReason || escalationReason(classification), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
     await recordScoutUsageCost(userId, sonnetCost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
     await persistProfileUpdates(userId, extractProfileUpdates(data));
     await persistScoutContext(userId, extractScoutContextUpdates(data));
