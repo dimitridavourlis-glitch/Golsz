@@ -19,10 +19,27 @@
 // first, before the account itself is gone and nothing can look up which
 // files were theirs anymore.
 //
-// A parent deleting THEIR OWN account does not delete any child account
-// they manage (parent_links.parent_id cascades, orphaning the link, not
-// the child's own account/data) — deliberate: removing a parent's account
-// must never silently destroy their athlete's profile.
+// PARENT-MANAGED CHILDREN (P1-5). The original behaviour here was to leave
+// a managed child untouched, on the reasoning that deleting a parent must
+// never silently destroy their athlete's profile. That reasoning was right
+// about the danger and wrong about the outcome: a parent_managed child has a
+// synthetic email and a random password nobody holds, so once the parent is
+// gone NOBODY can sign in, correct the record, export it, or exercise
+// erasure over it. The child's personal data — a minor's — would sit in the
+// database forever with no controller. That is a worse failure than either
+// alternative.
+//
+// So the deletion now REFUSES rather than orphaning, and says exactly what
+// is in the way. The caller must resolve it deliberately, one of two ways:
+//
+//   confirm_delete_children: true   also delete every parent_managed child
+//                                   (their data goes with the parent's)
+//   ...or unlink/transfer the child first, e.g. a second approved parent
+//
+// A child with an independent login (parent_managed = false — a 16+ athlete
+// who linked a parent for visibility) is NOT affected: they can still sign
+// in, so removing the parent orphans nothing. Only accounts nobody can reach
+// block the delete.
 //
 // Required env vars:
 //   SUPABASE_URL / SUPABASE_SERVICE_KEY
@@ -89,7 +106,62 @@ export default async function handler(req, res) {
   // is the server-side backstop for it).
   if (!body || body.confirm !== true) return res.status(400).json({ error: "Confirmation required." });
 
+  // --- P1-5: never leave an unreachable managed child behind ---
+  let managedChildren = [];
   try {
+    const linkRes = await fetch(
+      `${supaUrl}/rest/v1/parent_links?parent_id=eq.${userId}&approved_at=not.is.null&select=athlete_id`,
+      { headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey } },
+    );
+    const links = linkRes.ok ? await linkRes.json() : [];
+    const ids = Array.isArray(links) ? links.map((l) => l.athlete_id).filter(Boolean) : [];
+    if (ids.length) {
+      // Only accounts nobody can log into are blocking. A 16+ athlete who
+      // linked a parent keeps their own credentials and is unaffected.
+      const profRes = await fetch(
+        `${supaUrl}/rest/v1/profiles?id=in.(${ids.join(",")})&parent_managed=is.true&select=id,full_name`,
+        { headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey } },
+      );
+      managedChildren = profRes.ok ? (await profRes.json()) : [];
+      if (!Array.isArray(managedChildren)) managedChildren = [];
+    }
+  } catch (e) {
+    // Fail CLOSED. If we cannot establish whether this parent manages a
+    // child, deleting anyway is exactly the orphaning this guard exists to
+    // prevent — and unlike a rate limit, there is no undo afterwards.
+    await logError(supaUrl, serviceKey, "api/delete-account.js", "Managed-children lookup failed", { detail: String(e), userId });
+    return res.status(503).json({ error: "Couldn't check your linked athletes just now. Please try again in a moment." });
+  }
+
+  if (managedChildren.length && body.confirm_delete_children !== true) {
+    return res.status(409).json({
+      error: "This account manages athlete profiles that nobody else can sign in to. Deleting it would leave their data with no owner.",
+      code: "managed_children_present",
+      // Names only, so the client can show the athlete the actual decision
+      // it is asking them to make instead of an abstract warning.
+      children: managedChildren.map((c) => ({ id: c.id, full_name: c.full_name || null })),
+    });
+  }
+
+  try {
+    // Children first. If the parent were deleted first and a child delete
+    // then failed, the child would be orphaned anyway — the exact outcome
+    // this guard exists to prevent — and there would no longer be a
+    // parent_links row to find them by.
+    for (const child of managedChildren) {
+      await deleteStoragePrefix(supaUrl, serviceKey, "avatars", child.id);
+      await deleteStoragePrefix(supaUrl, serviceKey, "post-images", child.id);
+      const childDel = await fetch(`${supaUrl}/auth/v1/admin/users/${child.id}`, {
+        method: "DELETE",
+        headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+      });
+      if (!childDel.ok) {
+        const detail = await childDel.text();
+        await logError(supaUrl, serviceKey, "api/delete-account.js", "Managed-child delete failed", { detail, parentId: userId, childId: child.id });
+        return res.status(502).json({ error: "Couldn't delete a linked athlete's account, so nothing was deleted. Please contact support." });
+      }
+    }
+
     await deleteStoragePrefix(supaUrl, serviceKey, "avatars", userId);
     await deleteStoragePrefix(supaUrl, serviceKey, "post-images", userId);
 

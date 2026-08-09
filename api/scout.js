@@ -50,6 +50,14 @@
 // backstop.
 export const config = { maxDuration: 60 };
 
+// P0-4: parent-managed under-16 athletes. Scout accepts an athleteId in the
+// request body so a parent can talk to Scout on their child's behalf — and
+// that id is verified against parent_links here, server-side, before it is
+// used for anything. See api/_acting-for.js for the full rule set. The
+// underscore prefix keeps Vercel from treating it as its own Serverless
+// Function (this project is on the Hobby plan's 12-function cap).
+import { resolveActingAthlete } from "./_acting-for.js";
+
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
 // Total server-side wall-clock budget for one Scout request, kept safely
@@ -4224,7 +4232,31 @@ export default async function handler(req, res) {
   // cache entry and to stamp any entry written this turn.
   let stateDigest = null;
   if (process.env.SUPABASE_URL) {
-    userId = await getUserId(req.headers.authorization);
+    // The athlete this conversation is ABOUT — normally the caller, or a
+    // linked under-16 child when a parent is managing them. body.athleteId is
+    // a request, never a grant: resolveActingAthlete re-derives the caller
+    // from the token and requires an APPROVED parent_links row before it
+    // returns anything other than the caller's own id. A rejected request is
+    // a 403 and nothing else runs, so an unrelated child's data is never
+    // read, never sent to a model, and never written.
+    const acting = await resolveActingAthlete(
+      req.headers.authorization,
+      body && typeof body.athleteId === "string" ? body.athleteId : null,
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY,
+    );
+    if (!acting.ok && acting.reason === "unauthenticated") {
+      return res.status(401).json({ error: "Sign in to use the Scout." });
+    }
+    if (!acting.ok) {
+      console.warn("GOLSZ acting-for REJECTED:", JSON.stringify({ caller: acting.callerId, reason: acting.reason }));
+      return res.status(403).json({ error: "You don't have access to that athlete." });
+    }
+    userId = acting.athleteId;
+    // Metering, burst protection and duplicate detection stay keyed to the
+    // ATHLETE, not the parent: a child's daily Scout allowance is the child's,
+    // and a parent managing two athletes should get each one's full allowance
+    // rather than one shared pool.
     if (!userId) return res.status(401).json({ error: "Sign in to use the Scout." });
 
     // Burst protection + duplicate-submission guard — see the comment above
