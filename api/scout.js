@@ -122,9 +122,29 @@ const PRICING = {
   "claude-haiku-4-5": { input: 1, output: 5 },
 };
 
+// The emergency provider's per-1M rates. Env-driven because only the
+// operator knows which vendor they signed up with. If the fallback model
+// isn't in PRICING and these aren't set, cost estimation would silently bill
+// it at Sonnet rates (the old default), quietly corrupting the margin
+// dashboards. Defaults match grok-4.20-0309-non-reasoning's sub-200k-context
+// tier ($1.25 in / $2.50 out per 1M, xAI published pricing, checked
+// 2026-08-09) so an operator who sets only a key still gets accurate numbers.
+// NOTE: xAI charges double above a 200k-token context. GOLSZ prompts run
+// ~10k, so the lower tier is the correct one here — revisit only if the
+// context budget ever grows by an order of magnitude.
+function fallbackPricing() {
+  return {
+    input: Number(process.env.SCOUT_FALLBACK_INPUT_COST || 1.25),
+    output: Number(process.env.SCOUT_FALLBACK_OUTPUT_COST || 2.5),
+  };
+}
+
 function estimateCost(model, usage) {
   if (!usage) return null;
-  const price = PRICING[model] || PRICING["claude-sonnet-5"];
+  const fb = fallbackProviderConfig();
+  const price = PRICING[model]
+    || (fb && model === fb.model ? fallbackPricing() : null)
+    || PRICING["claude-sonnet-5"];
   const uncachedInput = usage.input_tokens || 0;
   const cacheRead = usage.cache_read_input_tokens || 0;
   const cacheWrite = usage.cache_creation_input_tokens || 0;
@@ -243,11 +263,26 @@ function selectModelTier({ plan, classification, score }) {
 // round trip on every request. Falls back to ANTHROPIC_DEFAULTS below if a
 // tier has no enabled row — a bad edit here degrades gracefully, never
 // hard-fails Scout.
+// advanced/premium max_output_tokens are 1024/2048, NOT the API's real
+// ceiling of 4096 — this is the pre-flight budgeting estimate migration 104
+// already reasoned through: 4096 x $15/M = $0.0614 for the output ceiling
+// ALONE exceeds every plan's HARD_MAX_COST_PER_REQUEST except elite's, so
+// budgetGate() silently downgraded advanced/premium to Haiku on every
+// request for free/starter/pro, regardless of actual complexity.
+//
+// This is the FALLBACK used whenever scout_model_config has no row for a
+// tier (including an empty table, which is the state that shipped the bug
+// live: migration 104 was a bare UPDATE against zero rows, a silent no-op,
+// so this stale 4096 default was the only value actually in effect). Kept
+// in permanent sync with migration 110, which seeds the DB with the same
+// numbers — fixed in both places on purpose, so the DB being empty, wiped,
+// or never seeded in a fresh environment can never silently regress this
+// again.
 const ANTHROPIC_DEFAULTS = {
   economy: { provider: "anthropic", model_name: "claude-haiku-4-5", input_cost_per_million: 1, output_cost_per_million: 5, max_output_tokens: 1024 },
   standard: { provider: "anthropic", model_name: "claude-haiku-4-5", input_cost_per_million: 1, output_cost_per_million: 5, max_output_tokens: 2048 },
-  advanced: { provider: "anthropic", model_name: "claude-sonnet-5", input_cost_per_million: 3, output_cost_per_million: 15, max_output_tokens: 4096 },
-  premium: { provider: "anthropic", model_name: "claude-sonnet-5", input_cost_per_million: 3, output_cost_per_million: 15, max_output_tokens: 4096 },
+  advanced: { provider: "anthropic", model_name: "claude-sonnet-5", input_cost_per_million: 3, output_cost_per_million: 15, max_output_tokens: 1024 },
+  premium: { provider: "anthropic", model_name: "claude-sonnet-5", input_cost_per_million: 3, output_cost_per_million: 15, max_output_tokens: 2048 },
 };
 
 let modelConfigCache = { at: 0, byTier: null };
@@ -284,9 +319,24 @@ const TARGET_COSTS = {
   pro: Number(process.env.SCOUT_TARGET_COST_PRO || 0.003),
   elite: Number(process.env.SCOUT_TARGET_COST_ELITE || 0.006),
 };
+// free/starter were 0.02 until 2026-08-09 — found live, via the diagnostic
+// added while chasing the migration-110 bug above: a real mid-conversation
+// advanced reply (2801 fresh + 5260 cached input tokens, 1024 output tokens)
+// costs ~$0.0253, already over $0.02 before the conversation grows at all.
+// Migration 104's reasoning ("keep the 1024-token output ceiling alone under
+// the cap") only budgeted ~$0.0046 of headroom for input, but this app's
+// per-request AUTHORITATIVE CONTEXT is rebuilt fresh from the DB every call
+// (it reflects live athlete state, so it can't sit behind Anthropic's prompt
+// cache like the static system prompt does) — so a routine message's fresh
+// input alone regularly exceeds that headroom by itself. Net effect: the
+// "advanced" ceiling PLAN_MODEL_ACCESS grants free/starter was unreachable
+// in practice, on top of (not instead of) the empty-table bug fixed above.
+// Raised to 0.03 — clears a typical advanced reply with real margin for the
+// conversation to grow, while staying below pro's 0.04 so plan tiers still
+// differ in how long a conversation can sustain Sonnet before downgrading.
 const HARD_MAX_COST_PER_REQUEST = {
-  free: Number(process.env.SCOUT_HARD_MAX_COST_FREE || 0.02),
-  starter: Number(process.env.SCOUT_HARD_MAX_COST_STARTER || 0.02),
+  free: Number(process.env.SCOUT_HARD_MAX_COST_FREE || 0.03),
+  starter: Number(process.env.SCOUT_HARD_MAX_COST_STARTER || 0.03),
   pro: Number(process.env.SCOUT_HARD_MAX_COST_PRO || 0.04),
   elite: Number(process.env.SCOUT_HARD_MAX_COST_ELITE || 0.08),
 };
@@ -353,9 +403,124 @@ async function budgetGate(tier, plan, freshInputTokens, cachedInputTokens) {
 const anthropicAdapter = {
   provider: "anthropic",
   async generate({ apiKey, model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences }) {
-    return callAnthropic(apiKey, { model, system, messages, tools, thinking, maxTokens, stopSequences });
+    // systemDynamic was destructured here but never forwarded — a real bug
+    // found 2026-08-09 while adding the second provider. Every caller that
+    // went through the adapter (rather than calling callAnthropic directly)
+    // silently lost the per-athlete half of the system prompt. The worst
+    // case was the cross-model fallback, which passes the athlete state AND
+    // the "live search is unavailable, don't invent results" notice through
+    // this field: a degraded reply was answering with no athlete context and
+    // without being told it was degraded.
+    return callAnthropic(apiKey, { model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences });
   },
 };
+
+// ---- Second provider: OpenAI-compatible chat/completions ----
+//
+// Deliberately built against the OpenAI /chat/completions WIRE FORMAT rather
+// than one named vendor. That shape is a de-facto standard — OpenAI, Groq,
+// Together, Fireworks, DeepSeek, Mistral and xAI all speak it — so a single
+// adapter lets the operator pick (or switch) the emergency provider with two
+// env vars and no code change. Which vendor to pay for is a business
+// decision, not one to hard-code here.
+//
+// Master Architecture Non-Negotiable #2: "GOLSZ must not depend on a single
+// AI provider." Until now every model in MODEL_REGISTRY was Anthropic and the
+// only "failover" was Sonnet -> Haiku, which does nothing in an
+// Anthropic-wide outage. This is the path that keeps Scout answering.
+//
+// THE CRITICAL CONTRACT: this returns an ANTHROPIC-SHAPED response. Every
+// downstream consumer — deriveReplyText, extractProfileUpdates,
+// extractMemoryWrites, estimateCost, logRouting, the salvage parser — reads
+// data.content[].text / data.usage.input_tokens / data.stop_reason.
+// Normalising here is what keeps routing, cost telemetry, memory writes,
+// safety rules and the athlete's experience identical no matter who answered.
+// Accepts either a full endpoint or a base URL. Vendors publish their base
+// ("https://api.x.ai/v1") far more often than the full path, and configuring
+// the base by mistake would POST to /v1 and 404 — a misconfiguration that
+// only ever surfaces during an outage, i.e. the worst possible time to
+// discover it. Normalising here makes both forms work.
+function openaiCompatEndpoint() {
+  let raw = (process.env.SCOUT_FALLBACK_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
+  // FORCE https. Found live 2026-08-09: the env var had been saved as
+  // "http://api.x.ai/v1", and every request failed with xAI's
+  // "unauthenticated:no-credentials" — because the Authorization header is
+  // dropped when a cleartext request is redirected to TLS. Two problems in
+  // one: the fallback silently never worked, AND the API key plus the
+  // athlete's personal context were being put on the wire in cleartext.
+  // Upgrading here means a mistyped scheme can never do either again.
+  raw = raw.replace(/^http:\/\//i, "https://");
+  if (!/^https:\/\//i.test(raw)) raw = "https://" + raw.replace(/^\/+/, "");
+  return /\/chat\/completions$/.test(raw) ? raw : raw + "/chat/completions";
+}
+
+function toOpenAiMessages(system, systemDynamic, messages) {
+  // Anthropic takes system separately; OpenAI-compatible APIs take it as the
+  // first message. The two system blocks are concatenated in the SAME order
+  // the model would have received them, so the prompt is byte-equivalent in
+  // content even though the transport differs.
+  const sys = [system, systemDynamic].filter(Boolean).join("\n\n");
+  const out = sys ? [{ role: "system", content: sys }] : [];
+  for (const m of messages || []) {
+    // Anthropic content can be a string or an array of blocks; flatten to the
+    // plain text these APIs expect, dropping tool/image blocks (the fallback
+    // path is text-only by design — see the no-tools note below).
+    const content = typeof m.content === "string"
+      ? m.content
+      : (Array.isArray(m.content) ? m.content.map((b) => (b && b.type === "text" ? b.text : "")).filter(Boolean).join("\n") : "");
+    if (content) out.push({ role: m.role === "assistant" ? "assistant" : "user", content });
+  }
+  return out;
+}
+
+const openaiCompatibleAdapter = {
+  provider: "openai_compatible",
+  // No `tools` parameter on purpose. This adapter only ever serves the
+  // emergency no-tools reply, so it can never claim to have run a web or
+  // database search. The caller pairs it with the same "say plainly that
+  // live search is unavailable" notice used by the Haiku fallback.
+  async generate({ apiKey, model, system, systemDynamic, messages, maxTokens }) {
+    const r = await fetch(openaiCompatEndpoint(), {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: "Bearer " + apiKey },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens || 1024,
+        messages: toOpenAiMessages(system, systemDynamic, messages),
+      }),
+    });
+    const raw = await r.json();
+    if (!r.ok) return { ok: false, status: r.status, data: raw };
+    return { ok: true, status: r.status, data: normalizeOpenAiResponse(raw) };
+  },
+};
+
+// Maps an OpenAI-compatible response onto the Anthropic shape the rest of the
+// file already understands. Exported-by-position for tests: this is the single
+// riskiest function in the fallback, because a wrong shape here would fail
+// LATER (empty reply, null cost, lost memory writes) rather than loudly.
+function normalizeOpenAiResponse(raw) {
+  const choice = raw && Array.isArray(raw.choices) ? raw.choices[0] : null;
+  const text = (choice && choice.message && typeof choice.message.content === "string") ? choice.message.content : "";
+  const u = (raw && raw.usage) || {};
+  return {
+    id: raw && raw.id ? raw.id : "fallback",
+    content: [{ type: "text", text }],
+    // "length" is this format's max_tokens stop; map it so continueIfTruncated
+    // and the existing max_tokens handling read it the same way.
+    stop_reason: choice && choice.finish_reason === "length" ? "max_tokens" : "end_turn",
+    usage: {
+      input_tokens: u.prompt_tokens || 0,
+      output_tokens: u.completion_tokens || 0,
+      // These APIs have no equivalent of Anthropic's explicit cache accounting.
+      // Reported as 0 rather than omitted so estimateCost() and the cost
+      // dashboards do arithmetic on real zeros instead of undefined.
+      cache_read_input_tokens: 0,
+      cache_creation_input_tokens: 0,
+    },
+  };
+}
+
 function unconfiguredAdapter(provider) {
   return {
     provider,
@@ -366,12 +531,49 @@ function unconfiguredAdapter(provider) {
 }
 const PROVIDER_ADAPTERS = {
   anthropic: anthropicAdapter,
+  openai: openaiCompatibleAdapter,
+  openai_compatible: openaiCompatibleAdapter,
   google: unconfiguredAdapter("google"),
   xai: unconfiguredAdapter("xai"),
-  openai: unconfiguredAdapter("openai"),
 };
 function adapterFor(provider) {
   return PROVIDER_ADAPTERS[provider] || anthropicAdapter;
+}
+
+// The emergency provider is configured entirely by env, and is INERT unless
+// both vars are set — no key means fallbackProviderConfig() returns null and
+// the failover chain behaves exactly as it does today. Nothing about the
+// normal path changes when this is unconfigured.
+// Configured provider: xAI (Grok), reached through the OpenAI-compatible
+// adapter above. Model default is grok-4.20-0309-non-reasoning, chosen
+// deliberately for THIS job rather than for raw capability:
+//
+//   - NON-REASONING is the decisive property. This path runs with a ~1024
+//     output cap under the existing SCOUT_BUDGET_MS wall clock, during an
+//     outage. A reasoning model can spend that entire budget on internal
+//     thinking and return truncated or empty content — a catastrophic
+//     failure mode for the one path whose whole purpose is to prevent a
+//     total outage. Non-reasoning returns usable text immediately.
+//   - Mid-tier price ($1.25/$2.50 per 1M), not the flagship. grok-4.5 is
+//     "most intelligent and fastest" per xAI but costs $6/1M output — 2.4x
+//     more for a degraded emergency reply nobody should be relying on.
+//   - 1M context, far beyond the ~10k this prompt needs, so the athlete's
+//     full context can never be truncated on the fallback path.
+//   - grok-build-0.1 is cheaper ($1/$2) but xAI documents no intended use
+//     for it and the name implies build/agentic work; an undocumented model
+//     is the wrong risk to take on the emergency path specifically.
+//
+// Every value stays env-overridable — this default is a sensible starting
+// point, not a lock-in.
+function fallbackProviderConfig() {
+  const apiKey = process.env.SCOUT_FALLBACK_API_KEY;
+  if (!apiKey) return null;
+  return {
+    apiKey,
+    model: process.env.SCOUT_FALLBACK_MODEL || "grok-4.20-0309-non-reasoning",
+    provider: process.env.SCOUT_FALLBACK_PROVIDER || "openai_compatible",
+    maxOutputTokens: Number(process.env.SCOUT_FALLBACK_MAX_TOKENS || 1024),
+  };
 }
 
 // Emergency kill switches — checked first in the handler, before any model
@@ -639,7 +841,15 @@ const PROFILE_FIELD_MAP = {
   dob: { table: "athletes", column: "dob" },
   secondary_position: { table: "athletes", column: "secondary_position" },
   club: { table: "athletes", column: "club_name" },
-  level: { table: "athletes", column: "recruiting_status" },
+  // `level` REMOVED 2026-08-09. It mapped competition level into
+  // athletes.recruiting_status — a different concept the athlete sets
+  // themselves from a controlled dropdown (Open to offers / In contact /
+  // Committed / Signed). Scout emitting level:"NCAA D2" would have
+  // overwritten their own recruiting state with a competition level.
+  // Latent only: a production check found all stored values valid, so no
+  // rows were corrupted and no backfill is needed. Competition level now
+  // lives in scout_context.current_level, which resolveCurrentLevel()
+  // already reads and validates against SPORT_SCHEMA.
   grad_year: { table: "athletes", column: "grad_year" },
   gpa: { table: "athletes", column: "gpa" },
   license: { table: "athletes", column: "license" },
@@ -739,9 +949,16 @@ async function persistProfileUpdates(userId, updates) {
   for (const table of ["profiles", "athletes"]) {
     if (!Object.keys(patches[table]).length) continue;
     try {
-      await fetch(`${supaUrl}/rest/v1/${table}?id=eq.${userId}`, {
+      const r = await fetch(`${supaUrl}/rest/v1/${table}?id=eq.${userId}`, {
         method: "PATCH", headers, body: JSON.stringify(patches[table]),
       });
+      // A non-OK PATCH used to pass silently: fetch only throws on network
+      // failure, so a 4xx from PostgREST looked identical to success. Scout
+      // meanwhile may have told the athlete their goal was saved. Logged
+      // loudly so a failed write is visible rather than inferred later from
+      // a column that mysteriously stayed empty.
+      if (!r.ok) console.error(`GOLSZ profile-update persist (${table}) rejected:`, r.status, await r.text());
+      else if (patches[table].goal_text) console.log("GOLSZ goal captured:", JSON.stringify({ goal_text: patches[table].goal_text, goal_defined: patches[table].goal_defined }));
     } catch (e) { console.error(`GOLSZ profile-update persist (${table}) failed:`, e); }
   }
 }
@@ -767,7 +984,1148 @@ const SCOUT_CONTEXT_KEYS = new Set([
   "height", "weight", "dominant_side", "preferred_countries",
   "secondary_goal", "secondary_gaps", "scholarship_interest", "transfer_interest", "exposure_need",
   "budget",
+  // Competition level. Lives here rather than as a Passport column so it
+  // carries source/confidence like every other soft fact, and so it can
+  // never again be written into recruiting_status.
+  "current_level",
 ]);
+
+// ============================================================
+// TRIAGE READINESS (Prompt #1 — Scout Triage Stabilization)
+//
+// Three pure functions, no I/O, no model call, no new storage. They answer
+// exactly one question: does GOLSZ know enough about this athlete to give a
+// preliminary assessment instead of continuing to ask intake questions?
+//
+// Deliberately NOT a stored state machine. profiles.scout_state /
+// scout_profile_ready are dead remnants of an earlier attempt at that and
+// are not read anywhere; this is recomputed from authoritative data per
+// request, so it can never drift out of sync with the athlete's real record.
+// ============================================================
+
+// Free-text goal -> pathway_plan.pathway_type enum (migration 093's own
+// 11-value vocabulary, reused rather than inventing a second taxonomy).
+//
+// Exists because the ONLY normalized goal in the schema lives on
+// pathway_plan, which is paywalled at Basic — so a free athlete in triage,
+// the exact population this feature serves, has nothing but free-text
+// profiles.goal_text. This bridges that gap without a migration.
+//
+// Conservative by design: it returns null unless the text is unambiguous.
+// Two DIFFERENT categories matching means the athlete's stated goal is
+// genuinely ambiguous, and Master Architecture §18 is explicit that
+// "I want to play college soccer" is exactly the case GOLSZ must clarify
+// rather than assume. Guessing here would silently pick a pathway and
+// weight the athlete's whole assessment against it. A null falls through
+// to DEFAULT, which is the safe, generic behaviour.
+const GOAL_TEXT_PATTERNS = [
+  ["ncaa", /\b(ncaa|d1|d2|d3|division\s*(1|2|3|i{1,3}))\b/i],
+  ["naia", /\bnaia\b/i],
+  ["juco", /\b(juco|junior\s+college)\b/i],
+  ["canadian_university", /\b(u\s*sports|usports|canadian\s+(university|college)|cis)\b/i],
+  ["academy", /\bacademy\b/i],
+  ["european_club", /\b(europe|european)\b/i],
+  // \bpro\b won't match "program"/"progress" (word boundary), and
+  // "professional" is listed separately rather than relying on a prefix.
+  ["professional", /\b(pro|professional|turn\s+pro|go\s+pro|sign\s+(a\s+)?contract)\b/i],
+];
+
+function classifyGoalText(goalText) {
+  if (!goalText || typeof goalText !== "string") return null;
+  const matched = new Set();
+  for (const [type, re] of GOAL_TEXT_PATTERNS) if (re.test(goalText)) matched.add(type);
+  // Ambiguous (or nothing recognised) -> null, never a guess.
+  return matched.size === 1 ? [...matched][0] : null;
+}
+
+// ============================================================
+// SPORT_SCHEMA V1 — the authoritative sport-context layer
+//
+// Master Architecture §7. Two sports are defined to production quality
+// (soccer, basketball) rather than eleven at surface quality: two is the
+// minimum that proves the abstraction generalises across BOTH axes (sport
+// and pathway), and one would have proved nothing.
+//
+// STRUCTURE — the whole point of this file:
+//   SPORT_CORE     concepts true of every athlete in every sport.
+//   SPORT_SCHEMAS  per-sport modules holding ONLY what differs.
+// Adding a third sport means adding one entry to SPORT_SCHEMAS. It must
+// never require touching SPORT_CORE, the athletes table, isAssessmentReady(),
+// the prompt builder, or any routing logic — that constraint is asserted in
+// tests/test_sport_schema.cjs, not just stated here.
+//
+// Deliberately a code module, not a table. Same reasoning as
+// PATHWAY_FIELD_PRIORITY: scout_model_config shipped EMPTY to production and
+// silently broke model routing for months. Reference data that changes rarely
+// and has no admin editor belongs in version control, where it cannot be
+// empty and deploys atomically with the code that reads it.
+//
+// NON-NEGOTIABLE: this layer never guesses. An unrecognised sport, position
+// or level resolves to an explicit unknown, never to a plausible-looking
+// default. Fabricating an athlete's position would be worse than admitting
+// GOLSZ doesn't know it.
+// ============================================================
+
+// Concepts that are genuinely sport-agnostic. Nothing soccer-shaped here.
+const SPORT_CORE = {
+  // Where an athlete is in their development arc. Age bands are indicative
+  // and never override a real stated age — resolveAge() remains authoritative.
+  stages: [
+    { id: "foundation", label: "Foundation", typical_ages: [8, 12] },
+    { id: "development", label: "Development", typical_ages: [12, 15] },
+    { id: "specialization", label: "Specialization", typical_ages: [15, 18] },
+    { id: "transition", label: "Transition", typical_ages: [18, 21] },
+    { id: "performance", label: "Performance", typical_ages: [21, 99] },
+  ],
+  // Every sport develops along these; sports ADD to this list, never replace it.
+  development_dimensions: [
+    { id: "physical", label: "Physical" },
+    { id: "technical", label: "Technical" },
+    { id: "tactical", label: "Tactical" },
+    { id: "mental", label: "Mental / competitive" },
+    { id: "academic", label: "Academic" },
+    { id: "exposure", label: "Exposure / visibility" },
+  ],
+  // Goal vocabulary shared with pathway_plan.pathway_type (migration 093) so
+  // SPORT_SCHEMA and the Pathway feature can never drift into two taxonomies.
+  goal_types: [
+    "ncaa", "naia", "juco", "canadian_university", "academy",
+    "european_club", "professional", "development",
+    "agent_representation", "trainer_performance", "other",
+  ],
+  // Ordered weakest -> strongest. Consumed later by Goal-relative Readiness;
+  // defined here so evidence quality has ONE definition platform-wide.
+  evidence_tiers: [
+    "ai_inferred", "athlete_stated", "parent_stated", "coach_evaluation",
+    "measured_test", "official_competition_result", "verified_third_party",
+  ],
+};
+
+const SPORT_SCHEMAS = {
+  soccer: {
+    id: "soccer",
+    label: "Soccer",
+    team_or_individual: "team",
+    positions: [
+      { id: "gk", label: "Goalkeeper", group: "goalkeeper" },
+      { id: "cb", label: "Centre Back", group: "defence" },
+      { id: "rb", label: "Right Back", group: "defence" },
+      { id: "lb", label: "Left Back", group: "defence" },
+      { id: "rwb", label: "Right Wing Back", group: "defence" },
+      { id: "lwb", label: "Left Wing Back", group: "defence" },
+      { id: "cdm", label: "Defensive Midfielder", group: "midfield" },
+      { id: "cm", label: "Central Midfielder", group: "midfield" },
+      { id: "cam", label: "Attacking Midfielder", group: "midfield" },
+      { id: "rm", label: "Right Midfielder", group: "midfield" },
+      { id: "lm", label: "Left Midfielder", group: "midfield" },
+      { id: "rw", label: "Right Winger", group: "attack" },
+      { id: "lw", label: "Left Winger", group: "attack" },
+      { id: "st", label: "Striker", group: "attack" },
+      { id: "cf", label: "Centre Forward", group: "attack" },
+    ],
+    // Sport-relevant athlete attributes beyond the universal Passport fields.
+    attributes: ["dominant_foot", "height_cm", "weight_kg"],
+    performance_indicators: [
+      { key: "sprint_10m", label: "10m sprint", unit: "s", higher_is_better: false },
+      { key: "sprint_40m", label: "40m sprint", unit: "s", higher_is_better: false },
+      { key: "vertical_jump", label: "Vertical jump", unit: "cm", higher_is_better: true },
+      { key: "yo_yo", label: "Yo-Yo intermittent recovery", unit: "level", higher_is_better: true },
+      { key: "match_minutes", label: "Competitive minutes this season", unit: "min", higher_is_better: true },
+      { key: "goals", label: "Goals", unit: "count", higher_is_better: true },
+      { key: "assists", label: "Assists", unit: "count", higher_is_better: true },
+      { key: "clean_sheets", label: "Clean sheets", unit: "count", higher_is_better: true, positions: ["gk", "cb", "rb", "lb"] },
+    ],
+    development_dimensions: [{ id: "set_pieces", label: "Set pieces" }],
+    levels: [
+      { id: "recreational", label: "Recreational", rank: 1 },
+      { id: "school", label: "School", rank: 2 },
+      { id: "club_youth", label: "Youth club", rank: 3 },
+      { id: "academy", label: "Academy", rank: 5 },
+      { id: "juco", label: "JUCO", rank: 5 },
+      { id: "ncaa_d3", label: "NCAA Division III", rank: 6 },
+      { id: "naia", label: "NAIA", rank: 6 },
+      { id: "canadian_university", label: "U Sports", rank: 6 },
+      { id: "ncaa_d2", label: "NCAA Division II", rank: 7 },
+      { id: "ncaa_d1", label: "NCAA Division I", rank: 8 },
+      { id: "semi_professional", label: "Semi-professional", rank: 8 },
+      { id: "professional_lower", label: "Lower-division professional", rank: 9 },
+      { id: "professional_top", label: "Top-division professional", rank: 10 },
+    ],
+    pathways: [
+      { id: "ncaa", goal_type: "ncaa", label: "US college soccer (NCAA)", levels: ["ncaa_d3", "ncaa_d2", "ncaa_d1"],
+        key_evidence: ["grad_year", "gpa", "match_minutes", "film", "exposure"] },
+      { id: "naia", goal_type: "naia", label: "NAIA college soccer", levels: ["naia"],
+        key_evidence: ["grad_year", "gpa", "film"] },
+      { id: "juco", goal_type: "juco", label: "Junior college", levels: ["juco"],
+        key_evidence: ["grad_year", "film"] },
+      { id: "canadian_university", goal_type: "canadian_university", label: "Canadian university (U Sports)", levels: ["canadian_university"],
+        key_evidence: ["grad_year", "gpa", "film"] },
+      { id: "academy", goal_type: "academy", label: "Academy progression", levels: ["club_youth", "academy"],
+        key_evidence: ["match_minutes", "level", "coach_evaluation"] },
+      // goal_type "professional": soccer distinguishes semi-pro from pro as a
+      // real pathway, but the shared vocabulary (and pathway_plan's enum) does
+      // not. Declaring the mapping keeps the sport's own precision without
+      // forking the taxonomy.
+      { id: "semi_professional", goal_type: "professional", label: "Semi-professional", levels: ["semi_professional"],
+        key_evidence: ["match_minutes", "film", "level"] },
+      { id: "professional", goal_type: "professional", label: "Professional", levels: ["professional_lower", "professional_top"],
+        key_evidence: ["match_minutes", "level", "film", "trial_history"] },
+      { id: "european_club", goal_type: "european_club", label: "European club pathway", levels: ["academy", "professional_lower"],
+        key_evidence: ["citizenship", "match_minutes", "film"] },
+    ],
+    terminology: {
+      trial: "trial", showcase: "ID camp / showcase", film: "highlight reel + full match",
+      governing_examples: ["NCAA", "NAIA", "NJCAA", "U Sports", "FIFA"],
+    },
+  },
+
+  basketball: {
+    id: "basketball",
+    label: "Basketball",
+    team_or_individual: "team",
+    positions: [
+      { id: "pg", label: "Point Guard", group: "guard" },
+      { id: "sg", label: "Shooting Guard", group: "guard" },
+      { id: "sf", label: "Small Forward", group: "wing" },
+      { id: "pf", label: "Power Forward", group: "frontcourt" },
+      { id: "c", label: "Center", group: "frontcourt" },
+    ],
+    // Wingspan/standing reach matter enormously here and are meaningless in
+    // soccer — exactly the kind of thing that must NOT live in the core model.
+    attributes: ["height_cm", "weight_kg", "wingspan_cm", "standing_reach_cm", "dominant_hand"],
+    performance_indicators: [
+      { key: "vertical_jump", label: "Max vertical", unit: "cm", higher_is_better: true },
+      { key: "lane_agility", label: "Lane agility drill", unit: "s", higher_is_better: false },
+      { key: "three_quarter_sprint", label: "3/4 court sprint", unit: "s", higher_is_better: false },
+      { key: "ppg", label: "Points per game", unit: "pts", higher_is_better: true },
+      { key: "rpg", label: "Rebounds per game", unit: "reb", higher_is_better: true },
+      { key: "apg", label: "Assists per game", unit: "ast", higher_is_better: true },
+      { key: "fg_pct", label: "Field goal %", unit: "%", higher_is_better: true },
+      { key: "three_pt_pct", label: "Three-point %", unit: "%", higher_is_better: true },
+      { key: "ft_pct", label: "Free throw %", unit: "%", higher_is_better: true },
+    ],
+    development_dimensions: [{ id: "shooting", label: "Shooting mechanics" }],
+    levels: [
+      { id: "recreational", label: "Recreational", rank: 1 },
+      { id: "school", label: "School team", rank: 3 },
+      { id: "aau", label: "AAU / club circuit", rank: 4 },
+      { id: "prep", label: "Prep school", rank: 5 },
+      { id: "juco", label: "JUCO", rank: 5 },
+      { id: "ncaa_d3", label: "NCAA Division III", rank: 6 },
+      { id: "naia", label: "NAIA", rank: 6 },
+      { id: "canadian_university", label: "U Sports", rank: 6 },
+      { id: "ncaa_d2", label: "NCAA Division II", rank: 7 },
+      { id: "ncaa_d1", label: "NCAA Division I", rank: 9 },
+      { id: "professional", label: "Professional", rank: 10 },
+    ],
+    pathways: [
+      { id: "ncaa", goal_type: "ncaa", label: "US college basketball (NCAA)", levels: ["ncaa_d3", "ncaa_d2", "ncaa_d1"],
+        key_evidence: ["grad_year", "gpa", "ppg", "film", "aau_exposure"] },
+      { id: "naia", goal_type: "naia", label: "NAIA college basketball", levels: ["naia"],
+        key_evidence: ["grad_year", "gpa", "film"] },
+      { id: "juco", goal_type: "juco", label: "Junior college", levels: ["juco"],
+        key_evidence: ["grad_year", "film"] },
+      { id: "canadian_university", goal_type: "canadian_university", label: "Canadian university (U Sports)", levels: ["canadian_university"],
+        key_evidence: ["grad_year", "gpa", "film"] },
+      { id: "development", goal_type: "development", label: "School / prep development", levels: ["school", "prep", "aau"],
+        key_evidence: ["level", "coach_evaluation", "ppg"] },
+      { id: "professional", goal_type: "professional", label: "Professional", levels: ["professional"],
+        key_evidence: ["level", "film", "ppg"] },
+    ],
+    terminology: {
+      trial: "open run / tryout", showcase: "AAU circuit / exposure camp", film: "game film + highlight mix",
+      governing_examples: ["NCAA", "NAIA", "NJCAA", "U Sports", "FIBA"],
+    },
+  },
+};
+
+// Resolves a free-text sport (athletes.sport is user-entered) to a schema.
+// Returns null for anything unrecognised — the caller then treats the athlete
+// as sport-unknown rather than being handed a fabricated default. This is the
+// single most important behaviour in this module.
+function sportSchemaFor(sport) {
+  if (!sport || typeof sport !== "string") return null;
+  return SPORT_SCHEMAS[sport.trim().toLowerCase()] || null;
+}
+
+function knownSportIds() { return Object.keys(SPORT_SCHEMAS); }
+
+// Matches a free-text position against a sport's own vocabulary, by id or
+// label, case-insensitively. Returns null when it doesn't belong to THIS
+// sport — including when it is a perfectly valid position in another sport.
+// Cross-sport contamination is the failure this exists to prevent.
+function resolvePosition(sport, position) {
+  const schema = sportSchemaFor(sport);
+  if (!schema || !position || typeof position !== "string") return null;
+  const p = position.trim().toLowerCase();
+  return schema.positions.find((x) => x.id === p || x.label.toLowerCase() === p) || null;
+}
+
+function resolveLevel(sport, level) {
+  const schema = sportSchemaFor(sport);
+  if (!schema || !level || typeof level !== "string") return null;
+  const l = level.trim().toLowerCase();
+  return schema.levels.find((x) => x.id === l || x.label.toLowerCase() === l) || null;
+}
+
+// Pathways this sport actually supports, for a goal type from the shared
+// vocabulary. Empty array (not null, not a guess) when the sport does not
+// support that pathway — e.g. soccer has semi_professional, basketball does not.
+// Matched on goal_type, not id: a sport's pathways may be finer-grained than
+// the shared vocabulary (soccer distinguishes semi-professional from
+// professional; the pathway_plan enum does not), so each pathway declares
+// which shared goal type it serves. That keeps the taxonomies linked without
+// forcing every sport to flatten its own real distinctions.
+function pathwaysFor(sport, goalType) {
+  const schema = sportSchemaFor(sport);
+  if (!schema) return [];
+  if (!goalType) return schema.pathways;
+  return schema.pathways.filter((x) => x.goal_type === goalType);
+}
+
+// Renders the sport-context block Scout receives. Every unknown is stated
+// plainly as unknown — Master Architecture §33. Returns "" when the sport
+// isn't in SPORT_SCHEMA at all, so Scout falls back to its existing honest
+// "GOLSZ has no built-out data for your sport" behaviour rather than being
+// handed an empty scaffold that looks like knowledge.
+function renderSportContext(sport, position, goalType) {
+  const schema = sportSchemaFor(sport);
+  if (!schema) return "";
+  const pos = resolvePosition(sport, position);
+  const paths = pathwaysFor(sport, goalType);
+  const lines = [
+    `SPORT CONTEXT — ${schema.label} (GOLSZ has a built-out schema for this sport):`,
+    `- positions in this sport: ${schema.positions.map((x) => x.label).join(", ")}`,
+    pos
+      ? `- this athlete's position: ${pos.label} (${pos.group})`
+      : (position
+        ? `- this athlete's recorded position ("${String(position).slice(0, 40)}") is not one this schema recognises — treat it as unconfirmed and ask, do not reinterpret it`
+        : `- this athlete's position: NOT ON RECORD — ask, never assume one`),
+    `- measurable indicators that matter here: ${schema.performance_indicators.map((x) => `${x.label} (${x.unit})`).join(", ")}`,
+    `- competition levels, weakest to strongest: ${schema.levels.map((x) => x.label).join(" < ")}`,
+    `- development dimensions: ${[...SPORT_CORE.development_dimensions, ...(schema.development_dimensions || [])].map((d) => d.label).join(", ")}`,
+    // Branches on whether a goal was actually CLASSIFIED, not on whether the
+    // filter returned rows — with no goal, pathwaysFor() returns everything,
+    // and reporting that as "in scope" would imply GOLSZ had picked a pathway
+    // for an athlete who has not chosen one.
+    (goalType && paths.length)
+      ? `- pathway(s) in scope for their stated goal: ${paths.map((x) => `${x.label} [key evidence: ${x.key_evidence.join(", ")}]`).join(" | ")}`
+      : `- no pathway selected yet — GOLSZ supports these for this sport: ${schema.pathways.map((x) => x.label).join(", ")}. Do not pick one for them.`,
+    `- terminology to use: trial = "${schema.terminology.trial}", showcase = "${schema.terminology.showcase}", film = "${schema.terminology.film}"`,
+  ];
+  return lines.join("\n");
+}
+
+// ============================================================
+// GOAL-RELATIVE READINESS — FOUNDATION ONLY
+//
+// This is the substrate the readiness ENGINE will later consume. No score is
+// computed here and no weight is chosen. Everything below either resolves
+// real athlete data onto SPORT_SCHEMA's vocabulary, or declares a shape that
+// still needs sourced content.
+//
+// The governing constraint, from Master Architecture §35 and §17: GOLSZ must
+// never manufacture certainty. That has a concrete engineering consequence
+// here — an unmappable metric, an unknown level and an absent reference band
+// are all FIRST-CLASS STATES, not gaps to paper over with a plausible guess.
+// ============================================================
+
+// ---- 1. Canonical benchmark mapping -------------------------------------
+//
+// athlete_benchmarks.metric is free text an athlete typed ("40 yard dash",
+// "10m", "vert"). performance_indicators[].key is canonical. This bridges the
+// two WITHOUT ever overwriting what the athlete entered — the original string
+// is always preserved and returned alongside the resolution.
+//
+// Aliases are per-sport on purpose. "vertical" means the same thing in both
+// sports so it appears in both, but a soccer alias can never resolve to a
+// basketball indicator: the lookup is scoped by sport before it begins.
+const BENCHMARK_ALIASES = {
+  soccer: {
+    sprint_10m: ["10m", "10 m", "10m sprint", "10 metre sprint", "10 meter sprint", "10m dash"],
+    sprint_40m: ["40m", "40 m", "40m sprint", "40 metre sprint", "40 meter sprint"],
+    vertical_jump: ["vertical", "vert", "vertical jump", "max vertical", "cmj"],
+    yo_yo: ["yo-yo", "yoyo", "yo yo", "yo-yo test", "beep test", "bleep test"],
+    match_minutes: ["minutes", "match minutes", "mins played", "playing time"],
+    goals: ["goals", "goals scored"],
+    assists: ["assists"],
+    clean_sheets: ["clean sheets", "shutouts"],
+  },
+  basketball: {
+    vertical_jump: ["vertical", "vert", "vertical jump", "max vertical", "standing vertical"],
+    lane_agility: ["lane agility", "agility drill", "lane agility drill"],
+    three_quarter_sprint: ["3/4 court sprint", "three quarter sprint", "3/4 sprint", "court sprint"],
+    ppg: ["ppg", "points per game", "points"],
+    rpg: ["rpg", "rebounds per game", "rebounds"],
+    apg: ["apg", "assists per game", "assists"],
+    fg_pct: ["fg%", "fg pct", "field goal %", "field goal percentage"],
+    three_pt_pct: ["3p%", "3pt%", "three point %", "three point percentage"],
+    ft_pct: ["ft%", "free throw %", "free throw percentage"],
+  },
+};
+
+// AMBIGUOUS strings that must NEVER auto-resolve, even though they look
+// close to something. "sprint" alone could be 10m or 40m; "%" could be any of
+// three shooting percentages. Guessing here would silently attach an
+// athlete's number to the wrong metric and then reason about it as fact.
+const AMBIGUOUS_METRICS = ["sprint", "speed", "time", "jump", "%", "percentage", "test", "score", "pb", "best"];
+
+// Returns EITHER a confident resolution or an explicit unresolved marker.
+// Never throws, never guesses, never mutates the athlete's own text.
+function resolveBenchmarkMetric(sport, rawMetric) {
+  const raw = typeof rawMetric === "string" ? rawMetric.trim() : "";
+  const base = { raw: rawMetric, resolved: false, key: null, indicator: null, unit: null, reason: null };
+  if (!raw) return { ...base, reason: "empty" };
+  const schema = sportSchemaFor(sport);
+  if (!schema) return { ...base, reason: "unknown_sport" };
+  const norm = raw.toLowerCase().replace(/\s+/g, " ");
+  if (AMBIGUOUS_METRICS.includes(norm)) return { ...base, reason: "ambiguous" };
+  const aliases = BENCHMARK_ALIASES[schema.id] || {};
+  let key = null;
+  for (const [k, list] of Object.entries(aliases)) {
+    if (k === norm || list.includes(norm)) { key = k; break; }
+  }
+  if (!key) return { ...base, reason: "no_match" };
+  const indicator = schema.performance_indicators.find((x) => x.key === key) || null;
+  // An alias pointing at an indicator this sport doesn't define is a config
+  // error, not something to paper over.
+  if (!indicator) return { ...base, reason: "indicator_missing_from_schema" };
+  return { raw: rawMetric, resolved: true, key, indicator, unit: indicator.unit, reason: null };
+}
+
+// Unit-safety gate. Two benchmark values may only be compared when they are
+// the SAME canonical metric in the SAME sport with the SAME unit. Comparing
+// seconds to centimetres, or one athlete's "vertical" in inches against
+// another's in cm, would produce confident nonsense.
+function canCompareBenchmarks(a, b) {
+  if (!a || !b || !a.resolved || !b.resolved) return { ok: false, reason: "unresolved" };
+  if (a.key !== b.key) return { ok: false, reason: "different_metric" };
+  if (a.unit !== b.unit) return { ok: false, reason: "unit_mismatch" };
+  return { ok: true, reason: null };
+}
+
+// ---- 2. Benchmark reference bands ---------------------------------------
+//
+// DELIBERATELY EMPTY. The architecture is defined; the numbers are not,
+// because GOLSZ does not yet have sourced reference data and inventing
+// "a D1 right back runs 10m in 1.75s" would be exactly the fabricated
+// certainty §35 forbids — with the added danger that an athlete would train
+// against a number nobody verified.
+//
+// Required shape for every future entry:
+//   { sport, metric, unit, position_group|null, stage|null, target_level,
+//     direction: "higher_is_better"|"lower_is_better"|"contextual",
+//     bands: [{ label, min, max }],
+//     source, source_url, source_date, evidence_quality, confidence }
+// evidence_quality must be one of SPORT_CORE.evidence_tiers.
+//
+// ---- Source hierarchy -------------------------------------------------
+// Tier A primary/official · Tier B sports-science · Tier C institutional.
+// Anything not traceable to one of these is not admissible. Recruiting
+// sites, blogs, social posts, forum numbers and AI-generated estimates are
+// excluded by policy, not by preference.
+//
+// These are VERIFIED SOURCE LOCATIONS, not extracted data. Registering the
+// source is the cheap half; extracting distributions from it, with sample
+// sizes and protocols attached, is the expensive half and is not done yet.
+const BENCHMARK_SOURCES = [
+  {
+    id: "nba_combine_strength_agility", tier: "A", sport: "basketball",
+    name: "NBA Draft Combine — Strength & Agility (official)",
+    url: "https://www.nba.com/stats/draft/combine-strength-agility",
+    covers: ["vertical_jump", "lane_agility", "three_quarter_sprint"],
+    population: "NBA Draft Combine invitees (elite, pre-professional, predominantly male)",
+    // The distinction that makes this data safe to use at all.
+    reference_type: "observed_distribution",
+    caution: "Describes NBA Combine participants ONLY. Must never be presented as an NCAA requirement or a recruiting threshold.",
+    status: "source_verified_data_not_extracted",
+  },
+  {
+    id: "nba_combine_anthro", tier: "A", sport: "basketball",
+    name: "NBA Draft Combine — Anthropometric (official)",
+    url: "https://www.nba.com/stats/draft/combine-anthro",
+    covers: ["wingspan_cm", "standing_reach_cm", "height_cm", "weight_kg"],
+    population: "NBA Draft Combine invitees",
+    reference_type: "observed_distribution",
+    caution: "Same population caveat as the agility dataset.",
+    status: "source_verified_data_not_extracted",
+  },
+  {
+    id: "mann_2010_hand_vs_electronic", tier: "B", sport: null,
+    name: "Comparison between hand and electronic timing of 40-yd dash performance in college football players (J Strength Cond Res)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/20072055/",
+    covers: ["measurement_protocol"],
+    population: "College football players",
+    reference_type: "published_standard",
+    caution: "Protocol evidence, not an athlete benchmark.",
+    status: "verified_and_encoded", // the only source whose finding is actually used below
+  },
+  {
+    id: "hetzler_hand_vs_electronic", tier: "B", sport: null,
+    name: "Validity and reliability of hand and electronic timing for 40-yd sprint in college football players (J Strength Cond Res)",
+    url: "https://www.ncbi.nlm.nih.gov/pubmed/25785707",
+    covers: ["measurement_protocol"],
+    population: "College football players; experienced vs novice timers",
+    reference_type: "published_standard",
+    caution: "Protocol evidence, not an athlete benchmark.",
+    status: "verified_and_encoded",
+  },
+];
+
+// ---- Reference types ----------------------------------------------------
+// The single most important distinction in this whole layer. An observed
+// average is NOT a requirement. Conflating the two is how a platform ends up
+// telling a 16-year-old they "need" a number nobody ever required.
+const REFERENCE_TYPES = [
+  "observed_distribution",   // what a measured population actually did
+  "population_reference",    // normative data for a defined population
+  "official_requirement",    // a governing body genuinely requires this
+  "published_standard",      // a published testing/protocol standard
+  "derived_reference_band",  // GOLSZ-derived FROM the above; must cite its parent
+];
+// Only these may ever be phrased to an athlete as something they must hit.
+const REQUIREMENT_TYPES = ["official_requirement"];
+
+// ---- Protocol compatibility --------------------------------------------
+// Two numbers are comparable only when their measurement protocols are
+// compatible. Encoded from the peer-reviewed sources above: hand timing is
+// materially FASTER than electronic over 40yd — 0.31 ± 0.07 s in Mann et al.,
+// and 0.22 ± 0.07 (experienced) / 0.26 ± 0.08 (novice) in Hetzler et al.
+//
+// GOLSZ deliberately does NOT auto-apply a correction. The published deltas
+// disagree with each other, they are distance- and population-specific, and
+// silently adding 0.24 s to a 10m youth soccer time would be inventing data
+// under the appearance of rigour. The rule is to REFUSE the comparison and
+// say why.
+const PROTOCOL_DIMENSIONS = ["timing_method", "distance_m", "start_type", "surface", "jump_protocol", "test_variant", "sex", "age_group"];
+
+const PROTOCOL_INCOMPATIBILITIES = [
+  { dimension: "timing_method", a: "hand", b: "electronic",
+    severity: "material",
+    magnitude_note: "Hand timing is faster by roughly 0.22-0.31 s over 40yd (Mann et al. 2010; Hetzler et al.). Distance- and population-specific.",
+    sources: ["mann_2010_hand_vs_electronic", "hetzler_hand_vs_electronic"],
+    auto_normalize: false },
+  { dimension: "start_type", a: "standing", b: "flying",
+    severity: "material",
+    magnitude_note: "A running/flying start removes acceleration time; not comparable to a standing start.",
+    sources: [], auto_normalize: false },
+  { dimension: "jump_protocol", a: "standing_vertical", b: "max_vertical",
+    severity: "material",
+    magnitude_note: "Max (approach) vertical exceeds standing vertical; the NBA Combine reports them as separate measures.",
+    sources: ["nba_combine_strength_agility"], auto_normalize: false },
+];
+
+// Returns whether two measurements may be compared, and if not, why.
+// Unknown protocol metadata is NOT treated as compatible — absence of
+// evidence about how something was measured is not evidence it matches.
+function protocolCompatible(a, b) {
+  const pa = (a && a.protocol) || {}, pb = (b && b.protocol) || {};
+  const issues = [];
+  for (const dim of PROTOCOL_DIMENSIONS) {
+    const va = pa[dim], vb = pb[dim];
+    if (va == null || vb == null) {
+      if (va != null || vb != null) issues.push({ dimension: dim, reason: "unknown_on_one_side" });
+      continue;
+    }
+    if (va === vb) continue;
+    const rule = PROTOCOL_INCOMPATIBILITIES.find((r) =>
+      r.dimension === dim && ((r.a === va && r.b === vb) || (r.a === vb && r.b === va)));
+    issues.push(rule
+      ? { dimension: dim, reason: "known_incompatible", severity: rule.severity, magnitude_note: rule.magnitude_note, sources: rule.sources }
+      : { dimension: dim, reason: "differs", a: va, b: vb });
+  }
+  // Two distinct outcomes, deliberately. A KNOWN incompatibility (hand vs
+  // electronic timing) is disqualifying: no arithmetic makes those numbers
+  // comparable. An UNKNOWN dimension is merely uncertainty — the brief's rule
+  // is that uncertainty reduces comparability rather than causing a guess, so
+  // it is surfaced as a caveat but does not by itself block a comparison.
+  // Treating unknown as disqualifying would block virtually every real
+  // comparison, since an athlete rarely records every dimension a study did.
+  const blocking = issues.some((i) => i.reason === "known_incompatible" || i.reason === "differs");
+  return { compatible: issues.length === 0, blocking, issues };
+}
+
+// ---- Reference bands ----------------------------------------------------
+//
+// STILL EMPTY, and that is the honest state. Tier A sources are verified and
+// registered above, but no distribution has been EXTRACTED from them with the
+// sample size, sex, age group and protocol metadata a defensible band needs.
+// Publishing a band without those would reproduce exactly the problem this
+// whole layer exists to prevent.
+//
+// Every future entry must satisfy validateBenchmarkBand() below.
+const BENCHMARK_BANDS = [];
+
+// Structural gate for any band added later. Rejects the four failure modes
+// that would matter most: missing provenance, an unknown reference type, an
+// observed distribution mislabelled as a requirement, and absent sample size
+// silently reading as zero rather than as unknown.
+function validateBenchmarkBand(b) {
+  const errors = [];
+  const required = ["sport", "metric", "unit", "target_level", "reference_type", "direction",
+    "bands", "source_name", "source_url", "source_date", "evidence_quality", "confidence",
+    "sample_size", "sex", "measurement_protocol"];
+  for (const k of required) if (b[k] === undefined) errors.push(`missing:${k}`);
+  if (b.reference_type && !REFERENCE_TYPES.includes(b.reference_type)) errors.push("bad:reference_type");
+  if (b.evidence_quality && !SPORT_CORE.evidence_tiers.includes(b.evidence_quality)) errors.push("bad:evidence_quality");
+  if (b.direction && !["higher_is_better", "lower_is_better", "contextual"].includes(b.direction)) errors.push("bad:direction");
+  // Unknown must be explicit — null would be indistinguishable from "not set".
+  if (b.sample_size !== undefined && b.sample_size !== "unknown" && typeof b.sample_size !== "number") errors.push("bad:sample_size");
+  return { valid: errors.length === 0, errors };
+}
+
+// May this band be phrased to an athlete as something they MUST achieve?
+// Almost always no. Only a genuine governing-body requirement qualifies.
+function isRequirement(band) {
+  return !!(band && REQUIREMENT_TYPES.includes(band.reference_type));
+}
+
+// ---- Specificity ---------------------------------------------------------
+//
+// A reference population describes WHO was measured. Every dimension may be
+// null, meaning "this source did not break the data down that way" — which is
+// different from, and must never be silently upgraded to, "this applies to
+// everyone". A study of elite U17 males with no position split is a genuine
+// elite-U17-male reference; it is NOT a winger standard.
+//
+// Ordered most-general -> most-specific. The weights only rank candidates
+// against each other; they are not scores and never reach an athlete.
+const SPECIFICITY_DIMENSIONS = [
+  { id: "sport", weight: 1 },
+  { id: "sex", weight: 2 },
+  { id: "competition_level", weight: 4 },
+  { id: "development_stage", weight: 8 },
+  { id: "age_range", weight: 16 },   // age_min/age_max treated as one dimension
+  { id: "position_group", weight: 32 },
+];
+
+function makeSpecificity(o = {}) {
+  // Explicit nulls, never absent keys — an absent key reads as "forgot to
+  // consider it", a null reads as "the source genuinely does not say".
+  return {
+    sport: o.sport ?? null,
+    sex: o.sex ?? null,                         // "male" | "female" | "mixed" | null
+    age_min: o.age_min ?? null,
+    age_max: o.age_max ?? null,
+    development_stage: o.development_stage ?? null,
+    competition_level: o.competition_level ?? null,
+    position_group: o.position_group ?? null,   // null === ALL, deliberately
+  };
+}
+
+// Does this population legitimately describe this athlete? A null dimension
+// on the POPULATION side is permissive (the source didn't split by it). A
+// null on the ATHLETE side is NOT — we cannot claim a female-specific
+// reference applies to an athlete whose sex we do not know.
+function specificityMatches(pop, athlete) {
+  const p = makeSpecificity(pop), a = makeSpecificity(athlete);
+  if (p.sport && a.sport && p.sport !== a.sport) return { match: false, reason: "sport_mismatch" };
+  if (p.sport && !a.sport) return { match: false, reason: "athlete_sport_unknown" };
+  for (const dim of ["sex", "development_stage", "competition_level", "position_group"]) {
+    if (p[dim] == null) continue;                       // population not split by it
+    if (a[dim] == null) return { match: false, reason: `athlete_${dim}_unknown` };
+    if (p[dim] !== a[dim]) return { match: false, reason: `${dim}_mismatch` };
+  }
+  if (p.age_min != null || p.age_max != null) {
+    if (a.age_min == null) return { match: false, reason: "athlete_age_unknown" };
+    if (p.age_min != null && a.age_min < p.age_min) return { match: false, reason: "age_below_range" };
+    if (p.age_max != null && a.age_min > p.age_max) return { match: false, reason: "age_above_range" };
+  }
+  return { match: true, reason: null };
+}
+
+function specificityScore(pop) {
+  const p = makeSpecificity(pop);
+  let s = 0;
+  for (const d of SPECIFICITY_DIMENSIONS) {
+    if (d.id === "age_range") { if (p.age_min != null || p.age_max != null) s += d.weight; continue; }
+    if (p[d.id] != null) s += d.weight;
+  }
+  return s;
+}
+
+// Human-readable statement of exactly how specific a match is, so an athlete
+// is never shown a comparison whose scope they cannot see.
+function specificityLabel(pop) {
+  const p = makeSpecificity(pop);
+  const parts = [];
+  if (p.sex) parts.push(p.sex);
+  if (p.age_min != null || p.age_max != null) parts.push(`age ${p.age_min ?? "?"}-${p.age_max ?? "?"}`);
+  if (p.development_stage) parts.push(p.development_stage);
+  if (p.competition_level) parts.push(p.competition_level);
+  parts.push(p.position_group ? p.position_group : "all positions");
+  return parts.join(", ");
+}
+
+// Deterministic selection: every compatible population, most specific first,
+// ties broken by larger sample then newer data. Returns the candidates too so
+// a caller can explain what was rejected and why.
+function selectReferencePopulation(candidates, athlete) {
+  const evaluated = (candidates || []).map((c) => ({ population: c, ...specificityMatches(c.specificity, athlete) }));
+  const compatible = evaluated.filter((e) => e.match);
+  compatible.sort((a, b) => {
+    const d = specificityScore(b.population.specificity) - specificityScore(a.population.specificity);
+    if (d !== 0) return d;
+    const na = typeof a.population.sample_size === "number" ? a.population.sample_size : -1;
+    const nb = typeof b.population.sample_size === "number" ? b.population.sample_size : -1;
+    if (nb !== na) return nb - na;
+    return String(b.population.source_date || "").localeCompare(String(a.population.source_date || ""));
+  });
+  return { selected: compatible[0] ? compatible[0].population : null, compatible: compatible.map((c) => c.population), rejected: evaluated.filter((e) => !e.match) };
+}
+
+// ---- Sample-size protection ---------------------------------------------
+//
+// PROVISIONAL. These thresholds are engineering defaults chosen to be
+// conservative, NOT established scientific cut-offs. They exist so the system
+// fails safe before real data arrives, and they must be reviewed by someone
+// with sports-science standing before anything athlete-facing ships.
+// Env-overridable so a review can change them without a code change.
+const SAMPLE_SIZE_GATES = {
+  descriptive_only: Number(process.env.BENCH_MIN_DESCRIPTIVE || 30),
+  percentile_eligible: Number(process.env.BENCH_MIN_PERCENTILE || 100),
+  strong_reference: Number(process.env.BENCH_MIN_STRONG || 500),
+  _provisional: true,
+  _review_note: "Provisional engineering defaults, not validated scientific thresholds. Review before launch.",
+};
+
+// Below descriptive_only nothing is published at all; between there and
+// percentile_eligible a population may be described but NEVER expressed as a
+// precise percentile, which is the specific failure mode this guards.
+function sampleSizeTier(n) {
+  if (n === "unknown" || n == null) return "insufficient_sample";
+  if (typeof n !== "number" || !Number.isFinite(n) || n < 0) return "insufficient_sample";
+  if (n >= SAMPLE_SIZE_GATES.strong_reference) return "strong_reference";
+  if (n >= SAMPLE_SIZE_GATES.percentile_eligible) return "percentile_eligible";
+  if (n >= SAMPLE_SIZE_GATES.descriptive_only) return "descriptive_only";
+  return "insufficient_sample";
+}
+function percentilesAllowed(n) {
+  const t = sampleSizeTier(n);
+  return t === "percentile_eligible" || t === "strong_reference";
+}
+
+// ---- Unit normalisation --------------------------------------------------
+//
+// Only EXACT, dimensionally-valid conversions. A protocol difference is not a
+// unit difference and is never handled here: no amount of arithmetic turns a
+// hand-timed sprint into an electronically-timed one.
+const UNIT_CONVERSIONS = {
+  "in->cm": (v) => v * 2.54,
+  "cm->in": (v) => v / 2.54,
+  "kg->lb": (v) => v * 2.2046226218,
+  "lb->kg": (v) => v / 2.2046226218,
+  "ms->s": (v) => v / 1000,
+  "s->ms": (v) => v * 1000,
+};
+function convertUnit(value, from, to) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return { ok: false, reason: "non_numeric" };
+  if (from === to) return { ok: true, value, converted: false };
+  const fn = UNIT_CONVERSIONS[`${from}->${to}`];
+  if (!fn) return { ok: false, reason: "no_conversion", from, to };
+  return { ok: true, value: fn(value), converted: true, from, to };
+}
+
+// ---- Import pipeline -----------------------------------------------------
+//
+// The contract for a supplied dataset. Every column is required — including
+// the ones people most want to skip (sample_size, protocol, source_url),
+// because a band without them cannot be defended to an athlete later.
+const BENCHMARK_IMPORT_COLUMNS = [
+  "sport", "metric", "unit", "sex", "age_min", "age_max", "development_stage",
+  "competition_level", "position_group", "reference_type", "direction",
+  "n", "mean", "sd", "p10", "p25", "p50", "p75", "p90",
+  // measurement_protocol is the human-readable description and is always
+  // required. The protocol_* columns are the STRUCTURED form used for
+  // compatibility checks — optional, because not every source reports every
+  // dimension, and an unreported dimension must stay unknown rather than be
+  // inferred from the prose.
+  "measurement_protocol", "protocol_timing_method", "protocol_start_type",
+  "protocol_jump_protocol", "protocol_distance_m", "protocol_surface",
+  "source_name", "source_url", "source_date",
+  "publication_date", "population_description", "evidence_quality", "confidence", "notes",
+];
+
+// Validates and normalises ONE supplied row. Never repairs questionable data —
+// a row either meets the contract or is rejected with reasons.
+function importBenchmarkRecord(row) {
+  const errors = [];
+  const r = row || {};
+  const schema = sportSchemaFor(r.sport);
+  if (!schema) errors.push("unsupported_sport");
+  const resolved = schema ? resolveBenchmarkMetric(r.sport, r.metric) : { resolved: false, reason: "unsupported_sport" };
+  if (!resolved.resolved) errors.push(`unresolved_metric:${resolved.reason}`);
+  if (resolved.resolved && r.unit && r.unit !== resolved.unit) {
+    // A supplied unit that differs from the canonical one is only acceptable
+    // if an exact conversion exists; otherwise the row is rejected rather
+    // than coerced.
+    const conv = convertUnit(1, r.unit, resolved.unit);
+    if (!conv.ok) errors.push(`unit_incompatible:${r.unit}->${resolved.unit}`);
+  }
+  if (!REFERENCE_TYPES.includes(r.reference_type)) errors.push("bad_reference_type");
+  if (!["higher_is_better", "lower_is_better", "contextual"].includes(r.direction)) errors.push("bad_direction");
+  if (!SPORT_CORE.evidence_tiers.includes(r.evidence_quality)) errors.push("bad_evidence_quality");
+  for (const k of ["source_name", "source_url", "source_date", "population_description", "measurement_protocol"]) {
+    if (r[k] == null || r[k] === "") errors.push(`missing:${k}`);
+  }
+  const n = r.n === "unknown" ? "unknown" : (r.n == null || r.n === "" ? "unknown" : Number(r.n));
+  if (n !== "unknown" && (!Number.isFinite(n) || n < 0)) errors.push("bad_sample_size");
+  if (errors.length) return { ok: false, errors, raw: row };
+
+  const specificity = makeSpecificity({
+    sport: schema.id, sex: r.sex || null,
+    age_min: r.age_min === "" || r.age_min == null ? null : Number(r.age_min),
+    age_max: r.age_max === "" || r.age_max == null ? null : Number(r.age_max),
+    development_stage: r.development_stage || null,
+    competition_level: r.competition_level || null,
+    position_group: r.position_group || null,
+  });
+  const tier = sampleSizeTier(n);
+  const stats = {};
+  for (const k of ["mean", "sd", "p10", "p25", "p50", "p75", "p90"]) {
+    if (r[k] == null || r[k] === "") { stats[k] = null; continue; }
+    const v = Number(r[k]);
+    if (!Number.isFinite(v)) { stats[k] = null; continue; }
+    const conv = r.unit && r.unit !== resolved.unit ? convertUnit(v, r.unit, resolved.unit) : { ok: true, value: v };
+    stats[k] = conv.ok ? conv.value : null;
+  }
+  return {
+    ok: true,
+    record: {
+      sport: schema.id, metric: resolved.key, unit: resolved.unit,
+      specificity, reference_type: r.reference_type, direction: r.direction,
+      sample_size: n, sample_tier: tier, percentiles_allowed: percentilesAllowed(n),
+      stats,
+      // Raw is preserved verbatim, always. If a conversion or a judgement
+      // later proves wrong, the original supplied row is still recoverable.
+      raw: row,
+      provenance: {
+        source_name: r.source_name, source_url: r.source_url, source_date: r.source_date,
+        publication_date: r.publication_date || null, population_description: r.population_description,
+        measurement_protocol: r.measurement_protocol,
+        // Structured counterpart. Only dimensions the source actually
+        // reported are present; the rest stay absent so protocolCompatible()
+        // flags them as unknown instead of assuming a match.
+        protocol_structured: (() => {
+          const o = {};
+          if (r.protocol_timing_method) o.timing_method = r.protocol_timing_method;
+          if (r.protocol_start_type) o.start_type = r.protocol_start_type;
+          if (r.protocol_jump_protocol) o.jump_protocol = r.protocol_jump_protocol;
+          if (r.protocol_distance_m !== undefined && r.protocol_distance_m !== null && r.protocol_distance_m !== "") o.distance_m = Number(r.protocol_distance_m);
+          if (r.protocol_surface) o.surface = r.protocol_surface;
+          if (r.sex) o.sex = r.sex;
+          return o;
+        })(),
+        evidence_quality: r.evidence_quality,
+        confidence: r.confidence == null || r.confidence === "" ? null : Number(r.confidence),
+        notes: r.notes || null,
+      },
+    },
+  };
+}
+
+// Batch import with a real report. Duplicates are detected on the natural key
+// (sport+metric+full specificity+source) and rejected rather than merged —
+// silently deduplicating supplied research would hide a data problem.
+function importBenchmarkDataset(rows) {
+  const accepted = [], rejected = [], seen = new Set();
+  for (let i = 0; i < (rows || []).length; i += 1) {
+    const res = importBenchmarkRecord(rows[i]);
+    if (!res.ok) { rejected.push({ row: i, errors: res.errors, raw: res.raw }); continue; }
+    const s = res.record.specificity;
+    const key = [res.record.sport, res.record.metric, s.sex, s.age_min, s.age_max,
+      s.development_stage, s.competition_level, s.position_group,
+      res.record.provenance.source_url].join("|");
+    if (seen.has(key)) { rejected.push({ row: i, errors: ["duplicate_record"], raw: rows[i] }); continue; }
+    seen.add(key);
+    accepted.push(res.record);
+  }
+  const byTier = {};
+  for (const a of accepted) byTier[a.sample_tier] = (byTier[a.sample_tier] || 0) + 1;
+  return {
+    total: (rows || []).length, accepted_count: accepted.length, rejected_count: rejected.length,
+    by_sample_tier: byTier,
+    percentile_eligible_count: accepted.filter((a) => a.percentiles_allowed).length,
+    accepted, rejected,
+  };
+}
+
+// ---- Comparison engine (NOT scoring) ------------------------------------
+//
+// Returns a described comparison or an honest refusal. It never produces a
+// rating, a grade, or anything that could be read as "how good is this
+// athlete" — that is readiness's job and readiness is still locked.
+function compareToReference({ sport, metric, value, unit, athlete, protocol, populations }) {
+  const resolved = resolveBenchmarkMetric(sport, metric);
+  if (!resolved.resolved) return { status: "unresolved_metric", reason: resolved.reason };
+  const pool = (populations || BENCHMARK_BANDS).filter((b) => b.sport === sportSchemaFor(sport)?.id && b.metric === resolved.key);
+  if (!pool.length) return { status: "no_reference_data", metric: resolved.key };
+  const { selected, rejected } = selectReferencePopulation(pool, { ...athlete, sport: sportSchemaFor(sport)?.id });
+  if (!selected) return { status: "no_compatible_population", metric: resolved.key, rejected_reasons: rejected.map((r) => r.reason) };
+
+  const compat = protocolCompatible({ protocol }, { protocol: selected.provenance.protocol_structured || {} });
+  const conv = unit && unit !== selected.unit ? convertUnit(value, unit, selected.unit) : { ok: true, value };
+  if (!conv.ok) return { status: "unit_incompatible", metric: resolved.key, from: unit, to: selected.unit };
+
+  return {
+    status: "ok",
+    metric: resolved.key, unit: selected.unit, athlete_value: conv.value,
+    // A percentile is offered ONLY when the population is large enough AND
+    // the protocols are compatible. Either failing downgrades to a described
+    // comparison with the caveat attached, never to a confident number.
+    // Gated on `blocking`, not `compatible`: a known protocol conflict
+    // withholds the percentile outright, while unreported protocol detail
+    // leaves it available but flagged in protocol_compatibility.issues.
+    percentile_available: selected.percentiles_allowed && !compat.blocking,
+    population: {
+      description: selected.provenance.population_description,
+      specificity: selected.specificity, specificity_label: specificityLabel(selected.specificity),
+      sample_size: selected.sample_size, sample_tier: selected.sample_tier,
+      reference_type: selected.reference_type, is_requirement: isRequirement(selected),
+    },
+    protocol_compatibility: compat,
+    evidence_quality: selected.provenance.evidence_quality,
+    // Full traceability: source -> population -> metric -> protocol -> N -> date -> tier.
+    provenance: selected.provenance,
+    caution: isRequirement(selected)
+      ? null
+      : "This is a descriptive reference population, not a requirement. It describes what a measured group did, not what an athlete must achieve.",
+  };
+}
+
+// Explicit status object rather than null, so a caller can distinguish
+// "we looked and have no reference data" from "something went wrong".
+// Until BENCHMARK_BANDS is populated this ALWAYS returns no_reference_data,
+// which is the honest answer and must stay visible rather than being smoothed
+// into a default band.
+function benchmarkBandFor({ sport, metric, positionGroup, stage, targetLevel }) {
+  const schema = sportSchemaFor(sport);
+  if (!schema) return { status: "unknown_sport", band: null };
+  const resolved = resolveBenchmarkMetric(sport, metric);
+  if (!resolved.resolved) return { status: "unresolved_metric", band: null, reason: resolved.reason };
+  const match = BENCHMARK_BANDS.find((b) =>
+    b.sport === schema.id && b.metric === resolved.key &&
+    (b.position_group == null || b.position_group === positionGroup) &&
+    (b.stage == null || b.stage === stage) &&
+    (b.target_level == null || b.target_level === targetLevel));
+  if (!match) return { status: "no_reference_data", band: null, metric: resolved.key, unit: resolved.unit };
+  return { status: "ok", band: match, metric: resolved.key, unit: resolved.unit };
+}
+
+// ---- 3. Current competitive level ---------------------------------------
+//
+// Stored in scout_context (jsonb) rather than a new column: no migration, no
+// risk to existing rows, and it inherits the source/confidence tagging every
+// other soft fact already carries.
+//
+// NEVER inferred. A club name, a country, an age or the athlete's own
+// enthusiasm are not evidence of competitive level — "I play for Omonia"
+// could mean the first team or an under-13 side. Only an explicit stored
+// value that resolves against THIS sport's level list counts.
+function resolveCurrentLevel(sport, scoutContext) {
+  const entry = scoutContext && scoutContext.current_level;
+  const rawVal = entry && typeof entry === "object" ? entry.value : entry;
+  if (!rawVal) return { known: false, level: null, source: null, reason: "not_on_record" };
+  const level = resolveLevel(sport, String(rawVal));
+  if (!level) return { known: false, level: null, source: null, reason: "unrecognised_for_sport", raw: rawVal };
+  return {
+    known: true, level,
+    source: (entry && typeof entry === "object" && entry.source) || "athlete_stated",
+    confidence: (entry && typeof entry === "object" && typeof entry.confidence === "number") ? entry.confidence : null,
+  };
+}
+
+// ---- 4. Readiness dimensions + configurable weighting -------------------
+//
+// The dimensions the future engine will evaluate. Declared here so the engine
+// consumes a shared vocabulary rather than inventing one.
+const READINESS_DIMENSIONS = [
+  { id: "athletic_fit", label: "Athletic / performance fit", needs: ["benchmarks", "reference_bands"] },
+  { id: "level_fit", label: "Competitive-level fit", needs: ["current_level", "target_level"] },
+  { id: "development_fit", label: "Development fit", needs: ["stage", "development_plan"] },
+  { id: "evidence_strength", label: "Evidence / profile strength", needs: ["evidence_tiers"] },
+  { id: "exposure_readiness", label: "Exposure / recruiting readiness", needs: ["film", "outreach"] },
+  { id: "pathway_requirements", label: "Pathway-specific requirements", needs: ["pathway_key_evidence"] },
+];
+
+// Weights are INTENTIONALLY null. The architecture supports per-sport and
+// per-pathway variation — academics matter enormously for NCAA and barely at
+// all for a pro trial — but choosing the actual numbers requires validation
+// GOLSZ has not done. A null weight means "not yet decided" and the engine
+// must refuse to score rather than substitute a default.
+const READINESS_WEIGHTS = {
+  DEFAULT: Object.fromEntries(READINESS_DIMENSIONS.map((d) => [d.id, null])),
+  "soccer:ncaa": Object.fromEntries(READINESS_DIMENSIONS.map((d) => [d.id, null])),
+  "soccer:professional": Object.fromEntries(READINESS_DIMENSIONS.map((d) => [d.id, null])),
+  "basketball:ncaa": Object.fromEntries(READINESS_DIMENSIONS.map((d) => [d.id, null])),
+};
+
+function readinessWeightsFor(sport, goalType) {
+  const schema = sportSchemaFor(sport);
+  const key = schema && goalType ? `${schema.id}:${goalType}` : null;
+  return (key && READINESS_WEIGHTS[key]) || READINESS_WEIGHTS.DEFAULT;
+}
+
+// The gate that keeps a half-built engine from shipping a number. Returns
+// false while any weight is unset or no reference bands exist.
+function readinessScoringReady(sport, goalType) {
+  const w = readinessWeightsFor(sport, goalType);
+  const weighted = Object.values(w).every((v) => typeof v === "number");
+  return { ready: weighted && BENCHMARK_BANDS.length > 0,
+    weights_configured: weighted, reference_bands: BENCHMARK_BANDS.length };
+}
+
+// Deterministic recovery for the goal-capture failure found 2026-08-09.
+//
+// Audit finding: across all 13 production athletes, profiles.goal_text was
+// EMPTY while scout_context.dream_outcome held real, athlete-stated goals
+// ("CPL professional contract", "turn pro in soccer"). Scout recognises goals
+// correctly; it just writes them to the scout_context channel instead of the
+// profile_updates one, because dream_outcome is the better-signposted key and
+// the `goal` instruction was purely discouraging. The prompt is fixed too, but
+// a prompt is a request — this makes the outcome structural.
+//
+// Strictly a promotion of the athlete's OWN words, never an inference:
+//   - only fires when goal_text is genuinely empty (never overwrites)
+//   - only for source === "athlete_stated" (an ai_inferred dream_outcome is
+//     Scout's reading between the lines, and §18 forbids assuming a goal)
+//   - never overrides an explicit profile_updates.goal the model did send
+// persistProfileUpdates() flips goal_defined=true off the same write, so the
+// derived flag stays deterministic rather than model-reported.
+// Reads BOTH this turn's dream_outcome and the one already on file. The
+// first version watched only the incoming updates and was therefore
+// structurally dead: the model does not re-send a dream_outcome it has
+// already recorded, so the net never fired for the athletes whose goals were
+// already stranded — the entire population it existed for. Verified live:
+// an athlete said "lock that in as my goal", Scout replied "goal locked in",
+// and goal_text stayed NULL because nothing new was emitted to promote.
+//
+// Reading the stored value makes this self-healing per athlete on their next
+// interaction. It is NOT a backfill: nothing is written until that athlete
+// talks to Scout again, and the value promoted is one they stated themselves.
+function pickStatedGoal(scoutContext) {
+  const d = scoutContext && scoutContext.dream_outcome;
+  // Only an object carries a source; a bare string has no provenance, and
+  // provenance is the whole basis for trusting this as the athlete's own word.
+  if (!d || typeof d !== "object" || d.source !== "athlete_stated") return null;
+  const v = typeof d.value === "string" ? d.value.trim() : "";
+  return v || null;
+}
+
+function applyGoalSafetyNet(profileUpdates, scoutContextUpdates, existingGoalText, storedScoutContext) {
+  if (existingGoalText && String(existingGoalText).trim()) return profileUpdates;
+  if (profileUpdates && profileUpdates.goal) return profileUpdates;
+  // This turn's statement first — it is the most current thing they said.
+  // Falls back to what is already on file, which is the self-heal path.
+  const goal = pickStatedGoal(scoutContextUpdates) || pickStatedGoal(storedScoutContext);
+  if (!goal) return profileUpdates;
+  return { ...(profileUpdates || {}), goal };
+}
+
+// The deliberate FIRST SLICE of a future SPORT_SCHEMA — not the whole thing.
+// Kept as a code constant rather than a table on purpose: scout_model_config
+// shipped empty to production while the code assumed rows existed, silently
+// breaking model routing for months (found 2026-08-09 only by sending a real
+// message and reading logs). A constant cannot be empty and deploys
+// atomically with the code that reads it. Move this to a table when there is
+// an admin editor for it, not before.
+//
+// Field names reference REAL athlete columns and REAL scout_context keys
+// only — nothing invented. "age" is the one derived field (dob OR
+// age_reported), resolved in fieldPresent() below.
+//
+// DEFAULT is the COMMON path, not the fallback edge case: ~11 sports are
+// offered and two are configured here, and a free athlete with no classified
+// goal lands here too. It must always produce something sensible.
+// target_level is USEFUL, never CRITICAL. It was critical in the first cut,
+// and a 2026-08-09 audit showed why that was wrong on both counts: it was
+// populated for only 1 of 13 athletes, and it is redundant with the goal —
+// "NCAA D1 soccer" as a goal already establishes the intended level. Keeping
+// both critical meant blocking readiness on a second field that asks the
+// athlete the same question twice, so a stated goal would still leave them
+// stuck. The goal itself remains mandatory (enforced separately below).
+const PATHWAY_FIELD_PRIORITY = {
+  "soccer:ncaa": {
+    critical: ["sport", "age", "position", "club_name", "grad_year", "gpa"],
+    useful: ["target_level", "height_cm", "perceived_strengths", "perceived_weaknesses", "timeline", "exposure_need"],
+    deprioritized: [],
+  },
+  "soccer:professional": {
+    // Academics are not what a pro pathway turns on — grad_year/gpa are
+    // explicitly deprioritized so triage stops treating them as blockers.
+    critical: ["sport", "age", "position", "club_name", "timeline"],
+    useful: ["target_level", "height_cm", "perceived_strengths", "perceived_weaknesses", "main_gap"],
+    deprioritized: ["gpa", "grad_year"],
+  },
+  "basketball:ncaa": {
+    critical: ["sport", "age", "position", "club_name", "grad_year", "gpa"],
+    useful: ["target_level", "height_cm", "perceived_strengths", "perceived_weaknesses", "timeline", "exposure_need"],
+    deprioritized: [],
+  },
+  "basketball:professional": {
+    critical: ["sport", "age", "position", "club_name", "timeline"],
+    useful: ["target_level", "height_cm", "perceived_strengths", "perceived_weaknesses", "main_gap"],
+    deprioritized: ["gpa", "grad_year"],
+  },
+  // Sport-agnostic, goal-agnostic baseline. Mirrors Master Architecture §Part 3's
+  // universal triage list, minus anything only meaningful for a known pathway.
+  DEFAULT: {
+    critical: ["sport", "age", "position", "club_name"],
+    useful: ["target_level", "timeline", "perceived_strengths", "perceived_weaknesses", "main_gap", "grad_year"],
+    deprioritized: [],
+  },
+};
+
+function pathwayPriorityFor(sport, pathwayType) {
+  const key = `${String(sport || "").toLowerCase().trim()}:${pathwayType || ""}`;
+  return PATHWAY_FIELD_PRIORITY[key] || PATHWAY_FIELD_PRIORITY.DEFAULT;
+}
+
+// Is this field actually known? Hard Passport columns outrank scout_context,
+// same precedence renderAuthoritativeContext() already applies. A
+// scout_context entry counts as present only when it has a real value —
+// the model writes {value, source, confidence} objects, and an empty value
+// is the same as never having asked.
+function fieldPresent(field, athlete, scoutContext, goalText) {
+  const a = athlete || {};
+  const sc = scoutContext || {};
+  if (field === "age") return !!(a.dob || a.age_reported);
+  if (field === "goal") return !!(goalText && String(goalText).trim());
+  if (a[field] !== undefined && a[field] !== null && a[field] !== "") return true;
+  const entry = sc[field];
+  if (entry && typeof entry === "object") return entry.value !== undefined && entry.value !== null && entry.value !== "";
+  return entry !== undefined && entry !== null && entry !== "";
+}
+
+// THE canonical "do we know enough to stop interviewing and start assessing"
+// signal. Both the Scout recap and the free->paid conversion moment read
+// this one function, so the server and the client can never disagree about
+// whether an athlete is ready.
+//
+// Returns no percentage on purpose: three overlapping completeness numbers
+// already exist (Readiness' profile_quality sub-score being one), and a
+// fourth soft metric would be noise. confidence is DERIVED from the counts
+// below, never free-form and never model-authored.
+function isAssessmentReady(ctx) {
+  const athlete = (ctx && ctx.athlete) || null;
+  const scoutContext = (athlete && athlete.scout_context) || (ctx && ctx.scoutContext) || {};
+  const goalText = (ctx && ctx.goalText) || null;
+  const pathwayType = (ctx && ctx.pathwayType) || classifyGoalText(goalText);
+  const priority = pathwayPriorityFor(athlete && athlete.sport, pathwayType);
+
+  const missing_critical = priority.critical.filter((f) => !fieldPresent(f, athlete, scoutContext, goalText));
+  const missing_useful = priority.useful.filter((f) => !fieldPresent(f, athlete, scoutContext, goalText));
+
+  // A stated goal is non-negotiable regardless of sport or pathway: without
+  // one there is nothing to be ready RELATIVE TO. Master Architecture §18.
+  const hasGoal = fieldPresent("goal", athlete, scoutContext, goalText);
+  if (!hasGoal) missing_critical.push("goal");
+
+  const sufficient = missing_critical.length === 0;
+  const confidence = !sufficient ? "low" : (missing_useful.length <= 1 ? "high" : missing_useful.length <= 3 ? "moderate" : "low");
+
+  return { sufficient_for_preliminary_assessment: sufficient, missing_critical, missing_useful, confidence };
+}
 
 // Same extraction shape as extractProfileUpdates(), pulling scout_context_updates
 // instead of profile_updates out of the same parsed reply.
@@ -1211,7 +2569,7 @@ function extractNextBestAction(classification) {
 // Reuses the same merge_scout_context() RPC; jsonb || only ever touches
 // the "ai_meta" top-level key here, leaving every other scout_context
 // field untouched.
-async function persistAiMeta(userId, classification) {
+async function persistAiMeta(userId, classification, assessmentReady) {
   if (!userId) return;
   const supaUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
@@ -1226,6 +2584,11 @@ async function persistAiMeta(userId, classification) {
   const aiMeta = {
     missing_information: missing, recommended_specialist: specialist,
     conversation_stage: stage, next_best_action: nextAction,
+    // Written here so the client's free->paid conversion moment can read the
+    // SAME readiness value the server just used for the Scout recap, rather
+    // than reimplementing isAssessmentReady() in golsz-app.html and drifting
+    // from it. One implementation, two consumers.
+    assessment_ready: !!(assessmentReady && assessmentReady.sufficient_for_preliminary_assessment),
     updated_at: new Date().toISOString(),
   };
 
@@ -1279,7 +2642,7 @@ If asked what AI model or company powers you, who made you, or whether you're Ch
 GOLSZ is a sports-recruiting platform used by athletes of all ages, including minors. Stay strictly on sports, athletics, recruiting, and career topics. Never generate or engage with sexual, romantic, 18+/adult, or otherwise inappropriate content, regardless of how the request is framed (roleplay, "hypothetically," "for a story," etc.) — decline briefly and warmly, and steer the conversation back to something sports-related. This applies no matter who the user says they are.
 GOLSZ PLANS below (when present) is the real, current source of truth for what each plan costs and includes — never invent a feature, price, or restriction beyond what's listed; if asked something not covered there, say you're not sure and offer to check rather than guessing. When a locked or higher-tier feature comes up naturally, explain what that level actually adds to how involved GOLSZ is in their development — never just "more messages" — and let them decide for themselves; never use false urgency, fake scarcity, or guaranteed-outcome language ("guaranteed scholarship," "guaranteed pro contract"), and never talk someone out of a higher plan they actually want. You're their AI Scout, not customer support — if you genuinely don't know something about how GOLSZ works, say so plainly and offer to find out, never brush past it.
 sport_support_level in ATHLETE STATE below tells you how deep GOLSZ's own pathway/benchmark knowledge actually is for their sport — "core" means real depth; "supported," "secondary," or "unknown" means say so honestly and lean on general knowledge/web search rather than implying GOLSZ has built-out sport-specific data it doesn't have yet.
-When ATHLETE STATE shows profile_complete=true, goal_defined=true, and plan=free, that's a real moment — recognize it ONCE (never repeat this recap on a later message once you've already said it): briefly recap what you've learned about them (history, what they're proud of, strengths, what needs work, their stated goal), tell them plainly that's the athlete they are today and it's time to figure out how they get where they want to go, and invite them toward building a Pathway — mention plainly that a Pathway opens with a paid plan, never hide or soften that.
+ATHLETE STATE carries assessment_ready — the app's own deterministic judgement of whether it knows enough about this athlete to stop interviewing and start assessing. When it is false, still_missing names what's actually blocking; prefer those over any generic intake question, and never announce the flag itself. When ATHLETE STATE shows assessment_ready=true and plan=free, that's a real moment — recognize it ONCE (never repeat this recap on a later message once you've already said it): briefly recap what you've learned about them (history, what they're proud of, strengths, what needs work, their stated goal), tell them plainly that's the athlete they are today and it's time to figure out how they get where they want to go, and invite them toward building a Pathway — mention plainly that a Pathway opens with a paid plan, never hide or soften that.
 SELLING THE RIGHT PLAN — this is part of helping them, not a separate job.
 GOLSZ CAPABILITIES lists every feature and the plan it starts on. When what the athlete actually needs RIGHT NOW sits above their current plan, say so: name the feature, say in one line what it would do for THIS situation, and name the tier. Put it inside the advice and carry on. Never bolt a pitch onto the end of every reply.
 Only ever point UPWARD from where they are — free to Basic, Basic to Pro or Elite, Pro to Elite. Never suggest a cheaper plan, never suggest downgrading, and never tell them their current plan is enough when a higher one genuinely solves the thing they just described.
@@ -1299,8 +2662,9 @@ SCOUT MEMORY (when present in the message) is your own durable memory of this at
 GOLSZ KNOWLEDGE (when present) is GOLSZ's own verified, curated reference on sport/eligibility/pathway rules. Prefer it over your own recollection and over a web result when they disagree, and cite it naturally ("GOLSZ's eligibility reference says..."). If it's absent or doesn't cover the question, say what you actually know and use web search — never invent a GOLSZ rule.
 GOLSZ CAPABILITIES (when present) is the real, current list of what the product can and cannot do. Anything listed as NOT part of GOLSZ does not exist — never suggest it, never imply it's coming, and never tell an athlete to find or contact someone through it. When a task needs something GOLSZ doesn't do, say plainly that GOLSZ doesn't do it and give them the real off-platform way to do it themselves.
 OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","memory_writes":[{"type":"...","subject":"...","content":"...","source":"athlete_stated|ai_inferred","confidence":0-1,"importance":1-5}],"research_note":{"summary":"...","confidence":0-1,"valid_days":N} or null,"profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"drafted_email":"the full drafted email text" or null}
-Allowed profile_updates keys: name, age, dob, occupation, sport, position, secondary_position, home_city, home_country, current_city, current_country, citizenship, club, previous_clubs, level, grad_year, gpa, license, looking_for_players, education_level, goal. Location is FOUR separate things and you must never merge them: home_city/home_country are where they are FROM, current_city/current_country are where they are NOW, citizenship is the passport they hold. Only set the one they actually told you about — setting the wrong one corrupts the record. previous_clubs is an array of {"name","from","to","level"} for clubs they have LEFT; the club they are at now goes in "club". Prefer dob (YYYY-MM-DD) over age when you know it. Do not repeat known fields. "goal" should be a real, clearly-stated goal the athlete actually confirmed (e.g. "play NCAA D1 soccer"), not a vague guess — setting it marks their goal as officially defined, so only set it once you're genuinely sure.
-Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need, budget. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
+Allowed profile_updates keys: name, age, dob, occupation, sport, position, secondary_position, home_city, home_country, current_city, current_country, citizenship, club, previous_clubs, grad_year, gpa, license, looking_for_players, education_level, goal. There is deliberately NO "level" key: an athlete's competition level is NOT a Passport column and must be sent as scout_context_updates.current_level instead, never as a profile_update. Location is FOUR separate things and you must never merge them: home_city/home_country are where they are FROM, current_city/current_country are where they are NOW, citizenship is the passport they hold. Only set the one they actually told you about — setting the wrong one corrupts the record. previous_clubs is an array of {"name","from","to","level"} for clubs they have LEFT; the club they are at now goes in "club". Prefer dob (YYYY-MM-DD) over age when you know it. Do not repeat known fields. "goal" should be a real, clearly-stated goal the athlete actually confirmed (e.g. "play NCAA D1 soccer"), not a vague guess. When they DO state one plainly, you must set it — send it in profile_updates.goal AND in scout_context_updates.dream_outcome, both, in the same reply. These are two different records, not two names for one: dream_outcome is your working note, profile_updates.goal is the athlete's goal on their actual Passport, and only the second one counts as defined. Already having recorded dream_outcome earlier is NOT a reason to skip goal — the "don't repeat known fields" rule above does not apply here, because a goal sitting only in dream_outcome has never reached the Passport at all. Do not set it from a guess or from something you inferred; a stated goal only.
+NEVER TELL THE ATHLETE SOMETHING WAS SAVED. You do not perform the save and you cannot see whether it succeeded — the app writes to the database after your reply has already been generated, and that write can fail. Sending profile_updates is a REQUEST to save, not a save. So never say "locked in", "saved", "updated", "that's on your Passport now", "I've added that", or anything else asserting the record changed; saying so when the write then fails tells the athlete a direct falsehood about their own data, which happened in production on 2026-08-09. Acknowledge what they told you in plain conversational terms instead — "got it, CPL professional contract" — and let the Passport itself show what is actually stored. The same applies to every field, not just goal.
+Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need, budget, current_level. current_level is the competition level they actually play at right now (e.g. "NCAA Division II", "academy", "JUCO") — only ever from something they stated plainly, never inferred from a club name, their age, or how ambitious they sound. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
 Only include research_note when THIS reply actually used web search to establish reusable factual findings (a league structure, an eligibility rule, a transfer window, a country's pathway, position benchmarks). Write summary as standalone reference notes that would still be correct and useful for a DIFFERENT athlete asking the same question — plain facts and figures, no advice, no "you"/"your", no reference to this athlete's own situation. valid_days is how long the finding stays trustworthy: 7 for anything with an active deadline or window, 30-90 for stable rules and structures. Omit entirely when you answered from your own knowledge, from PRIOR RESEARCH, or from GOLSZ KNOWLEDGE without searching.
 PRIOR RESEARCH (when present) is research you already did on this exact question, with its age and sources. Trust it and answer from it rather than searching again — unless it's old enough that it could plausibly have changed (deadlines, rosters, windows, rankings), in which case search to confirm and say briefly what changed.
 memory_writes is MANDATORY — always include the key. Use an empty array [] when this reply learned nothing durable; never omit it and never set it to null. It comes second in the JSON, immediately after "reply", so write it before the optional fields. Include an entry for something durable you learned THIS reply that is worth remembering months from now — not small talk, not a restatement of PROFILE SO FAR or SCOUT MEMORY you were just given. type is one of: FACT, USER_STATED, SCOUT_INFERENCE, GOAL, PREFERENCE, CONCERN, UNKNOWN, NEXT_DATA_NEEDED, ASSESSMENT, DECISION, PATHWAY_CONSIDERED, PATHWAY_REJECTED, PATHWAY_ACTIVE, MILESTONE. Use source "athlete_stated" ONLY when they said it in plain words this conversation, and "ai_inferred" for anything you concluded, judged, or read between the lines — an assessment of their level, a guess at their motivation, or anything a third party reportedly said all count as ai_inferred, never athlete_stated. "subject" is a short stable label you'd reuse if this same thing changed later (e.g. "current club", "target level", "biggest gap") — reusing the same subject is how a corrected fact replaces the old one instead of contradicting it. Use UNKNOWN/NEXT_DATA_NEEDED to record what you still need to find out. Something the athlete reports about ANOTHER person (a teammate, a relative, a club official) is a claim about a third party: record it as ai_inferred at low confidence if it matters to their own path, and never treat it as an established fact about that person. Cap at 8.
@@ -2095,7 +3459,7 @@ const IDENTITY_FIELDS = [
   ["secondary_position", "secondary position"],
   ["foot", "preferred foot/hand"],
   ["club_name", "current club / training environment"],
-  ["recruiting_status", "current competition level / recruiting status"],
+  ["recruiting_status", "recruiting status (their own Passport setting: Open to offers / In contact / Committed / Signed)"],
   ["grad_year", "graduation year"],
   ["education_level", "education level"],
   ["height_cm", "height (cm)"],
@@ -2170,13 +3534,37 @@ async function buildAuthoritativeContext(userId) {
   const headers = { apikey: serviceKey, Authorization: "Bearer " + serviceKey };
   try {
     const cols = "sport,position,secondary_position,foot,club_name,previous_clubs,recruiting_status,grad_year,education_level,height_cm,weight_kg,gpa,home_city,home_country,current_city,country,citizenship,dob,age_reported,age_reported_at,scout_context,bio";
-    const [aRes, mRes] = await Promise.all([
+    // profiles.dob is fetched alongside because DOB lives in TWO places and
+    // only one of them is ever populated. Found 2026-08-09 auditing why
+    // isAssessmentReady() reported nobody ready: date of birth is collected
+    // from every athlete at signup and written to profiles.dob (10/13 rows
+    // filled), but athletes.dob — added by a later migration, and the column
+    // everything downstream actually read — was 0/13. Net effect: Scout has
+    // never known any athlete's age, and resolveAge() has returned null for
+    // everyone since the column split.
+    //
+    // Deliberately a READ-side join, not a copy into athletes.dob. Duplicating
+    // the value would create two rows of record that can silently diverge,
+    // which is the same class of bug being fixed here.
+    const [aRes, mRes, pRes] = await Promise.all([
       fetch(`${supaUrl}/rest/v1/athletes?id=eq.${userId}&select=${cols}`, { headers }),
       fetch(`${supaUrl}/rest/v1/scout_memory?athlete_id=eq.${userId}&active=is.true&select=type,subject,content,confidence,source,importance,updated_at&order=importance.desc,updated_at.desc&limit=20`, { headers }),
+      fetch(`${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=dob`, { headers }),
     ]);
     const aRows = aRes.ok ? await aRes.json() : [];
     const mRows = mRes.ok ? await mRes.json() : [];
-    const athlete = Array.isArray(aRows) && aRows[0] ? aRows[0] : null;
+    const pRows = pRes.ok ? await pRes.json() : [];
+    const profileDob = (Array.isArray(pRows) && pRows[0] && pRows[0].dob) || null;
+    // profiles.dob WINS over athletes.dob: it is the date the athlete (or
+    // their parent) typed at signup, and it is the value the minor /
+    // parent-managed safeguarding logic already keys on. athletes.dob is only
+    // ever written by model extraction from conversation (PROFILE_FIELD_MAP),
+    // so letting a mis-heard date override a form-entered, safeguarding-
+    // relevant one would be the wrong precedence. It stays as the fallback.
+    const rawAthlete = Array.isArray(aRows) && aRows[0] ? aRows[0] : null;
+    const athlete = rawAthlete
+      ? { ...rawAthlete, dob: profileDob || rawAthlete.dob || null }
+      : (profileDob ? { dob: profileDob } : null);
     const memories = (Array.isArray(mRows) ? mRows : []).map((m) => ({ ...m, active: true }));
     if (!athlete && !memories.length) return null;
     return { athlete, memories, conflicts: detectConflicts(athlete, memories), age: resolveAge(athlete) };
@@ -2709,6 +4097,27 @@ export default async function handler(req, res) {
   // The single rendered factual block. Shared by the classifier, both answer
   // paths and the failover, so provider/tier can never change the facts.
   let authoritativeBlock = "";
+  // Declared out here, NOT inside the `if (process.env.SUPABASE_URL)` block
+  // that assigns it — it's read further down by persistAiMeta() and the
+  // ATHLETE STATE block. A const/let scoped to that if-block and read
+  // outside it is precisely the 2026-08-08 `storedAssessment` outage
+  // (node --check passes; the ReferenceError only appears at runtime, after
+  // the model has already been billed). Defaults to a not-ready shape so
+  // every downstream reader is safe when there is no signed-in athlete.
+  let assessmentReady = { sufficient_for_preliminary_assessment: false, missing_critical: [], missing_useful: [], confidence: "low" };
+  // Same hoisting reason as assessmentReady above. The goal safety net runs at
+  // the three persist sites, which sit OUTSIDE the `if (SUPABASE_URL)` block
+  // where getProfileMeta()'s destructured goalText is scoped — reading that
+  // binding down there is a ReferenceError, not a syntax error, so
+  // node --check would pass and it would only fail in production.
+  let currentGoalText = null;
+  // The athlete's ALREADY-STORED scout_context, hoisted for the same reason.
+  // The goal safety net has to read this, not just the incoming updates: the
+  // model won't re-send a dream_outcome it has already recorded ("don't repeat
+  // known fields"), which is the very mechanism that stranded goal_text empty
+  // in the first place. Watching only the incoming payload made the net
+  // structurally unable to fire for exactly the athletes it exists to rescue.
+  let storedScoutContext = null;
   let hasConflicts = false;
   // Whether BOTH origin and current location are known — the precondition
   // for treating a "go back"-style question as a real relocation decision.
@@ -2779,6 +4188,14 @@ export default async function handler(req, res) {
     // Rendered once, here, and reused verbatim by every downstream path so no
     // model can receive a materially different version of the athlete's facts.
     authoritativeBlock = renderAuthoritativeContext(authContext);
+    // THE canonical readiness signal, computed once here off the same
+    // authContext every downstream path already uses. Read by the recap
+    // instruction in ATHLETE STATE below AND persisted into ai_meta so the
+    // client's free->paid conversion moment reads this exact value instead
+    // of its own weaker profile_complete test.
+    currentGoalText = goalText;
+    storedScoutContext = (authContext && authContext.athlete && authContext.athlete.scout_context) || null;
+    assessmentReady = isAssessmentReady({ athlete: authContext && authContext.athlete, goalText });
     hasConflicts = !!(authContext && authContext.conflicts && authContext.conflicts.length);
     if (authContext && authContext.athlete) {
       const a = authContext.athlete;
@@ -2800,7 +4217,20 @@ export default async function handler(req, res) {
     // for Home's own cards (see golsz-app.html computeNextMove()). Scout
     // narrates around this; it never decides it — see computeNextMove()
     // comment.
-    athleteBlock = `\n\nATHLETE STATE (app-computed from real data, not your own inference — ground your guidance in this, never contradict it or claim a different plan/stage): profile_complete=${athleteState.profileComplete}, goal_defined=${goalDefined}${goalText ? ` ("${goalText.slice(0, 200)}")` : ""}, plan=${plan}, pathway_created=${athleteState.pathwayCreated}, baseline_complete=${athleteState.baselineComplete}, sport_support_level=${athleteState.sportSupportLevel || "unknown"}.`;
+    athleteBlock = `\n\nATHLETE STATE (app-computed from real data, not your own inference — ground your guidance in this, never contradict it or claim a different plan/stage): profile_complete=${athleteState.profileComplete}, goal_defined=${goalDefined}${goalText ? ` ("${goalText.slice(0, 200)}")` : ""}, plan=${plan}, pathway_created=${athleteState.pathwayCreated}, baseline_complete=${athleteState.baselineComplete}, sport_support_level=${athleteState.sportSupportLevel || "unknown"}, assessment_ready=${assessmentReady.sufficient_for_preliminary_assessment}${assessmentReady.missing_critical.length ? `, still_missing=${assessmentReady.missing_critical.join("/")}` : ""}.`;
+    // Names the exact contradiction that caused goal_text to sit empty for
+    // every athlete: a goal recorded ONLY as dream_outcome renders under
+    // "THINGS THE ATHLETE HAS STATED (confirmed — never re-ask)" while
+    // goal_defined stays false, so the model saw the goal as both already
+    // known and not needing writing. Surfacing the mismatch turns an invisible
+    // conflict into a specific instruction.
+    if (!goalDefined && authContext && authContext.athlete) {
+      const dream = authContext.athlete.scout_context && authContext.athlete.scout_context.dream_outcome;
+      const dreamVal = dream && typeof dream === "object" ? dream.value : dream;
+      if (dreamVal) {
+        athleteBlock += `\n\nGOAL NOT YET ON RECORD: you have previously noted their aim as "${String(dreamVal).slice(0, 200)}", but it has never been written to their Passport, so goal_defined is still false and no Pathway can be built. Confirm it back to them in one short sentence ("so the goal is X — right?") and, the moment they confirm or restate it, send it as profile_updates.goal. Do not treat it as already recorded, and do not silently assume it.`;
+      }
+    }
     // Directive §10 "database is the source of truth, never hard-code
     // aspirational features into prompts as if live" — real, current plan
     // facts, not whatever this file's own hardcoded copy happens to say.
@@ -2810,6 +4240,20 @@ export default async function handler(req, res) {
     // empty rather than sent as an empty heading — a new athlete with no
     // memory yet should get no MEMORY section at all, not one saying "none".
     if (authoritativeBlock) athleteBlock += `\n\n${authoritativeBlock}`;
+    // SPORT_SCHEMA V1. Appended only when GOLSZ genuinely has a schema for
+    // this athlete's sport — an unrecognised sport yields "" and Scout keeps
+    // its existing honest "no built-out data for your sport" behaviour rather
+    // than receiving an empty scaffold that looks like knowledge.
+    // Goal type is derived from the athlete's own stated goal via the same
+    // conservative classifier the readiness layer uses; an ambiguous goal
+    // yields null and Scout is shown every pathway the sport supports instead
+    // of one picked for them.
+    const sportContext = renderSportContext(
+      athleteState.sport,
+      authContext && authContext.athlete ? authContext.athlete.position : null,
+      classifyGoalText(goalText),
+    );
+    if (sportContext) athleteBlock += `\n\n${sportContext}`;
     if (capabilityKnowledge) sharedBlock += `\n\nGOLSZ CAPABILITIES (real, current — the product does exactly this and nothing more):\n${capabilityKnowledge}`;
     // Scout's own running note on the conversation. Labelled explicitly
     // because it used to be pasted into the USER message by the client, so
@@ -2926,7 +4370,7 @@ export default async function handler(req, res) {
     // Phase 2c: the classifier's missing_information/recommended_specialist
     // hints, written to scout_context.ai_meta regardless of which path below
     // ends up answering — routing metadata, not an answer-dependent fact.
-    await persistAiMeta(userId, classification);
+    await persistAiMeta(userId, classification, assessmentReady);
     const recommendedSpecialist = (classification && SPECIALISTS.has(classification.recommended_specialist)) ? classification.recommended_specialist : null;
     // Phase 2d: the actual specialist hand-off — everything downstream
     // (Haiku path, Sonnet path) uses this instead of baseSystemPrompt.
@@ -3083,8 +4527,8 @@ export default async function handler(req, res) {
       if (ok && data.stop_reason !== "tool_use") {
         console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
         const cost = estimateCost(tierConfig.model_name, data.usage);
-        const profileUpdates = extractProfileUpdates(data);
         const scoutContextUpdates = extractScoutContextUpdates(data);
+        const profileUpdates = applyGoalSafetyNet(extractProfileUpdates(data), scoutContextUpdates, currentGoalText, storedScoutContext);
         await logRouting("haiku", classification, tierConfig.model_name, data.usage, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, profileUpdates);
@@ -3178,7 +4622,7 @@ export default async function handler(req, res) {
         const cost = estimateCost(fastCfg.model_name, data.usage);
         await logRouting("haiku", classification, fastCfg.model_name, data.usage, { plan: userPlan, escalationReason: "sonnet_provider_failure", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
-        await persistProfileUpdates(userId, extractProfileUpdates(data));
+        await persistProfileUpdates(userId, applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext));
         await persistScoutContext(userId, extractScoutContextUpdates(data));
         await persistMemoryWrites(userId, extractMemoryWrites(data));
         // Keyed by requestId so a client-side timeout retry can recover this
@@ -3198,7 +4642,63 @@ export default async function handler(req, res) {
         return res.status(200).json(data);
       }
 
-      // Automatic failover, step 3 (both models down): stop here — never
+      // Automatic failover, step 3: CROSS-PROVIDER. Steps 1 and 2 are both
+      // Anthropic, so an Anthropic-wide outage exhausts them together and
+      // Scout used to go dark entirely — the exact single-provider dependency
+      // Non-Negotiable #2 forbids. This is the only step that survives that.
+      //
+      // Inert unless SCOUT_FALLBACK_API_KEY is set: with no key configured
+      // this block is skipped and behaviour is byte-identical to before.
+      const fb = fallbackProviderConfig();
+      if (fb) {
+        console.log("GOLSZ both Anthropic models failed, trying cross-provider fallback:", fb.provider, fb.model);
+        try {
+          const crossProvider = await adapterFor(fb.provider).generate({
+            apiKey: fb.apiKey,
+            model: fb.model,
+            system: systemStatic,
+            // Same degraded-mode notice the Haiku fallback uses, so a
+            // different provider can never imply it ran a search either.
+            systemDynamic: fallbackSystem,
+            messages: conversationForModel,
+            maxTokens: fb.maxOutputTokens,
+          });
+          if (crossProvider.ok) {
+            const data = crossProvider.data;
+            fallbackUsed = "cross_provider";
+            console.log("GOLSZ scout usage check (cross-provider):", JSON.stringify(data.usage));
+            // Everything below is the SAME pipeline the Anthropic paths run —
+            // cost, routing telemetry, usage metering, profile/context/memory
+            // persistence. normalizeOpenAiResponse() shaped the response so
+            // none of it needs to know which provider answered.
+            const cost = estimateCost(fb.model, data.usage);
+            await logRouting("cross_provider", classification, fb.model, data.usage, { plan: userPlan, escalationReason: "anthropic_outage", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
+            await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
+            await persistProfileUpdates(userId, applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext));
+            await persistScoutContext(userId, extractScoutContextUpdates(data));
+            await persistMemoryWrites(userId, extractMemoryWrites(data));
+            data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
+            data.scout_summary = updatedSummary;
+            if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
+            data.next_move = extractNextBestAction(classification);
+            data.suggested_targets = extractSuggestedTargets(data);
+            data.suggested_dev_items = extractSuggestedDevItems(data);
+            data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
+            data.drafted_email = extractDraftedEmail(data);
+            // Never cached, same reasoning as the Haiku fallback: a degraded
+            // reply must not be served back to a different athlete later.
+            return res.status(200).json(data);
+          }
+          console.log("GOLSZ cross-provider fallback failed:", JSON.stringify(crossProvider.data));
+        } catch (e) {
+          // A throwing adapter (misconfigured provider name, network error)
+          // must not turn a degraded request into a 500 — fall through to the
+          // graceful message below exactly as if it had returned not-ok.
+          console.error("GOLSZ cross-provider fallback threw:", e);
+        }
+      }
+
+      // Automatic failover, step 4 (every provider down): stop here — never
       // loop further (spec: "Never endlessly retry providers"). Release the
       // reserved question (no real answer was produced) and fail gracefully,
       // same wording/status as the emergency kill-switch responses above.
@@ -3218,7 +4718,7 @@ export default async function handler(req, res) {
     const sonnetCost = estimateCost(deepTierConfig.model_name, data.usage);
     await logRouting("sonnet", classification, deepTierConfig.model_name, data.usage, { plan: userPlan, escalationReason: haikuFailureReason || escalationReason(classification), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
     await recordScoutUsageCost(userId, sonnetCost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
-    await persistProfileUpdates(userId, extractProfileUpdates(data));
+    await persistProfileUpdates(userId, applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext));
     await persistScoutContext(userId, extractScoutContextUpdates(data));
     await persistMemoryWrites(userId, extractMemoryWrites(data));
     // Scout Cache write. Gated on the reply having ACTUALLY run web search
