@@ -1702,7 +1702,7 @@ function SettingsButton({ openSignal }) {
         setCurrentPlan("free");
         setPlanMsg(t("settings_plan_downgrade_note"));
       } else {
-        const link = STRIPE_LINKS[planId];
+        const link = stripeLinkFor(planId);
         if (!link) { setPlanMsg(t("settings_plan_checkout_unavailable")); return; }
         const { data: { user } } = await sb.auth.getUser();
         const checkoutUrl = new URL(link);
@@ -3861,7 +3861,8 @@ function Benchmarks({ viewUserId, manageId }) {
         // (athlete_benchmarks' own is_parent_of policy) authorises it.
         setUid(manageId || user.id);
         const [{ data, error }, { data: ath }] = await Promise.all([
-          sb.from("athlete_benchmarks").select("id, metric, metric_key, protocol, value, unit, recorded_date").eq("user_id", manageId || user.id).order("recorded_date", { ascending: false }),
+          sb.from("athlete_benchmarks").select("id, metric, metric_key, protocol, value, unit, recorded_date").eq("user_id", manageId || user.id).order("recorded_date", { ascending: false })
+            .then((r) => (r.error ? sb.from("athlete_benchmarks").select("id, metric, value, unit, recorded_date").eq("user_id", manageId || user.id).order("recorded_date", { ascending: false }) : r)),
           sb.from("athletes").select("sport").eq("id", manageId || user.id).maybeSingle(),
         ]);
         if (error) throw error;
@@ -3897,16 +3898,24 @@ function Benchmarks({ viewUserId, manageId }) {
       // unknown into a value.
       const cleanProtocol = {};
       for (const [k, v] of Object.entries(protocol)) if (v) cleanProtocol[k] = v;
-      const { data, error } = await sb.from("athlete_benchmarks").insert({
-        user_id: uid,
-        metric: metric.trim().slice(0, 60),
+      const base = { user_id: uid, metric: metric.trim().slice(0, 60), value: numValue, unit: unit.trim().slice(0, 20) || null };
+      let { data, error } = await sb.from("athlete_benchmarks").insert({
+        ...base,
         // Only set when the athlete picked from their sport's canonical list.
         // A free-text metric stays NULL rather than being guessed into a key.
         metric_key: metricKey || null,
         protocol: Object.keys(cleanProtocol).length ? cleanProtocol : null,
-        value: numValue,
-        unit: unit.trim().slice(0, 20) || null,
       }).select("id, metric, metric_key, protocol, value, unit, recorded_date").single();
+      // Same hand-applied-migration tolerance as GoalCard above (114). The
+      // measurement is recorded either way; only its protocol is lost, and
+      // an unrecorded protocol is already treated everywhere as unknown, so
+      // this degrades to exactly the pre-P1-2 behaviour rather than to a
+      // wrong value.
+      if (error && (error.code === "PGRST204" || /metric_key|protocol/.test(error.message || ""))) {
+        console.warn("GOLSZ benchmark protocol columns missing (migration 114 not applied) — saving without them.");
+        ({ data, error } = await sb.from("athlete_benchmarks").insert(base)
+          .select("id, metric, value, unit, recorded_date").single());
+      }
       if (error) throw error;
       setItems((prev) => [data, ...prev]);
       setMetric(""); setValue(""); setUnit(""); setMetricKey(""); setProtocol({});
@@ -7951,12 +7960,24 @@ function GoalCard({ actingFor, onSaved, compact }) {
       // never disagree about what "defined" means. goal_source marks this as
       // the athlete's own words, which is what stops Scout overwriting it
       // later (applyGoalAuthorship in api/scout.js).
-      const { error } = await sb.from("profiles").update({
+      let { error } = await sb.from("profiles").update({
         goal_text: clean,
         goal_defined: true,
         goal_source: "athlete_edited",
         goal_updated_at: new Date().toISOString(),
       }).eq("id", uid);
+      // Migrations in this project are applied by hand, so code can reach
+      // production before its SQL does. Without this, an athlete typing their
+      // goal on that day would get "couldn't save" for a column problem that
+      // has nothing to do with them. PostgREST reports an unknown column as
+      // PGRST204; retry with just the columns that have always existed.
+      // The goal is saved either way — it simply isn't marked as
+      // athlete-authored until 113 lands, which fails toward Scout being
+      // allowed to update it rather than toward losing the athlete's words.
+      if (error && (error.code === "PGRST204" || /goal_source|goal_updated_at/.test(error.message || ""))) {
+        console.warn("GOLSZ goal authorship columns missing (migration 113 not applied) — saving without them.");
+        ({ error } = await sb.from("profiles").update({ goal_text: clean, goal_defined: true }).eq("id", uid));
+      }
       if (error) throw error;
       setGoalText(clean);
       setGoalSource("athlete_edited");
@@ -9523,7 +9544,7 @@ function UpgradeScreen({ uid, onDismiss, title, body }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
           {PLANS.filter((pl) => pl.id !== "free").map((pl) => (
             <button key={pl.id} onClick={() => {
-              const link = STRIPE_LINKS[pl.id];
+              const link = stripeLinkFor(pl.id);
               if (!link || !uid) return;
               const checkoutUrl = new URL(link);
               checkoutUrl.searchParams.set("client_reference_id", uid);
@@ -9677,7 +9698,7 @@ function GuidedAssessment({ uid, onDismiss }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
               {PLANS.filter((pl) => pl.id !== "free").map((pl) => (
                 <button key={pl.id} onClick={() => {
-                  const link = STRIPE_LINKS[pl.id];
+                  const link = stripeLinkFor(pl.id);
                   if (!link || !uid) return;
                   const checkoutUrl = new URL(link);
                   checkoutUrl.searchParams.set("client_reference_id", uid);
@@ -9838,11 +9859,30 @@ const SCOUT_ENDPOINT = "/api/scout";  // same-origin — works on any Vercel dep
 // the previous $29/$79 prices, and Stripe Prices are immutable, so a price
 // change always means a new Payment Link, not editing the old one. Starter
 // now needs its own link too, since it moved from free to $6/mo.
+// P0-2. These are still sandbox links. A test-mode Payment Link renders a
+// bright TEST MODE banner and rejects every real card — on a platform whose
+// paying customer is usually a parent, that reads as a scam, which is worse
+// than an honest "not available yet". isLiveStripeLink() below is the gate:
+// until real links are pasted in, every upgrade path shows the
+// "checkout isn't set up yet" message instead of opening Stripe. Replacing
+// the three URLs with live ones is the only change needed to switch payments
+// on — no other code depends on the mode.
 const STRIPE_LINKS = {
   starter: "https://buy.stripe.com/test_9B6cN79hvdG43i83BFbQY02",
   pro: "https://buy.stripe.com/test_28E14p2T7atSb0Ea03bQY03",
   elite: "https://buy.stripe.com/test_bJedRb2T78lK3i86NRbQY04",
 };
+// A Stripe Payment Link is test-mode iff its path segment starts with
+// "test_". One check, used by every upgrade entry point, so switching to live
+// links flips all of them at once and nothing can be left behind.
+function isLiveStripeLink(url) {
+  return typeof url === "string" && /^https:\/\/buy\.stripe\.com\//.test(url) && !/\/test_/.test(url);
+}
+function stripeLinkFor(planId) {
+  const url = STRIPE_LINKS[planId];
+  return isLiveStripeLink(url) ? url : null;
+}
+
 const VAPID_PUBLIC_KEY = "BNrfmAAoP_PL4FocIjzfw5aaxzHsuCknwUeG5pX21v7cjvMCzt3PL2d70QbBJrcz3l36bfgnJ_N4wmC9EiM11mI"; // safe to be public — pairs with the server-only VAPID_PRIVATE_KEY
 
 // name is a brand/tier label (like Spotify's "Premium") kept in English across
@@ -10132,6 +10172,15 @@ function Auth({ onDone, paidReturn }) {
 
   async function submit() {
     if (!ok || busy || confirmPolling) return;
+    // P0-2. Checkout is not live yet (see isLiveStripeLink / STRIPE_LINKS).
+    // Stopping here rather than creating the account matters more than it
+    // looks: migration 116 makes every new account start on 'free', so
+    // without this an athlete would pick Pro, pay nothing, be given Free,
+    // and never be told why. Say so before anything is created.
+    if (isSignup && selected.price > 0 && !stripeLinkFor(plan)) {
+      setErr(t("settings_plan_checkout_unavailable"));
+      return;
+    }
     // Honeypot: a real user never sees or fills this field, so anything in
     // it means an automated script filled every input on the page. Trust &
     // Safety Moderation System pass: this used to silently no-op the whole
@@ -10149,7 +10198,7 @@ function Auth({ onDone, paidReturn }) {
     setResendSent(false);
     // preview mode: no backend configured -> behave like the demo
     if (!sb) {
-      if (isSignup && selected.price > 0 && STRIPE_LINKS[plan]) { window.location.href = STRIPE_LINKS[plan]; return; }
+      if (isSignup && selected.price > 0 && stripeLinkFor(plan)) { window.location.href = stripeLinkFor(plan); return; }
       onDone(); return;
     }
     // Open a blank tab synchronously, before any `await` — browsers only
@@ -10160,7 +10209,7 @@ function Auth({ onDone, paidReturn }) {
     // separate tab (instead of navigating this one away) is what lets this
     // tab stay alive and keep polling for email confirmation the whole time.
     let checkoutTab = null;
-    if (isSignup && selected.price > 0 && STRIPE_LINKS[plan]) {
+    if (isSignup && selected.price > 0 && stripeLinkFor(plan)) {
       checkoutTab = window.open("", "_blank");
     }
     setBusy(true);
@@ -10205,9 +10254,9 @@ function Auth({ onDone, paidReturn }) {
           hp: website.trim(),
         } } });
         if (error) throw error;
-        if (selected.price > 0 && STRIPE_LINKS[plan] && data.user) {
+        if (selected.price > 0 && stripeLinkFor(plan) && data.user) {
           // attribute the checkout back to this account for the Stripe webhook
-          const checkoutUrl = new URL(STRIPE_LINKS[plan]);
+          const checkoutUrl = new URL(stripeLinkFor(plan));
           checkoutUrl.searchParams.set("client_reference_id", data.user.id);
           checkoutUrl.searchParams.set("prefilled_email", signupEmail);
           if (checkoutTab) {
