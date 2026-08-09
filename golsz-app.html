@@ -169,6 +169,7 @@ const I18N = {
   en: {
     loading: "Loading…", yes: "Yes", no: "No",
     moderation_blocked: "That doesn't look appropriate for GOLSZ — please keep things sports-related.",
+    VALUE_LABELS: { "American Football": "American Football", "Archery": "Archery", "Badminton": "Badminton", "Baseball": "Baseball", "Basketball": "Basketball", "Bowling": "Bowling", "Boxing": "Boxing", "Cheerleading": "Cheerleading", "Cricket": "Cricket", "Cross Country": "Cross Country", "Cycling": "Cycling", "Diving": "Diving", "Equestrian": "Equestrian", "Fencing": "Fencing", "Field Hockey": "Field Hockey", "Futsal": "Futsal", "Golf": "Golf", "Gymnastics": "Gymnastics", "Handball": "Handball", "Hockey": "Hockey", "Lacrosse": "Lacrosse", "Martial Arts": "Martial Arts", "Racquetball": "Racquetball", "Rowing": "Rowing", "Rugby": "Rugby", "Sailing": "Sailing", "Skiing": "Skiing", "Snowboarding": "Snowboarding", "Soccer": "Soccer", "Softball": "Softball", "Squash": "Squash", "Swimming": "Swimming", "Table Tennis": "Table Tennis", "Tennis": "Tennis", "Track": "Track", "Triathlon": "Triathlon", "Volleyball": "Volleyball", "Water Polo": "Water Polo", "Weightlifting": "Weightlifting", "Wrestling": "Wrestling", "Other": "Other", "Player": "Player", "Parent": "Parent", "Scout": "Scout", "Agent": "Agent", "Coach": "Coach", "Physio": "Physio" },
     nav_home: "Home", nav_discover: "Discover", nav_scout: "Scout", nav_ai_scout: "AI Scout",
     nav_events: "Events", nav_passport: "Passport", nav_profile: "Profile", nav_messages: "Messages",
     nav_signout: "Sign out",
@@ -200,22 +201,22 @@ const I18N = {
     auth_continue_payment: "Continue to payment — ", auth_per_month: "/month",
     auth_couldnt_signup: "COULDN'T COMPLETE SIGNUP", auth_couldnt_login: "COULDN'T LOG IN",
     plan_free_tag: "No card needed", plan_starter_tag: "Get started", plan_pro_tag: "Most popular", plan_elite_tag: "It's GOLSZ Time",
-    plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport — profile, achievements & career history", plan_free_feat3: "AI Scout athlete intake & goal discovery", plan_free_feat4: "GOLSZ Readiness score & My Next Move",
+    plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport — profile, achievements & career history", plan_free_feat3: "AI Scout athlete intake & goal discovery", plan_free_feat4: "Passport Strength score & My Next Move",
     conversion_title: "We've learned enough about you — let's build your plan.", conversion_body: "GOLSZ Scout now knows your sport, your goals, and what you're working on. Upgrade to unlock deeper guidance built around your progression — not just more questions.", conversion_dismiss: "Not now", update_available: "A new version of GOLSZ is ready.", scout_try_again: "Try again", update_refresh: "Refresh", update_dismiss: "Dismiss", trial_ended_title: "Your trial has finished.", trial_ended_body: "Scout keeps everything you built together — your profile, your goal, its read on you. What stops is the deeper work: the personalised plan, the target list, and the research behind them. Pick a plan and carry on from exactly where you are.",
     feature_lock_body: "This is part of GOLSZ's guided pathway tools.", feature_lock_cta: "Upgrade to unlock",
     guided_step_goal: "Understanding your goal: {goal}", guided_step_goal_fallback: "Getting to know what you're working toward.",
     guided_step_passport: "Analyzing your Passport — {score}% complete.", guided_step_missing: "Missing: {list}.", guided_step_missing_none: "Your Passport basics are all filled in.",
-    guided_step_readiness: "Initial Readiness assessment: {score}/100.", guided_step_next_move: "Your next move: {label}", guided_step_next_move_generic: "Building your first recommended next move.",
-    guided_ready_title: "That's the athlete you are today.", guided_ready_body: "Now let's figure out how you become the athlete you want to be — GOLSZ Readiness, My Next Move, Targets, and Benchmarks are ready to unlock.",
+    guided_step_readiness: "Initial Passport Strength: {score}/100.", guided_step_next_move: "Your next move: {label}", guided_step_next_move_generic: "Building your first recommended next move.",
+    guided_ready_title: "That's the athlete you are today.", guided_ready_body: "Now let's figure out how you become the athlete you want to be — Passport Strength, My Next Move, Targets, and Benchmarks are ready to unlock.",
     elite_welcome_eyebrow: "IT'S GOLSZ TIME", elite_welcome_title: "Welcome to GOLSZ Elite.", elite_welcome_body: "Before we build your complete program, we need to understand you — the athlete you are today, where you want to go, and what your normal week looks like. We'll build your Passport, establish your goals, create your Pathway, and organize your development around getting there.", elite_welcome_cta: "Let's build it",
-    guided_locked_readiness: "GOLSZ Readiness", guided_locked_next_move: "My Next Move", guided_locked_targets: "Targets", guided_locked_benchmarks: "Benchmarks",
+    guided_locked_readiness: "Passport Strength", guided_locked_next_move: "My Next Move", guided_locked_targets: "Targets", guided_locked_benchmarks: "Benchmarks",
     guided_continue_cta: "Continue my journey",
     next_move_title: "MY NEXT MOVE", next_move_act: "Do this", next_move_dismiss: "Mark done", next_move_locked: "Scout found your next move — upgrade to see it.",
     next_move_type_complete_profile: "Finish your Passport.", next_move_type_define_goal: "Tell Scout what you're aiming for.", next_move_type_invite_to_pathway: "Build your Pathway.", next_move_type_establish_baseline: "Set your baseline with Scout.", next_move_type_build_pathway: "Build your Pathway with Scout.", next_move_type_target_work: "Identify your first targets.", next_move_type_follow_up: "Follow up on a stale target.", next_move_type_retest: "Time to log a new benchmark.", next_move_type_review_progress: "Review your progress.",
     next_move_why_ask_scout: "Based on what you told Scout", next_move_why_complete_profile: "Your Passport is missing some basics", next_move_why_share_passport: "You're ready to be seen — share your Passport",
     nav_home: "Home", home_greeting: "Welcome back, {name}.", home_readiness_title: "PASSPORT STRENGTH", home_assessment_title: "SCOUT'S READ ON YOU", home_assessment_level: "WHERE SCOUT THINKS YOU CAN GET TO", home_assessment_strengths: "WHAT'S WORKING", home_assessment_gaps: "WHAT'S IN THE WAY", home_assessment_focus: "NEXT 90 DAYS", home_assessment_dated: "Scout's read as of", home_profile_quality: "PROFILE QUALITY", home_verification: "VERIFICATION",
     home_verify_status_none: "Not started", home_verify_status_pending: "Pending review", home_verify_status_verified: "Verified",
-    home_readiness_composite: "PASSPORT STRENGTH", home_performance: "PERFORMANCE", home_performance_sub: "{n} metrics tracked", home_development: "DEVELOPMENT", home_pathway: "PATHWAY READINESS", home_pathway_sub: "{n} active targets", home_pathway_none: "No pathway set",
+    home_readiness_composite: "PASSPORT STRENGTH", home_performance: "PERFORMANCE", home_performance_sub: "{n} metrics tracked", home_development: "DEVELOPMENT", home_pathway: "PATHWAY", home_pathway_sub: "{n} active targets", home_pathway_none: "No pathway set",
     home_readiness_why_title: "WHY THIS SCORE", home_readiness_improve: "Improve this",
     home_readiness_weakest_profile_quality: "Your Passport is the biggest thing holding your score back — fill in the missing fields below.", home_readiness_weakest_verification: "Getting identity-verified would raise your score the most right now.", home_readiness_weakest_performance: "Recording and retesting a few performance benchmarks would raise your score the most right now.", home_readiness_weakest_development: "Adding focus areas to your development plan — and making progress on them — would raise your score the most right now.", home_readiness_weakest_pathway: "Setting a pathway and adding targets would raise your score the most right now.",
     home_this_month_title: "THIS MONTH", home_this_month_dev: "{n} development focus areas in progress.", home_this_month_targets: "{n} targets haven't been touched in a week.", home_this_month_review: "Review",
@@ -243,7 +244,7 @@ const I18N = {
     targets_notes_ph: "Notes", targets_draft_ph: "Draft outreach email",
     targets_status_researching: "Researching", targets_status_preparing: "Preparing", targets_status_contacted: "Contacted", targets_status_responded: "Responded", targets_status_follow_up: "Follow up", targets_status_opportunity: "Opportunity", targets_fit_reasoning_ph: "Why this is a good fit (optional)",
     plan_starter_feat1: "8 AI Scout questions/day — no lifetime limit", plan_starter_feat2: "Everything in Free", plan_starter_feat3: "Personalized Pathway, My Next Move & baseline assessment", plan_starter_feat4: "Target lists, basic outreach & PDF Passport export",
-    plan_pro_feat1: "15 AI Scout questions/day — no lifetime limit", plan_pro_feat2: "Everything in Basic", plan_pro_feat3: "GOLSZ Readiness & progress reviews", plan_pro_feat4: "Training & development plan", plan_pro_feat5: "Richer target tracking & outreach follow-ups", plan_pro_feat6: "Identity verification",
+    plan_pro_feat1: "15 AI Scout questions/day — no lifetime limit", plan_pro_feat2: "Everything in Basic", plan_pro_feat3: "Passport Strength breakdown & progress reviews", plan_pro_feat4: "Training & development plan", plan_pro_feat5: "Richer target tracking & outreach follow-ups", plan_pro_feat6: "Identity verification",
     plan_elite_feat1: "20 AI Scout questions/day — no lifetime limit", plan_elite_feat2: "Everything in Pro",
     feed_title: "Your feed", feed_search: "Search your feed…", feed_share_update: "Share an update…",
     feed_new_post: "NEW POST", feed_whats_happening: "What's happening?", feed_add_details: "Add details (optional)",
@@ -321,7 +322,7 @@ const I18N = {
     benchmarks_title: "PERFORMANCE BENCHMARKS", benchmarks_empty: "No benchmarks recorded yet.", benchmarks_metric_ph: "Metric (e.g. 40-yard dash)", benchmarks_value_ph: "Value", benchmarks_unit_ph: "Unit", benchmarks_add: "Record", benchmarks_add_err: "Couldn't record that. Try again.", benchmarks_invalid_value: "Enter a number for the value.",
     benchmarks_locked_teaser: "Upgrade to record and track your sport-specific benchmarks over time, with retest history and progress trends.",
     dev_plan_title: "DEVELOPMENT PLAN", dev_plan_empty: "No focus areas yet.", dev_plan_goal_ph: "What are you working on?", dev_plan_add: "Add", dev_plan_add_err: "Couldn't add that. Try again.", dev_plan_notes_ph: "Notes (optional)",
-    dev_plan_locked_teaser: "Upgrade to build an active training/development plan with GOLSZ Scout, tracked against your Readiness.",
+    dev_plan_locked_teaser: "Upgrade to build an active training/development plan with GOLSZ Scout, tracked against your Passport Strength.",
     dev_plan_status_active: "Active", dev_plan_status_done: "Done", dev_plan_status_paused: "Paused",
     dev_plan_focus_training: "Training", dev_plan_focus_strength: "Strength", dev_plan_focus_speed: "Speed", dev_plan_focus_conditioning: "Conditioning", dev_plan_focus_recovery: "Recovery", dev_plan_focus_sleep: "Sleep", dev_plan_focus_hydration: "Hydration", dev_plan_focus_nutrition: "Nutrition", dev_plan_focus_other: "Other",
     pathway_plan_title: "PATHWAY PLAN", pathway_timeline_ph: "Target timeline (e.g. Fall 2027)", pathway_save: "Save pathway", pathway_notes_ph: "Notes (optional)",
@@ -332,6 +333,11 @@ const I18N = {
     goal_card_required: "Write your goal first.", goal_card_too_short: "Add a bit more detail so Scout can work with it.",
     goal_card_save_err: "Couldn't save your goal. Nothing was changed — please try again.",
     goal_card_pathway: "Pathway", goal_card_by_you: "Your words", goal_card_by_scout: "Captured by Scout",
+    action_add_failed: "Couldn't add that — nothing was saved. Try again.",
+    admin_view_knowledge: "Knowledge", admin_no_knowledge: "No candidate facts awaiting review.",
+    admin_knowledge_source: "Source", admin_knowledge_no_source: "No source URL — cannot be approved",
+    admin_knowledge_confidence: "Scout confidence", admin_knowledge_recheck: "Recheck after",
+    admin_knowledge_approve: "Approve as GOLSZ fact", admin_knowledge_reject: "Reject",
     bench_pick_metric: "Choose a metric", bench_other_metric: "Something else…",
     bench_protocol_title: "HOW WAS IT MEASURED?", bench_protocol_unknown: "Not recorded",
     bench_protocol_hint: "Leave these blank if you're not sure — GOLSZ records \"not known\" rather than guessing. It only affects what your result can later be compared against.",
@@ -481,6 +487,7 @@ const I18N = {
   fr: {
     loading: "Chargement…", yes: "Oui", no: "Non",
     moderation_blocked: "Cela ne semble pas approprié pour GOLSZ — merci de rester sur des sujets sportifs.",
+    VALUE_LABELS: { "American Football": "Football américain", "Archery": "Tir à l'arc", "Badminton": "Badminton", "Baseball": "Baseball", "Basketball": "Basketball", "Bowling": "Bowling", "Boxing": "Boxe", "Cheerleading": "Cheerleading", "Cricket": "Cricket", "Cross Country": "Cross-country", "Cycling": "Cyclisme", "Diving": "Plongeon", "Equestrian": "Équitation", "Fencing": "Escrime", "Field Hockey": "Hockey sur gazon", "Futsal": "Futsal", "Golf": "Golf", "Gymnastics": "Gymnastique", "Handball": "Handball", "Hockey": "Hockey sur glace", "Lacrosse": "Crosse", "Martial Arts": "Arts martiaux", "Racquetball": "Racquetball", "Rowing": "Aviron", "Rugby": "Rugby", "Sailing": "Voile", "Skiing": "Ski", "Snowboarding": "Snowboard", "Soccer": "Football", "Softball": "Softball", "Squash": "Squash", "Swimming": "Natation", "Table Tennis": "Tennis de table", "Tennis": "Tennis", "Track": "Athlétisme", "Triathlon": "Triathlon", "Volleyball": "Volleyball", "Water Polo": "Water-polo", "Weightlifting": "Haltérophilie", "Wrestling": "Lutte", "Other": "Autre", "Player": "Athlète", "Parent": "Parent", "Scout": "Recruteur", "Agent": "Agent", "Coach": "Entraîneur", "Physio": "Physiothérapeute" },
     nav_home: "Accueil", nav_discover: "Découvrir", nav_scout: "Agent", nav_ai_scout: "Agent IA",
     nav_events: "Événements", nav_passport: "Passeport", nav_profile: "Profil", nav_messages: "Messages",
     nav_signout: "Déconnexion",
@@ -512,22 +519,22 @@ const I18N = {
     auth_continue_payment: "Continuer vers le paiement — ", auth_per_month: "/mois",
     auth_couldnt_signup: "INSCRIPTION IMPOSSIBLE", auth_couldnt_login: "CONNEXION IMPOSSIBLE",
     plan_free_tag: "Sans carte bancaire", plan_starter_tag: "Pour commencer", plan_pro_tag: "Le plus populaire", plan_elite_tag: "C'est l'heure GOLSZ",
-    plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique — profil, palmarès & parcours", plan_free_feat3: "Découverte de l'athlète & de vos objectifs avec Scout", plan_free_feat4: "Score GOLSZ Readiness & Ma Prochaine Étape",
+    plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique — profil, palmarès & parcours", plan_free_feat3: "Découverte de l'athlète & de vos objectifs avec Scout", plan_free_feat4: "Score Force du Passeport & Ma Prochaine Étape",
     conversion_title: "On en sait assez sur vous — construisons votre plan.", conversion_body: "GOLSZ Scout connaît maintenant votre sport, vos objectifs et ce sur quoi vous travaillez. Passez à un forfait supérieur pour un accompagnement plus poussé, centré sur votre progression — pas seulement plus de questions.", conversion_dismiss: "Pas maintenant", update_available: "Une nouvelle version de GOLSZ est prête.", scout_try_again: "Réessayer", update_refresh: "Actualiser", update_dismiss: "Ignorer", trial_ended_title: "Votre essai est terminé.", trial_ended_body: "Scout conserve tout ce que vous avez construit ensemble — votre profil, votre objectif, son analyse de vous. Ce qui s'arrête, c'est le travail de fond : le plan personnalisé, la liste de cibles et les recherches associées. Choisissez un forfait et reprenez exactement où vous en êtes.",
     feature_lock_body: "Cela fait partie des outils de parcours guidé de GOLSZ.", feature_lock_cta: "Passer à un forfait supérieur",
     guided_step_goal: "Compréhension de votre objectif : {goal}", guided_step_goal_fallback: "Nous apprenons ce vers quoi vous travaillez.",
     guided_step_passport: "Analyse de votre Passeport — {score}% complété.", guided_step_missing: "Manquant : {list}.", guided_step_missing_none: "Les bases de votre Passeport sont toutes remplies.",
-    guided_step_readiness: "Évaluation initiale de préparation : {score}/100.", guided_step_next_move: "Votre prochaine étape : {label}", guided_step_next_move_generic: "Construction de votre première étape recommandée.",
-    guided_ready_title: "Voilà l'athlète que vous êtes aujourd'hui.", guided_ready_body: "Voyons maintenant comment devenir l'athlète que vous voulez être — GOLSZ Readiness, Ma Prochaine Étape, Cibles et Repères sont prêts à être débloqués.",
+    guided_step_readiness: "Force du Passeport initiale : {score}/100.", guided_step_next_move: "Votre prochaine étape : {label}", guided_step_next_move_generic: "Construction de votre première étape recommandée.",
+    guided_ready_title: "Voilà l'athlète que vous êtes aujourd'hui.", guided_ready_body: "Voyons maintenant comment devenir l'athlète que vous voulez être — la Force du Passeport, Ma Prochaine Étape, Cibles et Repères sont prêts à être débloqués.",
     elite_welcome_eyebrow: "C'EST L'HEURE GOLSZ", elite_welcome_title: "Bienvenue dans GOLSZ Elite.", elite_welcome_body: "Avant de construire votre programme complet, nous devons vous comprendre — l'athlète que vous êtes aujourd'hui, où vous voulez aller, et à quoi ressemble votre semaine normale. Nous allons construire votre Passeport, définir vos objectifs, créer votre Parcours et organiser votre développement pour y arriver.", elite_welcome_cta: "Construisons-le",
-    guided_locked_readiness: "GOLSZ Readiness", guided_locked_next_move: "Ma Prochaine Étape", guided_locked_targets: "Cibles", guided_locked_benchmarks: "Repères",
+    guided_locked_readiness: "Force du Passeport", guided_locked_next_move: "Ma Prochaine Étape", guided_locked_targets: "Cibles", guided_locked_benchmarks: "Repères",
     guided_continue_cta: "Continuer mon parcours",
     next_move_title: "VOTRE PROCHAINE ÉTAPE", next_move_act: "Faire ça", next_move_dismiss: "Marquer comme fait", next_move_locked: "Scout a trouvé votre prochaine étape — passez à un forfait supérieur pour la voir.",
     next_move_type_complete_profile: "Terminez votre Passeport.", next_move_type_define_goal: "Dites à Scout votre objectif.", next_move_type_invite_to_pathway: "Construisez votre Parcours.", next_move_type_establish_baseline: "Établissez votre niveau de référence avec Scout.", next_move_type_build_pathway: "Construisez votre Parcours avec Scout.", next_move_type_target_work: "Identifiez vos premières cibles.", next_move_type_follow_up: "Relancez une cible en attente.", next_move_type_retest: "Il est temps d'enregistrer un nouveau repère.", next_move_type_review_progress: "Consultez vos progrès.",
     next_move_why_ask_scout: "D'après ce que vous avez dit à Scout", next_move_why_complete_profile: "Il manque des informations de base à votre Passeport", next_move_why_share_passport: "Vous êtes prêt à être vu — partagez votre Passeport",
     nav_home: "Accueil", home_greeting: "Bon retour, {name}.", home_readiness_title: "FORCE DU PASSEPORT", home_assessment_title: "L'ANALYSE DE SCOUT", home_assessment_level: "OÙ SCOUT PENSE QUE VOUS POUVEZ ALLER", home_assessment_strengths: "CE QUI FONCTIONNE", home_assessment_gaps: "CE QUI VOUS FREINE", home_assessment_focus: "90 PROCHAINS JOURS", home_assessment_dated: "Analyse de Scout au", home_profile_quality: "QUALITÉ DU PROFIL", home_verification: "VÉRIFICATION",
     home_verify_status_none: "Non commencé", home_verify_status_pending: "En cours de révision", home_verify_status_verified: "Vérifié",
-    home_readiness_composite: "FORCE DU PASSEPORT", home_performance: "PERFORMANCE", home_performance_sub: "{n} indicateurs suivis", home_development: "DÉVELOPPEMENT", home_pathway: "PRÉPARATION DU PARCOURS", home_pathway_sub: "{n} cibles actives", home_pathway_none: "Aucun parcours défini",
+    home_readiness_composite: "FORCE DU PASSEPORT", home_performance: "PERFORMANCE", home_performance_sub: "{n} indicateurs suivis", home_development: "DÉVELOPPEMENT", home_pathway: "PARCOURS", home_pathway_sub: "{n} cibles actives", home_pathway_none: "Aucun parcours défini",
     home_readiness_why_title: "POURQUOI CE SCORE", home_readiness_improve: "Améliorer ceci",
     home_readiness_weakest_profile_quality: "Votre Passeport est ce qui freine le plus votre score — complétez les champs manquants ci-dessous.", home_readiness_weakest_verification: "Obtenir une vérification d'identité augmenterait le plus votre score en ce moment.", home_readiness_weakest_performance: "Enregistrer et retester quelques repères de performance augmenterait le plus votre score en ce moment.", home_readiness_weakest_development: "Ajouter des axes de travail à votre plan de développement — et progresser dessus — augmenterait le plus votre score en ce moment.", home_readiness_weakest_pathway: "Définir un parcours et ajouter des cibles augmenterait le plus votre score en ce moment.",
     home_this_month_title: "CE MOIS-CI", home_this_month_dev: "{n} axes de développement en cours.", home_this_month_targets: "{n} cibles n'ont pas été touchées depuis une semaine.", home_this_month_review: "Revoir",
@@ -555,7 +562,7 @@ const I18N = {
     targets_notes_ph: "Notes", targets_draft_ph: "Brouillon d'email de contact",
     targets_status_researching: "Recherche", targets_status_preparing: "Préparation", targets_status_contacted: "Contacté", targets_status_responded: "Répondu", targets_status_follow_up: "Relance", targets_status_opportunity: "Opportunité", targets_fit_reasoning_ph: "Pourquoi c'est un bon choix (facultatif)",
     plan_starter_feat1: "8 questions/jour avec Scout — sans limite à vie", plan_starter_feat2: "Tout ce qui est dans Free", plan_starter_feat3: "Parcours personnalisé, Ma Prochaine Étape & bilan de départ", plan_starter_feat4: "Listes de cibles, approche de base & export PDF du Passeport",
-    plan_pro_feat1: "15 questions/jour avec Scout — sans limite à vie", plan_pro_feat2: "Tout ce qui est dans Basic", plan_pro_feat3: "GOLSZ Readiness & bilans de progression", plan_pro_feat4: "Plan d'entraînement & de développement", plan_pro_feat5: "Suivi enrichi des cibles & relances", plan_pro_feat6: "Vérification d'identité",
+    plan_pro_feat1: "15 questions/jour avec Scout — sans limite à vie", plan_pro_feat2: "Tout ce qui est dans Basic", plan_pro_feat3: "Détail de la Force du Passeport & bilans de progression", plan_pro_feat4: "Plan d'entraînement & de développement", plan_pro_feat5: "Suivi enrichi des cibles & relances", plan_pro_feat6: "Vérification d'identité",
     plan_elite_feat1: "20 questions/jour avec Scout — sans limite à vie", plan_elite_feat2: "Tout ce qui est dans Pro",
     feed_title: "Votre fil", feed_search: "Rechercher dans votre fil…", feed_share_update: "Partager une actualité…",
     feed_new_post: "NOUVELLE PUBLICATION", feed_whats_happening: "Quoi de neuf ?", feed_add_details: "Ajouter des détails (facultatif)",
@@ -633,7 +640,7 @@ const I18N = {
     benchmarks_title: "REPÈRES DE PERFORMANCE", benchmarks_empty: "Aucun repère enregistré pour l'instant.", benchmarks_metric_ph: "Mesure (ex. 40 yards)", benchmarks_value_ph: "Valeur", benchmarks_unit_ph: "Unité", benchmarks_add: "Enregistrer", benchmarks_add_err: "Impossible d'enregistrer. Réessayez.", benchmarks_invalid_value: "Entrez un nombre pour la valeur.",
     benchmarks_locked_teaser: "Passez à un forfait supérieur pour enregistrer et suivre vos repères de performance dans le temps, avec historique et tendances.",
     dev_plan_title: "PLAN DE DÉVELOPPEMENT", dev_plan_empty: "Aucun axe de travail pour l'instant.", dev_plan_goal_ph: "Sur quoi travaillez-vous ?", dev_plan_add: "Ajouter", dev_plan_add_err: "Impossible d'ajouter. Réessayez.", dev_plan_notes_ph: "Notes (facultatif)",
-    dev_plan_locked_teaser: "Passez à un forfait supérieur pour construire un plan de développement actif avec GOLSZ Scout, suivi selon votre Readiness.",
+    dev_plan_locked_teaser: "Passez à un forfait supérieur pour construire un plan de développement actif avec GOLSZ Scout, suivi selon votre Force du Passeport.",
     dev_plan_status_active: "Actif", dev_plan_status_done: "Terminé", dev_plan_status_paused: "En pause",
     dev_plan_focus_training: "Entraînement", dev_plan_focus_strength: "Force", dev_plan_focus_speed: "Vitesse", dev_plan_focus_conditioning: "Endurance", dev_plan_focus_recovery: "Récupération", dev_plan_focus_sleep: "Sommeil", dev_plan_focus_hydration: "Hydratation", dev_plan_focus_nutrition: "Nutrition", dev_plan_focus_other: "Autre",
     pathway_plan_title: "PLAN DE PARCOURS", pathway_timeline_ph: "Échéance visée (ex. automne 2027)", pathway_save: "Enregistrer le parcours", pathway_notes_ph: "Notes (facultatif)",
@@ -644,6 +651,11 @@ const I18N = {
     goal_card_required: "Écrivez d'abord votre objectif.", goal_card_too_short: "Ajoutez un peu plus de détails pour que Scout puisse s'en servir.",
     goal_card_save_err: "Impossible d'enregistrer votre objectif. Rien n'a été modifié — réessayez.",
     goal_card_pathway: "Parcours", goal_card_by_you: "Vos mots", goal_card_by_scout: "Recueilli par Scout",
+    action_add_failed: "Impossible d'ajouter — rien n'a été enregistré. Réessayez.",
+    admin_view_knowledge: "Connaissances", admin_no_knowledge: "Aucun fait candidat en attente de révision.",
+    admin_knowledge_source: "Source", admin_knowledge_no_source: "Aucune URL source — approbation impossible",
+    admin_knowledge_confidence: "Confiance de Scout", admin_knowledge_recheck: "Revérifier après le",
+    admin_knowledge_approve: "Approuver comme fait GOLSZ", admin_knowledge_reject: "Rejeter",
     bench_pick_metric: "Choisir un indicateur", bench_other_metric: "Autre chose…",
     bench_protocol_title: "COMMENT LA MESURE A-T-ELLE ÉTÉ PRISE ?", bench_protocol_unknown: "Non renseigné",
     bench_protocol_hint: "Laissez vide si vous n'êtes pas sûr — GOLSZ enregistre « inconnu » plutôt que de deviner. Cela n'influence que les comparaisons futures.",
@@ -793,6 +805,7 @@ const I18N = {
   es: {
     loading: "Cargando…", yes: "Sí", no: "No",
     moderation_blocked: "Eso no parece apropiado para GOLSZ — por favor, mantén el contenido relacionado con el deporte.",
+    VALUE_LABELS: { "American Football": "Fútbol americano", "Archery": "Tiro con arco", "Badminton": "Bádminton", "Baseball": "Béisbol", "Basketball": "Baloncesto", "Bowling": "Bolos", "Boxing": "Boxeo", "Cheerleading": "Animación", "Cricket": "Críquet", "Cross Country": "Campo a través", "Cycling": "Ciclismo", "Diving": "Salto de trampolín", "Equestrian": "Hípica", "Fencing": "Esgrima", "Field Hockey": "Hockey sobre hierba", "Futsal": "Fútbol sala", "Golf": "Golf", "Gymnastics": "Gimnasia", "Handball": "Balonmano", "Hockey": "Hockey sobre hielo", "Lacrosse": "Lacrosse", "Martial Arts": "Artes marciales", "Racquetball": "Racquetball", "Rowing": "Remo", "Rugby": "Rugby", "Sailing": "Vela", "Skiing": "Esquí", "Snowboarding": "Snowboard", "Soccer": "Fútbol", "Softball": "Sóftbol", "Squash": "Squash", "Swimming": "Natación", "Table Tennis": "Tenis de mesa", "Tennis": "Tenis", "Track": "Atletismo", "Triathlon": "Triatlón", "Volleyball": "Voleibol", "Water Polo": "Waterpolo", "Weightlifting": "Halterofilia", "Wrestling": "Lucha", "Other": "Otro", "Player": "Deportista", "Parent": "Madre/Padre", "Scout": "Ojeador", "Agent": "Agente", "Coach": "Entrenador", "Physio": "Fisioterapeuta" },
     nav_home: "Inicio", nav_discover: "Descubrir", nav_scout: "Agente", nav_ai_scout: "Agente IA",
     nav_events: "Eventos", nav_passport: "Pasaporte", nav_profile: "Perfil", nav_messages: "Mensajes",
     nav_signout: "Cerrar sesión",
@@ -824,22 +837,22 @@ const I18N = {
     auth_continue_payment: "Continuar al pago — ", auth_per_month: "/mes",
     auth_couldnt_signup: "NO SE PUDO COMPLETAR EL REGISTRO", auth_couldnt_login: "NO SE PUDO INICIAR SESIÓN",
     plan_free_tag: "Sin tarjeta", plan_starter_tag: "Para empezar", plan_pro_tag: "Más popular", plan_elite_tag: "Es hora de GOLSZ",
-    plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital — perfil, logros y trayectoria", plan_free_feat3: "Descubrimiento del atleta y tus objetivos con Scout", plan_free_feat4: "Puntuación GOLSZ Readiness y Tu Próximo Paso",
+    plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital — perfil, logros y trayectoria", plan_free_feat3: "Descubrimiento del atleta y tus objetivos con Scout", plan_free_feat4: "Puntuación Fuerza del Pasaporte y Tu Próximo Paso",
     conversion_title: "Ya sabemos suficiente sobre ti — construyamos tu plan.", conversion_body: "GOLSZ Scout ya conoce tu deporte, tus objetivos y en qué estás trabajando. Mejora tu plan para obtener una guía más profunda centrada en tu progreso, no solo más preguntas.", conversion_dismiss: "Ahora no", update_available: "Hay una nueva versión de GOLSZ.", scout_try_again: "Reintentar", update_refresh: "Actualizar", update_dismiss: "Descartar", trial_ended_title: "Tu prueba ha terminado.", trial_ended_body: "Scout conserva todo lo que construyeron juntos: tu perfil, tu objetivo y su lectura de ti. Lo que se detiene es el trabajo profundo: el plan personalizado, la lista de objetivos y la investigación detrás. Elige un plan y continúa justo donde estás.",
     feature_lock_body: "Esto forma parte de las herramientas de trayectoria guiada de GOLSZ.", feature_lock_cta: "Mejora tu plan para desbloquear",
     guided_step_goal: "Entendiendo tu objetivo: {goal}", guided_step_goal_fallback: "Conociendo hacia qué estás trabajando.",
     guided_step_passport: "Analizando tu Pasaporte — {score}% completo.", guided_step_missing: "Falta: {list}.", guided_step_missing_none: "Los datos básicos de tu Pasaporte están completos.",
-    guided_step_readiness: "Evaluación inicial de preparación: {score}/100.", guided_step_next_move: "Tu próximo paso: {label}", guided_step_next_move_generic: "Preparando tu primer paso recomendado.",
-    guided_ready_title: "Ese es el atleta que eres hoy.", guided_ready_body: "Ahora veamos cómo te conviertes en el atleta que quieres ser — GOLSZ Readiness, Tu Próximo Paso, Objetivos y Marcas están listos para desbloquear.",
+    guided_step_readiness: "Fuerza del Pasaporte inicial: {score}/100.", guided_step_next_move: "Tu próximo paso: {label}", guided_step_next_move_generic: "Preparando tu primer paso recomendado.",
+    guided_ready_title: "Ese es el atleta que eres hoy.", guided_ready_body: "Ahora veamos cómo te conviertes en el atleta que quieres ser — la Fuerza del Pasaporte, Tu Próximo Paso, Objetivos y Marcas están listos para desbloquear.",
     elite_welcome_eyebrow: "ES HORA DE GOLSZ", elite_welcome_title: "Bienvenido a GOLSZ Elite.", elite_welcome_body: "Antes de construir tu programa completo, necesitamos entenderte — el atleta que eres hoy, adónde quieres llegar y cómo es tu semana normal. Construiremos tu Pasaporte, definiremos tus objetivos, crearemos tu Camino y organizaremos tu desarrollo para llegar allí.", elite_welcome_cta: "Construyámoslo",
-    guided_locked_readiness: "GOLSZ Readiness", guided_locked_next_move: "Tu Próximo Paso", guided_locked_targets: "Objetivos", guided_locked_benchmarks: "Marcas",
+    guided_locked_readiness: "Fuerza del Pasaporte", guided_locked_next_move: "Tu Próximo Paso", guided_locked_targets: "Objetivos", guided_locked_benchmarks: "Marcas",
     guided_continue_cta: "Continuar mi camino",
     next_move_title: "TU PRÓXIMO PASO", next_move_act: "Hacer esto", next_move_dismiss: "Marcar como hecho", next_move_locked: "Scout encontró tu próximo paso — mejora tu plan para verlo.",
     next_move_type_complete_profile: "Termina tu Pasaporte.", next_move_type_define_goal: "Dile a Scout cuál es tu meta.", next_move_type_invite_to_pathway: "Construye tu Trayectoria.", next_move_type_establish_baseline: "Establece tu línea base con Scout.", next_move_type_build_pathway: "Construye tu Trayectoria con Scout.", next_move_type_target_work: "Identifica tus primeros objetivos.", next_move_type_follow_up: "Da seguimiento a un objetivo pendiente.", next_move_type_retest: "Hora de registrar un nuevo referente.", next_move_type_review_progress: "Revisa tu progreso.",
     next_move_why_ask_scout: "Basado en lo que le contaste a Scout", next_move_why_complete_profile: "A tu Pasaporte le faltan datos básicos", next_move_why_share_passport: "Estás listo para que te vean — comparte tu Pasaporte",
     nav_home: "Inicio", home_greeting: "Bienvenido de nuevo, {name}.", home_readiness_title: "FUERZA DEL PASAPORTE", home_assessment_title: "LA LECTURA DE SCOUT", home_assessment_level: "HASTA DÓNDE CREE SCOUT QUE PUEDES LLEGAR", home_assessment_strengths: "LO QUE FUNCIONA", home_assessment_gaps: "LO QUE TE FRENA", home_assessment_focus: "PRÓXIMOS 90 DÍAS", home_assessment_dated: "Lectura de Scout del", home_profile_quality: "CALIDAD DEL PERFIL", home_verification: "VERIFICACIÓN",
     home_verify_status_none: "No iniciado", home_verify_status_pending: "En revisión", home_verify_status_verified: "Verificado",
-    home_readiness_composite: "FUERZA DEL PASAPORTE", home_performance: "RENDIMIENTO", home_performance_sub: "{n} marcas registradas", home_development: "DESARROLLO", home_pathway: "PREPARACIÓN DE TRAYECTORIA", home_pathway_sub: "{n} objetivos activos", home_pathway_none: "Sin trayectoria definida",
+    home_readiness_composite: "FUERZA DEL PASAPORTE", home_performance: "RENDIMIENTO", home_performance_sub: "{n} marcas registradas", home_development: "DESARROLLO", home_pathway: "TRAYECTORIA", home_pathway_sub: "{n} objetivos activos", home_pathway_none: "Sin trayectoria definida",
     home_readiness_why_title: "POR QUÉ ESTA PUNTUACIÓN", home_readiness_improve: "Mejorar esto",
     home_readiness_weakest_profile_quality: "Tu Pasaporte es lo que más frena tu puntuación — completa los campos que faltan abajo.", home_readiness_weakest_verification: "Verificar tu identidad es lo que más aumentaría tu puntuación ahora mismo.", home_readiness_weakest_performance: "Registrar y volver a probar algunas marcas de rendimiento es lo que más aumentaría tu puntuación ahora mismo.", home_readiness_weakest_development: "Añadir áreas de enfoque a tu plan de desarrollo — y avanzar en ellas — es lo que más aumentaría tu puntuación ahora mismo.", home_readiness_weakest_pathway: "Definir una trayectoria y añadir objetivos es lo que más aumentaría tu puntuación ahora mismo.",
     home_this_month_title: "ESTE MES", home_this_month_dev: "{n} áreas de desarrollo en curso.", home_this_month_targets: "{n} objetivos no se han tocado en una semana.", home_this_month_review: "Revisar",
@@ -867,7 +880,7 @@ const I18N = {
     targets_notes_ph: "Notas", targets_draft_ph: "Borrador de email de contacto",
     targets_status_researching: "Investigando", targets_status_preparing: "Preparando", targets_status_contacted: "Contactado", targets_status_responded: "Respondido", targets_status_follow_up: "Seguimiento", targets_status_opportunity: "Oportunidad", targets_fit_reasoning_ph: "Por qué encaja bien (opcional)",
     plan_starter_feat1: "8 preguntas/día con Scout — sin límite de por vida", plan_starter_feat2: "Todo lo de Free", plan_starter_feat3: "Camino personalizado, Tu Próximo Paso y evaluación inicial", plan_starter_feat4: "Listas de objetivos, contacto básico y exportación PDF del Pasaporte",
-    plan_pro_feat1: "15 preguntas/día con Scout — sin límite de por vida", plan_pro_feat2: "Todo lo de Basic", plan_pro_feat3: "GOLSZ Readiness y revisiones de progreso", plan_pro_feat4: "Plan de entrenamiento y desarrollo", plan_pro_feat5: "Seguimiento avanzado de objetivos y seguimientos", plan_pro_feat6: "Verificación de identidad",
+    plan_pro_feat1: "15 preguntas/día con Scout — sin límite de por vida", plan_pro_feat2: "Todo lo de Basic", plan_pro_feat3: "Desglose de Fuerza del Pasaporte y revisiones de progreso", plan_pro_feat4: "Plan de entrenamiento y desarrollo", plan_pro_feat5: "Seguimiento avanzado de objetivos y seguimientos", plan_pro_feat6: "Verificación de identidad",
     plan_elite_feat1: "20 preguntas/día con Scout — sin límite de por vida", plan_elite_feat2: "Todo lo de Pro",
     feed_title: "Tu feed", feed_search: "Buscar en tu feed…", feed_share_update: "Comparte una novedad…",
     feed_new_post: "NUEVA PUBLICACIÓN", feed_whats_happening: "¿Qué está pasando?", feed_add_details: "Añade detalles (opcional)",
@@ -945,7 +958,7 @@ const I18N = {
     benchmarks_title: "MARCAS DE RENDIMIENTO", benchmarks_empty: "Aún no hay marcas registradas.", benchmarks_metric_ph: "Prueba (ej. 40 yardas)", benchmarks_value_ph: "Valor", benchmarks_unit_ph: "Unidad", benchmarks_add: "Registrar", benchmarks_add_err: "No se pudo registrar. Inténtalo de nuevo.", benchmarks_invalid_value: "Introduce un número para el valor.",
     benchmarks_locked_teaser: "Mejora tu plan para registrar y seguir tus marcas de rendimiento en el tiempo, con historial y tendencias de progreso.",
     dev_plan_title: "PLAN DE DESARROLLO", dev_plan_empty: "Aún no hay áreas de enfoque.", dev_plan_goal_ph: "¿En qué estás trabajando?", dev_plan_add: "Añadir", dev_plan_add_err: "No se pudo añadir. Inténtalo de nuevo.", dev_plan_notes_ph: "Notas (opcional)",
-    dev_plan_locked_teaser: "Mejora tu plan para construir un plan de desarrollo activo con GOLSZ Scout, en función de tu Readiness.",
+    dev_plan_locked_teaser: "Mejora tu plan para construir un plan de desarrollo activo con GOLSZ Scout, en función de tu Fuerza del Pasaporte.",
     dev_plan_status_active: "Activo", dev_plan_status_done: "Completado", dev_plan_status_paused: "En pausa",
     dev_plan_focus_training: "Entrenamiento", dev_plan_focus_strength: "Fuerza", dev_plan_focus_speed: "Velocidad", dev_plan_focus_conditioning: "Resistencia", dev_plan_focus_recovery: "Recuperación", dev_plan_focus_sleep: "Sueño", dev_plan_focus_hydration: "Hidratación", dev_plan_focus_nutrition: "Nutrición", dev_plan_focus_other: "Otro",
     pathway_plan_title: "PLAN DE TRAYECTORIA", pathway_timeline_ph: "Plazo objetivo (ej. otoño 2027)", pathway_save: "Guardar trayectoria", pathway_notes_ph: "Notas (opcional)",
@@ -956,6 +969,11 @@ const I18N = {
     goal_card_required: "Escribe primero tu objetivo.", goal_card_too_short: "Añade un poco más de detalle para que Scout pueda trabajar con ello.",
     goal_card_save_err: "No se pudo guardar tu objetivo. No se cambió nada — inténtalo de nuevo.",
     goal_card_pathway: "Trayectoria", goal_card_by_you: "Tus palabras", goal_card_by_scout: "Registrado por Scout",
+    action_add_failed: "No se pudo añadir — no se guardó nada. Inténtalo de nuevo.",
+    admin_view_knowledge: "Conocimiento", admin_no_knowledge: "No hay hechos candidatos pendientes de revisión.",
+    admin_knowledge_source: "Fuente", admin_knowledge_no_source: "Sin URL de origen — no se puede aprobar",
+    admin_knowledge_confidence: "Confianza de Scout", admin_knowledge_recheck: "Revisar después del",
+    admin_knowledge_approve: "Aprobar como hecho GOLSZ", admin_knowledge_reject: "Rechazar",
     bench_pick_metric: "Elige una métrica", bench_other_metric: "Otra cosa…",
     bench_protocol_title: "¿CÓMO SE MIDIÓ?", bench_protocol_unknown: "Sin registrar",
     bench_protocol_hint: "Déjalo en blanco si no estás seguro — GOLSZ registra «desconocido» en vez de adivinar. Solo afecta a con qué se podrá comparar más adelante.",
@@ -1105,6 +1123,7 @@ const I18N = {
   el: {
     loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
     moderation_blocked: "Αυτό δεν φαίνεται κατάλληλο για το GOLSZ — παρακαλούμε μείνετε σε θέματα σχετικά με τον αθλητισμό.",
+    VALUE_LABELS: { "American Football": "Αμερικανικό ποδόσφαιρο", "Archery": "Τοξοβολία", "Badminton": "Μπάντμιντον", "Baseball": "Μπέιζμπολ", "Basketball": "Μπάσκετ", "Bowling": "Μπόουλινγκ", "Boxing": "Πυγμαχία", "Cheerleading": "Τσιρλίντινγκ", "Cricket": "Κρίκετ", "Cross Country": "Ανώμαλος δρόμος", "Cycling": "Ποδηλασία", "Diving": "Καταδύσεις", "Equestrian": "Ιππασία", "Fencing": "Ξιφασκία", "Field Hockey": "Χόκεϊ επί χόρτου", "Futsal": "Φούτσαλ", "Golf": "Γκολφ", "Gymnastics": "Γυμναστική", "Handball": "Χάντμπολ", "Hockey": "Χόκεϊ επί πάγου", "Lacrosse": "Λακρός", "Martial Arts": "Πολεμικές τέχνες", "Racquetball": "Ρακετμπόλ", "Rowing": "Κωπηλασία", "Rugby": "Ράγκμπι", "Sailing": "Ιστιοπλοΐα", "Skiing": "Σκι", "Snowboarding": "Σνόουμπορντ", "Soccer": "Ποδόσφαιρο", "Softball": "Σόφτμπολ", "Squash": "Σκουός", "Swimming": "Κολύμβηση", "Table Tennis": "Επιτραπέζια αντισφαίριση", "Tennis": "Τένις", "Track": "Στίβος", "Triathlon": "Τρίαθλο", "Volleyball": "Βόλεϊ", "Water Polo": "Πόλο", "Weightlifting": "Άρση βαρών", "Wrestling": "Πάλη", "Other": "Άλλο", "Player": "Αθλητής", "Parent": "Γονέας", "Scout": "Σκάουτερ", "Agent": "Ατζέντης", "Coach": "Προπονητής", "Physio": "Φυσιοθεραπευτής" },
     nav_home: "Αρχική", nav_discover: "Ανακάλυψη", nav_scout: "Σκάουτ", nav_ai_scout: "AI Σκάουτ",
     nav_events: "Εκδηλώσεις", nav_passport: "Διαβατήριο", nav_profile: "Προφίλ", nav_messages: "Μηνύματα",
     nav_signout: "Αποσύνδεση",
@@ -1136,22 +1155,22 @@ const I18N = {
     auth_continue_payment: "Συνέχεια στην πληρωμή — ", auth_per_month: "/μήνα",
     auth_couldnt_signup: "Η ΕΓΓΡΑΦΗ ΑΠΕΤΥΧΕ", auth_couldnt_login: "Η ΣΥΝΔΕΣΗ ΑΠΕΤΥΧΕ",
     plan_free_tag: "Χωρίς κάρτα", plan_starter_tag: "Ξεκινήστε", plan_pro_tag: "Δημοφιλέστερο", plan_elite_tag: "Είναι ώρα για GOLSZ",
-    plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο — προφίλ, διακρίσεις & πορεία", plan_free_feat3: "Γνωριμία με τον αθλητή & τους στόχους σου μέσω του Scout", plan_free_feat4: "Βαθμολογία GOLSZ Readiness & Η Επόμενή σου Κίνηση",
+    plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο — προφίλ, διακρίσεις & πορεία", plan_free_feat3: "Γνωριμία με τον αθλητή & τους στόχους σου μέσω του Scout", plan_free_feat4: "Βαθμολογία Ισχύος Διαβατηρίου & Η Επόμενή σου Κίνηση",
     conversion_title: "Μάθαμε αρκετά για εσένα — ας χτίσουμε το πλάνο σου.", conversion_body: "Ο GOLSZ Scout γνωρίζει πλέον το άθλημά σου, τους στόχους σου και τι δουλεύεις. Αναβάθμισε για βαθύτερη καθοδήγηση γύρω από την εξέλιξή σου — όχι απλώς περισσότερες ερωτήσεις.", conversion_dismiss: "Όχι τώρα", update_available: "Νέα έκδοση του GOLSZ είναι έτοιμη.", scout_try_again: "Δοκίμασε ξανά", update_refresh: "Ανανέωση", update_dismiss: "Απόρριψη", trial_ended_title: "Η δοκιμή σου ολοκληρώθηκε.", trial_ended_body: "Ο Scout κρατά όλα όσα χτίσατε μαζί — το προφίλ σου, τον στόχο σου, την εκτίμησή του για σένα. Αυτό που σταματά είναι η βαθύτερη δουλειά: το εξατομικευμένο πλάνο, η λίστα στόχων και η έρευνα πίσω από αυτά. Διάλεξε πλάνο και συνέχισε ακριβώς από εκεί που είσαι.",
     feature_lock_body: "Αυτό αποτελεί μέρος των εργαλείων καθοδηγούμενης πορείας του GOLSZ.", feature_lock_cta: "Αναβάθμισε για ξεκλείδωμα",
     guided_step_goal: "Κατανοώντας τον στόχο σου: {goal}", guided_step_goal_fallback: "Μαθαίνουμε προς τι δουλεύεις.",
     guided_step_passport: "Ανάλυση του Διαβατηρίου σου — {score}% ολοκληρωμένο.", guided_step_missing: "Λείπει: {list}.", guided_step_missing_none: "Τα βασικά στοιχεία του Διαβατηρίου σου είναι πλήρη.",
-    guided_step_readiness: "Αρχική αξιολόγηση ετοιμότητας: {score}/100.", guided_step_next_move: "Η επόμενή σου κίνηση: {label}", guided_step_next_move_generic: "Δημιουργία της πρώτης προτεινόμενης κίνησής σου.",
-    guided_ready_title: "Αυτός είναι ο αθλητής που είσαι σήμερα.", guided_ready_body: "Τώρα ας δούμε πώς θα γίνεις ο αθλητής που θέλεις να είσαι — Το GOLSZ Readiness, Η Επόμενή σου Κίνηση, Στόχοι και Δείκτες είναι έτοιμα για ξεκλείδωμα.",
+    guided_step_readiness: "Αρχική Ισχύς Διαβατηρίου: {score}/100.", guided_step_next_move: "Η επόμενή σου κίνηση: {label}", guided_step_next_move_generic: "Δημιουργία της πρώτης προτεινόμενης κίνησής σου.",
+    guided_ready_title: "Αυτός είναι ο αθλητής που είσαι σήμερα.", guided_ready_body: "Τώρα ας δούμε πώς θα γίνεις ο αθλητής που θέλεις να είσαι — Η Ισχύς Διαβατηρίου, Η Επόμενή σου Κίνηση, Στόχοι και Δείκτες είναι έτοιμα για ξεκλείδωμα.",
     elite_welcome_eyebrow: "ΕΙΝΑΙ ΩΡΑ ΓΙΑ GOLSZ", elite_welcome_title: "Καλωσόρισες στο GOLSZ Elite.", elite_welcome_body: "Πριν χτίσουμε το πλήρες πρόγραμμά σου, χρειάζεται να σε γνωρίσουμε — τον αθλητή που είσαι σήμερα, πού θέλεις να φτάσεις και πώς μοιάζει η συνηθισμένη σου εβδομάδα. Θα χτίσουμε το Διαβατήριό σου, θα καθορίσουμε τους στόχους σου, θα δημιουργήσουμε το Μονοπάτι σου και θα οργανώσουμε την ανάπτυξή σου γύρω από αυτό.", elite_welcome_cta: "Ας το χτίσουμε",
-    guided_locked_readiness: "GOLSZ Readiness", guided_locked_next_move: "Η Επόμενή σου Κίνηση", guided_locked_targets: "Στόχοι", guided_locked_benchmarks: "Δείκτες",
+    guided_locked_readiness: "Ισχύς Διαβατηρίου", guided_locked_next_move: "Η Επόμενή σου Κίνηση", guided_locked_targets: "Στόχοι", guided_locked_benchmarks: "Δείκτες",
     guided_continue_cta: "Συνέχισε την πορεία μου",
     next_move_title: "Η ΕΠΟΜΕΝΗ ΣΟΥ ΚΙΝΗΣΗ", next_move_act: "Κάνε το", next_move_dismiss: "Ολοκληρώθηκε", next_move_locked: "Ο Scout βρήκε την επόμενή σου κίνηση — αναβάθμισε για να τη δεις.",
     next_move_type_complete_profile: "Ολοκλήρωσε το Διαβατήριό σου.", next_move_type_define_goal: "Πες στον Scout τον στόχο σου.", next_move_type_invite_to_pathway: "Δημιούργησε την Πορεία σου.", next_move_type_establish_baseline: "Καθόρισε το σημείο εκκίνησής σου με τον Scout.", next_move_type_build_pathway: "Δημιούργησε την Πορεία σου με τον Scout.", next_move_type_target_work: "Εντόπισε τους πρώτους σου στόχους.", next_move_type_follow_up: "Κάνε follow-up σε έναν στόχο.", next_move_type_retest: "Ώρα να καταγράψεις νέο δείκτη επίδοσης.", next_move_type_review_progress: "Δες την πρόοδό σου.",
     next_move_why_ask_scout: "Με βάση όσα είπες στον Scout", next_move_why_complete_profile: "Στο Διαβατήριό σου λείπουν βασικά στοιχεία", next_move_why_share_passport: "Είσαι έτοιμος να σε δουν — μοιράσου το Διαβατήριό σου",
     nav_home: "Αρχική", home_greeting: "Καλώς όρισες πάλι, {name}.", home_readiness_title: "ΙΣΧΥΣ ΔΙΑΒΑΤΗΡΙΟΥ", home_assessment_title: "Η ΕΚΤΙΜΗΣΗ ΤΟΥ SCOUT", home_assessment_level: "ΠΟΥ ΠΙΣΤΕΥΕΙ Ο SCOUT ΟΤΙ ΜΠΟΡΕΙΣ ΝΑ ΦΤΑΣΕΙΣ", home_assessment_strengths: "ΤΙ ΛΕΙΤΟΥΡΓΕΙ", home_assessment_gaps: "ΤΙ ΣΕ ΕΜΠΟΔΙΖΕΙ", home_assessment_focus: "ΕΠΟΜΕΝΕΣ 90 ΜΕΡΕΣ", home_assessment_dated: "Εκτίμηση Scout από", home_profile_quality: "ΠΟΙΟΤΗΤΑ ΠΡΟΦΙΛ", home_verification: "ΕΠΑΛΗΘΕΥΣΗ",
     home_verify_status_none: "Δεν ξεκίνησε", home_verify_status_pending: "Υπό εξέταση", home_verify_status_verified: "Επαληθευμένο",
-    home_readiness_composite: "ΙΣΧΥΣ ΔΙΑΒΑΤΗΡΙΟΥ", home_performance: "ΑΠΟΔΟΣΗ", home_performance_sub: "{n} δείκτες υπό παρακολούθηση", home_development: "ΑΝΑΠΤΥΞΗ", home_pathway: "ΕΤΟΙΜΟΤΗΤΑ ΠΟΡΕΙΑΣ", home_pathway_sub: "{n} ενεργοί στόχοι", home_pathway_none: "Δεν έχει οριστεί πορεία",
+    home_readiness_composite: "ΙΣΧΥΣ ΔΙΑΒΑΤΗΡΙΟΥ", home_performance: "ΑΠΟΔΟΣΗ", home_performance_sub: "{n} δείκτες υπό παρακολούθηση", home_development: "ΑΝΑΠΤΥΞΗ", home_pathway: "ΠΟΡΕΙΑ", home_pathway_sub: "{n} ενεργοί στόχοι", home_pathway_none: "Δεν έχει οριστεί πορεία",
     home_readiness_why_title: "ΓΙΑΤΙ ΑΥΤΗ Η ΒΑΘΜΟΛΟΓΙΑ", home_readiness_improve: "Βελτίωσέ το",
     home_readiness_weakest_profile_quality: "Το Διαβατήριό σου είναι αυτό που περιορίζει περισσότερο τη βαθμολογία σου — συμπλήρωσε τα πεδία που λείπουν παρακάτω.", home_readiness_weakest_verification: "Η επαλήθευση ταυτότητας θα αύξανε περισσότερο τη βαθμολογία σου αυτή τη στιγμή.", home_readiness_weakest_performance: "Η καταγραφή και επανεξέταση μερικών δεικτών απόδοσης θα αύξανε περισσότερο τη βαθμολογία σου αυτή τη στιγμή.", home_readiness_weakest_development: "Η προσθήκη τομέων εστίασης στο πλάνο ανάπτυξής σου — και η πρόοδος σε αυτούς — θα αύξανε περισσότερο τη βαθμολογία σου αυτή τη στιγμή.", home_readiness_weakest_pathway: "Ο καθορισμός πορείας και η προσθήκη στόχων θα αύξανε περισσότερο τη βαθμολογία σου αυτή τη στιγμή.",
     home_this_month_title: "ΑΥΤΟΝ ΤΟΝ ΜΗΝΑ", home_this_month_dev: "{n} τομείς ανάπτυξης σε εξέλιξη.", home_this_month_targets: "{n} στόχοι δεν έχουν αγγιχτεί εδώ και μια εβδομάδα.", home_this_month_review: "Έλεγχος",
@@ -1179,7 +1198,7 @@ const I18N = {
     targets_notes_ph: "Σημειώσεις", targets_draft_ph: "Πρόχειρο email επικοινωνίας",
     targets_status_researching: "Έρευνα", targets_status_preparing: "Προετοιμασία", targets_status_contacted: "Επικοινώνησα", targets_status_responded: "Απάντησαν", targets_status_follow_up: "Παρακολούθηση", targets_status_opportunity: "Ευκαιρία", targets_fit_reasoning_ph: "Γιατί ταιριάζει καλά (προαιρετικό)",
     plan_starter_feat1: "8 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_starter_feat2: "Όλα όσα περιλαμβάνει το Free", plan_starter_feat3: "Προσωπικό Μονοπάτι, Η Επόμενή σου Κίνηση & αρχική αξιολόγηση", plan_starter_feat4: "Λίστες στόχων, βασική προσέγγιση & εξαγωγή PDF Διαβατηρίου",
-    plan_pro_feat1: "15 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_pro_feat2: "Όλα όσα περιλαμβάνει το Basic", plan_pro_feat3: "GOLSZ Readiness & αξιολογήσεις προόδου", plan_pro_feat4: "Πλάνο προπόνησης & ανάπτυξης", plan_pro_feat5: "Εμπλουτισμένη παρακολούθηση στόχων & follow-up", plan_pro_feat6: "Επαλήθευση ταυτότητας",
+    plan_pro_feat1: "15 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_pro_feat2: "Όλα όσα περιλαμβάνει το Basic", plan_pro_feat3: "Ανάλυση Ισχύος Διαβατηρίου & αξιολογήσεις προόδου", plan_pro_feat4: "Πλάνο προπόνησης & ανάπτυξης", plan_pro_feat5: "Εμπλουτισμένη παρακολούθηση στόχων & follow-up", plan_pro_feat6: "Επαλήθευση ταυτότητας",
     plan_elite_feat1: "20 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_elite_feat2: "Όλα όσα περιλαμβάνει το Pro",
     feed_title: "Η ροή σας", feed_search: "Αναζήτηση στη ροή σας…", feed_share_update: "Μοιραστείτε μια ενημέρωση…",
     feed_new_post: "ΝΕΑ ΑΝΑΡΤΗΣΗ", feed_whats_happening: "Τι συμβαίνει;", feed_add_details: "Προσθήκη λεπτομερειών (προαιρετικό)",
@@ -1257,7 +1276,7 @@ const I18N = {
     benchmarks_title: "ΔΕΙΚΤΕΣ ΑΠΟΔΟΣΗΣ", benchmarks_empty: "Δεν έχουν καταγραφεί δείκτες ακόμα.", benchmarks_metric_ph: "Δείκτης (π.χ. σπριντ 40 yards)", benchmarks_value_ph: "Τιμή", benchmarks_unit_ph: "Μονάδα", benchmarks_add: "Καταγραφή", benchmarks_add_err: "Δεν καταγράφηκε. Δοκιμάστε ξανά.", benchmarks_invalid_value: "Εισάγετε έναν αριθμό για την τιμή.",
     benchmarks_locked_teaser: "Αναβάθμισε για να καταγράφεις και να παρακολουθείς τους δείκτες απόδοσής σου με την πάροδο του χρόνου, με ιστορικό και τάσεις προόδου.",
     dev_plan_title: "ΠΛΑΝΟ ΑΝΑΠΤΥΞΗΣ", dev_plan_empty: "Δεν υπάρχουν ακόμα τομείς εστίασης.", dev_plan_goal_ph: "Σε τι δουλεύεις;", dev_plan_add: "Προσθήκη", dev_plan_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", dev_plan_notes_ph: "Σημειώσεις (προαιρετικό)",
-    dev_plan_locked_teaser: "Αναβάθμισε για να χτίσεις ένα ενεργό πλάνο ανάπτυξης με τον GOLSZ Scout, βασισμένο στο Readiness σου.",
+    dev_plan_locked_teaser: "Αναβάθμισε για να χτίσεις ένα ενεργό πλάνο ανάπτυξης με τον GOLSZ Scout, βασισμένο στην Ισχύ Διαβατηρίου σου.",
     dev_plan_status_active: "Ενεργό", dev_plan_status_done: "Ολοκληρώθηκε", dev_plan_status_paused: "Σε παύση",
     dev_plan_focus_training: "Προπόνηση", dev_plan_focus_strength: "Δύναμη", dev_plan_focus_speed: "Ταχύτητα", dev_plan_focus_conditioning: "Αντοχή", dev_plan_focus_recovery: "Αποκατάσταση", dev_plan_focus_sleep: "Ύπνος", dev_plan_focus_hydration: "Ενυδάτωση", dev_plan_focus_nutrition: "Διατροφή", dev_plan_focus_other: "Άλλο",
     pathway_plan_title: "ΠΛΑΝΟ ΠΟΡΕΙΑΣ", pathway_timeline_ph: "Στοχευμένο χρονοδιάγραμμα (π.χ. Φθινόπωρο 2027)", pathway_save: "Αποθήκευση πορείας", pathway_notes_ph: "Σημειώσεις (προαιρετικό)",
@@ -1268,6 +1287,11 @@ const I18N = {
     goal_card_required: "Γράψε πρώτα τον στόχο σου.", goal_card_too_short: "Πρόσθεσε λίγη περισσότερη λεπτομέρεια για να μπορέσει ο Scout να τη χρησιμοποιήσει.",
     goal_card_save_err: "Δεν αποθηκεύτηκε ο στόχος σου. Τίποτα δεν άλλαξε — δοκίμασε ξανά.",
     goal_card_pathway: "Πορεία", goal_card_by_you: "Τα λόγια σου", goal_card_by_scout: "Καταγράφηκε από τον Scout",
+    action_add_failed: "Δεν προστέθηκε — δεν αποθηκεύτηκε τίποτα. Δοκίμασε ξανά.",
+    admin_view_knowledge: "Γνώση", admin_no_knowledge: "Δεν υπάρχουν υποψήφια στοιχεία προς έλεγχο.",
+    admin_knowledge_source: "Πηγή", admin_knowledge_no_source: "Χωρίς URL πηγής — δεν μπορεί να εγκριθεί",
+    admin_knowledge_confidence: "Βεβαιότητα Scout", admin_knowledge_recheck: "Επανέλεγχος μετά τις",
+    admin_knowledge_approve: "Έγκριση ως στοιχείο GOLSZ", admin_knowledge_reject: "Απόρριψη",
     bench_pick_metric: "Διάλεξε μέτρηση", bench_other_metric: "Κάτι άλλο…",
     bench_protocol_title: "ΠΩΣ ΜΕΤΡΗΘΗΚΕ;", bench_protocol_unknown: "Δεν καταγράφηκε",
     bench_protocol_hint: "Άφησέ τα κενά αν δεν είσαι σίγουρος — το GOLSZ καταγράφει «άγνωστο» αντί να μαντεύει. Επηρεάζει μόνο με τι θα μπορεί να συγκριθεί αργότερα.",
@@ -1417,10 +1441,34 @@ const I18N = {
 };
 const LANGS = [["en", "English"], ["fr", "Français"], ["es", "Español"], ["el", "Ελληνικά"]];
 const LangContext = React.createContext(null);
+// tv() — "translate value". P1-7.
+//
+// SPORTS, NON_PLAYER_SPORTS and OCCUPATIONS are canonical ENGLISH values that
+// get STORED (athletes.sport, profiles.occupation) and matched against by
+// SPORT_SCHEMAS, BENCHMARK_METRICS_BY_SPORT, the `sports` table lookup in
+// api/scout.js, and the isPlayer/isParent branches in this file. Translating
+// the stored value would break every one of them, so this translates only
+// what the athlete READS while the <option value> stays English.
+//
+// Falls back to the English value itself, so a sport added to SPORTS without
+// a VALUE_LABELS entry renders in English rather than as a blank option.
+//
+// Deliberately NOT applied to COUNTRIES or the position datalists: those feed
+// free-text <input list=...> fields whose typed value is stored verbatim and
+// matched by resolvePosition() against the schema's English position labels.
+// Offering translated suggestions there would let an athlete store
+// "Τερματοφύλακας" and silently lose their sport context in Scout. Those stay
+// English until the stored value and the displayed label are separated too.
+function translateValue(lang, value) {
+  if (!value) return value;
+  const map = (I18N[lang] && I18N[lang].VALUE_LABELS) || null;
+  return (map && map[value]) || value;
+}
+
 function useLang() {
   const ctx = useContext(LangContext);
   if (ctx) return ctx;
-  return { lang: "en", setLang: () => {}, t: (k) => (I18N.en[k] || k) };
+  return { lang: "en", setLang: () => {}, t: (k) => (I18N.en[k] || k), tv: (v) => translateValue("en", v) };
 }
 function LangProvider({ children }) {
   const [lang, setLang] = useState(() => {
@@ -1431,7 +1479,8 @@ function LangProvider({ children }) {
     try { localStorage.setItem("golsz-lang", lang); } catch (e) {}
   }, [lang]);
   const t = (key) => (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
-  return <LangContext.Provider value={{ lang, setLang, t }}>{children}</LangContext.Provider>;
+  const tv = (value) => translateValue(lang, value);
+  return <LangContext.Provider value={{ lang, setLang, t, tv }}>{children}</LangContext.Provider>;
 }
 
 /* ============ PUSH NOTIFICATIONS ============
@@ -2770,7 +2819,7 @@ function Discover({ onMessage, onViewProfile }) {
    owner (or an admin) can read a private row back, per events_read in
    migration 011. */
 function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
-  const { t } = useLang();
+  const { t, tv } = useLang();
   const [title, setTitle] = useState(initialTitle || "");
   const [sport, setSport] = useState("");
   const [location, setLocation] = useState("");
@@ -2828,7 +2877,7 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
           <div><span style={label}>{t("events_field_sport")}</span>
             <select style={field} value={sport} onChange={(e) => setSport(e.target.value)}>
               <option value="">—</option>
-              {SPORTS.filter((s) => s !== "All").map((s) => <option key={s} value={s}>{s}</option>)}
+              {SPORTS.filter((s) => s !== "All").map((s) => <option key={s} value={s}>{tv(s)}</option>)}
             </select>
           </div>
         </div>
@@ -4040,7 +4089,7 @@ function PostsGrid({ viewUserId }) {
   );
 }
 
-// GOLSZ Readiness — brief §6's 5 named sub-scores (Recruitment/Pathway
+// Passport Strength (was "GOLSZ Readiness") — brief §6's 5 named sub-scores (Recruitment/Pathway
 // Readiness, Performance, Profile Quality, Development Progress,
 // Verification), every one computed entirely from data that already
 // exists — nothing invented, no black-box "readiness algorithm". Always
@@ -4111,8 +4160,8 @@ function computePathwayScore(pathway, targetsCount) {
 // as Basic-tier deliverables ("personalized Pathway," "baseline
 // assessment," "My Next Move," "target identification," "basic outreach
 // strategy," "Passport PDF export" — all under §5 BASIC). PRO = "manage my
-// journey" — GOLSZ Readiness and the Development Plan stay at Pro; the
-// directive's §6 PRO list explicitly names "GOLSZ Readiness" as a Pro
+// journey" — the Passport Strength breakdown and the Development Plan stay at Pro; the
+// directive's §6 PRO list explicitly names it (as "GOLSZ Readiness") as a Pro
 // capability and never mentions Pathway/targets/benchmarks/PDF as newly
 // unlocked there (they're already unlocked one tier down). Anything not
 // listed here (Passport itself, Scout chat) stays ungated — differentiated
@@ -4305,7 +4354,7 @@ function PublicPassport({ userId, token }) {
 // RLS is what authorises the write, so a wrong id here fails closed rather
 // than editing a stranger.
 function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
-  const { t } = useLang();
+  const { t, tv } = useLang();
   const [form, setForm] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -4395,7 +4444,7 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
         {group(t("auth_occupation"), (
           <select style={field} value={form.occupation || ""} onChange={set("occupation")}>
             <option value="">{t("editor_select")}</option>
-            {OCCUPATIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+            {OCCUPATIONS.map((o) => <option key={o} value={o}>{tv(o)}</option>)}
           </select>
         ))}
 
@@ -4403,7 +4452,7 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
           <div><span style={label}>{t("editor_sport_label")}</span>
             <select style={field} value={form.sport || ""} onChange={set("sport")}>
               <option value="">{t("editor_select")}</option>
-              {(isPlayer ? SPORTS.filter((s) => s !== "All") : NON_PLAYER_SPORTS).map((s) => <option key={s} value={s}>{s}</option>)}
+              {(isPlayer ? SPORTS.filter((s) => s !== "All") : NON_PLAYER_SPORTS).map((s) => <option key={s} value={s}>{tv(s)}</option>)}
             </select>
           </div>
           {isPlayer && !SPORTS_WITHOUT_POSITION.includes(form.sport) ? (
@@ -4512,7 +4561,7 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
 }
 
 function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, onOpenAdmin, viewUserId, manageMode, onBack, onMessage, onViewProfile, plan, onUpgrade }) {
-  const { t } = useLang();
+  const { t, tv } = useLang();
   const [uid, setUid] = useState(null);
   const [profile, setProfile] = useState(null);
   const [athlete, setAthlete] = useState(null);
@@ -4975,13 +5024,13 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
             <div style={{ fontSize: 11, color: C.slate, fontFamily: "'Space Mono', monospace", marginBottom: 10 }}>{p.handle}</div>
             {isPlayerProfile ? (
               <>
-                <PassRow k={t("passport_sport")} v={p.sport} />
+                <PassRow k={t("passport_sport")} v={tv(p.sport)} />
                 <PassRow k={p.positionLabel} v={p.position} />
                 <PassRow k={t("passport_club")} v={p.club} />
               </>
             ) : (
               <>
-                <PassRow k={t("passport_sport")} v={p.sport} />
+                <PassRow k={t("passport_sport")} v={tv(p.sport)} />
                 <PassRow k={t("passport_club")} v={p.club} />
                 <PassRow k={t("passport_license")} v={p.license} />
               </>
@@ -5436,6 +5485,9 @@ function AdminPanel({ onBack }) {
   // Feed is off and nothing new lands there — "queue" is the new default
   // landing view instead of the now-unreachable "reports".
   const [moderationView, setModerationView] = useState("queue");
+  // P1-9. Discovered knowledge (golsz_knowledge, verification_status
+  // 'discovered') awaiting a human decision. null = not loaded yet.
+  const [knowledge, setKnowledge] = useState(null);
   const [systemView, setSystemView] = useState("audit"); // "audit" | "errors" | "scout"
   const [scoutDebugId, setScoutDebugId] = useState("");
   const [scoutDebug, setScoutDebug] = useState(null);
@@ -5744,6 +5796,25 @@ function AdminPanel({ onBack }) {
   }
 
   // Trust & Safety Moderation System — appeals review (migration 059).
+  // Goes through admin_list_knowledge_candidates() rather than selecting
+  // from golsz_knowledge: migration 096's read policy exposes only
+  // verified/active rows, so a direct select returns nothing even for an
+  // admin. The RPC is security-definer and re-checks is_admin() itself.
+  async function loadKnowledge() {
+    try {
+      const { data, error } = await sb.rpc("admin_list_knowledge_candidates", { p_limit: 50 });
+      if (error) throw error;
+      setKnowledge(data || []);
+    } catch (e) { console.error("GOLSZ admin knowledge error:", e); setKnowledge([]); }
+  }
+  async function reviewKnowledge(id, approve) {
+    try {
+      const { error } = await sb.rpc("admin_review_knowledge", { p_id: id, p_approve: approve });
+      if (error) throw error;
+      loadKnowledge();
+    } catch (e) { console.error("GOLSZ review knowledge error:", e); }
+  }
+
   async function loadAppeals() {
     try {
       const { data, error } = await sb.from("moderation_appeals")
@@ -6029,7 +6100,7 @@ function AdminPanel({ onBack }) {
         // loadReports()/loadEvents() are skipped here — their tabs
         // (Reports, Manage events) are launch-scoped off below, so
         // there's no UI these would populate right now.
-        if (ok) { loadStats(); loadUsers(); loadAnalytics(); loadAuditLog(); loadModerationQueue(); loadVerificationRequests(); loadAppeals(); loadErrorLog(); loadFaqMisses(); }
+        if (ok) { loadStats(); loadUsers(); loadAnalytics(); loadAuditLog(); loadModerationQueue(); loadVerificationRequests(); loadAppeals(); loadKnowledge(); loadErrorLog(); loadFaqMisses(); }
       } catch (e) { console.error("GOLSZ admin auth-check error:", e); setAuthorized(false); }
     })();
   }, []);
@@ -6103,6 +6174,7 @@ function AdminPanel({ onBack }) {
             ["queue", t("admin_view_auto_queue")],
             ["verification", t("admin_view_verification")],
             ["appeals", t("admin_view_appeals")],
+            ["knowledge", t("admin_view_knowledge")],
           ], moderationView, setModerationView)}
 
           {moderationView === "reports" && (
@@ -6222,6 +6294,48 @@ function AdminPanel({ onBack }) {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* P1-9. Scout's own research findings, awaiting a human decision.
+              Nothing is promoted automatically: a candidate is invisible to
+              every athlete and to Scout itself until an admin reads it,
+              checks the source, and approves. Rejected rows are kept, not
+              deleted — knowing what was refused is worth more than the row
+              costs. */}
+          {moderationView === "knowledge" && (
+            <div>
+              {knowledge === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+              {knowledge && knowledge.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "20px 0" }}>{t("admin_no_knowledge")}</div>}
+              {knowledge && knowledge.map((k) => (
+                <div key={k.id} style={{ ...card }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10.5, color: C.slate, marginBottom: 6, flexWrap: "wrap", gap: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 999, padding: "2px 8px" }}>{String(k.verification_status).toUpperCase()}</span>
+                      <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.slate, border: `1px solid ${C.line2}`, borderRadius: 999, padding: "2px 8px" }}>{k.category}</span>
+                      {k.sport && <span>{k.sport}</span>}
+                      {k.country && <span>· {k.country}</span>}
+                    </div>
+                    <span>{timeAgo(k.discovered_at)}</span>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: C.chalk, marginBottom: 4 }}>{k.subject}</div>
+                  <div style={{ fontSize: 12.5, whiteSpace: "pre-wrap", lineHeight: 1.5, marginBottom: 8 }}>{k.content}</div>
+                  {/* Provenance is the whole basis for the decision — an
+                      admin cannot responsibly approve a claim they can't
+                      check, so the source is shown, not summarized. */}
+                  <div style={{ fontSize: 11, color: C.slate, marginBottom: 8, wordBreak: "break-all" }}>
+                    {t("admin_knowledge_source")}: {k.source_url
+                      ? <a href={k.source_url} target="_blank" rel="noopener noreferrer" style={{ color: C.info }}>{k.source_url}</a>
+                      : t("admin_knowledge_no_source")}
+                    {" · "}{t("admin_knowledge_confidence")} {Math.round((Number(k.confidence) || 0) * 100)}%
+                    {k.recheck_after && <> · {t("admin_knowledge_recheck")} {new Date(k.recheck_after).toLocaleDateString()}</>}
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => reviewKnowledge(k.id, true)} disabled={!k.source_url} title={!k.source_url ? t("admin_knowledge_no_source") : undefined} style={{ ...iconBtn(k.source_url ? C.lime : C.slate), fontSize: 11.5, opacity: k.source_url ? 1 : 0.5 }}>{t("admin_knowledge_approve")}</button>
+                    <button onClick={() => reviewKnowledge(k.id, false)} style={{ ...iconBtn(C.amber), fontSize: 11.5 }}>{t("admin_knowledge_reject")}</button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -7380,14 +7494,22 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
   // instead of the athlete re-typing what Scout just said. Marks the
   // message's own suggestions consumed afterward (msgIndex) so the button
   // can't double-insert on a re-render or a slow double-tap.
+  // P1-8. These used to console.error and stop. The athlete tapped "add
+  // these", the insert failed, the buttons stayed put and nothing said why —
+  // the same class of silent lie as Scout announcing a save that never
+  // happened (fixed 2026-08-09). A failure now stays visible on the message
+  // it belongs to, and the buttons remain so the tap can be retried.
   async function addSuggestedTargets(msgIndex, targets) {
     if (!sb || !uidRef.current || !targets || !targets.length) return;
     try {
       const rows = targets.map((t) => ({ user_id: uidRef.current, name: t.name, fit_reasoning: t.reasoning || null }));
       const { error } = await sb.from("outreach_targets").insert(rows);
       if (error) throw error;
-      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedTargets: null, targetsAdded: true } : msg)));
-    } catch (e) { console.error("GOLSZ add suggested targets error:", e); }
+      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedTargets: null, targetsAdded: true, actionError: null } : msg)));
+    } catch (e) {
+      console.error("GOLSZ add suggested targets error:", e);
+      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, actionError: t("action_add_failed") } : msg)));
+    }
   }
   async function addSuggestedDevItems(msgIndex, items) {
     if (!sb || !uidRef.current || !items || !items.length) return;
@@ -7395,8 +7517,11 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
       const rows = items.map((i) => ({ user_id: uidRef.current, focus_area: i.focus_area, goal: i.goal }));
       const { error } = await sb.from("development_plan_items").insert(rows);
       if (error) throw error;
-      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedDevItems: null, devItemsAdded: true } : msg)));
-    } catch (e) { console.error("GOLSZ add suggested dev items error:", e); }
+      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedDevItems: null, devItemsAdded: true, actionError: null } : msg)));
+    } catch (e) {
+      console.error("GOLSZ add suggested dev items error:", e);
+      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, actionError: t("action_add_failed") } : msg)));
+    }
   }
   // Same one-tap pattern as the two above, for Scout's suggested_pathway
   // (GOLSZ Final Product directive §5 "personalized Pathway" — a Basic+
@@ -7415,8 +7540,11 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
         { onConflict: "user_id" }
       );
       if (error) throw error;
-      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedPathway: null, pathwayAdded: true } : msg)));
-    } catch (e) { console.error("GOLSZ add suggested pathway error:", e); }
+      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedPathway: null, pathwayAdded: true, actionError: null } : msg)));
+    } catch (e) {
+      console.error("GOLSZ add suggested pathway error:", e);
+      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, actionError: t("action_add_failed") } : msg)));
+    }
   }
 
   // Brief §8: "AI Scout should be able to create professional introduction/
@@ -7443,8 +7571,11 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
       const { error } = await sb.from("outreach_targets").update({ draft_email: emailText, updated_at: new Date().toISOString() }).eq("id", selectedEmailTarget).eq("user_id", uidRef.current);
       if (error) throw error;
       setSavingEmailFor(null);
-      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, draftedEmail: null, emailSaved: true } : msg)));
-    } catch (e) { console.error("GOLSZ save drafted email error:", e); }
+      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, draftedEmail: null, emailSaved: true, actionError: null } : msg)));
+    } catch (e) {
+      console.error("GOLSZ save drafted email error:", e);
+      setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, actionError: t("action_add_failed") } : msg)));
+    }
   }
 
   const isPlayerChat = !profile.occupation || profile.occupation === "Player";
@@ -7563,6 +7694,9 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
                 )
               )}
               {m.pathwayAdded && <div style={{ marginTop: 8, fontSize: 11.5, color: C.lime }}>{t("scout_pathway_added")}</div>}
+              {/* P1-8: a failed one-tap action is visible, on the message it
+                  belongs to, with the buttons still there to retry. */}
+              {m.actionError && <div style={{ marginTop: 8, fontSize: 11.5, color: C.amber }}>{m.actionError}</div>}
               {m.draftedEmail && savingEmailFor !== i && (
                 hasFeature(plan, "targets") ? (
                   <button onClick={() => openSaveEmailPicker(i)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
@@ -7696,7 +7830,7 @@ function ReadinessCard({ label, score, sub }) {
   );
 }
 
-// Home dashboard tab — GOLSZ Readiness (brief §6's 5 named sub-scores, all
+// Home dashboard tab — Passport Strength (brief §6's 5 named sub-scores, all
 // computed from data that already exists elsewhere in the app — nothing
 // invented) + a read-only preview of My Next Move (the interactive version
 // — filling the composer, etc. — stays on Scout, its natural home; tapping
@@ -7922,7 +8056,7 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
 }
 
 function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
-  const { t } = useLang();
+  const { t, tv } = useLang();
   const [loaded, setLoaded] = useState(!sb);
   const [athlete, setAthlete] = useState(null);
   const [quality, setQuality] = useState(null);
@@ -8005,7 +8139,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
   // no server round trip needed for something this low-stakes.
   const greetingHour = new Date().getHours();
   const greetingKey = greetingHour < 12 ? "home_greeting_morning" : greetingHour < 18 ? "home_greeting_afternoon" : "home_greeting_evening";
-  // Composite GOLSZ Readiness — a plain average of the 5 named sub-scores,
+  // Composite Passport Strength — a plain average of the 5 named sub-scores,
   // shown alongside its own breakdown (never just the number alone) so it
   // stays explainable per brief §6's "WHY IS MY SCORE 72? / HOW DO I
   // IMPROVE IT?" requirement, rather than reading as an opaque judgment.
@@ -8061,7 +8195,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
               {name}{verification && verification.status === "verified" && <BadgeCheck size={14} color={C.lime} />}
             </div>
             <div style={{ fontSize: 11.5, color: C.slate, lineHeight: 1.5 }}>
-              {[athlete.sport, athlete.position].filter(Boolean).join(" · ")}
+              {[tv(athlete.sport), athlete.position].filter(Boolean).join(" · ")}
               {athlete.club_name && <><br />{athlete.club_name}</>}
               {(athlete.height_cm || athlete.weight_kg || athlete.grad_year) && <><br />
                 {[athlete.height_cm && `${athlete.height_cm} cm`, athlete.weight_kg && `${athlete.weight_kg} kg`, athlete.grad_year && t("home_grad_prefix") + athlete.grad_year].filter(Boolean).join(" · ")}
@@ -9720,7 +9854,7 @@ const VAPID_PUBLIC_KEY = "BNrfmAAoP_PL4FocIjzfw5aaxzHsuCknwUeG5pX21v7cjvMCzt3PL2
 // (Passport + athlete intake/discovery with Scout). BASIC = "BUILD MY PATH"
 // — matches FEATURE_MIN_PLAN above: this is where Pathway/My Next Move/
 // targets/benchmarks/PDF export actually unlock. PRO = "MANAGE MY JOURNEY"
-// — adds GOLSZ Readiness + the training/development plan (also gated at
+// — adds the Passport Strength breakdown + the training/development plan (also gated at
 // "pro" in FEATURE_MIN_PLAN) plus richer target/outreach tracking. ELITE =
 // "LIVE THE PLAN" — everything in Pro at the highest Scout volume ceiling;
 // schedule/diary/GOLSZ Motion have DB space reserved (migration 095) but no
