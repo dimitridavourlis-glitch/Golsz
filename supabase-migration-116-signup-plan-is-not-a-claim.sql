@@ -38,10 +38,27 @@
 -- NOT A PRICING CHANGE. The tiers and their prices are untouched; this only
 -- stops the product giving them away.
 --
--- EXISTING ACCOUNTS ARE NOT TOUCHED. Some of the 13 live profiles may carry
--- a paid plan they never paid for, and some may be deliberate admin grants.
--- Silently demoting a real person's account is not a fix, it is a second
--- bug. Audit query at the bottom; the decision is the owner's.
+-- EXISTING ACCOUNTS ARE NOT TOUCHED, AND THAT IS NOW A DECISION, NOT A GAP.
+--
+-- Audited against production on 2026-08-10, immediately after applying this
+-- migration. 13 accounts: 12 on 'starter', 1 on 'free', none on pro/elite.
+-- That split is not people gaming the paywall — the pre-116 function fell
+-- back to 'starter' for any signup without a valid metadata plan, so the
+-- normal flow put everybody there. Of the 12: 1 is the admin account, 1 is a
+-- deliberate ai_unlimited grant (migration 045), 1 carries a stripe_customer_id
+-- from a TEST-mode checkout (which incidentally proves the webhook path works
+-- end to end), and 9 are unexplained. Several are self-evidently test accounts
+-- by name.
+--
+-- Owner decision, 2026-08-10: GRANDFATHER ALL OF THEM. No demotion. The cost
+-- is AI usage on ~9 accounts, most of which are the owner's own tests, and
+-- demoting a real athlete would visibly strip Targets/Benchmarks/Pathway and
+-- cut their Scout allowance from 8/day to 3/day plus the 40-lifetime cap —
+-- a worse outcome than the money involved.
+--
+-- This migration is what stops it recurring. Every account created from here
+-- starts on 'free'. The audit query at the bottom still works if the position
+-- is ever revisited.
 -- ============================================================
 
 create or replace function handle_new_user()
