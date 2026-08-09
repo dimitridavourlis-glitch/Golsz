@@ -147,6 +147,22 @@ ck("Scout is told when the goal is the athlete's own",
 ck("...and told to ask rather than assume a change",
    /has that actually changed, or is Y a backup/.test(SRC), true);
 
+console.log("\n-- P0-5: code may land before its migration without losing data --");
+// Migrations in this project are applied by hand. PostgREST rejects an
+// entire select/PATCH for one unknown column, so naming goal_source before
+// migration 113 exists would have silently dropped `plan` from the profile
+// read (metering an Elite athlete as Starter) and thrown away captured
+// goals. Both paths retry without the authorship columns.
+ck("the profile read retries without goal_source",
+   /retrying without goal_source[\s\S]{0,400}select=plan,is_admin,ai_unlimited,goal_defined,goal_text", \{ headers \}\)/.test(SRC), true);
+ck("...and says why in the log", /migration 113 not applied\?/.test(SRC), true);
+ck("the goal write retries with authorship stripped",
+   /const \{ goal_source, goal_updated_at, \.\.\.withoutAuthorship \} = patches\.profiles;/.test(SRC), true);
+ck("...only for the profiles table, only when authorship was set",
+   /if \(!r\.ok && table === "profiles" && patches\.profiles\.goal_source\)/.test(SRC), true);
+ck("the client goal save has the same tolerance", /migration 113 not applied\) — saving without them/.test(APP), true);
+ck("the benchmark insert has it for 114", /migration 114 not applied\) — saving without them/.test(APP), true);
+
 console.log("\n-- P0-5: the client actually shows and edits the goal --");
 ck("GoalCard exists", /function GoalCard\(/.test(APP), true);
 ck("it renders goal_text itself, not a category", /<div style=\{\{ fontSize: 14, fontWeight: 800, color: C\.chalk, lineHeight: 1\.35 \}\}>\{goalText\}<\/div>/.test(APP), true);

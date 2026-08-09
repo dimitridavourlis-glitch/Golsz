@@ -966,9 +966,21 @@ async function persistProfileUpdates(userId, updates) {
   for (const table of ["profiles", "athletes"]) {
     if (!Object.keys(patches[table]).length) continue;
     try {
-      const r = await fetch(`${supaUrl}/rest/v1/${table}?id=eq.${userId}`, {
+      let r = await fetch(`${supaUrl}/rest/v1/${table}?id=eq.${userId}`, {
         method: "PATCH", headers, body: JSON.stringify(patches[table]),
       });
+      // Migration 113 adds goal_source/goal_updated_at. Until it is applied,
+      // a PATCH naming them is rejected WHOLESALE — so a goal Scout finally
+      // captured would be thrown away over two bookkeeping columns. Retry
+      // with the authorship fields stripped: the goal reaches the Passport,
+      // and it is simply not marked as Scout-captured until 113 lands.
+      if (!r.ok && table === "profiles" && patches.profiles.goal_source) {
+        const { goal_source, goal_updated_at, ...withoutAuthorship } = patches.profiles;
+        console.warn("GOLSZ goal authorship columns missing (migration 113 not applied) — retrying without them.");
+        r = await fetch(`${supaUrl}/rest/v1/${table}?id=eq.${userId}`, {
+          method: "PATCH", headers, body: JSON.stringify(withoutAuthorship),
+        });
+      }
       // A non-OK PATCH used to pass silently: fetch only throws on network
       // failure, so a 4xx from PostgREST looked identical to success. Scout
       // meanwhile may have told the athlete their goal was saved. Logged
@@ -3804,7 +3816,16 @@ async function getProfileMeta(userId) {
   let goalText = null;
   let goalSource = null;
   try {
-    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text,goal_source", { headers });
+    // goal_source arrives with migration 113. Migrations here are applied by
+    // hand, so this code can be live before the column exists — and PostgREST
+    // rejects the ENTIRE select for one unknown column, which would drop
+    // `plan` too and silently meter an Elite athlete as Starter. Retry
+    // without it rather than losing the whole row.
+    let p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text,goal_source", { headers });
+    if (!p.ok) {
+      console.warn("GOLSZ profile select failed (migration 113 not applied?) — retrying without goal_source.");
+      p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text", { headers });
+    }
     const rows = await p.json();
     if (Array.isArray(rows) && rows[0]) {
       plan = rows[0].plan || "starter";
