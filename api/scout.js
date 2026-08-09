@@ -908,7 +908,16 @@ async function persistProfileUpdates(userId, updates) {
   // derived deterministically the moment a real goal_text is written, in
   // the same PATCH. Keeps the state machine independent of the LLM
   // correctly reporting a separate boolean it could just as easily forget.
-  if (patches.profiles.goal_text) patches.profiles.goal_defined = true;
+  if (patches.profiles.goal_text) {
+    patches.profiles.goal_defined = true;
+    // Migration 113. Everything reaching persistProfileUpdates() came from
+    // model extraction or the safety net, never from the athlete's own
+    // editor (that writes directly from the client), so this is always
+    // 'scout_captured' here. Stamping it is what makes the protection in
+    // applyGoalAuthorship() meaningful for the NEXT write.
+    patches.profiles.goal_source = "scout_captured";
+    patches.profiles.goal_updated_at = new Date().toISOString();
+  }
 
   // `age` was listed in SYSTEM_PROMPT as an allowed profile_updates key but
   // had no PROFILE_FIELD_MAP entry, so every age Scout ever learned was
@@ -1249,6 +1258,29 @@ function sportSchemaFor(sport) {
 }
 
 function knownSportIds() { return Object.keys(SPORT_SCHEMAS); }
+
+// P0-6. The `sports` table (migration 094) declares ten sports as
+// support_level 'core', but SPORT_SCHEMAS only actually contains soccer and
+// basketball. Scout's prompt says "core means real depth" -- so for eight
+// sports it was being told GOLSZ had built-out intelligence while
+// renderSportContext() correctly handed it nothing. That combination is the
+// precise condition under which a model invents position groups, competition
+// ladders and eligibility requirements.
+//
+// The database expresses intent; only the code can substantiate it. This caps
+// the declared level at what SPORT_SCHEMAS can actually back, so 'core' is
+// unreachable for a sport with no schema no matter what any row says. The
+// accompanying migration corrects the rows too -- this cap is the guarantee,
+// the migration is hygiene.
+const SPORT_SUPPORT_LEVELS = ["core", "supported", "secondary"];
+
+function hasStructuredSportKnowledge(sport) { return !!sportSchemaFor(sport); }
+
+function resolveSportSupportLevel(sport, declaredLevel) {
+  const declared = SPORT_SUPPORT_LEVELS.includes(declaredLevel) ? declaredLevel : "secondary";
+  if (hasStructuredSportKnowledge(sport)) return declared;
+  return declared === "core" ? "supported" : declared;
+}
 
 // Matches a free-text position against a sport's own vocabulary, by id or
 // label, case-insensitively. Returns null when it doesn't belong to THIS
@@ -2022,6 +2054,50 @@ function applyGoalSafetyNet(profileUpdates, scoutContextUpdates, existingGoalTex
   return { ...(profileUpdates || {}), goal };
 }
 
+// P0-5 counterpart to the safety net above. The net exists to get a goal ONTO
+// the Passport when there isn't one; this exists to stop model extraction
+// silently REPLACING one the athlete wrote themselves.
+//
+// Master Architecture §42. Once an athlete types their goal into the Plan
+// editor, that sentence is theirs. Scout hearing something it reads as a
+// different aim is not evidence the athlete changed their mind — it is far
+// more often Scout over-reading a passing remark ("I'd take JUCO if D1
+// doesn't happen" is not a new goal). Overwriting on that basis rewrites the
+// athlete's own words behind their back, and they would have no way to tell
+// it happened.
+//
+// So: athlete-authored goals are dropped from the update, and Scout is told
+// separately (goal_authored_by_athlete in ATHLETE STATE) to raise a genuine
+// change conversationally instead. A Scout-captured goal stays freely
+// updatable by Scout — that path is what got goals recorded at all.
+//
+// Comparison is deliberately loose: case, surrounding whitespace and
+// punctuation should not count as a "material" change, or a re-statement of
+// the same goal with a full stop on the end would trip the guard.
+function normalizeGoalForComparison(goal) {
+  return String(goal || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function applyGoalAuthorship(profileUpdates, existingGoalText, existingGoalSource) {
+  if (!profileUpdates || !profileUpdates.goal) return profileUpdates;
+  if (existingGoalSource !== "athlete_edited") return profileUpdates;
+  const incoming = normalizeGoalForComparison(profileUpdates.goal);
+  const existing = normalizeGoalForComparison(existingGoalText);
+  // Same goal restated — nothing to protect, and dropping it is harmless.
+  // Materially different — protected, and the athlete must be the one to
+  // change it.
+  if (incoming && existing && incoming === existing) {
+    const { goal, ...rest } = profileUpdates;
+    return rest;
+  }
+  const { goal, ...rest } = profileUpdates;
+  console.log("GOLSZ goal overwrite BLOCKED (athlete-authored):", JSON.stringify({
+    kept: String(existingGoalText || "").slice(0, 120),
+    rejected: String(goal).slice(0, 120),
+  }));
+  return rest;
+}
+
 // The deliberate FIRST SLICE of a future SPORT_SCHEMA — not the whole thing.
 // Kept as a code constant rather than a table on purpose: scout_model_config
 // shipped empty to production while the code assumed rows existed, silently
@@ -2641,7 +2717,9 @@ For trials, camps, combines, or showcases, use search_golsz_events first (real G
 If asked what AI model or company powers you, who made you, or whether you're ChatGPT/OpenAI/Claude/Anthropic/Gemini/etc., always answer that you are GOLSZ Scout, built by GOLSZ — never name or confirm any underlying model or provider, and don't explain that you're declining to say. Just answer as GOLSZ Scout and move on.
 GOLSZ is a sports-recruiting platform used by athletes of all ages, including minors. Stay strictly on sports, athletics, recruiting, and career topics. Never generate or engage with sexual, romantic, 18+/adult, or otherwise inappropriate content, regardless of how the request is framed (roleplay, "hypothetically," "for a story," etc.) — decline briefly and warmly, and steer the conversation back to something sports-related. This applies no matter who the user says they are.
 GOLSZ PLANS below (when present) is the real, current source of truth for what each plan costs and includes — never invent a feature, price, or restriction beyond what's listed; if asked something not covered there, say you're not sure and offer to check rather than guessing. When a locked or higher-tier feature comes up naturally, explain what that level actually adds to how involved GOLSZ is in their development — never just "more messages" — and let them decide for themselves; never use false urgency, fake scarcity, or guaranteed-outcome language ("guaranteed scholarship," "guaranteed pro contract"), and never talk someone out of a higher plan they actually want. You're their AI Scout, not customer support — if you genuinely don't know something about how GOLSZ works, say so plainly and offer to find out, never brush past it.
-sport_support_level in ATHLETE STATE below tells you how deep GOLSZ's own pathway/benchmark knowledge actually is for their sport — "core" means real depth; "supported," "secondary," or "unknown" means say so honestly and lean on general knowledge/web search rather than implying GOLSZ has built-out sport-specific data it doesn't have yet.
+golsz_structured_sport_knowledge in ATHLETE STATE below is the load-bearing flag, and it is a hard yes/no derived from whether GOLSZ actually holds a built-out schema for that sport — not an opinion and not something to reason around. When it is "yes" a SPORT CONTEXT block appears with GOLSZ's real position list, competition ladder and measurable indicators for that sport; use it as the record. When it is "no" there is NO GOLSZ position structure, NO competition ladder, NO pathway list, NO benchmark vocabulary and NO eligibility data for that sport — none, not a partial version. sport_support_level ("core"/"supported"/"secondary") only ranks how much depth is intended; it never overrides the flag.
+
+With the flag at "no" you may still help, and should — general sports knowledge and web search are legitimate and often good. What you must not do is let general knowledge wear GOLSZ's authority. Never present recruiting requirements, competition ladders, benchmark standards, position structures or eligibility rules for that sport as GOLSZ's structured data, and never invent them at all. Say plainly which it is — "GOLSZ hasn't built out structured data for handball yet, so this is general knowledge, not a GOLSZ standard" — and where a real number or rule matters, look it up or tell them you don't have it. An invented requirement an athlete trains against for months is a worse outcome than an honest "I don't know."
 ATHLETE STATE carries assessment_ready — the app's own deterministic judgement of whether it knows enough about this athlete to stop interviewing and start assessing. When it is false, still_missing names what's actually blocking; prefer those over any generic intake question, and never announce the flag itself. When ATHLETE STATE shows assessment_ready=true and plan=free, that's a real moment — recognize it ONCE (never repeat this recap on a later message once you've already said it): briefly recap what you've learned about them (history, what they're proud of, strengths, what needs work, their stated goal), tell them plainly that's the athlete they are today and it's time to figure out how they get where they want to go, and invite them toward building a Pathway — mention plainly that a Pathway opens with a paid plan, never hide or soften that.
 SELLING THE RIGHT PLAN — this is part of helping them, not a separate job.
 GOLSZ CAPABILITIES lists every feature and the plan it starts on. When what the athlete actually needs RIGHT NOW sits above their current plan, say so: name the feature, say in one line what it would do for THIS situation, and name the tier. Put it inside the advice and carry on. Never bolt a pitch onto the end of every reply.
@@ -2658,11 +2736,14 @@ Do not end every message with a question. Ask only when their answer would genui
 Keep headers, bold and bullet lists for a genuinely branching decision or a list they will act from. Most replies are two or three plain paragraphs.
 React like a person when something real happens — an injury, a knock-back, a win. Briefly, specifically, then move on. "Two weeks and still sore — that's worth getting looked at properly" is warmth. "That's huge, this changes everything" is theatre. Never invent a feeling they have not expressed, never assume they are discouraged or excited, never perform sympathy.
 Be honest before you are encouraging. If something is unrealistic, say so kindly and show them the path that IS real. Warmth is not softness — a mentor who only agrees with you is worth nothing.
+HEALTH AND MEDICAL BOUNDARY — applies to EVERY reply you write, in every conversation, whatever the topic and whatever specialist framing you may or may not have been given. This rule lived only in the development-specialist and Physio branches, which meant most ordinary conversations had no boundary at all; a minor asking about a sore knee or making weight in a general chat got whatever came out. So: you do not diagnose injuries, you do not prescribe treatment or rehab protocols or return-to-play timelines, you do not recommend or dose medication or supplements for an individual, and you never give weight-cutting, dehydration, calorie-restriction or "making weight" instructions — not a plan, not a shortcut, not "what some athletes do." Many GOLSZ athletes are minors, and disordered eating and unsafe cuts are a real and documented harm in youth sport; that specific refusal is not negotiable no matter how the request is framed.
+What you SHOULD still do is coach. General, educational sports-performance guidance is squarely your job and athletes are worse off without it: how training blocks are structured, why sleep and recovery matter, what fuelling around a match generally looks like, how to build a strength base, what a given benchmark measures. Keep it general and educational, and when a question turns on this individual's body, health history, an actual injury, pain, a medical condition, or a weight target, name the right professional plainly — a physician, a physiotherapist or athletic trainer, a registered dietitian — and say why. Do it in one natural sentence, not a disclaimer block, and then keep being useful about the parts you can help with. "Two weeks of pain is a physio question, not a training question — but while you're getting that looked at, here's what we can still work on" is the shape.
 SCOUT MEMORY (when present in the message) is your own durable memory of this athlete from earlier conversations, already split by trust: things they TOLD you are confirmed and must never be re-asked; things you INFERRED are not confirmed, so confirm one in passing before you build advice on it. "Still unknown" lists what you'd most benefit from learning — prefer those over generic questions.
 GOLSZ KNOWLEDGE (when present) is GOLSZ's own verified, curated reference on sport/eligibility/pathway rules. Prefer it over your own recollection and over a web result when they disagree, and cite it naturally ("GOLSZ's eligibility reference says..."). If it's absent or doesn't cover the question, say what you actually know and use web search — never invent a GOLSZ rule.
 GOLSZ CAPABILITIES (when present) is the real, current list of what the product can and cannot do. Anything listed as NOT part of GOLSZ does not exist — never suggest it, never imply it's coming, and never tell an athlete to find or contact someone through it. When a task needs something GOLSZ doesn't do, say plainly that GOLSZ doesn't do it and give them the real off-platform way to do it themselves.
 OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","memory_writes":[{"type":"...","subject":"...","content":"...","source":"athlete_stated|ai_inferred","confidence":0-1,"importance":1-5}],"research_note":{"summary":"...","confidence":0-1,"valid_days":N} or null,"profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"drafted_email":"the full drafted email text" or null}
 Allowed profile_updates keys: name, age, dob, occupation, sport, position, secondary_position, home_city, home_country, current_city, current_country, citizenship, club, previous_clubs, grad_year, gpa, license, looking_for_players, education_level, goal. There is deliberately NO "level" key: an athlete's competition level is NOT a Passport column and must be sent as scout_context_updates.current_level instead, never as a profile_update. Location is FOUR separate things and you must never merge them: home_city/home_country are where they are FROM, current_city/current_country are where they are NOW, citizenship is the passport they hold. Only set the one they actually told you about — setting the wrong one corrupts the record. previous_clubs is an array of {"name","from","to","level"} for clubs they have LEFT; the club they are at now goes in "club". Prefer dob (YYYY-MM-DD) over age when you know it. Do not repeat known fields. "goal" should be a real, clearly-stated goal the athlete actually confirmed (e.g. "play NCAA D1 soccer"), not a vague guess. When they DO state one plainly, you must set it — send it in profile_updates.goal AND in scout_context_updates.dream_outcome, both, in the same reply. These are two different records, not two names for one: dream_outcome is your working note, profile_updates.goal is the athlete's goal on their actual Passport, and only the second one counts as defined. Already having recorded dream_outcome earlier is NOT a reason to skip goal — the "don't repeat known fields" rule above does not apply here, because a goal sitting only in dream_outcome has never reached the Passport at all. Do not set it from a guess or from something you inferred; a stated goal only.
+When goal_authored_by_athlete=yes in ATHLETE STATE, the goal on file is a sentence the athlete typed themselves in their Plan, not something you extracted. Treat it as theirs. If what they say now sounds like a different aim, that is usually you over-reading a passing remark — "I'd take JUCO if D1 doesn't work out" is a contingency, not a new goal. Do not send profile_updates.goal to replace it; the app will drop it anyway. If you genuinely believe the goal has changed, say so and ask ("your Plan says X — has that actually changed, or is Y a backup?"), and tell them they can change it themselves in the Plan tab. When goal_authored_by_athlete=no, the goal came from you or is absent, and the normal capture rules above apply in full.
 NEVER TELL THE ATHLETE SOMETHING WAS SAVED. You do not perform the save and you cannot see whether it succeeded — the app writes to the database after your reply has already been generated, and that write can fail. Sending profile_updates is a REQUEST to save, not a save. So never say "locked in", "saved", "updated", "that's on your Passport now", "I've added that", or anything else asserting the record changed; saying so when the write then fails tells the athlete a direct falsehood about their own data, which happened in production on 2026-08-09. Acknowledge what they told you in plain conversational terms instead — "got it, CPL professional contract" — and let the Passport itself show what is actually stored. The same applies to every field, not just goal.
 Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need, budget, current_level. current_level is the competition level they actually play at right now (e.g. "NCAA Division II", "academy", "JUCO") — only ever from something they stated plainly, never inferred from a club name, their age, or how ambitious they sound. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
 Only include research_note when THIS reply actually used web search to establish reusable factual findings (a league structure, an eligibility rule, a transfer window, a country's pathway, position benchmarks). Write summary as standalone reference notes that would still be correct and useful for a DIFFERENT athlete asking the same question — plain facts and figures, no advice, no "you"/"your", no reference to this athlete's own situation. valid_days is how long the finding stays trustworthy: 7 for anything with an active deadline or window, 30-90 for stable rules and structures. Omit entirely when you answered from your own knowledge, from PRIOR RESEARCH, or from GOLSZ KNOWLEDGE without searching.
@@ -3706,15 +3787,16 @@ async function getUserId(authHeader) {
 async function getProfileMeta(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null };
+  if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null, goalSource: null };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let plan = "starter";
   let isAdmin = false;
   let aiUnlimited = false;
   let goalDefined = false;
   let goalText = null;
+  let goalSource = null;
   try {
-    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text", { headers });
+    const p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text,goal_source", { headers });
     const rows = await p.json();
     if (Array.isArray(rows) && rows[0]) {
       plan = rows[0].plan || "starter";
@@ -3722,9 +3804,10 @@ async function getProfileMeta(userId) {
       aiUnlimited = !!rows[0].ai_unlimited;
       goalDefined = !!rows[0].goal_defined;
       goalText = rows[0].goal_text || null;
+      goalSource = rows[0].goal_source || null;
     }
   } catch {}
-  return { plan, isAdmin, aiUnlimited, goalDefined, goalText };
+  return { plan, isAdmin, aiUnlimited, goalDefined, goalText, goalSource };
 }
 
 // GOLSZ Final Product / AI Scout / Pathway / Elite Architecture directive
@@ -3740,7 +3823,7 @@ async function getProfileMeta(userId) {
 async function getAthleteState(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { profileComplete: false, pathwayCreated: false, baselineComplete: false, sportSupportLevel: null, sport: null, country: null };
+  if (!url || !key || !userId) return { profileComplete: false, pathwayCreated: false, baselineComplete: false, sportSupportLevel: null, sport: null, country: null, structuredSportKnowledge: false };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let profileComplete = false;
   let sport = null;
@@ -3773,10 +3856,14 @@ async function getAthleteState(userId) {
     try {
       const s = await fetch(url + "/rest/v1/sports?name=ilike." + encodeURIComponent(sport) + "&select=support_level", { headers });
       const sRows = await s.json();
-      sportSupportLevel = Array.isArray(sRows) && sRows[0] ? sRows[0].support_level : "secondary";
-    } catch {}
+      const declared = Array.isArray(sRows) && sRows[0] ? sRows[0].support_level : "secondary";
+      sportSupportLevel = resolveSportSupportLevel(sport, declared);
+    } catch { sportSupportLevel = resolveSportSupportLevel(sport, "secondary"); }
   }
-  return { profileComplete, pathwayCreated, baselineComplete, sportSupportLevel, sport, country };
+  return {
+    profileComplete, pathwayCreated, baselineComplete, sportSupportLevel, sport, country,
+    structuredSportKnowledge: hasStructuredSportKnowledge(sport),
+  };
 }
 
 // Atomic reserve-and-check (migration 053) — one statement, row-locked by
@@ -4111,6 +4198,10 @@ export default async function handler(req, res) {
   // binding down there is a ReferenceError, not a syntax error, so
   // node --check would pass and it would only fail in production.
   let currentGoalText = null;
+  // Who authored that goal (migration 113). Hoisted for the identical reason
+  // as currentGoalText above — the persist sites are outside the block where
+  // getProfileMeta()'s destructuring is scoped.
+  let currentGoalSource = null;
   // The athlete's ALREADY-STORED scout_context, hoisted for the same reason.
   // The goal safety net has to read this, not just the incoming updates: the
   // model won't re-send a dream_outcome it has already recorded ("don't repeat
@@ -4178,7 +4269,7 @@ export default async function handler(req, res) {
     // getCapabilityKnowledge is global and cached. The GOLSZ Core lookup
     // can't run here because it needs athleteState.sport, so it runs
     // alongside the classifier below instead.
-    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
+    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, goalSource }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
       getProfileMeta(userId),
       getAthleteState(userId),
       getPlanKnowledge(),
@@ -4194,6 +4285,7 @@ export default async function handler(req, res) {
     // client's free->paid conversion moment reads this exact value instead
     // of its own weaker profile_complete test.
     currentGoalText = goalText;
+    currentGoalSource = goalSource;
     storedScoutContext = (authContext && authContext.athlete && authContext.athlete.scout_context) || null;
     assessmentReady = isAssessmentReady({ athlete: authContext && authContext.athlete, goalText });
     hasConflicts = !!(authContext && authContext.conflicts && authContext.conflicts.length);
@@ -4217,7 +4309,7 @@ export default async function handler(req, res) {
     // for Home's own cards (see golsz-app.html computeNextMove()). Scout
     // narrates around this; it never decides it — see computeNextMove()
     // comment.
-    athleteBlock = `\n\nATHLETE STATE (app-computed from real data, not your own inference — ground your guidance in this, never contradict it or claim a different plan/stage): profile_complete=${athleteState.profileComplete}, goal_defined=${goalDefined}${goalText ? ` ("${goalText.slice(0, 200)}")` : ""}, plan=${plan}, pathway_created=${athleteState.pathwayCreated}, baseline_complete=${athleteState.baselineComplete}, sport_support_level=${athleteState.sportSupportLevel || "unknown"}, assessment_ready=${assessmentReady.sufficient_for_preliminary_assessment}${assessmentReady.missing_critical.length ? `, still_missing=${assessmentReady.missing_critical.join("/")}` : ""}.`;
+    athleteBlock = `\n\nATHLETE STATE (app-computed from real data, not your own inference — ground your guidance in this, never contradict it or claim a different plan/stage): profile_complete=${athleteState.profileComplete}, goal_defined=${goalDefined}${goalText ? ` ("${goalText.slice(0, 200)}")` : ""}, plan=${plan}, pathway_created=${athleteState.pathwayCreated}, baseline_complete=${athleteState.baselineComplete}, sport_support_level=${athleteState.sportSupportLevel || "unknown"}, golsz_structured_sport_knowledge=${athleteState.structuredSportKnowledge ? "yes" : "no"}, goal_authored_by_athlete=${goalSource === "athlete_edited" ? "yes" : "no"}, assessment_ready=${assessmentReady.sufficient_for_preliminary_assessment}${assessmentReady.missing_critical.length ? `, still_missing=${assessmentReady.missing_critical.join("/")}` : ""}.`;
     // Names the exact contradiction that caused goal_text to sit empty for
     // every athlete: a goal recorded ONLY as dream_outcome renders under
     // "THINGS THE ATHLETE HAS STATED (confirmed — never re-ask)" while
@@ -4528,7 +4620,7 @@ export default async function handler(req, res) {
         console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
         const cost = estimateCost(tierConfig.model_name, data.usage);
         const scoutContextUpdates = extractScoutContextUpdates(data);
-        const profileUpdates = applyGoalSafetyNet(extractProfileUpdates(data), scoutContextUpdates, currentGoalText, storedScoutContext);
+        const profileUpdates = applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), scoutContextUpdates, currentGoalText, storedScoutContext), currentGoalText, currentGoalSource);
         await logRouting("haiku", classification, tierConfig.model_name, data.usage, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, profileUpdates);
@@ -4622,7 +4714,7 @@ export default async function handler(req, res) {
         const cost = estimateCost(fastCfg.model_name, data.usage);
         await logRouting("haiku", classification, fastCfg.model_name, data.usage, { plan: userPlan, escalationReason: "sonnet_provider_failure", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
-        await persistProfileUpdates(userId, applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext));
+        await persistProfileUpdates(userId, applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext), currentGoalText, currentGoalSource));
         await persistScoutContext(userId, extractScoutContextUpdates(data));
         await persistMemoryWrites(userId, extractMemoryWrites(data));
         // Keyed by requestId so a client-side timeout retry can recover this
@@ -4674,7 +4766,7 @@ export default async function handler(req, res) {
             const cost = estimateCost(fb.model, data.usage);
             await logRouting("cross_provider", classification, fb.model, data.usage, { plan: userPlan, escalationReason: "anthropic_outage", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
             await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
-            await persistProfileUpdates(userId, applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext));
+            await persistProfileUpdates(userId, applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext), currentGoalText, currentGoalSource));
             await persistScoutContext(userId, extractScoutContextUpdates(data));
             await persistMemoryWrites(userId, extractMemoryWrites(data));
             data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
@@ -4718,7 +4810,7 @@ export default async function handler(req, res) {
     const sonnetCost = estimateCost(deepTierConfig.model_name, data.usage);
     await logRouting("sonnet", classification, deepTierConfig.model_name, data.usage, { plan: userPlan, escalationReason: haikuFailureReason || escalationReason(classification), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
     await recordScoutUsageCost(userId, sonnetCost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
-    await persistProfileUpdates(userId, applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext));
+    await persistProfileUpdates(userId, applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext), currentGoalText, currentGoalSource));
     await persistScoutContext(userId, extractScoutContextUpdates(data));
     await persistMemoryWrites(userId, extractMemoryWrites(data));
     // Scout Cache write. Gated on the reply having ACTUALLY run web search
