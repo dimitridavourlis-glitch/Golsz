@@ -40,9 +40,30 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const secretKey = process.env.TURNSTILE_SECRET_KEY;
-  if (!secretKey) return res.status(200).json({ success: true, skipped: true });
+  // P1-3. This used to return { success: true } whenever the secret was
+  // missing — in production as well as locally. That is the worst possible
+  // default for a bot check: a half-finished rollout (site key pasted into
+  // the client, secret never added to Vercel) would look enabled, send real
+  // tokens, and verify none of them, with nothing anywhere saying so.
+  //
+  // The client only calls this endpoint when TURNSTILE_SITE_KEY is set, so a
+  // request arriving here means the browser believes Turnstile is active.
+  // In PRODUCTION, a missing secret at that point is a misconfiguration and
+  // must fail closed. Outside production it stays a loud no-op, so preview
+  // deploys and local work are not blocked by a secret nobody has set.
+  const isProduction = process.env.VERCEL_ENV === "production";
+  if (!secretKey) {
+    if (isProduction) {
+      console.error("GOLSZ TURNSTILE MISCONFIGURED: a token was submitted but TURNSTILE_SECRET_KEY is not set in production. Signup is failing closed.");
+      return res.status(503).json({ success: false, error: "Signup verification is temporarily unavailable. Please try again shortly.", code: "turnstile_misconfigured" });
+    }
+    console.warn("GOLSZ turnstile: TURNSTILE_SECRET_KEY unset outside production — skipping verification.");
+    return res.status(200).json({ success: true, skipped: true });
+  }
 
-  const { token } = req.body || {};
+  let body = req.body;
+  if (typeof body === "string") { try { body = JSON.parse(body); } catch { body = {}; } }
+  const { token } = body || {};
   if (!token || typeof token !== "string") return res.status(400).json({ success: false, error: "Missing token" });
 
   try {
@@ -52,6 +73,11 @@ export default async function handler(req, res) {
       body: new URLSearchParams({ secret: secretKey, response: token, remoteip: req.headers["x-forwarded-for"] || "" }),
     });
     const data = await r.json();
+    // Cloudflare returns 200 with success:false for a failed/expired/replayed
+    // token. Surface its error codes so a real misconfiguration (wrong secret,
+    // hostname mismatch) is diagnosable from the logs instead of looking like
+    // ordinary bot traffic.
+    if (!data.success) console.warn("GOLSZ turnstile rejected a token:", JSON.stringify(data["error-codes"] || []));
     return res.status(200).json({ success: !!data.success });
   } catch (e) {
     console.error("GOLSZ turnstile verify error:", e);

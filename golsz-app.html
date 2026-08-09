@@ -187,6 +187,8 @@ const I18N = {
     auth_create_athlete_account: "Create account & add athlete",
     auth_check_email: "CHECK YOUR EMAIL",
     auth_secure_checkout: "Secure checkout by Stripe · billed monthly · cancel anytime",
+    auth_legal_pre: "By creating an account you agree to our ", auth_legal_terms: "Terms", auth_legal_mid: " and confirm you've read our ", auth_legal_privacy: "Privacy Policy", auth_legal_post: ".",
+    settings_privacy: "Privacy Policy",
     auth_already_have: "Already have an account? ", auth_new_to_golsz: "New to GOLSZ? ",
     auth_back_to_login: "Back to log in",
     auth_reset_title: "Reset your password",
@@ -330,6 +332,13 @@ const I18N = {
     goal_card_required: "Write your goal first.", goal_card_too_short: "Add a bit more detail so Scout can work with it.",
     goal_card_save_err: "Couldn't save your goal. Nothing was changed — please try again.",
     goal_card_pathway: "Pathway", goal_card_by_you: "Your words", goal_card_by_scout: "Captured by Scout",
+    bench_pick_metric: "Choose a metric", bench_other_metric: "Something else…",
+    bench_protocol_title: "HOW WAS IT MEASURED?", bench_protocol_unknown: "Not recorded",
+    bench_protocol_hint: "Leave these blank if you're not sure — GOLSZ records \"not known\" rather than guessing. It only affects what your result can later be compared against.",
+    bench_dim_timing_method: "timing", bench_dim_start_type: "start", bench_dim_jump_protocol: "jump type",
+    bench_timing_electronic: "Electronic / laser timing", bench_timing_hand: "Hand-timed (stopwatch)",
+    bench_start_standing: "Standing start", bench_start_flying: "Flying / running start",
+    bench_jump_standing: "Standing vertical (no run-up)", bench_jump_max: "Max vertical (with approach)",
     plan_next_30_title: "NEXT 30 DAYS", plan_next_90_title: "NEXT 90 DAYS", plan_season_title: "{a} / {b} SEASON",
     plan_next30_profile: "Complete your Passport", plan_next30_film: "Upload match footage", plan_next30_benchmark: "Record a performance benchmark",
     pathway_milestones_title: "Milestones", pathway_milestones_empty: "No milestones yet.", pathway_milestone_ph: "Add a milestone", pathway_milestone_add: "Add",
@@ -490,6 +499,8 @@ const I18N = {
     auth_create_athlete_account: "Créer le compte et ajouter l'athlète",
     auth_check_email: "VÉRIFIEZ VOS E-MAILS",
     auth_secure_checkout: "Paiement sécurisé par Stripe · facturation mensuelle · annulez à tout moment",
+    auth_legal_pre: "En créant un compte, vous acceptez nos ", auth_legal_terms: "Conditions", auth_legal_mid: " et confirmez avoir lu notre ", auth_legal_privacy: "Politique de confidentialité", auth_legal_post: ".",
+    settings_privacy: "Politique de confidentialité",
     auth_already_have: "Vous avez déjà un compte ? ", auth_new_to_golsz: "Nouveau sur GOLSZ ? ",
     auth_back_to_login: "Retour à la connexion",
     auth_reset_title: "Réinitialisez votre mot de passe",
@@ -633,6 +644,13 @@ const I18N = {
     goal_card_required: "Écrivez d'abord votre objectif.", goal_card_too_short: "Ajoutez un peu plus de détails pour que Scout puisse s'en servir.",
     goal_card_save_err: "Impossible d'enregistrer votre objectif. Rien n'a été modifié — réessayez.",
     goal_card_pathway: "Parcours", goal_card_by_you: "Vos mots", goal_card_by_scout: "Recueilli par Scout",
+    bench_pick_metric: "Choisir un indicateur", bench_other_metric: "Autre chose…",
+    bench_protocol_title: "COMMENT LA MESURE A-T-ELLE ÉTÉ PRISE ?", bench_protocol_unknown: "Non renseigné",
+    bench_protocol_hint: "Laissez vide si vous n'êtes pas sûr — GOLSZ enregistre « inconnu » plutôt que de deviner. Cela n'influence que les comparaisons futures.",
+    bench_dim_timing_method: "chronométrage", bench_dim_start_type: "départ", bench_dim_jump_protocol: "type de saut",
+    bench_timing_electronic: "Chronométrage électronique / laser", bench_timing_hand: "Chronomètre à la main",
+    bench_start_standing: "Départ arrêté", bench_start_flying: "Départ lancé",
+    bench_jump_standing: "Détente sans élan", bench_jump_max: "Détente avec élan",
     plan_next_30_title: "PROCHAINS 30 JOURS", plan_next_90_title: "PROCHAINS 90 JOURS", plan_season_title: "SAISON {a} / {b}",
     plan_next30_profile: "Complétez votre Passeport", plan_next30_film: "Ajoutez des vidéos de match", plan_next30_benchmark: "Enregistrez un repère de performance",
     pathway_milestones_title: "Étapes clés", pathway_milestones_empty: "Aucune étape pour l'instant.", pathway_milestone_ph: "Ajouter une étape", pathway_milestone_add: "Ajouter",
@@ -793,6 +811,8 @@ const I18N = {
     auth_create_athlete_account: "Crear cuenta y añadir deportista",
     auth_check_email: "REVISA TU CORREO",
     auth_secure_checkout: "Pago seguro con Stripe · facturación mensual · cancela cuando quieras",
+    auth_legal_pre: "Al crear una cuenta aceptas nuestros ", auth_legal_terms: "Términos", auth_legal_mid: " y confirmas que has leído nuestra ", auth_legal_privacy: "Política de Privacidad", auth_legal_post: ".",
+    settings_privacy: "Política de Privacidad",
     auth_already_have: "¿Ya tienes una cuenta? ", auth_new_to_golsz: "¿Nuevo en GOLSZ? ",
     auth_back_to_login: "Volver a iniciar sesión",
     auth_reset_title: "Restablece tu contraseña",
@@ -936,6 +956,13 @@ const I18N = {
     goal_card_required: "Escribe primero tu objetivo.", goal_card_too_short: "Añade un poco más de detalle para que Scout pueda trabajar con ello.",
     goal_card_save_err: "No se pudo guardar tu objetivo. No se cambió nada — inténtalo de nuevo.",
     goal_card_pathway: "Trayectoria", goal_card_by_you: "Tus palabras", goal_card_by_scout: "Registrado por Scout",
+    bench_pick_metric: "Elige una métrica", bench_other_metric: "Otra cosa…",
+    bench_protocol_title: "¿CÓMO SE MIDIÓ?", bench_protocol_unknown: "Sin registrar",
+    bench_protocol_hint: "Déjalo en blanco si no estás seguro — GOLSZ registra «desconocido» en vez de adivinar. Solo afecta a con qué se podrá comparar más adelante.",
+    bench_dim_timing_method: "cronometraje", bench_dim_start_type: "salida", bench_dim_jump_protocol: "tipo de salto",
+    bench_timing_electronic: "Cronometraje electrónico / láser", bench_timing_hand: "Cronómetro manual",
+    bench_start_standing: "Salida parada", bench_start_flying: "Salida lanzada",
+    bench_jump_standing: "Salto sin carrera", bench_jump_max: "Salto máximo (con carrera)",
     plan_next_30_title: "PRÓXIMOS 30 DÍAS", plan_next_90_title: "PRÓXIMOS 90 DÍAS", plan_season_title: "TEMPORADA {a} / {b}",
     plan_next30_profile: "Completa tu Pasaporte", plan_next30_film: "Sube vídeos de partidos", plan_next30_benchmark: "Registra una marca de rendimiento",
     pathway_milestones_title: "Hitos", pathway_milestones_empty: "Aún no hay hitos.", pathway_milestone_ph: "Añadir un hito", pathway_milestone_add: "Añadir",
@@ -1096,6 +1123,8 @@ const I18N = {
     auth_create_athlete_account: "Δημιουργία λογαριασμού και προσθήκη αθλητή",
     auth_check_email: "ΕΛΕΓΞΤΕ ΤΟ EMAIL ΣΑΣ",
     auth_secure_checkout: "Ασφαλής πληρωμή μέσω Stripe · μηνιαία χρέωση · ακύρωση οποτεδήποτε",
+    auth_legal_pre: "Δημιουργώντας λογαριασμό αποδέχεσαι τους ", auth_legal_terms: "Όρους", auth_legal_mid: " και επιβεβαιώνεις ότι διάβασες την ", auth_legal_privacy: "Πολιτική Απορρήτου", auth_legal_post: ".",
+    settings_privacy: "Πολιτική Απορρήτου",
     auth_already_have: "Έχετε ήδη λογαριασμό; ", auth_new_to_golsz: "Νέος στο GOLSZ; ",
     auth_back_to_login: "Επιστροφή στη σύνδεση",
     auth_reset_title: "Επαναφορά κωδικού πρόσβασης",
@@ -1239,6 +1268,13 @@ const I18N = {
     goal_card_required: "Γράψε πρώτα τον στόχο σου.", goal_card_too_short: "Πρόσθεσε λίγη περισσότερη λεπτομέρεια για να μπορέσει ο Scout να τη χρησιμοποιήσει.",
     goal_card_save_err: "Δεν αποθηκεύτηκε ο στόχος σου. Τίποτα δεν άλλαξε — δοκίμασε ξανά.",
     goal_card_pathway: "Πορεία", goal_card_by_you: "Τα λόγια σου", goal_card_by_scout: "Καταγράφηκε από τον Scout",
+    bench_pick_metric: "Διάλεξε μέτρηση", bench_other_metric: "Κάτι άλλο…",
+    bench_protocol_title: "ΠΩΣ ΜΕΤΡΗΘΗΚΕ;", bench_protocol_unknown: "Δεν καταγράφηκε",
+    bench_protocol_hint: "Άφησέ τα κενά αν δεν είσαι σίγουρος — το GOLSZ καταγράφει «άγνωστο» αντί να μαντεύει. Επηρεάζει μόνο με τι θα μπορεί να συγκριθεί αργότερα.",
+    bench_dim_timing_method: "χρονομέτρηση", bench_dim_start_type: "εκκίνηση", bench_dim_jump_protocol: "τύπος άλματος",
+    bench_timing_electronic: "Ηλεκτρονική / laser χρονομέτρηση", bench_timing_hand: "Χειροκίνητο χρονόμετρο",
+    bench_start_standing: "Στατική εκκίνηση", bench_start_flying: "Εκκίνηση με φόρα",
+    bench_jump_standing: "Κατακόρυφο άλμα χωρίς φόρα", bench_jump_max: "Μέγιστο άλμα (με φόρα)",
     plan_next_30_title: "ΕΠΟΜΕΝΕΣ 30 ΜΕΡΕΣ", plan_next_90_title: "ΕΠΟΜΕΝΕΣ 90 ΜΕΡΕΣ", plan_season_title: "ΣΕΖΟΝ {a} / {b}",
     plan_next30_profile: "Ολοκλήρωσε το Διαβατήριό σου", plan_next30_film: "Ανέβασε βίντεο αγώνων", plan_next30_benchmark: "Κατέγραψε έναν δείκτη απόδοσης",
     pathway_milestones_title: "Ορόσημα", pathway_milestones_empty: "Δεν υπάρχουν ορόσημα ακόμα.", pathway_milestone_ph: "Προσθήκη οροσήμου", pathway_milestone_add: "Προσθήκη",
@@ -3686,6 +3722,64 @@ function Timeline({ viewUserId, manageMode }) {
    scope, see the migration comment) — viewUserId is accepted only so the
    render call site doesn't need special-casing, not because another
    viewer's benchmarks are ever fetched or shown. */
+// P1-2. Sport-aware benchmark entry. MIRRORS api/scout.js's SPORT_SCHEMAS
+// performance_indicators exactly — same keys, same labels, same units — for
+// the two sports that actually have a schema. tests/test_benchmark_input.cjs
+// diffs the two at run time and fails if they drift, which is the only thing
+// making a second copy acceptable here (the client has no build step and
+// cannot import from the serverless function).
+//
+// A sport that is NOT in this table falls through to free-text entry,
+// unchanged. That is deliberate: 39 of the 41 sports GOLSZ offers have no
+// schema, and forcing them through a picker built for soccer would be worse
+// than the free text they have today.
+const BENCHMARK_METRICS_BY_SPORT = {
+  Soccer: [
+    { key: "sprint_10m", label: "10m sprint", unit: "s" },
+    { key: "sprint_40m", label: "40m sprint", unit: "s" },
+    { key: "vertical_jump", label: "Vertical jump", unit: "cm" },
+    { key: "yo_yo", label: "Yo-Yo intermittent recovery", unit: "level" },
+    { key: "match_minutes", label: "Competitive minutes this season", unit: "min" },
+    { key: "goals", label: "Goals", unit: "count" },
+    { key: "assists", label: "Assists", unit: "count" },
+    { key: "clean_sheets", label: "Clean sheets", unit: "count" },
+  ],
+  Basketball: [
+    { key: "vertical_jump", label: "Max vertical", unit: "cm" },
+    { key: "lane_agility", label: "Lane agility drill", unit: "s" },
+    { key: "three_quarter_sprint", label: "3/4 court sprint", unit: "s" },
+    { key: "ppg", label: "Points per game", unit: "pts" },
+    { key: "rpg", label: "Rebounds per game", unit: "reb" },
+    { key: "apg", label: "Assists per game", unit: "ast" },
+    { key: "fg_pct", label: "Field goal %", unit: "%" },
+    { key: "three_pt_pct", label: "Three-point %", unit: "%" },
+    { key: "ft_pct", label: "Free throw %", unit: "%" },
+  ],
+};
+
+// Which protocol dimensions actually change the number for a given metric.
+// Drawn from PROTOCOL_INCOMPATIBILITIES in api/scout.js — only dimensions
+// that appear there as MATERIAL are asked about, because every extra question
+// costs an athlete something and an unasked question is honestly recorded as
+// unknown. A metric absent from this map needs no protocol at all (goals
+// scored is goals scored).
+const METRIC_PROTOCOL_FIELDS = {
+  sprint_10m: ["timing_method", "start_type"],
+  sprint_40m: ["timing_method", "start_type"],
+  three_quarter_sprint: ["timing_method", "start_type"],
+  lane_agility: ["timing_method"],
+  vertical_jump: ["jump_protocol"],
+};
+
+// The option lists match the exact values PROTOCOL_INCOMPATIBILITIES compares
+// against — a label mismatch here would silently make everything look
+// incompatible later. "" is the honest "I don't know" and stores NOTHING.
+const PROTOCOL_OPTIONS = {
+  timing_method: [["electronic", "bench_timing_electronic"], ["hand", "bench_timing_hand"]],
+  start_type: [["standing", "bench_start_standing"], ["flying", "bench_start_flying"]],
+  jump_protocol: [["standing_vertical", "bench_jump_standing"], ["max_vertical", "bench_jump_max"]],
+};
+
 function Benchmarks({ viewUserId, manageId }) {
   const { t } = useLang();
   const [items, setItems] = useState([]);
@@ -3694,6 +3788,15 @@ function Benchmarks({ viewUserId, manageId }) {
   const [metric, setMetric] = useState("");
   const [value, setValue] = useState("");
   const [unit, setUnit] = useState("");
+  // P1-2. The athlete's sport decides whether they get a canonical metric
+  // picker or the original free-text field. null until loaded; "" (no sport
+  // on the Passport yet) also falls through to free text.
+  const [sport, setSport] = useState(null);
+  const [metricKey, setMetricKey] = useState("");
+  // Only the protocol dimensions the athlete actually answered. A dimension
+  // left on "" is NOT stored — unknown stays unknown rather than defaulting
+  // to whatever is most common, which would be inventing provenance.
+  const [protocol, setProtocol] = useState({});
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const isOwner = !!(uid && !viewUserId);
@@ -3708,13 +3811,30 @@ function Benchmarks({ viewUserId, manageId }) {
         // benchmarks are the ones on screen and the ones written; RLS
         // (athlete_benchmarks' own is_parent_of policy) authorises it.
         setUid(manageId || user.id);
-        const { data, error } = await sb.from("athlete_benchmarks").select("id, metric, value, unit, recorded_date").eq("user_id", manageId || user.id).order("recorded_date", { ascending: false });
+        const [{ data, error }, { data: ath }] = await Promise.all([
+          sb.from("athlete_benchmarks").select("id, metric, metric_key, protocol, value, unit, recorded_date").eq("user_id", manageId || user.id).order("recorded_date", { ascending: false }),
+          sb.from("athletes").select("sport").eq("id", manageId || user.id).maybeSingle(),
+        ]);
         if (error) throw error;
         setItems(data || []);
+        setSport((ath && ath.sport) || "");
       } catch (e) { console.error("GOLSZ benchmarks load error:", e); }
       setLoaded(true);
     })();
   }, [viewUserId, manageId]);
+
+  // Selecting a canonical metric fills the display name and unit from the
+  // schema, so an athlete cannot record "10m sprint" in metres. Switching
+  // metric clears the protocol answers: they belong to the metric that was
+  // selected when they were given, and carrying them over would attach a
+  // timing method to a jump.
+  function pickMetric(key) {
+    setMetricKey(key);
+    setProtocol({});
+    if (!key || key === "__other") { setMetric(""); setUnit(""); return; }
+    const m = (sportMetrics || []).find((x) => x.key === key);
+    if (m) { setMetric(m.label); setUnit(m.unit); }
+  }
 
   async function addEntry() {
     if (!sb || !uid || !isOwner || !metric.trim() || !value.trim() || busy) return;
@@ -3722,12 +3842,25 @@ function Benchmarks({ viewUserId, manageId }) {
     try {
       const numValue = Number(value);
       if (!Number.isFinite(numValue)) throw new Error(t("benchmarks_invalid_value"));
+      // Strip empty answers before storing. An absent key means "not
+      // recorded" everywhere downstream (protocolCompatible treats it as a
+      // caveat, never as agreement) — storing "" would turn a genuine
+      // unknown into a value.
+      const cleanProtocol = {};
+      for (const [k, v] of Object.entries(protocol)) if (v) cleanProtocol[k] = v;
       const { data, error } = await sb.from("athlete_benchmarks").insert({
-        user_id: uid, metric: metric.trim().slice(0, 60), value: numValue, unit: unit.trim().slice(0, 20) || null,
-      }).select("id, metric, value, unit, recorded_date").single();
+        user_id: uid,
+        metric: metric.trim().slice(0, 60),
+        // Only set when the athlete picked from their sport's canonical list.
+        // A free-text metric stays NULL rather than being guessed into a key.
+        metric_key: metricKey || null,
+        protocol: Object.keys(cleanProtocol).length ? cleanProtocol : null,
+        value: numValue,
+        unit: unit.trim().slice(0, 20) || null,
+      }).select("id, metric, metric_key, protocol, value, unit, recorded_date").single();
       if (error) throw error;
       setItems((prev) => [data, ...prev]);
-      setMetric(""); setValue(""); setUnit("");
+      setMetric(""); setValue(""); setUnit(""); setMetricKey(""); setProtocol({});
     } catch (e) {
       setErr((e && e.message) || t("benchmarks_add_err"));
     } finally { setBusy(false); }
@@ -3745,6 +3878,10 @@ function Benchmarks({ viewUserId, manageId }) {
   const grouped = {};
   for (const b of items) { (grouped[b.metric] = grouped[b.metric] || []).push(b); }
   const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
+  // null for a sport GOLSZ has no schema for (39 of the 41 offered), which is
+  // the free-text path this component has always had.
+  const sportMetrics = sport ? (BENCHMARK_METRICS_BY_SPORT[sport] || null) : null;
+  const protocolFields = (metricKey && metricKey !== "__other" && METRIC_PROTOCOL_FIELDS[metricKey]) || [];
 
   return (
     <div style={{ ...card }}>
@@ -3765,13 +3902,46 @@ function Benchmarks({ viewUserId, manageId }) {
       {sb && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <input value={metric} onChange={(e) => setMetric(e.target.value)} placeholder={t("benchmarks_metric_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
+            {/* P1-2. A sport with a real schema gets its canonical metric
+                list; everything else keeps the original free-text field. */}
+            {sportMetrics ? (
+              <select value={metricKey} onChange={(e) => pickMetric(e.target.value)} style={{ flex: "1 1 150px", ...inputStyle }}>
+                <option value="">{t("bench_pick_metric")}</option>
+                {sportMetrics.map((m) => <option key={m.key} value={m.key}>{m.label} ({m.unit})</option>)}
+                <option value="__other">{t("bench_other_metric")}</option>
+              </select>
+            ) : (
+              <input value={metric} onChange={(e) => setMetric(e.target.value)} placeholder={t("benchmarks_metric_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
+            )}
+            {sportMetrics && metricKey === "__other" && (
+              <input value={metric} onChange={(e) => setMetric(e.target.value)} placeholder={t("benchmarks_metric_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
+            )}
             <input value={value} onChange={(e) => setValue(e.target.value)} placeholder={t("benchmarks_value_ph")} inputMode="decimal" style={{ width: 90, ...inputStyle }} />
             <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder={t("benchmarks_unit_ph")} style={{ width: 70, ...inputStyle }} />
             <button onClick={addEntry} disabled={!metric.trim() || !value.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!metric.trim() || !value.trim() || busy) ? 0.5 : 1 }}>
               {busy ? "…" : t("benchmarks_add")}
             </button>
           </div>
+
+          {/* Protocol questions, asked only for the metrics where the answer
+              actually changes whether two numbers can be compared (hand vs
+              electronic timing, standing vs approach vertical). Every one
+              defaults to "not recorded" and stays that way unless answered —
+              GOLSZ never guesses how a measurement was taken. */}
+          {protocolFields.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 10, color: C.slate, fontWeight: 700, marginBottom: 5 }}>{t("bench_protocol_title")}</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {protocolFields.map((dim) => (
+                  <select key={dim} value={protocol[dim] || ""} onChange={(e) => setProtocol((prev) => ({ ...prev, [dim]: e.target.value }))} style={{ flex: "1 1 140px", ...inputStyle }}>
+                    <option value="">{t("bench_protocol_unknown")} — {t("bench_dim_" + dim)}</option>
+                    {(PROTOCOL_OPTIONS[dim] || []).map(([val, key]) => <option key={val} value={val}>{t(key)}</option>)}
+                  </select>
+                ))}
+              </div>
+              <div style={{ fontSize: 10, color: C.slate, marginTop: 5, lineHeight: 1.4 }}>{t("bench_protocol_hint")}</div>
+            </div>
+          )}
           {err && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 6 }}>{err}</div>}
         </div>
       )}
@@ -4974,6 +5144,9 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       {!viewingOther && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 14, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
           <a href="terms.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>{t("passport_terms")}</a>
+          {/* P0-3: privacy.html was reachable only from the marketing site,
+              never from inside the signed-in app. */}
+          <a href="privacy.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>{t("settings_privacy")}</a>
           <span style={{ color: C.line2 }}>·</span>
           <a href="index.html" style={{ fontSize: 12.5, color: C.slate, cursor: "pointer", textDecoration: "none" }}>golsz.com</a>
           <span style={{ color: C.line2 }}>·</span>
@@ -9510,6 +9683,20 @@ const SUPABASE_ANON_KEY = "sb_publishable_Po2PXFdCkqZ26mtkJEJ4fA_HHBy5i_s";
 // site's domain, paste its SITE key here, and set its SECRET key as the
 // TURNSTILE_SECRET_KEY env var on Vercel (api/verify-turnstile.js reads
 // it — never put the secret key in this file, it's client-visible).
+// OWNER ACTION (P1-3). Paste the Cloudflare Turnstile SITE key here and set
+// the matching SECRET key as TURNSTILE_SECRET_KEY in Vercel — both, in the
+// same change. The two halves are now interlocked on purpose:
+//
+//   both set      -> Turnstile is enforced; a failed challenge blocks signup
+//   neither set   -> Turnstile is dormant; signup behaves exactly as today
+//   site key only -> the browser sends tokens and api/verify-turnstile.js
+//                    FAILS CLOSED in production (503) rather than pretending
+//                    to verify them, which is what it used to do
+//
+// The CSP in vercel.json already allows challenges.cloudflare.com in
+// script-src, frame-src and connect-src, so nothing else needs to change
+// when the key goes in. Site keys are public by design — this one is safe
+// in client code; the secret key never is.
 const TURNSTILE_SITE_KEY = "";
 const SCOUT_ENDPOINT = "/api/scout";  // same-origin — works on any Vercel deploy + `vercel dev` locally
 // Stripe Payment Link URLs (sandbox/test mode). Re-created 2026-08-05 for
@@ -9796,7 +9983,12 @@ function Auth({ onDone, paidReturn }) {
   const childAge = childDobOk ? ageFromDobIso(childDobIso) : null;
   const childAgeOk = childAge !== null && childAge < 16;
 
-  const turnstileOk = !TURNSTILE_SITE_KEY || !isSignup || !!turnstileToken;
+  // isSignupLike, not isSignup: the parent-signup flow renders the Turnstile
+  // widget (see the JSX below, which gates on isSignupLike) but this check
+  // used isSignup, so a parent could submit without ever completing the
+  // challenge — the one signup path a bot creating throwaway accounts would
+  // find first, since it also creates a second account for the "child".
+  const turnstileOk = !TURNSTILE_SITE_KEY || !isSignupLike || !!turnstileToken;
   const ok = isParentSignup
     ? (email.trim() && pw.trim() && turnstileOk && name.trim() && childName.trim() && childDobOk && childAgeOk)
     : (email.trim() && pw.trim() && turnstileOk && (!isSignup || (name.trim() && dobOk && !requiresParentAccount)));
@@ -9864,7 +10056,13 @@ function Auth({ onDone, paidReturn }) {
             body: JSON.stringify({ token: turnstileToken }),
           });
           const verifyData = await verifyRes.json().catch(() => ({}));
-          if (!verifyRes.ok || !verifyData.success) throw new Error("Verification failed — please retry the challenge below and try again.");
+          if (!verifyRes.ok || !verifyData.success) {
+            // A 503 with turnstile_misconfigured means the site key is live
+            // but the server has no secret — retrying the challenge cannot
+            // fix that, so don't tell the athlete to. Show what the server
+            // actually said.
+            throw new Error((verifyData && verifyData.error) || "Verification failed — please retry the challenge below and try again.");
+          }
         }
         const signupEmail = email.trim();
         const signupPw = pw;
@@ -9923,7 +10121,13 @@ function Auth({ onDone, paidReturn }) {
             body: JSON.stringify({ token: turnstileToken }),
           });
           const verifyData = await verifyRes.json().catch(() => ({}));
-          if (!verifyRes.ok || !verifyData.success) throw new Error("Verification failed — please retry the challenge below and try again.");
+          if (!verifyRes.ok || !verifyData.success) {
+            // A 503 with turnstile_misconfigured means the site key is live
+            // but the server has no secret — retrying the challenge cannot
+            // fix that, so don't tell the athlete to. Show what the server
+            // actually said.
+            throw new Error((verifyData && verifyData.error) || "Verification failed — please retry the challenge below and try again.");
+          }
         }
         const parentEmail = email.trim();
         const parentPw = pw;
@@ -10170,6 +10374,24 @@ function Auth({ onDone, paidReturn }) {
 
           {isSignup && selected.price > 0 && (
             <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: C.slate }}>{t("auth_secure_checkout")}</div>
+          )}
+
+          {/* P0-3. Signup previously showed no Terms and no Privacy notice at
+              all, and privacy.html was linked only from the marketing site —
+              so an athlete handing over their date of birth, school, club and
+              physical measurements never saw either document. Deliberately
+              plain text with two real links rather than a pre-ticked box: a
+              checkbox that is already ticked is not consent, and one more
+              tap between an athlete and their account is not worth a dark
+              pattern. Rendered for both the athlete and parent signup flows. */}
+          {isSignupLike && (
+            <div style={{ textAlign: "center", marginTop: 12, fontSize: 11, color: C.slate, lineHeight: 1.5 }}>
+              {t("auth_legal_pre")}
+              <a href="terms.html" target="_blank" rel="noopener noreferrer" style={{ color: C.lime, fontWeight: 700, textDecoration: "underline" }}>{t("auth_legal_terms")}</a>
+              {t("auth_legal_mid")}
+              <a href="privacy.html" target="_blank" rel="noopener noreferrer" style={{ color: C.lime, fontWeight: 700, textDecoration: "underline" }}>{t("auth_legal_privacy")}</a>
+              {t("auth_legal_post")}
+            </div>
           )}
 
           <div style={{ textAlign: "center", marginTop: 14, fontSize: 13, color: C.slate }}>
