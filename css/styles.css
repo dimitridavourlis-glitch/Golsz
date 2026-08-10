@@ -20,8 +20,16 @@
   --gold-bright: #E6C76A;
   --gold-ink: #0D1210;
   --ink: #F7F4EA;
-  --ink-muted: #415A77;
-  --ink-faint: #415A77;
+  /* --ink-muted was #415A77, which is ~2.5:1 against --navy — under the
+     4.5:1 WCAG AA minimum for body text, and the reason so much of the
+     small copy read as unreadable pale blue. These keep the same blue-grey
+     family; both clear 4.5:1 on the navy page background AND on --surface
+     cards (6.2/5.0 and 5.8/4.6 respectively), since muted text appears on
+     both. Used by p, .lede, .field-hint
+     and every muted label across all pages, so this lifts contrast site-
+     wide, not just on the homepage. */
+  --ink-muted: #8096B2;
+  --ink-faint: #7A90AD;
   --border: #1B263B;
   --border-strong: #415A77;
   --gold-border: rgba(212, 175, 55, 0.4);
@@ -314,14 +322,19 @@ textarea:focus-visible,
 }
 .mobile-panel .btn { margin-top: 10px; }
 
+/* .nav-signin is the quiet half of the pair; .nav-cta ("Start free") is the
+   single primary action repeated down the page. Both collapse into the
+   mobile panel below 1080px, which carries its own copies. */
+.nav-signin { display: none; font-weight: 600; }
 @media (min-width: 1080px) {
   .nav-links { display: flex; }
   .nav-cta { display: inline-flex; }
+  .nav-signin { display: inline-flex; align-items: center; margin-left: auto; margin-right: 1.1rem; }
   .nav-toggle { display: none; }
   .mobile-panel { display: none !important; }
 }
 @media (max-width: 1079px) {
-  .nav-links, .nav-cta { display: none; }
+  .nav-links, .nav-cta, .nav-signin { display: none; }
 }
 
 /* ==========================================================================
@@ -372,8 +385,11 @@ textarea:focus-visible,
 .hero-mega h1 {
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: clamp(3.2rem, 9vw, 5.4rem);
-  line-height: 0.92;
+  /* Was clamp(3.2rem, 9vw, 5.4rem) for the single-word "JOIN" shout. The
+     headline is now two full sentences, so the floor has to come down or
+     "Know where you're going." breaks badly at 375px. */
+  font-size: clamp(2.15rem, 6.2vw, 4.1rem);
+  line-height: 1.03;
   letter-spacing: -0.01em;
   margin: 0 0 1.1rem;
 }
@@ -541,6 +557,12 @@ textarea:focus-visible,
 @media (min-width: 720px) {
   .card-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
   .card-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+}
+/* cols-4 went straight from 1 column to 4 at 1000px, which left tablets
+   (and large phones in landscape) scrolling through four full-height
+   pricing cards in a single stack. 2-up from 720px is the missing rung. */
+@media (min-width: 720px) {
+  .card-grid.cols-4 { grid-template-columns: repeat(2, 1fr); }
 }
 @media (min-width: 1000px) {
   .card-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
@@ -1607,3 +1629,194 @@ select {
   border-top: 1px solid var(--border);
 }
 .chat-input-row input { flex: 1; }
+
+
+/* ==========================================================================
+   PRODUCT PREVIEWS  (homepage)
+   Faithful, static renderings of real GOLSZ app surfaces — Sports Passport,
+   AI Scout, the pathway map, benchmarks. Built from the same tokens the app
+   uses so they stay honest as the product changes, rather than being
+   screenshots that silently rot. Every one is marked "Illustrative preview"
+   in the markup: the layout and labels are real, the athlete is not.
+   ========================================================================== */
+
+.preview-frame {
+  background: var(--navy-deep);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.preview-chrome {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-strong);
+}
+.preview-chrome i {
+  width: 9px; height: 9px; border-radius: 999px;
+  background: var(--border-strong); flex-shrink: 0;
+}
+.preview-chrome span {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+}
+.preview-body { padding: clamp(1rem, 2.5vw, 1.5rem); }
+
+/* Alternating text/visual rows. Single column until there's genuinely room
+   for two — a 50/50 split below ~900px squeezes both halves. */
+.showcase {
+  display: grid;
+  gap: clamp(1.75rem, 4vw, 3.5rem);
+  align-items: center;
+  padding: clamp(2.5rem, 5vw, 4rem) 0;
+}
+.showcase-copy .lede { margin-bottom: 0; }
+@media (min-width: 900px) {
+  .showcase { grid-template-columns: 1fr 1.05fr; }
+  .showcase.is-flipped .showcase-copy { order: 2; }
+}
+
+/* --- Passport preview --- */
+.pp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
+.pp-avatar {
+  width: 46px; height: 46px; border-radius: 10px; flex-shrink: 0;
+  background: linear-gradient(140deg, var(--surface-raised), var(--charcoal));
+  border: 1px solid var(--gold-border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-weight: 700; color: var(--gold-bright);
+}
+.pp-name { font-family: var(--font-display); font-weight: 800; color: var(--ink); line-height: 1.2; }
+.pp-sub { font-size: 0.82rem; color: var(--ink-muted); }
+.pp-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px;
+  background: var(--border-strong); border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); overflow: hidden;
+}
+@media (min-width: 480px) { .pp-grid { grid-template-columns: repeat(4, 1fr); } }
+.pp-cell { background: var(--navy-deep); padding: 0.7rem 0.6rem; text-align: center; }
+.pp-cell b {
+  display: block; font-family: var(--font-mono); font-size: 1rem;
+  color: var(--ink); font-weight: 700;
+}
+.pp-cell span {
+  font-size: 0.6rem; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--ink-faint); font-weight: 700;
+}
+/* Passport Strength meter — mirrors the app's composite bar. */
+.pp-meter { margin-top: 1rem; }
+.pp-meter-top {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-faint); font-weight: 700; margin-bottom: 6px;
+}
+.pp-meter-top b { font-family: var(--font-mono); font-size: 1.05rem; color: var(--gold-bright); }
+.pp-bar { height: 7px; border-radius: 999px; background: var(--charcoal); overflow: hidden; }
+.pp-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
+
+/* --- Scout conversation preview --- */
+.sc-line { display: flex; gap: 9px; margin-bottom: 0.85rem; align-items: flex-start; }
+.sc-line.is-me { flex-direction: row-reverse; }
+.sc-dot {
+  width: 26px; height: 26px; border-radius: 999px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 0.6rem; font-weight: 700;
+  background: var(--charcoal); color: var(--gold-bright);
+  border: 1px solid var(--gold-border);
+}
+.sc-line.is-me .sc-dot { background: var(--surface-raised); color: var(--ink); border-color: var(--border-strong); }
+.sc-bubble {
+  background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: 13px; padding: 0.65rem 0.85rem;
+  font-size: 0.88rem; line-height: 1.55; color: var(--ink-muted); max-width: 82%;
+}
+.sc-line.is-me .sc-bubble { background: var(--surface-raised); color: var(--ink); }
+.sc-bubble strong { color: var(--ink); font-weight: 700; }
+
+/* --- Pathway preview --- */
+.path-row { display: flex; align-items: flex-start; gap: 0; }
+.path-node { flex: 1 1 0; min-width: 0; text-align: center; }
+.path-ring {
+  width: 38px; height: 38px; margin: 0 auto 7px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--border-strong); color: var(--ink-faint);
+  background: var(--navy-deep);
+}
+.path-node.is-done .path-ring { border-color: var(--gold); color: var(--gold-bright); background: rgba(212,175,55,0.1); }
+.path-node.is-goal .path-ring { border-color: var(--gold-bright); color: var(--gold-ink); background: var(--gold-bright); }
+.path-node b {
+  display: block; font-size: 0.68rem; font-weight: 800; line-height: 1.25;
+  color: var(--ink); overflow-wrap: anywhere;
+}
+.path-node span { font-size: 0.6rem; color: var(--ink-faint); font-weight: 700; }
+.path-link { flex: 0 0 auto; width: 14px; height: 2px; background: var(--border-strong); margin-top: 18px; }
+.path-link.is-done { background: var(--gold); }
+
+/* --- Benchmark rows --- */
+.bm-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0.6rem 0; border-bottom: 1px solid var(--border-strong);
+}
+.bm-row:last-child { border-bottom: none; }
+.bm-row b { font-family: var(--font-mono); color: var(--gold-bright); font-size: 0.95rem; }
+.bm-name { font-size: 0.86rem; color: var(--ink); font-weight: 700; }
+.bm-meta { font-size: 0.68rem; color: var(--ink-faint); }
+.bm-delta { margin-left: auto; font-family: var(--font-mono); font-size: 0.78rem; color: var(--gold); white-space: nowrap; }
+
+/* --- Journey strip: ATHLETE -> PASSPORT -> SCOUT -> PLAN -> PROGRESS --- */
+.journey {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 0.5rem 0.65rem; align-items: center;
+  padding: 1.4rem 0 0;
+}
+.journey b {
+  font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-muted); font-weight: 700;
+  border: 1px solid var(--border-strong); border-radius: 999px; padding: 6px 13px;
+}
+.journey b.is-hot { color: var(--gold-bright); border-color: var(--gold-border); }
+.journey i { color: var(--ink-faint); font-style: normal; }
+
+/* --- Goal chips --- */
+.goal-chips { display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 1.3rem; }
+.goal-chip {
+  border: 1px solid var(--border-strong); border-radius: 999px;
+  padding: 8px 15px; font-size: 0.85rem; font-weight: 700; color: var(--ink);
+  background: var(--surface); transition: border-color 0.18s ease, color 0.18s ease;
+}
+.goal-chip:hover { border-color: var(--gold); color: var(--gold-bright); }
+
+/* --- Trust list --- */
+.trust-grid { display: grid; gap: 0.75rem; margin-top: 1.6rem; }
+@media (min-width: 720px) { .trust-grid { grid-template-columns: 1fr 1fr; gap: 0.85rem 2rem; } }
+.trust-item { display: flex; gap: 11px; align-items: flex-start; color: var(--ink-muted); }
+.trust-item svg { flex-shrink: 0; margin-top: 4px; color: var(--gold); }
+.trust-item strong { color: var(--ink); font-weight: 700; }
+
+/* --- Pricing --- */
+.plan { display: flex; flex-direction: column; height: 100%; position: relative; }
+.plan.is-featured { border-color: var(--gold-border); box-shadow: 0 0 0 1px var(--gold-border); }
+.plan-price {
+  font-family: var(--font-mono); font-size: 2rem; font-weight: 700;
+  color: var(--gold-bright); margin: 0.15rem 0 0.1rem; line-height: 1.1;
+}
+.plan-price small { font-size: 0.85rem; color: var(--ink-muted); font-weight: 400; }
+.plan-for { font-size: 0.84rem; color: var(--ink-muted); min-height: 2.6em; margin-bottom: 0.9rem; }
+.plan-feats { list-style: none; margin: 0 0 1.2rem; padding: 0; }
+.plan-feats li {
+  display: flex; gap: 8px; align-items: flex-start;
+  font-size: 0.86rem; color: var(--ink-muted); margin-bottom: 0.5rem;
+}
+.plan-feats svg { flex-shrink: 0; margin-top: 4px; color: var(--gold); }
+.plan-scout {
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.05em;
+  color: var(--ink); background: var(--charcoal); border-radius: var(--radius-sm);
+  padding: 7px 11px; margin-bottom: 1.1rem; text-align: center;
+}
+.plan .btn { margin-top: auto; width: 100%; }

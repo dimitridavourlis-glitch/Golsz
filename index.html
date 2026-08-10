@@ -53,52 +53,159 @@
   <div class="container nav-row">
     <a href="index.html" class="logo">GOLSZ<span class="mark">.</span></a>
     <nav class="nav-links" aria-label="Primary">
-      <a href="index.html" class="nav-link" data-page="index.html">Home</a>
+      <a href="index.html#product" class="nav-link">Product</a>
+      <a href="index.html#how-it-works" class="nav-link">How it works</a>
       <a href="index.html#pricing" class="nav-link">Pricing</a>
-      <a href="golsz-app.html" class="nav-link">App</a>
-      <a href="contact.html" class="nav-link" data-page="contact.html">Contact</a>
+      <a href="index.html#about-section" class="nav-link">About</a>
     </nav>
-    <a href="golsz-app.html" class="btn btn-primary nav-cta">Launch the app</a>
+    <!-- Sign in and Start free both open the app, which shows either form.
+         Previously "Home", "App" and "Launch the app" all pointed at
+         overlapping destinations and competed for the same click. -->
+    <a href="golsz-app.html" class="nav-link nav-signin">Sign in</a>
+    <a href="golsz-app.html" class="btn btn-primary nav-cta">Start free</a>
     <button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-panel">
       <span class="bar"></span>
     </button>
   </div>
   <div class="container">
     <nav class="mobile-panel" id="mobile-panel" aria-label="Mobile">
-      <a href="index.html" class="nav-link" data-page="index.html">Home</a>
+      <a href="index.html#product" class="nav-link">Product</a>
+      <a href="index.html#how-it-works" class="nav-link">How it works</a>
       <a href="index.html#pricing" class="nav-link">Pricing</a>
-      <a href="golsz-app.html" class="nav-link">App</a>
-      <a href="contact.html" class="nav-link" data-page="contact.html">Contact</a>
-      <a href="golsz-app.html" class="btn btn-primary btn-block">Launch the app</a>
+      <a href="index.html#about-section" class="nav-link">About</a>
+      <a href="golsz-app.html" class="nav-link">Sign in</a>
+      <a href="golsz-app.html" class="btn btn-primary btn-block">Start free</a>
     </nav>
   </div>
 </header>
 
 <main id="main">
 
-  <!-- Hero -->
+  <!-- Hero. Leads with the PRODUCT, not the price: "JOIN FOR FREE!" told a
+       visitor nothing about what GOLSZ is. Free-to-start now sits under the
+       CTA as reassurance rather than as the headline. -->
   <section class="hero-mega" id="hero" data-hero-region>
     <div class="container">
       <div class="hero-mega-inner reveal">
-        <h1><span class="line-accent">JOIN</span><span class="line-main">FOR FREE!</span></h1>
-        <p class="lede">An AI built for athletes, <strong>by athletes</strong>.</p>
-        <p class="hero-sub">Your Sports Passport, an AI Scout that actually knows your profile, and a plan for getting where you want to go.</p>
-        <a href="golsz-app.html" class="btn btn-primary">Join for free <span aria-hidden="true">→</span></a>
-        <p class="field-hint">Free to start, with a limited number of AI questions included — upgrade any time for deeper guidance.</p>
+        <p class="eyebrow">The intelligent sports platform</p>
+        <h1><span class="line-main">Know where you stand.</span><span class="line-main">Know where you're going.</span></h1>
+        <p class="lede">Build your Sports Passport. Give AI Scout your goal. Get a personalised path for what to do next.</p>
+        <div style="display:flex; flex-wrap:wrap; gap:0.7rem; margin-top:1.6rem;">
+          <a href="golsz-app.html" class="btn btn-primary">Build my Sports Passport <span aria-hidden="true">&rarr;</span></a>
+          <a href="index.html#how-it-works" class="btn btn-ghost">See how it works</a>
+        </div>
+        <p class="field-hint" style="margin-top:1rem;">Free to start &middot; No card required</p>
       </div>
     </div>
   </section>
 
-  <!-- AI Scout promo -->
+  <!-- ======================= PRODUCT ======================= -->
+  <!-- Previews are static HTML built from the same tokens as the app, not
+       screenshots: they can't silently go stale, and every one carries an
+       "Illustrative preview" label. Layout and labels are real; the athlete
+       is invented. No feature is shown that doesn't exist. -->
+  <section class="section-pad" id="product">
+    <div class="container">
+      <div class="reveal text-center mx-auto" style="max-width: 640px;">
+        <p class="eyebrow" style="justify-content:center;">The product</p>
+        <h2>Two things, working together.</h2>
+        <p class="lede mx-auto">Your Sports Passport is the record. AI Scout is what reads it and tells you what to do next.</p>
+        <div class="journey" aria-label="How GOLSZ fits together">
+          <b class="is-hot">Athlete</b><i aria-hidden="true">&rarr;</i>
+          <b class="is-hot">Passport</b><i aria-hidden="true">&rarr;</i>
+          <b class="is-hot">AI Scout</b><i aria-hidden="true">&rarr;</i>
+          <b>Plan</b><i aria-hidden="true">&rarr;</i>
+          <b>Progress</b>
+        </div>
+      </div>
+
+      <!-- Sports Passport -->
+      <div class="showcase reveal">
+        <div class="showcase-copy">
+          <p class="eyebrow">Sports Passport</p>
+          <h3>Your athletic record, in one place.</h3>
+          <p class="lede">Sport, position, club, level, school year, measurements, highlights and career history — kept current, and shareable with a coach through a link they can open without an account.</p>
+        </div>
+        <div class="preview-frame">
+          <div class="preview-chrome"><i></i><i></i><i></i><span>Illustrative preview</span></div>
+          <div class="preview-body">
+            <div class="pp-head">
+              <div class="pp-avatar">AM</div>
+              <div>
+                <div class="pp-name">Alex Moreno</div>
+                <div class="pp-sub">Basketball &middot; Shooting Guard &middot; Class of 2028</div>
+              </div>
+            </div>
+            <div class="pp-grid">
+              <div class="pp-cell"><b>16</b><span>Age</span></div>
+              <div class="pp-cell"><b>188</b><span>Height cm</span></div>
+              <div class="pp-cell"><b>3.6</b><span>GPA</span></div>
+              <div class="pp-cell"><b>4</b><span>Highlights</span></div>
+            </div>
+            <div class="pp-meter">
+              <div class="pp-meter-top"><span>Passport Strength</span><b>68</b></div>
+              <div class="pp-bar"><i style="width:68%"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pathway + progress -->
+      <div class="showcase is-flipped reveal">
+        <div class="showcase-copy">
+          <p class="eyebrow">Your path &amp; your progress</p>
+          <h3>Milestones you can actually check off.</h3>
+          <p class="lede">Scout turns your goal into a pathway with real stages, then tracks the benchmarks you retest against it — recorded with how they were measured, so a hand-timed sprint is never quietly compared against an electronic one.</p>
+        </div>
+        <div class="preview-frame">
+          <div class="preview-chrome"><i></i><i></i><i></i><span>Illustrative preview</span></div>
+          <div class="preview-body">
+            <div class="path-row" aria-label="Example pathway">
+              <div class="path-node is-done"><div class="path-ring"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg></div><b>School team</b><span>Now</span></div>
+              <div class="path-link is-done"></div>
+              <div class="path-node is-done"><div class="path-ring"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg></div><b>Club</b><span>Done</span></div>
+              <div class="path-link"></div>
+              <div class="path-node"><div class="path-ring"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></div><b>Showcase</b><span>Next</span></div>
+              <div class="path-link"></div>
+              <div class="path-node is-goal"><div class="path-ring"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.6 6.6L21 10l-5 4.2L17.5 21 12 17.4 6.5 21 8 14.2 3 10l6.4-1.4z"/></svg></div><b>NCAA D1</b><span>Goal</span></div>
+            </div>
+            <div style="margin-top:1.3rem; border-top:1px solid var(--border-strong); padding-top:0.4rem;">
+              <div class="bm-row">
+                <div><div class="bm-name">Max vertical</div><div class="bm-meta">Standing vertical &middot; 12 Mar</div></div>
+                <b style="margin-left:auto;">71 cm</b><span class="bm-delta">+4</span>
+              </div>
+              <div class="bm-row">
+                <div><div class="bm-name">3/4 court sprint</div><div class="bm-meta">Electronic timing &middot; 12 Mar</div></div>
+                <b style="margin-left:auto;">3.28 s</b><span class="bm-delta">&minus;0.09</span>
+              </div>
+              <div class="bm-row">
+                <div><div class="bm-name">Free throw %</div><div class="bm-meta">Season to date</div></div>
+                <b style="margin-left:auto;">78%</b><span class="bm-delta">+5</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= AI SCOUT ======================= -->
   <section class="scout-panel">
     <div class="container">
       <div class="scout-panel-head reveal">
         <p class="badge"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4z"/></svg> AI Scout</p>
-        <h2 style="margin-top:0.6rem;">Your intelligent sports assistant.</h2>
-        <p class="lede mx-auto">Ask about your training, development, or what's next — Scout gives real answers, grounded in your profile and goals, not just search results.</p>
+        <h2 style="margin-top:0.6rem;">An AI Scout that actually knows the athlete.</h2>
+        <p class="lede mx-auto">Scout uses your Sports Passport, goals and progress to give answers in context &mdash; not generic search results.</p>
       </div>
 
       <div class="reveal">
+        <a href="golsz-app.html" class="scout-search" aria-label="Ask Scout — opens the app">
+          <div class="search-bar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" placeholder="Ask Scout anything about your path…" readonly style="cursor:pointer;">
+          </div>
+        </a>
+
         <div class="scout-pill-row" aria-label="Things you can ask Scout">
           <a href="golsz-app.html" class="scout-pill">Explore schools &amp; programs</a>
           <a href="golsz-app.html" class="scout-pill">Track my progress</a>
@@ -107,28 +214,13 @@
           <a href="golsz-app.html" class="scout-pill">Get career guidance</a>
         </div>
 
-        <a href="golsz-app.html" class="scout-search" aria-label="Ask Scout — opens the app">
-          <div class="search-bar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-            <input type="text" placeholder="What are you looking for?" readonly style="cursor:pointer;">
-          </div>
-        </a>
-
-        <div class="value-strip">
-          <div class="value-strip-item">
-            <div class="value-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
-            <h4>ASK.</h4>
-            <p>Real answers, not search results.</p>
-          </div>
-          <div class="value-strip-item">
-            <div class="value-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></div>
-            <h4>TRACK.</h4>
-            <p>See exactly where you stand.</p>
-          </div>
-          <div class="value-strip-item">
-            <div class="value-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2 3 14h7l-1 8 11-13h-7z"/></svg></div>
-            <h4>PLAN.</h4>
-            <p>Know your next move.</p>
+        <div class="preview-frame mx-auto" style="max-width:620px; margin-top:2.2rem;">
+          <div class="preview-chrome"><i></i><i></i><i></i><span>Illustrative preview</span></div>
+          <div class="preview-body">
+            <div class="sc-line is-me"><div class="sc-dot">AM</div><div class="sc-bubble">I want to play D1 basketball. Am I anywhere close?</div></div>
+            <div class="sc-line"><div class="sc-dot">S</div><div class="sc-bubble">You're a 2028 guard at 188&nbsp;cm with a 3.6 GPA and four highlights up &mdash; that's a real starting point, and the GPA keeps every division open.<br><br>The honest gap is <strong>exposure</strong>. You've got no showcase on record and no target list yet. D1 staff have to see you somewhere.</div></div>
+            <div class="sc-line is-me"><div class="sc-dot">AM</div><div class="sc-bubble">What should I do first?</div></div>
+            <div class="sc-line"><div class="sc-dot">S</div><div class="sc-bubble">Get one summer showcase on the calendar, then we'll build a target list around your level. Want me to start that list?</div></div>
           </div>
         </div>
       </div>
@@ -136,142 +228,165 @@
   </section>
 
   <!-- ======================= HOW IT WORKS ======================= -->
-  <!-- Rewritten 2026-08-10. The previous version sold three journeys
-       (athletes / clubs & recruiters / agents & scouts) and six features —
-       AI matching, discovery tools, an opportunity board, a feed and direct
-       messaging — none of which exist in the product. Six of its links
-       pointed at ?page=messages and ?page=feed, which are not in the app's
-       valid route list and silently landed on Home. This section now
-       describes only what an athlete can actually do today. -->
   <section class="section-pad" id="how-it-works">
     <div class="container">
-      <div class="reveal text-center mx-auto" style="max-width: 640px;">
+      <div class="reveal text-center mx-auto" style="max-width: 620px;">
         <p class="eyebrow" style="justify-content:center;">How it works</p>
-        <h2>Where you are. Where you want to go. What to do next.</h2>
-        <p class="lede mx-auto">Most athletes get advice in fragments — a coach here, a forum thread there. GOLSZ puts your whole picture in one place and works out the path from it.</p>
+        <h2>Three steps.</h2>
       </div>
-
       <div class="card-grid cols-3 mt-lg">
         <article class="step-card reveal">
-          <div class="step-num">1</div>
-          <h3>Build your Sports Passport</h3>
-          <p>Your sport, position, club, level, school year, measurements, highlights and career history — the record everything else is built on. It's yours, and you can share it with a coach through a link they can open without an account.</p>
+          <div class="step-num">01</div>
+          <h3>Build your Passport</h3>
+          <p>Create the athletic record Scout uses to understand you.</p>
         </article>
         <article class="step-card reveal">
-          <div class="step-num">2</div>
-          <h3>Talk to AI Scout</h3>
-          <p>Scout asks about your situation and what you're aiming for, then answers in the context of your actual Passport instead of giving generic advice. It tells you when it doesn't know something rather than guessing.</p>
+          <div class="step-num">02</div>
+          <h3>Tell Scout your goal</h3>
+          <p>College, academy, semi-pro, professional, or simply getting better.</p>
         </article>
         <article class="step-card reveal">
-          <div class="step-num">3</div>
-          <h3>Work your plan</h3>
-          <p>Your goal in your own words, the pathway that fits it, a development plan, target schools and clubs, and benchmarks you can retest to see whether you're actually moving.</p>
+          <div class="step-num">03</div>
+          <h3>Follow your path</h3>
+          <p>Personalised next steps, benchmarks and milestones based on where you actually stand.</p>
         </article>
       </div>
+    </div>
+  </section>
 
-      <div class="track-section" id="athletes" style="border-top:none;">
-        <div class="track-head reveal">
-          <div>
-            <p class="eyebrow">Built around your goal</p>
-            <h3 style="font-family: var(--font-display); font-size: clamp(1.6rem, 2vw + 1rem, 2.2rem); font-weight:700; margin-bottom:0;">NCAA, academy, semi-pro or professional.</h3>
-          </div>
-          <a href="golsz-app.html" class="btn btn-ghost">Start free</a>
+  <!-- ======================= GOALS ======================= -->
+  <section class="section-pad" style="background: var(--charcoal); border-top:1px solid var(--border-strong); border-bottom:1px solid var(--border-strong);" id="goals">
+    <div class="container">
+      <div class="reveal mx-auto" style="max-width: 720px;">
+        <p class="eyebrow">Your goal</p>
+        <h2>Your goal determines your path.</h2>
+        <p class="lede">Tell Scout what you're chasing. GOLSZ builds your milestones, benchmarks and next steps around that goal, instead of forcing every athlete through the same plan.</p>
+        <div class="goal-chips" aria-label="Example goals">
+          <span class="goal-chip">NCAA</span>
+          <span class="goal-chip">NAIA</span>
+          <span class="goal-chip">JUCO</span>
+          <span class="goal-chip">U Sports</span>
+          <span class="goal-chip">Academy</span>
+          <span class="goal-chip">European club</span>
+          <span class="goal-chip">Semi-professional</span>
+          <span class="goal-chip">Professional</span>
+          <span class="goal-chip">Get measurably better</span>
         </div>
-        <p class="lede reveal" style="margin-top: 1rem;">A path to NCAA Division I is not a path to a European academy, and neither looks like a path to a professional contract. You tell Scout what you're actually chasing — in your own words — and the plan, the milestones and the targets are built around that goal, not a generic template.</p>
-        <ul class="check-list reveal" style="margin-top:1.4rem; max-width:660px;">
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Your goal, your words.</strong> Written on your Passport and editable any time. Scout won't quietly overwrite something you wrote yourself.</span></li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Pathway and milestones</strong> for NCAA, NAIA, JUCO, U Sports, academy, European club, semi-professional and professional routes.</span></li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Target schools and clubs</strong> with contact tracking and follow-up reminders, plus outreach emails Scout can draft for you.</span></li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Benchmarks you can retest</strong> — recorded with how they were measured, so a hand-timed sprint is never quietly compared against an electronic one.</span></li>
-        </ul>
       </div>
+    </div>
+  </section>
 
-      <div class="track-section" id="honest">
-        <div class="track-head reveal">
-          <div>
-            <p class="eyebrow">What GOLSZ won't do</p>
-            <h3 style="font-family: var(--font-display); font-size: clamp(1.6rem, 2vw + 1rem, 2.2rem); font-weight:700; margin-bottom:0;">No invented numbers. No false promises.</h3>
-          </div>
+  <!-- ======================= TRUST ======================= -->
+  <section class="section-pad" id="trust">
+    <div class="container">
+      <div class="reveal mx-auto" style="max-width: 760px;">
+        <p class="eyebrow">Why trust it</p>
+        <h2>Built to tell athletes the truth.</h2>
+        <div class="trust-grid">
+          <div class="trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>No invented benchmarks.</strong> If GOLSZ has no verified data, it shows none.</span></div>
+          <div class="trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>No guaranteed scholarships or contracts.</strong> Ever.</span></div>
+          <div class="trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Scout says when it doesn't know.</strong> Rather than filling the gap.</span></div>
+          <div class="trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Your data stays tied to its source.</strong> Measured how, when, by whom.</span></div>
+          <div class="trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>General guidance, not diagnosis.</strong> Scout points you to a professional.</span></div>
+          <div class="trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Your goal, your words.</strong> Scout won't overwrite what you wrote.</span></div>
         </div>
-        <p class="lede reveal" style="margin-top: 1rem;">Recruiting is full of people happy to sell you a guarantee. We'd rather be useful than impressive, so it's worth being blunt about the limits.</p>
-        <ul class="check-list reveal" style="margin-top:1.4rem; max-width:660px;">
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Scout says "I don't know."</strong> Where GOLSZ has no verified data for your sport, it says so and gives general guidance rather than inventing a requirement you might train against for months.</span></li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span><strong>No guaranteed outcomes.</strong> No promises of scholarships, trials or contracts — from us or from Scout.</span></li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Not a medical service.</strong> Scout won't diagnose an injury, prescribe treatment, or give you a weight-cutting plan. It will tell you when to see a physio, a doctor or a dietitian.</span></li>
-          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Deepest for soccer and basketball</strong> today. Other sports work, and Scout will say plainly where its knowledge of yours is thinner.</span></li>
-        </ul>
       </div>
     </div>
   </section>
 
   <!-- ======================= PRICING ======================= -->
-  <!-- Mirrors PLANS in golsz-app.html. If one changes, change both. -->
-  <section class="section-pad" style="background: var(--charcoal); border-top:1px solid var(--border); border-bottom:1px solid var(--border);" id="pricing">
+  <!-- Prices here are the marketing source of truth as of 2026-08-10.
+       PLANS in golsz-app.html and the Stripe Payment Links must be brought
+       into line — see the note handed back with this change. -->
+  <section class="section-pad" style="background: var(--charcoal); border-top:1px solid var(--border-strong); border-bottom:1px solid var(--border-strong);" id="pricing">
     <div class="container">
-      <div class="reveal text-center mx-auto" style="max-width: 640px;">
+      <div class="reveal text-center mx-auto" style="max-width: 620px;">
         <p class="eyebrow" style="justify-content:center;">Pricing</p>
-        <h2>Start free. Pay only if it's working.</h2>
-        <p class="lede mx-auto">Your Sports Passport and AI Scout intake are free. Paid plans add the planning tools and more daily Scout questions.</p>
+        <h2>Start free. Upgrade when it's working.</h2>
       </div>
 
       <div class="card-grid cols-4 mt-lg">
-        <article class="card reveal">
-          <p class="badge-pill" style="visibility:hidden;" aria-hidden="true">Most popular</p>
-          <h3 style="margin-top:0.6rem;">Free</h3>
-          <p style="font-family: var(--font-mono); font-size:1.7rem; font-weight:700; color: var(--gold-bright); margin:0.2rem 0 0.8rem;">$0</p>
-          <p>Sports Passport, AI Scout intake and goal discovery, Passport Strength. 3 Scout questions a day, 40 in total.</p>
+        <article class="card plan reveal">
+          <h3>Free</h3>
+          <p class="plan-price">&euro;0</p>
+          <p class="plan-for">Try it. See where you stand before paying anything.</p>
+          <ul class="plan-feats">
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Sports Passport</span></li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Scout intake &amp; goal discovery</span></li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Passport Strength score</span></li>
+          </ul>
+          <p class="plan-scout">3 Scout questions/day &middot; 40 total</p>
+          <a href="golsz-app.html" class="btn btn-ghost">Start free</a>
         </article>
-        <article class="card reveal">
-          <p class="badge-pill" style="visibility:hidden;" aria-hidden="true">Most popular</p>
-          <h3 style="margin-top:0.6rem;">Basic</h3>
-          <p style="font-family: var(--font-mono); font-size:1.7rem; font-weight:700; color: var(--gold-bright); margin:0.2rem 0 0.8rem;">$6<span style="font-size:0.9rem; color: var(--ink-muted); font-weight:400;">/mo</span></p>
-          <p>Everything in Free, plus your pathway, target lists, benchmarks and PDF Passport export. 8 questions a day, no lifetime cap.</p>
+
+        <article class="card plan reveal">
+          <h3>Basic</h3>
+          <p class="plan-price">&euro;6<small>/mo</small></p>
+          <p class="plan-for">For the athlete who knows the goal and needs the plan.</p>
+          <ul class="plan-feats">
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Everything in Free</span></li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Personalised pathway &amp; milestones</span></li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Target schools &amp; clubs</span></li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Benchmark tracking</span></li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>PDF Passport export</span></li>
+          </ul>
+          <p class="plan-scout">8 Scout questions/day &middot; no lifetime cap</p>
+          <a href="golsz-app.html" class="btn btn-ghost">Choose Basic</a>
         </article>
-        <article class="card reveal">
+
+        <article class="card plan is-featured reveal">
           <p class="badge-pill">Most popular</p>
           <h3 style="margin-top:0.6rem;">Pro</h3>
-          <p style="font-family: var(--font-mono); font-size:1.7rem; font-weight:700; color: var(--gold-bright); margin:0.2rem 0 0.8rem;">$14<span style="font-size:0.9rem; color: var(--ink-muted); font-weight:400;">/mo</span></p>
-          <p>Everything in Basic, plus your training and development plan, the full Passport Strength breakdown, and richer outreach tracking. 15 a day.</p>
+          <p class="plan-price">&euro;15<small>/mo</small></p>
+          <p class="plan-for">For athletes actively working a recruiting cycle.</p>
+          <ul class="plan-feats">
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Everything in Basic</span></li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Training &amp; development plan</span></li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Full Passport Strength breakdown</span></li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Outreach tracking &amp; follow-ups</span></li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Identity verification</span></li>
+          </ul>
+          <p class="plan-scout">15 Scout questions/day</p>
+          <a href="golsz-app.html" class="btn btn-primary">Choose Pro</a>
         </article>
-        <article class="card reveal">
-          <p class="badge-pill" style="visibility:hidden;" aria-hidden="true">Most popular</p>
-          <h3 style="margin-top:0.6rem;">Elite</h3>
-          <p style="font-family: var(--font-mono); font-size:1.7rem; font-weight:700; color: var(--gold-bright); margin:0.2rem 0 0.8rem;">$30<span style="font-size:0.9rem; color: var(--ink-muted); font-weight:400;">/mo</span></p>
-          <p>Everything in Pro, with the highest daily Scout allowance — for athletes in an active recruiting window. 20 a day.</p>
+
+        <article class="card plan reveal">
+          <h3>Elite</h3>
+          <p class="plan-price">&euro;30<small>/mo</small></p>
+          <p class="plan-for">For an athlete in the middle of a live recruiting window.</p>
+          <ul class="plan-feats">
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Everything in Pro</span></li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Highest daily Scout allowance</span></li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Priority access to new features</span></li>
+          </ul>
+          <p class="plan-scout">20 Scout questions/day</p>
+          <a href="golsz-app.html" class="btn btn-ghost">Choose Elite</a>
         </article>
       </div>
 
-      <div class="text-center" style="margin-top:2.4rem;">
-        <a href="golsz-app.html" class="btn btn-primary">Create your free Passport <span aria-hidden="true">&rarr;</span></a>
-        <p class="field-hint" style="margin-top:0.9rem;">No card needed to start. Cancel any time. Under 16? A parent creates and manages the account.</p>
-      </div>
+      <p class="field-hint text-center" style="margin-top:1.6rem;">No card needed to start &middot; Cancel any time &middot; Under 16? A parent creates and manages the account.</p>
     </div>
   </section>
 
   <!-- ======================= ABOUT ======================= -->
   <section class="section-pad" id="about-section">
     <div class="container">
-      <div class="reveal text-center mx-auto" style="max-width: 640px;">
+      <div class="reveal text-center mx-auto" style="max-width: 660px;">
         <p class="eyebrow" style="justify-content:center;">About GOLSZ</p>
         <h2>Every athlete deserves a real plan.</h2>
-        <p class="lede mx-auto">GOLSZ started with a simple observation: the athletes who make it are rarely the ones with the most talent. They're the ones who knew what to do next.</p>
-      </div>
-
-      <div class="reveal mx-auto" style="max-width: 720px; margin-top: 2.5rem; border-top: 1px solid var(--border); padding-top: 2.5rem;">
-        <p>Good guidance in sport is unevenly distributed. If you're at the right club, in the right country, with the right coach, someone tells you which showcase matters, what a college actually looks for, and when to send the email. If you're not, you find out too late — and talent is not the thing that decided it.</p>
-        <p style="margin-bottom:0;">GOLSZ is an attempt to hand that guidance to any athlete with a phone. Not a promise that you'll make it, and not a shortcut — a clear picture of where you stand, an honest read on where you could get to, and the next concrete thing to do about it. We'd rather tell you something true and unwelcome than something encouraging and invented.</p>
+        <p class="lede mx-auto">Good sports guidance is unevenly distributed. If you're at the right club, in the right country, with the right coach, someone tells you what matters and when. If you're not, you find out too late.</p>
+        <p class="lede mx-auto">GOLSZ gives any athlete access to structured, personalised guidance — regardless of where they live or who they know.</p>
       </div>
     </div>
   </section>
 
-  <!-- Founding story -->
-  <section class="section-pad" style="background: var(--charcoal); border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
+  <!-- Company story — deliberately compact and near the bottom. -->
+  <section class="section-pad-sm" style="background: var(--charcoal); border-top:1px solid var(--border-strong); border-bottom:1px solid var(--border-strong);">
     <div class="container">
-      <div class="reveal mx-auto" style="max-width: 720px;">
+      <div class="reveal mx-auto" style="max-width: 660px;">
         <p class="eyebrow">Our story</p>
-        <h3 style="font-family: var(--font-display); font-size: clamp(1.5rem, 1.8vw + 1rem, 2rem); font-weight:700;">Founded in Nicosia. Built for the world.</h3>
-        <p>GOLSZ is built by a small team in Nicosia, Cyprus — a growing hub for sport, tech, and finance at the crossroads of Europe, the Middle East, and Africa. The app is live and open: you can create a Passport and talk to Scout today. We're building it in the open with early athletes and their families, and the product deepens sport by sport as real, verifiable data goes in.</p>
-        <p style="margin-bottom:0;">If you're an athlete, a parent, or a coach with a view on what's missing, we want to hear it — <a href="contact.html">tell us</a>. We also welcome conversations with people who <a href="contact.html#investors">invest in early-stage sport, careers and AI</a>.</p>
+        <h3>Founded in Nicosia. Built for the world.</h3>
+        <p style="margin-bottom:0;">GOLSZ is built by a small team in Nicosia, Cyprus, working with early athletes and their families. We also welcome conversations with people who <a href="contact.html#investors">invest in early-stage sport, careers and AI</a>.</p>
       </div>
     </div>
   </section>
@@ -281,8 +396,9 @@
       <div class="cta-band reveal">
         <p class="eyebrow" style="justify-content:center;">Every goal has a path</p>
         <h2>Find out where you actually stand.</h2>
-        <p class="lede mx-auto" style="margin-bottom:1.8rem;">Build your Sports Passport and get Scout's honest read on your goal. Free, no card, about ten minutes.</p>
+        <p class="lede mx-auto" style="margin-bottom:1.8rem;">Build your Sports Passport and let Scout help you figure out what comes next.</p>
         <a href="golsz-app.html" class="btn btn-primary">Start free <span aria-hidden="true">&rarr;</span></a>
+        <p class="field-hint" style="margin-top:1rem; margin-bottom:0;">No card required.</p>
       </div>
     </div>
   </section>
@@ -299,16 +415,17 @@
       <div class="footer-col">
         <h4>Site</h4>
         <ul>
-          <li><a href="index.html">Home</a></li>
+          <li><a href="index.html#product">Product</a></li>
+          <li><a href="index.html#how-it-works">How it works</a></li>
           <li><a href="index.html#pricing">Pricing</a></li>
-          <li><a href="golsz-app.html">App</a></li>
+          <li><a href="index.html#about-section">About</a></li>
           <li><a href="contact.html">Contact</a></li>
         </ul>
       </div>
       <div class="footer-col">
         <h4>Get involved</h4>
         <ul>
-          <li><a href="golsz-app.html">Create your Passport</a></li>
+          <li><a href="golsz-app.html">Start free</a></li>
           <li><a href="contact.html">Contact us</a></li>
           <li><a href="contact.html#investors">Investor inquiries</a></li>
           <li><a href="mailto:hello@golsz.com">hello@golsz.com</a></li>
