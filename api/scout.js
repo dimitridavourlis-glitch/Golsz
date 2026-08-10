@@ -1135,6 +1135,91 @@ async function autoFixPathwayType(userId, derivedType) {
   } catch (e) { console.error("GOLSZ autoFixPathwayType failed:", e); return false; }
 }
 
+// ---- CHANNEL 3, STRUCTURALLY -------------------------------------------
+// The running conversation note used to be one undivided lump of model-
+// authored prose, carried forward and rewritten every turn. That is the
+// worst possible container for a goal: nothing in the format distinguishes
+// "what they are aiming at NOW" from "what we discussed in March", so a
+// superseded goal simply keeps getting restated, and after enough turns it
+// reads as current again. Overruling it with a prompt sentence worked, but
+// it depended on obedience — the model had to choose to believe the
+// override over the paragraph directly above it.
+//
+// This removes the choice. The block is now composed server-side, section
+// by section, and the five CURRENT sections are rendered from live
+// structured state on every single turn. They are not carried forward and
+// the model never writes them, so a stale goal cannot occupy them no matter
+// how long the conversation runs or what the previous note said.
+//
+// The model still authors narrative — that is genuinely valuable and this
+// does not try to replace it — but it lands in USEFUL CONVERSATION HISTORY,
+// underneath the current state, where it is clearly context rather than
+// fact. Any sentence in it that declares a DIFFERENT direction than the
+// current goal is moved to HISTORICAL, not deleted, so Scout can still say
+// "you previously considered the CPL route" and cannot say it is the plan.
+function splitNarrativeByGoal(narrative, currentGoalType) {
+  const current = [];
+  const historical = [];
+  if (typeof narrative !== "string" || !narrative.trim()) return { current, historical };
+  for (const s of narrative.split(/(?<=[.!?])\s+/)) {
+    const line = s.trim();
+    if (!line) continue;
+    const t = currentGoalType ? classifyGoalText(line) : null;
+    if (t && t !== currentGoalType) historical.push(line);
+    else current.push(line);
+  }
+  return { current, historical };
+}
+
+// Renders the seven-section note. Everything above HISTORICAL is derived
+// from this turn's structured reads; nothing above HISTORICAL survives from
+// a previous turn.
+function composeStructuredSummary({ goalText, goalSource, athleteState, narrative, entLocked, entUpgradeName }) {
+  const rd = athleteState && athleteState.readiness;
+  const currentGoalType = classifyGoalText(goalText);
+  const { current, historical } = splitNarrativeByGoal(narrative, currentGoalType);
+  const L = [];
+  L.push("CONVERSATION NOTE — rebuilt from their live record this turn. The CURRENT sections below are regenerated from the database every message and are the only description of where this athlete stands. Nothing carried over from an earlier turn can contradict them.");
+
+  L.push(`\nCURRENT GOAL / CURRENT DIRECTION:\n- ${goalText ? `"${String(goalText).slice(0, 200)}"` : "not set yet — establishing it is the priority"}${goalSource === "athlete_edited" ? " (written by the athlete themselves — never reword it)" : ""}`);
+
+  const st = [];
+  if (athleteState) {
+    st.push(`sport: ${athleteState.sport || "unknown"}`);
+    st.push(`Passport complete: ${athleteState.profileComplete ? "yes" : "no"}`);
+    if (rd) { st.push(`Passport Strength: ${rd.composite}/100`); st.push(`weakest area: ${DIMENSION_LABEL[rd.weakest]}`); }
+  }
+  L.push(`\nCURRENT ATHLETE STATE:\n- ${st.length ? st.join("; ") : "nothing on file yet"}`);
+
+  L.push(`\nCURRENT PLAN:\n- ${athleteState && athleteState.pathwayCreated
+    ? `${athleteState.pathwayType || "no category"}${athleteState.pathwayTimeline ? `, timeline ${athleteState.pathwayTimeline}` : ""}, ${athleteState.milestonesDone}/${athleteState.milestoneCount} milestones done${athleteState.pathwayComplete ? "" : " — a shell, nothing to act on yet"}`
+    : "no Plan built yet"}`);
+
+  const gaps = [];
+  if (rd && rd.quality && rd.quality.missing && rd.quality.missing.length) gaps.push(`Passport missing: ${rd.quality.missing.join(", ")}`);
+  if (rd && rd.performance && rd.performance.metricsTracked === 0) gaps.push("no benchmarks recorded");
+  if (rd && rd.development && rd.development.total === 0) gaps.push("no development plan");
+  if (athleteState && !athleteState.targetsCount) gaps.push("no targets being contacted");
+  if (entLocked && entLocked.length && entUpgradeName) gaps.push(`needs beyond their plan: ${entLocked.join("; ")} (lowest plan covering these: ${entUpgradeName})`);
+  L.push(`\nCURRENT NEEDS / GAPS:\n- ${gaps.length ? gaps.join("\n- ") : "nothing outstanding in their record"}`);
+
+  const facts = [];
+  if (athleteState && athleteState.benchmarks && athleteState.benchmarks.length) {
+    facts.push(`benchmarks: ${athleteState.benchmarks.map((b) => `${b.metric} ${b.value}${b.unit || ""}`).join("; ")}`);
+  }
+  if (athleteState && athleteState.devItems && athleteState.devItems.length) facts.push(`development items: ${athleteState.devItems.length}`);
+  if (athleteState && athleteState.targetsCount) facts.push(`targets: ${athleteState.targetsCount}`);
+  L.push(`\nCONFIRMED CURRENT FACTS:\n- ${facts.length ? facts.join("\n- ") : "none recorded yet"}`);
+
+  L.push(`\nHISTORICAL GOALS / SUPERSEDED INFORMATION (true EARLIER, not now):\n${historical.length ? historical.map((h) => `- ${h}`).join("\n") : "- none"}`);
+  if (historical.length) {
+    L.push(`These describe directions the athlete has moved on from. Refer to them as history when it is genuinely useful ("you previously looked at that route") — never as what they are working toward. Their direction is the CURRENT GOAL section above, and only an explicit new statement from them changes it.`);
+  }
+
+  L.push(`\nUSEFUL CONVERSATION HISTORY (your own note from earlier turns — context only; the athlete did not say this and cannot see it):\n${current.length ? current.map((c) => `- ${c}`).join("\n") : "- nothing yet"}`);
+  return L.join("\n");
+}
+
 // ---- 5 / RECOMMEND -------------------------------------------------------
 // Which GATED features this athlete's CURRENT state actually calls for.
 //
@@ -5090,19 +5175,15 @@ A newer source always beats an older one at the same level. If memory says one t
     // the model read it as something the athlete had just said — and in
     // production replied "that summary doesn't match what we've actually
     // discussed", arguing with a message nobody sent.
+    // Gated on there BEING carried-forward context, which is exactly when a
+    // stale goal can survive. On the first message of a conversation there
+    // is no note to go stale and ATHLETE STATE above already says all of it.
     if (priorSummaryForPrompt) {
-      athleteBlock += `\n\nCONVERSATION SO FAR (YOUR OWN running note from earlier turns — context only. The athlete did NOT say this and cannot see it. Never quote it back, never argue with it, never treat it as their latest message):\n${clampBlock(priorSummaryForPrompt, 700)}`;
-      // THE THIRD CHANNEL. The running note is free prose, so it cannot be
-      // classified entry-by-entry the way scout_context and scout_memory
-      // are — and it is rewritten every turn, so a goal the athlete has
-      // since changed keeps getting restated in it indefinitely. In
-      // production this was the last thing still saying "you're aiming at a
-      // CPL professional contract" after both structured channels had been
-      // corrected. The note is not edited; it is simply overruled here, at
-      // the point of use, by the goal the athlete actually wrote.
-      if (goalText) {
-        athleteBlock += `\n\nTHE RUNNING NOTE ABOVE IS OLDER THAN THEIR GOAL. Their goal, as they wrote it, is "${String(goalText).slice(0, 200)}". Wherever the note describes a different aim, the note is out of date and the goal above wins — silently, without announcing the discrepancy and without asking them to confirm it again. Never tell them their current goal was "a mistake", "retracted" or "corrected" unless they said so themselves in this conversation.`;
-      }
+      athleteBlock += `\n\n${composeStructuredSummary({
+        goalText, goalSource, athleteState,
+        narrative: clampBlock(priorSummaryForPrompt, 700),
+        entLocked: ent.lockedLabels, entUpgradeName: ent.upgradeToName,
+      })}`;
     }
 
     dailyLimit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)

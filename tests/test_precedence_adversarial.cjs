@@ -245,17 +245,104 @@ ck("internal terminology still rewritten through the combined path",
    /suggested_pathway/.test(sanitizeReplyText("I'm holding the suggested_pathway build for one more message, and your speed is fine.") || ""), false);
 
 
-// THE THIRD CHANNEL — the running conversation note.
-// Free prose, rewritten every turn, so a superseded goal keeps being
-// restated in it. It was the last thing still saying "you're aiming at a
-// CPL professional contract" after both structured channels were corrected.
-// It is overruled at the point of use rather than edited.
-ck("the running note is explicitly overruled by the written goal",
-   /THE RUNNING NOTE ABOVE IS OLDER THAN THEIR GOAL/.test(SCOUT), true);
-ck("...the goal is quoted next to it", /Their goal, as they wrote it, is/.test(SCOUT), true);
-ck("...the override is silent, not announced", /silently, without announcing the discrepancy/.test(SCOUT), true);
-ck("...and Scout may not call the current goal a mistake",
-   /Never tell them their current goal was "a mistake", "retracted" or "corrected"/.test(SCOUT), true);
+// =========================================================================
+// CHANNEL 3, STRUCTURALLY — the running note is composed, not carried
+// =========================================================================
+// The note used to be one undivided lump of model prose. Nothing in the
+// format separated "aiming at now" from "discussed in March", so a
+// superseded goal kept being restated until it read as current again.
+// A prompt override fixed it but depended on obedience. Now the five
+// CURRENT sections are rendered from live structured state every turn and
+// the model never writes them, so a stale goal cannot occupy them at all.
+// composeStructuredSummary closes over DIMENSION_LABEL from
+// api/_readiness.js; supply the real one.
+const { DIMENSION_LABEL } = require("../api/_readiness.js");
+eval(slice("function splitNarrativeByGoal(narrative, currentGoalType) {", "// ---- 5 / RECOMMEND", "summary composer"));
+{
+  const STATE = {
+    sport: "Soccer", profileComplete: true,
+    pathwayCreated: true, pathwayType: "ncaa", pathwayTimeline: "2027", milestoneCount: 0, milestonesDone: 0, pathwayComplete: false,
+    targetsCount: 0, benchmarks: [{ metric: "10m", value: 2.0, unit: "s" }], devItems: [],
+    readiness: { composite: 54, weakest: "development", quality: { missing: ["Highlights"] }, performance: { metricsTracked: 1, metricsRetested: 0 }, development: { total: 0 } },
+  };
+  // A note thoroughly polluted with the OLD goal, the realistic long
+  // conversation case.
+  const staleNote = "The athlete is chasing a CPL professional contract. We agreed the U Sports draft into the CPL is the main route. His trial is in two weeks. Recovery speed is the real gap. He needs minutes at Tusculum.";
+  const outS = composeStructuredSummary({
+    goalText: NCAA_GOAL, goalSource: "athlete_edited", athleteState: STATE,
+    narrative: staleNote, entLocked: ["a development plan"], entUpgradeName: "Pro",
+  });
+
+  for (const h of ["CURRENT GOAL / CURRENT DIRECTION", "CURRENT ATHLETE STATE", "CURRENT PLAN", "CURRENT NEEDS / GAPS", "CONFIRMED CURRENT FACTS", "HISTORICAL GOALS / SUPERSEDED INFORMATION", "USEFUL CONVERSATION HISTORY"]) {
+    ck(`section present: ${h}`, outS.includes(h), true);
+  }
+  // Ordering is the point: current state above history, always.
+  ck("current goal comes before historical", outS.indexOf("CURRENT GOAL") < outS.indexOf("HISTORICAL GOALS"), true);
+  ck("historical comes before free narrative", outS.indexOf("HISTORICAL GOALS") < outS.indexOf("USEFUL CONVERSATION HISTORY"), true);
+
+  // The current sections are rendered from STRUCTURED state, not the note.
+  const goalSection = outS.slice(outS.indexOf("CURRENT GOAL"), outS.indexOf("CURRENT ATHLETE STATE"));
+  ck("the current goal section holds the written goal", goalSection.includes(NCAA_GOAL), true);
+  ck("...and no trace of the superseded one", /CPL/.test(goalSection), false);
+  ck("...and marks it as athlete-authored", /written by the athlete themselves/.test(goalSection), true);
+  const planSection = outS.slice(outS.indexOf("CURRENT PLAN"), outS.indexOf("CURRENT NEEDS"));
+  ck("the plan section is rendered from live state", /ncaa/.test(planSection), true);
+  ck("...and names the empty Plan honestly", /a shell, nothing to act on yet/.test(planSection), true);
+  const stateSection = outS.slice(outS.indexOf("CURRENT ATHLETE STATE"), outS.indexOf("CURRENT PLAN"));
+  ck("the state section carries the real Passport Strength", /54\/100/.test(stateSection), true);
+  const needsSection = outS.slice(outS.indexOf("CURRENT NEEDS"), outS.indexOf("CONFIRMED CURRENT FACTS"));
+  ck("needs are derived from the record", /no benchmarks recorded|Passport missing|no development plan|no targets/.test(needsSection), true);
+  ck("...and carry the computed lowest plan", /lowest plan covering these: Pro/.test(needsSection), true);
+  const factsSection = outS.slice(outS.indexOf("CONFIRMED CURRENT FACTS"), outS.indexOf("HISTORICAL GOALS"));
+  ck("confirmed facts carry live benchmarks", /10m 2s/.test(factsSection), true);
+
+  // The stale goal sentences land in HISTORICAL — preserved, not deleted.
+  const histSection = outS.slice(outS.indexOf("HISTORICAL GOALS"), outS.indexOf("USEFUL CONVERSATION HISTORY"));
+  ck("the old goal sentence is filed as history", /CPL professional contract/.test(histSection), true);
+  ck("...and the old route with it", /U Sports draft/.test(histSection), true);
+  ck("...preserved verbatim, not deleted", outS.includes("chasing a CPL professional contract"), true);
+  ck("history may be referenced as history", /you previously looked at that route/.test(outS), true);
+  ck("...but never as what they are working toward", /never as what they are working toward/.test(outS), true);
+  // Narrative that says nothing about direction stays useful context.
+  const useful = outS.slice(outS.indexOf("USEFUL CONVERSATION HISTORY"));
+  ck("a non-directional note stays in useful history", /Recovery speed is the real gap/.test(useful), true);
+  ck("...as does a factual one", /trial is in two weeks/.test(useful), true);
+
+  // Turn count cannot erode it: the CURRENT sections are recomputed, so the
+  // same note after 25 turns produces the same answer.
+  for (let turn = 1; turn <= 25; turn++) {
+    const t = composeStructuredSummary({
+      goalText: NCAA_GOAL, goalSource: "athlete_edited", athleteState: STATE,
+      narrative: staleNote + " ".repeat(turn) + "We keep coming back to the CPL contract as the target.",
+      entLocked: [], entUpgradeName: null,
+    });
+    const g = t.slice(t.indexOf("CURRENT GOAL"), t.indexOf("CURRENT ATHLETE STATE"));
+    if (turn % 5 === 0 || turn === 1) {
+      ck(`turn ${turn}: current goal section still only the written goal`, g.includes(NCAA_GOAL) && !/CPL/.test(g), true);
+      ck(`turn ${turn}: the repeated old goal is still filed as history`,
+         t.indexOf("CPL contract as the target") > t.indexOf("HISTORICAL GOALS"), true);
+    }
+  }
+
+  // A second goal change must move the FIRST new goal into history too.
+  const outEuro = composeStructuredSummary({
+    goalText: "My goal is to play for a top European club", goalSource: "athlete_edited", athleteState: { ...STATE, pathwayType: "european_club" },
+    narrative: "The athlete is now targeting an NCAA Division 1 scholarship. Earlier we looked at a CPL professional contract.",
+    entLocked: [], entUpgradeName: null,
+  });
+  const euroGoal = outEuro.slice(outEuro.indexOf("CURRENT GOAL"), outEuro.indexOf("CURRENT ATHLETE STATE"));
+  ck("after a second change the goal section holds only the newest goal",
+     euroGoal.includes("top European club") && !/NCAA|CPL/.test(euroGoal), true);
+  ck("...the previous goal moves to history", outEuro.indexOf("NCAA Division 1 scholarship") > outEuro.indexOf("HISTORICAL GOALS"), true);
+  ck("...and so does the one before it", outEuro.indexOf("CPL professional contract") > outEuro.indexOf("HISTORICAL GOALS"), true);
+
+  // Degenerate inputs must not throw or fabricate.
+  ck("no goal yet is stated plainly, not invented",
+     /not set yet — establishing it is the priority/.test(composeStructuredSummary({ goalText: null, athleteState: STATE, narrative: staleNote })), true);
+  ck("no narrative produces no history", /- none/.test(composeStructuredSummary({ goalText: NCAA_GOAL, athleteState: STATE, narrative: "" })), true);
+  ck("no athlete state does not throw",
+     typeof composeStructuredSummary({ goalText: NCAA_GOAL, athleteState: null, narrative: "" }) === "string", true);
+}
 
 // The prompt carries the same rule, as defence in depth.
 ck("the prompt forbids narrating the machinery", /WRITE THE ANSWER, NOT YOUR WORKING OUT/.test(SCOUT), true);
