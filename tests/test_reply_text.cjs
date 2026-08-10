@@ -42,4 +42,23 @@ const cases = [withPreamble, '{"reply":"x","a":1}', 'prose only', '{"reply":"y"'
 ck("NO case ever returns something containing \"reply\": or leading brace",
    cases.every(c => { const r = deriveReplyText(B(c)); return r === null || clean(r); }));
 
+
+// TOOL-USE SCRATCHPAD (production, 2026-08-11). Five web searches, the model
+// ran out of output budget before writing the envelope, and the joined
+// between-search commentary was shipped to a real athlete — in the third
+// person. Commentary between tool calls is never the answer; null puts the
+// client on its honest retry path instead.
+const T = (...blocks) => ({ content: blocks });
+const txt = (t) => ({ type: "text", text: t });
+const toolUse = { type: "server_tool_use", id: "x", name: "web_search", input: {} };
+const toolRes = { type: "web_search_tool_result", tool_use_id: "x", content: [] };
+ck("tool-use scratchpad with no envelope yields null, never the scratchpad",
+   deriveReplyText(T(toolUse, toolRes, txt("Good, that confirms the U-21 cutoff detail I need to flag."), toolUse, toolRes, txt("Now I'll write the answer."))) === null);
+ck("a tool-use reply that DID produce an envelope is still extracted",
+   deriveReplyText(T(toolUse, toolRes, txt("Let me check that."), txt('{"reply":"The window opens May 1.","memory_writes":[]}'))) === "The window opens May 1.");
+ck("tool-use envelope split across blocks still reassembles",
+   deriveReplyText(T(toolUse, toolRes, txt('{"reply":"opens in late '), txt('November.","memory_writes":[]}'))) === "opens in late November.");
+ck("plain prose with NO tool blocks still passes through (unchanged)",
+   deriveReplyText(B("Noted on the ankle. What is your plan for minutes?")).startsWith("Noted on the ankle"));
+
 console.log(`\n${p}/${p+f} passed`); process.exit(f?1:0);

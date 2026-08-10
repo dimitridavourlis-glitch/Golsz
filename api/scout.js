@@ -2699,12 +2699,34 @@ function parseReplyObject(clean) {
 //   3. strip the JSON block out and keep any real prose around it
 //   4. null -> the client shows honest error copy, never braces
 function deriveReplyText(data) {
-  const raw = ((data && data.content) || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
+  const blocks = (data && data.content) || [];
+  const raw = blocks.map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
   const clean = raw.replace(/```json|```/g, "").trim();
   const parsed = parseReplyObject(clean);
   if (parsed && typeof parsed.reply === "string" && parsed.reply.trim()) return stripInternalTerminology(parsed.reply.trim());
   const salvaged = salvageJsonValue(clean, "reply");
   if (typeof salvaged === "string" && salvaged.trim()) return stripInternalTerminology(salvaged.trim());
+  // TOOL-USE RESPONSES HAVE NO USABLE PROSE FALLBACK.
+  //
+  // When Scout runs web searches the response comes back as many interleaved
+  // blocks — server_tool_use, web_search_tool_result, and the model's own
+  // between-search notes to itself. If it then runs out of output budget
+  // before writing the envelope, joining every text block yields its private
+  // scratchpad, and the fallback below happily shipped it. Observed in
+  // production on 2026-08-11 after five searches, sent to a real athlete,
+  // discussing him in the third person:
+  //
+  //   "Good, that confirms the U-21 cutoff detail I need to flag. Now to
+  //    answer directly using the record I already have... Now let me write
+  //    the reply."
+  //
+  // Commentary between tool calls is never the answer. Returning null puts
+  // the client on its honest "that didn't come through, retry" path, which
+  // is the correct outcome for a genuinely incomplete generation.
+  //
+  // The prose fallback below stays for the case it was written for: a
+  // single-shot reply where the model wrote plain prose instead of JSON.
+  if (blocks.some((b) => b && (b.type === "server_tool_use" || b.type === "tool_use"))) return null;
   // No recoverable "reply". Drop everything from the first "{" onward and see
   // if the model wrote anything usable before it.
   const brace = clean.indexOf("{");
