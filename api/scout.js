@@ -674,8 +674,50 @@ function isDuplicateRequest(requestId) {
 const CACHE_ELIGIBLE_INTENTS = new Set(["simple_knowledge"]);
 const RESPONSE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-function cacheKeyFor(intent, text, lang, tier) {
-  return `${intent}:${lang}:${tier}:${String(text || "").trim().toLowerCase().slice(0, 300)}`;
+// EVERY INPUT THAT CAN CHANGE THE ANSWER MUST BE IN THE KEY.
+//
+// The cache is meant for simple_knowledge only — questions with no athlete
+// in them. In production that assumption broke: "Which GOLSZ plan do I
+// actually need?" classified as simple_knowledge, and the model answered it
+// from the athlete's live record anyway. The reply was cached under
+// intent+lang+tier+text, so after the account moved to Elite the SAME
+// question replayed the Free-era answer, opening with "You're on Free right
+// now". Personalized advice served under a subscription state that no
+// longer existed.
+//
+// The fingerprint below carries the athlete state that can change such an
+// answer: plan first, then the goal wording, the Plan's real completeness,
+// whether anything is being tracked or contacted, and the Passport Strength
+// score. Change any of them and the key changes, so the old reply is simply
+// never found. Nothing is invalidated or deleted — stale entries just stop
+// matching and expire on their existing TTL.
+//
+// Kept SEPARATE from athleteStateDigest(), which invalidates conversation
+// summaries. That belongs to the memory architecture and is not touched.
+function responseCacheFingerprint(plan, goalText, state) {
+  const rd = state && state.readiness;
+  return [
+    String(plan || "free"),
+    String(goalText || "").trim().toLowerCase().slice(0, 60),
+    state && state.pathwayComplete ? "plan1" : "plan0",
+    String((state && state.pathwayType) || "-"),
+    (state && state.targetsCount) ? "t1" : "t0",
+    rd && rd.performance && rd.performance.metricsTracked ? "b1" : "b0",
+    rd && rd.development && rd.development.total ? "d1" : "d0",
+    rd ? String(rd.composite) : "-",
+  ].join("|");
+}
+
+function cacheKeyFor(intent, text, lang, tier, fingerprint) {
+  return `${intent}:${lang}:${tier}:${fingerprint || "anon"}:${String(text || "").trim().toLowerCase().slice(0, 300)}`;
+}
+
+// A LAST LINE OF DEFENCE. Any reply naming a plan tier is, by definition,
+// specific to the tier the athlete was on when it was written. Those are
+// never shared, whatever the key says.
+function replyIsPlanSpecific(data) {
+  const t = (data && typeof data.reply_text === "string") ? data.reply_text : "";
+  return /\b(Free|Basic|Pro|Elite)\b/.test(t);
 }
 
 async function getCachedResponse(cacheKey) {
@@ -4983,6 +5025,7 @@ export default async function handler(req, res) {
   // plan + goal + pathway state) and used both to select a still-valid
   // cache entry and to stamp any entry written this turn.
   let stateDigest = null;
+  let cacheFingerprint = null; // athlete state the response cache must key on
   if (process.env.SUPABASE_URL) {
     // The athlete this conversation is ABOUT — normally the caller, or a
     // linked under-16 child when a parent is managing them. body.athleteId is
@@ -5081,6 +5124,7 @@ export default async function handler(req, res) {
     athleteSport = athleteState.sport;
     athleteCountry = athleteState.country;
     stateDigest = athleteStateDigest(athleteState, plan, goalDefined);
+    cacheFingerprint = responseCacheFingerprint(plan, goalText, athleteState);
     userPlan = plan;
     userIsAdmin = isAdmin;
     userAiUnlimited = aiUnlimited;
@@ -5467,7 +5511,7 @@ A newer source always beats an older one at the same level. If memory says one t
     // non-personalized, shared answers (simple_knowledge). ----
     let cacheKey = null;
     if (classification && CACHE_ELIGIBLE_INTENTS.has(classification.intent)) {
-      cacheKey = cacheKeyFor(classification.intent, latestText, faqLang, modelTier);
+      cacheKey = cacheKeyFor(classification.intent, latestText, faqLang, modelTier, cacheFingerprint);
       const cached = await getCachedResponse(cacheKey);
       if (cached) {
         console.log("GOLSZ scout cache hit");
@@ -5533,7 +5577,7 @@ A newer source always beats an older one at the same level. If memory says one t
         // before its first await), so a personalized next-move suggestion
         // never gets baked into what a different user sees on a future cache
         // hit for the same generic simple_knowledge answer.
-        if (cacheKey && !profileUpdates && !scoutContextUpdates) await setCachedResponse(cacheKey, classification.intent, modelTier, data);
+        if (cacheKey && !profileUpdates && !scoutContextUpdates && !replyIsPlanSpecific(data)) await setCachedResponse(cacheKey, classification.intent, modelTier, data);
         data.next_move = extractNextBestAction(classification);
         // Same cache-safety ordering as next_move above — these are
         // this-athlete-specific suggestions, attached only after the cache
