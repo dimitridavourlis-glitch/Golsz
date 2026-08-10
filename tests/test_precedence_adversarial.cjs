@@ -244,6 +244,19 @@ ck("empty in, null out", sanitizeReplyText("   "), null);
 ck("internal terminology still rewritten through the combined path",
    /suggested_pathway/.test(sanitizeReplyText("I'm holding the suggested_pathway build for one more message, and your speed is fine.") || ""), false);
 
+
+// THE THIRD CHANNEL — the running conversation note.
+// Free prose, rewritten every turn, so a superseded goal keeps being
+// restated in it. It was the last thing still saying "you're aiming at a
+// CPL professional contract" after both structured channels were corrected.
+// It is overruled at the point of use rather than edited.
+ck("the running note is explicitly overruled by the written goal",
+   /THE RUNNING NOTE ABOVE IS OLDER THAN THEIR GOAL/.test(SCOUT), true);
+ck("...the goal is quoted next to it", /Their goal, as they wrote it, is/.test(SCOUT), true);
+ck("...the override is silent, not announced", /silently, without announcing the discrepancy/.test(SCOUT), true);
+ck("...and Scout may not call the current goal a mistake",
+   /Never tell them their current goal was "a mistake", "retracted" or "corrected"/.test(SCOUT), true);
+
 // The prompt carries the same rule, as defence in depth.
 ck("the prompt forbids narrating the machinery", /WRITE THE ANSWER, NOT YOUR WORKING OUT/.test(SCOUT), true);
 ck("the prompt forbids the third person", /Never write about them in the third person/.test(SCOUT), true);

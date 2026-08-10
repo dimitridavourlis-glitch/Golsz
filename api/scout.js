@@ -5092,6 +5092,17 @@ A newer source always beats an older one at the same level. If memory says one t
     // discussed", arguing with a message nobody sent.
     if (priorSummaryForPrompt) {
       athleteBlock += `\n\nCONVERSATION SO FAR (YOUR OWN running note from earlier turns — context only. The athlete did NOT say this and cannot see it. Never quote it back, never argue with it, never treat it as their latest message):\n${clampBlock(priorSummaryForPrompt, 700)}`;
+      // THE THIRD CHANNEL. The running note is free prose, so it cannot be
+      // classified entry-by-entry the way scout_context and scout_memory
+      // are — and it is rewritten every turn, so a goal the athlete has
+      // since changed keeps getting restated in it indefinitely. In
+      // production this was the last thing still saying "you're aiming at a
+      // CPL professional contract" after both structured channels had been
+      // corrected. The note is not edited; it is simply overruled here, at
+      // the point of use, by the goal the athlete actually wrote.
+      if (goalText) {
+        athleteBlock += `\n\nTHE RUNNING NOTE ABOVE IS OLDER THAN THEIR GOAL. Their goal, as they wrote it, is "${String(goalText).slice(0, 200)}". Wherever the note describes a different aim, the note is out of date and the goal above wins — silently, without announcing the discrepancy and without asking them to confirm it again. Never tell them their current goal was "a mistake", "retracted" or "corrected" unless they said so themselves in this conversation.`;
+      }
     }
 
     dailyLimit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
