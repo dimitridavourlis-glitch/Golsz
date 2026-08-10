@@ -5339,3 +5339,147 @@ grant execute on function admin_scout_margin_summary() to authenticated;
 -- Confirm no entitlement moved:
 --   select plan, count(*) from profiles group by plan order by plan;
 --   -- must match the distribution from before this migration ran.
+
+-- ============================================================
+-- 118 — Revoke PUBLIC/anon EXECUTE on admin_scout_margin_summary()
+--
+-- Found while verifying migration 117 in production:
+--   has_function_privilege('anon', 'admin_scout_margin_summary()', 'execute')
+--   => true
+--
+-- Not introduced by 117. Postgres grants EXECUTE to PUBLIC by default on
+-- every newly created function, and `create or replace` preserves the
+-- existing ACL, so this has been inherited since migration 056 created the
+-- function. Migration 102 revoked PUBLIC execute on several service-role-
+-- only functions but never covered this one.
+--
+-- SEVERITY: low, but worth closing. The function is security definer with
+-- an in-body `if not is_admin() then raise exception 'not authorized'`, so
+-- an anon caller already gets an exception rather than data. This removes
+-- the ability to even reach that check — defence in depth, not a fix for a
+-- live leak. Nothing was exposed.
+--
+-- WHAT MUST KEEP WORKING
+-- The Admin Panel calls this through supabase-js:
+--     sb.rpc("admin_scout_margin_summary")     -- golsz-app.html
+-- which sends the signed-in admin's JWT, so PostgREST executes it as role
+-- `authenticated`. That grant is therefore preserved deliberately and
+-- explicitly re-granted below, so this migration is idempotent and cannot
+-- lock an admin out even if run twice or out of order.
+--
+-- Admin-ness itself is NOT a database role — it is profiles.is_admin, read
+-- by is_admin() via auth.uid(). Every authenticated user may call the
+-- function; only an admin gets past the first statement inside it. That
+-- two-layer arrangement is unchanged here.
+--
+-- NO ENTITLEMENT CHANGES. This is a grant on a read-only reporting
+-- function. It touches no profile row, no plan, no feature gate.
+-- ============================================================
+
+revoke execute on function admin_scout_margin_summary() from public;
+revoke execute on function admin_scout_margin_summary() from anon;
+
+-- Re-assert the grant the application actually needs. Harmless if already
+-- present; the point is that this file alone is sufficient to leave the
+-- function in the correct end state.
+grant execute on function admin_scout_margin_summary() to authenticated;
+
+-- Verification:
+--   select has_function_privilege('anon', p.oid, 'execute')          as anon,
+--          has_function_privilege('authenticated', p.oid, 'execute') as authed,
+--          p.prosecdef                                               as secdef
+--     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+--    where n.nspname = 'public' and p.proname = 'admin_scout_margin_summary';
+--   -- expected: anon = false, authed = true, secdef = true
+--
+-- Behavioural check, impersonating a real caller inside a rolled-back
+-- transaction (substitute a real profiles.id for each):
+--   begin;
+--     set local role authenticated;
+--     set local request.jwt.claims = '{"sub":"<NON-ADMIN-UUID>"}';
+--     select * from admin_scout_margin_summary();   -- expect: not authorized
+--   rollback;
+
+-- ============================================================
+-- 119 — admin_scout_margin_summary() never actually ran  [BUG FIX]
+--
+-- Found by the behavioural verification of migration 118: impersonating a
+-- real admin (set local role authenticated + their JWT claims, inside a
+-- rolled-back transaction) and calling the function produced:
+--
+--   ERROR 42804: structure of query does not match function result type
+--   DETAIL: Returned type plan_tier does not match expected type text
+--           in column 1.
+--
+-- profiles.plan is the plan_tier ENUM. The function's signature declares
+-- `returns table (plan text, ...)`. PostgreSQL does not implicitly coerce an
+-- enum to text in a RETURNS TABLE, so the function raised on its first row
+-- every single time it was called.
+--
+-- NOT INTRODUCED BY 117 OR 118. The mismatch dates from migration 056,
+-- which created the function; 117 copied the body verbatim and changed only
+-- the price literals, and 118 changed only grants. This has been broken for
+-- every admin since the function shipped — the Admin Panel's margin card
+-- has been silently erroring, which is exactly why nobody noticed a wrong
+-- number: there was never a number.
+--
+-- It also means the ~60%-under-reporting risk flagged when 117 was written
+-- was hypothetical: the function could not report anything at all. 117 was
+-- still correct and necessary — this makes it reachable.
+--
+-- There were TWO type mismatches, found one at a time because PostgreSQL
+-- reports only the first offending column:
+--   column 1  plan            plan_tier -> text
+--   column 3  monthly_revenue bigint    -> numeric
+-- (count() returns bigint; bigint * integer is still bigint, but the
+-- signature declares numeric.)
+--
+-- FIX: cast both at the point of return. Grouping still happens on the enum
+-- (cheaper, and preserves its ordering semantics); only the projected
+-- columns are cast. The else-branch of ai_cost_pct is cast too so the CASE
+-- cannot resolve to integer on a zero-revenue plan.
+--
+-- Everything else is byte-identical to 117: same CAD prices (10/24/48),
+-- same is_admin() gate, same security definer, same left join. Grants are
+-- untouched, so 118's revoke of PUBLIC/anon stands — `create or replace`
+-- preserves the ACL.
+--
+-- NO ENTITLEMENT CHANGES. Read-only reporting function.
+-- ============================================================
+
+create or replace function admin_scout_margin_summary()
+returns table (plan text, subscriber_count bigint, monthly_revenue numeric, ai_cost numeric, ai_cost_pct numeric)
+language plpgsql security definer set search_path to 'public' as $$
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  return query
+  select
+    p.plan::text,
+    count(distinct p.id),
+    (count(distinct p.id) * (case p.plan when 'starter' then 10 when 'pro' then 24 when 'elite' then 48 else 0 end))::numeric,
+    coalesce(sum(u.total_cost), 0),
+    case when count(distinct p.id) * (case p.plan when 'starter' then 10 when 'pro' then 24 when 'elite' then 48 else 0 end) > 0
+      then round(100 * coalesce(sum(u.total_cost), 0) / (count(distinct p.id) * (case p.plan when 'starter' then 10 when 'pro' then 24 when 'elite' then 48 else 0 end)), 2)
+      else 0::numeric
+    end
+  from profiles p
+  left join scout_daily_usage u on u.user_id = p.id and u.usage_date >= date_trunc('month', now())::date
+  group by p.plan;
+end;
+$$;
+
+-- Verification, impersonating a real admin (substitute a profiles.id where
+-- is_admin is true). Must return one row per plan present, with
+-- monthly_revenue = subscriber_count * the CAD price:
+--   begin;
+--     set local role authenticated;
+--     set local request.jwt.claims = '{"sub":"<ADMIN-UUID>","role":"authenticated"}';
+--     select plan, subscriber_count, monthly_revenue
+--       from admin_scout_margin_summary() order by plan;
+--   rollback;
+--
+-- And that 118's lockdown survived `create or replace`:
+--   select has_function_privilege('anon','admin_scout_margin_summary()','execute');
+--   -- expected: false
