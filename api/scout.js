@@ -2724,9 +2724,9 @@ function deriveReplyText(data) {
   const raw = blocks.map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
   const clean = raw.replace(/```json|```/g, "").trim();
   const parsed = parseReplyObject(clean);
-  if (parsed && typeof parsed.reply === "string" && parsed.reply.trim()) return stripInternalTerminology(parsed.reply.trim());
+  if (parsed && typeof parsed.reply === "string" && parsed.reply.trim()) return sanitizeReplyText(parsed.reply);
   const salvaged = salvageJsonValue(clean, "reply");
-  if (typeof salvaged === "string" && salvaged.trim()) return stripInternalTerminology(salvaged.trim());
+  if (typeof salvaged === "string" && salvaged.trim()) return sanitizeReplyText(salvaged);
   // TOOL-USE RESPONSES HAVE NO USABLE PROSE FALLBACK.
   //
   // When Scout runs web searches the response comes back as many interleaved
@@ -2755,7 +2755,7 @@ function deriveReplyText(data) {
   // Threshold is low on purpose: a short real sentence ("Here is what I found
   // about the window.") is 38 chars and must not be thrown away. The '":'
   // check is what actually rejects JSON fragments, not the length.
-  if (prose.length > 15 && !prose.includes('":')) return stripInternalTerminology(prose);
+  if (prose.length > 15 && !prose.includes('":')) return sanitizeReplyText(prose);
   return null;
 }
 
@@ -2817,6 +2817,94 @@ function stripInternalTerminology(text) {
   // athlete's message.
   if (out !== text) console.warn("GOLSZ internal terminology leaked into a reply and was rewritten");
   return out;
+}
+
+// ---- META-COMMENTARY -----------------------------------------------------
+// The other half of the same problem. Terminology substitution cannot help
+// when the model writes its working-out INSIDE the reply value, which it
+// does, in production, to real athletes:
+//
+//   "The search results for CPL preseason are about cricket and general
+//    MLS/Premier League info, not Canadian Premier League soccer."
+//   "Confirmed: Tusculum is NCAA Division II, so his currently written goal
+//    would actually mean transferring. Now let me write the reply."
+//
+// Two tells, both fatal to the illusion that an agent is talking to you:
+// narration of the machinery (searches, tools, "now I'll answer"), and the
+// third person — an athlete being discussed rather than addressed.
+//
+// Removal is by SENTENCE, not by whole reply: the surrounding advice is
+// usually fine and throwing it away would cost the athlete a real answer.
+// Paragraph structure is preserved so what is left still reads naturally.
+const META_COMMENTARY_PATTERNS = [
+  // Narrating the tools.
+  /\bsearch results?\b/i,
+  /\bweb search(?:es)?\b/i,
+  /\bI (?:just |already )?(?:ran|did|performed|tried) (?:a |another )?search\b/i,
+  /\bsearching (?:the web|online|for)\b/i,
+  /\bthe search (?:for|came back|returned|didn'?t)\b/i,
+  /\btool (?:call|result)s?\b/i,
+  // Narrating its own process.
+  /\bnow (?:I'?ll|I will|let me|to) (?:write|answer|give|draft|respond|reply)\b/i,
+  /\blet me (?:write|draft|put together)\b[^.!?]*\b(?:reply|answer|response)\b/i,
+  // "Let me look that up for you." — announcing the lookup instead of doing
+  // it. The athlete wants the answer, not a status update.
+  /\blet me (?:look|check|see|find|dig|pull|go)\b/i,
+  /\bI'?ll (?:look|check) (?:that|this|it) up\b/i,
+  /\bone (?:sec|second|moment)\b/i,
+  /\bI'?ll write the (?:actual |full |real )?(?:reply|answer|response)\b/i,
+  /\bthis (?:confirms|settles) (?:it|that|the)\b/i,
+  /\bI (?:have|now have) (?:what I need|enough|everything I need|plenty to work with)\b/i,
+  /\bgrounded in the\b[^.!?]*\brecord\b/i,
+  /\bnow I have (?:what I need|enough|everything)\b/i,
+  // Talking ABOUT the athlete instead of TO them. Scoped to GOLSZ objects
+  // that can only be the athlete's own, so an athlete discussing a teammate
+  // ("his goal this season was 20 assists") is not caught by accident.
+  // Case-insensitive: the give-away often opens a sentence ("Her Plan is a
+  // shell"). Anchored to GOLSZ objects only, so "his touch under pressure"
+  // — an athlete talking about a team-mate — is untouched.
+  /\b(?:his|her) (?:currently |newly |recently )?(?:written |stated |current )?(?:goal|plan|passport|record|benchmarks|situation)\b/i,
+  /\bthe athlete(?:'s)?\b/i,
+  /\bthe user(?:'s)?\b/i,
+];
+function stripMetaCommentary(text) {
+  if (typeof text !== "string" || !text) return text;
+  const paragraphs = text.split(/\n{2,}/);
+  const keptParagraphs = [];
+  let dropped = 0;
+  for (const para of paragraphs) {
+    // Split on sentence boundaries, keeping the terminator with its sentence.
+    const sentences = para.split(/(?<=[.!?])\s+/);
+    const kept = sentences.filter((s) => {
+      if (!s.trim()) return false;
+      const isMeta = META_COMMENTARY_PATTERNS.some((re) => re.test(s));
+      if (isMeta) dropped++;
+      return !isMeta;
+    });
+    if (kept.length) keptParagraphs.push(kept.join(" ").trim());
+  }
+  const out = keptParagraphs.join("\n\n").trim();
+  if (dropped) console.warn("GOLSZ meta-commentary removed from a reply:", JSON.stringify({ sentencesDropped: dropped, survivedChars: out.length }));
+  return out;
+}
+
+// Both sanitizers, in the one order that makes sense: rewrite the internal
+// identifiers first (so a sentence is judged on its final wording), then
+// drop whole sentences that are machinery rather than advice.
+//
+// Returns null ONLY when nothing survives — a reply that was ENTIRELY
+// scratchpad is not a reply, and the client's honest retry path is the right
+// outcome.
+//
+// No minimum length here. "Yes." and "ok" are complete, legitimate replies;
+// an earlier version of this imposed a 15-character floor and turned every
+// short answer into a failed message. The one length rule that exists lives
+// where it belongs — on the prose fallback in deriveReplyText, which is
+// guessing at whether stray text was ever meant to be a reply at all.
+function sanitizeReplyText(text) {
+  if (typeof text !== "string" || !text.trim()) return null;
+  const out = stripMetaCommentary(stripInternalTerminology(text));
+  return out && out.trim() ? out.trim() : null;
 }
 
 // Scout kept ending EVERY reply with a question — four, five in a row reads
@@ -3078,6 +3166,7 @@ HAVE AN OPINION. When there are options, say which one YOU would pick and why, t
 Lead with the read or the answer, never a recap. You already have their record; use it INSIDE the advice ("with the minutes you're getting at Tusculum...") instead of reciting it back to them. They know their own story.
 Do not end every message with a question. Ask only when their answer would genuinely change what you'd advise, and never more than one. Several replies in a row with no question is normal and good — a string of questions reads like an intake form.
 NEVER SAY THE PLUMBING OUT LOUD. Everything you are given is internal: field names, block headings, flags, JSON keys, table and column names. The athlete sees none of it and it means nothing to them. Never write suggested_pathway, pathway_type, goal_text, goal_defined, profile_updates, memory_writes, scout_context, athlete_benchmarks, development_plan_items, outreach_targets, baseline_complete, assessment_ready, still_missing, ATHLETE STATE, PLAN FIT, profile_quality or any other identifier from these instructions in a reply, not even to explain what you are doing or to say you are holding one back. Say "your Plan", "your goal", "your Passport", "your benchmarks", "your target list", "how complete your Passport is". A reply that names an internal field reads as broken software, and telling them you are withholding an internal object is worse than simply not mentioning it.
+WRITE THE ANSWER, NOT YOUR WORKING OUT. The athlete sees the "reply" value and nothing else — no searches, no notes to yourself, no process. Never narrate the machinery ("the search results show", "let me look that up", "this confirms it", "now I'll write the reply", "I have what I need"). If you searched, just use what you found; if a search was useless, silently ignore it. Never write about them in the third person — no "the athlete", no "his goal", no "her Plan". You are talking TO them: "your goal", "you". Start with the substance. A reply that opens by describing what you just did has wasted the only thing they came for.
 PLAIN TEXT ONLY. The Scout chat prints your reply exactly as you type it. There is no markdown parser on the client, so every formatting character reaches the athlete as a literal character on screen. Never begin a line with "-" or "*", never write "**bold**", "#" headers, or markdown tables. They show up as stray dashes and asterisks and make the reply look broken.
 Do not use the dash as punctuation either. No em dash, and no " - " joining two clauses. Use a comma, a full stop, a colon, or simply split it into two sentences. Dashes are the single strongest tell that writing came from a machine rather than from a person talking, and they are the one thing athletes notice first.
 Write plain paragraphs. When you genuinely need to lay out a few options or steps, give each one its own line as a short sentence with nothing in front of it, or name them inside the sentence ("first ... then ... finally"). Most replies are two or three plain paragraphs and need none of this.
@@ -4021,7 +4110,7 @@ async function buildAuthoritativeContext(userId) {
 // shares. Facts, inferences and unknowns are kept in SEPARATE sections on
 // purpose — collapsing them into one list is precisely how an inference gets
 // restated later as a fact.
-function renderAuthoritativeContext(ctx) {
+function renderAuthoritativeContext(ctx, goalText) {
   if (!ctx) return "";
   const { athlete, memories, conflicts, age } = ctx;
   const facts = [];
@@ -4050,7 +4139,30 @@ function renderAuthoritativeContext(ctx) {
     if (v.source === "athlete_stated") stated.push(line);
     else inferred.push(`${line}${typeof v.confidence === "number" ? ` (confidence ${v.confidence})` : ""}`);
   }
+  // PRECEDENCE, ENFORCED AT RENDER TIME.
+  //
+  // A prompt rule saying "the live record outranks memory" was not enough.
+  // Observed in production: the athlete's written goal read "earn an NCAA
+  // Division 1 scholarship" and Scout kept advising toward CPL, because 35
+  // memory rows all said CPL and one field said NCAA. Rank is a weak signal
+  // when the volume is that lopsided.
+  //
+  // So a memory that disagrees with the CURRENT goal is no longer presented
+  // as a peer fact — it is relabelled, in place, as history. It is never
+  // deleted: "we looked at CPL before you switched" is genuinely useful
+  // context and Scout should still be able to refer to it. It simply stops
+  // being sayable as the athlete's present aim.
+  //
+  // Detection is deterministic and reuses the shipped classifier: a memory is
+  // superseded only when its text points at a DIFFERENT pathway than the
+  // current goal does. A memory the classifier cannot read, or one that
+  // agrees, is left exactly as it was.
+  const currentGoalType = classifyGoalText(goalText);
+  const superseded = [];
   for (const m of memories) {
+    const memType = classifyGoalText(`${m.subject || ""} ${m.content || ""}`);
+    const isSuperseded = !!(currentGoalType && memType && memType !== currentGoalType);
+    if (isSuperseded) { superseded.push(`- [${m.type}] ${m.subject}: ${m.content}`); continue; }
     if (m.type === "UNKNOWN" || m.type === "NEXT_DATA_NEEDED") unknowns.push(`- ${m.subject}: ${m.content}`);
     else if (m.source === "athlete_stated") stated.push(`- [${m.type}] ${m.subject}: ${m.content}`);
     else inferred.push(`- [${m.type}] ${m.subject}: ${m.content} (confidence ${m.confidence})`);
@@ -4069,6 +4181,10 @@ function renderAuthoritativeContext(ctx) {
   if (stated.length) out += `\n\nTHINGS THE ATHLETE HAS STATED (confirmed — treat as fact, never re-ask):\n${stated.join("\n")}`;
   if (inferred.length) out += `\n\nYOUR EARLIER INFERENCES (NOT facts — never assert these back as things they told you; confirm in passing if one matters):\n${inferred.join("\n")}`;
   if (unknowns.length) out += `\n\nKNOWN UNKNOWNS (ask about these before anything generic):\n${unknowns.join("\n")}`;
+  if (superseded.length) {
+    out += `\n\nHISTORY — SUPERSEDED BY THEIR CURRENT GOAL (this is NOT what they are aiming at now):\n${superseded.join("\n")}\n`;
+    out += `Their goal now reads "${String(goalText).slice(0, 160)}". Everything in this section was true EARLIER and is now out of date, however many entries there are and however confident they sound — volume is not authority. You may refer to it as history ("when we were looking at that route..."), and you should, because the reasoning still matters. What you must not do is treat any of it as their present aim. Every diagnosis, every piece of advice, every next step and every plan recommendation in this reply must serve the goal quoted above. Do not ask them to re-confirm the change, do not hedge between the two, and do not describe their current goal as a "mismatch" with these entries — the entries are simply older. Only an explicit new statement from them changes direction again.`;
+  }
   if (conflicts.length) {
     out += `\n\nCONFLICTS — two authoritative sources disagree. Do NOT guess, do NOT silently pick one, do NOT invent a story that reconciles them. Ask ONE short clarifying question:\n${conflicts.map((c) => `- ${c}`).join("\n")}`;
   }
@@ -4795,7 +4911,7 @@ export default async function handler(req, res) {
     ]);
     // Rendered once, here, and reused verbatim by every downstream path so no
     // model can receive a materially different version of the athlete's facts.
-    authoritativeBlock = renderAuthoritativeContext(authContext);
+    authoritativeBlock = renderAuthoritativeContext(authContext, goalText);
     // THE canonical readiness signal, computed once here off the same
     // authContext every downstream path already uses. Read by the recap
     // instruction in ATHLETE STATE below AND persisted into ai_meta so the

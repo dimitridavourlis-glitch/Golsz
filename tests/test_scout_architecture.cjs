@@ -79,11 +79,11 @@ ck("empty string passes through", stripInternalTerminology(""), "");
 // The guarantee is that this runs on the one function every response path
 // derives athlete-facing text from — a prompt rule alone already failed.
 ck("deriveReplyText sanitizes the normal parse path",
-   /return stripInternalTerminology\(parsed\.reply\.trim\(\)\)/.test(SCOUT), true);
+   /return sanitizeReplyText\(parsed\.reply\)/.test(SCOUT), true);
 ck("deriveReplyText sanitizes the salvage path",
-   /return stripInternalTerminology\(salvaged\.trim\(\)\)/.test(SCOUT), true);
+   /return sanitizeReplyText\(salvaged\)/.test(SCOUT), true);
 ck("deriveReplyText sanitizes the prose-fallback path",
-   /return stripInternalTerminology\(prose\)/.test(SCOUT), true);
+   /return sanitizeReplyText\(prose\)/.test(SCOUT), true);
 ck("the prompt also forbids it (defence in depth)",
    /NEVER SAY THE PLUMBING OUT LOUD/.test(SCOUT), true);
 ck("...including saying it is withholding one",

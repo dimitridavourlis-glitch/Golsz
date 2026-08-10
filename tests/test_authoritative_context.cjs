@@ -11,6 +11,11 @@ const slice = (from, to) => SRC.slice(SRC.indexOf(from), SRC.indexOf(to));
 // One contiguous slice: renderAuthoritativeContext sits AFTER
 // buildAuthoritativeContext in the file, so stopping at the latter silently
 // dropped it. Ends at LANG_NAMES, the next unrelated declaration.
+// renderAuthoritativeContext() now closes over classifyGoalText: a memory
+// that points at a different pathway than the athlete's CURRENT goal is
+// relabelled as history rather than presented as a peer fact. Supply the
+// real classifier, not a stub.
+eval(slice("const GOAL_TEXT_PATTERNS", "// Applies ONLY the derived pathway_type"));
 eval(slice("const IDENTITY_FIELDS", "// Matches golsz-app.html's LANGS"));
 // complexityScore lives elsewhere in the file (model routing, not context
 // building) but this suite asserts the two-locations signal raises it.
