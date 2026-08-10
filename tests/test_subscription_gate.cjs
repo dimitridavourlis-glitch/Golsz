@@ -83,7 +83,12 @@ ck("...and the audit query is provided instead", /where plan <> 'free' and strip
 console.log("\n-- the webhook remains the only writer of a paid plan --");
 ck("it verifies the Stripe signature first", /verifyStripeSignature\(rawBody, req\.headers\["stripe-signature"\], webhookSecret\)/.test(WEBHOOK), true);
 ck("...and refuses without a secret", /Server missing STRIPE_WEBHOOK_SECRET/.test(WEBHOOK), true);
-ck("it sets the plan on a completed checkout", /patchProfile\(supaUrl, serviceKey, `id=eq\.\$\{profileId\}`, \{ plan,/.test(WEBHOOK), true);
+// Reworded for the plan-catalogue refactor: the checkout handler now
+// always binds stripe_customer_id and adds `plan` only when a trusted
+// Stripe identifier resolved one. See api/_plan-catalog.js.
+ck("it binds the Stripe customer on a completed checkout",
+   /patchProfile\(supaUrl, serviceKey, `id=eq\.\$\{profileId\}`, patch\)/.test(WEBHOOK), true);
+ck("...and sets the plan only when one resolved", /if \(plan\) patch\.plan = plan;/.test(WEBHOOK), true);
 ck("it drops back to free on cancellation", /\{ plan: "free", payment_past_due: false \}/.test(WEBHOOK), true);
 
 console.log(`\n${p}/${p + f} passed`);

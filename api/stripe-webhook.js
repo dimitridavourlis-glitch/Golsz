@@ -19,9 +19,11 @@
 //
 // Attribution: golsz-app.html's Auth appends ?client_reference_id=<user.id>
 // to the Payment Link redirect, so checkout.session.completed can identify
-// who paid. Plan is inferred from the checkout amount (Basic C$10, Pro C$24,
-// Elite C$48, matching PLANS in golsz-app.html) since Payment Links don't
-// carry arbitrary metadata via URL — if those prices ever change, update
+// who paid. Which plan they receive is resolved from a TRUSTED STRIPE
+// IDENTIFIER (Price id, lookup_key, or explicit metadata) by
+// api/_plan-catalog.js — never from the amount paid. Currency and unit
+// amount are then validated separately against the catalogue. See that
+// file's header for why amount-inference was wrong. To change prices,
 // the thresholds below to match. Free never reaches this file at all since
 // it has no Stripe link and never goes through checkout.
 // ============================================================
@@ -77,26 +79,35 @@ function verifyStripeSignature(rawBody, sigHeader, secret) {
 // condition) targeting a different row than intended. Requiring a real
 // UUID shape first closes that off, same pattern as the UUID check in
 // api/admin-user-action.js.
+import {
+  resolvePlanFromStripe,
+  readPriceFields,
+  stripeCatalogConfigured,
+} from "./_plan-catalog.js";
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Payment Links don't carry arbitrary metadata, so plan is inferred from
-// price. Kept as one function so the thresholds only need updating in one
-// place, and stated in minor units (cents) because that is what Stripe
-// sends in unit_amount.
-//
-// CAD as of 2026-08-10: Basic C$10, Pro C$24, Elite C$48 — matching PLANS
-// in golsz-app.html. Previously USD 6/14/30.
-//
-// The bands are floors, not equality checks, so a price rise inside a tier
-// (or tax added on top) still resolves. They are checked highest-first;
-// keep them in descending order or a C$48 payment would match "basic".
-//
-// NOTE: this reads unit_amount only, NOT currency. Every Payment Link must
-// therefore be CAD. If a second currency is ever offered, this function has
-// to switch on event.data.object.currency as well, or a 48-unit payment in
-// another currency would silently grant Elite.
-function planFromAmount(amount) {
-  return amount >= 4800 ? "elite" : amount >= 2400 ? "pro" : amount >= 1000 ? "starter" : null;
+// Resolves a Stripe subscription item to a GOLSZ plan, logging the reason
+// whenever it refuses. Refusing is the safe outcome: the profile keeps
+// whatever plan it already had rather than being granted or downgraded on
+// a guess.
+function resolvePlanOrLog(fields, context) {
+  const result = resolvePlanFromStripe(fields);
+  if (!result.plan) {
+    console.warn("GOLSZ stripe plan NOT resolved:", JSON.stringify({
+      context,
+      reason: result.reason,
+      problems: result.problems || null,
+      expected: result.expected || null,
+      // Price id is a Stripe object id, not a secret — safe to log and the
+      // single most useful thing when diagnosing a misconfigured Price.
+      sawPriceId: fields.priceId || null,
+      sawLookupKey: fields.lookupKey || null,
+      sawCurrency: fields.currency || null,
+      sawUnitAmount: fields.unitAmount === undefined ? null : fields.unitAmount,
+    }));
+  }
+  return result.plan;
 }
 
 async function patchProfile(supaUrl, serviceKey, filterQuery, body) {
@@ -129,21 +140,57 @@ export default async function handler(req, res) {
   let event;
   try { event = JSON.parse(rawBody); } catch { return res.status(400).json({ error: "Invalid JSON" }); }
 
+  // No configured Price ids means no paid plan can be granted by any event.
+  // That is correct today (checkout is deliberately disabled) but would be
+  // a silent revenue outage after go-live, so say so on every event rather
+  // than failing quietly.
+  if (!stripeCatalogConfigured()) {
+    console.warn("GOLSZ stripe catalog NOT configured: STRIPE_PRICE_BASIC/PRO/ELITE are unset, so no subscription event can grant a plan. Expected while checkout is disabled.");
+  }
+
   try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       const profileId = session.client_reference_id;
       const customerId = session.customer;
-      const plan = planFromAmount(session.amount_total || 0);
-      if (profileId && UUID_RE.test(profileId) && plan) {
-        await patchProfile(supaUrl, serviceKey, `id=eq.${profileId}`, { plan, stripe_customer_id: customerId || null, payment_past_due: false });
+
+      // NOTE ON line_items: Stripe does NOT include line_items in this
+      // webhook payload — it is an expandable field, and webhooks never
+      // expand. So the Price is usually unavailable here, and this event
+      // alone often cannot identify the plan. That is fine, because the
+      // customer.subscription.created event that follows DOES carry
+      // items.data[0].price with id, lookup_key, currency and unit_amount,
+      // and is handled below as the authoritative source.
+      //
+      // session.amount_total is deliberately never used: it carries tax,
+      // discounts and proration and says nothing reliable about which
+      // product was bought.
+      const line = session.line_items && session.line_items.data && session.line_items.data[0];
+      const fields = readPriceFields(line && line.price);
+      // Metadata we set on the Payment Link ourselves. This is what makes
+      // the checkout event able to resolve a plan at all in the normal
+      // (unexpanded) case — see the OWNER note in api/_plan-catalog.js.
+      fields.metadataPlan = (session.metadata && session.metadata.golsz_plan) || null;
+      const plan = fields.metadataPlan || fields.priceId
+        ? resolvePlanOrLog(fields, "checkout.session.completed")
+        : null;
+
+      if (profileId && UUID_RE.test(profileId)) {
+        // Bind the Stripe customer to the profile ALWAYS, even when the plan
+        // could not be resolved. Every subsequent subscription event is
+        // matched by stripe_customer_id, so skipping this write would orphan
+        // the customer and silently break the authoritative path below —
+        // client_reference_id is only present on this one event.
+        const patch = { stripe_customer_id: customerId || null, payment_past_due: false };
+        if (plan) patch.plan = plan;
+        await patchProfile(supaUrl, serviceKey, `id=eq.${profileId}`, patch);
       }
     } else if (event.type === "customer.subscription.deleted") {
       const customerId = event.data.object.customer;
       if (customerId) {
         await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, { plan: "free", payment_past_due: false });
       }
-    } else if (event.type === "customer.subscription.updated") {
+    } else if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
       // Syncs plan changes and recovers/flags the past-due state as the
       // subscription's status transitions (e.g. active -> past_due after a
       // failed charge, or past_due -> active after Stripe's retry succeeds).
@@ -159,8 +206,12 @@ export default async function handler(req, res) {
           await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, { plan: "free", payment_past_due: false });
         } else {
           const item = sub.items && sub.items.data && sub.items.data[0];
-          const amount = item && item.price && typeof item.price.unit_amount === "number" ? item.price.unit_amount : null;
-          const plan = amount === null ? null : planFromAmount(amount);
+          const fields = readPriceFields(item && item.price);
+          fields.metadataPlan = (sub.metadata && sub.metadata.golsz_plan) || null;
+          const plan = resolvePlanOrLog(fields, event.type);
+          // past_due is still recorded even when the plan can't be resolved
+          // — the billing state is independently true, and refusing to
+          // write it would leave a failing subscription looking healthy.
           const patch = { payment_past_due: status === "past_due" };
           if (plan) patch.plan = plan;
           await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, patch);
