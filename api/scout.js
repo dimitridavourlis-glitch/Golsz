@@ -1220,6 +1220,50 @@ function composeStructuredSummary({ goalText, goalSource, athleteState, narrativ
   return L.join("\n");
 }
 
+// The daily Scout message ceiling per plan. ONE definition, used both to
+// meter and to reason about volume pressure, so the two can never disagree.
+// Values unchanged: Free 3, Basic 8, Pro 15, Elite 20.
+function planDailyLimit(plan) {
+  return plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
+    : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 15)
+    : plan === "starter" ? Number(process.env.STARTER_DAILY_LIMIT || 8)
+    : Number(process.env.FREE_DAILY_LIMIT || 3);
+}
+
+// VOLUME IS THE ONLY REAL ELITE DIFFERENTIATOR.
+// Nothing in FEATURE_MIN_PLAN requires Elite — every gated capability tops
+// out at Pro — so a feature-based Pro->Elite pitch would be manufactured.
+// The honest trigger is an athlete actually running out of messages. Fires
+// only at 80% of their own ceiling, from metered usage, never from a guess.
+const NEXT_TIER_FOR_VOLUME = { free: "starter", starter: "pro", pro: "elite" };
+function deriveVolumeNeed(plan, questionsUsedToday, dailyLimit) {
+  const limit = Number(dailyLimit) || 0;
+  const used = Number(questionsUsedToday) || 0;
+  const next = NEXT_TIER_FOR_VOLUME[plan || "free"];
+  if (!next || !limit) return { pressured: false, nextPlan: null };
+  return { pressured: used >= Math.ceil(limit * 0.8), nextPlan: next, used, limit };
+}
+
+// SAFEGUARD — the athlete said no.
+// Read from their OWN words, not from the model's read of the room. Once
+// they have declined, refused, or said they cannot afford it, the plan
+// block is suppressed for the rest of the conversation: repeating a pitch
+// someone has already turned down is the single fastest way to make Scout
+// feel like a salesman rather than an agent.
+const UPGRADE_DECLINE_PATTERNS = [
+  /\b(can'?t|cannot|can not) afford\b/i,
+  /\b(too expensive|no money|out of my budget|not in my budget)\b/i,
+  /\b(no thanks|not interested|don'?t want to (pay|upgrade)|won'?t be upgrading|not upgrading)\b/i,
+  /\b(i'?m|i am|we'?re|we are) (staying|sticking) (on|with)\b/i,
+  /\bstop (asking|pitching|selling)\b/i,
+  /\bnot (paying|buying)\b/i,
+];
+function athleteDeclinedUpgrade(messages) {
+  if (!Array.isArray(messages)) return false;
+  return messages.some((m) => m && m.role === "user" && typeof m.content === "string"
+    && UPGRADE_DECLINE_PATTERNS.some((re) => re.test(m.content)));
+}
+
 // ---- 5 / RECOMMEND -------------------------------------------------------
 // Which GATED features this athlete's CURRENT state actually calls for.
 //
@@ -4424,7 +4468,7 @@ async function getProfileMeta(userId) {
 async function getAthleteState(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { profileComplete: false, pathwayCreated: false, baselineComplete: false, sportSupportLevel: null, sport: null, country: null, structuredSportKnowledge: false, pathwayType: null, pathwayTimeline: null, milestoneCount: 0, milestonesDone: 0, pathwayComplete: false, devItems: [], targets: [], benchmarks: [], readiness: null };
+  if (!url || !key || !userId) return { profileComplete: false, pathwayCreated: false, baselineComplete: false, sportSupportLevel: null, sport: null, country: null, structuredSportKnowledge: false, pathwayType: null, pathwayTimeline: null, milestoneCount: 0, milestonesDone: 0, pathwayComplete: false, devItems: [], targets: [], benchmarks: [], readiness: null, questionsUsedToday: 0 };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let profileComplete = false;
   let sport = null;
@@ -4451,6 +4495,7 @@ async function getAthleteState(userId) {
   let targetsCount = 0;
   let hasPendingVerification = false;
   let pathwayRow = null;
+  let questionsUsedToday = 0;
   try {
     // Selects every field computeProfileQuality() checks — the same list
     // HomeTab fetches, so the two cannot score different things.
@@ -4468,6 +4513,17 @@ async function getAthleteState(userId) {
   } catch {}
   // Newest request only, matching HomeTab: a previously denied request must
   // not keep scoring 50 forever.
+  // Today's Scout usage. The ONLY thing that genuinely separates Elite from
+  // Pro is daily message volume — no feature in FEATURE_MIN_PLAN requires
+  // Elite — so an athlete actually running out of messages is the one
+  // honest Pro->Elite trigger. Read here rather than inferred, and it stays
+  // 0 on any failure so a metering hiccup can never invent a reason to sell.
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const u = await fetch(url + "/rest/v1/scout_daily_usage?user_id=eq." + userId + "&usage_date=eq." + today + "&select=questions_used", { headers });
+    const uRows = await u.json();
+    questionsUsedToday = (Array.isArray(uRows) && uRows[0] && Number(uRows[0].questions_used)) || 0;
+  } catch {}
   try {
     const v = await fetch(url + "/rest/v1/verification_requests?user_id=eq." + userId + "&select=status&order=created_at.desc&limit=1", { headers });
     const vRows = await v.json();
@@ -4561,7 +4617,7 @@ async function getAthleteState(userId) {
     // D — a Pathway with no milestones is a shell, not a Pathway. One flag,
     // computed once here, so Home, Plan and Scout cannot disagree about it.
     pathwayComplete: pathwayCreated && milestoneCount > 0,
-    devItems, targets, benchmarks, targetsCount, readiness,
+    devItems, targets, benchmarks, targetsCount, readiness, questionsUsedToday,
   };
 }
 
@@ -5125,13 +5181,24 @@ A newer source always beats an older one at the same level. If memory says one t
     // identified gaps, and the prompt is told that ceiling explicitly.
     const entNeeds = deriveEntitlementNeeds(athleteState);
     const ent = evaluateEntitlements(plan, entNeeds);
-    if (ent.locked.length && ent.upgradeToName) {
+    const volume = deriveVolumeNeed(plan, athleteState.questionsUsedToday, planDailyLimit(plan));
+    // SAFEGUARD: they have already said no. Nothing about plans reaches the
+    // model for the rest of this conversation.
+    const declined = athleteDeclinedUpgrade(messages);
+    if (declined) {
+      athleteBlock += `\n\nPLAN FIT: they have already told you they do not want to upgrade, or cannot. Do not mention plans, pricing, upgrading or locked features again in this conversation, in any form, however the topic comes up. Help them with what they have. If they raise it themselves, answer plainly and briefly and move on.`;
+    } else if (ent.locked.length && ent.upgradeToName) {
       athleteBlock += `\n\nPLAN FIT (computed by the app — do not do this arithmetic yourself): they are on ${ent.currentPlanName}.`;
       if (ent.coveredLabels.length) athleteBlock += ` Already included on their plan: ${ent.coveredLabels.join("; ")}.`;
       athleteBlock += ` NOT included on their plan, and their current situation points at it: ${ent.lockedLabels.join("; ")}. The lowest plan that covers all of that is ${ent.upgradeToName}.`;
       athleteBlock += ` ${ent.upgradeToName} is the ONLY plan you may name. Never name a more expensive one, never imply a more expensive one would be better, and never list tiers. Raise it at most once, only after you have actually answered them, and only if what they raised genuinely needs one of those items — if this reply is about something else, say nothing about plans at all.`;
     } else {
       athleteBlock += `\n\nPLAN FIT (computed by the app): they are on ${ent.currentPlanName} and nothing their current situation needs is locked. Do not mention plans, pricing or upgrading in this reply at all.`;
+      // Volume is the one honest reason to raise a tier when no feature is
+      // locked — and the only route to Elite, which gates no feature at all.
+      if (volume.pressured && volume.nextPlan) {
+        athleteBlock += ` One exception: they have used ${volume.used} of their ${volume.limit} Scout messages today. If — and only if — that limit is actually getting in their way right now, you may note once that ${planDisplayName(volume.nextPlan)} raises it. Never raise it otherwise.`;
+      }
     }
     // Names the exact contradiction that caused goal_text to sit empty for
     // every athlete: a goal recorded ONLY as dream_outcome renders under
@@ -5186,10 +5253,7 @@ A newer source always beats an older one at the same level. If memory says one t
       })}`;
     }
 
-    dailyLimit = plan === "elite" ? Number(process.env.ELITE_DAILY_LIMIT || 20)
-      : plan === "pro" ? Number(process.env.PRO_DAILY_LIMIT || 15)
-      : plan === "starter" ? Number(process.env.STARTER_DAILY_LIMIT || 8)
-      : Number(process.env.FREE_DAILY_LIMIT || 3);
+    dailyLimit = planDailyLimit(plan);
 
     if (!isAdmin && !aiUnlimited) {
       const reservation = await reserveScoutQuestion(userId, dailyLimit);
