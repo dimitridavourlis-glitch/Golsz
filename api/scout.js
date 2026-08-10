@@ -4132,10 +4132,22 @@ function renderAuthoritativeContext(ctx, goalText) {
   const stated = [];
   const inferred = [];
   const unknowns = [];
+  // The current goal, classified once and reused for both loops below.
+  // Declared here because scout_context is rendered BEFORE memories and its
+  // goal-shaped fields need the same treatment — dream_outcome lives here,
+  // not in scout_memory, and it was the field actually saying "CPL
+  // professional contract" while the athlete's written goal said NCAA.
+  const currentGoalType = classifyGoalText(goalText);
+  const superseded = [];
   for (const [k, v] of Object.entries(sc)) {
     if (!v || typeof v !== "object" || v.value === undefined || v.value === null || v.value === "") continue;
     if (k === "ai_meta") continue;
     const line = `- ${k.replace(/_/g, " ")}: ${typeof v.value === "object" ? JSON.stringify(v.value) : v.value}`;
+    // Same rule as memories: a stored field that DECLARES a direction other
+    // than the current goal is history, not a current fact. Anything the
+    // classifier cannot read (height, budget, biggest gap) is untouched.
+    const scType = typeof v.value === "string" ? classifyGoalText(`${k.replace(/_/g, " ")} ${v.value}`) : null;
+    if (currentGoalType && scType && scType !== currentGoalType) { superseded.push(line); continue; }
     if (v.source === "athlete_stated") stated.push(line);
     else inferred.push(`${line}${typeof v.confidence === "number" ? ` (confidence ${v.confidence})` : ""}`);
   }
@@ -4157,8 +4169,6 @@ function renderAuthoritativeContext(ctx, goalText) {
   // superseded only when its text points at a DIFFERENT pathway than the
   // current goal does. A memory the classifier cannot read, or one that
   // agrees, is left exactly as it was.
-  const currentGoalType = classifyGoalText(goalText);
-  const superseded = [];
   for (const m of memories) {
     const memType = classifyGoalText(`${m.subject || ""} ${m.content || ""}`);
     const isSuperseded = !!(currentGoalType && memType && memType !== currentGoalType);

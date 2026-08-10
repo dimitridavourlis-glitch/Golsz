@@ -137,6 +137,44 @@ ck("only an explicit new statement changes direction",
   }
 }
 
+
+// =========================================================================
+// scout_context — the field that ACTUALLY broke in production
+// =========================================================================
+// The first version of this fix only covered scout_memory, and production
+// still answered "Your goal is a CPL professional contract, that's what's on
+// your Passport" against an NCAA goal. dream_outcome does not live in
+// scout_memory — it lives in athletes.scout_context, and it was rendering
+// under "THINGS THE ATHLETE HAS STATED (confirmed — treat as fact)", the
+// highest-trust section in the whole block.
+{
+  const scAthlete = {
+    sport: "Soccer",
+    scout_context: {
+      dream_outcome: { value: "CPL professional contract", source: "athlete_stated", confidence: 0.95 },
+      target_level: { value: "Canadian Premier League (top-tier professional)", source: "athlete_stated", confidence: 0.9 },
+      target_country: { value: "Canada (Quebec)", source: "athlete_stated", confidence: 0.9 },
+      main_gap: { value: "Playing time; current tape thin", source: "athlete_stated", confidence: 0.9 },
+      ai_meta: { updated_at: "2026-08-11T00:00:00Z" },
+    },
+  };
+  const scOut = renderAuthoritativeContext({ athlete: scAthlete, memories: [], conflicts: [], age: 20 }, NCAA_GOAL);
+  const hi = scOut.indexOf("HISTORY — SUPERSEDED");
+  ck("a stored dream outcome that contradicts the goal is filed as history", hi >= 0, true);
+  ck("...specifically dream_outcome", scOut.indexOf("CPL professional contract") > hi, true);
+  ck("...and target level with it", scOut.indexOf("Canadian Premier League") > hi, true);
+  ck("...so it is NOT under things the athlete has stated as fact",
+     scOut.indexOf("CPL professional contract") > scOut.indexOf("THINGS THE ATHLETE HAS STATED"), true);
+  // Fields that say nothing about a direction are untouched.
+  ck("an unrelated stored field stays a current fact",
+     scOut.indexOf("Playing time; current tape thin") < hi, true);
+  ck("target country is not a pathway claim and stays current",
+     scOut.indexOf("Canada (Quebec)") < hi, true);
+  // And it must not fire when the goal agrees.
+  const proOut = renderAuthoritativeContext({ athlete: scAthlete, memories: [], conflicts: [], age: 20 }, "My goal is to sign a professional contract");
+  ck("a matching goal leaves stored context alone", /HISTORY — SUPERSEDED/.test(proOut), false);
+}
+
 // =========================================================================
 // META-COMMENTARY — the reply must never contain the working out
 // =========================================================================
