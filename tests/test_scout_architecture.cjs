@@ -97,6 +97,10 @@ const PATHWAY_TYPE_SET = new Set([
   "professional", "development", "agent_representation", "trainer_performance", "other",
 ]);
 const { hasFeature } = require("../api/_entitlements.js");
+// resolveSuggestedPathway closes over classifyGoalText in production; supply
+// the real one rather than a stub so the goal-contradiction guard is tested
+// against the same classifier that ships.
+eval(slice("const GOAL_TEXT_PATTERNS", "// Applies ONLY the derived pathway_type", "goal classifier"));
 eval(slice("const PATHWAY_APPROVAL_PATTERNS = [", "// Same extraction shape again, pulling drafted_email", "handoff"));
 
 // Approval is read from the ATHLETE's words. These are the real messages
@@ -141,7 +145,7 @@ const READINESS_GAPS = {
 };
 {
   const modelPathway = { pathway_type: "european_club", target_timeline: "2027", milestones: [{ label: "m", done: false }] };
-  const base = { plan: "starter", goalDefined: true, pathwayType: "european_club", readiness: READINESS_GAPS };
+  const base = { plan: "starter", goalDefined: true, pathwayType: "european_club", readiness: READINESS_GAPS, goalText: "My goal is to play for a top European club" };
 
   const r1 = resolveSuggestedPathway({ ...base, modelPathway, approved: true });
   ck("the model's own Pathway is preferred when it emits one", r1.source, "model");
@@ -176,6 +180,26 @@ const READINESS_GAPS = {
   ck("an unknown pathway category is refused",
      resolveSuggestedPathway({ ...base, modelPathway: null, approved: true, pathwayType: "made_up" }).source, "insufficient_state");
   // The app-built Plan carries no goal fields whatsoever.
+
+  // PRODUCTION, 2026-08-11: the athlete's written goal read "earn an NCAA
+  // Division 1 scholarship" and the emitted Pathway came back as a CPL
+  // professional route assembled from older conversation memory. Accepting
+  // it would have persisted a Plan pointing somewhere they never asked to
+  // go. A model Pathway that contradicts the written goal is refused, and
+  // the app builds one from that goal instead.
+  const contradicting = { pathway_type: "professional", target_timeline: "CPL contract", milestones: [{ label: "CPL trial", done: false }] };
+  const ncaa = { ...base, pathwayType: "ncaa", goalText: "My goal is to earn an NCAA Division 1 scholarship" };
+  const r3 = resolveSuggestedPathway({ ...ncaa, modelPathway: contradicting, approved: true });
+  ck("a Plan contradicting the written goal is refused", r3.source, "app");
+  ck("...and the app builds one pointing at the written goal instead", r3.pathway.pathway_type, "ncaa");
+  ck("...never persisting the contradicting category", r3.pathway.pathway_type === "professional", false);
+  const agreeing = { pathway_type: "ncaa", target_timeline: "2027", milestones: [{ label: "m", done: false }] };
+  ck("a Plan that agrees with the written goal is still accepted",
+     resolveSuggestedPathway({ ...ncaa, modelPathway: agreeing, approved: true }).source, "model");
+  // A goal the classifier cannot read must impose nothing at all.
+  ck("an unclassifiable goal imposes no constraint",
+     resolveSuggestedPathway({ ...base, goalText: "MLS contract", modelPathway: contradicting, approved: true }).source, "model");
+
   ck("an app-built Plan never carries goal wording",
      Object.keys(r2.pathway).sort(), ["milestones", "pathway_type", "target_timeline"]);
 }

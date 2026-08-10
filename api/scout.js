@@ -2485,9 +2485,29 @@ function synthesizePathwayFromState({ pathwayType, readiness }) {
 //
 // Plan gating is unchanged and is checked FIRST: Pathway is not part of
 // Free, and nothing here may hand a Free athlete a paid object.
-function resolveSuggestedPathway({ modelPathway, approved, plan, goalDefined, pathwayType, readiness }) {
+function resolveSuggestedPathway({ modelPathway, approved, plan, goalDefined, pathwayType, readiness, goalText }) {
   if (!hasFeature(plan, "pathway_plan")) return { pathway: null, source: "gated" };
-  if (modelPathway) return { pathway: modelPathway, source: "model" };
+  // A model-built Pathway must agree with the goal the athlete WROTE.
+  //
+  // The prompt already says "never send one that contradicts their written
+  // goal" and in production it did exactly that: the athlete's goal read
+  // "earn an NCAA Division 1 scholarship" and the emitted Pathway came back
+  // as a CPL professional route, assembled from older conversation memory.
+  // Accepting it would have written a Plan pointing somewhere the athlete
+  // had not asked to go — the precedence rule broken at the one moment it
+  // matters most, because this one persists.
+  //
+  // Only fires when the goal classifies unambiguously; a goal the classifier
+  // cannot read yields null and imposes nothing. Falls through to the app's
+  // own build, which derives its category from that same written goal.
+  if (modelPathway) {
+    const derived = classifyGoalText(goalText);
+    if (derived && modelPathway.pathway_type !== derived) {
+      console.warn("GOLSZ rejected a suggested Plan that contradicted the athlete's written goal:", JSON.stringify({ emitted: modelPathway.pathway_type, goalPointsAt: derived }));
+    } else {
+      return { pathway: modelPathway, source: "model" };
+    }
+  }
   if (!approved) return { pathway: null, source: "not_requested" };
   // No goal on record means there is nothing to build a route toward, and
   // inventing one would be exactly the silent-overwrite this forbids.
@@ -2514,6 +2534,7 @@ function finalizeSuggestedPathway(data, ctx, incomingText, userPlan) {
     goalDefined: ctx.goalDefined,
     pathwayType: ctx.pathwayType,
     readiness: ctx.readiness,
+    goalText: ctx.goalText,
   });
   if (resolved.source === "app") {
     console.log("GOLSZ Plan assembled by the app after athlete approval — model emitted none:", JSON.stringify({ pathway_type: resolved.pathway.pathway_type, milestones: resolved.pathway.milestones.length }));
@@ -4822,6 +4843,7 @@ export default async function handler(req, res) {
     pathwayBuildCtx = {
       plan,
       goalDefined,
+      goalText,
       pathwayType: athleteState.pathwayType || recon.derived || null,
       readiness: athleteState.readiness,
     };
