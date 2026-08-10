@@ -300,7 +300,12 @@ console.log("\n-- Scout must never claim a save it cannot verify --");
 // goes on your Passport now" while goal_text stayed NULL. The model generates
 // its reply BEFORE the write happens and can never see the outcome, so the
 // only safe rule is that it never asserts persistence at all.
-const SRC_PROMPT = SRC.slice(SRC.indexOf("Allowed profile_updates keys"), SRC.indexOf("Allowed profile_updates keys") + 4000);
+// Window widened from 4000 to 7000 on 2026-08-10: the goal-authorship
+// paragraph inside this range grew when the "you CAN correct the Pathway"
+// permission was added (issue C), pushing the save-honesty rule past the
+// old cutoff. The assertions below are unchanged — only the slice that
+// feeds them is big enough to still contain the section it is checking.
+const SRC_PROMPT = SRC.slice(SRC.indexOf("Allowed profile_updates keys"), SRC.indexOf("Allowed profile_updates keys") + 7000);
 ck("the prompt forbids claiming something was saved", /NEVER TELL THE ATHLETE SOMETHING WAS SAVED/.test(SRC_PROMPT), true);
 ck("...and names the specific phrases to avoid", /locked in.*saved.*updated/s.test(SRC_PROMPT), true);
 ck("...and explains WHY (write happens after the reply)", /after your reply has already been generated/.test(SRC_PROMPT), true);

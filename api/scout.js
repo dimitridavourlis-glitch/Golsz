@@ -1068,6 +1068,62 @@ function classifyGoalText(goalText) {
 }
 
 // ============================================================
+// B — GOAL vs PATHWAY RECONCILIATION (2026-08-10)
+//
+// The athlete's goal lives in profiles.goal_text (free text, and often
+// THEIRS — goal_source='athlete_edited'). The normalized pathway category
+// lives in pathway_plan.pathway_type. Nothing kept them in step, so editing
+// a goal left the old pathway behind: production held goal_text "play for a
+// top European club" against pathway_type 'juco'.
+//
+// THE RULE THAT MATTERS: the athlete's written goal is never touched here.
+// Not rewritten, not normalized, not "cleaned up". Only the DERIVED
+// classification is ever in question.
+//
+// Two outcomes, and which one applies is deterministic:
+//
+//   safeAutoFix  — the classifier is unambiguous AND the stored pathway has
+//                  ZERO milestones. An empty pathway is a shell; correcting
+//                  its label destroys no athlete work, so it is safe to do
+//                  silently. This is the case that was breaking people.
+//
+//   conflict     — the classifier is unambiguous, it disagrees with the
+//                  stored type, and there ARE milestones. Real work exists;
+//                  rebuilding it is the athlete's call, so we only FLAG it
+//                  and Scout raises it in conversation.
+//
+// An ambiguous goal (classifier returns null) is never a conflict. "I want
+// to play college soccer" matching both ncaa and juco means we genuinely do
+// not know, and guessing is what caused this bug in the first place.
+function reconcileGoalWithPathway(goalText, pathwayType, milestoneCount) {
+  const derived = classifyGoalText(goalText);
+  if (!derived) return { derived: null, conflict: false, safeAutoFix: false };
+  if (!pathwayType) return { derived, conflict: false, safeAutoFix: false };
+  if (derived === pathwayType) return { derived, conflict: false, safeAutoFix: false };
+  const empty = !milestoneCount || milestoneCount < 1;
+  return { derived, conflict: !empty, safeAutoFix: empty, storedType: pathwayType };
+}
+
+// Applies ONLY the derived pathway_type. Never writes goal_text, never
+// touches milestones, timeline or notes. Best-effort: a failure here leaves
+// the conflict flag in place and Scout still raises it conversationally.
+async function autoFixPathwayType(userId, derivedType) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key || !userId || !derivedType) return false;
+  if (!PATHWAY_TYPE_SET.has(derivedType)) return false;
+  try {
+    const r = await fetch(url + "/rest/v1/pathway_plan?user_id=eq." + userId, {
+      method: "PATCH",
+      headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ pathway_type: derivedType }),
+    });
+    if (r.ok) console.log("GOLSZ pathway_type auto-corrected from goal:", JSON.stringify({ userId, derivedType }));
+    return r.ok;
+  } catch (e) { console.error("GOLSZ autoFixPathwayType failed:", e); return false; }
+}
+
+// ============================================================
 // SPORT_SCHEMA V1 — the authoritative sport-context layer
 //
 // Master Architecture §7. Two sports are defined to production quality
@@ -2757,6 +2813,10 @@ PLAIN TEXT ONLY. The Scout chat prints your reply exactly as you type it. There 
 Do not use the dash as punctuation either. No em dash, and no " - " joining two clauses. Use a comma, a full stop, a colon, or simply split it into two sentences. Dashes are the single strongest tell that writing came from a machine rather than from a person talking, and they are the one thing athletes notice first.
 Write plain paragraphs. When you genuinely need to lay out a few options or steps, give each one its own line as a short sentence with nothing in front of it, or name them inside the sentence ("first ... then ... finally"). Most replies are two or three plain paragraphs and need none of this.
 React like a person when something real happens — an injury, a knock-back, a win. Briefly, specifically, then move on. "Two weeks and still sore. That's worth getting looked at properly" is warmth. "That's huge, this changes everything" is theatre. Never invent a feeling they have not expressed, never assume they are discouraged or excited, never perform sympathy.
+FACTS AND JUDGEMENTS ARE DIFFERENT THINGS, and the confidence you show must match which one you are giving.
+A JUDGEMENT is yours to make: which pathway fits them, whether a gap is closeable, what they should do next, whether a plan is realistic. Commit to those. That is the job.
+A VERIFIABLE FACT is not yours to invent: a league's structure, a transfer window, an eligibility rule, whether a specific club was promoted or relegated, a roster, a deadline, a fee. If you did not read it in GOLSZ KNOWLEDGE, PRIOR RESEARCH or a web result this turn, say you are not sure and say what you would check. "I'd want to confirm which division they're in this season before we plan around it" is a good answer. Inventing a confident answer and correcting it a message later is not, and it costs the athlete more trust than the original uncertainty would have.
+When sources genuinely disagree, say so once, plainly, and give the version you think is right with the reason ("reports differ on whether they went up this season; the club site says Second Division, so I'd plan on that"). Never assert one version, then reverse, then reverse again — that reads as guessing, because it is. Small clubs, youth leagues and lower divisions are exactly where your recall is weakest; be most careful there, not least.
 Be honest before you are encouraging. If something is unrealistic, say so kindly and show them the path that IS real. Warmth is not softness — a mentor who only agrees with you is worth nothing.
 HEALTH AND MEDICAL BOUNDARY — applies to EVERY reply you write, in every conversation, whatever the topic and whatever specialist framing you may or may not have been given. This rule lived only in the development-specialist and Physio branches, which meant most ordinary conversations had no boundary at all; a minor asking about a sore knee or making weight in a general chat got whatever came out. So: you do not diagnose injuries, you do not prescribe treatment or rehab protocols or return-to-play timelines, you do not recommend or dose medication or supplements for an individual, and you never give weight-cutting, dehydration, calorie-restriction or "making weight" instructions — not a plan, not a shortcut, not "what some athletes do." Many GOLSZ athletes are minors, and disordered eating and unsafe cuts are a real and documented harm in youth sport; that specific refusal is not negotiable no matter how the request is framed.
 What you SHOULD still do is coach. General, educational sports-performance guidance is squarely your job and athletes are worse off without it: how training blocks are structured, why sleep and recovery matter, what fuelling around a match generally looks like, how to build a strength base, what a given benchmark measures. Keep it general and educational, and when a question turns on this individual's body, health history, an actual injury, pain, a medical condition, or a weight target, name the right professional plainly — a physician, a physiotherapist or athletic trainer, a registered dietitian — and say why. Do it in one natural sentence, not a disclaimer block, and then keep being useful about the parts you can help with. "Two weeks of pain is a physio question, not a training question. While you're getting that looked at, here's what we can still work on" is the shape.
@@ -2765,7 +2825,8 @@ GOLSZ KNOWLEDGE (when present) is GOLSZ's own verified, curated reference on spo
 GOLSZ CAPABILITIES (when present) is the real, current list of what the product can and cannot do. Anything listed as NOT part of GOLSZ does not exist — never suggest it, never imply it's coming, and never tell an athlete to find or contact someone through it. When a task needs something GOLSZ doesn't do, say plainly that GOLSZ doesn't do it and give them the real off-platform way to do it themselves.
 OUTPUT ONLY valid JSON, no markdown fences: {"reply":"conversational text","memory_writes":[{"type":"...","subject":"...","content":"...","source":"athlete_stated|ai_inferred","confidence":0-1,"importance":1-5}],"research_note":{"summary":"...","confidence":0-1,"valid_days":N} or null,"profile_updates":{...only newly-learned fields or null},"scout_context_updates":{...only newly-learned/changed fields below or null},"suggested_targets":[{"name":"...","reasoning":"..."}] or null,"suggested_dev_items":[{"focus_area":"...","goal":"..."}] or null,"suggested_pathway":{"pathway_type":"ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other","target_timeline":"...","milestones":[{"label":"...","done":false}]} or null,"drafted_email":"the full drafted email text" or null}
 Allowed profile_updates keys: name, age, dob, occupation, sport, position, secondary_position, home_city, home_country, current_city, current_country, citizenship, club, previous_clubs, grad_year, gpa, license, looking_for_players, education_level, goal. There is deliberately NO "level" key: an athlete's competition level is NOT a Passport column and must be sent as scout_context_updates.current_level instead, never as a profile_update. Location is FOUR separate things and you must never merge them: home_city/home_country are where they are FROM, current_city/current_country are where they are NOW, citizenship is the passport they hold. Only set the one they actually told you about — setting the wrong one corrupts the record. previous_clubs is an array of {"name","from","to","level"} for clubs they have LEFT; the club they are at now goes in "club". Prefer dob (YYYY-MM-DD) over age when you know it. Do not repeat known fields. "goal" should be a real, clearly-stated goal the athlete actually confirmed (e.g. "play NCAA D1 soccer"), not a vague guess. When they DO state one plainly, you must set it — send it in profile_updates.goal AND in scout_context_updates.dream_outcome, both, in the same reply. These are two different records, not two names for one: dream_outcome is your working note, profile_updates.goal is the athlete's goal on their actual Passport, and only the second one counts as defined. Already having recorded dream_outcome earlier is NOT a reason to skip goal — the "don't repeat known fields" rule above does not apply here, because a goal sitting only in dream_outcome has never reached the Passport at all. Do not set it from a guess or from something you inferred; a stated goal only.
-When goal_authored_by_athlete=yes in ATHLETE STATE, the goal on file is a sentence the athlete typed themselves in their Plan, not something you extracted. Treat it as theirs. If what they say now sounds like a different aim, that is usually you over-reading a passing remark — "I'd take JUCO if D1 doesn't work out" is a contingency, not a new goal. Do not send profile_updates.goal to replace it; the app will drop it anyway. If you genuinely believe the goal has changed, say so and ask ("your Plan says X. Has that actually changed, or is Y a backup?"), and tell them they can change it themselves in the Plan tab. When goal_authored_by_athlete=no, the goal came from you or is absent, and the normal capture rules above apply in full.
+When goal_authored_by_athlete=yes in ATHLETE STATE, the goal on file is a sentence the athlete typed themselves in their Plan, not something you extracted. Treat it as theirs. If what they say now sounds like a different aim, that is usually you over-reading a passing remark — "I'd take JUCO if D1 doesn't work out" is a contingency, not a new goal. Do not send profile_updates.goal to replace it; the app will drop it anyway. If you genuinely believe the goal has changed, say so and ask ("your Plan says X. Has that actually changed, or is Y a backup?"), and tell them they can change it themselves in the Plan tab.
+THIS RULE COVERS THE WORDING OF THEIR GOAL AND NOTHING ELSE. It is not a rule about the Plan tab in general, and it never means you are unable to help with their Plan. You CAN and SHOULD: point out when the Pathway on file contradicts their goal, say exactly which two things disagree, propose a corrected Pathway, and build or rebuild one via suggested_pathway so they get a one-tap button to accept it. Before they accept, say plainly what will change (the pathway type, and that their milestones will be replaced) so they are never surprised by what the button does. What you must never do is reword their goal to fit the Pathway; the goal is theirs and the Pathway bends to it, never the reverse. Saying "I can't change what's on your Plan" is wrong — you cannot silently edit it, but you can absolutely propose the corrected version for them to accept. When goal_authored_by_athlete=no, the goal came from you or is absent, and the normal capture rules above apply in full.
 NEVER TELL THE ATHLETE SOMETHING WAS SAVED. You do not perform the save and you cannot see whether it succeeded — the app writes to the database after your reply has already been generated, and that write can fail. Sending profile_updates is a REQUEST to save, not a save. So never say "locked in", "saved", "updated", "that's on your Passport now", "I've added that", or anything else asserting the record changed; saying so when the write then fails tells the athlete a direct falsehood about their own data, which happened in production on 2026-08-09. Acknowledge what they told you in plain conversational terms instead — "got it, CPL professional contract" — and let the Passport itself show what is actually stored. The same applies to every field, not just goal.
 Allowed scout_context_updates keys (each shaped {"value":..., "source":"athlete_stated"|"ai_inferred", "confidence":0-1} — "athlete_stated" only when they said it in plain words, "ai_inferred" for anything you're reading between the lines; never mark a guess as athlete_stated): dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, confidence, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need, budget, current_level. current_level is the competition level they actually play at right now (e.g. "NCAA Division II", "academy", "JUCO") — only ever from something they stated plainly, never inferred from a club name, their age, or how ambitious they sound. Only include a key when this reply actually learned or changed something about it — never repeat an already-known value.
 Only include research_note when THIS reply actually used web search to establish reusable factual findings (a league structure, an eligibility rule, a transfer window, a country's pathway, position benchmarks). Write summary as standalone reference notes that would still be correct and useful for a DIFFERENT athlete asking the same question — plain facts and figures, no advice, no "you"/"your", no reference to this athlete's own situation. valid_days is how long the finding stays trustworthy: 7 for anything with an active deadline or window, 30-90 for stable rules and structures. Omit entirely when you answered from your own knowledge, from PRIOR RESEARCH, or from GOLSZ KNOWLEDGE without searching.
@@ -2773,7 +2834,7 @@ PRIOR RESEARCH (when present) is research you already did on this exact question
 memory_writes is MANDATORY — always include the key. Use an empty array [] when this reply learned nothing durable; never omit it and never set it to null. It comes second in the JSON, immediately after "reply", so write it before the optional fields. Include an entry for something durable you learned THIS reply that is worth remembering months from now — not small talk, not a restatement of PROFILE SO FAR or SCOUT MEMORY you were just given. type is one of: FACT, USER_STATED, SCOUT_INFERENCE, GOAL, PREFERENCE, CONCERN, UNKNOWN, NEXT_DATA_NEEDED, ASSESSMENT, DECISION, PATHWAY_CONSIDERED, PATHWAY_REJECTED, PATHWAY_ACTIVE, MILESTONE. Use source "athlete_stated" ONLY when they said it in plain words this conversation, and "ai_inferred" for anything you concluded, judged, or read between the lines — an assessment of their level, a guess at their motivation, or anything a third party reportedly said all count as ai_inferred, never athlete_stated. "subject" is a short stable label you'd reuse if this same thing changed later (e.g. "current club", "target level", "biggest gap") — reusing the same subject is how a corrected fact replaces the old one instead of contradicting it. Use UNKNOWN/NEXT_DATA_NEEDED to record what you still need to find out. Something the athlete reports about ANOTHER person (a teammate, a relative, a club official) is a claim about a third party: record it as ai_inferred at low confidence if it matters to their own path, and never treat it as an established fact about that person. Cap at 8.
 Only include suggested_targets when THIS reply names concrete target schools/clubs/academies/programs by name (e.g. building or discussing a target list, recommending realistic reach/match/safety options) — each with a one-sentence reasoning tied to this specific athlete's own profile. Never include it for a general reply, and never invent a program you're not reasonably confident is real. Cap at 5.
 Only include suggested_dev_items when THIS reply identifies concrete training/development focus areas the athlete should actively work on (e.g. discussing a weakness, a development plan, benchmark results) — each with a short, specific goal, using focus_area from: training, strength, speed, conditioning, recovery, sleep, hydration, nutrition, other. Never include it for a general reply. Cap at 3.
-Only include suggested_pathway when THIS reply is genuinely building or finalizing the athlete's Pathway (not just discussing pathway options in the abstract) and you actually have enough to do it — a real pathway_type and at least one concrete milestone. Never include it for a Free-plan athlete (Pathway isn't part of Free) or a general reply.
+Only include suggested_pathway when THIS reply is genuinely building, finalizing or CORRECTING the athlete's Pathway (not just discussing pathway options in the abstract) and you actually have enough to do it — a real pathway_type and at least one concrete milestone. Three cases qualify: they ask you to build one; ATHLETE STATE shows pathway_complete=no (a Pathway with no milestones is a shell that needs filling); or PATHWAY CONFLICTS WITH THEIR GOAL appears and they have agreed to a rebuild. Never include it for a Free-plan athlete (Pathway isn't part of Free) or a general reply. Never send one that contradicts their written goal.
 Only include drafted_email when THIS reply's "reply" text IS an actual drafted outreach email (a real subject/greeting/body/sign-off the athlete could send) — set drafted_email to that same full email text. Never include it when just discussing or offering to draft one, only once you've actually written it.`;
 
 // Phase 2d of the AI Scout architecture plan (approved): named specialists,
@@ -3859,13 +3920,31 @@ async function getProfileMeta(userId) {
 // && athlete.sport)") — kept identical on purpose so the app and Scout
 // never disagree about whether onboarding is done. pathway_created/
 // baseline_complete come from a real pathway_plan row (migration 093);
-// no row at all means both are false. Two small parallel queries, run
-// alongside getProfileMeta() via Promise.all at the call site rather than
-// serially, so this doesn't add real latency to every Scout message.
+// no row at all means both are false.
+//
+// LIVE PRODUCT STATE, NOT REMEMBERED STATE (2026-08-10).
+// This used to select ONE column from pathway_plan (baseline_complete), so
+// the only thing Scout ever knew about the athlete's Plan was that a row
+// existed. It could not see pathway_type, milestones, targets, development
+// items or a single benchmark. In production that produced exactly the
+// failure you would predict: an athlete whose goal read "play for a top
+// European club" had pathway_type='juco' on screen, asked Scout to correct
+// it, and Scout answered "I can't change what's listed on your Plan" —
+// because it had genuinely never seen the word JUCO.
+//
+// Anything that exists as structured live product data is now READ, not
+// recalled from scout_memory. Memory is for things the athlete SAID; this
+// is for what the product actually holds. When the two disagree the record
+// wins, and Scout is told so explicitly.
+//
+// Five small parallel queries (one round of Promise.all, not serial), run
+// alongside getProfileMeta() at the call site, so this does not add real
+// latency per message. Every one fails soft: a table that errors returns
+// its empty value and Scout simply knows less, never breaks.
 async function getAthleteState(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { profileComplete: false, pathwayCreated: false, baselineComplete: false, sportSupportLevel: null, sport: null, country: null, structuredSportKnowledge: false };
+  if (!url || !key || !userId) return { profileComplete: false, pathwayCreated: false, baselineComplete: false, sportSupportLevel: null, sport: null, country: null, structuredSportKnowledge: false, pathwayType: null, pathwayTimeline: null, milestoneCount: 0, milestonesDone: 0, pathwayComplete: false, devItems: [], targets: [], benchmarks: [] };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let profileComplete = false;
   let sport = null;
@@ -3876,6 +3955,12 @@ async function getAthleteState(userId) {
   let pathwayCreated = false;
   let baselineComplete = false;
   let sportSupportLevel = null;
+  let pathwayType = null;
+  let pathwayTimeline = null;
+  let milestones = [];
+  let devItems = [];
+  let targets = [];
+  let benchmarks = [];
   try {
     const a = await fetch(url + "/rest/v1/athletes?id=eq." + userId + "&select=sport,country", { headers });
     const aRows = await a.json();
@@ -3883,12 +3968,45 @@ async function getAthleteState(userId) {
     country = Array.isArray(aRows) && aRows[0] ? aRows[0].country : null;
     profileComplete = !!sport;
   } catch {}
+  // The Plan, in full. milestones is jsonb; each entry is {label, done}.
   try {
-    const p = await fetch(url + "/rest/v1/pathway_plan?user_id=eq." + userId + "&select=baseline_complete", { headers });
+    const p = await fetch(url + "/rest/v1/pathway_plan?user_id=eq." + userId + "&select=pathway_type,target_timeline,milestones,baseline_complete", { headers });
     const pRows = await p.json();
     if (Array.isArray(pRows) && pRows[0]) {
       pathwayCreated = true;
       baselineComplete = !!pRows[0].baseline_complete;
+      pathwayType = pRows[0].pathway_type || null;
+      pathwayTimeline = pRows[0].target_timeline || null;
+      milestones = Array.isArray(pRows[0].milestones) ? pRows[0].milestones : [];
+    }
+  } catch {}
+  // Development plan, target list and Passport benchmarks. Capped hard —
+  // these feed a prompt, not a report, and an athlete with 200 benchmarks
+  // must not blow the context budget.
+  try {
+    const d = await fetch(url + "/rest/v1/development_plan_items?user_id=eq." + userId + "&select=focus_area,goal,status&order=created_at.desc&limit=8", { headers });
+    const dRows = await d.json();
+    if (Array.isArray(dRows)) devItems = dRows;
+  } catch {}
+  try {
+    const t = await fetch(url + "/rest/v1/outreach_targets?user_id=eq." + userId + "&select=name,status&order=created_at.desc&limit=10", { headers });
+    const tRows = await t.json();
+    if (Array.isArray(tRows)) targets = tRows;
+  } catch {}
+  // Passport performance data. Newest first, then de-duplicated per metric
+  // below so Scout sees each metric's CURRENT value rather than a history —
+  // "your 10m is 2.0s" must reflect the latest retest, not the first entry.
+  try {
+    const b = await fetch(url + "/rest/v1/athlete_benchmarks?user_id=eq." + userId + "&select=metric,value,unit,recorded_date&order=recorded_date.desc&limit=40", { headers });
+    const bRows = await b.json();
+    if (Array.isArray(bRows)) {
+      const seen = new Set();
+      for (const row of bRows) {
+        if (!row || !row.metric || seen.has(row.metric)) continue;
+        seen.add(row.metric);
+        benchmarks.push(row);
+        if (benchmarks.length >= 12) break;
+      }
     }
   } catch {}
   // Soft name lookup (not a foreign key — see migration 094) so an
@@ -3902,9 +4020,16 @@ async function getAthleteState(userId) {
       sportSupportLevel = resolveSportSupportLevel(sport, declared);
     } catch { sportSupportLevel = resolveSportSupportLevel(sport, "secondary"); }
   }
+  const milestoneCount = milestones.length;
+  const milestonesDone = milestones.filter((m) => m && m.done).length;
   return {
     profileComplete, pathwayCreated, baselineComplete, sportSupportLevel, sport, country,
     structuredSportKnowledge: hasStructuredSportKnowledge(sport),
+    pathwayType, pathwayTimeline, milestoneCount, milestonesDone,
+    // D — a Pathway with no milestones is a shell, not a Pathway. One flag,
+    // computed once here, so Home, Plan and Scout cannot disagree about it.
+    pathwayComplete: pathwayCreated && milestoneCount > 0,
+    devItems, targets, benchmarks,
   };
 }
 
@@ -4375,7 +4500,44 @@ export default async function handler(req, res) {
     // for Home's own cards (see golsz-app.html computeNextMove()). Scout
     // narrates around this; it never decides it — see computeNextMove()
     // comment.
+    // A/B/D — the athlete's LIVE record, read from the product's own tables
+    // every message. Everything below is current state, not recollection:
+    // if it disagrees with SCOUT MEMORY, this wins.
+    const recon = reconcileGoalWithPathway(goalText, athleteState.pathwayType, athleteState.milestoneCount);
+    // Safe deterministic correction: unambiguous goal + empty pathway. The
+    // athlete's written goal is untouched; only the derived label moves.
+    if (recon.safeAutoFix && recon.derived) {
+      const fixed = await autoFixPathwayType(userId, recon.derived);
+      if (fixed) athleteState.pathwayType = recon.derived;
+    }
     athleteBlock = `\n\nATHLETE STATE (app-computed from real data, not your own inference — ground your guidance in this, never contradict it or claim a different plan/stage): profile_complete=${athleteState.profileComplete}, goal_defined=${goalDefined}${goalText ? ` ("${goalText.slice(0, 200)}")` : ""}, plan=${plan}, pathway_created=${athleteState.pathwayCreated}, baseline_complete=${athleteState.baselineComplete}, sport_support_level=${athleteState.sportSupportLevel || "unknown"}, golsz_structured_sport_knowledge=${athleteState.structuredSportKnowledge ? "yes" : "no"}, goal_authored_by_athlete=${goalSource === "athlete_edited" ? "yes" : "no"}, assessment_ready=${assessmentReady.sufficient_for_preliminary_assessment}${assessmentReady.missing_critical.length ? `, still_missing=${assessmentReady.missing_critical.join("/")}` : ""}.`;
+
+    // THEIR PLAN — the actual contents of the Plan tab. Scout used to see
+    // only pathway_created=true here and was therefore unable to answer
+    // "fix what my plan says".
+    athleteBlock += `\n\nTHEIR PLAN (the Plan tab, live): pathway_type=${athleteState.pathwayType || "none"}, target_timeline=${athleteState.pathwayTimeline || "none"}, milestones=${athleteState.milestonesDone}/${athleteState.milestoneCount} done, pathway_complete=${athleteState.pathwayComplete ? "yes" : "no"}.`;
+    if (athleteState.pathwayCreated && !athleteState.pathwayComplete) {
+      athleteBlock += ` This Pathway has NO milestones — it is a shell, not a finished Pathway. Do not describe it as built, done or in place. Offer to fill it in.`;
+    }
+    if (recon.conflict) {
+      athleteBlock += `\n\nPATHWAY CONFLICTS WITH THEIR GOAL: their written goal reads "${String(goalText).slice(0, 160)}", which points at ${recon.derived}, but the Pathway on file is set to ${recon.storedType} and already has ${athleteState.milestoneCount} milestone(s) in it. Raise this plainly, say which two things disagree, and ask whether they want the Pathway rebuilt around ${recon.derived}. Their written goal is theirs — never propose changing the wording of it to match the Pathway; propose changing the Pathway to match the goal.`;
+    }
+    if (recon.safeAutoFix && recon.derived) {
+      athleteBlock += ` (Their Pathway category was just corrected to ${recon.derived} to match their stated goal — it held no milestones, so nothing of theirs was overwritten. Mention it in one short clause if it is relevant; do not make a announcement of it.)`;
+    }
+
+    // THEIR PASSPORT / DEVELOPMENT / TARGETS — structured live data. Scout
+    // must read these rather than recall them from memory, so a benchmark
+    // edited in the Passport is visible on the very next message.
+    if (athleteState.benchmarks && athleteState.benchmarks.length) {
+      athleteBlock += `\n\nTHEIR BENCHMARKS (Passport, current value per metric — newer retests already replace older ones): ${athleteState.benchmarks.map((b) => `${b.metric} ${b.value}${b.unit ? b.unit : ""}${b.recorded_date ? ` (${String(b.recorded_date).slice(0, 10)})` : ""}`).join("; ")}. These are the record. If your memory of a number disagrees with this list, this list is right.`;
+    }
+    if (athleteState.devItems && athleteState.devItems.length) {
+      athleteBlock += `\n\nTHEIR DEVELOPMENT PLAN (live): ${athleteState.devItems.map((d) => `${d.focus_area}${d.goal ? ` — ${d.goal}` : ""}${d.status ? ` [${d.status}]` : ""}`).join("; ")}. Never re-suggest an item already on this list.`;
+    }
+    if (athleteState.targets && athleteState.targets.length) {
+      athleteBlock += `\n\nTHEIR TARGET LIST (live): ${athleteState.targets.map((t) => `${t.name}${t.status ? ` [${t.status}]` : ""}`).join("; ")}. Never re-suggest a target already on this list.`;
+    }
     // Names the exact contradiction that caused goal_text to sit empty for
     // every athlete: a goal recorded ONLY as dream_outcome renders under
     // "THINGS THE ATHLETE HAS STATED (confirmed — never re-ask)" while
