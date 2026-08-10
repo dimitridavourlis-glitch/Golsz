@@ -149,5 +149,41 @@ for (const l of ["fr", "es", "el"]) {
   ck(`${l} has no key English lacks`, [...keySets[l]].filter((k) => !keySets.en.has(k)), []);
 }
 
+// --- Scout renders as raw text, so the prompt must not ask for markdown ---
+//
+// golsz-app.html renders a Scout reply inside a plain <div> with
+// whiteSpace:"pre-wrap" and no markdown parser. Any "- " bullet, "**bold**"
+// or "#" header the model emits therefore reaches the athlete as literal
+// punctuation on screen. The prompt used to say "keep headers, bold and
+// bullet lists for..." — actively asking for output the client cannot
+// render. These lock the fix in place.
+const SCOUT = fs.readFileSync(REPO + "/api/scout.js", "utf8");
+const PROMPT = SCOUT.slice(SCOUT.indexOf("const SYSTEM_PROMPT = `"), SCOUT.indexOf("const SPECIALIST_FRAMING"));
+
+ck("Scout replies still render with no markdown parser",
+   /m\.text && <div style=\{\{ whiteSpace: "pre-wrap" \}\}>\{m\.text\}<\/div>/.test(APP), true);
+ck("the prompt no longer asks for headers/bold/bullet lists",
+   /Keep headers, bold and bullet lists/.test(PROMPT), false);
+ck("the prompt states plain text only", /PLAIN TEXT ONLY/.test(PROMPT), true);
+ck("...and forbids leading dash/asterisk bullets",
+   /Never begin a line with "-" or "\*"/.test(PROMPT), true);
+ck("...and forbids the dash as punctuation",
+   /Do not use the dash as punctuation/.test(PROMPT), true);
+
+// The rule is only credible if the prompt's own worked examples obey it: a
+// quoted model reply containing an em dash teaches the opposite of the rule
+// no matter what the rule above says. A generic "no em dash between quotes"
+// scan can't be used here — the prompt is full of quoted fragments, so such
+// a regex matches ordinary instruction prose sitting BETWEEN two quotes and
+// reports it as an example. These name the four worked replies instead.
+for (const [label, ex] of [
+  ["the sore-knee warmth example", "Two weeks and still sore. That's worth getting looked at properly"],
+  ["the physio-boundary example", "Two weeks of pain is a physio question, not a training question. While you're getting that looked at"],
+  ["the goal-changed question", "your Plan says X. Has that actually changed, or is Y a backup?"],
+  ["the Pathway upgrade pitch", "re-deciding it every conversation, and that opens on Basic"],
+]) {
+  ck(`${label} is present and dash-free`, PROMPT.includes(ex), true);
+}
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);

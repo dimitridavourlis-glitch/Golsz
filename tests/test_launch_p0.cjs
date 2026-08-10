@@ -145,7 +145,7 @@ ck("the safety net is wrapped by the authorship guard at every call site",
 ck("Scout is told when the goal is the athlete's own",
    /goal_authored_by_athlete=\$\{goalSource === "athlete_edited" \? "yes" : "no"\}/.test(SRC), true);
 ck("...and told to ask rather than assume a change",
-   /has that actually changed, or is Y a backup/.test(SRC), true);
+   /[Hh]as that actually changed, or is Y a backup/.test(SRC), true);
 
 console.log("\n-- P0-5: code may land before its migration without losing data --");
 // Migrations in this project are applied by hand. PostgREST rejects an
