@@ -123,7 +123,28 @@ ck("...and a suggestion may never contradict the written goal",
    /Never send one that contradicts their written goal/.test(SCOUT), true);
 // Free stays free: correcting a Pathway must not become a Free feature.
 ck("suggested_pathway is still Free-gated", /Never include it for a Free-plan athlete/.test(SCOUT), true);
-ck("...and still stripped server-side for free", /userPlan === "free" \? null : extractSuggestedPathway/.test(SCOUT), true);
+// The server-side Free gate used to be the literal expression
+// `userPlan === "free" ? null : extractSuggestedPathway(data)` at each of
+// the four response paths. Those were replaced by finalizeSuggestedPathway()
+// when the deterministic Scout->Plan handoff landed, so asserting on that
+// string would now be testing a ghost. Assert the BEHAVIOUR instead, by
+// running the real gate: Free must still get nothing even when the model
+// emitted a perfectly valid Pathway and the athlete asked for it.
+{
+  const gateFrom = SCOUT.indexOf("function resolveSuggestedPathway");
+  const gateTo = SCOUT.indexOf("// One call the four response paths share");
+  if (gateFrom < 0 || gateTo < 0) throw new Error("resolveSuggestedPathway not found — update this slice");
+  // hasFeature comes from api/_entitlements.js, which resolveSuggestedPathway
+  // closes over in production; supply the real one here.
+  const { hasFeature } = require("../api/_entitlements.js");
+  const PATHWAY_TYPE_SET = new Set(["ncaa", "juco", "european_club", "professional"]);
+  eval(SCOUT.slice(gateFrom, gateTo));
+  const validModelPathway = { pathway_type: "european_club", target_timeline: null, milestones: [{ label: "x", done: false }] };
+  ck("suggested_pathway still stripped server-side for free",
+     resolveSuggestedPathway({ modelPathway: validModelPathway, approved: true, plan: "free", goalDefined: true, pathwayType: "european_club", readiness: null }).pathway, null);
+  ck("...and Basic still receives it",
+     resolveSuggestedPathway({ modelPathway: validModelPathway, approved: true, plan: "starter", goalDefined: true, pathwayType: "european_club", readiness: null }).pathway !== null, true);
+}
 
 console.log("\n-- D: an empty Pathway is not a Pathway --");
 ck("server computes pathwayComplete from milestone count",

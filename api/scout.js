@@ -57,6 +57,18 @@ export const config = { maxDuration: 60 };
 // underscore prefix keeps Vercel from treating it as its own Serverless
 // Function (this project is on the Hobby plan's 12-function cap).
 import { resolveActingAthlete } from "./_acting-for.js";
+// The app's own deterministic diagnosis (the five Passport Strength
+// sub-scores Home renders) and the one authoritative feature->plan mapping.
+// Both are shared modules rather than re-derived here so Scout cannot
+// disagree with what the athlete is looking at, or name a tier the UI does
+// not actually gate on. See each file's header for why they are copies of
+// golsz-app.html rather than imports of it.
+// Aliased: READINESS_DIMENSIONS is already taken further down by the (not
+// yet shipped) goal-relative readiness ENGINE vocabulary, which is a
+// different six-dimension concept. These five are the Passport Strength
+// sub-scores the athlete actually sees on Home today.
+import { computeReadiness, DIMENSION_LABEL, READINESS_DIMENSIONS as PASSPORT_STRENGTH_DIMENSIONS } from "./_readiness.js";
+import { evaluateEntitlements, hasFeature, planDisplayName, FEATURE_LABEL } from "./_entitlements.js";
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
@@ -1121,6 +1133,35 @@ async function autoFixPathwayType(userId, derivedType) {
     if (r.ok) console.log("GOLSZ pathway_type auto-corrected from goal:", JSON.stringify({ userId, derivedType }));
     return r.ok;
   } catch (e) { console.error("GOLSZ autoFixPathwayType failed:", e); return false; }
+}
+
+// ---- 5 / RECOMMEND -------------------------------------------------------
+// Which GATED features this athlete's CURRENT state actually calls for.
+//
+// Deterministic and state-driven on purpose. The failure mode being designed
+// out is a model that decides on its own that now is a good moment to
+// mention Elite. Every entry below is an observable gap in their record — an
+// empty Pathway, nothing being tracked, nobody being contacted — so if their
+// record is in good shape this returns [] and there is nothing to raise.
+// Never keyed off message count, conversation length or sentiment.
+//
+// Order is by how early it blocks progress, and only matters for reading;
+// the plan chosen from these is the LOWEST that covers them all, never the
+// highest (see lowestPlanUnlocking in api/_entitlements.js).
+function deriveEntitlementNeeds(athleteState) {
+  const needs = [];
+  if (!athleteState) return needs;
+  // A goal with no route to it. Includes the "shell" case: a row exists but
+  // carries no milestones, which is not a Pathway the athlete can act on.
+  if (!athleteState.pathwayComplete) needs.push("pathway_plan");
+  // Nothing measured means no way to show progress to anyone.
+  const rd = athleteState.readiness;
+  if (rd && rd.performance && rd.performance.metricsTracked === 0) needs.push("benchmarks");
+  // No one being contacted — the goal cannot advance on training alone.
+  if (!athleteState.targetsCount) needs.push("targets");
+  // No structured work on the weaknesses they have already named.
+  if (rd && rd.development && rd.development.total === 0) needs.push("development_plan");
+  return needs;
 }
 
 // ============================================================
@@ -2365,6 +2406,121 @@ function extractSuggestedPathway(data) {
   }
 }
 
+// ---- 2 / THE SCOUT -> PLAN HANDOFF --------------------------------------
+// extractSuggestedPathway() above can only return what the MODEL chose to
+// emit, and in production the model simply declined. Tested 2026-08-10
+// against four escalating, unambiguous instructions ("build it now", "go
+// ahead and build it", "that is genuinely my new goal, build the Plan"):
+// four times it described a complete Pathway in prose — pathway category,
+// timeline, dated milestones — and four times emitted no structured object,
+// so nothing ever reached the Plan tab. The athlete is told a plan exists
+// and then finds an empty screen.
+//
+// Emission cannot stay a model decision. Below: a deterministic read of the
+// ATHLETE'S OWN words for approval, and an app-built Pathway when approval
+// is given and the model still produced nothing. The model is preferred
+// when it does emit (richer, sport-specific content); the app guarantees
+// that an approved Plan always lands.
+//
+// Approval is read from the athlete's message, never from the model's
+// claim that the athlete agreed — that would hand the decision straight
+// back to the thing that failed.
+const PATHWAY_APPROVAL_PATTERNS = [
+  /\b(yes|yep|yeah|ok|okay|sure|please|confirmed?)\b[^.?!]{0,60}\b(build|rebuild|make|create|set\s?up)\b/i,
+  /\b(go ahead|do it|build it|build my|build the|build that|rebuild it|rebuild my|rebuild the|set it up|lock it in|let'?s do it)\b/i,
+];
+// Anything that turns an apparent instruction back into a question, a
+// refusal or a "later". Checked FIRST so "should you build it?" and "don't
+// build it yet" can never read as approval.
+const PATHWAY_APPROVAL_BLOCKERS = [
+  /\b(should|can|could|would|will|shall)\s+(you|i|we)\b/i,
+  /\bdon'?t\b/i,
+  /\b(not yet|hold off|wait until|let'?s wait|maybe later)\b/i,
+  /^\s*(no|nope)\b/i,
+];
+function athleteApprovedPathwayBuild(message) {
+  if (typeof message !== "string" || !message.trim()) return false;
+  const m = message.trim();
+  if (PATHWAY_APPROVAL_BLOCKERS.some((re) => re.test(m))) return false;
+  return PATHWAY_APPROVAL_PATTERNS.some((re) => re.test(m));
+}
+
+// The app's own Pathway, built with no model involvement at all.
+//
+// Every milestone is a real, named gap in this athlete's record — the same
+// readiness figures Home shows them — so this is honest and specific rather
+// than filler. It deliberately does NOT invent sport-specific tactical
+// steps: the app does not know those, and a plausible-sounding invented
+// milestone an athlete trains against for months is a worse outcome than a
+// plain one.
+//
+// Writes nothing about the goal. The athlete's wording is untouchable here
+// exactly as it is in autoFixPathwayType().
+function synthesizePathwayFromState({ pathwayType, readiness }) {
+  if (!pathwayType || !PATHWAY_TYPE_SET.has(pathwayType)) return null;
+  const rd = readiness;
+  const milestones = [];
+  if (rd && rd.quality && Array.isArray(rd.quality.missing) && rd.quality.missing.length) {
+    milestones.push({ label: `Complete your Passport: add ${rd.quality.missing.slice(0, 3).join(", ")}`, done: false });
+  }
+  if (rd && rd.performance) {
+    if (rd.performance.metricsTracked === 0) milestones.push({ label: "Record your first set of benchmark results", done: false });
+    else if (rd.performance.metricsRetested === 0) milestones.push({ label: "Retest your benchmarks so progression is on record", done: false });
+  }
+  if (rd && rd.pathway && !rd.pathway.targetsCount) {
+    milestones.push({ label: "Build a target list of clubs or programmes to approach", done: false });
+  }
+  if (rd && rd.development && rd.development.total === 0) {
+    milestones.push({ label: "Set up a development plan for your weakest area", done: false });
+  }
+  if (rd && rd.verification && rd.verification.status === "none") {
+    milestones.push({ label: "Request identity verification on your Passport", done: false });
+  }
+  if (!milestones.length) return null;
+  return { pathway_type: pathwayType, target_timeline: null, milestones: milestones.slice(0, 6) };
+}
+
+// The guarantee. Model first, app second, never nothing when the athlete
+// has actually said yes and the state supports building one.
+//
+// Plan gating is unchanged and is checked FIRST: Pathway is not part of
+// Free, and nothing here may hand a Free athlete a paid object.
+function resolveSuggestedPathway({ modelPathway, approved, plan, goalDefined, pathwayType, readiness }) {
+  if (!hasFeature(plan, "pathway_plan")) return { pathway: null, source: "gated" };
+  if (modelPathway) return { pathway: modelPathway, source: "model" };
+  if (!approved) return { pathway: null, source: "not_requested" };
+  // No goal on record means there is nothing to build a route toward, and
+  // inventing one would be exactly the silent-overwrite this forbids.
+  if (!goalDefined) return { pathway: null, source: "no_goal" };
+  const synth = synthesizePathwayFromState({ pathwayType, readiness });
+  if (!synth) return { pathway: null, source: "insufficient_state" };
+  return { pathway: synth, source: "app" };
+}
+
+// One call the four response paths share, so the guarantee cannot be wired
+// into three of them and forgotten in the fourth.
+//
+// ctx is null when there is no authenticated athlete state to reason about
+// (no Supabase env, unauthenticated caller). That path keeps the exact
+// pre-existing behaviour rather than silently changing what an
+// unauthenticated request returns.
+function finalizeSuggestedPathway(data, ctx, incomingText, userPlan) {
+  const modelPathway = extractSuggestedPathway(data);
+  if (!ctx) return { pathway: userPlan === "free" ? null : modelPathway, source: modelPathway ? "model" : "not_requested" };
+  const resolved = resolveSuggestedPathway({
+    modelPathway,
+    approved: athleteApprovedPathwayBuild(incomingText),
+    plan: ctx.plan,
+    goalDefined: ctx.goalDefined,
+    pathwayType: ctx.pathwayType,
+    readiness: ctx.readiness,
+  });
+  if (resolved.source === "app") {
+    console.log("GOLSZ Plan assembled by the app after athlete approval — model emitted none:", JSON.stringify({ pathway_type: resolved.pathway.pathway_type, milestones: resolved.pathway.milestones.length }));
+  }
+  return resolved;
+}
+
 // Same extraction shape again, pulling drafted_email — brief §8: "AI Scout
 // should be able to create professional introduction/email drafts using
 // Passport information," wired to a target's own draft_email column
@@ -2546,9 +2702,9 @@ function deriveReplyText(data) {
   const raw = ((data && data.content) || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
   const clean = raw.replace(/```json|```/g, "").trim();
   const parsed = parseReplyObject(clean);
-  if (parsed && typeof parsed.reply === "string" && parsed.reply.trim()) return parsed.reply.trim();
+  if (parsed && typeof parsed.reply === "string" && parsed.reply.trim()) return stripInternalTerminology(parsed.reply.trim());
   const salvaged = salvageJsonValue(clean, "reply");
-  if (typeof salvaged === "string" && salvaged.trim()) return salvaged.trim();
+  if (typeof salvaged === "string" && salvaged.trim()) return stripInternalTerminology(salvaged.trim());
   // No recoverable "reply". Drop everything from the first "{" onward and see
   // if the model wrote anything usable before it.
   const brace = clean.indexOf("{");
@@ -2556,8 +2712,68 @@ function deriveReplyText(data) {
   // Threshold is low on purpose: a short real sentence ("Here is what I found
   // about the window.") is 38 chars and must not be thrown away. The '":'
   // check is what actually rejects JSON fragments, not the length.
-  if (prose.length > 15 && !prose.includes('":')) return prose;
+  if (prose.length > 15 && !prose.includes('":')) return stripInternalTerminology(prose);
   return null;
+}
+
+// ---- 6 / NEVER EXPOSE INTERNAL TERMINOLOGY -------------------------------
+// The prompt forbids this, and the prompt was not enough. Observed in
+// production on 2026-08-10, verbatim, to a real athlete:
+//
+//   "I'm holding the suggested_pathway build for one more message"
+//
+// A prompt rule is a request; this is the guarantee. Every athlete-facing
+// string goes through here (deriveReplyText is the single choke point all
+// four response paths share).
+//
+// Substitutions, not deletions: removing the word would leave a sentence
+// with a hole in it. Each internal identifier maps to what a human would
+// have said, so the sentence survives ("I'm holding the Plan build for one
+// more message").
+//
+// Word-boundary anchored and case-insensitive. Deliberately conservative —
+// it only rewrites tokens that are unmistakably ours. "pathway" and "plan"
+// on their own are ordinary English an athlete should absolutely hear, so
+// only the snake_case/CAPS forms are touched.
+const INTERNAL_TERM_REPLACEMENTS = [
+  [/\bsuggested_pathway\b/gi, "Plan"],
+  [/\bpathway_type\b/gi, "pathway"],
+  [/\bpathway_plan\b/gi, "Plan"],
+  [/\bpathway_complete\b/gi, "whether your Plan is finished"],
+  [/\btarget_timeline\b/gi, "target timeline"],
+  [/\bgoal_text\b/gi, "your goal"],
+  [/\bgoal_defined\b/gi, "whether your goal is set"],
+  [/\bgoal_authored_by_athlete\b/gi, "whether you wrote the goal yourself"],
+  [/\bgoal_source\b/gi, "where your goal came from"],
+  [/\bprofile_updates\b/gi, "your Passport details"],
+  [/\bmemory_writes\b/gi, "my notes"],
+  [/\bscout_context(_updates)?\b/gi, "what I know about you"],
+  [/\bathlete_benchmarks\b/gi, "your benchmarks"],
+  [/\bdevelopment_plan_items\b/gi, "your development plan"],
+  [/\boutreach_targets\b/gi, "your target list"],
+  [/\bsuggested_targets\b/gi, "target suggestions"],
+  [/\bsuggested_dev_items\b/gi, "development suggestions"],
+  [/\bbaseline_complete\b/gi, "your baseline"],
+  [/\bassessment_ready\b/gi, "whether I know enough yet"],
+  [/\bstill_missing\b/gi, "what's still missing"],
+  [/\bprofile_complete\b/gi, "how complete your Passport is"],
+  [/\bprofile_quality\b/gi, "how complete your Passport is"],
+  [/\bmilestones_?done\b/gi, "milestones done"],
+  [/\bATHLETE STATE\b/g, "your record"],
+  [/\bPLAN FIT\b/g, "your plan"],
+  [/\bSCOUT MEMORY\b/g, "my notes"],
+  [/\bdrafted_email\b/gi, "the draft email"],
+  [/\breply_text\b/gi, "my reply"],
+];
+function stripInternalTerminology(text) {
+  if (typeof text !== "string" || !text) return text;
+  let out = text;
+  for (const [re, replacement] of INTERNAL_TERM_REPLACEMENTS) out = out.replace(re, replacement);
+  // Loud, because a hit means the prompt rule was ignored and the wording
+  // around the substitution may still read oddly. Logs the term, never the
+  // athlete's message.
+  if (out !== text) console.warn("GOLSZ internal terminology leaked into a reply and was rewritten");
+  return out;
 }
 
 // Scout kept ending EVERY reply with a question — four, five in a row reads
@@ -2797,9 +3013,18 @@ golsz_structured_sport_knowledge in ATHLETE STATE below is the load-bearing flag
 
 With the flag at "no" you may still help, and should — general sports knowledge and web search are legitimate and often good. What you must not do is let general knowledge wear GOLSZ's authority. Never present recruiting requirements, competition ladders, benchmark standards, position structures or eligibility rules for that sport as GOLSZ's structured data, and never invent them at all. Say plainly which it is — "GOLSZ hasn't built out structured data for handball yet, so this is general knowledge, not a GOLSZ standard" — and where a real number or rule matters, look it up or tell them you don't have it. An invented requirement an athlete trains against for months is a worse outcome than an honest "I don't know."
 ATHLETE STATE carries assessment_ready — the app's own deterministic judgement of whether it knows enough about this athlete to stop interviewing and start assessing. When it is false, still_missing names what's actually blocking; prefer those over any generic intake question, and never announce the flag itself. When ATHLETE STATE shows assessment_ready=true and plan=free, that's a real moment — recognize it ONCE (never repeat this recap on a later message once you've already said it): briefly recap what you've learned about them (history, what they're proud of, strengths, what needs work, their stated goal), tell them plainly that's the athlete they are today and it's time to figure out how they get where they want to go, and invite them toward building a Pathway — mention plainly that a Pathway opens with a paid plan, never hide or soften that.
-SELLING THE RIGHT PLAN — this is part of helping them, not a separate job.
-GOLSZ CAPABILITIES lists every feature and the plan it starts on. When what the athlete actually needs RIGHT NOW sits above their current plan, say so: name the feature, say in one line what it would do for THIS situation, and name the tier. Put it inside the advice and carry on. Never bolt a pitch onto the end of every reply.
-Only ever point UPWARD from where they are — free to Basic, Basic to Pro or Elite, Pro to Elite. Never suggest a cheaper plan, never suggest downgrading, and never tell them their current plan is enough when a higher one genuinely solves the thing they just described.
+HOW YOU THINK THROUGH A MESSAGE — in this order, every time. Earlier steps are not optional preludes you may skip to get to a later one.
+1. UNDERSTAND. What does this athlete actually want? Their written goal is the anchor, and it is theirs — read it, don't reinterpret it. If you genuinely do not know what they are aiming at, finding that out IS the reply.
+2. DIAGNOSE. Where are they now, from their real record — Passport, Plan, benchmarks, development items, targets, and THEIR PASSPORT STRENGTH. Those figures are the app's own diagnosis; use them instead of forming a competing one. Then name what is actually standing between them and the goal. Be specific: "nothing on your Plan past the category" or "no one contacted since March", not "keep working hard".
+3. ADVISE. Answer them. Give the read, commit to it, say what you would do. This is the part that earns the conversation and it is never optional.
+4. PLAN. Turn the advice into the next concrete actions — what to do, in what order, by when.
+5. RECOMMEND. ONLY NOW, and only if steps 2-4 surfaced a real need their plan does not cover, mention the plan. PLAN FIT below has already computed whether that is true and which single plan applies.
+You may never jump to step 5. A reply that opens with a plan, or that substitutes a plan for an answer, is a failed reply — the athlete came for help, not a checkout. If steps 2-4 fill the reply, that is a complete and good reply on its own; most replies should end there.
+
+SELLING THE RIGHT PLAN — this is step 5 of the sequence above, never a shortcut past it.
+PLAN FIT below is the computed, authoritative answer about this athlete's entitlements: it names their current plan, what their situation needs, and the LOWEST plan that covers it. Follow it exactly. Never work out a tier yourself from GOLSZ CAPABILITIES, never name a plan PLAN FIT did not name, and never suggest a more expensive one because it would also work — the cheapest plan that genuinely solves their identified need is the correct answer and the only one you may give.
+When it applies: name the thing they need in plain words, say in one line what it would do for THIS situation, name the plan once, and carry on with the advice. Never bolt a pitch onto the end of a reply, and never mention plans twice in one reply.
+Only ever point UPWARD from where they are. Never suggest a cheaper plan or a downgrade. If PLAN FIT says nothing is locked, say nothing about plans at all.
 Trigger on a real need, never on a schedule. If they are stuck on something a paid feature would actually unblock — a Pathway, target lists and outreach drafts, PDF Passport, benchmark tracking, a development plan, identity verification, more Scout questions — that is the moment to say it. If nothing they raised points at a gated feature, sell nothing at all.
 Be concrete about the value. "A Pathway would lay this out as dated steps instead of us re-deciding it every conversation, and that opens on Basic" beats "upgrade for more features". Tie it to the exact problem they just described.
 Answer the question first, always. A pitch in place of an answer is how you lose them.
@@ -2809,6 +3034,7 @@ Talk to them. Plain sentences, contractions, second person. Default to about 120
 HAVE AN OPINION. When there are options, say which one YOU would pick and why, then give the alternative a line. Never lay out a balanced "Option 1 / Option 2" with matching pros and cons and leave them to choose — that is what someone with no view does. You are their agent. Agents commit, and they say when they might be wrong.
 Lead with the read or the answer, never a recap. You already have their record; use it INSIDE the advice ("with the minutes you're getting at Tusculum...") instead of reciting it back to them. They know their own story.
 Do not end every message with a question. Ask only when their answer would genuinely change what you'd advise, and never more than one. Several replies in a row with no question is normal and good — a string of questions reads like an intake form.
+NEVER SAY THE PLUMBING OUT LOUD. Everything you are given is internal: field names, block headings, flags, JSON keys, table and column names. The athlete sees none of it and it means nothing to them. Never write suggested_pathway, pathway_type, goal_text, goal_defined, profile_updates, memory_writes, scout_context, athlete_benchmarks, development_plan_items, outreach_targets, baseline_complete, assessment_ready, still_missing, ATHLETE STATE, PLAN FIT, profile_quality or any other identifier from these instructions in a reply, not even to explain what you are doing or to say you are holding one back. Say "your Plan", "your goal", "your Passport", "your benchmarks", "your target list", "how complete your Passport is". A reply that names an internal field reads as broken software, and telling them you are withholding an internal object is worse than simply not mentioning it.
 PLAIN TEXT ONLY. The Scout chat prints your reply exactly as you type it. There is no markdown parser on the client, so every formatting character reaches the athlete as a literal character on screen. Never begin a line with "-" or "*", never write "**bold**", "#" headers, or markdown tables. They show up as stray dashes and asterisks and make the reply look broken.
 Do not use the dash as punctuation either. No em dash, and no " - " joining two clauses. Use a comma, a full stop, a colon, or simply split it into two sentences. Dashes are the single strongest tell that writing came from a machine rather than from a person talking, and they are the one thing athletes notice first.
 Write plain paragraphs. When you genuinely need to lay out a few options or steps, give each one its own line as a short sentence with nothing in front of it, or name them inside the sentence ("first ... then ... finally"). Most replies are two or three plain paragraphs and need none of this.
@@ -3944,7 +4170,7 @@ async function getProfileMeta(userId) {
 async function getAthleteState(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { profileComplete: false, pathwayCreated: false, baselineComplete: false, sportSupportLevel: null, sport: null, country: null, structuredSportKnowledge: false, pathwayType: null, pathwayTimeline: null, milestoneCount: 0, milestonesDone: 0, pathwayComplete: false, devItems: [], targets: [], benchmarks: [] };
+  if (!url || !key || !userId) return { profileComplete: false, pathwayCreated: false, baselineComplete: false, sportSupportLevel: null, sport: null, country: null, structuredSportKnowledge: false, pathwayType: null, pathwayTimeline: null, milestoneCount: 0, milestonesDone: 0, pathwayComplete: false, devItems: [], targets: [], benchmarks: [], readiness: null };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
   let profileComplete = false;
   let sport = null;
@@ -3961,18 +4187,44 @@ async function getAthleteState(userId) {
   let devItems = [];
   let targets = [];
   let benchmarks = [];
+  // Readiness inputs. These are the UNTRUNCATED rows the score is computed
+  // from, kept separate from the capped prompt-facing lists above: a score
+  // derived from the first 8 development items is a different (wrong) score.
+  let athleteRow = null;
+  let profileRow = null;
+  let allDevItems = [];
+  let allBenchmarks = [];
+  let targetsCount = 0;
+  let hasPendingVerification = false;
+  let pathwayRow = null;
   try {
-    const a = await fetch(url + "/rest/v1/athletes?id=eq." + userId + "&select=sport,country", { headers });
+    // Selects every field computeProfileQuality() checks — the same list
+    // HomeTab fetches, so the two cannot score different things.
+    const a = await fetch(url + "/rest/v1/athletes?id=eq." + userId + "&select=sport,country,position,club_name,grad_year,recruiting_status,bio,highlights,timeline", { headers });
     const aRows = await a.json();
-    sport = Array.isArray(aRows) && aRows[0] ? aRows[0].sport : null;
-    country = Array.isArray(aRows) && aRows[0] ? aRows[0].country : null;
+    athleteRow = Array.isArray(aRows) && aRows[0] ? aRows[0] : null;
+    sport = athleteRow ? athleteRow.sport : null;
+    country = athleteRow ? athleteRow.country : null;
     profileComplete = !!sport;
+  } catch {}
+  try {
+    const pr = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=occupation,avatar_url,identity_verified", { headers });
+    const prRows = await pr.json();
+    profileRow = Array.isArray(prRows) && prRows[0] ? prRows[0] : null;
+  } catch {}
+  // Newest request only, matching HomeTab: a previously denied request must
+  // not keep scoring 50 forever.
+  try {
+    const v = await fetch(url + "/rest/v1/verification_requests?user_id=eq." + userId + "&select=status&order=created_at.desc&limit=1", { headers });
+    const vRows = await v.json();
+    hasPendingVerification = !!(Array.isArray(vRows) && vRows[0] && vRows[0].status === "pending");
   } catch {}
   // The Plan, in full. milestones is jsonb; each entry is {label, done}.
   try {
     const p = await fetch(url + "/rest/v1/pathway_plan?user_id=eq." + userId + "&select=pathway_type,target_timeline,milestones,baseline_complete", { headers });
     const pRows = await p.json();
     if (Array.isArray(pRows) && pRows[0]) {
+      pathwayRow = pRows[0];
       pathwayCreated = true;
       baselineComplete = !!pRows[0].baseline_complete;
       pathwayType = pRows[0].pathway_type || null;
@@ -3983,23 +4235,32 @@ async function getAthleteState(userId) {
   // Development plan, target list and Passport benchmarks. Capped hard —
   // these feed a prompt, not a report, and an athlete with 200 benchmarks
   // must not blow the context budget.
+  //
+  // Two consumers, two shapes, ONE fetch. The readiness score needs every
+  // row (a "30% done" computed over a truncated page is simply a wrong
+  // number, and it would disagree with Home); the prompt needs a short list.
+  // So each query pulls the full set and the capped slice is taken after.
+  // 500 is a ceiling against a pathological account, not a page size.
   try {
-    const d = await fetch(url + "/rest/v1/development_plan_items?user_id=eq." + userId + "&select=focus_area,goal,status&order=created_at.desc&limit=8", { headers });
+    const d = await fetch(url + "/rest/v1/development_plan_items?user_id=eq." + userId + "&select=focus_area,goal,status&order=created_at.desc&limit=500", { headers });
     const dRows = await d.json();
-    if (Array.isArray(dRows)) devItems = dRows;
+    if (Array.isArray(dRows)) { allDevItems = dRows; devItems = dRows.slice(0, 8); }
   } catch {}
   try {
-    const t = await fetch(url + "/rest/v1/outreach_targets?user_id=eq." + userId + "&select=name,status&order=created_at.desc&limit=10", { headers });
+    const t = await fetch(url + "/rest/v1/outreach_targets?user_id=eq." + userId + "&select=name,status&order=created_at.desc&limit=500", { headers });
     const tRows = await t.json();
-    if (Array.isArray(tRows)) targets = tRows;
+    if (Array.isArray(tRows)) { targetsCount = tRows.length; targets = tRows.slice(0, 10); }
   } catch {}
   // Passport performance data. Newest first, then de-duplicated per metric
   // below so Scout sees each metric's CURRENT value rather than a history —
   // "your 10m is 2.0s" must reflect the latest retest, not the first entry.
   try {
-    const b = await fetch(url + "/rest/v1/athlete_benchmarks?user_id=eq." + userId + "&select=metric,value,unit,recorded_date&order=recorded_date.desc&limit=40", { headers });
+    const b = await fetch(url + "/rest/v1/athlete_benchmarks?user_id=eq." + userId + "&select=metric,value,unit,recorded_date&order=recorded_date.desc&limit=500", { headers });
     const bRows = await b.json();
     if (Array.isArray(bRows)) {
+      // Full history feeds the performance sub-score, which counts metrics
+      // RETESTED (>= 2 entries) — de-duplicating first would zero that out.
+      allBenchmarks = bRows;
       const seen = new Set();
       for (const row of bRows) {
         if (!row || !row.metric || seen.has(row.metric)) continue;
@@ -4022,6 +4283,23 @@ async function getAthleteState(userId) {
   }
   const milestoneCount = milestones.length;
   const milestonesDone = milestones.filter((m) => m && m.done).length;
+  // The app's own diagnosis, computed from the same rows Home uses and by
+  // the same functions. Scout is handed the RESULT, not the ingredients, so
+  // it reports the athlete's score rather than forming a second opinion.
+  // Fails soft to null: an athlete with no athletes row still gets a reply.
+  let readiness = null;
+  try {
+    readiness = computeReadiness({
+      athlete: athleteRow,
+      profile: profileRow,
+      benchmarks: allBenchmarks,
+      devItems: allDevItems,
+      pathway: pathwayRow,
+      targetsCount,
+      identityVerified: profileRow ? profileRow.identity_verified : false,
+      hasPendingVerification,
+    });
+  } catch (e) { console.error("GOLSZ readiness compute failed:", e && e.message); }
   return {
     profileComplete, pathwayCreated, baselineComplete, sportSupportLevel, sport, country,
     structuredSportKnowledge: hasStructuredSportKnowledge(sport),
@@ -4029,7 +4307,7 @@ async function getAthleteState(userId) {
     // D — a Pathway with no milestones is a shell, not a Pathway. One flag,
     // computed once here, so Home, Plan and Scout cannot disagree about it.
     pathwayComplete: pathwayCreated && milestoneCount > 0,
-    devItems, targets, benchmarks,
+    devItems, targets, benchmarks, targetsCount, readiness,
   };
 }
 
@@ -4328,6 +4606,11 @@ export default async function handler(req, res) {
   // never a value trusted from the request body.
   let userId = null;
   let userPlan = null; // threaded down to logRouting() below — pure telemetry, no gating logic depends on it yet
+  // 2 — everything finalizeSuggestedPathway() needs to guarantee an approved
+  // Plan reaches the Plan tab. Populated once below, after the goal/pathway
+  // reconciliation has settled pathwayType, and read by all four response
+  // paths. Stays null when there is no athlete state to reason about.
+  let pathwayBuildCtx = null;
   let requestId = null; // hoisted so logRouting() below can persist the same id already used for isDuplicateRequest() idempotency
   let userIsAdmin = false; // hoisted so the free-plan tool-block below can exempt admins, same reason userPlan is hoisted
   let userAiUnlimited = false;
@@ -4510,6 +4793,16 @@ export default async function handler(req, res) {
       const fixed = await autoFixPathwayType(userId, recon.derived);
       if (fixed) athleteState.pathwayType = recon.derived;
     }
+    // Captured AFTER the reconciliation so a Plan built from here uses the
+    // corrected category, not the stale one. recon.derived covers the case
+    // where the conflict was left standing for the athlete to resolve but
+    // they have now said "yes, rebuild it".
+    pathwayBuildCtx = {
+      plan,
+      goalDefined,
+      pathwayType: athleteState.pathwayType || recon.derived || null,
+      readiness: athleteState.readiness,
+    };
     athleteBlock = `\n\nATHLETE STATE (app-computed from real data, not your own inference — ground your guidance in this, never contradict it or claim a different plan/stage): profile_complete=${athleteState.profileComplete}, goal_defined=${goalDefined}${goalText ? ` ("${goalText.slice(0, 200)}")` : ""}, plan=${plan}, pathway_created=${athleteState.pathwayCreated}, baseline_complete=${athleteState.baselineComplete}, sport_support_level=${athleteState.sportSupportLevel || "unknown"}, golsz_structured_sport_knowledge=${athleteState.structuredSportKnowledge ? "yes" : "no"}, goal_authored_by_athlete=${goalSource === "athlete_edited" ? "yes" : "no"}, assessment_ready=${assessmentReady.sufficient_for_preliminary_assessment}${assessmentReady.missing_critical.length ? `, still_missing=${assessmentReady.missing_critical.join("/")}` : ""}.`;
 
     // THEIR PLAN — the actual contents of the Plan tab. Scout used to see
@@ -4537,6 +4830,53 @@ export default async function handler(req, res) {
     }
     if (athleteState.targets && athleteState.targets.length) {
       athleteBlock += `\n\nTHEIR TARGET LIST (live): ${athleteState.targets.map((t) => `${t.name}${t.status ? ` [${t.status}]` : ""}`).join("; ")}. Never re-suggest a target already on this list.`;
+    }
+
+    // 1 — THE APP'S OWN DIAGNOSIS. Before this, Home computed five readiness
+    // sub-scores and Scout computed a separate prose opinion, with nothing
+    // reconciling them: an athlete could read "Performance 40" on Home and be
+    // told something else by Scout in the same minute. api/_readiness.js is
+    // now the single implementation and this hands Scout the RESULT, so the
+    // diagnosis is reported rather than re-formed.
+    const rd = athleteState.readiness;
+    if (rd) {
+      const dims = PASSPORT_STRENGTH_DIMENSIONS.map((d) => `${DIMENSION_LABEL[d]} ${rd.subScores[d]}`).join(", ");
+      athleteBlock += `\n\nTHEIR PASSPORT STRENGTH (the exact figures on their Home screen right now — computed by the app, not by you): overall ${rd.composite} out of 100. ${dims}. Weakest area: ${DIMENSION_LABEL[rd.weakest]}.`;
+      if (rd.quality && rd.quality.missing && rd.quality.missing.length) {
+        athleteBlock += ` Still missing from their Passport: ${rd.quality.missing.join(", ")}.`;
+      }
+      athleteBlock += ` Supporting counts: ${rd.performance.metricsTracked} benchmark metric(s) tracked and ${rd.performance.metricsRetested} retested; ${rd.development.done}/${rd.development.total} development items done; ${rd.pathway.milestonesDone}/${rd.pathway.milestonesTotal} milestones done; ${rd.pathway.targetsCount} target(s); identity ${rd.verification.status}.`;
+      athleteBlock += ` These numbers are authoritative. Never state a score that is not in this block, never invent a sixth category, and never describe their Passport in a way that contradicts these figures. When you talk about the weakest area, use the plain-language name above and say what would actually raise it.`;
+    }
+
+    // 3 — PRECEDENCE. Scout was observed telling an athlete "your goal on
+    // file is CPL professional contract" while the goal they had actually
+    // written read "a top European club": 35 memory rows outvoted one live
+    // field. Memory is continuity, not authority, and the order is explicit
+    // rather than left to the model to intuit.
+    athleteBlock += `\n\nWHEN SOURCES DISAGREE, THIS IS THE ORDER OF AUTHORITY — highest first, and it is not negotiable:
+1. What the athlete has written themselves (their goal wording above when goal_authored_by_athlete=yes). Highest authority. Never overwrite it, never restate it as something else, never treat an older version of it as still current.
+2. Their live record in the blocks above — Passport, Plan, benchmarks, development items, targets, Passport Strength. This is what the product actually holds right now.
+3. Something they told you earlier in THIS conversation.
+4. SCOUT MEMORY from previous conversations. Lowest authority.
+A newer source always beats an older one at the same level. If memory says one thing and the live record above says another, the live record is right and the memory is stale — follow the record silently and do not argue with yourself out loud or announce that your notes were out of date. If the athlete's written goal has changed since you last spoke, the new wording is the goal; do not keep advising toward the old one.`;
+
+    // 4 + 5 / RECOMMEND — the entitlement answer is COMPUTED here from
+    // api/_entitlements.js (the same mapping golsz-app.html gates the UI on)
+    // rather than inferred by the model from a prose capabilities list. Two
+    // things this fixes: Scout can no longer name a tier the UI does not
+    // actually enforce, and it can no longer reach for the most expensive
+    // plan — lowestPlanUnlocking() returns the cheapest tier that covers the
+    // identified gaps, and the prompt is told that ceiling explicitly.
+    const entNeeds = deriveEntitlementNeeds(athleteState);
+    const ent = evaluateEntitlements(plan, entNeeds);
+    if (ent.locked.length && ent.upgradeToName) {
+      athleteBlock += `\n\nPLAN FIT (computed by the app — do not do this arithmetic yourself): they are on ${ent.currentPlanName}.`;
+      if (ent.coveredLabels.length) athleteBlock += ` Already included on their plan: ${ent.coveredLabels.join("; ")}.`;
+      athleteBlock += ` NOT included on their plan, and their current situation points at it: ${ent.lockedLabels.join("; ")}. The lowest plan that covers all of that is ${ent.upgradeToName}.`;
+      athleteBlock += ` ${ent.upgradeToName} is the ONLY plan you may name. Never name a more expensive one, never imply a more expensive one would be better, and never list tiers. Raise it at most once, only after you have actually answered them, and only if what they raised genuinely needs one of those items — if this reply is about something else, say nothing about plans at all.`;
+    } else {
+      athleteBlock += `\n\nPLAN FIT (computed by the app): they are on ${ent.currentPlanName} and nothing their current situation needs is locked. Do not mention plans, pricing or upgrading in this reply at all.`;
     }
     // Names the exact contradiction that caused goal_text to sit empty for
     // every athlete: a goal recorded ONLY as dream_outcome renders under
@@ -4874,7 +5214,7 @@ export default async function handler(req, res) {
         // write already happened.
         data.suggested_targets = extractSuggestedTargets(data);
         data.suggested_dev_items = extractSuggestedDevItems(data);
-        data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
+        { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
         data.drafted_email = extractDraftedEmail(data);
         return res.status(200).json(data);
       }
@@ -4955,7 +5295,7 @@ export default async function handler(req, res) {
         data.next_move = extractNextBestAction(classification);
         data.suggested_targets = extractSuggestedTargets(data);
         data.suggested_dev_items = extractSuggestedDevItems(data);
-        data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
+        { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
         data.drafted_email = extractDraftedEmail(data);
         // Deliberately never cached — a degraded, apologetic reply shouldn't
         // get served back to a different athlete once things recover.
@@ -5003,7 +5343,7 @@ export default async function handler(req, res) {
             data.next_move = extractNextBestAction(classification);
             data.suggested_targets = extractSuggestedTargets(data);
             data.suggested_dev_items = extractSuggestedDevItems(data);
-            data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
+            { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
             data.drafted_email = extractDraftedEmail(data);
             // Never cached, same reasoning as the Haiku fallback: a degraded
             // reply must not be served back to a different athlete later.
@@ -5067,7 +5407,7 @@ export default async function handler(req, res) {
     data.next_move = extractNextBestAction(classification);
     data.suggested_targets = extractSuggestedTargets(data);
     data.suggested_dev_items = extractSuggestedDevItems(data);
-    data.suggested_pathway = userPlan === "free" ? null : extractSuggestedPathway(data);
+    { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
     data.drafted_email = extractDraftedEmail(data);
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
