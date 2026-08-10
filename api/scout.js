@@ -17,9 +17,9 @@
 //   SUPABASE_URL             enables auth check + metering
 //   SUPABASE_SERVICE_KEY     service role key (server-only; never ship to the browser)
 //   FREE_DAILY_LIMIT         Scout calls/day on the free plan (default 3)
-//   STARTER_DAILY_LIMIT      Scout calls/day on Starter ($6/mo, default 8)
-//   PRO_DAILY_LIMIT          Scout calls/day on Pro ($14/mo, default 15)
-//   ELITE_DAILY_LIMIT        Scout calls/day on Elite ($30/mo, default 20)
+//   STARTER_DAILY_LIMIT      Scout calls/day on Basic (C$10/mo, default 8)
+//   PRO_DAILY_LIMIT          Scout calls/day on Pro (C$24/mo, default 15)
+//   ELITE_DAILY_LIMIT        Scout calls/day on Elite (C$48/mo, default 20)
 //   FREE_LIFETIME_LIMIT      total Scout calls EVER on the free plan, never
 //                            resets (default 40) — separate from
 //                            FREE_DAILY_LIMIT, see migration 068

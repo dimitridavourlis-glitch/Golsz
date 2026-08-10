@@ -19,8 +19,8 @@
 //
 // Attribution: golsz-app.html's Auth appends ?client_reference_id=<user.id>
 // to the Payment Link redirect, so checkout.session.completed can identify
-// who paid. Plan is inferred from the checkout amount (Starter=$6, Pro=$14,
-// Elite=$30, matching PLANS in golsz-app.html) since Payment Links don't
+// who paid. Plan is inferred from the checkout amount (Basic C$10, Pro C$24,
+// Elite C$48, matching PLANS in golsz-app.html) since Payment Links don't
 // carry arbitrary metadata via URL — if those prices ever change, update
 // the thresholds below to match. Free never reaches this file at all since
 // it has no Stripe link and never goes through checkout.
@@ -80,11 +80,23 @@ function verifyStripeSignature(rawBody, sigHeader, secret) {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Payment Links don't carry arbitrary metadata, so plan is inferred from
-// price the same way in every handler that needs it — kept as one function
-// so the thresholds (Starter=$6, Pro=$14, Elite=$30, matching PLANS in
-// golsz-app.html) only need updating in one place if prices ever change.
+// price. Kept as one function so the thresholds only need updating in one
+// place, and stated in minor units (cents) because that is what Stripe
+// sends in unit_amount.
+//
+// CAD as of 2026-08-10: Basic C$10, Pro C$24, Elite C$48 — matching PLANS
+// in golsz-app.html. Previously USD 6/14/30.
+//
+// The bands are floors, not equality checks, so a price rise inside a tier
+// (or tax added on top) still resolves. They are checked highest-first;
+// keep them in descending order or a C$48 payment would match "basic".
+//
+// NOTE: this reads unit_amount only, NOT currency. Every Payment Link must
+// therefore be CAD. If a second currency is ever offered, this function has
+// to switch on event.data.object.currency as well, or a 48-unit payment in
+// another currency would silently grant Elite.
 function planFromAmount(amount) {
-  return amount >= 3000 ? "elite" : amount >= 1400 ? "pro" : amount >= 600 ? "starter" : null;
+  return amount >= 4800 ? "elite" : amount >= 2400 ? "pro" : amount >= 1000 ? "starter" : null;
 }
 
 async function patchProfile(supaUrl, serviceKey, filterQuery, body) {
