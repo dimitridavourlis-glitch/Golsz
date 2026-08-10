@@ -5,7 +5,7 @@
 // The webhook used to decide which plan a customer received by looking at
 // how much they paid:
 //
-//     planFromAmount(amount) => amount >= 4800 ? "elite" : ...
+//     planFromAmount(amount) => amount >= 3000 ? "elite" : ...
 //
 // That is one input doing two jobs — identifying the product AND proving
 // the price — and it breaks the moment reality is less tidy than a bare
@@ -17,14 +17,14 @@
 //     plan price at all;
 //   * a partial refund changes the amount after the fact;
 //   * any future price change silently re-maps existing subscriptions;
-//   * and because it reads unit_amount WITHOUT currency, 4800 of any other
+//   * and because it reads unit_amount WITHOUT currency, 3000 of any other
 //     currency would have granted Elite.
 //
 // The fix separates the two questions:
 //
 //   1. WHICH PLAN IS THIS?  Answered only from a trusted Stripe identifier
 //      — the Price id, its lookup_key, or explicit metadata. Never from money.
-//   2. IS THE CONFIGURATION WHAT WE EXPECT?  Currency must be CAD and the
+//   2. IS THE CONFIGURATION WHAT WE EXPECT?  Currency must be EUR and the
 //      unit amount must match the catalogue. Checked independently, and a
 //      failure rejects rather than downgrades.
 //
@@ -40,9 +40,9 @@
 // OWNER: when the live CAD Stripe configuration is created, set these in
 // Vercel (Production). Values come from Stripe; do not invent them.
 //
-//   STRIPE_PRICE_BASIC   price_...   the recurring C$10.00/mo CAD Price
-//   STRIPE_PRICE_PRO     price_...   the recurring C$24.00/mo CAD Price
-//   STRIPE_PRICE_ELITE   price_...   the recurring C$48.00/mo CAD Price
+//   STRIPE_PRICE_BASIC   price_...   the recurring EUR 6.00/mo Price
+//   STRIPE_PRICE_PRO     price_...   the recurring EUR 15.00/mo Price
+//   STRIPE_PRICE_ELITE   price_...   the recurring EUR 30.00/mo Price
 //
 // Optionally also set each Price's `lookup_key` in Stripe to the value in
 // LOOKUP_KEY below. A lookup_key survives Price recreation, so if a price
@@ -54,31 +54,31 @@
 // The one place plan money is defined server-side. Mirrors PLANS in
 // golsz-app.html; tests/test_cad_pricing.cjs diffs the two so they cannot
 // drift. Amounts are Stripe minor units (cents).
-const EXPECTED_CURRENCY = "cad";
+const EXPECTED_CURRENCY = "eur";
 
 const PLAN_CATALOG = [
   {
     plan: "starter",          // the DB enum value — NOT the display name
     displayName: "Basic",
-    unitAmount: 1000,         // C$10.00
+    unitAmount: 600,          // EUR 6.00
     currency: EXPECTED_CURRENCY,
-    lookupKey: "golsz_basic_cad_monthly",
+    lookupKey: "golsz_basic_eur_monthly",
     priceEnv: "STRIPE_PRICE_BASIC",
   },
   {
     plan: "pro",
     displayName: "Pro",
-    unitAmount: 2400,         // C$24.00
+    unitAmount: 1500,         // EUR 15.00
     currency: EXPECTED_CURRENCY,
-    lookupKey: "golsz_pro_cad_monthly",
+    lookupKey: "golsz_pro_eur_monthly",
     priceEnv: "STRIPE_PRICE_PRO",
   },
   {
     plan: "elite",
     displayName: "Elite",
-    unitAmount: 4800,         // C$48.00
+    unitAmount: 3000,         // EUR 30.00
     currency: EXPECTED_CURRENCY,
-    lookupKey: "golsz_elite_cad_monthly",
+    lookupKey: "golsz_elite_eur_monthly",
     priceEnv: "STRIPE_PRICE_ELITE",
   },
 ];

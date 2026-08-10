@@ -198,7 +198,7 @@ const I18N = {
     auth_reset_sent_pre: "If an account exists for ",
     auth_reset_sent_post: ", a reset link is on its way. Open it to set a new password.",
     auth_working: "Working…", auth_create_free: "Create free account",
-    auth_continue_payment: "Continue to payment — ", auth_per_month: "/month", prices_cad_note: "All prices in CAD.",
+    auth_continue_payment: "Continue to payment — ", auth_per_month: "/month", prices_currency_note: "All prices in EUR.",
     auth_couldnt_signup: "COULDN'T COMPLETE SIGNUP", auth_couldnt_login: "COULDN'T LOG IN",
     plan_free_tag: "No card needed", plan_starter_tag: "Get started", plan_pro_tag: "Most popular", plan_elite_tag: "It's GOLSZ Time",
     plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport — profile, achievements & career history", plan_free_feat3: "AI Scout athlete intake & goal discovery", plan_free_feat4: "Passport Strength score & My Next Move",
@@ -516,7 +516,7 @@ const I18N = {
     auth_reset_sent_pre: "Si un compte existe pour ",
     auth_reset_sent_post: ", un lien de réinitialisation est en route. Ouvrez-le pour définir un nouveau mot de passe.",
     auth_working: "Chargement…", auth_create_free: "Créer un compte gratuit",
-    auth_continue_payment: "Continuer vers le paiement — ", auth_per_month: "/mois", prices_cad_note: "Tous les prix sont en CAD.",
+    auth_continue_payment: "Continuer vers le paiement — ", auth_per_month: "/mois", prices_currency_note: "Tous les prix sont en EUR.",
     auth_couldnt_signup: "INSCRIPTION IMPOSSIBLE", auth_couldnt_login: "CONNEXION IMPOSSIBLE",
     plan_free_tag: "Sans carte bancaire", plan_starter_tag: "Pour commencer", plan_pro_tag: "Le plus populaire", plan_elite_tag: "C'est l'heure GOLSZ",
     plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique — profil, palmarès & parcours", plan_free_feat3: "Découverte de l'athlète & de vos objectifs avec Scout", plan_free_feat4: "Score Force du Passeport & Ma Prochaine Étape",
@@ -834,7 +834,7 @@ const I18N = {
     auth_reset_sent_pre: "Si existe una cuenta para ",
     auth_reset_sent_post: ", un enlace de restablecimiento está en camino. Ábrelo para establecer una nueva contraseña.",
     auth_working: "Procesando…", auth_create_free: "Crear cuenta gratuita",
-    auth_continue_payment: "Continuar al pago — ", auth_per_month: "/mes", prices_cad_note: "Todos los precios en CAD.",
+    auth_continue_payment: "Continuar al pago — ", auth_per_month: "/mes", prices_currency_note: "Todos los precios en EUR.",
     auth_couldnt_signup: "NO SE PUDO COMPLETAR EL REGISTRO", auth_couldnt_login: "NO SE PUDO INICIAR SESIÓN",
     plan_free_tag: "Sin tarjeta", plan_starter_tag: "Para empezar", plan_pro_tag: "Más popular", plan_elite_tag: "Es hora de GOLSZ",
     plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital — perfil, logros y trayectoria", plan_free_feat3: "Descubrimiento del atleta y tus objetivos con Scout", plan_free_feat4: "Puntuación Fuerza del Pasaporte y Tu Próximo Paso",
@@ -1152,7 +1152,7 @@ const I18N = {
     auth_reset_sent_pre: "Αν υπάρχει λογαριασμός για ",
     auth_reset_sent_post: ", ένας σύνδεσμος επαναφοράς είναι καθ' οδόν. Ανοίξτε τον για να ορίσετε νέο κωδικό.",
     auth_working: "Επεξεργασία…", auth_create_free: "Δημιουργία δωρεάν λογαριασμού",
-    auth_continue_payment: "Συνέχεια στην πληρωμή — ", auth_per_month: "/μήνα", prices_cad_note: "Όλες οι τιμές σε CAD.",
+    auth_continue_payment: "Συνέχεια στην πληρωμή — ", auth_per_month: "/μήνα", prices_currency_note: "Όλες οι τιμές σε EUR.",
     auth_couldnt_signup: "Η ΕΓΓΡΑΦΗ ΑΠΕΤΥΧΕ", auth_couldnt_login: "Η ΣΥΝΔΕΣΗ ΑΠΕΤΥΧΕ",
     plan_free_tag: "Χωρίς κάρτα", plan_starter_tag: "Ξεκινήστε", plan_pro_tag: "Δημοφιλέστερο", plan_elite_tag: "Είναι ώρα για GOLSZ",
     plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο — προφίλ, διακρίσεις & πορεία", plan_free_feat3: "Γνωριμία με τον αθλητή & τους στόχους σου μέσω του Scout", plan_free_feat4: "Βαθμολογία Ισχύος Διαβατηρίου & Η Επόμενή σου Κίνηση",
@@ -1864,7 +1864,7 @@ function SettingsButton({ openSignal }) {
                     );
                   })}
                 </div>
-                <div style={{ fontSize: 11, color: C.slate, marginTop: 8 }}>{t("prices_cad_note")}</div>
+                <div style={{ fontSize: 11, color: C.slate, marginTop: 8 }}>{t("prices_currency_note")}</div>
                 {planMsg && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 8, lineHeight: 1.4 }}>{planMsg}</div>}
               </div>
             )}
@@ -5994,9 +5994,9 @@ function AdminPanel({ onBack }) {
         // only count pro/elite from when Basic (then "Starter") was a free
         // loss-leader. Reads the amounts straight out of PLANS rather than
         // repeating them: they were hardcoded as 6/14/30 and silently went
-        // stale the moment pricing moved to CAD, under-reporting MRR by
-        // about 60%. In CAD, matching PLANS and planFromAmount() in
-        // api/stripe-webhook.js.
+        // stale the moment pricing changed, under-reporting MRR by about
+        // 60%. Denominated in EUR, matching PLANS above and PLAN_CATALOG in
+        // api/_plan-catalog.js.
         mrrEstimate: Math.round(
           PLANS.reduce((sum, pl) => sum + pl.price * (planCounts[pl.id] || 0), 0) * 100,
         ) / 100,
@@ -9566,7 +9566,7 @@ function UpgradeScreen({ uid, onDismiss, title, body }) {
             </button>
           ))}
         </div>
-        <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_cad_note")}</div>
+        <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_currency_note")}</div>
         <button onClick={onDismiss} style={{ width: "100%", textAlign: "center", background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 8 }}>{t("conversion_dismiss")}</button>
       </div>
     </div>,
@@ -9694,7 +9694,7 @@ function GuidedAssessment({ uid, onDismiss }) {
                   ))}
                 </div>
                 <button onClick={() => setShowPlans(true)} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "13px 14px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>{t("guided_continue_cta")}</button>
-                <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_cad_note")}</div>
+                <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_currency_note")}</div>
         <button onClick={onDismiss} style={{ width: "100%", textAlign: "center", background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 8 }}>{t("conversion_dismiss")}</button>
               </>
             )}
@@ -9722,7 +9722,7 @@ function GuidedAssessment({ uid, onDismiss }) {
                 </button>
               ))}
             </div>
-            <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_cad_note")}</div>
+            <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_currency_note")}</div>
         <button onClick={onDismiss} style={{ width: "100%", textAlign: "center", background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 8 }}>{t("conversion_dismiss")}</button>
           </>
         )}
@@ -9864,11 +9864,11 @@ const SUPABASE_ANON_KEY = "sb_publishable_Po2PXFdCkqZ26mtkJEJ4fA_HHBy5i_s";
 // in client code; the secret key never is.
 const TURNSTILE_SITE_KEY = "";
 const SCOUT_ENDPOINT = "/api/scout";  // same-origin — works on any Vercel deploy + `vercel dev` locally
-// Stripe Payment Link URLs (sandbox/test mode). Re-created 2026-08-05 for
-// GOLSZ pricing moved to fixed CAD on 2026-08-10 (Basic C$10, Pro C$24,
-// Elite C$48 — see PLANS below). Stripe Prices are immutable AND these
-// links are still USD sandbox links, so they are wrong on both counts and
-// must be recreated in CAD before payments go live. isLiveStripeLink()
+// Stripe Payment Link URLs (sandbox/test mode). GOLSZ pricing is fixed EUR
+// as of 2026-08-10 (Basic EUR 6, Pro EUR 15, Elite EUR 30 — see PLANS
+// below). Stripe Prices are immutable AND these links are still USD sandbox
+// links, so they are wrong on both counts and must be recreated in EUR
+// before payments go live. isLiveStripeLink()
 // below keeps checkout dark until real links replace them, so nobody can
 // be charged the old amount in the meantime.
 // P0-2. These are still sandbox links. A test-mode Payment Link renders a
@@ -9879,15 +9879,18 @@ const SCOUT_ENDPOINT = "/api/scout";  // same-origin — works on any Vercel dep
 // "checkout isn't set up yet" message instead of opening Stripe. Replacing
 // the three URLs with live ones is the only change needed to switch payments
 // on — no other code depends on the mode.
-// GOLSZ prices are fixed CAD amounts (2026-08-10) — NOT converted from
+// GOLSZ prices are fixed EUR amounts (2026-08-10) — NOT converted from
 // another currency at runtime, and not localised per visitor. planPrice()
 // is the single formatter so the symbol can never drift between the signup
 // picker, Settings, the upgrade screen and the paywall.
 //
 // Changing an amount here means: (1) new Stripe Payment Links, since Stripe
-// Prices are immutable, and (2) updating planFromAmount() in
-// api/stripe-webhook.js, which maps a paid amount back to a plan.
-const PRICE_CURRENCY = "C$";
+// Prices are immutable, and (2) updating PLAN_CATALOG in
+// api/_plan-catalog.js, which is the server-side source of truth that the
+// webhook validates a Stripe Price against. tests/test_pricing.cjs diffs
+// this table against the catalogue, plan_config and the margin-summary SQL,
+// so all four cannot drift apart silently.
+const PRICE_CURRENCY = "\u20AC";
 function planPrice(amount) { return PRICE_CURRENCY + amount; }
 
 const STRIPE_LINKS = {
@@ -9925,9 +9928,9 @@ const VAPID_PUBLIC_KEY = "BNrfmAAoP_PL4FocIjzfw5aaxzHsuCknwUeG5pX21v7cjvMCzt3PL2
 // pricing copy does not list them until they're real.
 const PLANS = [
   { id: "free",    name: "Free",    price: 0,  featKeys: ["plan_free_feat1", "plan_free_feat2", "plan_free_feat3", "plan_free_feat4"] },
-  { id: "starter", name: "Basic",   price: 10, featKeys: ["plan_starter_feat1", "plan_starter_feat2", "plan_starter_feat3", "plan_starter_feat4"] },
-  { id: "pro",   name: "Pro",     price: 24, featKeys: ["plan_pro_feat1", "plan_pro_feat2", "plan_pro_feat3", "plan_pro_feat4", "plan_pro_feat5", "plan_pro_feat6"] },
-  { id: "elite", name: "Elite",   price: 48, featKeys: ["plan_elite_feat1", "plan_elite_feat2"] },
+  { id: "starter", name: "Basic",   price: 6,  featKeys: ["plan_starter_feat1", "plan_starter_feat2", "plan_starter_feat3", "plan_starter_feat4"] },
+  { id: "pro",   name: "Pro",     price: 15, featKeys: ["plan_pro_feat1", "plan_pro_feat2", "plan_pro_feat3", "plan_pro_feat4", "plan_pro_feat5", "plan_pro_feat6"] },
+  { id: "elite", name: "Elite",   price: 30, featKeys: ["plan_elite_feat1", "plan_elite_feat2"] },
 ];
 
 // Supabase client (null when not configured -> app runs in preview mode)
@@ -10582,7 +10585,7 @@ function Auth({ onDone, paidReturn }) {
             <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: C.slate }}>{t("auth_secure_checkout")}</div>
           )}
           {isSignup && (
-            <div style={{ textAlign: "center", marginTop: 6, fontSize: 11, color: C.slate }}>{t("prices_cad_note")}</div>
+            <div style={{ textAlign: "center", marginTop: 6, fontSize: 11, color: C.slate }}>{t("prices_currency_note")}</div>
           )}
 
           {/* P0-3. Signup previously showed no Terms and no Privacy notice at

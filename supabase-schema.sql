@@ -5483,3 +5483,275 @@ $$;
 -- And that 118's lockdown survived `create or replace`:
 --   select has_function_privilege('anon','admin_scout_margin_summary()','execute');
 --   -- expected: false
+
+-- ============================================================
+-- 120 — GOLSZ pricing becomes fixed EUR
+--
+-- Final pricing, 2026-08-10:
+--   Free EUR 0 · Basic EUR 6 · Pro EUR 15 · Elite EUR 30
+-- replacing the short-lived CAD 0/10/24/48 set (migration 117), which in
+-- turn replaced USD 0/6/14/30.
+--
+-- WHY THIS MIGRATION EXISTS AT ALL
+-- The full audit found that the CAD change updated three of the FOUR places
+-- a plan price lives and missed the fourth. plan_config still held the
+-- original USD figures (6/14/30), and api/scout.js reads that table to build
+-- Scout's product knowledge — so the AI was quoting "Basic ($6/mo)" to
+-- athletes while the homepage said C$10. A live, user-facing pricing
+-- contradiction that no test caught.
+--
+-- This migration fixes both halves of that:
+--   1. plan_config carries the real prices, and its column is renamed from
+--      price_usd to price_eur so the name can no longer lie about the
+--      currency (the values had been EUR-agnostic integers all along).
+--   2. admin_scout_margin_summary() computes MRR from the same numbers.
+--
+-- tests/test_pricing.cjs now diffs all four locations against each other, so
+-- the class of bug that produced this migration cannot recur silently.
+--
+-- ENTITLEMENTS ARE UNCHANGED. Plan ids (free/starter/pro/elite), feature
+-- gates, FEATURE_MIN_PLAN, PLAN_RANK, Scout daily allowances and the free
+-- lifetime cap are all untouched. Internal identifiers keep their historical
+-- names on purpose — "starter" is still the DB enum value for the tier the
+-- product calls Basic. Only money and currency labels move here.
+--
+-- DEPLOY ORDER: the column rename and api/scout.js's read of price_eur must
+-- land together. They will not in practice, so getPlanKnowledge() retries
+-- with the old column name if the new select 404s, exactly like the
+-- goal_source pattern in the same file. Either order degrades to "Scout has
+-- no plan knowledge this call", never to an error.
+-- ============================================================
+
+-- 1. Rename the mislabelled column, idempotently.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'plan_config' and column_name = 'price_usd'
+  ) and not exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'plan_config' and column_name = 'price_eur'
+  ) then
+    alter table plan_config rename column price_usd to price_eur;
+  end if;
+end $$;
+
+-- 2. The prices themselves.
+update plan_config set price_eur = 0  where plan_id = 'free';
+update plan_config set price_eur = 6  where plan_id = 'starter';   -- displayed as "Basic"
+update plan_config set price_eur = 15 where plan_id = 'pro';
+update plan_config set price_eur = 30 where plan_id = 'elite';
+
+-- 3. Admin revenue reporting, same EUR numbers.
+--    Body is otherwise byte-identical to migration 119: same is_admin() gate,
+--    same security definer, same ::text / ::numeric casts that 119 added to
+--    make this function return a row at all. Grants untouched, so 118's
+--    revoke of PUBLIC/anon stands — `create or replace` preserves the ACL.
+create or replace function admin_scout_margin_summary()
+returns table (plan text, subscriber_count bigint, monthly_revenue numeric, ai_cost numeric, ai_cost_pct numeric)
+language plpgsql security definer set search_path to 'public' as $$
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+  return query
+  select
+    p.plan::text,
+    count(distinct p.id),
+    (count(distinct p.id) * (case p.plan when 'starter' then 6 when 'pro' then 15 when 'elite' then 30 else 0 end))::numeric,
+    coalesce(sum(u.total_cost), 0),
+    case when count(distinct p.id) * (case p.plan when 'starter' then 6 when 'pro' then 15 when 'elite' then 30 else 0 end) > 0
+      then round(100 * coalesce(sum(u.total_cost), 0) / (count(distinct p.id) * (case p.plan when 'starter' then 6 when 'pro' then 15 when 'elite' then 30 else 0 end)), 2)
+      else 0::numeric
+    end
+  from profiles p
+  left join scout_daily_usage u on u.user_id = p.id and u.usage_date >= date_trunc('month', now())::date
+  group by p.plan;
+end;
+$$;
+
+-- Verification:
+--   select plan_id, plan_name, price_eur from plan_config order by display_order;
+--   -- expected: free 0, starter 6, pro 15, elite 30
+--
+--   begin;
+--     set local role authenticated;
+--     set local request.jwt.claims = '{"sub":"<ADMIN-UUID>","role":"authenticated"}';
+--     select plan, subscriber_count, monthly_revenue from admin_scout_margin_summary() order by plan;
+--   rollback;
+--   -- monthly_revenue for 'starter' must equal subscriber_count * 6.
+--
+--   select plan, count(*) from profiles group by plan order by plan;
+--   -- must be unchanged: no entitlement moves in this migration.
+
+-- ============================================================
+-- 121 — record_scout_usage_cost() can no longer lose a cost  [BUG FIX]
+--
+-- Found by the full audit, empirically: one real Scout message was sent
+-- through the live app, and afterwards production showed
+--
+--   scout_daily_usage rows today ... 0
+--   cost today ..................... 0
+--   latest usage_date .............. yesterday
+--
+-- ROOT CAUSE
+-- api/scout.js gates the quota reservation on the caller not being an admin:
+--
+--     if (!isAdmin && !aiUnlimited) { await reserveScoutQuestion(...) }
+--
+-- and reserve_scout_question() is what CREATES the day's scout_daily_usage
+-- row. record_scout_usage_cost() was UPDATE-only. So for any admin or
+-- ai_unlimited account there was no row to update and the cost write was a
+-- silent no-op: Anthropic bills the call, GOLSZ records zero.
+--
+-- Today that is one account. The moment ai_unlimited is handed to testers,
+-- partners or a promo cohort, the Admin Panel's margin card — the single
+-- number the whole cost-control system exists to protect — starts
+-- under-reporting with no signal that it is doing so.
+--
+-- FIX
+-- Make the write an upsert on the existing unique index
+-- scout_daily_usage_user_id_usage_date_key (user_id, usage_date), so cost is
+-- recorded independently of whether a quota was ever reserved.
+--
+-- questions_used is deliberately NOT incremented here, and deliberately
+-- inserted as 0: an admin/unlimited call genuinely consumed no quota. Cost
+-- accounting and quota accounting stay separate, which is the distinction
+-- that was accidentally coupled before. On conflict the existing row's
+-- questions_used is left exactly as reserve_scout_question set it.
+--
+-- Accumulation semantics are preserved: the previous body added to the
+-- running totals, and the DO UPDATE branch still adds.
+--
+-- Signature, security definer, search_path and grants are unchanged, so this
+-- replaces the function rather than overloading it.
+--
+-- NO ENTITLEMENT CHANGES. Telemetry only. Nothing here gates a request,
+-- grants a plan, or alters a limit.
+-- ============================================================
+
+create or replace function record_scout_usage_cost(
+  p_user uuid,
+  p_cost numeric,
+  p_input_tokens integer,
+  p_output_tokens integer
+)
+returns void
+language plpgsql security definer set search_path to 'public' as $$
+begin
+  insert into scout_daily_usage (user_id, usage_date, questions_used, input_tokens, output_tokens, total_cost)
+  values (p_user, current_date, 0, coalesce(p_input_tokens, 0), coalesce(p_output_tokens, 0), coalesce(p_cost, 0))
+  on conflict (user_id, usage_date) do update
+    set input_tokens  = scout_daily_usage.input_tokens  + coalesce(excluded.input_tokens, 0),
+        output_tokens = scout_daily_usage.output_tokens + coalesce(excluded.output_tokens, 0),
+        total_cost    = scout_daily_usage.total_cost    + coalesce(excluded.total_cost, 0);
+end;
+$$;
+
+-- Verification (rolled back — proves a row is CREATED for a user who never
+-- reserved a question today, which is the exact case that silently lost cost):
+--   begin;
+--     select record_scout_usage_cost('<ADMIN-UUID>'::uuid, 0.0123, 100, 50);
+--     select user_id, usage_date, questions_used, input_tokens, output_tokens, total_cost
+--       from scout_daily_usage where usage_date = current_date;
+--     -- expect one row, questions_used = 0, total_cost = 0.0123
+--     select record_scout_usage_cost('<ADMIN-UUID>'::uuid, 0.0100, 10, 5);
+--     -- expect the SAME row, total_cost now 0.0223 (accumulates, no duplicate)
+--   rollback;
+
+-- ============================================================
+-- 122 — Revoke PUBLIC/anon EXECUTE across every admin_* function
+--
+-- Migration 118 fixed admin_scout_margin_summary(). The full audit then
+-- showed 118 had fixed exactly ONE instance of a systemic default: every
+-- other admin_* security-definer function was still
+--
+--   has_function_privilege('anon',   fn, 'execute') => true
+--   has_function_privilege('public', fn, 'execute') => true
+--
+-- including admin_analytics_counts, admin_moderation_stats,
+-- admin_review_appeal, admin_review_verification and admin_get_model_config.
+-- PostgreSQL grants EXECUTE to PUBLIC by default on every new function and
+-- `create or replace` preserves the ACL, so this was inherited from whichever
+-- migration first created each one. Migration 102 covered a handful of
+-- service-role-only functions; nothing covered the admin surface as a set.
+--
+-- SEVERITY: low, and NOTHING WAS EXPOSED. Every function this touches has an
+-- in-body `if not is_admin() then raise exception 'not authorized'` gate, so
+-- an anon caller already received an exception rather than data — verified
+-- behaviourally against production for admin_scout_margin_summary() when 118
+-- shipped. This removes the ability to reach that check at all. Defence in
+-- depth, not a leak fix.
+--
+-- WHY THIS IS DYNAMIC RATHER THAN ~36 HAND-WRITTEN LINES
+-- A list would be stale the day someone adds admin_something_new(). The loop
+-- below re-derives the set from the catalogue, so re-running this migration
+-- after new admin functions ship re-secures them too.
+--
+-- THE SAFETY PREDICATE IS THE POINT. It only touches a function when ALL of:
+--   * schema is public
+--   * SECURITY DEFINER
+--   * name matches 'admin_%' (underscore escaped via ESCAPE '@', never a
+--     backslash: a backslash survives one round of string-escaping and
+--     silently matches NOTHING, which is exactly how the first run of this
+--     migration reported success while securing zero functions)
+--   * the body actually contains is_admin()
+-- That last condition is what makes this safe to run blind: a function that
+-- has no internal gate is NOT touched here, because for such a function the
+-- grant might be the only access control and revoking it could break a real
+-- caller. Those are tracked separately and are not in scope for this file.
+--
+-- WHAT MUST KEEP WORKING
+-- The Admin Panel calls these through supabase-js (sb.rpc(...)), which sends
+-- the signed-in admin's JWT, so PostgREST executes as role `authenticated`.
+-- That grant is re-asserted explicitly for every function touched, so this
+-- migration is idempotent and cannot lock an admin out even if run twice.
+--
+-- Admin-ness is NOT a database role — it is profiles.is_admin, read by
+-- is_admin() via auth.uid(). Every authenticated user may still call these;
+-- only an admin gets past the first statement inside. That two-layer
+-- arrangement is unchanged.
+--
+-- NO ENTITLEMENT CHANGES. Grants only. No profile row, plan or feature gate
+-- is touched.
+-- ============================================================
+
+do $$
+declare
+  fn record;
+  touched int := 0;
+begin
+  for fn in
+    select p.oid::regprocedure as sig
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.prosecdef
+       and p.proname like 'admin@_%' escape '@'
+       and pg_get_functiondef(p.oid) like '%is_admin()%'
+     order by p.proname
+  loop
+    execute format('revoke execute on function %s from public', fn.sig);
+    execute format('revoke execute on function %s from anon',   fn.sig);
+    execute format('grant  execute on function %s to authenticated', fn.sig);
+    touched := touched + 1;
+  end loop;
+  raise notice 'migration 122: secured % admin_* functions', touched;
+end $$;
+
+-- Verification:
+--   select count(*) filter (where has_function_privilege('anon', p.oid, 'execute'))          as anon_can_run,
+--          count(*) filter (where has_function_privilege('public', p.oid, 'execute'))        as public_can_run,
+--          count(*) filter (where has_function_privilege('authenticated', p.oid, 'execute')) as authed_can_run,
+--          count(*)                                                                          as total
+--     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+--    where n.nspname = 'public' and p.prosecdef and p.proname like 'admin@_%' escape '@'
+--      and pg_get_functiondef(p.oid) like '%is_admin()%';
+--   -- expected: anon_can_run = 0, public_can_run = 0, authed_can_run = total
+--
+-- Behavioural check that a real admin still works through the app's path:
+--   begin;
+--     set local role authenticated;
+--     set local request.jwt.claims = '{"sub":"<ADMIN-UUID>","role":"authenticated"}';
+--     select * from admin_scout_margin_summary() order by plan;
+--   rollback;

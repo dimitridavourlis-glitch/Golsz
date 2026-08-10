@@ -17,9 +17,9 @@
 //   SUPABASE_URL             enables auth check + metering
 //   SUPABASE_SERVICE_KEY     service role key (server-only; never ship to the browser)
 //   FREE_DAILY_LIMIT         Scout calls/day on the free plan (default 3)
-//   STARTER_DAILY_LIMIT      Scout calls/day on Basic (C$10/mo, default 8)
-//   PRO_DAILY_LIMIT          Scout calls/day on Pro (C$24/mo, default 15)
-//   ELITE_DAILY_LIMIT        Scout calls/day on Elite (C$48/mo, default 20)
+//   STARTER_DAILY_LIMIT      Scout calls/day on Basic (EUR 6/mo, default 8)
+//   PRO_DAILY_LIMIT          Scout calls/day on Pro (EUR 15/mo, default 15)
+//   ELITE_DAILY_LIMIT        Scout calls/day on Elite (EUR 30/mo, default 20)
 //   FREE_LIFETIME_LIMIT      total Scout calls EVER on the free plan, never
 //                            resets (default 40) — separate from
 //                            FREE_DAILY_LIMIT, see migration 068
@@ -3161,13 +3161,24 @@ async function getPlanKnowledge() {
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
   if (!supaUrl || !serviceKey) return planKnowledgeCache || "";
   try {
-    const r = await fetch(`${supaUrl}/rest/v1/plan_config?select=plan_id,plan_name,tagline,price_usd,live_features&active=eq.true&order=display_order`, {
-      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
-    });
+    const headers = { apikey: serviceKey, Authorization: "Bearer " + serviceKey };
+    const base = `${supaUrl}/rest/v1/plan_config?select=plan_id,plan_name,tagline,`;
+    const tail = `,live_features&active=eq.true&order=display_order`;
+    // Migration 120 renames plan_config.price_usd -> price_eur. Code and
+    // migration never land in the same instant, and PostgREST rejects the
+    // WHOLE select for one unknown column, so try the new name and fall back
+    // to the old one. Same tolerance pattern as the goal_source select below.
+    let r = await fetch(base + "price_eur" + tail, { headers });
+    let priceKey = "price_eur";
+    if (!r.ok) {
+      console.warn("GOLSZ plan_config select failed (migration 120 not applied?) — retrying with price_usd.");
+      r = await fetch(base + "price_usd" + tail, { headers });
+      priceKey = "price_usd";
+    }
     if (!r.ok) return planKnowledgeCache || "";
     const rows = await r.json();
     if (!Array.isArray(rows) || !rows.length) return planKnowledgeCache || "";
-    const text = rows.map((p) => `${p.plan_name} ($${p.price_usd}/mo, "${p.tagline}"): ${(p.live_features || []).join("; ")}`).join("\n");
+    const text = rows.map((p) => `${p.plan_name} (\u20AC${p[priceKey]}/mo, "${p.tagline}"): ${(p.live_features || []).join("; ")}`).join("\n");
     planKnowledgeCache = text;
     planKnowledgeCacheAt = now;
     return text;
