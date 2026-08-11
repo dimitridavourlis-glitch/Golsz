@@ -49,8 +49,26 @@ const ck = (l, a, e) => {
 // too (get_public_passport), so treating every rpc as a write produced false
 // positives on the first run. Mutating RPCs are listed explicitly; adding one
 // means adding it here, which is the point.
-const MUTATING_RPCS = ["set_athlete_context_field", "ensure_message_request", "merge_scout_context",
-  "admin_review_verification", "admin_review_appeal", "resolve_moderation_item", "request_parent_link"];
+// EVERY rpc the client calls must be classified as one or the other. This is
+// an allowlist keyed on a value, and the first version inherited the failure
+// this repo has hit repeatedly: an unlisted entry is invisible. It was already
+// true — the original list of 7 missed nine mutating RPCs and included
+// merge_scout_context, which the client never calls. The assertion below makes
+// an unclassified RPC fail rather than pass unchecked.
+const MUTATING_RPCS = [
+  "set_athlete_context_field", "ensure_message_request", "request_parent_link",
+  "respond_to_message_request", "admin_review_verification", "admin_review_appeal",
+  "admin_review_knowledge", "resolve_moderation_item", "resolve_error_log_item",
+  "create_passport_share_token", "revoke_passport_share_token",
+  "reset_scout_intelligence", "log_admin_action", "log_client_error",
+  "record_activity_ping",
+];
+const READ_RPCS = [
+  "get_public_passport", "get_public_passport_by_token",
+  "admin_analytics_counts", "admin_moderation_stats", "admin_scout_model_mix",
+  "admin_scout_cost_summary", "admin_scout_margin_summary", "admin_scout_cache_stats",
+  "admin_scout_debug", "admin_list_knowledge_candidates",
+];
 const WRITE = new RegExp(
   "await\\s+sb\\s*\\.\\s*(?:from\\([^)]*\\)[\\s\\S]{0,400}?\\.(?:update|insert|delete|upsert)\\(" +
   "|rpc\\(\\s*[\"'](?:" + MUTATING_RPCS.join("|") + ")[\"'])");
@@ -59,11 +77,27 @@ const WRITE = new RegExp(
 // call sites on the first run.
 const BOUND = /(?:(?:const|let|var)\s*)?\(?\s*\{[^}]*\berror\b[^}]*\}\s*=\s*await\s+sb\s*\./;
 
+// A write does not have to be awaited. `sb.rpc(...).then(({ error }) => ...)`
+// is the other shape in this file, and a detector that only inspects `await`
+// lines is blind to it — a .then() write that dropped its error would pass
+// this suite in silence. Found by asking why the unbound count did not move
+// after eight RPCs were added to the mutating list.
+const THEN_WRITE = new RegExp(
+  "sb\\s*\\.\\s*(?:from\\([^)]*\\)[\\s\\S]{0,400}?\\.(?:update|insert|delete|upsert)\\(" +
+  "|rpc\\(\\s*[\"'](?:" + MUTATING_RPCS.join("|") + ")[\"'])");
+const THEN_HANDLED = /\.then\(\s*\(?\s*\{[^}]*\berror\b/;
+
 function unboundWrites(code) {
   const out = [];
   code.split("\n").forEach((line, i) => {
-    if (!WRITE.test(line)) return;
-    if (BOUND.test(line)) return;
+    const awaited = /await\s+sb\s*\./.test(line);
+    if (awaited) {
+      if (!WRITE.test(line) || BOUND.test(line)) return;
+    } else {
+      // unawaited: only flag if it is a write AND its .then() never sees error
+      if (!THEN_WRITE.test(line) || THEN_HANDLED.test(line)) return;
+      if (!/\.then\(/.test(line)) return; // fire-and-forget with no handler at all
+    }
     out.push({ line: i + 1, text: line.trim() });
   });
   return out;
@@ -92,6 +126,12 @@ ck("...and is NOT fooled by console.error in the catch",
    unboundWrites(BROKEN)[0] && /console\.error/.test(BROKEN), true);
 ck("the detector stays silent when the result is bound and checked", unboundWrites(GOOD).length, 0);
 
+// The .then() shape, both ways. A write need not be awaited to lose data.
+const THEN_BROKEN = `sb.rpc("log_client_error", { p_message: m }).then(() => {});`;
+const THEN_OK = `sb.rpc("log_client_error", { p_message: m }).then(({ error }) => { if (error) console.error(error); });`;
+ck("the detector flags an unawaited write whose .then ignores error", unboundWrites(THEN_BROKEN).length, 1);
+ck("...and stays silent when the .then handles it", unboundWrites(THEN_OK).length, 0);
+
 // ---- deliberately unchecked, by table/rpc rather than line number -------
 // Line numbers drift; the decision is about the write, not its position. The
 // rule is SELF-CORRECTION, not importance: a like that failed to save springs
@@ -113,6 +153,16 @@ console.log(`   ${found.length} unbound writes, ${found.length - unexpected.leng
 
 ck("no consequential write discards its own result",
    unexpected.map((w) => `${w.line}: ${w.text.slice(0, 90)}`), []);
+
+// ---- the classification itself must be exhaustive ----------------------
+// Without this, adding a mutating RPC and forgetting to list it means the
+// detector simply never looks at it — silent, which is the property this
+// whole suite exists to remove.
+const calledRpcs = [...new Set([...APP.matchAll(/sb\.rpc\(\s*["']([a-z_]+)["']/g)].map((m) => m[1]))].sort();
+const unclassified = calledRpcs.filter((r) => !MUTATING_RPCS.includes(r) && !READ_RPCS.includes(r));
+ck("every rpc the client calls is classified as a read or a write", unclassified, []);
+const phantom = [...MUTATING_RPCS, ...READ_RPCS].filter((r) => !calledRpcs.includes(r));
+ck("no classified rpc has stopped being called", phantom, []);
 
 // An exemption list that outlives its entries rots into blanket permission.
 const stale = SELF_CORRECTING.filter((t) => !found.some((w) => isAccepted(w.text) && w.text.includes(t)));
