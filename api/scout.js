@@ -800,6 +800,11 @@ function countServerTools(data) {
   };
 }
 
+// Preserves a real 0 while still mapping undefined/null/NaN to null. See the
+// usage fields in logRouting for why this distinction cost us a correct
+// baseline.
+function num(v) { return typeof v === "number" && Number.isFinite(v) ? v : null; }
+
 async function logRouting(answeredBy, classification, model, usage, extra) {
   try {
     const supaUrl = process.env.SUPABASE_URL;
@@ -812,10 +817,19 @@ async function logRouting(answeredBy, classification, model, usage, extra) {
         answered_by: answeredBy,
         intent: (classification && classification.intent) || null,
         confidence: (classification && typeof classification.confidence === "number") ? classification.confidence : null,
-        input_tokens: (usage && usage.input_tokens) || null,
-        cache_read_input_tokens: (usage && usage.cache_read_input_tokens) || null,
-        cache_creation_input_tokens: (usage && usage.cache_creation_input_tokens) || null,
-        output_tokens: (usage && usage.output_tokens) || null,
+        // ZERO IS A MEASUREMENT, NOT AN ABSENCE.
+        // These were `(usage && usage.X) || null`, so a genuine 0 became
+        // null — and avg() skips nulls. Every per-call average computed from
+        // this table was therefore taken over the non-zero subset only. On
+        // 2026-08-11 that inflated avg cache-read by 87% (35,337 vs 18,871)
+        // and avg cache-write by 79% (16,970 vs 9,507), because 47% and 44%
+        // of calls respectively had a true zero. Sums were unaffected, which
+        // is why the cache-read SHARE was roughly right while the per-call
+        // figures were not. num() keeps null meaning "not reported".
+        input_tokens: num(usage && usage.input_tokens),
+        cache_read_input_tokens: num(usage && usage.cache_read_input_tokens),
+        cache_creation_input_tokens: num(usage && usage.cache_creation_input_tokens),
+        output_tokens: num(usage && usage.output_tokens),
         estimated_cost_usd: estimateCost(model, usage),
         plan: (extra && extra.plan) || null,
         escalation_reason: (extra && extra.escalationReason) || null,
