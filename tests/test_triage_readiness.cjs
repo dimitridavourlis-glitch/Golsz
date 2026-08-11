@@ -311,7 +311,7 @@ console.log("\n-- Scout must never claim a save it cannot verify --");
 // itself so the window cannot drift off it again.
 const SRC_PROMPT = SRC.slice(SRC.indexOf("Never assert something changed on their Passport"), SRC.indexOf("Never assert something changed on their Passport") + 700);
 ck("the prompt forbids claiming something was saved", /Never assert something changed on their Passport/.test(SRC_PROMPT), true);
-ck("...and names the specific phrases to avoid", /locked in.*saved.*updated/s.test(SRC_PROMPT), true);
+ck("...and names the specific phrases to avoid", /I've saved that/.test(SRC_PROMPT), true);
 ck("...and explains WHY (write happens after the reply)", /If the app's save fails, you won't know/.test(SRC_PROMPT), true);
 ck("...and applies the rule beyond just goal", /Let their Passport show what actually stored/.test(SRC_PROMPT), true);
 

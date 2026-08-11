@@ -176,11 +176,20 @@ ck("...and forbids the dash as punctuation",
 // scan can't be used here — the prompt is full of quoted fragments, so such
 // a regex matches ordinary instruction prose sitting BETWEEN two quotes and
 // reports it as an example. These name the four worked replies instead.
+// The 2026-08-11 prompt rewrite kept two of the four worked replies and
+// dropped two. Only the ILLUSTRATIONS went; the rules they illustrated are
+// both still stated in prose:
+//   * the physio boundary -> "name the right professional (physician, physio,
+//     registered dietitian) in one natural sentence and move on"
+//   * the goal-changed question -> "if they disagree with what the Pathway
+//     shows, that's a real conflict to surface and resolve with them"
+// Asserting on examples that no longer exist would be testing a ghost, so
+// they are removed here rather than kept as permanent failures. The two that
+// survive still carry the point of this block: a worked reply containing a
+// dash teaches the opposite of the no-dash rule above it.
 for (const [label, ex] of [
-  ["the sore-knee warmth example", "Two weeks and still sore. That's worth getting looked at properly"],
-  ["the physio-boundary example", "Two weeks of pain is a physio question, not a training question. While you're getting that looked at"],
-  ["the goal-changed question", "your Plan says X. Has that actually changed, or is Y a backup?"],
-  ["the Pathway upgrade pitch", "re-deciding it every conversation, and that opens on Basic"],
+  ["the sore-knee warmth example", "Two weeks of pain and still sore, that's worth getting checked out"],
+  ["the Pathway upgrade pitch", "dated steps instead of us deciding it every conversation"],
 ]) {
   ck(`${label} is present and dash-free`, PROMPT.includes(ex), true);
 }

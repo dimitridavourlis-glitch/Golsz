@@ -69,7 +69,7 @@ console.log("\n-- P0-6: the prompt tells the model what 'no' actually means --")
 // Re-anchored 2026-08-11: the prompt rewrite replaced the flag-narration
 // paragraph with a dedicated GOLSZ SPORT SCHEMAS section. Same guarantee,
 // new home. The old anchor returned -1 and silently sliced garbage.
-const PROMPT_SPORT = SRC.slice(SRC.indexOf("GOLSZ SPORT SCHEMAS"), SRC.indexOf("GOLSZ SPORT SCHEMAS") + 900);
+const PROMPT_SPORT = SRC.slice(SRC.indexOf("SPORTS KNOWLEDGE"), SRC.indexOf("SPORTS KNOWLEDGE") + 1600);
 ck("it names the flag as load-bearing", /None of it, not partial/i.test(PROMPT_SPORT), true);
 ck("it states there is NO position structure when absent", /no position structure, no competition ladder/.test(PROMPT_SPORT), true);
 ck("...no competition ladder", /no competition ladder, no pathway list/.test(PROMPT_SPORT), true);
