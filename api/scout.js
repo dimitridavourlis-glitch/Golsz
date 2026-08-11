@@ -1097,6 +1097,13 @@ const SCOUT_CONTEXT_KEYS = new Set([
   "confidence", "professional_interest", "college_interest", "trial_interest",
   "height", "weight", "dominant_side", "preferred_countries",
   "secondary_goal", "secondary_gaps", "scholarship_interest", "transfer_interest", "exposure_need",
+  // Athlete-authored via set_athlete_context_field() (migration 125), but
+  // Scout must be able to write them too or its own updates silently drop
+  // the field — and every test of the RPC write path would still pass,
+  // because those tests write through the RPC rather than through Scout.
+  // tests/test_athlete_editable_context.cjs asserts this list is a superset
+  // of the RPC allowlist.
+  "secondary_goal_pathway", "secondary_goal_declined",
   "budget",
   // Competition level. Lives here rather than as a Passport column so it
   // carries source/confidence like every other soft fact, and so it can

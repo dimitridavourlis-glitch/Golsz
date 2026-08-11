@@ -8706,9 +8706,8 @@ function Targets({ plan, onUpgrade, actingFor }) {
 
   const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
   const sport = pathwayState.athlete && pathwayState.athlete.sport;
-  const sportConfig = SPORT_PATHWAY_STAGES[sport] || SPORT_PATHWAY_STAGES.__default;
   // Only a secondary goal if the athlete actually named one. Previously this
-  // was `sportConfig.altBranch && pathwayType !== altBranch`, i.e. pure sport
+  // was `SPORT_PATHWAY_STAGES[sport].altBranch && pathwayType !== altBranch`, i.e. pure sport
   // config — so every Soccer athlete not on the NCAA pathway was shown
   // "SECONDARY GOAL: NCAA" regardless of whether college had ever come up.
   const statedSecondary = statedContextValue(pathwayState.athlete && pathwayState.athlete.scout_context, "secondary_goal");
