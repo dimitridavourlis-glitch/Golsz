@@ -140,6 +140,11 @@ const REVIEWED_AMBIGUOUS = new Set([
   // appears in both the reconcile path and its test-shaped mirror; the slice
   // wants the first and the second is inside the same function.
   "if (recon.safeAutoFix && recon.derived) {",
+  // test_client_scope searches with a fromIndex — indexOf("</script>", start)
+  // — so it takes the first close AFTER the script opens. The count here
+  // cannot see the fromIndex, which is why this is reviewed rather than a
+  // real ambiguity.
+  "</script>",
 ]);
 // Entries are matched as PREFIXES, not exact strings. The failure message
 // truncates literals at 50 chars, so an entry copied from the console output

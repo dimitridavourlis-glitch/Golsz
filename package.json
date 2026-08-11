@@ -11,6 +11,7 @@
     "deploy": "npm run check && npx vercel --prod --yes"
   },
   "devDependencies": {
-    "@babel/parser": "^7.29.8"
+    "@babel/parser": "^7.29.8",
+    "@babel/traverse": "^8.0.4"
   }
 }

@@ -2328,7 +2328,11 @@ function Feed({ onMessage, onViewProfile }) {
       let imageUrl = null;
       if (composeImageFile) {
         const ext = (composeImageFile.name.split(".").pop() || "jpg").toLowerCase().slice(0, 5);
-        const path = `${editId}/${Date.now()}.${ext}`;
+        // `editId` here was a copy-paste from Passport, where it IS declared.
+        // In Feed it resolves to nothing, so attaching an image to a post threw
+        // ReferenceError inside a try and surfaced as a generic failure. Feed's
+        // own id is `uid`, which the composer already guards on above.
+        const path = `${uid}/${Date.now()}.${ext}`;
         // Uploading the raw File object directly can arrive at Supabase Storage
         // with an empty body ("No content provided") in some mobile browsers —
         // reading it into an ArrayBuffer first is the reliable way to upload.
