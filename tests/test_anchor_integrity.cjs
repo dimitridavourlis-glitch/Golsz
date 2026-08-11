@@ -74,6 +74,7 @@ if (suites.length < 20) throw new Error(`only found ${suites.length} suites — 
 
 let checked = 0;
 const dead = [];
+const ambiguous = [];
 for (const name of suites) {
   const t = fs.readFileSync(path.join(REPO, "tests", name), "utf8");
 
@@ -91,13 +92,68 @@ for (const name of suites) {
   }
   for (const lit of literals) {
     checked++;
-    if (!pool.includes(lit)) dead.push({ suite: name, lit });
+    if (!pool.includes(lit)) { dead.push({ suite: name, lit }); continue; }
+    // split().length - 1 counts non-overlapping occurrences without a regex,
+    // so anchors containing regex metacharacters are counted correctly.
+    const n = pool.split(lit).length - 1;
+    if (n > 1) ambiguous.push({ suite: name, lit, n });
   }
 }
 
 console.log(`   scanned ${suites.length} suites, ${checked} anchor literals`);
 ck("every slice anchor still exists in the source its suite reads",
    dead.map((d) => `${d.suite}: ${d.lit.slice(0, 60)}`), []);
+
+// ---- UNIQUENESS ---------------------------------------------------------
+// Promoted from "known residual" on 2026-08-11, hours after being documented
+// and deliberately deferred. An anchor occurring twice silently takes the
+// FIRST occurrence. That day it silently reverted a shipped fix: PathwayPlan
+// and DevelopmentPlan both contained
+//   if (viewUserId) return null;\n  if (!loaded) return null;
+// byte for byte, so an edit meant for one landed on the other, and the visual
+// verification passed because a DIFFERENT component's skeleton was on screen.
+//
+// Existence checking cannot see this: both occurrences exist. So count them.
+// A blanket ban would be wrong: several ambiguities are correct by
+// construction. An i18n key legitimately appears once per language; a section
+// separator is a fine END anchor; and where the schema is append-ordered the
+// LAST definition is the live one, so lastIndexOf is deliberate. Banning those
+// would make the check fail on correct code, which is how checks get muted.
+//
+// So ambiguity is not forbidden — it is REVIEWED. Each entry below was looked
+// at and found safe, with the reason recorded. Anything new fails, and the
+// author has to look rather than assume, which is the whole point.
+const REVIEWED_AMBIGUOUS = new Set([
+  // lastIndexOf, deliberately: supabase-schema.sql is append-ordered so the
+  // final definition is the one in production.
+  "create or replace function admin_scout_model_mix",
+  // three adjacent revoke lines forming one grant block; the slice covers all
+  // of them from the first.
+  "revoke execute on function merge_scout_context",
+  // section separator used only as an END anchor.
+  "// ===============================================",
+  // i18n keys: one occurrence per language plus the use site. Checked for
+  // presence, never sliced.
+  "scout_pathway_current", "scout_pathway_incoming", "scout_pathway_replace_warning",
+  // comment prefixes used as coarse end markers.
+  "// Plan-gating", "create or replace",
+  // appears in both the reconcile path and its test-shaped mirror; the slice
+  // wants the first and the second is inside the same function.
+  "if (recon.safeAutoFix && recon.derived) {",
+]);
+// Entries are matched as PREFIXES, not exact strings. The failure message
+// truncates literals at 50 chars, so an entry copied from the console output
+// would never match the real anchor — which is how the first version of this
+// allowlist was written, and it silently reported the same anchor as both
+// unreviewed and stale.
+const reviewed = (lit) => [...REVIEWED_AMBIGUOUS].some((prefix) => lit.startsWith(prefix));
+const unreviewed = ambiguous.filter((a) => !reviewed(a.lit));
+ck("every ambiguous anchor has been reviewed",
+   unreviewed.map((a) => `${a.suite}: ${a.n}x "${a.lit.slice(0, 50)}"`), []);
+// If an entry stops being ambiguous the allowlist is stale and should shrink —
+// a permanent exemption list is how this kind of check rots.
+const stale = [...REVIEWED_AMBIGUOUS].filter((prefix) => !ambiguous.some((a) => a.lit.startsWith(prefix)));
+ck("the reviewed list has no stale entries", stale, []);
 // A scan that finds nothing because its patterns stopped matching is the same
 // failure this file guards against, one level up.
 ck("the scan actually found anchors to check", checked > 100, true);
