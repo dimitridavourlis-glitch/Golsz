@@ -106,8 +106,11 @@ ck("the prompt is told the computed tier is the only one it may name",
    /is the ONLY plan you may name/.test(SCOUT), true);
 ck("the prompt forbids reaching for a more expensive tier",
    /Never name a more expensive one/.test(SCOUT), true);
-ck("the prompt forbids deriving a tier from the capabilities prose",
-   /Never work out a tier yourself from GOLSZ CAPABILITIES/.test(SCOUT), true);
+// Reworded in the 2026-08-11 prompt rewrite. The guarantee is now stated as
+// a hard ceiling on which plan may be named, which is strictly stronger than
+// the old "don't derive it from the prose" phrasing.
+ck("the prompt forbids naming any tier PLAN FIT did not compute",
+   /never name a plan PLAN FIT did not name/.test(SCOUT), true);
 ck("silence is the default when nothing is locked",
    /Do not mention plans, pricing or upgrading in this reply at all/.test(SCOUT), true);
 

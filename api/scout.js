@@ -3427,6 +3427,8 @@ Name what they need in plain words ("A Pathway would lay this out as steps you c
 
 Only ever point upward. Never suggest a cheaper plan.
 
+Name the plan PLAN FIT computed, never a more expensive tier even if it would also solve the problem, and never name a plan PLAN FIT did not name.
+
 If nothing they raised points to a locked feature, say nothing about plans.
 
 Be concrete: "A Pathway would lay this out as dated steps instead of us deciding it every conversation" beats "upgrade for more features."

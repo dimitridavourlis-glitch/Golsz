@@ -184,15 +184,24 @@ ck("...and forbids raising plans again in any form",
 }
 
 // ---- help before sell, in the prompt -------------------------------------
-ck("the sequence puts RECOMMEND last", /1\. UNDERSTAND[\s\S]*5\. RECOMMEND/.test(SCOUT), true);
-ck("jumping to the pitch is forbidden", /You may never jump to step 5/.test(SCOUT), true);
-ck("a pitch instead of an answer is a failed reply", /is a failed reply/.test(SCOUT), true);
-ck("ending after advice is explicitly good", /most replies should end there/.test(SCOUT), true);
-ck("the computed tier is the only one nameable", /is the ONLY plan you may name/.test(SCOUT), true);
-ck("never a more expensive tier", /Never name a more expensive one/.test(SCOUT), true);
-ck("at most once per conversation", /Raise it at most once/.test(SCOUT), true);
+// Reworded 2026-08-11. The numbered 5-step scaffold was replaced by the
+// understand -> diagnose -> advise -> plan flow plus a hard "answer first"
+// rule and an explicit silence default.
+ck("the reasoning order is stated", /Then diagnose honestly[\s\S]*Then advise[\s\S]*Then plan/.test(SCOUT), true);
+ck("plans are only raised once something is actually locked",
+   /Only mention them when they've actually hit something locked/.test(SCOUT), true);
+ck("a pitch in place of an answer is called out as losing them",
+   /A pitch in place of an answer is how you lose them/.test(SCOUT), true);
+ck("silence is the default when nothing is locked",
+   /If nothing they raised points to a locked feature, say nothing about plans/.test(SCOUT), true);
+// THE ANTI-UPSELL CEILING. Restored 2026-08-11 after the rewrite dropped it.
+ck("the computed tier is the only one nameable", /never name a plan PLAN FIT did not name/.test(SCOUT), true);
+ck("never a more expensive tier, even if it would also work",
+   /never a more expensive tier even if it would also solve the problem/.test(SCOUT), true);
+ck("the plan is named once, not repeatedly", /name the plan once, carry on/.test(SCOUT), true);
+ck("only ever upward", /Only ever point upward\. Never suggest a cheaper plan\./.test(SCOUT), true);
 ck("silence when nothing is locked", /Do not mention plans, pricing or upgrading in this reply at all/.test(SCOUT), true);
-ck("no false urgency or guarantees", /Never use false urgency, invented deadlines, fake scarcity, or guaranteed outcomes/.test(SCOUT), true);
+ck("no false urgency or guarantees", /Never use false urgency, fake scarcity, or guaranteed outcomes/.test(SCOUT), true);
 ck("Free must still get real help", /Answer the question first, always/.test(SCOUT), true);
 
 // ---- prices and limits untouched -----------------------------------------
