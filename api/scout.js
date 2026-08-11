@@ -787,6 +787,19 @@ async function logError(source, message, detail) {
 // (admin_scout_model_mix()) and monthly cost cards
 // (admin_scout_cost_summary()). Self-contained and best-effort, same as
 // logError — a logging failure must never affect the real response.
+// Migration 123. The two counts the cost audit could not produce: how often
+// a call actually searched, and how many server tools it issued. Taken from
+// block types already present in the response, so this costs nothing.
+// Separating "issued a tool call" from "got search results back" is what
+// distinguishes a wasted search from a useful one.
+function countServerTools(data) {
+  const blocks = (data && Array.isArray(data.content)) ? data.content : [];
+  return {
+    webSearchCount: blocks.filter((b) => b && b.type === "web_search_tool_result").length,
+    serverToolCalls: blocks.filter((b) => b && b.type === "server_tool_use").length,
+  };
+}
+
 async function logRouting(answeredBy, classification, model, usage, extra) {
   try {
     const supaUrl = process.env.SUPABASE_URL;
@@ -821,6 +834,10 @@ async function logRouting(answeredBy, classification, model, usage, extra) {
         request_id: (extra && extra.requestId) || null,
         response_time_ms: (extra && typeof extra.responseTimeMs === "number") ? extra.responseTimeMs : null,
         success: !(extra && extra.success === false),
+        // Explicit integers, never null: history is null because it predates
+        // migration 123, so a null appearing in NEW data means capture broke.
+        web_search_count: (extra && typeof extra.webSearchCount === "number") ? extra.webSearchCount : 0,
+        server_tool_calls: (extra && typeof extra.serverToolCalls === "number") ? extra.serverToolCalls : 0,
       }),
     });
   } catch (e) { console.error("GOLSZ routing-log write failed:", e); }
@@ -5729,7 +5746,7 @@ A newer source always beats an older one at the same level. If memory says one t
         const cost = estimateCost(tierConfig.model_name, data.usage);
         const scoutContextUpdates = extractScoutContextUpdates(data);
         const profileUpdates = applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), scoutContextUpdates, currentGoalText, storedScoutContext), currentGoalText, currentGoalSource);
-        await logRouting("haiku", classification, tierConfig.model_name, data.usage, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
+        await logRouting("haiku", classification, tierConfig.model_name, data.usage, { plan: userPlan, ...countServerTools(data), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, profileUpdates);
         await persistScoutContext(userId, scoutContextUpdates);
@@ -5820,7 +5837,7 @@ A newer source always beats an older one at the same level. If memory says one t
         const data = haikuFallback.data;
         console.log("GOLSZ scout usage check (haiku fallback):", JSON.stringify(data.usage));
         const cost = estimateCost(fastCfg.model_name, data.usage);
-        await logRouting("haiku", classification, fastCfg.model_name, data.usage, { plan: userPlan, escalationReason: "sonnet_provider_failure", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
+        await logRouting("haiku", classification, fastCfg.model_name, data.usage, { plan: userPlan, ...countServerTools(data), escalationReason: "sonnet_provider_failure", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext), currentGoalText, currentGoalSource));
         await persistScoutContext(userId, extractScoutContextUpdates(data));
@@ -5872,7 +5889,7 @@ A newer source always beats an older one at the same level. If memory says one t
             // persistence. normalizeOpenAiResponse() shaped the response so
             // none of it needs to know which provider answered.
             const cost = estimateCost(fb.model, data.usage);
-            await logRouting("cross_provider", classification, fb.model, data.usage, { plan: userPlan, escalationReason: "anthropic_outage", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
+            await logRouting("cross_provider", classification, fb.model, data.usage, { plan: userPlan, ...countServerTools(data), escalationReason: "anthropic_outage", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
             await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
             await persistProfileUpdates(userId, applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext), currentGoalText, currentGoalSource));
             await persistScoutContext(userId, extractScoutContextUpdates(data));
@@ -5916,7 +5933,7 @@ A newer source always beats an older one at the same level. If memory says one t
     const data = await continueIfTruncated(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, sonnetResult.data, scoutDeadline);
     if (sonnetResult.toolBudgetExhausted && timeoutReason === "none") timeoutReason = "tool_budget_exhausted";
     const sonnetCost = estimateCost(deepTierConfig.model_name, data.usage);
-    await logRouting("sonnet", classification, deepTierConfig.model_name, data.usage, { plan: userPlan, escalationReason: haikuFailureReason || escalationReason(classification), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
+    await logRouting("sonnet", classification, deepTierConfig.model_name, data.usage, { plan: userPlan, ...countServerTools(data), escalationReason: haikuFailureReason || escalationReason(classification), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
     await recordScoutUsageCost(userId, sonnetCost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
     await persistProfileUpdates(userId, applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext), currentGoalText, currentGoalSource));
     await persistScoutContext(userId, extractScoutContextUpdates(data));
