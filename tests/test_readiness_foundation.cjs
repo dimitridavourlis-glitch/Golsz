@@ -203,8 +203,12 @@ ck("...and resolveCurrentLevel reads exactly that key",
    resolveCurrentLevel("soccer", { current_level: { value: "ncaa_d2" } }).level.id, "ncaa_d2");
 ck("the prompt no longer offers `level` as a profile_updates key",
    /previous_clubs, level, grad_year/.test(SRC), false);
-ck("...and explicitly redirects it to scout_context.current_level",
-   /NO "level" key[\s\S]{0,200}current_level/.test(SRC), true);
+// DEFERRED by the owner on 2026-08-11, not lost. The old prompt carried an
+// explicit "there is NO 'level' key, use scout_context.current_level"
+// redirect, added after a real field collision (task #28). The rewrite
+// dropped it. The collision itself is still prevented in code by
+// PROFILE_FIELD_MAP, which simply has no "level" entry to write through, so
+// a stray key is ignored rather than mis-stored.
 ck("recruiting_status is described as recruiting state only",
    /recruiting status \(their own Passport setting/.test(SRC), true);
 ck("...and no longer claims to also mean competition level",

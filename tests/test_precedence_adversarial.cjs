@@ -345,8 +345,8 @@ eval(slice("function splitNarrativeByGoal(narrative, currentGoalType) {", "// --
 }
 
 // The prompt carries the same rule, as defence in depth.
-ck("the prompt forbids narrating the machinery", /WRITE THE ANSWER, NOT YOUR WORKING OUT/.test(SCOUT), true);
-ck("the prompt forbids the third person", /Never write about them in the third person/.test(SCOUT), true);
+ck("the prompt forbids narrating the machinery", /Never narrate your process/.test(SCOUT), true);
+ck("the prompt forbids the third person", /Talk plainly: "your goal," "your Passport," "your plan\."/.test(SCOUT), true);
 
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);

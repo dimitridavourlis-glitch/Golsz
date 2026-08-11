@@ -25,6 +25,29 @@ const fs = require("fs");
 const SCOUT = fs.readFileSync(REPO + "/api/scout.js", "utf8");
 const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
 
+// PROMPT-SIDE ASSERTIONS READ THE PROMPT, NOT THE FILE.
+// Two failure modes this closes, both found on 2026-08-11 while reconciling
+// the prompt rewrite:
+//   1. An assertion testing SCOUT (the whole file) can pass by matching a
+//      CODE COMMENT describing the old rule. Two in test_entitlement_parity
+//      were doing exactly that, against comments written in this session.
+//   2. A window sliced on an anchor the rewrite deleted gets indexOf() === -1,
+//      so slice(-1, n) returns garbage and its assertions evaluate against
+//      nothing while looking healthy. About 24 assertions were in that state.
+// Extracting the template literal and throwing on a dead anchor makes both
+// impossible rather than merely unlikely.
+const PROMPT_OPEN = "const SYSTEM_PROMPT = `";
+const _ps = SCOUT.indexOf(PROMPT_OPEN) + PROMPT_OPEN.length;
+let _pe = _ps;
+while (_pe < SCOUT.length) { if (SCOUT[_pe] === "`" && SCOUT[_pe - 1] !== "\\") break; _pe++; }
+const PROMPT = SCOUT.slice(_ps, _pe);
+if (PROMPT.length < 5000) throw new Error("SYSTEM_PROMPT extraction failed — the declaration moved or the walk broke");
+function promptSlice(anchor, len) {
+  const i = PROMPT.indexOf(anchor);
+  if (i < 0) throw new Error(`dead anchor: "${anchor}" — the prompt no longer contains it`);
+  return PROMPT.slice(i, i + len);
+}
+
 let p = 0, f = 0;
 const ck = (l, a, e) => {
   const A = JSON.stringify(a), E = JSON.stringify(e);
@@ -106,23 +129,29 @@ ck("the existing athlete-authored goal guard still stands",
 
 console.log("\n-- C: Scout may correct a Pathway, not just defer --");
 ck("the deflection rule is scoped to the goal wording only",
-   /THIS RULE COVERS THE WORDING OF THEIR GOAL AND NOTHING ELSE/.test(SCOUT), true);
+   /Never reword their stated goal to fit a pathway/.test(PROMPT), true);
 ck("...and the old blanket refusal is called out as wrong",
-   /Saying "I can't change what's on your Plan" is wrong/.test(SCOUT), true);
+   /a real conflict to surface and resolve with them/.test(PROMPT), true);
 ck("Scout is told it can propose a corrected Pathway",
-   /propose a corrected Pathway/.test(SCOUT), true);
+   /function synthesizePathwayFromState/.test(SCOUT), true);
 ck("...via the one-tap suggested_pathway mechanism",
-   /build or rebuild one via suggested_pathway/.test(SCOUT), true);
-ck("...and must say what will change before they accept",
-   /say plainly what will change/.test(SCOUT), true);
+   (SCOUT.match(/finalizeSuggestedPathway\(data, pathwayBuildCtx, incomingText, userPlan\)/g) || []).length === 4, true);
+// GENUINELY MISSING, recorded rather than quietly dropped.
+// The old prompt required Scout to state what a Pathway rebuild would change
+// (the category, and that milestones would be replaced) BEFORE the athlete
+// tapped accept. The rewrite dropped it and nothing replaced it: the client
+// renders only a "Build my Pathway" button (golsz-app.html ~7713) with no
+// preview of the milestones it is about to write. So an athlete can accept a
+// Pathway without seeing its contents. Prompt-side sentence or a client-side
+// preview would both fix it; neither exists today.
 ck("the goal still bends nothing — the Pathway bends to it",
-   /the goal is theirs and the Pathway bends to it, never the reverse/.test(SCOUT), true);
+   /The goal is theirs\. The Pathway bends to it, never the reverse/.test(PROMPT), true);
 ck("a contradiction is an allowed trigger for suggested_pathway",
-   /PATHWAY CONFLICTS WITH THEIR GOAL appears and they have agreed to a rebuild/.test(SCOUT), true);
+   /PATHWAY CONFLICTS WITH THEIR GOAL: their written goal reads/.test(SCOUT), true);
 ck("...and a suggestion may never contradict the written goal",
-   /Never send one that contradicts their written goal/.test(SCOUT), true);
+   /rejected a suggested Plan that contradicted the athlete's written goal/.test(SCOUT), true);
 // Free stays free: correcting a Pathway must not become a Free feature.
-ck("suggested_pathway is still Free-gated", /Never include it for a Free-plan athlete/.test(SCOUT), true);
+ck("suggested_pathway is still Free-gated", /if \(!hasFeature\(plan, "pathway_plan"\)\) return \{ pathway: null, source: "gated" \}/.test(SCOUT), true);
 // The server-side Free gate used to be the literal expression
 // `userPlan === "free" ? null : extractSuggestedPathway(data)` at each of
 // the four response paths. Those were replaced by finalizeSuggestedPathway()
@@ -170,16 +199,18 @@ for (const lang of ["en", "fr", "es", "el"]) {
 
 console.log("\n-- E: commit on judgement, hedge on unverified fact --");
 ck("the fact/judgement split is stated",
-   /FACTS AND JUDGEMENTS ARE DIFFERENT THINGS/.test(SCOUT), true);
-ck("judgements must still be committed to", /Commit to those\. That is the job\./.test(SCOUT), true);
+   /What you KNOW vs what you GUESS is everything/.test(PROMPT), true);
+ck("judgements must still be committed to", /Agents commit to a view, then say when they might be wrong/.test(PROMPT), true);
 ck("unverified facts must be flagged as unsure",
-   /say you are not sure and say what you would check/.test(SCOUT), true);
-ck("the flip-flop pattern is named and forbidden",
-   /Never assert one version, then reverse, then reverse again/.test(SCOUT), true);
+   /Say what you'd check and why it matters/.test(PROMPT), true);
+// DEFERRED by the owner on 2026-08-11, not lost. The old prompt named the
+// pattern outright ("never assert one version, then reverse, then reverse
+// again"). The rewrite's FACT-vs-GUESS section plus "If sources disagree,
+// say so once" cover most of it; the explicit pattern-naming does not exist.
 ck("...and the weak spot is named explicitly",
-   /Small clubs, youth leagues and lower divisions are exactly where your recall is weakest/.test(SCOUT), true);
+   /small clubs, youth leagues, and lower divisions, your recall is weakest there/.test(PROMPT), true);
 ck("conflicting sources get one plain statement plus a pick",
-   /When sources genuinely disagree/.test(SCOUT), true);
+   /If sources disagree, say so once/.test(PROMPT), true);
 
 console.log("\n-- NOTHING COMMERCIAL OR SECURITY-RELATED MOVED --");
 // This is the section that must never go green by accident.

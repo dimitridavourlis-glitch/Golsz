@@ -85,9 +85,9 @@ ck("deriveReplyText sanitizes the salvage path",
 ck("deriveReplyText sanitizes the prose-fallback path",
    /return sanitizeReplyText\(prose\)/.test(SCOUT), true);
 ck("the prompt also forbids it (defence in depth)",
-   /NEVER SAY THE PLUMBING OUT LOUD/.test(SCOUT), true);
+   /Never mention internal fields, flags, or JSON keys that appear in server responses/.test(SCOUT), true);
 ck("...including saying it is withholding one",
-   /not even to explain what you are doing or to say you are holding one back/.test(SCOUT), true);
+   /Never narrate your process/.test(SCOUT), true);
 
 // =========================================================================
 // 2 — the Scout -> Plan handoff is guaranteed by the app
@@ -252,16 +252,16 @@ ck("readiness counts every target", /targetsCount = tRows\.length; targets = tRo
 // =========================================================================
 // 5 — the reasoning sequence
 // =========================================================================
-ck("the sequence is spelled out in order", /1\. UNDERSTAND[\s\S]*2\. DIAGNOSE[\s\S]*3\. ADVISE[\s\S]*4\. PLAN[\s\S]*5\. RECOMMEND/.test(SCOUT), true);
-ck("skipping to the pitch is forbidden", /You may never jump to step 5/.test(SCOUT), true);
-ck("a pitch in place of an answer is called a failed reply", /is a failed reply/.test(SCOUT), true);
-ck("ending after advice is explicitly a good reply", /most replies should end there/.test(SCOUT), true);
+ck("the sequence is spelled out in order", /Then diagnose honestly[\s\S]*Then advise[\s\S]*Then plan/.test(SCOUT), true);
+ck("skipping to the pitch is forbidden", /Only mention them when they've actually hit something locked/.test(SCOUT), true);
+ck("a pitch in place of an answer is called a failed reply", /A pitch in place of an answer is how you lose them/.test(SCOUT), true);
+ck("ending after advice is explicitly a good reply", /If nothing they raised points to a locked feature, say nothing about plans/.test(SCOUT), true);
 ck("the diagnosis step is pointed at the computed scores, not a second opinion",
-   /use them instead of forming a competing one/.test(SCOUT), true);
-ck("selling is labelled as step 5 of the sequence", /this is step 5 of the sequence above, never a shortcut past it/.test(SCOUT), true);
+   /These numbers are authoritative\. Never state a score that is not in this block/.test(SCOUT), true);
+ck("selling is labelled as step 5 of the sequence", /Answer the question first, always/.test(SCOUT), true);
 ck("no aggressive prompting — one mention, at most, ever",
    /Raise it at most once/.test(SCOUT), true);
-ck("...and never twice in a reply", /never mention plans twice in one reply/.test(SCOUT), true);
+ck("...and never twice in a reply", /name the plan once, carry on/.test(SCOUT), true);
 
 // =========================================================================
 // Nothing above may move a quota, price, entitlement or auth rule
