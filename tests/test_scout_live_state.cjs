@@ -136,14 +136,34 @@ ck("Scout is told it can propose a corrected Pathway",
    /function synthesizePathwayFromState/.test(SCOUT), true);
 ck("...via the one-tap suggested_pathway mechanism",
    (SCOUT.match(/finalizeSuggestedPathway\(data, pathwayBuildCtx, incomingText, userPlan\)/g) || []).length === 4, true);
-// GENUINELY MISSING, recorded rather than quietly dropped.
-// The old prompt required Scout to state what a Pathway rebuild would change
-// (the category, and that milestones would be replaced) BEFORE the athlete
-// tapped accept. The rewrite dropped it and nothing replaced it: the client
-// renders only a "Build my Pathway" button (golsz-app.html ~7713) with no
-// preview of the milestones it is about to write. So an athlete can accept a
-// Pathway without seeing its contents. Prompt-side sentence or a client-side
-// preview would both fix it; neither exists today.
+// CLOSED 2026-08-11 by a client-side preview, which is a stronger fix than
+// the prompt sentence it replaces: it cannot be skipped by a model that
+// decides not to mention the change.
+//
+// The hazard is that addSuggestedPathway() upserts milestones as a straight
+// REPLACE. An athlete with six milestones and three ticked off loses all of
+// it in one tap. Showing the incoming Pathway alone would not prevent that,
+// so the panel shows BOTH sides and states the destruction in words.
+ck("the preview renders the athlete's CURRENT Pathway before the incoming one",
+   APP.indexOf("scout_pathway_current") < APP.indexOf("scout_pathway_incoming"), true);
+ck("...and completed milestones are visibly marked as such",
+   /ms && ms\.done \? "\\u2713 " : "\\u00b7 "/.test(APP), true);
+ck("the replacement is stated in words, with both counts and the done count",
+   /scout_pathway_replace_warning[\s\S]{0,160}replace\("\{old\}", cur\.length\)[\s\S]{0,80}replace\("\{done\}", done\)[\s\S]{0,80}replace\("\{new\}", next\.length\)/.test(APP), true);
+ck("a first-time build says so instead of warning about a replacement",
+   /cur\.length[\s\S]{0,120}scout_pathway_first_build/.test(APP), true);
+ck("the warning is highlighted only when something is actually destroyed",
+   /color: cur\.length \? C\.amber : C\.slate/.test(APP), true);
+ck("the preview sits ABOVE the button that commits it",
+   APP.indexOf("scout_pathway_replace_warning") < APP.indexOf("addSuggestedPathway(i, m.suggestedPathway)"), true);
+ck("Scout holds the current Pathway to compare against", /const \[currentPathway, setCurrentPathway\]/.test(APP), true);
+ck("...read on mount alongside the other athlete reads",
+   /sb\.from\("pathway_plan"\)\.select\("pathway_type, target_timeline, milestones"\)/.test(APP), true);
+ck("...and refreshed after an apply so a second proposal compares correctly",
+   /setCurrentPathway\(\{ pathway_type: pathway\.pathway_type/.test(APP), true);
+ck("all four preview strings are translated in every language",
+   ["scout_pathway_current", "scout_pathway_incoming", "scout_pathway_replace_warning", "scout_pathway_first_build"]
+     .every((k) => (APP.match(new RegExp(k + ":", "g")) || []).length === 4), true);
 ck("the goal still bends nothing — the Pathway bends to it",
    /The goal is theirs\. The Pathway bends to it, never the reverse/.test(PROMPT), true);
 ck("a contradiction is an allowed trigger for suggested_pathway",
