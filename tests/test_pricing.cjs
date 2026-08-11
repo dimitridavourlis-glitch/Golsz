@@ -21,7 +21,16 @@ const HOME = fs.readFileSync(REPO + "/index.html", "utf8");
 const WEBHOOK = fs.readFileSync(REPO + "/api/stripe-webhook.js", "utf8");
 const MIG = fs.readFileSync(REPO + "/supabase-migration-120-eur-pricing.sql", "utf8");
 
-const slice = (from, to) => APP.slice(APP.indexOf(from), APP.indexOf(to));
+const slice = (from, to) => {
+  const i = APP.indexOf(from), j = APP.indexOf(to);
+  // A missing anchor used to give indexOf -1, so slice() returned a huge
+  // trailing chunk of the file and eval() either threw a confusing
+  // SyntaxError or — worse — silently succeeded on the wrong code. Renaming
+  // hasFeature() to featureUnlocked()/featureLocked() tripped exactly this.
+  if (i < 0) throw new Error(`dead anchor (start): "${from}" is no longer in golsz-app.html`);
+  if (j < 0) throw new Error(`dead anchor (end): "${to}" is no longer in golsz-app.html`);
+  return APP.slice(i, j);
+};
 // Direct eval LEAKS function declarations into this scope but not consts,
 // so planPrice arrives on its own and only PRICE_CURRENCY needs extracting.
 // Destructuring planPrice here too would collide with the leaked function.
@@ -32,7 +41,7 @@ eval(slice("const STRIPE_LINKS = {", "// A Stripe Payment Link is test-mode") + 
 const STRIPE_LINKS_LIVE = __sl();
 eval(slice("const PLANS = [", "\n// Supabase client") + "\nfunction __p() { return PLANS; }");
 const PLANS = __p();
-eval(slice("const FEATURE_MIN_PLAN = {", "function hasFeature(") + "\nfunction __f() { return FEATURE_MIN_PLAN; }");
+eval(slice("const FEATURE_MIN_PLAN = {", "// ---- ENTITLEMENT IS THREE-VALUED") + "\nfunction __f() { return FEATURE_MIN_PLAN; }");
 const FEATURE_MIN_PLAN = __f();
 
 let p = 0, f = 0;

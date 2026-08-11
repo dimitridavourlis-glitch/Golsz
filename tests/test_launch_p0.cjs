@@ -172,7 +172,16 @@ ck("it renders goal_text itself, not a category", /<div style=\{\{ fontSize: 14,
 ck("it writes goal_text", /goal_text: clean,/.test(APP), true);
 ck("...and derives goal_defined in the same write", /goal_defined: true,/.test(APP), true);
 ck("...and marks it athlete-authored", /goal_source: "athlete_edited",/.test(APP), true);
-ck("Home renders it", /<GoalCard actingFor=\{actingFor\} onSaved=\{\(\) => reload\(\)\} \/>/.test(APP), true);
+// Home still shows the goal — that is the P0-5 guarantee and it has not
+// moved. What changed is WHO OWNS EDITING IT. Home is a read-only dashboard
+// and hands off to Plan; Plan is the workspace and owns the edit. Both render
+// the same component so the two views cannot drift, which is why this asserts
+// the props rather than just the presence of the tag.
+ck("Home renders it", /<GoalCard actingFor=\{actingFor\} readOnly onOpenPlan=/.test(APP), true);
+ck("...read-only, so Home never edits", /<GoalCard actingFor=\{actingFor\} readOnly/.test(APP), true);
+ck("...and hands off to Plan", /onOpenPlan=\{\(\) => onNavigate\("targets"\)\}/.test(APP), true);
+ck("Plan renders it editable", /<GoalCard actingFor=\{actingFor\} onSaved=\{[^}]+\} compact \/>/.test(APP), true);
+ck("exactly two render sites — no third copy", (APP.match(/<GoalCard /g) || []).length, 2);
 ck("Plan renders it", /<GoalCard actingFor=\{actingFor\} onSaved=\{\(\) => setGoalVersion/.test(APP), true);
 ck("the Plan card no longer substitutes the pathway category for the goal",
    /plan_primary_goal"\)\}<\/span>\s*<\/div>\s*<div[^>]*>\{hasPrimaryGoal/.test(APP), false);

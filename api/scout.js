@@ -3196,6 +3196,35 @@ function extractMemoryWrites(data) {
 // chat lands only in that athlete's own RLS-protected row and can never
 // become platform knowledge for anyone else. Promotion into golsz_knowledge
 // stays an admin-curated action (migration 096's admin-only write policy).
+// A correction the model declined to write down is a correction the athlete
+// will have to make again. The 2026-08-11 Tusculum failure had the athlete
+// correcting the same fact twice in two minutes, so this does not depend on
+// the model choosing to emit a memory_write: when the classifier says the
+// message was a correction, the runtime appends the write itself.
+//
+// source "athlete_stated" + confidence 1 + importance 5 is the highest-trust
+// shape this system has, which is the correct weight for a fact the athlete
+// cared enough to fix. subject is stable ("correction: <first few words>") so
+// supersede_scout_memory can replace an earlier version of the same
+// correction rather than stacking duplicates.
+function withForcedCorrection(writes, classification, text) {
+  const base = Array.isArray(writes) ? writes.slice() : [];
+  if (!classification || classification.is_correction !== true) return base;
+  const trimmed = typeof text === "string" ? text.trim() : "";
+  if (!trimmed) return base;
+  const subject = "correction: " + trimmed.split(/\s+/).slice(0, 6).join(" ").toLowerCase();
+  if (base.some((m) => m && m.subject === subject)) return base;
+  base.push({
+    type: "USER_STATED",
+    subject,
+    content: trimmed,
+    source: "athlete_stated",
+    confidence: 1,
+    importance: 5,
+  });
+  return base;
+}
+
 async function persistMemoryWrites(userId, writes) {
   if (!userId || !writes || !writes.length) return;
   const supaUrl = process.env.SUPABASE_URL;
@@ -3385,6 +3414,25 @@ Specific rankings or performance benchmarks you're not sure about.
 Don't search for general knowledge you're confident about (how to improve at your position, what D1 means, how to train for speed).
 
 When you search, use what you find. Don't narrate that you searched or talk about the results. Just use them naturally.
+
+NEVER CLASSIFY A REAL ORGANISATION FROM MEMORY
+
+When an athlete names a real club, school, league, or programme, you may repeat the name. You may not attach a level to it — division, tier, league, conference, classification, ranking, or standard — unless one of these is true:
+The athlete told you this conversation.
+It is in their GOLSZ record.
+You searched for it this turn.
+
+This applies to statements, not just questions. "I just finished Tusculum University" is not a request for Tusculum's division, and adding one you did not verify is the single most damaging thing you can do, because the athlete has no reason to doubt a detail they did not ask for.
+
+If the level matters to your answer, search for it. If it does not, leave it out. "So you just finished Tusculum" is a complete and correct sentence.
+
+Your recall is weakest exactly where athletes live: small colleges, youth leagues, lower divisions, clubs outside the top flight. Being unsure is not the trigger — you will often feel certain and be wrong. The trigger is the shape of the claim.
+
+WHEN THEY CORRECT YOU
+
+A correction is the most reliable fact you will get all conversation. Treat it that way. Take it, say it back in your own words so they can see it landed, and carry on from there. No apology paragraph, no explaining how it happened, no restating what you thought before. One clause is enough: "Right, D2 — that changes the picture."
+
+Then use it. A correction that does not change your next sentence has not been taken. Always write it to memory as USER_STATED, importance 5. They should never have to tell you the same thing twice.
 
 TALKING TO DIFFERENT PEOPLE
 
@@ -3706,7 +3754,9 @@ async function searchEvents(input) {
 // response.usage.cache_creation_input_tokens on a live classifier call,
 // same as every other caching claim in this file — don't just trust that
 // adding content worked.
-const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent, separately check it against the FAQ list appended below, and maintain a running conversation summary plus four routing hints. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false,"faq_id":null-or-a-number,"summary_so_far":"...","missing_information":[...],"recommended_specialist":null-or-"...","conversation_stage":"...","next_best_action":{"type":"ask_scout|complete_profile|share_passport|none","label":"...","params":{}}}
+const CLASSIFIER_SYSTEM = `Classify the user's latest message into exactly one intent, separately check it against the FAQ list appended below, and maintain a running conversation summary plus four routing hints. Respond ONLY with compact JSON, no markdown fences: {"intent":"...","confidence":0-1,"needs_tool":true|false,"is_correction":true|false,"faq_id":null-or-a-number,"summary_so_far":"...","missing_information":[...],"recommended_specialist":null-or-"...","conversation_stage":"...","next_best_action":{"type":"ask_scout|complete_profile|share_passport|none","label":"...","params":{}}}
+
+"is_correction" IS A SEPARATE BOOLEAN FLAG, NOT AN INTENT. Never put "is_correction" in the "intent" field — "intent" only ever takes one of the intent values listed further below. Set the boolean "is_correction" to true when the athlete's message disputes, corrects, or contradicts something in the conversation so far, including a fact Scout previously asserted. "Tusculum is a D2", "no I'm not at Saint-Laurent", "that's wrong", "actually it's the other way round" are all corrections — each of those still gets a normal intent (usually career_advice) PLUS "is_correction":true. A correction is never a general question, however generic its wording looks, and never a FAQ match.
 SUMMARY: the message may open with a "CONVERSATION SUMMARY SO FAR: ..." section describing everything discussed before this turn (empty/absent on a conversation's first message — that's normal, not an error). Produce an updated "summary_so_far": ONE short sentence, 25 words max, covering the prior summary plus what this new message adds — never just repeat the input back, never a numbered list, never multiple sentences. If there's no prior summary and this message alone isn't summary-worthy yet (a greeting, "thanks", etc.), a few words is fine — it does not need to be a full sentence.
 ATHLETE CONTEXT: the message may also include a "PROFILE SO FAR: {...}" section (hard facts already on file) and a "SCOUT CONTEXT SO FAR: {...}" section (softer qualification facts already captured — dream/goal, target level, gap, urgency, interest flags, etc.). Use both plus the summary to fill in:
 - "missing_information": an array of up to 3 field names, chosen only from this list, that are NOT already present in either section and would meaningfully help right now: dream_outcome, target_level, target_country, timeline, perceived_strengths, perceived_weaknesses, main_gap, urgency, professional_interest, college_interest, trial_interest, secondary_goal, secondary_gaps, scholarship_interest, transfer_interest, exposure_need. Use an empty array if nothing important is missing, or the conversation doesn't call for asking right now (e.g. off_topic, or the athlete is mid-thought on something else).
@@ -3760,7 +3810,7 @@ ESCALATION GUIDANCE (when torn between two intents or confidence levels):
 - A message containing multiple distinct questions (e.g. a general question plus a personal follow-up in the same turn) should classify by whichever part needs the more capable handling — if any part needs personalization, tool use, or judgment, that part decides the intent even if the other part alone would have been a simple lookup.
 - When a message is a near-exact repeat of an earlier turn in the same conversation (the user re-asking because the last answer didn't land), treat that as a signal to escalate rather than repeat the same routing decision — a repeated question is evidence the cheaper path already failed once.
 - If a message reads as satisfied or a simple acknowledgment of a previous answer ("thanks," "got it," "makes sense") rather than a new question, classify it as off_topic with high confidence and needs_tool false — there's nothing to look up or reason about, and it should never be treated as db_lookup, web_lookup, or any tool-needing intent just because the prior turn was.
-- A message that names a specific real person, team, school, or organization by name (not a general category) and asks a factual question about them almost always needs web_lookup, even if the underlying topic sounds generic — "what division is State University in" needs a real lookup even though "what's the difference between divisions" is simple_knowledge.
+- A message that names a specific real person, team, school, or organization by name (not a general category) and asks a factual question about them almost always needs web_lookup, even if the underlying topic sounds generic — "what division is State University in" needs a real lookup even though "what's the difference between divisions" is simple_knowledge. A named organisation arriving as a STATEMENT needs web_lookup ONLY when the reply genuinely turns on that organisation's level or standing — "I signed with Lakeshore FC, is that a step up?" does; "I just finished Tusculum University" or "training at Saint-Laurent today" does NOT, because the honest reply there simply repeats the name without classifying it. Athletes name their club in most messages; treating every mention as a lookup sends ordinary conversation to the slow path for nothing. (REAL production miss both ways: first this classified as career_advice with needs_tool false and the reply invented a division for a real university — the prompt now forbids stating an unverified level, which is the actual fix. Then over-correcting to escalate on every mention pushed normal chat onto the ~25s model.)
 - Treat an image attached to the message the same as any other content when deciding intent — a photo of a highlight reel thumbnail or a stat sheet accompanying a career_advice-shaped question doesn't change the intent, but a photo with no real question attached (just "what do you think?") should default to career_advice or scouting_analysis depending on who's asking, never simple_knowledge.`;
 
 // Appends the FAQ list to the classifier prompt and asks it to match by
@@ -3788,6 +3838,81 @@ function latestUserText(conversation) {
     return textBlock ? textBlock.text : "";
   }
   return "";
+}
+
+// The intent taxonomy, as an actual set rather than an assumption.
+//
+// WHY THIS EXISTS (2026-08-11, found from production data)
+// Adding "is_correction":true|false to the classifier's JSON contract made
+// the model start returning it as an INTENT — scout_routing_log has rows with
+// intent = 'is_correction'. A boolean field name leaked into the enum next to
+// it, which is a normal failure when a new key is introduced beside a
+// free-text field the model is asked to fill in.
+//
+// The damage was entirely in the routing, and all of it silent:
+//   • 'is_correction' is not in HAIKU_INTENTS  -> never the cheap model
+//   • not in FAQ_ELIGIBLE_INTENTS              -> no $0 FAQ answer
+//   • not in CACHE_ELIGIBLE_INTENTS            -> no cache hit
+// so every affected message took the ~25s Sonnet path. Nothing errored,
+// nothing logged a warning, and the only visible symptom was "Scout is slow".
+//
+// A prompt fix alone would be a soft instruction, and this file's standing
+// precedent (see FAQ_ELIGIBLE_INTENTS) is that a soft instruction is not a
+// guarantee. So the runtime repairs it: a known boolean leaking into `intent`
+// is put back where it belongs, and any unrecognised intent is logged loudly
+// instead of silently degrading to the slowest path.
+//
+// ---- TWO RULES FOR ANYONE ADDING A FIELD TO THIS CONTRACT ----------------
+//
+// 1. A NEW FIELD MUST NOT READ LIKE A VALUE OF A SIBLING FIELD.
+//    "is_correction" sits next to "intent", and "is_correction" reads exactly
+//    like an intent name, so the model put it in the intent slot. That is the
+//    contract inviting the mistake, not the model being careless. Before
+//    adding a key here, ask whether its NAME could plausibly be read as a
+//    value of any free-text field beside it. If it could, rename it
+//    ("disputes_prior_claim"), or expect to absorb it below. Absorb it in
+//    THIS function, not in the prompt — the prompt can only ask.
+//
+// 2. ALLOWLISTS DEGRADE SILENTLY AND EXPENSIVELY, ALL AT ONCE.
+//    HAIKU_INTENTS, FAQ_ELIGIBLE_INTENTS and CACHE_ELIGIBLE_INTENTS are all
+//    allowlists keyed on `intent`. An unrecognised value therefore fails
+//    every one of them simultaneously — which looks like a freak coincidence
+//    and is actually structural. The message loses the cheap model, the $0
+//    FAQ answer and the cache in a single step, with no error anywhere, and
+//    lands on the slowest and most expensive path available. Any new
+//    allowlist keyed on a model-supplied value inherits this property.
+//    Defaulting to something routable is what converts a silent triple-miss
+//    into a known path.
+const KNOWN_INTENTS = new Set([
+  "simple_knowledge", "career_advice", "scouting_analysis", "player_comparison",
+  "agent_workflow", "profile_assist", "off_topic", "web_lookup", "db_lookup",
+]);
+// Boolean fields in the same JSON object that could plausibly be emitted as
+// an intent. Mapping them back is strictly better than dropping them.
+const BOOLEAN_FIELDS_THAT_LEAK = new Set(["is_correction", "needs_tool"]);
+
+function normalizeClassification(parsed) {
+  if (!parsed || typeof parsed !== "object") return parsed;
+  const intent = parsed.intent;
+  if (typeof intent !== "string" || KNOWN_INTENTS.has(intent)) return parsed;
+
+  const fixed = { ...parsed };
+  if (BOOLEAN_FIELDS_THAT_LEAK.has(intent)) {
+    // The model answered the boolean in the intent slot. Honour the signal it
+    // was actually giving, then fall back to the intent a correction really
+    // is: a personalised reply, never FAQ- or cache-eligible.
+    fixed[intent] = true;
+    fixed.intent = "career_advice";
+    console.log("GOLSZ classifier field leaked into intent, repaired:", JSON.stringify({ was: intent, now: fixed.intent }));
+  } else {
+    // Unknown and unrecognisable. career_advice is the conservative default:
+    // it is personalised, so it can never be answered from the FAQ or the
+    // cache, and it still respects the per-plan tier cap instead of pinning
+    // every such message to the most expensive model.
+    fixed.intent = "career_advice";
+    console.log("GOLSZ classifier returned an unknown intent, defaulted:", JSON.stringify({ was: intent }));
+  }
+  return fixed;
 }
 
 async function classifyIntent(key, conversation, faqList, authoritativeBlock) {
@@ -3842,7 +3967,7 @@ async function classifyIntent(key, conversation, faqList, authoritativeBlock) {
     if (start < 0 || end <= start) return { raw: block.text };
     let parsed;
     try { parsed = JSON.parse(cleaned.slice(start, end + 1)); } catch { return { raw: block.text }; }
-    return { ...parsed, usage: data.usage };
+    return { ...normalizeClassification(parsed), usage: data.usage };
   } catch (e) {
     return { error: String(e) };
   }
@@ -3892,11 +4017,64 @@ function shouldRouteToHaiku(classification) {
 const FAQ_ELIGIBLE_INTENTS = new Set(["simple_knowledge"]);
 const FAQ_CONFIDENCE_THRESHOLD = 0.85;
 
-function shouldUseFaqMatch(classification) {
+// Migration 042's NCAA-divisions FAQ was served verbatim to an athlete who
+// was CORRECTING Scout ("Tusculum university is a D2") — Scout had just
+// invented D3 for a real D2 university. It classified simple_knowledge with
+// a faq_id at high confidence, so no model ever ran, and the athlete got a
+// canned encyclopedia entry in reply to their correction. They then had to
+// correct the same fact twice.
+//
+// The intent gate above cannot catch this: the message really is *about* a
+// generic topic. What disqualifies it is its POSITION — it is a reply, not
+// a question. A canned answer can only honestly stand in for a cold-open
+// ask.
+//
+// isShortReactive() is deliberately dumb and deterministic. is_correction
+// comes from the model, so a classifier failure must not silently re-open
+// the hole; this is a second lock on the same door, not a second language
+// model.
+const CORRECTION_OPENERS = /^(no|not|nope|nah|actually|wrong|incorrect|it'?s|that'?s|thats|its)\b/i;
+
+// "Has Scout actually said something TO them yet?" — which is not the same
+// question as "is there an assistant message present".
+//
+// The client seeds every new conversation with a greeting as an assistant
+// turn (scoutGreetingFor -> setMsgs([{role:"assistant"...}]) in
+// golsz-app.html) and posts the array verbatim. So the FIRST request of a
+// brand-new chat already contains an assistant message. A naive .some()
+// check therefore returns true on turn one, and combined with
+// isShortReactive() it disqualified every short cold-open question — which
+// is precisely what the FAQ path exists to answer. That would have taken the
+// $0 path to near zero and looked like a cache regression.
+//
+// A real exchange requires an assistant turn that FOLLOWS a user turn. The
+// seeded greeting precedes every user message, so it can never satisfy this.
+function isReplyToScout(conversation) {
+  if (!Array.isArray(conversation)) return false;
+  let seenUser = false;
+  for (const m of conversation) {
+    if (!m) continue;
+    if (m.role === "user") seenUser = true;
+    else if (m.role === "assistant" && seenUser) return true;
+  }
+  return false;
+}
+
+function isShortReactive(text) {
+  if (typeof text !== "string") return false;
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (CORRECTION_OPENERS.test(trimmed)) return true;
+  return trimmed.split(/\s+/).length <= 12;
+}
+
+function shouldUseFaqMatch(classification, conversation) {
   if (!classification || classification.error || classification.raw) return false;
   if (classification.faq_id == null) return false;
   if (!FAQ_ELIGIBLE_INTENTS.has(classification.intent)) return false;
   if (typeof classification.confidence === "number" && classification.confidence < FAQ_CONFIDENCE_THRESHOLD) return false;
+  if (classification.is_correction === true) return false;
+  if (isReplyToScout(conversation) && isShortReactive(latestUserText(conversation))) return false;
   return true;
 }
 
@@ -5042,9 +5220,13 @@ async function continueIfTruncated(key, cfg, systemPrompt, systemDynamic, baseMe
   return out;
 }
 
-async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, baseConversation, deadlineMs) {
+async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, baseConversation, deadlineMs, maxToolTurns) {
   const conversation = baseConversation.slice();
-  const MAX_TOOL_TURNS = 4;
+  // Free accounts get ONE verification turn (see FREE_VERIFY_TURNS at the
+  // free-plan gate); everything else keeps the validated 4. Defaulting to 4
+  // rather than requiring the argument keeps every existing call site — and
+  // the budget comments at the top of this file — correct as written.
+  const MAX_TOOL_TURNS = typeof maxToolTurns === "number" && maxToolTurns > 0 ? maxToolTurns : 4;
   // Surfaced to the caller so a reply that was cut short by the request
   // budget is logged as degraded rather than as a clean success.
   let toolBudgetExhausted = false;
@@ -5641,10 +5823,13 @@ A newer source always beats an older one at the same level. If memory says one t
     // ---- Database path: a real $0-AI-cost answer, matched by MEANING (not
     // exact wording) inside the classification call above, before any real
     // answering model runs. ----
-    const faqMatch = shouldUseFaqMatch(classification)
+    const faqMatch = shouldUseFaqMatch(classification, conversation)
       ? faqList.find((f) => f.id === classification.faq_id)
       : null;
     if (faqMatch) {
+      // answered_by "faq", not "database" — the response cache below used to
+      // write the same string, so the $0 share could not be attributed to
+      // either mechanism. See migration 124.
       console.log("GOLSZ scout FAQ match:", JSON.stringify({ id: faqMatch.id, question: faqMatch.question }));
       const payload = {
         content: [{ type: "text", text: JSON.stringify({ reply: faqMatch.answer, profile_updates: null }) }],
@@ -5653,7 +5838,7 @@ A newer source always beats an older one at the same level. If memory says one t
         scout_usage: reservedQuestion ? { remaining: questionsRemaining, limit: dailyLimit } : undefined,
         next_move: extractNextBestAction(classification),
       };
-      await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
+      await logRouting("faq", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
       return res.status(200).json(payload);
     }
     await logFaqMiss(classification, latestUserText(conversation));
@@ -5666,14 +5851,28 @@ A newer source always beats an older one at the same level. If memory says one t
     // could still trigger a full-price web_lookup/db_lookup tool call.
     // Checked here, not inside selectModelTier(), so it can return a clear
     // 402 with an upgrade message instead of silently downgrading quality. ----
+    // A free account may run ONE verification search — checking what a named
+    // organisation actually is, before advising about it. What §12 blocks is
+    // deep RESEARCH (multi-turn loops, large school searches), not the single
+    // lookup that stops Scout inventing a division for a real university.
+    // The 2026-08-11 Tusculum failure shipped exactly that invention to an
+    // athlete; paywalling the fix would have made it worse, not better. One
+    // search turn is cents, a four-turn research loop is not — so db_lookup
+    // (the player/club database, genuinely the expensive one) stays Starter+
+    // while web_lookup falls through capped at FREE_VERIFY_TURNS.
+    const FREE_VERIFY_TURNS = 1;
+    let maxToolTurns = 4;
     if (userPlan === "free" && classification && classification.needs_tool && !userIsAdmin && !userAiUnlimited) {
-      if (reservedQuestion) await releaseScoutQuestion(userId);
-      if (reservedFreeAi) await releaseFreeAiQuestion(userId);
-      return res.status(402).json({
-        error: "Web and player-database search is a Starter+ feature. Upgrade to unlock deeper research from Scout.",
-        code: "free_tool_blocked",
-        scout_usage: { remaining: questionsRemaining, limit: dailyLimit },
-      });
+      if (classification.intent === "db_lookup") {
+        if (reservedQuestion) await releaseScoutQuestion(userId);
+        if (reservedFreeAi) await releaseFreeAiQuestion(userId);
+        return res.status(402).json({
+          error: "Player-database search is a Starter+ feature. Upgrade to unlock deeper research from Scout.",
+          code: "free_tool_blocked",
+          scout_usage: { remaining: questionsRemaining, limit: dailyLimit },
+        });
+      }
+      maxToolTurns = FREE_VERIFY_TURNS;
     }
 
     // ---- Multi-Model tier selection (approved Cost-Control plan) ----
@@ -5710,13 +5909,19 @@ A newer source always beats an older one at the same level. If memory says one t
 
     // ---- Generic response cache (migration 054) — only for genuinely
     // non-personalized, shared answers (simple_knowledge). ----
+    // The same correction gate as shouldUseFaqMatch(). A correction is never
+    // a shared, non-personalized question, so it must never be answered from
+    // — or written into — the generic response cache. Identical bug class to
+    // the FAQ short-circuit above, reached through a different door.
     let cacheKey = null;
-    if (classification && CACHE_ELIGIBLE_INTENTS.has(classification.intent)) {
+    if (classification && CACHE_ELIGIBLE_INTENTS.has(classification.intent)
+        && classification.is_correction !== true
+        && !(isReplyToScout(conversation) && isShortReactive(latestText))) {
       cacheKey = cacheKeyFor(classification.intent, latestText, faqLang, modelTier, cacheFingerprint);
       const cached = await getCachedResponse(cacheKey);
       if (cached) {
         console.log("GOLSZ scout cache hit");
-        await logRouting("database", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
+        await logRouting("cache", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
         cached.scout_summary = updatedSummary;
         if (reservedQuestion) cached.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         cached.next_move = extractNextBestAction(classification);
@@ -5764,7 +5969,7 @@ A newer source always beats an older one at the same level. If memory says one t
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, profileUpdates);
         await persistScoutContext(userId, scoutContextUpdates);
-        await persistMemoryWrites(userId, extractMemoryWrites(data));
+        await persistMemoryWrites(userId, withForcedCorrection(extractMemoryWrites(data), classification, latestText));
         // Keyed by requestId so a client-side timeout retry can recover this
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache.
@@ -5809,7 +6014,7 @@ A newer source always beats an older one at the same level. If memory says one t
     const deepTierConfig = useHaiku ? (byTier.advanced || ANTHROPIC_DEFAULTS.advanced) : tierConfig;
 
     const scoutDeadline = handlerStartMs + SCOUT_BUDGET_MS;
-    let sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline);
+    let sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline, maxToolTurns);
     if (!sonnetResult.ok) {
       // Automatic failover, step 1: retry the WHOLE reply once, from a fresh
       // conversation copy (runDeepReply never mutates the caller's array) —
@@ -5823,7 +6028,7 @@ A newer source always beats an older one at the same level. If memory says one t
         console.log("GOLSZ sonnet call failed, retrying once:", JSON.stringify(sonnetResult.data));
         if (timeoutReason === "none") timeoutReason = "provider_error";
         fallbackUsed = "sonnet_retry";
-        sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline);
+        sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline, maxToolTurns);
       } else {
         console.log("GOLSZ sonnet call failed, skipping retry (budget left ms:", retryRoom, "):", JSON.stringify(sonnetResult.data));
         timeoutReason = "retry_skipped";
@@ -5855,7 +6060,7 @@ A newer source always beats an older one at the same level. If memory says one t
         await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
         await persistProfileUpdates(userId, applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext), currentGoalText, currentGoalSource));
         await persistScoutContext(userId, extractScoutContextUpdates(data));
-        await persistMemoryWrites(userId, extractMemoryWrites(data));
+        await persistMemoryWrites(userId, withForcedCorrection(extractMemoryWrites(data), classification, latestText));
         // Keyed by requestId so a client-side timeout retry can recover this
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache.
@@ -5907,7 +6112,7 @@ A newer source always beats an older one at the same level. If memory says one t
             await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
             await persistProfileUpdates(userId, applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext), currentGoalText, currentGoalSource));
             await persistScoutContext(userId, extractScoutContextUpdates(data));
-            await persistMemoryWrites(userId, extractMemoryWrites(data));
+            await persistMemoryWrites(userId, withForcedCorrection(extractMemoryWrites(data), classification, latestText));
             data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
             data.scout_summary = updatedSummary;
             if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
@@ -5951,7 +6156,7 @@ A newer source always beats an older one at the same level. If memory says one t
     await recordScoutUsageCost(userId, sonnetCost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
     await persistProfileUpdates(userId, applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext), currentGoalText, currentGoalSource));
     await persistScoutContext(userId, extractScoutContextUpdates(data));
-    await persistMemoryWrites(userId, extractMemoryWrites(data));
+    await persistMemoryWrites(userId, withForcedCorrection(extractMemoryWrites(data), classification, latestText));
     // Scout Cache write. Gated on the reply having ACTUALLY run web search
     // (checked against the response's tool-result blocks, not the model's
     // word for it) — this is the only path with the web_search tool, and

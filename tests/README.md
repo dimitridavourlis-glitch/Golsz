@@ -35,6 +35,46 @@ const SRC = require("fs").readFileSync(REPO + "/api/scout.js", "utf8");
 eval(SRC.slice(SRC.indexOf("function myThing("), ...));
 ```
 
+## The second rule: fixtures must be the shape production sends
+
+Extracting the real function is only half the guarantee. **A fixture that
+omits something the client seeds is not a simplified version of production —
+it is a different input, and the suite is testing a different system.**
+
+This cost a live regression on 2026-08-11, in the same change that documented
+the trap it fell into.
+
+`shouldUseFaqMatch()` gained a gate refusing the FAQ short-circuit when a
+short reactive message arrives after Scout has spoken, so a correction could
+never be answered with a canned encyclopedia entry. Its guard suite asserted
+that a genuine cold-open question still matched the FAQ, using:
+
+```js
+const COLD_OPEN = [{ role: "user", content: "..." }];   // never happens
+```
+
+Production never sends that. `golsz-app.html` seeds every new conversation
+with the greeting as an **assistant** turn and posts the array verbatim, so
+the very first request of a brand-new chat already contains an assistant
+message. `isReplyToScout()` was therefore true on turn one, and every short
+cold-open question — the FAQ's entire reason to exist — was disqualified. The
+$0 path would have gone to near zero. The suite was green throughout, because
+its cold open was a shape the server can never receive.
+
+So: **before writing a fixture, read how the client builds the payload.** For
+Scout that is `const api = next.slice(-RECENT_TURNS).map(...)` in
+`golsz-app.html`, and `next` always begins with a seeded greeting. Every
+conversation fixture in `test_faq_correction_gate.cjs` now starts from a
+shared `GREETING` constant for exactly this reason.
+
+The generalisation, which is also what the four other measurement bugs in
+this repo had in common (`0 || null` swallowing zeros, `indexOf` -1 feeding
+`slice`, a mock discriminator matching `/classif/`, a CHECK constraint
+rewritten without `'failed'`): **ask whether the check can distinguish the
+thing you are about to conclude — before you run it, not after the number
+looks wrong.** In every case the information was never in the number. It was
+in the gap between what was measured and what was about to be decided.
+
 ## `test_handler_smoke.cjs` is the important one
 
 Every other suite tests individual functions. That is not enough, and on

@@ -64,7 +64,14 @@ global.fetch = async (url, opts) => {
     // model was ACTUALLY told, rather than trusting that the wiring ran.
     LAST_ANTHROPIC_BODY = body;
     // The classifier asks for intent; everything else is a reply.
-    if (body.includes("needs_tool") || body.includes("classif")) {
+    // Discriminates on a string unique to CLASSIFIER_SYSTEM's JSON contract.
+    // This used to also match /classif/, which broke the moment SYSTEM_PROMPT
+    // gained the line banning Scout from CLASSIFYing an organisation from
+    // memory ("division, tier, league, conference, classification, ..."): the
+    // ANSWERING call started matching the classifier branch, so every reply
+    // came back as classifier JSON and reply_text was empty. A loose
+    // discriminator in a mock is a suite that fails on unrelated prompt edits.
+    if (body.includes("summary_so_far")) {
       return anthropicReply({ intent: "career_advice", confidence: 0.9, needs_tool: false, faq_id: null,
         summary_so_far: "s", missing_information: [], recommended_specialist: null,
         conversation_stage: "pathway", next_best_action: null });

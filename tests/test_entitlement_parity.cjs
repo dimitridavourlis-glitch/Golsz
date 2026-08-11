@@ -32,9 +32,16 @@ const ck = (l, a, e) => {
 // ---- extract the client's copy -------------------------------------------
 const rankSrc = APP.match(/const PLAN_RANK = \{[^}]+\};/);
 const featSrc = APP.match(/const FEATURE_MIN_PLAN = \{[\s\S]*?\n\};/);
-const hasFeatSrc = APP.match(/function hasFeature\(plan, feature\) \{[\s\S]*?\n\}/);
-if (!rankSrc || !featSrc || !hasFeatSrc) throw new Error("client entitlement source not found — markers moved, update this suite");
-const client = eval(`${rankSrc[0]}\n${featSrc[0]}\n${hasFeatSrc[0]}\n({ PLAN_RANK, FEATURE_MIN_PLAN, hasFeature })`);
+// The client no longer has hasFeature(). It was replaced by a three-valued
+// pair, because in the UI "plan not loaded yet" is a different fact from
+// "plan is free" and coercing them together showed a paying athlete an
+// upgrade prompt on every page load. The server keeps hasFeature() — for
+// ENFORCEMENT, denying an unknown plan is correct.
+const knownSrc = APP.match(/function planKnown\(plan\) \{[^}]*\}/);
+const unlockedSrc = APP.match(/function featureUnlocked\(plan, feature\) \{[\s\S]*?\n\}/);
+const lockedSrc = APP.match(/function featureLocked\(plan, feature\) \{[\s\S]*?\n\}/);
+if (!rankSrc || !featSrc || !knownSrc || !unlockedSrc || !lockedSrc) throw new Error("client entitlement source not found — markers moved, update this suite");
+const client = eval(`${rankSrc[0]}\n${featSrc[0]}\n${knownSrc[0]}\n${unlockedSrc[0]}\n${lockedSrc[0]}\n({ PLAN_RANK, FEATURE_MIN_PLAN, planKnown, featureUnlocked, featureLocked })`);
 
 // ---- the diff that makes drift impossible --------------------------------
 ck("PLAN_RANK identical", ent.PLAN_RANK, client.PLAN_RANK);
@@ -44,15 +51,42 @@ ck("no feature exists on only one side",
 
 // Behavioural equivalence, not just structural: every feature against every
 // plan must gate the same way on both sides.
+// For a KNOWN plan the two sides must still agree exactly — the three-valued
+// split changed how the UI handles "not loaded", not who is entitled to what.
 for (const plan of Object.keys(ent.PLAN_RANK)) {
   for (const feature of Object.keys(ent.FEATURE_MIN_PLAN)) {
-    ck(`hasFeature(${plan}, ${feature}) agrees`, ent.hasFeature(plan, feature), client.hasFeature(plan, feature));
+    ck(`entitlement(${plan}, ${feature}) agrees`, ent.hasFeature(plan, feature), client.featureUnlocked(plan, feature));
+    // Known plan: exactly one of unlocked/locked is true. Never both, never neither.
+    ck(`...and is decisive for ${plan}/${feature}`,
+       client.featureUnlocked(plan, feature) !== client.featureLocked(plan, feature), true);
   }
 }
 // Unknown features are ungated on both sides — a typo must not silently lock
 // something for everyone.
 ck("unknown feature ungated (server)", ent.hasFeature("free", "not_a_real_feature"), true);
-ck("unknown feature ungated (client)", client.hasFeature("free", "not_a_real_feature"), true);
+ck("unknown feature ungated (client)", client.featureUnlocked("free", "not_a_real_feature"), true);
+
+// ---- THE INVARIANT: an unknown plan can never render as locked -----------
+// This is the whole point of the split. If featureLocked() ever returns true
+// for a null plan, every gated surface in the app starts showing "Upgrade to
+// unlock" to paying athletes again while their subscription loads.
+for (const unknown of [null, undefined, ""]) {
+  for (const feature of Object.keys(ent.FEATURE_MIN_PLAN)) {
+    ck(`unknown plan (${JSON.stringify(unknown)}) is never locked for ${feature}`,
+       client.featureLocked(unknown, feature), false);
+    ck(`...and never unlocked either`, client.featureUnlocked(unknown, feature), false);
+  }
+}
+ck("planKnown is false for null", client.planKnown(null), false);
+ck("planKnown is true for a real plan", client.planKnown("free"), true);
+
+// The server deliberately does the OPPOSITE: enforcement denies an unknown
+// plan rather than deferring. Asserted so the divergence stays intentional.
+ck("server still denies an unknown plan (enforcement)", ent.hasFeature(null, "targets"), false);
+
+// And the coercing client function must stay gone — an old-style call should
+// be a loud ReferenceError, not a silent paywall.
+ck("client hasFeature() is not reintroduced", /function hasFeature\(/.test(APP), false);
 
 // ---- entitlements are UNCHANGED by this refactor -------------------------
 // The task that introduced this module explicitly must not move who gets

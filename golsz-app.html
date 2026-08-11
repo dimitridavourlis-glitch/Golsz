@@ -235,7 +235,7 @@ const I18N = {
     home_path_title: "YOUR PATH", home_path_you: "YOU", home_path_now: "NOW", home_path_developing: "Developing", home_path_goal_placeholder: "Set your goal",
     home_readiness_row_profile: "PROFILE", home_readiness_row_film: "FILM", home_readiness_row_performance: "PERFORMANCE", home_readiness_row_pathway: "PATHWAY",
     home_readiness_status_profile_ok: "Strong", home_readiness_status_profile_no: "Needed", home_readiness_status_film_ok: "Added", home_readiness_status_film_no: "Needed",
-    home_readiness_status_performance_ok: "Tracked", home_readiness_status_performance_no: "Building", home_readiness_status_pathway_ok: "Active", home_readiness_status_pathway_no: "Not set",
+    home_readiness_status_performance_ok: "Tracked", home_readiness_status_performance_no: "Building", home_readiness_status_pathway_ok: "Active", home_readiness_status_pathway_started: "Started", home_readiness_status_pathway_no: "Not set",
     home_readiness_teaser_profile_quality: "Upgrade to see exactly which Passport fields are holding your Readiness back, and by how much.", home_readiness_teaser_verification: "Upgrade to see how much identity verification would raise your Readiness.", home_readiness_teaser_performance: "Upgrade to see your performance trend across every benchmark you've recorded.", home_readiness_teaser_development: "Upgrade to see how your development plan is actually moving your Readiness.", home_readiness_teaser_pathway: "Upgrade to see exactly what your Pathway and targets are contributing to your Readiness.",
     home_scout_ask_ph: "Ask Scout anything…",
     nav_targets: "Pathway/Plan", nav_plan: "Plan", plan_page_title: "MY PATHWAY", nav_account: "Account", targets_title: "TARGET SCHOOLS & CLUBS", targets_name_ph: "School or club name", targets_contact_name_ph: "Contact name", targets_contact_email_ph: "Contact email",
@@ -332,7 +332,7 @@ const I18N = {
     goal_card_save: "Save goal", goal_card_saving: "Saving...", goal_card_cancel: "Cancel", goal_card_saved: "Goal saved.",
     goal_card_required: "Write your goal first.", goal_card_too_short: "Add a bit more detail so Scout can work with it.",
     goal_card_save_err: "Couldn't save your goal. Nothing was changed — please try again.",
-    goal_card_pathway: "Pathway", goal_card_by_you: "Your words", goal_card_by_scout: "Captured by Scout",
+    goal_card_pathway: "Pathway", goal_card_open_plan: "Open in Plan", goal_card_by_you: "Your words", goal_card_by_scout: "Captured by Scout",
     action_add_failed: "Couldn't add that — nothing was saved. Try again.",
     admin_view_knowledge: "Knowledge", admin_no_knowledge: "No candidate facts awaiting review.",
     admin_knowledge_source: "Source", admin_knowledge_no_source: "No source URL — cannot be approved",
@@ -345,7 +345,7 @@ const I18N = {
     bench_timing_electronic: "Electronic / laser timing", bench_timing_hand: "Hand-timed (stopwatch)",
     bench_start_standing: "Standing start", bench_start_flying: "Flying / running start",
     bench_jump_standing: "Standing vertical (no run-up)", bench_jump_max: "Max vertical (with approach)",
-    plan_next_30_title: "NEXT 30 DAYS", plan_next_90_title: "NEXT 90 DAYS", plan_season_title: "{a} / {b} SEASON",
+    plan_next_30_title: "NEXT 30 DAYS", plan_empty_season: "No milestones set for this season yet. Add one above, or ask Scout to map the season out.", plan_empty_targets: "No target schools or clubs yet. Ask Scout to build you a target list.", plan_empty_90: "Nothing here yet. Ask Scout to build a development plan and the focus areas will land here.", plan_next_90_title: "NEXT 90 DAYS", plan_season_title: "{a} / {b} SEASON",
     plan_next30_profile: "Complete your Passport", plan_next30_film: "Upload match footage", plan_next30_benchmark: "Record a performance benchmark",
     pathway_milestones_title: "Milestones", pathway_milestones_empty: "No milestones yet.", pathway_milestone_ph: "Add a milestone", pathway_milestone_add: "Add",
     scout_pathway_current: "YOUR PATHWAY NOW",
@@ -557,7 +557,7 @@ const I18N = {
     home_path_title: "VOTRE PARCOURS", home_path_you: "VOUS", home_path_now: "MAINTENANT", home_path_developing: "En développement", home_path_goal_placeholder: "Définissez votre objectif",
     home_readiness_row_profile: "PROFIL", home_readiness_row_film: "VIDÉOS", home_readiness_row_performance: "PERFORMANCE", home_readiness_row_pathway: "PARCOURS",
     home_readiness_status_profile_ok: "Solide", home_readiness_status_profile_no: "À faire", home_readiness_status_film_ok: "Ajoutées", home_readiness_status_film_no: "À faire",
-    home_readiness_status_performance_ok: "Suivie", home_readiness_status_performance_no: "En cours", home_readiness_status_pathway_ok: "Actif", home_readiness_status_pathway_no: "Non défini",
+    home_readiness_status_performance_ok: "Suivie", home_readiness_status_performance_no: "En cours", home_readiness_status_pathway_ok: "Actif", home_readiness_status_pathway_started: "Commencé", home_readiness_status_pathway_no: "Non défini",
     home_readiness_teaser_profile_quality: "Passez à un forfait supérieur pour voir exactement quels champs du Passeport freinent votre Readiness, et de combien.", home_readiness_teaser_verification: "Passez à un forfait supérieur pour voir de combien la vérification d'identité augmenterait votre Readiness.", home_readiness_teaser_performance: "Passez à un forfait supérieur pour voir votre progression sur chaque repère de performance enregistré.", home_readiness_teaser_development: "Passez à un forfait supérieur pour voir comment votre plan de développement fait évoluer votre Readiness.", home_readiness_teaser_pathway: "Passez à un forfait supérieur pour voir exactement ce que votre Parcours et vos cibles apportent à votre Readiness.",
     home_scout_ask_ph: "Demandez n'importe quoi à Scout…",
     nav_targets: "Parcours/Plan", nav_plan: "Plan", plan_page_title: "MON PARCOURS", nav_account: "Compte", targets_title: "ÉCOLES & CLUBS CIBLÉS", targets_name_ph: "Nom de l'école ou du club", targets_contact_name_ph: "Nom du contact", targets_contact_email_ph: "Email du contact",
@@ -654,7 +654,7 @@ const I18N = {
     goal_card_save: "Enregistrer", goal_card_saving: "Enregistrement...", goal_card_cancel: "Annuler", goal_card_saved: "Objectif enregistré.",
     goal_card_required: "Écrivez d'abord votre objectif.", goal_card_too_short: "Ajoutez un peu plus de détails pour que Scout puisse s'en servir.",
     goal_card_save_err: "Impossible d'enregistrer votre objectif. Rien n'a été modifié — réessayez.",
-    goal_card_pathway: "Parcours", goal_card_by_you: "Vos mots", goal_card_by_scout: "Recueilli par Scout",
+    goal_card_pathway: "Parcours", goal_card_open_plan: "Ouvrir dans Parcours", goal_card_by_you: "Vos mots", goal_card_by_scout: "Recueilli par Scout",
     action_add_failed: "Impossible d'ajouter — rien n'a été enregistré. Réessayez.",
     admin_view_knowledge: "Connaissances", admin_no_knowledge: "Aucun fait candidat en attente de révision.",
     admin_knowledge_source: "Source", admin_knowledge_no_source: "Aucune URL source — approbation impossible",
@@ -667,7 +667,7 @@ const I18N = {
     bench_timing_electronic: "Chronométrage électronique / laser", bench_timing_hand: "Chronomètre à la main",
     bench_start_standing: "Départ arrêté", bench_start_flying: "Départ lancé",
     bench_jump_standing: "Détente sans élan", bench_jump_max: "Détente avec élan",
-    plan_next_30_title: "PROCHAINS 30 JOURS", plan_next_90_title: "PROCHAINS 90 JOURS", plan_season_title: "SAISON {a} / {b}",
+    plan_next_30_title: "PROCHAINS 30 JOURS", plan_empty_90: "Rien pour l'instant. Demandez à Scout un plan de développement et les axes de travail apparaîtront ici.", plan_empty_season: "Aucun jalon pour cette saison. Ajoutez-en un ci-dessus ou demandez à Scout de planifier la saison.", plan_empty_targets: "Aucune école ou club ciblé. Demandez à Scout de créer votre liste.", plan_next_90_title: "PROCHAINS 90 JOURS", plan_season_title: "SAISON {a} / {b}",
     scout_pathway_current: "VOTRE PARCOURS ACTUEL",
     scout_pathway_incoming: "PROPOSITION DU SCOUT",
     scout_pathway_replace_warning: "Remplace vos {old} jalons ({done} termin\u00e9s) par ces {new}.",
@@ -879,7 +879,7 @@ const I18N = {
     home_path_title: "TU CAMINO", home_path_you: "TÚ", home_path_now: "AHORA", home_path_developing: "En desarrollo", home_path_goal_placeholder: "Define tu objetivo",
     home_readiness_row_profile: "PERFIL", home_readiness_row_film: "VÍDEOS", home_readiness_row_performance: "RENDIMIENTO", home_readiness_row_pathway: "CAMINO",
     home_readiness_status_profile_ok: "Sólido", home_readiness_status_profile_no: "Pendiente", home_readiness_status_film_ok: "Añadidos", home_readiness_status_film_no: "Pendiente",
-    home_readiness_status_performance_ok: "Registrado", home_readiness_status_performance_no: "En proceso", home_readiness_status_pathway_ok: "Activo", home_readiness_status_pathway_no: "Sin definir",
+    home_readiness_status_performance_ok: "Registrado", home_readiness_status_performance_no: "En proceso", home_readiness_status_pathway_ok: "Activo", home_readiness_status_pathway_started: "Iniciada", home_readiness_status_pathway_no: "Sin definir",
     home_readiness_teaser_profile_quality: "Mejora tu plan para ver exactamente qué campos del Pasaporte están frenando tu Readiness, y cuánto.", home_readiness_teaser_verification: "Mejora tu plan para ver cuánto aumentaría tu Readiness la verificación de identidad.", home_readiness_teaser_performance: "Mejora tu plan para ver tu progreso en cada marca de rendimiento registrada.", home_readiness_teaser_development: "Mejora tu plan para ver cómo tu plan de desarrollo mueve tu Readiness.", home_readiness_teaser_pathway: "Mejora tu plan para ver exactamente qué aportan tu Camino y tus objetivos a tu Readiness.",
     home_scout_ask_ph: "Pregúntale lo que sea a Scout…",
     nav_targets: "Trayectoria/Plan", nav_plan: "Plan", plan_page_title: "MI TRAYECTORIA", nav_account: "Cuenta", targets_title: "ESCUELAS Y CLUBES OBJETIVO", targets_name_ph: "Nombre de la escuela o club", targets_contact_name_ph: "Nombre del contacto", targets_contact_email_ph: "Email del contacto",
@@ -976,7 +976,7 @@ const I18N = {
     goal_card_save: "Guardar objetivo", goal_card_saving: "Guardando...", goal_card_cancel: "Cancelar", goal_card_saved: "Objetivo guardado.",
     goal_card_required: "Escribe primero tu objetivo.", goal_card_too_short: "Añade un poco más de detalle para que Scout pueda trabajar con ello.",
     goal_card_save_err: "No se pudo guardar tu objetivo. No se cambió nada — inténtalo de nuevo.",
-    goal_card_pathway: "Trayectoria", goal_card_by_you: "Tus palabras", goal_card_by_scout: "Registrado por Scout",
+    goal_card_pathway: "Trayectoria", goal_card_open_plan: "Abrir en Plan", goal_card_by_you: "Tus palabras", goal_card_by_scout: "Registrado por Scout",
     action_add_failed: "No se pudo añadir — no se guardó nada. Inténtalo de nuevo.",
     admin_view_knowledge: "Conocimiento", admin_no_knowledge: "No hay hechos candidatos pendientes de revisión.",
     admin_knowledge_source: "Fuente", admin_knowledge_no_source: "Sin URL de origen — no se puede aprobar",
@@ -993,7 +993,7 @@ const I18N = {
     scout_pathway_first_build: "Esto crear\u00e1 tu trayectoria con {new} hitos.",
     bench_start_standing: "Salida parada", bench_start_flying: "Salida lanzada",
     bench_jump_standing: "Salto sin carrera", bench_jump_max: "Salto máximo (con carrera)",
-    plan_next_30_title: "PRÓXIMOS 30 DÍAS", plan_next_90_title: "PRÓXIMOS 90 DÍAS", plan_season_title: "TEMPORADA {a} / {b}",
+    plan_next_30_title: "PRÓXIMOS 30 DÍAS", plan_empty_season: "Aún no hay hitos para esta temporada. Añade uno arriba o pídele a Scout que planifique la temporada.", plan_empty_targets: "Aún no hay escuelas o clubes objetivo. Pídele a Scout que cree tu lista.", plan_empty_90: "Nada por ahora. Pídele a Scout un plan de desarrollo y las áreas de trabajo aparecerán aquí.", plan_next_90_title: "PRÓXIMOS 90 DÍAS", plan_season_title: "TEMPORADA {a} / {b}",
     plan_next30_profile: "Completa tu Pasaporte", plan_next30_film: "Sube vídeos de partidos", plan_next30_benchmark: "Registra una marca de rendimiento",
     pathway_milestones_title: "Hitos", pathway_milestones_empty: "Aún no hay hitos.", pathway_milestone_ph: "Añadir un hito", pathway_milestone_add: "Añadir",
     pathway_type_ncaa: "NCAA", pathway_type_naia: "NAIA", pathway_type_juco: "JUCO", pathway_type_canadian_university: "Universidad canadiense", pathway_type_academy: "Academia", pathway_type_european_club: "Trayectoria en club europeo", pathway_type_professional: "Trayectoria profesional", pathway_type_development: "Desarrollo", pathway_type_agent_representation: "Representación por agente", pathway_type_trainer_performance: "Entrenador / desarrollo del rendimiento", pathway_type_other: "Otro",
@@ -1201,7 +1201,7 @@ const I18N = {
     home_path_title: "ΤΟ ΜΟΝΟΠΑΤΙ ΣΟΥ", home_path_you: "ΕΣΥ", home_path_now: "ΤΩΡΑ", home_path_developing: "Σε ανάπτυξη", home_path_goal_placeholder: "Όρισε τον στόχο σου",
     home_readiness_row_profile: "ΠΡΟΦΙΛ", home_readiness_row_film: "ΒΙΝΤΕΟ", home_readiness_row_performance: "ΑΠΟΔΟΣΗ", home_readiness_row_pathway: "ΜΟΝΟΠΑΤΙ",
     home_readiness_status_profile_ok: "Δυνατό", home_readiness_status_profile_no: "Εκκρεμεί", home_readiness_status_film_ok: "Προστέθηκαν", home_readiness_status_film_no: "Εκκρεμεί",
-    home_readiness_status_performance_ok: "Καταγράφεται", home_readiness_status_performance_no: "Σε εξέλιξη", home_readiness_status_pathway_ok: "Ενεργό", home_readiness_status_pathway_no: "Δεν έχει οριστεί",
+    home_readiness_status_performance_ok: "Καταγράφεται", home_readiness_status_performance_no: "Σε εξέλιξη", home_readiness_status_pathway_ok: "Ενεργό", home_readiness_status_pathway_started: "Ξεκίνησε", home_readiness_status_pathway_no: "Δεν έχει οριστεί",
     home_readiness_teaser_profile_quality: "Αναβάθμισε για να δεις ακριβώς ποια πεδία του Διαβατηρίου περιορίζουν το Readiness σου, και κατά πόσο.", home_readiness_teaser_verification: "Αναβάθμισε για να δεις πόσο θα αύξανε το Readiness σου η επαλήθευση ταυτότητας.", home_readiness_teaser_performance: "Αναβάθμισε για να δεις την πρόοδό σου σε κάθε δείκτη απόδοσης που έχεις καταγράψει.", home_readiness_teaser_development: "Αναβάθμισε για να δεις πώς το πλάνο ανάπτυξής σου επηρεάζει το Readiness σου.", home_readiness_teaser_pathway: "Αναβάθμισε για να δεις τι ακριβώς προσφέρουν το Μονοπάτι και οι στόχοι σου στο Readiness σου.",
     home_scout_ask_ph: "Ρώτησε οτιδήποτε τον Scout…",
     nav_targets: "Πορεία/Πλάνο", nav_plan: "Πλάνο", plan_page_title: "ΤΟ ΜΟΝΟΠΑΤΙ ΜΟΥ", nav_account: "Λογαριασμός", targets_title: "ΣΧΟΛΕΣ & ΣΥΛΛΟΓΟΙ-ΣΤΟΧΟΙ", targets_name_ph: "Όνομα σχολής ή συλλόγου", targets_contact_name_ph: "Όνομα επαφής", targets_contact_email_ph: "Email επαφής",
@@ -1298,7 +1298,7 @@ const I18N = {
     goal_card_save: "Αποθήκευση", goal_card_saving: "Αποθήκευση...", goal_card_cancel: "Άκυρο", goal_card_saved: "Ο στόχος αποθηκεύτηκε.",
     goal_card_required: "Γράψε πρώτα τον στόχο σου.", goal_card_too_short: "Πρόσθεσε λίγη περισσότερη λεπτομέρεια για να μπορέσει ο Scout να τη χρησιμοποιήσει.",
     goal_card_save_err: "Δεν αποθηκεύτηκε ο στόχος σου. Τίποτα δεν άλλαξε — δοκίμασε ξανά.",
-    goal_card_pathway: "Πορεία", goal_card_by_you: "Τα λόγια σου", goal_card_by_scout: "Καταγράφηκε από τον Scout",
+    goal_card_pathway: "Πορεία", goal_card_open_plan: "Άνοιγμα στο Πλάνο", goal_card_by_you: "Τα λόγια σου", goal_card_by_scout: "Καταγράφηκε από τον Scout",
     action_add_failed: "Δεν προστέθηκε — δεν αποθηκεύτηκε τίποτα. Δοκίμασε ξανά.",
     admin_view_knowledge: "Γνώση", admin_no_knowledge: "Δεν υπάρχουν υποψήφια στοιχεία προς έλεγχο.",
     admin_knowledge_source: "Πηγή", admin_knowledge_no_source: "Χωρίς URL πηγής — δεν μπορεί να εγκριθεί",
@@ -1315,7 +1315,7 @@ const I18N = {
     bench_timing_electronic: "Ηλεκτρονική / laser χρονομέτρηση", bench_timing_hand: "Χειροκίνητο χρονόμετρο",
     bench_start_standing: "Στατική εκκίνηση", bench_start_flying: "Εκκίνηση με φόρα",
     bench_jump_standing: "Κατακόρυφο άλμα χωρίς φόρα", bench_jump_max: "Μέγιστο άλμα (με φόρα)",
-    plan_next_30_title: "ΕΠΟΜΕΝΕΣ 30 ΜΕΡΕΣ", plan_next_90_title: "ΕΠΟΜΕΝΕΣ 90 ΜΕΡΕΣ", plan_season_title: "ΣΕΖΟΝ {a} / {b}",
+    plan_next_30_title: "ΕΠΟΜΕΝΕΣ 30 ΜΕΡΕΣ", plan_empty_season: "Δεν έχουν οριστεί ορόσημα για τη σεζόν. Προσθέστε ένα ή ζητήστε από τον Scout να σχεδιάσει τη σεζόν.", plan_empty_targets: "Δεν υπάρχουν σχολές ή σύλλογοι-στόχοι ακόμη. Ζητήστε από τον Scout να φτιάξει τη λίστα.", plan_empty_90: "Τίποτα ακόμη. Ζητήστε από τον Scout ένα πλάνο ανάπτυξης και οι τομείς θα εμφανιστούν εδώ.", plan_next_90_title: "ΕΠΟΜΕΝΕΣ 90 ΜΕΡΕΣ", plan_season_title: "ΣΕΖΟΝ {a} / {b}",
     plan_next30_profile: "Ολοκλήρωσε το Διαβατήριό σου", plan_next30_film: "Ανέβασε βίντεο αγώνων", plan_next30_benchmark: "Κατέγραψε έναν δείκτη απόδοσης",
     pathway_milestones_title: "Ορόσημα", pathway_milestones_empty: "Δεν υπάρχουν ορόσημα ακόμα.", pathway_milestone_ph: "Προσθήκη οροσήμου", pathway_milestone_add: "Προσθήκη",
     pathway_type_ncaa: "NCAA", pathway_type_naia: "NAIA", pathway_type_juco: "JUCO", pathway_type_canadian_university: "Καναδικό πανεπιστήμιο", pathway_type_academy: "Ακαδημία", pathway_type_european_club: "Πορεία σε ευρωπαϊκό σύλλογο", pathway_type_professional: "Επαγγελματική πορεία", pathway_type_development: "Ανάπτυξη", pathway_type_agent_representation: "Εκπροσώπηση από ατζέντη", pathway_type_trainer_performance: "Προπονητής / ανάπτυξη απόδοσης", pathway_type_other: "Άλλο",
@@ -4212,7 +4212,7 @@ const FEATURE_MIN_PLAN = {
   // like a crippled demo. readiness stays Pro+ for the DEEP numeric
   // sub-score breakdown + "why this score" reasoning, but the composite
   // score + plain-language status words now render for every plan (see
-  // HomeTab) — hasFeature(plan, "readiness") below only gates the deeper
+  // HomeTab) — featureUnlocked(plan, "readiness") below only gates the deeper
   // interpretation layer, not Readiness itself existing.
   readiness: "pro",
   targets: "starter",
@@ -4220,10 +4220,43 @@ const FEATURE_MIN_PLAN = {
   development_plan: "pro",
   pathway_plan: "starter",
 };
-function hasFeature(plan, feature) {
+// ---- ENTITLEMENT IS THREE-VALUED IN THE UI, NOT TWO --------------------
+//
+// This replaces hasFeature(), which did `PLAN_RANK[plan || "free"]`. That
+// coercion is CORRECT for enforcement — deny until proven entitled — and it
+// still happens server-side in api/_entitlements.js, which is where
+// enforcement belongs. In the client there is no enforcement: every call site
+// is DISPLAY. And for display, "we have not loaded the subscription yet" is
+// not the same fact as "this athlete is on Free".
+//
+// userPlan starts null and is filled by a fetch. Coerced to "free", it made
+// every gated surface render its paywall first and the real content second,
+// so a PAYING athlete was shown "Upgrade to unlock" on page load. That is
+// close to the worst display bug this product can have, and it was invisible
+// because it lasted two seconds and nobody screenshots a loading frame.
+//
+// Fixing the call sites one by one would leave the next gated surface to
+// inherit the bug. So the ambiguity is absorbed HERE, at the boundary where
+// it enters: THERE IS NO FUNCTION THAT RETURNS "LOCKED" WHEN THE PLAN IS
+// UNKNOWN. featureLocked() is false while loading, so no branch guarded by it
+// can render an upsell. hasFeature() is deliberately gone rather than kept as
+// an alias — an old-style call is now a loud ReferenceError, not a silent
+// paywall.
+//
+//   featureUnlocked -> true only when the plan is KNOWN and sufficient
+//   featureLocked   -> true only when the plan is KNOWN and insufficient
+//   both false       -> still loading; render a skeleton or nothing, never a lock
+function planKnown(plan) { return plan != null && plan !== ""; }
+
+function featureUnlocked(plan, feature) {
+  if (!planKnown(plan)) return false;
   const min = FEATURE_MIN_PLAN[feature];
   if (!min) return true;
-  return PLAN_RANK[plan || "free"] >= PLAN_RANK[min];
+  return PLAN_RANK[plan] >= PLAN_RANK[min];
+}
+
+function featureLocked(plan, feature) {
+  return planKnown(plan) && !featureUnlocked(plan, feature);
 }
 
 // Reusable "visibly locked" placeholder (brief §11: paywall should show
@@ -4861,7 +4894,12 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     looking_for_players: athlete && athlete.looking_for_players === true ? "true" : athlete && athlete.looking_for_players === false ? "false" : "",
   });
 
-  if (!loaded) return <div style={{ padding: "40px 20px", textAlign: "center", color: C.slate, fontSize: 13 }}>{t("loading")}</div>;
+  // Passport is where Home's identity row and Passport Strength card now land,
+  // so its loading frame sits on the main path rather than being reached only
+  // deliberately. A centred "Loading…" was a THIRD different answer to the same
+  // question — Plan showed a paywall, GoalCard showed nothing, this showed text.
+  // Three surfaces, three behaviours, none of them chosen. Same skeleton as the rest.
+  if (!loaded) return <div style={{ padding: "8px 12px 20px" }}><SkeletonCard height={120} /><SkeletonCard height={220} /></div>;
 
   return (
     <div style={{ padding: "8px 12px 20px", background: C.passportWash }}>
@@ -4878,7 +4916,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
                 that, the control is absent until the RPC can take an athlete
                 id. Nothing else on this screen is withheld from a parent. */}
             {!manageMode && <button onClick={sharePassport} style={{ ...iconBtn(C.chalk), fontSize: 11.5 }}><Share2 size={13} /> {t("passport_share")}</button>}
-            <button onClick={() => hasFeature(plan, "pdf_export") ? window.print() : onUpgrade()} style={{ ...iconBtn(hasFeature(plan, "pdf_export") ? C.chalk : C.slate), fontSize: 11.5 }}>{hasFeature(plan, "pdf_export") ? <Download size={13} /> : <Lock size={12} />} {t("passport_export_pdf")}</button>
+            <button onClick={() => featureUnlocked(plan, "pdf_export") ? window.print() : planKnown(plan) ? onUpgrade() : null} style={{ ...iconBtn(featureUnlocked(plan, "pdf_export") ? C.chalk : C.slate), fontSize: 11.5 }}>{featureUnlocked(plan, "pdf_export") ? <Download size={13} /> : <Lock size={12} />} {t("passport_export_pdf")}</button>
             <button onClick={() => setEditing(true)} style={{ ...iconBtn(C.lime), fontSize: 11.5 }}><Pencil size={13} /> {t("passport_edit")}</button>
           </div>
         ) : (
@@ -5194,7 +5232,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           on Free/Basic, per §11's "visibly locked" paywall language. */}
       {viewingOther ? (
         <Benchmarks viewUserId={viewUserId} />
-      ) : hasFeature(plan, "benchmarks") ? (
+      ) : !planKnown(plan) ? null : featureUnlocked(plan, "benchmarks") ? (
         <Benchmarks viewUserId={null} manageId={manageMode ? viewUserId : null} />
       ) : (
         <div style={{ marginTop: 16 }}><FeatureLock label={t("benchmarks_title")} teaser={t("benchmarks_locked_teaser")} onUpgrade={onUpgrade} /></div>
@@ -5204,7 +5242,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           gating pattern as benchmarks above. */}
       {viewingOther ? (
         <div style={{ marginTop: 16 }}><DevelopmentPlan viewUserId={viewUserId} /></div>
-      ) : hasFeature(plan, "development_plan") ? (
+      ) : !planKnown(plan) ? null : featureUnlocked(plan, "development_plan") ? (
         <div style={{ marginTop: 16 }}><DevelopmentPlan viewUserId={null} manageId={manageMode ? viewUserId : null} /></div>
       ) : (
         <div style={{ marginTop: 16 }}><FeatureLock label={t("dev_plan_title")} teaser={t("dev_plan_locked_teaser")} onUpgrade={onUpgrade} /></div>
@@ -7715,7 +7753,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
                 </button>
               )}
               {m.suggestedTargets && m.suggestedTargets.length > 0 && (
-                hasFeature(plan, "targets") ? (
+                !planKnown(plan) ? null : featureUnlocked(plan, "targets") ? (
                   <button onClick={() => addSuggestedTargets(i, m.suggestedTargets)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
                     <Target size={13} /> {t("scout_build_target_list").replace("{n}", m.suggestedTargets.length)}
                   </button>
@@ -7727,7 +7765,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
               )}
               {m.targetsAdded && <div style={{ marginTop: 8, fontSize: 11.5, color: C.lime }}>{t("scout_targets_added")}</div>}
               {m.suggestedDevItems && m.suggestedDevItems.length > 0 && (
-                hasFeature(plan, "development_plan") ? (
+                !planKnown(plan) ? null : featureUnlocked(plan, "development_plan") ? (
                   <button onClick={() => addSuggestedDevItems(i, m.suggestedDevItems)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
                     <Radar size={13} /> {t("scout_add_dev_items").replace("{n}", m.suggestedDevItems.length)}
                   </button>
@@ -7738,7 +7776,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
                 )
               )}
               {m.devItemsAdded && <div style={{ marginTop: 8, fontSize: 11.5, color: C.lime }}>{t("scout_dev_items_added")}</div>}
-              {m.suggestedPathway && hasFeature(plan, "pathway_plan") && (() => {
+              {m.suggestedPathway && featureUnlocked(plan, "pathway_plan") && (() => {
                 // WHAT THIS TAP DESTROYS, BEFORE IT HAPPENS.
                 // The upsert replaces milestones wholesale. Until this panel
                 // existed an athlete could lose months of ticked-off progress
@@ -7779,7 +7817,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
                 );
               })()}
               {m.suggestedPathway && (
-                hasFeature(plan, "pathway_plan") ? (
+                !planKnown(plan) ? null : featureUnlocked(plan, "pathway_plan") ? (
                   <button onClick={() => addSuggestedPathway(i, m.suggestedPathway)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
                     <Compass size={13} /> {t("scout_build_pathway")}
                   </button>
@@ -7794,7 +7832,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
                   belongs to, with the buttons still there to retry. */}
               {m.actionError && <div style={{ marginTop: 8, fontSize: 11.5, color: C.amber }}>{m.actionError}</div>}
               {m.draftedEmail && savingEmailFor !== i && (
-                hasFeature(plan, "targets") ? (
+                !planKnown(plan) ? null : featureUnlocked(plan, "targets") ? (
                   <button onClick={() => openSaveEmailPicker(i)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
                     <Mail size={13} /> {t("scout_save_email")}
                   </button>
@@ -7991,7 +8029,15 @@ function PathNode({ Icon, label, sub, filled, current, onClick, size, color }) {
 // athlete editing their own goal. RLS (profiles_self: "(id = auth.uid()) OR
 // is_parent_of(id)") is what actually authorises the write; passing the id
 // here only decides which row we ask for.
-function GoalCard({ actingFor, onSaved, compact }) {
+// `readOnly` is what separates Home from Plan.
+//
+// Home and Plan both rendered this card, identically, edit button and all —
+// which is most of why the two pages felt like the same page twice and why
+// neither felt like it owned anything. Home is now a dashboard: it SHOWS the
+// goal and hands you to Plan to change it. Plan is the workspace: it owns
+// editing. Same component, one prop, so the two can never drift out of sync
+// the way two copies would.
+function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [goalText, setGoalText] = useState("");
@@ -8082,7 +8128,8 @@ function GoalCard({ actingFor, onSaved, compact }) {
     } finally { setBusy(false); }
   }
 
-  if (!loaded) return null;
+  // A hole in the page reads as broken; a placeholder reads as pending.
+  if (!loaded) return <SkeletonCard height={compact ? 84 : 92} compact={compact} />;
   const hasGoal = !!goalText;
   const inputStyle = { width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box", resize: "vertical", minHeight: 66 };
   const btn = (bg, fg) => ({ background: bg, color: fg, border: "none", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 800, fontFamily: "inherit", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 });
@@ -8092,11 +8139,15 @@ function GoalCard({ actingFor, onSaved, compact }) {
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
         <Trophy size={13} color={C.lime} />
         <span style={{ fontSize: 8.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700 }}>{t("goal_card_title")}</span>
-        {!editing && (
+        {!editing && (readOnly ? (
+          <button onClick={() => onOpenPlan && onOpenPlan()} style={{ marginLeft: "auto", background: "none", border: "none", color: C.slate, fontSize: 11, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+            {t("goal_card_open_plan")}<ChevronRight size={13} color={C.slate} />
+          </button>
+        ) : (
           <button onClick={startEdit} style={{ marginLeft: "auto", background: "none", border: "none", color: C.lime, fontSize: 11, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", padding: 0 }}>
             {hasGoal ? t("goal_card_edit") : t("goal_card_set")}
           </button>
-        )}
+        ))}
       </div>
 
       {editing ? (
@@ -8283,7 +8334,16 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
     { key: "profile", ok: !!(quality && quality.score >= 70) },
     { key: "film", ok: filmAdded },
     { key: "performance", ok: !!(performance && performance.metricsTracked > 0) },
-    { key: "pathway", ok: !!(pathway && pathway.hasPathway) },
+    // THREE STATES, NOT TWO — same lesson as the PROFILE row above.
+    // computePathwayScore() returns pathwayStarted ("a pathway row exists")
+    // AND hasPathway ("...and it has milestones"). Rendering that through a
+    // single boolean collapsed the middle state onto "Not set", so an athlete
+    // with a real pathway and no milestones yet saw the goal card say
+    // "Pathway: Professional pathway" and this tile say "PATHWAY — Not set"
+    // ON THE SAME SCREEN. The paid ReadinessCard below already handled all
+    // three; only this free-tier tile was binary, so the page disagreed with
+    // itself depending on plan.
+    { key: "pathway", ok: !!(pathway && pathway.hasPathway), started: !!(pathway && pathway.pathwayStarted) },
   ];
   return (
     <div style={{ padding: "8px 12px 20px" }}>
@@ -8294,7 +8354,10 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
         </div>
       )}
       {athlete && (athlete.sport || athlete.club_name) && (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 2px 16px" }}>
+        // The identity row IS the Passport, summarised — so it opens it.
+        <div onClick={() => onNavigate("profile")} role="button" tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate("profile"); } }}
+          style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 2px 16px", cursor: "pointer" }}>
           <div style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0, overflow: "hidden", border: `1.5px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg, ${C.turf}, ${C.line2})`, fontWeight: 800, fontSize: 17, color: C.lime, fontFamily: "'Space Mono', monospace" }}>
             {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(name || "?")}
           </div>
@@ -8317,16 +8380,22 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           it is supposed to explain. The strip below shows the pathway
           CATEGORY as a node; without this card that category was the only
           representation of the goal anywhere in the product. */}
-      <GoalCard actingFor={actingFor} onSaved={() => reload()} />
+      <GoalCard actingFor={actingFor} readOnly onOpenPlan={() => onNavigate("targets")} />
 
       <SectionTitle>{t("home_path_title")}</SectionTitle>
       <PathwayStrip athlete={athlete} pathwayRow={pathwayRow} t={t} onNavigate={onNavigate} />
 
       <SectionTitle>{t("home_readiness_title")}</SectionTitle>
-      <div style={{ ...card, marginBottom: 10 }}>
+      {/* Home is a dashboard: every card is a way INTO the page that owns the
+          thing it is describing. Passport Strength is computed from Passport
+          content, so the card opens Passport. Without this the score was a
+          dead end — an athlete could see FILM: Needed and have nowhere to go. */}
+      <div onClick={() => onNavigate("profile")} role="button" tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate("profile"); } }}
+        style={{ ...card, marginBottom: 10, cursor: "pointer" }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
           <span style={{ fontSize: 26, fontWeight: 900, color: compositeColor, fontFamily: "'Space Mono', monospace" }}>{composite}%</span>
-          <span style={{ fontSize: 9, letterSpacing: "0.14em", color: C.slate, fontWeight: 700 }}>{t("home_readiness_composite")}</span>
+          <span style={{ fontSize: 9, letterSpacing: "0.14em", color: C.slate, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>{t("home_readiness_composite")}<ChevronRight size={12} color={C.slate} /></span>
         </div>
         <div style={{ height: 6, borderRadius: 99, background: C.turf, overflow: "hidden", marginBottom: 16 }}>
           <div style={{ height: "100%", width: `${composite}%`, borderRadius: 99, background: compositeColor, transition: "width .3s ease" }} />
@@ -8336,16 +8405,16 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
             const Icon = READINESS_STATUS_ICON[s.key];
             return (
               <div key={s.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, textAlign: "center" }}>
-                <Icon size={17} color={s.ok ? C.lime : C.slate} />
+                <Icon size={17} color={s.ok ? C.lime : s.started ? C.amber : C.slate} />
                 <span style={{ fontSize: 9, color: C.slate, fontWeight: 700, letterSpacing: "0.03em" }}>{t("home_readiness_row_" + s.key)}</span>
-                <span style={{ fontSize: 9.5, fontWeight: 800, color: s.ok ? C.lime : C.slate }}>{t("home_readiness_status_" + s.key + "_" + (s.ok ? "ok" : "no"))}</span>
+                <span style={{ fontSize: 9.5, fontWeight: 800, color: s.ok ? C.lime : s.started ? C.amber : C.slate }}>{t("home_readiness_status_" + s.key + "_" + (s.ok ? "ok" : s.started ? "started" : "no"))}</span>
               </div>
             );
           })}
         </div>
       </div>
 
-      {hasFeature(plan, "readiness") ? (
+      {!planKnown(plan) ? null : featureUnlocked(plan, "readiness") ? (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
             <ReadinessCard label={t("home_profile_quality")} score={subScores.profile_quality} sub={quality ? `${quality.filled}/${quality.total}` : ""} />
@@ -8433,17 +8502,52 @@ const TARGET_STATUSES = ["researching", "preparing", "contacted", "responded", "
 // 0/3" style rows) — a thin header that expands to reveal real content,
 // reused for all four Plan-tab sections instead of four separate
 // always-open cards.
-function CollapsibleRow({ title, count, total, expanded, onToggle, children }) {
+// ---- THREE STATES, DECIDED ONCE: loading / empty / content ---------------
+//
+// Plan could not tell an athlete apart "still loading", "nothing scheduled
+// yet" and "something is broken" — all three rendered as absence. Deep-linking
+// straight to Plan showed three grey bars and no goal, no map, for as long as
+// the fetches took, which reads as a broken page rather than a loading one.
+//
+// SkeletonCard is what LOADING looks like: it holds the same space the real
+// card will occupy, so nothing jumps, and it is visibly inert rather than
+// missing. Components that fetch their own data must render this instead of
+// returning null — GoalCard and PathwayPlan both returned null, which is why
+// the top of Plan was simply a hole.
+function SkeletonCard({ height, compact }) {
+  return (
+    <div aria-busy="true" style={{ ...card, margin: compact ? 0 : undefined, marginBottom: 10, height, opacity: 0.45,
+      background: `linear-gradient(90deg, ${C.turf} 0%, ${C.line2} 50%, ${C.turf} 100%)`,
+      backgroundSize: "200% 100%", animation: "golszShimmer 1.4s ease-in-out infinite" }} />
+  );
+}
+
+// EMPTY is not a score. `0/0` was rendered in C.lime — the same green as
+// "2/3" — so "nothing here yet" looked exactly like "all done", which is the
+// opposite meaning. An empty row now shows a muted dash and, when opened,
+// says what would put something in it.
+function CollapsibleRow({ title, count, total, expanded, onToggle, children, emptyLabel }) {
+  const isEmpty = total === 0 || total == null;
   return (
     <div style={{ ...card, marginBottom: 10 }}>
       <div onClick={onToggle} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
         <span style={{ fontSize: 9, letterSpacing: "0.14em", color: C.slate, fontWeight: 700 }}>{title}</span>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {total != null && <span style={{ fontSize: 11, fontWeight: 800, color: C.lime, fontFamily: "'Space Mono', monospace" }}>{count != null ? `${count}/${total}` : total}</span>}
+          {total != null && (
+            isEmpty
+              ? <span style={{ fontSize: 11, fontWeight: 800, color: C.slate, fontFamily: "'Space Mono', monospace" }}>—</span>
+              : <span style={{ fontSize: 11, fontWeight: 800, color: C.lime, fontFamily: "'Space Mono', monospace" }}>{count != null ? `${count}/${total}` : total}</span>
+          )}
           {expanded ? <ChevronUp size={15} color={C.slate} /> : <ChevronDown size={15} color={C.slate} />}
         </div>
       </div>
-      {expanded && <div style={{ marginTop: 12 }}>{children}</div>}
+      {expanded && (
+        <div style={{ marginTop: 12 }}>
+          {isEmpty && emptyLabel
+            ? <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.45 }}>{emptyLabel}</div>
+            : children}
+        </div>
+      )}
     </div>
   );
 }
@@ -8539,7 +8643,21 @@ function Targets({ plan, onUpgrade, actingFor }) {
 
   if (!loaded) return <div style={{ padding: "40px 20px", textAlign: "center", color: C.slate, fontSize: 13 }}>{t("loading")}</div>;
 
-  if (!hasFeature(plan, "targets")) {
+  // PLAN UNKNOWN IS NOT PLAN FREE.
+  //
+  // userPlan starts as null and is filled by a fetch, but hasFeature() does
+  // `PLAN_RANK[plan || "free"]` — so a null plan scores as free and this gate
+  // fires. A paying athlete opening Plan was shown "Upgrade to unlock", with
+  // an upgrade button, for as long as the subscription took to load, and only
+  // then saw their own Plan. Caught on a 4-second screenshot of a deep link.
+  //
+  // Coercing null to free is the right default for ENFORCEMENT (deny until
+  // proven entitled). It is the wrong default for DISPLAY, where the honest
+  // answer is "not known yet". Same distinction the rest of this page now
+  // makes between loading, empty and absent.
+  if (plan == null) return <SkeletonCard height={240} />;
+
+  if (featureLocked(plan, "targets")) {
     return (
       <div style={{ padding: "8px 12px 20px" }}>
         <SectionTitle>{t("nav_targets")}</SectionTitle>
@@ -8605,7 +8723,7 @@ function Targets({ plan, onUpgrade, actingFor }) {
         ))}
       </CollapsibleRow>
 
-      <CollapsibleRow title={t("plan_next_90_title")} count={next90Done} total={devItems.length} expanded={expandedSection === "90"} onToggle={() => setExpandedSection(expandedSection === "90" ? null : "90")}>
+      <CollapsibleRow title={t("plan_next_90_title")} emptyLabel={t("plan_empty_90")} count={next90Done} total={devItems.length} expanded={expandedSection === "90"} onToggle={() => setExpandedSection(expandedSection === "90" ? null : "90")}>
         {devItems.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("dev_plan_empty")}</div>}
         {devItems.map((i) => (
           <div key={i.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0" }}>
@@ -8615,7 +8733,7 @@ function Targets({ plan, onUpgrade, actingFor }) {
         ))}
       </CollapsibleRow>
 
-      <CollapsibleRow title={seasonLabel} count={seasonDone} total={seasonMilestones.length} expanded={expandedSection === "season"} onToggle={() => setExpandedSection(expandedSection === "season" ? null : "season")}>
+      <CollapsibleRow title={seasonLabel} emptyLabel={t("plan_empty_season")} count={seasonDone} total={seasonMilestones.length} expanded={expandedSection === "season"} onToggle={() => setExpandedSection(expandedSection === "season" ? null : "season")}>
         {seasonMilestones.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("pathway_milestones_empty")}</div>}
         {seasonMilestones.map((m) => (
           <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0" }}>
@@ -8625,7 +8743,7 @@ function Targets({ plan, onUpgrade, actingFor }) {
         ))}
       </CollapsibleRow>
 
-      <CollapsibleRow title={t("targets_title")} count={null} total={items.length} expanded={expandedSection === "targets"} onToggle={() => setExpandedSection(expandedSection === "targets" ? null : "targets")}>
+      <CollapsibleRow title={t("targets_title")} emptyLabel={t("plan_empty_targets")} count={null} total={items.length} expanded={expandedSection === "targets"} onToggle={() => setExpandedSection(expandedSection === "targets" ? null : "targets")}>
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
           {!showAddTarget && <button onClick={() => setShowAddTarget(true)} style={{ ...iconBtn(C.lime), fontSize: 12 }}><Plus size={13} /> {t("targets_add")}</button>}
         </div>
@@ -8739,7 +8857,7 @@ function DevelopmentPlan({ viewUserId, manageId }) {
   }
 
   if (viewUserId) return null;
-  if (!loaded) return null;
+  if (!loaded) return <SkeletonCard height={232} />;
 
   const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
 
@@ -9189,7 +9307,17 @@ function GolszApp({ onSignOut, startOnboarding }) {
       // function and the route list below, both untouched) — this just
       // narrows what a fresh page load can land on directly.
       const valid = ["home", "scout", "profile", "targets", "admin"];
-      return valid.includes(p) ? p : "home";
+      // The nav labels and the internal ids disagree: the tab an athlete sees
+      // as "Plan" is id "targets", and "Passport" is id "profile". So
+      // ?page=plan and ?page=passport — the URLs an athlete would guess, and
+      // the words Scout uses when it says "open your Plan" — both fell
+      // through to "home" silently. Deep-linking to the Plan was impossible,
+      // which quietly broke the one hand-off from Scout into the rest of the
+      // product. Alias the user-facing names rather than renaming the ids,
+      // which would touch every onNavigate() call site.
+      const ALIAS = { plan: "targets", pathway: "targets", passport: "profile" };
+      const resolved = ALIAS[p] || p;
+      return valid.includes(resolved) ? resolved : "home";
     } catch (e) { return "home"; }
   });
   const [thread, setThread] = useState(null);
@@ -9302,10 +9430,12 @@ function GolszApp({ onSignOut, startOnboarding }) {
   // once-per-session popup.
   const [showConversion, setShowConversion] = useState(false);
   const [conversionUid, setConversionUid] = useState(null);
-  // Plan-gating (brief §13, see hasFeature() above): the athlete's own uid
+  // Plan-gating (brief §13, see featureUnlocked()/featureLocked() above): the athlete's own uid
   // + plan, fetched once alongside the conversion check (same query already
   // reads profiles.plan) and threaded down to Home/Scout/Targets/Passport
-  // so gated features can check hasFeature(userPlan, "...") at render time.
+  // so gated features can check featureUnlocked(userPlan, "...") at render time.
+  // null means "not loaded yet", and featureLocked() stays false for it, so no
+  // gated surface can render an upsell before the subscription is known.
   const [userUid, setUserUid] = useState(null);
   const [userPlan, setUserPlan] = useState(null);
   // Direct-to-Elite accelerated onboarding (directive §8): "a user must not
@@ -9880,6 +10010,11 @@ const CSS = `
   .noscroll { -ms-overflow-style: none; scrollbar-width: none; }
   .msg { animation: rise .22s ease; }
   @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  /* Loading placeholders (SkeletonCard). Reduced-motion users get a static
+     block rather than a moving one — it still reads as "pending" because it
+     occupies the card's space and is visibly inert. */
+  @keyframes golszShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { [aria-busy="true"] { animation: none !important; } }
   .running { display: flex; gap: 5px; padding: 4px 0; }
   .running span { width: 6px; height: 6px; border-radius: 99px; background: ${C.lime}; animation: run 1s infinite; }
   .running span:nth-child(2){ animation-delay:.15s } .running span:nth-child(3){ animation-delay:.3s }

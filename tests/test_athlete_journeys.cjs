@@ -47,7 +47,11 @@ global.fetch = async (url, opts) => {
   const u = String(url), body = opts && opts.body ? String(opts.body) : "";
   if (u.includes("api.anthropic.com")) {
     LAST_PROMPT = body;
-    if (body.includes("needs_tool") || body.includes("classif")) {
+    // Unique to CLASSIFIER_SYSTEM's JSON contract — see the same fix in
+    // test_handler_smoke.cjs. Matching /classif/ made the ANSWERING call look
+    // like a classifier call as soon as SYSTEM_PROMPT mentioned
+    // "classification", emptying reply_text on every scenario.
+    if (body.includes("summary_so_far")) {
       return reply({ intent: "career_advice", confidence: 0.9, needs_tool: false, faq_id: null,
         summary_so_far: "s", missing_information: [], recommended_specialist: null,
         conversation_stage: "discovery", next_best_action: null });
