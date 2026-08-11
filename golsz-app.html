@@ -2376,7 +2376,7 @@ function Feed({ onMessage, onViewProfile }) {
   async function reportPost(p) {
     if (!sb || !uid || !p.postId || reportedIds[p.postId]) return;
     try {
-      await sb.from("post_reports").insert({ post_id: p.postId, reporter_id: uid, reason: "reported from feed" });
+      const { error } = await sb.from("post_reports").insert({ post_id: p.postId, reporter_id: uid, reason: "reported from feed" }); if (error) throw error;
       setReportedIds((r) => ({ ...r, [p.postId]: true }));
     } catch (e) { console.error("GOLSZ report error:", e); }
   }
@@ -2384,7 +2384,7 @@ function Feed({ onMessage, onViewProfile }) {
   async function blockAuthor(p) {
     if (!sb || !uid || !p.authorId || p.authorId === uid) return;
     try {
-      await sb.from("blocks").insert({ blocker_id: uid, blocked_id: p.authorId });
+      const { error } = await sb.from("blocks").insert({ blocker_id: uid, blocked_id: p.authorId }); if (error) throw error;
       loadFeed();
     } catch (e) { console.error("GOLSZ block error:", e); }
   }
@@ -2985,7 +2985,7 @@ function Events() {
   async function deleteEvent(id) {
     if (!sb) return;
     setMyEvents((list) => (list || []).filter((e) => e.id !== id));
-    try { await sb.from("events").delete().eq("id", id); }
+    try { const { error } = await sb.from("events").delete().eq("id", id); if (error) throw error; }
     catch (e) { console.error("GOLSZ delete event error:", e); load(); }
   }
 
@@ -3242,7 +3242,7 @@ function Messages({ thread, setThread, onViewProfile }) {
   async function reportThread(counterpartId) {
     if (!sb || !uid || !counterpartId || reportedThread) return;
     try {
-      await sb.from("content_reports").insert({ reporter_id: uid, target_type: "message", target_id: counterpartId, reason: "reported from message thread" });
+      const { error } = await sb.from("content_reports").insert({ reporter_id: uid, target_type: "message", target_id: counterpartId, reason: "reported from message thread" }); if (error) throw error;
       setReportedThread(true);
     } catch (e) { console.error("GOLSZ thread report error:", e); }
   }
@@ -3477,8 +3477,8 @@ function FamilyAccess() {
     } catch (e) { setMsg(e.message || t("family_couldnt_send")); }
     finally { setBusy(false); }
   }
-  async function approve(id) { try { await sb.from("parent_links").update({ approved_at: new Date().toISOString() }).eq("id", id); load(); } catch (e) { console.error("GOLSZ approve error:", e); } }
-  async function remove(id) { try { await sb.from("parent_links").delete().eq("id", id); load(); } catch (e) { console.error("GOLSZ remove link error:", e); } }
+  async function approve(id) { try { const { error } = await sb.from("parent_links").update({ approved_at: new Date().toISOString() }).eq("id", id); if (error) throw error; load(); } catch (e) { console.error("GOLSZ approve error:", e); } }
+  async function remove(id) { try { const { error } = await sb.from("parent_links").delete().eq("id", id); if (error) throw error; load(); } catch (e) { console.error("GOLSZ remove link error:", e); } }
 
   if (!sb || !uid) return null;
   const rowStyle = { display: "flex", alignItems: "center", gap: 8, padding: "6px 0" };
@@ -3592,7 +3592,7 @@ function Highlights({ viewUserId, manageMode }) {
 
   async function saveList(list) {
     if (!sb || !uid || !isOwner) return;
-    try { await sb.from("athletes").update({ highlights: list }).eq("id", targetId); }
+    try { const { error } = await sb.from("athletes").update({ highlights: list }).eq("id", targetId); if (error) throw error; }
     catch (e) { console.error("GOLSZ highlights save error:", e); }
   }
 
@@ -3623,7 +3623,7 @@ function Highlights({ viewUserId, manageMode }) {
       // also share it to Feed as a clip post, same as any other post — the
       // 'clip' kind already existed in posts' schema and the original demo
       // Feed data for exactly this ("New defensive highlight reel is live")
-      try { await sb.from("posts").insert({ author_id: targetId, kind: "clip", headline: entry.title, body: entry.url }); }
+      try { const { error } = await sb.from("posts").insert({ author_id: targetId, kind: "clip", headline: entry.title, body: entry.url }); if (error) throw error; }
       catch (e) { console.error("GOLSZ clip post error:", e); }
     } catch (e) {
       setErr((e && e.message) ? e.message : t("highlights_add_err"));
@@ -3716,7 +3716,7 @@ function Timeline({ viewUserId, manageMode }) {
 
   async function saveList(list) {
     if (!sb || !uid || !isOwner) return;
-    try { await sb.from("athletes").update({ timeline: list }).eq("id", targetId); }
+    try { const { error } = await sb.from("athletes").update({ timeline: list }).eq("id", targetId); if (error) throw error; }
     catch (e) { console.error("GOLSZ timeline save error:", e); }
   }
 
@@ -3944,7 +3944,7 @@ function Benchmarks({ viewUserId, manageId }) {
   async function removeEntry(id) {
     if (!sb || !uid || !isOwner) return;
     setItems((prev) => prev.filter((b) => b.id !== id));
-    try { await sb.from("athlete_benchmarks").delete().eq("id", id).eq("user_id", uid); }
+    try { const { error } = await sb.from("athlete_benchmarks").delete().eq("id", id).eq("user_id", uid); if (error) throw error; }
     catch (e) { console.error("GOLSZ benchmark delete error:", e); }
   }
 
@@ -4246,6 +4246,35 @@ const FEATURE_MIN_PLAN = {
 //   featureUnlocked -> true only when the plan is KNOWN and sufficient
 //   featureLocked   -> true only when the plan is KNOWN and insufficient
 //   both false       -> still loading; render a skeleton or nothing, never a lock
+// ---- WRITES THAT ARE DELIBERATELY NOT ERROR-CHECKED ---------------------
+//
+// supabase-js RESOLVES with { error } rather than throwing, so `try { await
+// sb.from(...).update(...) } catch` catches a network throw and nothing else.
+// An RLS rejection, a constraint violation or an expired session all look
+// exactly like success. On 2026-08-11 a scan found 36 writes whose result was
+// never bound at all, so the error was not ignored — it was unobservable.
+//
+// 23 were fixed: everything that touches the athlete's own content
+// (highlights, timeline, benchmarks, targets, reports, blocks, verification
+// requests, appeals, scout history) and every admin action that writes an
+// audit entry. An audit row asserting a change that never happened is worse
+// than no row, so those now skip logAdmin() and the list refresh on failure.
+//
+// THESE ARE LEFT UNCHECKED ON PURPOSE:
+//   post_likes insert/delete      (~2296)
+//   follows insert/delete         (~2410, ~2736, ~4866)
+//   messages.read_at update       (~3194)
+//   ensure_message_request rpc    (~3213)
+//   push_subscriptions delete     (~1554)
+//
+// The test is SELF-CORRECTION, not importance. A like that failed to save
+// springs back the next time the feed loads and the athlete sees the truth
+// without being told. A deleted highlight that failed to delete looks gone
+// until they come back and find it there. Silence is acceptable only where
+// the next render corrects it.
+//
+// If you add a write, decide which of those two it is. Do not leave it
+// unbound by default.
 function planKnown(plan) { return plan != null && plan !== ""; }
 
 // scout_context stores {value, source, confidence} per field. `source` is
@@ -4874,7 +4903,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   async function reportProfile() {
     if (!sb || !uid || !viewUserId || viewUserId === uid || reportedProfile) return;
     try {
-      await sb.from("content_reports").insert({ reporter_id: uid, target_type: "profile", target_id: viewUserId, reason: "reported from profile" });
+      const { error } = await sb.from("content_reports").insert({ reporter_id: uid, target_type: "profile", target_id: viewUserId, reason: "reported from profile" }); if (error) throw error;
       setReportedProfile(true);
     } catch (e) { console.error("GOLSZ profile report error:", e); }
   }
@@ -5484,7 +5513,7 @@ function VerificationRequest({ occupation }) {
     if (!sb || !uid || busy) return;
     setBusy(true);
     try {
-      await sb.from("verification_requests").insert({ user_id: uid, occupation, proof_url: proofUrl.trim() || null });
+      const { error } = await sb.from("verification_requests").insert({ user_id: uid, occupation, proof_url: proofUrl.trim() || null }); if (error) throw error;
       setDone(true); setPending(true);
     } catch (e) { console.error("GOLSZ verification submit error:", e); }
     setBusy(false);
@@ -5691,13 +5720,14 @@ function AdminPanel({ onBack }) {
   }
 
   async function resolveReport(id) {
-    try { await sb.from("post_reports").update({ resolved_at: new Date().toISOString() }).eq("id", id); logAdmin("resolve_report", id); loadReports(); loadStats(); }
+    try { const { error } = await sb.from("post_reports").update({ resolved_at: new Date().toISOString() }).eq("id", id); if (error) throw error; logAdmin("resolve_report", id); loadReports(); loadStats(); }
     catch (e) { console.error("GOLSZ admin resolve report error:", e); }
   }
   async function deleteReportedPost(postId, reportId) {
     try {
-      await sb.from("posts").delete().eq("id", postId);
-      await sb.from("post_reports").update({ resolved_at: new Date().toISOString() }).eq("id", reportId);
+      // Order matters: only mark the report resolved if the post actually went.
+        const { error } = await sb.from("posts").delete().eq("id", postId); if (error) throw error;
+      const { error: resolveError } = await sb.from("post_reports").update({ resolved_at: new Date().toISOString() }).eq("id", reportId); if (resolveError) throw resolveError;
       logAdmin("delete_post", postId, { report_id: reportId });
       loadReports(); loadStats();
     } catch (e) { console.error("GOLSZ admin delete post error:", e); }
@@ -5753,11 +5783,11 @@ function AdminPanel({ onBack }) {
   }
 
   async function setUserAdmin(id, val) {
-    try { await sb.from("profiles").update({ is_admin: val }).eq("id", id); logAdmin(val ? "make_admin" : "revoke_admin", id); loadUsers(userQuery); }
+    try { const { error } = await sb.from("profiles").update({ is_admin: val }).eq("id", id); if (error) throw error; logAdmin(val ? "make_admin" : "revoke_admin", id); loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin set-admin error:", e); }
   }
   async function setUserPlan(id, val) {
-    try { await sb.from("profiles").update({ plan: val }).eq("id", id); logAdmin("set_plan", id, { plan: val }); loadUsers(userQuery); }
+    try { const { error } = await sb.from("profiles").update({ plan: val }).eq("id", id); if (error) throw error; logAdmin("set_plan", id, { plan: val }); loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin set-plan error:", e); }
   }
   // migration 045 — profiles.ai_unlimited. Deliberately separate from
@@ -5765,7 +5795,7 @@ function AdminPanel({ onBack }) {
   // access) and from plan (no billing change) — api/scout.js's meter()
   // checks this directly and skips the daily-limit check when it's true.
   async function setUserAiUnlimited(id, val) {
-    try { await sb.from("profiles").update({ ai_unlimited: val }).eq("id", id); logAdmin(val ? "grant_ai_unlimited" : "revoke_ai_unlimited", id); loadUsers(userQuery); }
+    try { const { error } = await sb.from("profiles").update({ ai_unlimited: val }).eq("id", id); if (error) throw error; logAdmin(val ? "grant_ai_unlimited" : "revoke_ai_unlimited", id); loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin ai-unlimited error:", e); }
   }
   // Ban/delete need the real Supabase Admin API (service role key,
@@ -5806,7 +5836,7 @@ function AdminPanel({ onBack }) {
     } catch (e) { console.error("GOLSZ admin events error:", e); setEvents([]); }
   }
   async function deleteEvent(id) {
-    try { await sb.from("events").delete().eq("id", id); logAdmin("delete_event", id); loadEvents(); loadStats(); }
+    try { const { error } = await sb.from("events").delete().eq("id", id); if (error) throw error; logAdmin("delete_event", id); loadEvents(); loadStats(); }
     catch (e) { console.error("GOLSZ admin delete event error:", e); }
   }
   async function setEventBlocked(id, val) {
@@ -7297,7 +7327,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
 
   async function logTurn(role, text) {
     if (!sb || !uidRef.current) return;
-    try { await sb.from("scout_history").insert({ user_id: uidRef.current, conversation_id: conversationId, messages: [{ role, content: text }] }); }
+    try { const { error } = await sb.from("scout_history").insert({ user_id: uidRef.current, conversation_id: conversationId, messages: [{ role, content: text }] }); if (error) throw error; }
     catch (e) { console.error("GOLSZ scout history write error:", e); }
   }
 
@@ -8795,13 +8825,13 @@ function Targets({ plan, onUpgrade, actingFor }) {
 
   async function updateTarget(id, updates) {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...updates } : it)));
-    try { await sb.from("outreach_targets").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id).eq("user_id", uid); }
+    try { const { error } = await sb.from("outreach_targets").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id).eq("user_id", uid); if (error) throw error; }
     catch (e) { console.error("GOLSZ target update error:", e); }
   }
 
   async function removeTarget(id) {
     setItems((prev) => prev.filter((it) => it.id !== id));
-    try { await sb.from("outreach_targets").delete().eq("id", id).eq("user_id", uid); }
+    try { const { error } = await sb.from("outreach_targets").delete().eq("id", id).eq("user_id", uid); if (error) throw error; }
     catch (e) { console.error("GOLSZ target delete error:", e); }
   }
 
@@ -11175,7 +11205,7 @@ function BannedScreen({ onSignOut }) {
     if (!sb || !uid || !reason.trim() || busy) return;
     setBusy(true);
     try {
-      await sb.from("moderation_appeals").insert({ user_id: uid, ban_related: true, reason: reason.trim().slice(0, 1000) });
+      const { error } = await sb.from("moderation_appeals").insert({ user_id: uid, ban_related: true, reason: reason.trim().slice(0, 1000) }); if (error) throw error;
       setSubmitted(true);
     } catch (e) { console.error("GOLSZ appeal submit error:", e); }
     setBusy(false);
