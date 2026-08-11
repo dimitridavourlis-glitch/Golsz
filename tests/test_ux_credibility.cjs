@@ -164,11 +164,11 @@ ck("Scout replies still render with no markdown parser",
    /m\.text && <div style=\{\{ whiteSpace: "pre-wrap" \}\}>\{m\.text\}<\/div>/.test(APP), true);
 ck("the prompt no longer asks for headers/bold/bullet lists",
    /Keep headers, bold and bullet lists/.test(PROMPT), false);
-ck("the prompt states plain text only", /PLAIN TEXT ONLY/.test(PROMPT), true);
+ck("the prompt states plain text only", /No markdown formatting/.test(PROMPT), true);
 ck("...and forbids leading dash/asterisk bullets",
-   /Never begin a line with "-" or "\*"/.test(PROMPT), true);
+   /No asterisks or hyphens at the start of lines/.test(PROMPT), true);
 ck("...and forbids the dash as punctuation",
-   /Do not use the dash as punctuation/.test(PROMPT), true);
+   /No dashes, use commas, periods, colons/.test(PROMPT), true);
 
 // The rule is only credible if the prompt's own worked examples obey it: a
 // quoted model reply containing an em dash teaches the opposite of the rule

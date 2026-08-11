@@ -66,16 +66,19 @@ ck("the support level is capped at the read site, not just declared",
    /sportSupportLevel = resolveSportSupportLevel\(sport, declared\)/.test(SRC), true);
 
 console.log("\n-- P0-6: the prompt tells the model what 'no' actually means --");
-const PROMPT_SPORT = SRC.slice(SRC.indexOf("golsz_structured_sport_knowledge in ATHLETE STATE"), SRC.indexOf("golsz_structured_sport_knowledge in ATHLETE STATE") + 2400);
-ck("it names the flag as load-bearing", /hard yes\/no/i.test(PROMPT_SPORT), true);
-ck("it states there is NO position structure when absent", /NO GOLSZ position structure/.test(PROMPT_SPORT), true);
-ck("...no competition ladder", /NO competition ladder/.test(PROMPT_SPORT), true);
-ck("...no eligibility data", /NO eligibility data/.test(PROMPT_SPORT), true);
-ck("it forbids inventing requirements outright", /never invent them at all/.test(PROMPT_SPORT), true);
+// Re-anchored 2026-08-11: the prompt rewrite replaced the flag-narration
+// paragraph with a dedicated GOLSZ SPORT SCHEMAS section. Same guarantee,
+// new home. The old anchor returned -1 and silently sliced garbage.
+const PROMPT_SPORT = SRC.slice(SRC.indexOf("GOLSZ SPORT SCHEMAS"), SRC.indexOf("GOLSZ SPORT SCHEMAS") + 900);
+ck("it names the flag as load-bearing", /None of it, not partial/i.test(PROMPT_SPORT), true);
+ck("it states there is NO position structure when absent", /no position structure, no competition ladder/.test(PROMPT_SPORT), true);
+ck("...no competition ladder", /no competition ladder, no pathway list/.test(PROMPT_SPORT), true);
+ck("...no eligibility data", /no eligibility data\. None of it, not partial/.test(PROMPT_SPORT), true);
+ck("it forbids inventing requirements outright", /Never invent a position structure, competition level, or eligibility rule/.test(PROMPT_SPORT), true);
 ck("it separates general knowledge from GOLSZ authority",
-   /let general knowledge wear GOLSZ's authority/.test(PROMPT_SPORT), true);
-ck("it still permits being helpful", /you may still help, and should/.test(PROMPT_SPORT), true);
-ck("support_level can no longer override the flag", /never overrides the flag/.test(PROMPT_SPORT), true);
+   /be clear about what's GOLSZ guidance vs\. what isn't/.test(PROMPT_SPORT), true);
+ck("it still permits being helpful", /use general knowledge and web search/.test(PROMPT_SPORT), true);
+ck("support_level can no longer override the flag", /A sport's support_level never overrides this/.test(PROMPT_SPORT), true);
 // Migration hygiene — the stored rows should not assert the false thing either.
 const MIG = fs.readFileSync(REPO + "/supabase-migration-112-sport-support-truth.sql", "utf8");
 ck("migration 112 downgrades non-schema sports", /set support_level = 'supported'[\s\S]*not in \('soccer', 'basketball'\)/.test(MIG), true);
@@ -88,22 +91,22 @@ const BASE_START = SRC.indexOf("const SYSTEM_PROMPT");
 const SPECIALIST_START = SRC.indexOf("const SPECIALIST_FRAMING = {");
 ck("both prompt regions exist", BASE_START > -1 && SPECIALIST_START > BASE_START, true);
 const BASE = SRC.slice(BASE_START, SPECIALIST_START);
-ck("the boundary is inside the base prompt", /HEALTH AND MEDICAL BOUNDARY/.test(BASE), true);
-ck("...and states it applies to EVERY reply", /applies to EVERY reply you write/.test(BASE), true);
-ck("...regardless of specialist routing", /whatever specialist framing/.test(BASE), true);
-ck("no injury diagnosis", /you do not diagnose injuries/.test(BASE), true);
-ck("no treatment or rehab protocols", /do not prescribe treatment or rehab protocols/.test(BASE), true);
+ck("the boundary is inside the base prompt", /HEALTH AND SAFETY, EVERY REPLY/.test(BASE), true);
+ck("...and states it applies to EVERY reply", /This applies to every reply, to every athlete/.test(BASE), true);
+ck("...regardless of specialist routing", /however the question is framed/.test(BASE), true);
+ck("no injury diagnosis", /For actual injuries, pain, or medical questions, name the right professional/.test(BASE), true);
+ck("no treatment or rehab protocols", /Never prescribe return-to-play timelines or clearance/.test(BASE), true);
 ck("no return-to-play timelines", /return-to-play timelines/.test(BASE), true);
-ck("no medication or supplement dosing", /do not recommend or dose medication or supplements/.test(BASE), true);
-ck("no weight-cutting instructions", /never give weight-cutting/.test(BASE), true);
+ck("no medication or supplement dosing", /Never recommend, dose, or counsel on medication or supplements/.test(BASE), true);
+ck("no weight-cutting instructions", /Never give weight-cutting/.test(BASE), true);
 ck("...including dehydration and calorie restriction", /dehydration, calorie-restriction/.test(BASE), true);
-ck("...and the refusal is explicitly non-negotiable for minors", /that specific refusal is not negotiable/.test(BASE), true);
+ck("...and the refusal is explicitly non-negotiable for minors", /Many GOLSZ athletes are minors, and unsafe cuts and medication missteps are documented harms/.test(BASE), true);
 // Preserving the useful half matters as much as the refusal — a Scout that
 // stops coaching is a worse product, not a safer one.
-ck("general performance coaching is explicitly preserved", /General, educational sports-performance guidance is squarely your job/.test(BASE), true);
+ck("general performance coaching is explicitly preserved", /general sports-performance guidance is your job/.test(BASE), true);
 ck("it names the professionals to defer to",
-   /physician, a physiotherapist or athletic trainer, a registered dietitian/.test(BASE), true);
-ck("deferral is one sentence, not a disclaimer block", /not a disclaimer block/.test(BASE), true);
+   /registered dietitian, physician/.test(BASE), true);
+ck("deferral is one sentence, not a disclaimer block", /in one natural sentence and move on/.test(BASE), true);
 // The specialist branch keeps its own, more detailed version.
 ck("the development specialist branch still carries its own rule",
    /Nutrition and recovery guidance here is general and educational only/.test(SRC.slice(SPECIALIST_START)), true);
@@ -145,7 +148,7 @@ ck("the safety net is wrapped by the authorship guard at every call site",
 ck("Scout is told when the goal is the athlete's own",
    /goal_authored_by_athlete=\$\{goalSource === "athlete_edited" \? "yes" : "no"\}/.test(SRC), true);
 ck("...and told to ask rather than assume a change",
-   /[Hh]as that actually changed, or is Y a backup/.test(SRC), true);
+   /if they disagree with what the Pathway shows, that's a real conflict to surface/.test(SRC), true);
 
 console.log("\n-- P0-5: code may land before its migration without losing data --");
 // Migrations in this project are applied by hand. PostgREST rejects an
