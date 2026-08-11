@@ -68,10 +68,29 @@ ck("a legacy entry with no source is honoured",
 // ---- the derivation is gone from both surfaces --------------------------
 ck("Plan no longer derives a secondary goal from sport config",
    /hasSecondaryGoal = sportConfig\.altBranch && pathwayState\.pathwayType !== sportConfig\.altBranch/.test(APP), false);
+// The logic moved into BackupPlanCard, which owns all three states. The
+// guarantee did not move: the value shown is still only ever an
+// athlete_stated one, and it is still their words rather than a category.
 ck("Plan's secondary goal comes from what they said",
-   /const hasSecondaryGoal = !!statedSecondary;/.test(APP), true);
+   /const stated = statedContextValue\(ctx, "secondary_goal"\);/.test(APP), true);
+ck("...and Plan renders the card rather than deriving it inline",
+   /<BackupPlanCard athlete=\{pathwayState\.athlete\}/.test(APP), true);
 ck("...and the card renders their words, not the category label",
-   /\{statedSecondary\}<\/div>/.test(APP), true);
+   /lineHeight: 1\.35 \}\}>\{stated\}<\/div>/.test(APP), true);
+// An inference may only ever be a question. If it can reach a value render,
+// the whole card is back to asserting something the athlete never said.
+ck("an inference is offered as a question, never as a value",
+   /rawEntry\.source === "ai_inferred"/.test(APP), true);
+ck("...and the question is the only place it appears",
+   /t\("plan_backup_ask"\)\.replace\("\{x\}", inferred\)/.test(APP), true);
+ck("declining is recorded, not just cleared",
+   /write\("secondary_goal_declined", "declined"\)/.test(APP), true);
+ck("...and a declined inference is never asked again",
+   /if \(inferred && !declined\)/.test(APP), true);
+ck("the write goes through the RPC that forces the source",
+   /sb\.rpc\("set_athlete_context_field"/.test(APP), true);
+ck("...and the client never sends a source of its own",
+   /p_source/.test(APP), false);
 ck("Home reads the same field", /statedContextValue\(athlete && athlete\.scout_context, "secondary_goal"\)/.test(APP), true);
 
 // The alternative route may still be SHOWN — an athlete who has never
