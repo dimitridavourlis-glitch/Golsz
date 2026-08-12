@@ -27,9 +27,13 @@ productivity. When asked what to work on, the default answer is a blocker.
 
 This list goes stale. Check current state before repeating any of it.
 
-1. **Turnstile keys unset.** The signup honeypot is client-side; a bot calling
-   Supabase Auth directly bypasses it. Product serves minors — signup abuse is
-   a safety issue, not just a spam one.
+1. ~~**Turnstile keys unset.**~~ **CLEARED 2026-08-12.** Captcha protection is
+   ON in Supabase Auth with provider **Turnstile by Cloudflare** and the secret
+   persisted. Enforcement now lives at the auth endpoint (GoTrue), which is
+   where it always had to be — see the resolved lead below.
+   **The provider dropdown is the trap**: the other option is hCaptcha, and
+   selecting it would send the app's Turnstile token to an hCaptcha verifier
+   and fail every signup. Verify the provider, not just that captcha is on.
 2. **Live EUR Stripe not configured.** No revenue can be collected. Test-mode
    keys pass every check that exists.
 3. **~207-item moderation queue, unreviewed.** Real reported content on a
@@ -111,12 +115,16 @@ timeout, and something outside it has to notice its silence.
 Reported by reviewers, call paths read, defects **not reproduced**. They are
 listed so they are not lost, not so they can be cited:
 
-- **Signup gates may be advisory.** `api/signup-guard.js` states in its own
-  header that it is "a real gate", but both it and `verify-turnstile.js` are
-  called by the browser, which then calls `sb.auth.signUp()` directly with the
-  anon key. If nothing binds a verified token to account creation, a script
-  POSTing to `/auth/v1/signup` never touches either. Would not be fixable in
-  application code — GoTrue must enforce it.
+- ~~**Signup gates may be advisory.**~~ **RESOLVED 2026-08-12** by enabling
+  captcha in Supabase Auth. Kept because the *shape* is the lesson:
+  `api/signup-guard.js` stated in its own header that it was "a real gate",
+  but both it and `verify-turnstile.js` were called by the browser, which then
+  called `sb.auth.signUp()` directly with the anon key. Nothing bound a
+  verified token to account creation, so a script POSTing straight to
+  `/auth/v1/signup` never touched either.
+  **A file asserting it is a gate is not evidence that it is one** — follow the
+  call path to whatever actually creates the record. This class was never
+  fixable in application code; the platform had to enforce it.
 - **Internal terminology may reach athletes on the retry path.** The
   `req:<requestId>` cache may be written before `reply_text` and the
   suggestion fields are attached, so a timeout retry could replay an object
