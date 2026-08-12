@@ -179,7 +179,14 @@ ck("...and marks it athlete-authored", /goal_source: "athlete_edited",/.test(APP
 // the props rather than just the presence of the tag.
 ck("Home renders it", /<GoalCard actingFor=\{actingFor\} readOnly onOpenPlan=/.test(APP), true);
 ck("...read-only, so Home never edits", /<GoalCard actingFor=\{actingFor\} readOnly/.test(APP), true);
-ck("...and hands off to Plan", /onOpenPlan=\{\(\) => onNavigate\("targets"\)\}/.test(APP), true);
+// The optional second argument is the hand-off ORIGIN, which Plan reads to
+// render its breadcrumb. This assertion used to require exactly
+// `onNavigate("targets")` and went red when the origin was added — a change
+// that strengthened the guarantee rather than weakening it. What P0-5 is
+// protecting is that Home routes the athlete to Plan to edit; the argument
+// count is not the guarantee. Destination is still asserted exactly.
+ck("...and hands off to Plan", /onOpenPlan=\{\(\) => onNavigate\("targets"(?:, "[a-z_]+")?\)\}/.test(APP), true);
+ck("...carrying where it came from, so Plan can say so", /onNavigate\("targets", "goal"\)/.test(APP), true);
 ck("Plan renders it editable", /<GoalCard actingFor=\{actingFor\} onSaved=\{[^}]+\} compact \/>/.test(APP), true);
 ck("exactly two render sites — no third copy", (APP.match(/<GoalCard /g) || []).length, 2);
 ck("Plan renders it", /<GoalCard actingFor=\{actingFor\} onSaved=\{\(\) => setGoalVersion/.test(APP), true);
