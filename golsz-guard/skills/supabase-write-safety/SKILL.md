@@ -70,6 +70,68 @@ every classified RPC must still be called. **Adding a mutating RPC without
 listing it fails the suite instead of passing unexamined.** If you add one,
 add it to `MUTATING_RPCS`.
 
+## A trigger that writes to another table runs under the caller's RLS
+
+```sql
+create or replace function _post_likes_sync()
+returns trigger language plpgsql as $$        -- no `security definer`
+  update posts set likes_count = likes_count + 1 where id = new.post_id;
+```
+
+The trigger fires on `post_likes` but writes to `posts`, so the UPDATE is
+subject to `posts_update` (`author_id = auth.uid() or is_parent_of(...)`).
+Liking **someone else's** post matches zero rows. No error, no exception, the
+trigger returns normally, the `post_likes` row inserts fine, and the
+optimistic UI shows 1.
+
+Every like count in the product had always been 0 except self-likes. Nothing
+surfaced it, because **"0 rows updated" is a success.**
+
+A trigger writing to a table other than the one it fires on needs
+`security definer` (and a pinned `search_path`). Zero-row writes are the
+failure mode with no error attached — `update ... returning` and check you got
+a row when the row is the point.
+
+## `await fetch()` is not a completed write
+
+```js
+try {
+  await fetch(url + "/rest/v1/rpc/record_scout_usage_cost", { ... });
+} catch (e) { console.error("failed:", e); }
+```
+
+The `catch` fires only on a thrown transport error. A constraint violation, an
+RLS denial or a bad parameter returns a perfectly normal `Response` with a 4xx
+or 5xx status — which **resolves**, is never inspected, and is discarded.
+
+This one fed the emergency spend ceiling. A silently failing write means the
+cost cap stops counting while continuing to report healthy. Six writes in this
+codebase had this shape.
+
+Same root cause as the supabase-js rule at the top of this file, one layer
+down: `fetch` rejects on transport failure and on nothing else. **Always check
+`r.ok`.**
+
+## A PostgREST error is a valid object and passes a `typeof` guard
+
+```js
+const data = await r.json();
+return data && typeof data === "object" ? data : { allowed: true, used: 0, limit };
+```
+
+A non-2xx PostgREST body is `{code, message, hint, details}` — an object. It
+passes the guard and gets returned *as the reservation*. It has no `allowed`
+field, so the caller reads `undefined` as falsy.
+
+A Supabase hiccup therefore told a brand-new free account **"You've used all
+your free GOLSZ Scout questions"** on question one — a hard upsell at zero
+usage, on first impression. The intended posture was fail-open and the
+shape-check inverted it.
+
+**Validating the type of a response body is not validating that it is the
+expected body.** Check `r.ok` first, then check for the specific field you are
+about to read.
+
 ## Migrations
 
 **`drop constraint; add constraint` rewrites the whole list.** Migration 111

@@ -150,6 +150,65 @@ that way. Redirect and gate on the command itself:
 npm run check > /tmp/check.log 2>&1 && vercel deploy --prod --scope golszcom
 ```
 
+## A bounded number compared to its own bound
+
+`reserve_scout_question` clamped before it compared:
+
+```sql
+set questions_used = case when scout_daily_usage.questions_used < p_plan_limit
+                            then scout_daily_usage.questions_used + 1
+                            else scout_daily_usage.questions_used end
+returning questions_used into v_used;
+return jsonb_build_object('allowed', v_used <= p_plan_limit, ...);   -- always true
+```
+
+`v_used` cannot exceed `p_plan_limit` by construction, so `allowed` is
+structurally `true` forever. Same defect in `reserve_free_ai_question`.
+
+**Why no test caught it:** the suites mocked the RPC as `{allowed: true}`.
+They asserted the *handler's reaction to* a limit and never that the limit
+computed one. **A mocked boundary means the boundary is untested** — "the
+tests pass" covered the caller, not the computation. `reserve_signup_attempt`
+in migration 074 increments unclamped and is correct, so the same author got
+one right and one wrong; the pattern is not a habit you can trust.
+
+When a value is bounded and then compared against its own bound, the
+comparison is dead code. Exercise the boundary with real SQL.
+
+## Two suites in one run asserting opposite things, both green
+
+`test_stripe_webhook_logic.cjs` tested `planFromAmount`. `test_pricing.cjs`
+asserted `planFromAmount` was gone. **Both passed.** The function had been
+deleted from production months earlier — 11 green assertions covering code
+that did not ship. Worse, the hand-copied reimplementation was itself wrong:
+it mapped `1400` to `pro` when Pro is `1500`. Green on a wrong implementation
+of a removed feature.
+
+**When two suites disagree, at least one is measuring nothing.** A suite that
+tests a retyped copy drifts silently and stays green forever. Load the real
+source — that is what the `eval(slice(...))` convention is for.
+
+## A red result is a claim about the query too
+
+A post-migration check searched `where indexname like 'idx_%'` and reported
+"0 audit indexes present". The convention here is an `_idx` **suffix**
+(`posts_author_idx`, `follows_followed_idx`). All six existed.
+
+Failure gets the same burden of proof as success. Before filing a red result
+as a finding, confirm the query addresses the thing it is being read as
+addressing.
+
+## Confirm two numbers are the same kind of number
+
+A production bundle measured 833,281; the local file measured 833,255. A
+26-character gap is exactly the size that gets waved through as noise. It was
+Python counting code points against JavaScript `.length` counting UTF-16
+units — the file holds exactly 26 astral characters (flag emoji, 🌍, 🏴, 🔒),
+each counting as two. The files were byte-identical.
+
+Before concluding two artifacts differ, check that both measurements mean the
+same thing. Same shape as one label meaning two mechanisms.
+
 ## Conventions
 
 - `npm run check` = `node --check` ×2 + `node tests/run-all.cjs`.

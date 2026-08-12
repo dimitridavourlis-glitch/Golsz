@@ -100,6 +100,75 @@ gated page. The fix is three states, not two — `featureUnlocked`,
 Check `planKnown` before showing any locked-state UI. When adding a gated
 surface, this is the thing to get right first.
 
+## The no-login surfaces are the ones nobody looks at
+
+`Root()` routes `?share=` and `?public=` to `PublicPassport` **before any auth
+check**. Every colour in it is `var(--pitch)` / `var(--chalk)`, defined only
+inside the `CSS` template string — which `PublicPassport` never injected. Both
+declarations were invalid, got dropped, and the page fell back to the `<head>`
+inline `body{background:#0D1210}` with the browser's default black text.
+
+**Every Passport share link a coach opened was black-on-black.** 100%
+reproducible, and structurally invisible to anyone signed in — which is
+everyone who works on it.
+
+`<style>{CSS}</style>` belongs in every component rendered *outside*
+`GolszApp`'s tree: `Auth`, `ResetPassword`, `PublicPassport`. Nothing fails a
+test when it is missing. This has now been missed twice.
+
+## `finally`, not the happy path
+
+```js
+try { ...fetch...; setLoaded(true); }        // three call sites
+catch (e) { console.error(e); }
+```
+
+A failed fetch leaves `loaded` false forever, or — worse, where the flag was
+set before the throw — renders a **blank card asserting the athlete has no
+highlights and no timeline.** Not a spinner, not an error: a confident empty
+state. `Events` had the adjacent form, with no `setLoading(false)` anywhere, so
+a fetch error produced a permanent "Loading…" with no retry.
+
+The correct pattern already existed in the same file — `finally { setLoaded(true); }`
+at two other call sites. This is a convention the codebase **had and drifted
+from**, which is the more common way conventions fail.
+
+**Empty is a claim about the data.** If a failure can also produce it, it is a
+lie. The transition into "empty" must be unreachable from the error path.
+
+## One module's exception is every module's exception
+
+`_readiness.js` defines `SPORTS_WITHOUT_POSITION = ["Golf", "Bowling"]` and
+the UI hides the position input for them. `scout.js` listed `position` as
+critical at five separate call sites, unconditionally.
+
+A golfer completes their entire Passport and **Scout keeps interviewing them
+forever** — a state that can be entered and never exited, and the athlete
+cannot see why, because the field they are missing is not rendered for their
+sport.
+
+When one module encodes an exception, grep every other place that field is
+treated as mandatory. Gated and gating logic fails closed and silently.
+
+## Falsy is not absent
+
+```js
+const t = (key) => (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+```
+
+`messages_request_banner_pre` is deliberately `""` — the athlete's name
+renders before it. Empty string is falsy, so the chain falls through English
+(also `""`) to **the raw key name**:
+
+> `messages_request_banner_preAlex Smith wants to send you a message.`
+
+In English, French and Spanish. Greek was correct by accident. This is the
+first-contact safety flow a minor sees. The same root cause put
+`il y a 3d ago` in the French admin panel.
+
+Test key **presence**, not truthiness, wherever empty is a legitimate value.
+Use `key in obj` or `?? `, never `||`.
+
 ## Numbers and language
 
 Say what a number is measured over. A readiness sub-score computed from two

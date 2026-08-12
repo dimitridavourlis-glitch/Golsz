@@ -77,6 +77,55 @@ must not break again: **no function returns "locked" when the plan is
 unknown** — a loading profile once showed "Upgrade to unlock" to paying
 athletes on every gated page. See `athlete-claims`.
 
+## Exercise the boundary that defines a tier before shipping it
+
+Free / Starter €6 / Pro €14 / Elite €30 were differentiated by exactly one
+thing: a question cap. That cap **could not fire** — the counter was clamped
+before it was compared, so `allowed` was structurally always true (see
+`measurement-integrity`). Every paid tier enforced nothing, and the pricing
+page described behaviourally identical products.
+
+The suites were green because they mocked the RPC as `{allowed: true}`. They
+tested the handler's reaction to a limit, never that a limit existed.
+
+**Before shipping a tier, hit its boundary for real.** A tier is a claim about
+what happens at the limit; nothing else about it is checkable.
+
+## Ask what a monitor does when the target hangs
+
+`.github/workflows/health-alert.yml` had no `--max-time`, no
+`--connect-timeout`, and no job `timeout-minutes`. If `/api/health-alert`
+hangs — the most common outage shape, and the exact class of the incident the
+file's own header cites — curl blocks, the job neither succeeds nor fails, and
+**no alert is emitted at all.**
+
+Compounding: GitHub silently disables `schedule:` triggers after 60 days of
+repo inactivity, which a pre-launch repo hits routinely. Nothing inside the
+workflow can detect that, because the thing that stops is the workflow.
+
+**Absence of an alert is not evidence of health.** Every monitor needs a
+timeout, and something outside it has to notice its silence.
+
+## Two open leads — verify before treating as fact
+
+Reported by reviewers, call paths read, defects **not reproduced**. They are
+listed so they are not lost, not so they can be cited:
+
+- **Signup gates may be advisory.** `api/signup-guard.js` states in its own
+  header that it is "a real gate", but both it and `verify-turnstile.js` are
+  called by the browser, which then calls `sb.auth.signUp()` directly with the
+  anon key. If nothing binds a verified token to account creation, a script
+  POSTing to `/auth/v1/signup` never touches either. Would not be fixable in
+  application code — GoTrue must enforce it.
+- **Internal terminology may reach athletes on the retry path.** The
+  `req:<requestId>` cache may be written before `reply_text` and the
+  suggestion fields are attached, so a timeout retry could replay an object
+  that bypasses `stripInternalTerminology` / `stripMetaCommentary`.
+
+Verify the write ordering and the signup call path before writing either up as
+a rule. A plausible rule with no confirmed failure behind it teaches the
+reader to skim.
+
 ## Reporting honestly
 
 At the end of a stretch of work, say which of these it was:
