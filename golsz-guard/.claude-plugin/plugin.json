@@ -1,0 +1,6 @@
+{
+  "name": "golsz-guard",
+  "version": "1.0.0",
+  "description": "Four rules-with-receipts for the GOLSZ codebase: measurement integrity, Supabase write safety, what may be claimed to an athlete, and what actually blocks launch.",
+  "author": { "name": "GOLSZ" }
+}
