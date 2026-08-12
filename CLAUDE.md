@@ -89,9 +89,14 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   mobile bottom-tab-bar layout — branching on `isDesktop` before the final `return`. `Auth`'s plan cards
   (`.pricing-grid`) and `Discover`'s results (`.discover-grid`) go from 1/2 columns to 3 via CSS media
   queries in the shared `CSS` template string, not inline logic. **`<style>{CSS}</style>` must be included
-  in every top-level screen** (`GolszApp`, `Auth`, `ResetPassword`) — `Auth` was missing it entirely until
-  this was caught (no fonts, no focus-visible outlines, no responsive grid on the whole pre-login flow);
-  if you add another top-level screen, don't forget it there too.
+  in every top-level screen** (`GolszApp`, `Auth`, `ResetPassword`, `PublicPassport`) — this has now been
+  missed **twice**. `Auth` was missing it entirely (no fonts, no focus-visible outlines, no responsive grid
+  on the whole pre-login flow), and `PublicPassport` was missing it until the 2026-08-12 audit, which made
+  **every shared Passport link render black-on-black** — unreadable, on the one surface shown to coaches
+  and universities by an athlete who could not see the problem themselves.
+  The trap is that a top-level screen is any component rendered *outside* `GolszApp`'s tree — the no-login
+  and pre-login surfaces, exactly the ones nobody logged in ever sees. If you add another, it needs
+  `<style>{CSS}</style>` and it will not fail any test without it.
 - **Theming (dark/light background, Settings button)**: every color in `C` (`C.pitch`, `C.chalk`, `C.lime`,
   etc.) is a CSS custom property string (`"var(--pitch)"`, ...), not a hardcoded hex value — the actual hex
   values live in the `CSS` template string's `:root { ... }` (dark, default) and `html[data-theme="light"]
@@ -305,15 +310,23 @@ There is no build/lint/test tooling in this repo. Relevant commands:
 - Handles two event types: `checkout.session.completed` (sets `profiles.plan` + `stripe_customer_id`,
   identified via `client_reference_id` — see below) and `customer.subscription.deleted` (reverts to the real
   `'free'` tier — matched by `stripe_customer_id`). Everything else is acknowledged with 200 and ignored.
-- **Plan is inferred from `amount_total`** (Starter ≥ $6 → `'starter'`, Pro ≥ $14 → `'pro'`, Elite ≥ $30 →
-  `'elite'`), because Stripe Payment Links don't carry arbitrary metadata through the URL — only
-  `client_reference_id` and `prefilled_email`. **This file went stale once already**: pricing moved to
-  $6/$14/$30 earlier in the same session this file was updated, but the thresholds here were left at the old
-  $29/$79 values — every real Starter/Pro payment silently mapped to `plan=null` (no upgrade applied at all)
-  and every Elite payment mapped to `'pro'` instead, until caught and fixed while unrelated free-tier work
-  touched this same plan logic. If Starter/Pro/Elite pricing ever changes, update the thresholds here in the
-  **same commit**, not a follow-up — `PLANS` in `golsz-app.html` is the other half of this pair and they must
-  never drift apart. Free never reaches this file — it has no Stripe link and never goes through checkout.
+- **Plan is resolved from the Stripe Price, never from the amount paid.** `api/_plan-catalog.js` matches on
+  Payment Link metadata (`session.metadata.golsz_plan`), then `price.id` / `lookup_key`, and validates
+  `currency` + `price.unit_amount` against the catalogue. `resolvePlanOrLog()` returns `{ plan: null, reason }`
+  and logs on any mismatch — **it never guesses and never falls back to an amount-based inference.**
+  `checkout.session.completed` often cannot resolve a plan alone (Stripe does not expand `line_items`);
+  the `customer.subscription.created` event that follows carries `items.data[0].price` and is the
+  authoritative source.
+- **`amount_total` / `amount_paid` are deliberately never used.** They carry tax, discounts and proration,
+  so they say nothing reliable about which product was bought. `unit_amount` is the recurring, tax-exclusive
+  list price, which is why it can be compared exactly rather than with a tolerance band.
+  **This section documented the opposite until 2026-08-12** — it described threshold inference from
+  `amount_total` (Starter ≥ $6 / Pro ≥ $14 / Elite ≥ $30) months after production had deleted it, and a test
+  suite was asserting against that ghost until the audit. Before that it had gone stale a *first* time, with
+  thresholds left at old $29/$79 values while pricing moved, silently mapping every real Starter/Pro payment
+  to `plan=null`. Twice now, in the same passage: **if you change how plans are resolved, change this file in
+  the same commit.** `PLANS` in `golsz-app.html` is the other half of the pair and must not drift.
+  Free never reaches this file — it has no Stripe link and never goes through checkout.
 - **Attribution**: `Auth`'s checkout redirect in `golsz-app.html` appends
   `?client_reference_id=<user.id>&prefilled_email=<email>` to `STRIPE_LINKS[plan]` right after signup, so
   the webhook can identify who paid. If you ever change how/where checkout is triggered, keep that query
