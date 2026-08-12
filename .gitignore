@@ -1,4 +1,16 @@
+# Secrets. The documented workflow is `vercel env pull` (see CLAUDE.md
+# "Commands"), which writes **.env.local** — NOT `.env`. The single `.env`
+# line this file used to carry did not match that filename, so a pulled
+# ANTHROPIC_API_KEY / SUPABASE_SERVICE_KEY / STRIPE_WEBHOOK_SECRET /
+# VAPID_PRIVATE_KEY was one `git add .` away from being committed.
+# `.env*` covers .env, .env.local, .env.production.local, and friends.
 .env
+.env*
+.env*.local
+# ...but keep a checked-in template visible if one is ever added.
+!.env.example
+
 .DS_Store
-node_modules
+node_modules/
 .vercel
+.next/

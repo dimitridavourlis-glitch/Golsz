@@ -126,7 +126,7 @@
         </form>
 
         <div class="form-success" id="contact-success" role="status">
-          <h3>You're on the list.</h3>
+          <h2 class="size-h3">You're on the list.</h2>
           <p style="margin-bottom:0;">Thanks for joining the GOLSZ waitlist. We'll be in touch as we get closer to launch.</p>
         </div>
 
@@ -142,7 +142,7 @@
           <div class="card-icon" aria-hidden="true">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
           </div>
-          <h3>General inquiries</h3>
+          <h2 class="size-h3">General inquiries</h2>
           <p>Questions about GOLSZ, partnerships, or media requests.</p>
           <a class="card-link" href="mailto:hello@golsz.com">hello@golsz.com</a>
         </div>
@@ -150,7 +150,7 @@
           <div class="card-icon" aria-hidden="true">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
           </div>
-          <h3>Investor inquiries</h3>
+          <h2 class="size-h3">Investor inquiries</h2>
           <p>GOLSZ is currently raising financing. Reach out directly for our deck and data room.</p>
           <a class="card-link" href="mailto:invest@golsz.com">invest@golsz.com</a>
         </div>
@@ -167,14 +167,18 @@
       <div class="footer-brand">
         <a href="index.html" class="logo">GOLSZ<span class="mark">.</span></a>
         <p>The AI-powered professional network for the global sports ecosystem. Every goal has a path.</p>
-        <div class="social-row">
-          <a href="#" aria-label="GOLSZ on LinkedIn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.5 8h4V23h-4V8zm7 0h3.8v2.05h.05c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.78 2.65 4.78 6.1V23h-4v-6.8c0-1.62-.03-3.7-2.26-3.7-2.26 0-2.6 1.77-2.6 3.6V23h-4V8z"/></svg></a>
-          <a href="#" aria-label="GOLSZ on Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg></a>
-          <a href="#" aria-label="GOLSZ on X"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.9 2H22l-7.6 8.7L23.3 22h-7l-5.5-6.7L4.5 22H1.4l8.1-9.3L.9 2h7.2l5 6.2L18.9 2zm-1.2 18h1.7L7.4 3.9H5.6L17.7 20z"/></svg></a>
-        </div>
+        <!-- Social links removed. All three pointed at a bare "#"
+             placeholder. A link that goes nowhere is worse than no link:
+             it takes a tab stop, a screen reader announces it as a link to
+             a real destination, and activating it just jumps to the top of
+             the page. The real profile URLs are not known, and inventing
+             them would be worse still. index.html's footer has never had a
+             social row, so removing these also makes all four footers
+             consistent. Restore the block with real destinations when the
+             accounts exist. -->
       </div>
       <div class="footer-col">
-        <h4>Site</h4>
+        <h2>Site</h2>
         <ul>
           <li><a href="index.html">Home</a></li>
           <li><a href="golsz-app.html?page=feed">Feed</a></li>
@@ -184,7 +188,7 @@
         </ul>
       </div>
       <div class="footer-col">
-        <h4>Get involved</h4>
+        <h2>Get involved</h2>
         <ul>
           <li><a href="contact.html">Join the waitlist</a></li>
           <li><a href="contact.html#investors">Investor inquiries</a></li>
@@ -192,7 +196,7 @@
         </ul>
       </div>
       <div class="footer-col">
-        <h4>Based in</h4>
+        <h2>Based in</h2>
         <ul>
           <li>Nicosia</li>
           <li>Cyprus</li>

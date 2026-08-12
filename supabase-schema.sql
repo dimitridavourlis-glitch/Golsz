@@ -1294,7 +1294,19 @@ begin
     url := 'https://golsz.vercel.app/api/send-push',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'x-webhook-secret', '2209b4e6446eab5feeed1a7817fad4797e8278cc2452dacf023738485d07fbb5'
+      -- SUBSTITUTE AT PASTE TIME — DO NOT COMMIT A REAL SECRET HERE.
+      -- Replace REPLACE_WITH_SUPABASE_WEBHOOK_SECRET with the live value in
+      -- the Supabase SQL Editor immediately before running this file.
+      -- It must match Vercel's SUPABASE_WEBHOOK_SECRET env var exactly —
+      -- api/send-push.js compares the incoming x-webhook-secret header
+      -- against that env var and rejects the call if they differ, so a
+      -- mismatch silently kills every push notification.
+      -- The real value lives in Vercel's env settings and nowhere else in
+      -- this repo: a secret committed to git is a leaked secret, even after
+      -- it is later removed, because the history keeps it. Same note is on
+      -- supabase-migration-026-push-webhook-triggers.sql, which defines the
+      -- same function — keep the two in sync.
+      'x-webhook-secret', 'REPLACE_WITH_SUPABASE_WEBHOOK_SECRET'
     ),
     body := jsonb_build_object(
       'type', TG_OP,
@@ -3967,11 +3979,20 @@ alter table scout_routing_log add constraint scout_routing_log_answered_by_check
 -- of this migration.
 -- ============================================================
 
+-- The price column is created as price_eur, not price_usd. Migration 092
+-- originally called it price_usd and migration 120 renamed it to price_eur
+-- (see the rename block further down this file) — which quietly made this
+-- file non-re-runnable: on any database that had already been through 120,
+-- `create table if not exists` was a no-op, so the seed INSERT below still
+-- named price_usd against a table that no longer had that column, and the
+-- whole paste aborted at that statement. This file's header promises it can
+-- be re-run; naming the column its final name here, plus the compatibility
+-- rename immediately below, is what makes that true again.
 create table if not exists plan_config (
   plan_id text primary key check (plan_id in ('free', 'starter', 'pro', 'elite')),
   plan_name text not null,
   tagline text,
-  price_usd numeric not null,
+  price_eur numeric not null,
   display_order int not null,
   live_features jsonb not null default '[]'::jsonb,
   coming_soon_features jsonb not null default '[]'::jsonb,
@@ -3981,10 +4002,32 @@ create table if not exists plan_config (
   updated_at timestamptz not null default now()
 );
 
+-- Compatibility rename for any database still carrying the original
+-- price_usd name (created by a paste of this file from before migration
+-- 120). Byte-identical to the guard migration 120 uses further down, and
+-- idempotent both ways: a no-op on a fresh database (already price_eur) and
+-- a no-op on a 120-era database (already renamed).
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'plan_config' and column_name = 'price_usd'
+  ) and not exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'plan_config' and column_name = 'price_eur'
+  ) then
+    alter table plan_config rename column price_usd to price_eur;
+  end if;
+end $$;
+
 alter table plan_config enable row level security;
 -- no select/insert/update policy — service-role only, same as scout_model_config
 
-insert into plan_config (plan_id, plan_name, tagline, price_usd, display_order, live_features, ai_daily_question_limit, ai_lifetime_question_limit) values
+-- The literal prices in this seed are the migration-092-era numbers, kept as
+-- written for history; migration 120's `update plan_config set price_eur =
+-- ...` further down this same file is what sets the current live prices, and
+-- it runs after this statement on every paste.
+insert into plan_config (plan_id, plan_name, tagline, price_eur, display_order, live_features, ai_daily_question_limit, ai_lifetime_question_limit) values
   ('free', 'Free', 'Understand me', 0,
     0,
     '["Digital Sports Passport", "Profile creation & editing", "Approved media links, achievements, career history", "General AI Scout conversation & athlete discovery", "Basic recruiting/development explanations"]'::jsonb,
@@ -4002,7 +4045,7 @@ insert into plan_config (plan_id, plan_name, tagline, price_usd, display_order, 
     '["Everything in Pro", "Training organization", "Performance benchmarks", "Schedule", "Athlete diary", "Recovery, sleep & general nutrition education", "Reminders & push alerts", "Periodic reassessment", "GOLSZ Motion exercise demonstrations"]'::jsonb,
     20, null)
 on conflict (plan_id) do update set
-  plan_name = excluded.plan_name, tagline = excluded.tagline, price_usd = excluded.price_usd,
+  plan_name = excluded.plan_name, tagline = excluded.tagline, price_eur = excluded.price_eur,
   display_order = excluded.display_order, live_features = excluded.live_features,
   ai_daily_question_limit = excluded.ai_daily_question_limit,
   ai_lifetime_question_limit = excluded.ai_lifetime_question_limit,

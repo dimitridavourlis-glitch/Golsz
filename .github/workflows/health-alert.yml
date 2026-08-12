@@ -12,9 +12,57 @@
 # Requires ONE repository secret:
 #   CRON_SECRET  — must match the CRON_SECRET env var set in Vercel.
 #
+# ...and ONE repository variable (Settings -> Secrets and variables ->
+# Actions -> Variables):
+#   PROD_BASE_URL — e.g. https://golsz.com   (no trailing slash)
+# The URL used to be hardcoded to https://golsz.vercel.app while every
+# rel="canonical" on the marketing site points at https://golsz.com. If the
+# apex domain ever stops routing to the deployment, the monitor was checking
+# a hostname no real user visits and would stay green straight through a
+# customer-visible outage. The fallback below keeps the job working until
+# the variable is set — but set it.
+#
 # Note: GitHub's scheduled runs are best-effort and can be delayed under load,
 # which is fine here — api/health-alert.js looks at a 20-minute window against
 # a 15-minute schedule, so a late run still sees the failure.
+#
+# WHEN THIS WORKFLOW STOPS, SOMETHING ELSE NOTICES. (This was a KNOWN GAP
+# until migration 127; it is now handled, and here is the arrangement so the
+# next person does not have to reconstruct it.)
+#
+# GitHub silently DISABLES `schedule:` triggers after 60 days of repository
+# inactivity. A quiet pre-launch repo therefore loses this monitor entirely,
+# and the loss is itself silent — no runs, no failures, nothing to notice.
+# Nothing inside this file can detect that, because the thing that stops is
+# this file.
+#
+# So the detection was put on a scheduler that is not GitHub:
+#
+#   1. api/health-alert.js stamps ops_heartbeat (name = 'health-alert',
+#      last_ok_at = now) on every successful run — see stampHeartbeat().
+#      It means "the monitor completed a check", NOT "Scout is healthy": a
+#      run that fires an outage alert still stamps it.
+#   2. api/target-followup-reminders.js — the project's only VERCEL cron
+#      (vercel.json, daily 13:00 UTC), which runs regardless of how quiet
+#      this repo has been — reads that stamp on its way past and pushes to
+#      every admin via alertAdmins() when it is older than
+#      HEARTBEAT_MAX_AGE_HOURS (default 6, i.e. ~24 consecutive missed runs;
+#      see checkHealthHeartbeat() for why 6 rather than something nearer the
+#      15-minute cadence).
+#
+# Worst-case detection latency is therefore one day — the next 13:00 UTC —
+# against a failure mode that would otherwise have gone unnoticed until
+# someone happened to look at the Actions tab. Deliberately NOT an external
+# heartbeat service (Healthchecks.io and friends): the owner's condition was
+# no new service dependency, and the second scheduler we already have is
+# enough. Note that this workflow needs no change and holds no new secret
+# for any of it — the stamp is written by the endpoint it already calls.
+#
+# The two halves fail independently and neither can cry wolf: if the stamp
+# cannot be written, health-alert logs it and still returns 200 (a missing
+# ops_heartbeat table must not turn into a fake Scout outage); if the stamp
+# cannot be READ, the watchdog reports "unknown" and alerts nobody, because
+# "I could not check" is not evidence that this workflow has stopped.
 name: health-alert
 
 on:
@@ -22,22 +70,127 @@ on:
     - cron: "*/15 * * * *"
   workflow_dispatch: {}   # so it can be triggered by hand while debugging
 
+# Least privilege by default: the health check itself only runs curl and
+# needs nothing at all from the GitHub API.
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    # Without this, a request that connects and then HANGS — the most common
+    # outage shape, and the exact class of the 2026-08-08 incident this
+    # file's header cites — leaves the job neither succeeding nor failing
+    # for up to 6 hours. No alert fires, and the next scheduled run can be
+    # skipped as still-in-progress, so the monitor stops monitoring. The
+    # curl timeouts below are the real guard; this is the backstop for
+    # anything else in the job wedging.
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # Needed only by the "monitor is broken" step below, which opens an
+      # issue. Scoped at the job rather than the top level so the token is
+      # read-only for everything else.
+      issues: write
     steps:
       - name: Call the health endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BASE_URL: ${{ vars.PROD_BASE_URL || 'https://golsz.com' }}
         run: |
-          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+          set -u
+          if [ -z "${CRON_SECRET}" ]; then
             echo "CRON_SECRET is not set as a repository secret — the endpoint will 401."
             exit 1
           fi
-          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            https://golsz.vercel.app/api/health-alert)
+          # --connect-timeout : give up fast on a dead or blackholed host.
+          # --max-time        : give up on a host that accepts the connection
+          #                     and then never answers. This is the line that
+          #                     turns a hang into a failed job, and a failed
+          #                     job into an alert.
+          # --retry           : ride out one transient blip so a flaky runner
+          #                     network does not page anyone.
+          #                     --retry-all-errors so connection-level
+          #                     failures retry too, not only HTTP 5xx.
+          # `|| code="000"` : curl exits non-zero on timeout, and without
+          #                     this the `set -u`-safe assignment would leave
+          #                     $code empty and the final test would compare
+          #                     against "" instead of failing loudly.
+          code=$(curl -sS -o /tmp/out.json -w "%{http_code}" \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --retry 2 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${BASE_URL}/api/health-alert") || code="000"
           echo "HTTP $code"
-          cat /tmp/out.json
-          echo
+          # Print the body ONLY on a non-200, and truncate it. Action logs on
+          # a public repo are world-readable, and api/health-alert.js's catch
+          # block returns `String(e)` verbatim (see its final `res.status(500)
+          # .json({ error: String(e) })`) — a raw JS error can carry a
+          # Supabase URL, a connection string, or a key fragment. On success
+          # the body is only a counts summary and is not worth the exposure.
+          if [ "$code" != "200" ]; then
+            echo "--- response body (first 500 bytes) ---"
+            head -c 500 /tmp/out.json 2>/dev/null || true
+            echo
+            echo "--- end body ---"
+          fi
           # A non-200 here means the MONITOR is broken, which matters as much
           # as the thing it monitors — fail the workflow so it surfaces.
           [ "$code" = "200" ]
+
+      - name: The monitor itself is broken — tell a human
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Why an issue rather than a push notification: the delivery path
+        # this codebase already uses for "wake an admin up" is alertAdmins()
+        # in api/moderate.js — web-push over VAPID to every row of
+        # push_subscriptions whose user_id is an admin. Reproducing it here
+        # would need five repository secrets this workflow does not have:
+        # VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT, SUPABASE_URL
+        # and SUPABASE_SERVICE_KEY. That last one bypasses RLS on the entire
+        # database; putting it in GitHub Actions is a materially larger blast
+        # radius than the problem being solved, so it is deliberately not
+        # done. An issue reaches watchers/assignees with no new secret at all.
+        #
+        # Before this step existed, a broken monitor's ONLY signal was
+        # GitHub's own behaviour: an email to the last pusher of the
+        # scheduled workflow — on a quiet pre-launch repo, nobody who is
+        # looking.
+        #
+        # TODO(owner) — if you want the push path as well as (or instead of)
+        # the issue, the exact wiring is:
+        #   1. Add repo secrets VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY,
+        #      VAPID_SUBJECT, SUPABASE_URL, SUPABASE_SERVICE_KEY.
+        #   2. Prefer a new least-privilege Supabase key over the
+        #      service-role key if one can be scoped to read `profiles` and
+        #      `push_subscriptions` only.
+        #   3. Add `actions/setup-node` + `npm i web-push`, then a script
+        #      mirroring alertAdmins(): GET
+        #      profiles?is_admin=eq.true&select=id -> GET
+        #      push_subscriptions?user_id=in.(<ids>)&select=endpoint,p256dh,auth
+        #      -> webpush.sendNotification(..., JSON.stringify({title, body,
+        #      url: "/golsz-app.html?page=admin"})).
+        run: |
+          set -euo pipefail
+          TITLE="health-alert monitor is failing"
+          # Dedupe: this workflow runs every 15 minutes. Without this check a
+          # sustained outage opens ~96 issues a day and trains everyone to
+          # ignore the notification, which is the same as having no alert.
+          EXISTING="$(gh issue list --state open --search "$TITLE in:title" \
+            --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+          BODY="The health-alert workflow failed at $(date -u +%FT%TZ).
+
+          This means the MONITOR is broken — a non-200, a timeout, or a
+          missing CRON_SECRET. It does not by itself mean Scout is down, but
+          it does mean the outage detector is not detecting anything right now.
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi

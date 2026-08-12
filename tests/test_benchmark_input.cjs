@@ -96,7 +96,13 @@ ck("switching metric clears protocol answers", /setMetricKey\(key\);\s*\n\s*setP
 
 console.log("\n-- sports without a schema keep working --");
 ck("the picker only appears when the sport has a schema", /const sportMetrics = sport \? \(BENCHMARK_METRICS_BY_SPORT\[sport\] \|\| null\) : null;/.test(APP), true);
-ck("...and free text is the fallback branch", /\) : \(\s*\n\s*<input value=\{metric\} onChange=\{\(e\) => setMetric\(e\.target\.value\)\} placeholder=\{t\("benchmarks_metric_ph"\)\}/.test(APP), true);
+// The `[^>]*?` between onChange and placeholder is deliberate. This used to
+// require the two attributes to be literally adjacent, so adding an
+// aria-label to the input — a pure accessibility improvement that changes
+// no behaviour — turned this assertion red. The thing under test is that
+// the free-text input IS the else-branch of the schema check, not the order
+// someone happened to write the attributes in.
+ck("...and free text is the fallback branch", /\) : \(\s*\n\s*<input value=\{metric\} onChange=\{\(e\) => setMetric\(e\.target\.value\)\}[^>]*? placeholder=\{t\("benchmarks_metric_ph"\)\}/.test(APP), true);
 ck("even a schema sport can record something the list doesn't name",
    /<option value="__other">\{t\("bench_other_metric"\)\}<\/option>/.test(APP), true);
 ck("...and __other never becomes a metric_key",

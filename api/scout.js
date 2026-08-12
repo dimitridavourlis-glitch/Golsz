@@ -67,7 +67,13 @@ import { resolveActingAthlete } from "./_acting-for.js";
 // yet shipped) goal-relative readiness ENGINE vocabulary, which is a
 // different six-dimension concept. These five are the Passport Strength
 // sub-scores the athlete actually sees on Home today.
-import { computeReadiness, DIMENSION_LABEL, READINESS_DIMENSIONS as PASSPORT_STRENGTH_DIMENSIONS } from "./_readiness.js";
+// SPORTS_WITHOUT_POSITION comes along for the ride: _readiness.js owns the
+// list (golsz-app.html mirrors it to hide the position input), and triage
+// has to agree with it or a Golf athlete can never be assessment-ready. See
+// POSITIONLESS_SPORTS by PATHWAY_FIELD_PRIORITY for why the triage block
+// reads a mirror rather than this binding, and for the guard at the foot of
+// this file that pins the two together.
+import { computeReadiness, DIMENSION_LABEL, SPORTS_WITHOUT_POSITION, READINESS_DIMENSIONS as PASSPORT_STRENGTH_DIMENSIONS } from "./_readiness.js";
 import { evaluateEntitlements, hasFeature, planDisplayName, FEATURE_LABEL } from "./_entitlements.js";
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
@@ -400,6 +406,17 @@ function estimateTierCost(tierConfig, freshInputTokens, cachedInputTokens, outpu
 // tier's max_output_tokens as the output ceiling, since real output length
 // isn't known until after the call — would exceed this plan's hard
 // per-request ceiling. Never silently upgrades past what was selected.
+//
+// RETURNS null WHEN EVEN THE CHEAPEST TIER IS OVER THE CEILING.
+// The loop stops at idx 0 and this used to return TIER_ORDER[0] regardless —
+// so "economy costs more than this plan's HARD_MAX_COST_PER_REQUEST" was
+// answered by running the request on economy anyway. HARD_MAX was therefore
+// not a maximum; it was a preference between tiers, and the only genuinely
+// unaffordable request was the one it silently let through. A null says the
+// request cannot be served within the plan's cost ceiling at all, and the
+// caller turns that into a refusal. With the request-size ceiling in the
+// handler this should be unreachable in practice — that is the point: two
+// independent bounds, and neither one assumes the other is working.
 async function budgetGate(tier, plan, freshInputTokens, cachedInputTokens) {
   const byTier = await getModelConfigByTier();
   const hardMax = HARD_MAX_COST_PER_REQUEST[plan] || HARD_MAX_COST_PER_REQUEST.free;
@@ -409,6 +426,8 @@ async function budgetGate(tier, plan, freshInputTokens, cachedInputTokens) {
     if (estimateTierCost(cfg, freshInputTokens, cachedInputTokens, cfg.max_output_tokens) <= hardMax) break;
     idx -= 1;
   }
+  const floorCfg = byTier[TIER_ORDER[idx]];
+  if (idx === 0 && floorCfg && estimateTierCost(floorCfg, freshInputTokens, cachedInputTokens, floorCfg.max_output_tokens) > hardMax) return null;
   return TIER_ORDER[idx];
 }
 
@@ -712,6 +731,55 @@ function cacheKeyFor(intent, text, lang, tier, fingerprint) {
   return `${intent}:${lang}:${tier}:${fingerprint || "anon"}:${String(text || "").trim().toLowerCase().slice(0, 300)}`;
 }
 
+// THE CACHE IS PER-ATHLETE. IT IS NOT A SHARED CACHE ANY MORE.
+//
+// The fingerprint above was written to answer "has this athlete's situation
+// changed", and it does that well. It was never an answer to "is this the
+// same athlete", and that is the question the key was silently relying on it
+// to answer. Everything the fingerprint carries is COARSE — plan, 60 chars of
+// goal, four booleans and a composite score — while the reply it keys was
+// generated with the full AUTHORITATIVE CONTEXT block: club, city, country,
+// citizenship, age, GPA, height/weight, position, the Passport bio, and up to
+// 20 Scout Memory rows. Two new free-tier athletes who have written no goal
+// yet produce a byte-identical fingerprint, so athlete B could be handed a
+// reply that opens "Given you're at Lakeshore SC in Mississauga and you're
+// 15…". That is not a stale answer, it is another athlete's answer, and no
+// amount of state in the fingerprint fixes it — the failure is identity, not
+// freshness.
+//
+// SCOPED BY USER ID, DELIBERATELY, RATHER THAN BY ADDING MORE FIELDS.
+// The alternative — keep the cache cross-user and add every identity field
+// renderAuthoritativeContext() can emit — is a standing obligation to update
+// this function every time that renderer learns a new field, enforced by
+// nothing. It has already failed once (the plan-tier replay of 2026-08-11,
+// recorded above). Missing a field there does not degrade the cache, it
+// leaks one athlete's personal circumstances to another, so the fragile
+// option is the wrong one however small the hit-rate cost.
+//
+// What is actually lost: a cross-athlete hit on an identical
+// simple_knowledge question. What is kept: the repeat-question case, which
+// is what this cache was measured on — the same athlete asking the same
+// thing again inside the 24h TTL still hits. scout_faq (curated, admin-
+// written, genuinely shared) remains the mechanism for answers that are the
+// same for everyone, and it costs $0 rather than a cache read.
+function scopeFingerprintToAthlete(fingerprint, userId) {
+  return `u:${userId || "anon"}|${fingerprint || "anon"}`;
+}
+
+// The crash-recovery replay key, in ONE place so the read and all three
+// writes cannot drift apart.
+//
+// requestId is generated by the client and is only ever unique per browser,
+// not per platform — so `req:${requestId}` was a global namespace keyed on a
+// value we do not control. A collision (a repeated uuid, a copied request, a
+// client bug) hands one athlete another athlete's complete reply, with none
+// of the scoping the rest of this handler applies. Keyed by athlete first,
+// the worst a collision can now do is replay the same athlete's own reply,
+// which is exactly what this cache is for.
+function replayCacheKey(userId, requestId) {
+  return `req:${userId || "anon"}:${requestId}`;
+}
+
 // A LAST LINE OF DEFENCE. Any reply naming a plan tier is, by definition,
 // specific to the tier the athlete was on when it was written. Those are
 // never shared, whatever the key says.
@@ -747,11 +815,16 @@ async function setCachedResponse(cacheKey, intent, tier, response) {
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!url || !key) return;
   try {
-    await fetch(`${url}/rest/v1/scout_response_cache`, {
+    const r = await fetch(`${url}/rest/v1/scout_response_cache`, {
       method: "POST",
       headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
       body: JSON.stringify({ cache_key: cacheKey, intent, model_tier: tier, response, expires_at: new Date(Date.now() + RESPONSE_CACHE_TTL_MS).toISOString() }),
     });
+    // A rejected write here is not cosmetic: this is also the `req:` replay
+    // entry, so a silent failure means the client's 58s-timeout retry finds
+    // nothing and the athlete gets a 409 for a reply we already produced and
+    // already charged them for.
+    if (!r.ok) console.error("GOLSZ response cache write rejected:", r.status, await r.text());
   } catch (e) { console.error("GOLSZ response cache write failed:", e); }
 }
 
@@ -810,7 +883,7 @@ async function logRouting(answeredBy, classification, model, usage, extra) {
     const supaUrl = process.env.SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_KEY;
     if (!supaUrl || !serviceKey) return;
-    await fetch(`${supaUrl}/rest/v1/scout_routing_log`, {
+    const r = await fetch(`${supaUrl}/rest/v1/scout_routing_log`, {
       method: "POST",
       headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
       body: JSON.stringify({
@@ -854,6 +927,12 @@ async function logRouting(answeredBy, classification, model, usage, extra) {
         server_tool_calls: (extra && typeof extra.serverToolCalls === "number") ? extra.serverToolCalls : 0,
       }),
     });
+    // Migration 124's header records that unchecked writes here silently
+    // dropped routing rows for an unknown period, which is why the
+    // answered_by split could not be reconstructed after the fact. A rejected
+    // write is a hole in the cost and model-mix analytics, and analytics with
+    // invisible holes are worse than no analytics — they get believed.
+    if (!r.ok) console.error("GOLSZ routing-log write rejected:", r.status, await r.text());
   } catch (e) { console.error("GOLSZ routing-log write failed:", e); }
 }
 
@@ -2208,6 +2287,222 @@ function importBenchmarkDataset(rows) {
   };
 }
 
+// ---- CSV ingestion -------------------------------------------------------
+//
+// data/benchmark-templates/*.csv is the supply format: a researcher fills the
+// template in, and this turns that file into the row objects
+// importBenchmarkDataset() already validates. It is a PARSER ONLY. Every
+// judgement about whether a row is admissible — reference type, evidence
+// tier, sample-size gates, unit conversion, duplicates — stays in
+// importBenchmarkRecord()/importBenchmarkDataset(), which this calls rather
+// than reimplements. Nothing here repairs, defaults or coerces a value: every
+// field arrives at the importer as the string the file contained, because ""
+// means "the source did not report this" and turning that into 0 or null
+// would fabricate a measurement.
+//
+// No dependency: this repo has one (web-push), on purpose.
+
+// RFC 4180 tokenizer. Returns physical records, before any header binding.
+//
+// Handles, because real spreadsheet exports contain all of them:
+//   • quoted fields with embedded commas (measurement_protocol always has one)
+//   • embedded newlines inside quotes (free-text notes)
+//   • doubled "" as a literal quote
+//   • CRLF and LF line endings, mixed in the same file
+//   • a UTF-8 BOM (Excel writes one; without stripping it the first header
+//     name is "<BOM>sport" and every column reads as missing)
+//   • #-comment rows and blank rows
+//
+// Whitespace: an UNQUOTED field is trimmed (a hand-edited sheet leaves spaces
+// after commas, and " 12 " and "12" are the same reported number). A QUOTED
+// field is preserved exactly, except that a CRLF inside it becomes LF so the
+// same prose does not compare unequal depending on the OS that saved it.
+// Those two are the only transformations applied anywhere in this file.
+function parseCsvRecords(text) {
+  const src = String(text == null ? "" : text).replace(/^\uFEFF/, "");
+  const len = src.length;
+  const records = [];
+  const skipped = { comment: 0, blank: 0 };
+  const fatal = [];
+  let i = 0;
+  let line = 1;
+
+  while (i < len) {
+    // Record start. A '#' here — after optional indentation, and only here,
+    // never on a continuation line inside a quoted field — is a comment.
+    let j = i;
+    while (j < len && (src[j] === " " || src[j] === "\t")) j += 1;
+    if (src[j] === "#") {
+      while (i < len && src[i] !== "\n") i += 1;
+      if (i < len) i += 1;
+      skipped.comment += 1;
+      line += 1;
+      continue;
+    }
+    if (src[i] === "\n") { i += 1; line += 1; skipped.blank += 1; continue; }
+    if (src[i] === "\r" && src[i + 1] === "\n") { i += 2; line += 1; skipped.blank += 1; continue; }
+
+    const startLine = line;
+    const fields = [];
+    const errs = [];
+    let done = false;
+    while (!done) {
+      let field = "";
+      let lead = "";
+      while (i < len && (src[i] === " " || src[i] === "\t")) { lead += src[i]; i += 1; }
+      if (src[i] === '"') {
+        i += 1;
+        let closed = false;
+        while (i < len) {
+          const c = src[i];
+          if (c === '"') {
+            if (src[i + 1] === '"') { field += '"'; i += 2; continue; }
+            i += 1; closed = true; break;
+          }
+          if (c === "\r" && src[i + 1] === "\n") { field += "\n"; line += 1; i += 2; continue; }
+          if (c === "\n") { field += "\n"; line += 1; i += 1; continue; }
+          field += c; i += 1;
+        }
+        if (!closed) {
+          // Everything after an unclosed quote has been swallowed into this
+          // field, so the rest of the file is not trustworthy. Fatal, not a
+          // row-level rejection — a partial import here would be worse than
+          // no import.
+          errs.push("unterminated_quote");
+          fatal.push(`unterminated_quote:line_${startLine}`);
+          fields.push(field);
+          done = true;
+          break;
+        }
+        let k = i;
+        while (k < len && (src[k] === " " || src[k] === "\t")) k += 1;
+        const atEnd = k >= len || src[k] === "," || src[k] === "\n" || (src[k] === "\r" && src[k + 1] === "\n");
+        if (atEnd) {
+          i = k;
+        } else {
+          // e.g.  "a"b  — malformed. Consume it so the record still
+          // terminates predictably, and reject the row rather than guess.
+          errs.push("text_after_closing_quote");
+          while (i < len && src[i] !== "," && src[i] !== "\n") {
+            if (src[i] === "\r" && src[i + 1] === "\n") break;
+            field += src[i]; i += 1;
+          }
+        }
+      } else {
+        field = lead;
+        while (i < len && src[i] !== "," && src[i] !== "\n") {
+          if (src[i] === "\r" && src[i + 1] === "\n") break;
+          field += src[i]; i += 1;
+        }
+        field = field.trim();
+      }
+      fields.push(field);
+      if (i >= len) done = true;
+      else if (src[i] === ",") i += 1;
+      else if (src[i] === "\r" && src[i + 1] === "\n") { i += 2; line += 1; done = true; }
+      else if (src[i] === "\n") { i += 1; line += 1; done = true; }
+      else i += 1; // lone CR outside quotes; nothing else can reach here
+    }
+    // A row of nothing but empty fields (",,,," — Excel's trailing row) is
+    // blank, not 33 unreported measurements.
+    if (fields.every((v) => v === "")) { skipped.blank += 1; continue; }
+    records.push({ line: startLine, fields, errors: errs });
+    if (fatal.length) break;
+  }
+  return { records, skipped, fatal };
+}
+
+// Binds records to BENCHMARK_IMPORT_COLUMNS BY NAME.
+//
+// Position binding is the failure this is shaped to prevent: someone drags a
+// column in a spreadsheet, every subsequent value shifts one place, and
+// source_date lands in population_description without a single error. So the
+// header is checked as a SET — a reordered file is accepted and bound
+// correctly, a file missing a column or carrying an unrecognised one is
+// refused outright rather than imported shifted.
+//
+// Returns { ok, header, rows, lines, skipped, errors, rejected }:
+//   ok        the FILE parsed and its header is the contract. Says nothing
+//             about whether any row is admissible — that is the importer's
+//             call, made per row.
+//   rows      row objects, every value a string, ready for
+//             importBenchmarkDataset()
+//   lines     lines[k] is the source line of rows[k], so a rejection can name
+//             a line in the file the researcher is editing
+//   rejected  rows refused before validation (wrong field count, malformed
+//             quoting) — never truncated or padded into shape
+function parseBenchmarkCsv(text, options) {
+  const columns = (options && options.columns) || BENCHMARK_IMPORT_COLUMNS;
+  const { records, skipped, fatal } = parseCsvRecords(text);
+  const errors = fatal.slice();
+  if (!records.length) {
+    errors.push("no_header_row");
+    return { ok: false, header: null, rows: [], lines: [], skipped, errors, rejected: [] };
+  }
+  const header = records[0].fields;
+  for (const e of records[0].errors) errors.push(`header_${e}`);
+  const seen = new Set();
+  for (const h of header) {
+    if (seen.has(h)) errors.push(`duplicate_column:${h}`);
+    seen.add(h);
+  }
+  for (const c of columns) if (!seen.has(c)) errors.push(`missing_column:${c}`);
+  for (const h of header) if (!columns.includes(h)) errors.push(`unknown_column:${h}`);
+  if (errors.length) return { ok: false, header, rows: [], lines: [], skipped, errors, rejected: [] };
+
+  const rows = [], lines = [], rejected = [];
+  for (let r = 1; r < records.length; r += 1) {
+    const rec = records[r];
+    const rowErrors = rec.errors.slice();
+    if (rec.fields.length !== header.length) {
+      rowErrors.push(`field_count:expected_${header.length}_got_${rec.fields.length}`);
+    }
+    if (rowErrors.length) { rejected.push({ line: rec.line, errors: rowErrors, raw: rec.fields }); continue; }
+    const obj = {};
+    for (let c = 0; c < header.length; c += 1) obj[header[c]] = rec.fields[c];
+    rows.push(obj);
+    lines.push(rec.line);
+  }
+  return { ok: true, header, rows, lines, skipped, errors: [], rejected };
+}
+
+// CSV text -> the SAME validated import report importBenchmarkDataset()
+// produces, with the parse stage reported alongside it and each rejection
+// carrying the source line it came from.
+//
+// ok=false means the FILE could not be read as the contract (bad header,
+// unterminated quote). ok=true means it was read; individual rows may still
+// be rejected, and `accepted` is the only thing that ever counted as imported.
+//
+// This does no I/O and writes nothing. Reading the file is the caller's job
+// (see data/benchmark-templates/README.md); persisting `accepted` is
+// deliberately unbuilt — there is no benchmark-population table yet, only the
+// in-memory BENCHMARK_BANDS.
+function importBenchmarkCsv(text, options) {
+  const parsed = parseBenchmarkCsv(text, options);
+  const parseReport = {
+    header: parsed.header,
+    skipped: parsed.skipped,
+    errors: parsed.errors,
+    malformed_rows: parsed.rejected,
+  };
+  if (!parsed.ok) {
+    return {
+      ok: false, stage: "parse", parse: parseReport,
+      total: 0, accepted_count: 0, rejected_count: 0, by_sample_tier: {},
+      percentile_eligible_count: 0, accepted: [], rejected: [],
+    };
+  }
+  const report = importBenchmarkDataset(parsed.rows);
+  return {
+    ok: true, stage: "import", parse: parseReport,
+    ...report,
+    // Additive only: the importer's own {row, errors, raw} shape is kept
+    // intact and a file line number is attached to it.
+    rejected: report.rejected.map((r) => ({ ...r, line: parsed.lines[r.row] == null ? null : parsed.lines[r.row] })),
+  };
+}
+
 // ---- Comparison engine (NOT scoring) ------------------------------------
 //
 // Returns a described comparison or an honest refusal. It never produces a
@@ -2478,9 +2773,45 @@ const PATHWAY_FIELD_PRIORITY = {
   },
 };
 
+// SOME SPORTS HAVE NO POSITION, AND EVERY ROW ABOVE DEMANDED ONE.
+//
+// `position` is critical in DEFAULT and in all four named pathways, so
+// isAssessmentReady() held it against every athlete in every sport. But
+// api/_readiness.js defines SPORTS_WITHOUT_POSITION = ["Golf", "Bowling"]
+// and golsz-app.html hides the position input for exactly those sports — the
+// athlete is never shown a field to fill in, so it can never be filled in,
+// so sufficient_for_preliminary_assessment was permanently false for them.
+// Scout does not fail loudly there: it just keeps interviewing, forever,
+// asking for the one thing the product refuses to collect. A golfer could
+// complete every other field in the app and never once be assessed.
+//
+// WHY THIS IS A MIRROR AND NOT THE IMPORTED BINDING
+// The list is imported at the top of this file and that import is the source
+// of truth. It cannot be referenced HERE: tests/test_triage_readiness.cjs
+// eval()s this whole region of the file in isolation (per tests/README.md's
+// "extract, never retype" rule) to exercise classifyGoalText /
+// pathwayPriorityFor / isAssessmentReady against the real source, and a
+// module-scope import is not in scope inside that eval — a free reference
+// would throw ReferenceError the moment the extracted function ran. The
+// mirror is pinned to the import by assertPositionlessSportsMirror() at the
+// foot of this file, which runs once per cold start and shouts if _readiness
+// ever adds a third sport without this list following it.
+const POSITIONLESS_SPORTS = ["Golf", "Bowling"];
+
 function pathwayPriorityFor(sport, pathwayType) {
   const key = `${String(sport || "").toLowerCase().trim()}:${pathwayType || ""}`;
-  return PATHWAY_FIELD_PRIORITY[key] || PATHWAY_FIELD_PRIORITY.DEFAULT;
+  const base = PATHWAY_FIELD_PRIORITY[key] || PATHWAY_FIELD_PRIORITY.DEFAULT;
+  // Case-insensitive: `sport` arrives straight off athletes.sport, and the
+  // triage key above already lowercases it for the same reason.
+  const positionless = POSITIONLESS_SPORTS.some((s) => s.toLowerCase() === String(sport || "").toLowerCase().trim());
+  if (!positionless || !base.critical.includes("position")) return base;
+  // Moved to deprioritized rather than simply dropped, so the reason stays
+  // visible in the config the way gpa/grad_year's demotion already is.
+  return {
+    ...base,
+    critical: base.critical.filter((f) => f !== "position"),
+    deprioritized: [...base.deprioritized, "position"],
+  };
 }
 
 // Is this field actually known? Hard Passport columns outrank scout_context,
@@ -2794,11 +3125,17 @@ async function persistScoutContext(userId, updates) {
   if (!Object.keys(patch).length) return;
 
   try {
-    await fetch(`${supaUrl}/rest/v1/rpc/merge_scout_context`, {
+    const r = await fetch(`${supaUrl}/rest/v1/rpc/merge_scout_context`, {
       method: "POST",
       headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
       body: JSON.stringify({ p_user: userId, p_updates: patch }),
     });
+    // Everything Scout learned this turn lives in this one call. A rejected
+    // write means the next message re-asks a question the athlete already
+    // answered — the exact "don't re-ask known fields" failure the
+    // authoritative-context layer exists to prevent — and nothing would have
+    // said so.
+    if (!r.ok) console.error("GOLSZ scout context persist rejected:", r.status, await r.text());
   } catch (e) { console.error("GOLSZ scout context persist failed:", e); }
 }
 
@@ -3076,21 +3413,45 @@ const META_COMMENTARY_PATTERNS = [
   /\bthe athlete(?:'s)?\b/i,
   /\bthe user(?:'s)?\b/i,
 ];
+// THIS RAN ON EVERY REPLY, INCLUDING THE ONES IT HAD NOTHING TO REMOVE FROM.
+//
+// Paragraphs were split on \n{2,} and reassembled, but the sentences INSIDE
+// each paragraph were split on \s+ — which matches a newline — and rejoined
+// with a single space. So any single \n that happened to follow a sentence
+// terminator was quietly converted to a space, in every reply, whether or not
+// a single sentence was dropped. Numbered steps ("1. Retest your 10m.\n2. Add
+// two sessions a week.") came out as one run-on line. The Scout bubble renders
+// with white-space: pre-wrap precisely so that structure survives, so the loss
+// was visible to the athlete on every list Scout has ever written.
+//
+// The separator is now CAPTURED and put back exactly as it was found, so this
+// function only ever removes whole sentences — it never reformats the text
+// around them. Splitting on [ \t]+ or a single newline still finds the same
+// sentence boundaries the meta-commentary patterns are matched against, so
+// nothing about the stripping itself changes (see the mixed-paragraph cases in
+// tests/test_precedence_adversarial.cjs).
 function stripMetaCommentary(text) {
   if (typeof text !== "string" || !text) return text;
   const paragraphs = text.split(/\n{2,}/);
   const keptParagraphs = [];
   let dropped = 0;
   for (const para of paragraphs) {
-    // Split on sentence boundaries, keeping the terminator with its sentence.
-    const sentences = para.split(/(?<=[.!?])\s+/);
-    const kept = sentences.filter((s) => {
-      if (!s.trim()) return false;
-      const isMeta = META_COMMENTARY_PATTERNS.some((re) => re.test(s));
-      if (isMeta) dropped++;
-      return !isMeta;
-    });
-    if (kept.length) keptParagraphs.push(kept.join(" ").trim());
+    // Split on sentence boundaries, keeping the terminator with its sentence
+    // AND capturing the whitespace that separated them. String.split with a
+    // capture group interleaves the separators into the result, so parts is
+    // [sentence, sep, sentence, sep, ..., sentence].
+    const parts = para.split(/(?<=[.!?])([ \t]*\n[ \t]*|[ \t]+)/);
+    let kept = "";
+    for (let i = 0; i < parts.length; i += 2) {
+      const sentence = parts[i];
+      const separator = parts[i + 1] || "";
+      if (!sentence || !sentence.trim()) continue;
+      if (META_COMMENTARY_PATTERNS.some((re) => re.test(sentence))) { dropped++; continue; }
+      // The separator that FOLLOWED this sentence — a dropped sentence takes
+      // its own trailing whitespace with it, so nothing is left dangling.
+      kept += sentence + separator;
+    }
+    if (kept.trim()) keptParagraphs.push(kept.trim());
   }
   const out = keptParagraphs.join("\n\n").trim();
   if (dropped) console.warn("GOLSZ meta-commentary removed from a reply:", JSON.stringify({ sentencesDropped: dropped, survivedChars: out.length }));
@@ -3330,11 +3691,15 @@ async function persistAiMeta(userId, classification, assessmentReady) {
   };
 
   try {
-    await fetch(`${supaUrl}/rest/v1/rpc/merge_scout_context`, {
+    const r = await fetch(`${supaUrl}/rest/v1/rpc/merge_scout_context`, {
       method: "POST",
       headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
       body: JSON.stringify({ p_user: userId, p_updates: { ai_meta: aiMeta } }),
     });
+    // assessment_ready rides in here, and the client's free->paid conversion
+    // moment reads it. A silently rejected write leaves that moment reading a
+    // stale value forever.
+    if (!r.ok) console.error("GOLSZ scout ai_meta persist rejected:", r.status, await r.text());
   } catch (e) { console.error("GOLSZ scout ai_meta persist failed:", e); }
 }
 
@@ -3352,7 +3717,7 @@ async function persistScoutSummary(userId, conversationId, summary) {
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
   if (!supaUrl || !serviceKey) return;
   try {
-    await fetch(`${supaUrl}/rest/v1/scout_conversation_summaries`, {
+    const r = await fetch(`${supaUrl}/rest/v1/scout_conversation_summaries`, {
       method: "POST",
       headers: {
         apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json",
@@ -3360,6 +3725,10 @@ async function persistScoutSummary(userId, conversationId, summary) {
       },
       body: JSON.stringify({ conversation_id: conversationId, user_id: userId, summary: summary.slice(0, 2000), updated_at: new Date().toISOString() }),
     });
+    // The summary is what lets the client send bounded history instead of the
+    // whole transcript. If this keeps failing, continuity degrades message by
+    // message with no other symptom.
+    if (!r.ok) console.error("GOLSZ scout summary persist rejected:", r.status, await r.text());
   } catch (e) { console.error("GOLSZ scout summary persist failed:", e); }
 }
 
@@ -3741,6 +4110,14 @@ async function searchEvents(input) {
   }
 }
 
+// The answering tool set, named once so the two call sites that carry it
+// (the Haiku path and runDeepReply's loop) cannot end up offering different
+// tools, and so a caller can drop it wholesale by passing null. Anthropic's
+// own web_search plus the two GOLSZ database tools; the block is part of the
+// cache_control'd prefix, which is why it stays a single shared array rather
+// than being rebuilt per request.
+const SCOUT_SEARCH_TOOLS = [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL, SEARCH_EVENTS_TOOL];
+
 // ---- Intent classifier / router ----
 // Classifies every message into the taxonomy below using a cheap Haiku
 // call. Validated against real production traffic in shadow mode first
@@ -3836,15 +4213,42 @@ function buildClassifierSystem(faqList) {
   return CLASSIFIER_SYSTEM + `\n\nFAQ_ID MATCHING: Set "faq_id" to the id of a listed FAQ only if the user's message is genuinely asking the same underlying question, even if worded completely differently (a paraphrase, or an unrelated-looking real-world phrasing of the same question, both count). Leave it null if the user adds their own specific details, wants a personalized comparison, or wants next-step advice beyond what the FAQ answer covers — even if it's topically related. When unsure, prefer null.\n\nFAQ list (id: question):\n${list}`;
 }
 
+// Null-guarded on every hop, because the FIRST call to this runs BEFORE the
+// handler's try block. `{"messages":[null]}` used to throw a TypeError on
+// `m.role` there, and an exception outside the try is a raw platform 500:
+// no error_log row (logError only ever runs inside the catch), no
+// scout_routing_log row, nothing in the Admin Panel's Errors tab — the one
+// failure shape this file is otherwise built to make visible. A malformed
+// body is a 400 the caller can act on, not an invisible crash, and the
+// validation below can only produce that 400 if this returns rather than
+// throws.
 function latestUserText(conversation) {
-  const last = [...conversation].reverse().find((m) => m.role === "user");
+  if (!Array.isArray(conversation)) return "";
+  const last = [...conversation].reverse().find((m) => m && m.role === "user");
   if (!last) return "";
   if (typeof last.content === "string") return last.content;
   if (Array.isArray(last.content)) {
-    const textBlock = last.content.find((b) => b.type === "text");
-    return textBlock ? textBlock.text : "";
+    const textBlock = last.content.find((b) => b && b.type === "text");
+    return textBlock && typeof textBlock.text === "string" ? textBlock.text : "";
   }
   return "";
+}
+
+// The SAME last user turn latestUserText() reads, but every text block of it
+// summed rather than only the first.
+//
+// MAX_MESSAGE_LENGTH was enforced against latestUserText(), which returns
+// `content.find(b => b.type === "text")` — the FIRST text block. A turn shaped
+// [{text:"hi"}, {text:<600KB>}] therefore measured 2 characters and sailed
+// through. Anthropic concatenates every text block in the turn, so the model
+// (and the bill) saw all 600KB of it.
+function latestUserTextLength(conversation) {
+  if (!Array.isArray(conversation)) return 0;
+  const last = [...conversation].reverse().find((m) => m && m.role === "user");
+  if (!last) return 0;
+  if (typeof last.content === "string") return last.content.length;
+  if (!Array.isArray(last.content)) return 0;
+  return last.content.reduce((sum, b) => sum + ((b && typeof b.text === "string") ? b.text.length : 0), 0);
 }
 
 // The intent taxonomy, as an actual set rather than an assumption.
@@ -3938,8 +4342,14 @@ async function classifyIntent(key, conversation, faqList, authoritativeBlock) {
       // Failover & Discovery Polish pass added two more short fields
       // (conversation_stage, next_best_action) to the JSON contract, which
       // need a little more room than the 300 budget that was tuned for the
-      // previous (smaller) schema.
-      maxTokens: 300,
+      // previous (smaller) schema. The comment and the value disagreed until
+      // 2026-08-12 — the number was left at 300 while the sentence above
+      // described the raise to 350, so the schema this call was re-tuned for
+      // was still being generated into the OLD budget. A truncated classifier
+      // response fails JSON.parse and falls through to { raw }, which loses
+      // intent, needs_tool, summary_so_far and next_best_action all at once
+      // (the same blast radius the stop-sequence note below documents).
+      maxTokens: 350,
       // NO stop sequence. There used to be stopSequences: ["}"], justified by
       // "the schema is always a flat, single-level object — exactly one
       // closing brace". That stopped being true when next_best_action was
@@ -5057,17 +5467,38 @@ async function getAthleteState(userId) {
 async function reserveScoutQuestion(userId, limit) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key || !userId) return { allowed: true, used: 0, limit };
+  if (!url || !key || !userId) return { allowed: true, used: 0, limit, reserved: false };
   try {
     const r = await fetch(url + "/rest/v1/rpc/reserve_scout_question", {
       method: "POST",
       headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
       body: JSON.stringify({ p_user: userId, p_plan_limit: limit }),
     });
+    // FAILING OPEN MEANS FAILING OPEN ON EVERY KIND OF FAILURE.
+    // A thrown network error hit the catch below and correctly returned the
+    // permissive default. A non-2xx PostgREST response did not: it parses
+    // cleanly into an OBJECT ({code, message, hint, details}), which passed
+    // the typeof check and was returned as the reservation. That object has
+    // no `allowed`, so the handler read undefined as "not allowed" and told
+    // an athlete who had used nothing today "Daily Scout limit reached" —
+    // a 402 upsell shown because OUR metering broke. The documented posture
+    // is that a Supabase hiccup must never block a real question; r.ok is
+    // what makes that true for the failure mode that actually happens.
+    if (!r.ok) {
+      console.error("GOLSZ reserve_scout_question failed:", r.status, JSON.stringify(await r.json().catch(() => null)));
+      return { allowed: true, used: 0, limit, reserved: false };
+    }
     const data = await r.json();
-    return data && typeof data === "object" ? data : { allowed: true, used: 0, limit };
-  } catch {
-    return { allowed: true, used: 0, limit };
+    if (!data || typeof data !== "object" || typeof data.allowed !== "boolean") {
+      console.error("GOLSZ reserve_scout_question returned an unusable body:", JSON.stringify(data));
+      return { allowed: true, used: 0, limit, reserved: false };
+    }
+    // reserved distinguishes "the row was really incremented" from the
+    // fail-open default — see the release logic in the handler.
+    return { ...data, reserved: true };
+  } catch (e) {
+    console.error("GOLSZ reserve_scout_question threw:", e);
+    return { allowed: true, used: 0, limit, reserved: false };
   }
 }
 
@@ -5105,10 +5536,28 @@ async function reserveFreeAiQuestion(userId, limit) {
       headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
       body: JSON.stringify({ p_user: userId, p_lifetime_limit: limit }),
     });
+    // Same fail-open discipline as reserveScoutQuestion above, and the same
+    // trap it just had fixed: a non-2xx PostgREST response parses into an
+    // OBJECT ({code, message, hint}), which passed the old typeof check and
+    // was returned as the reservation. With no `allowed` on it, the handler
+    // read undefined as "not allowed" and told a brand-new free account
+    // "You've used all your free GOLSZ Scout questions" on question one.
+    // That is worse than the daily-limit version of this bug — it is a hard
+    // upsell shown to someone at zero usage, on their first impression of
+    // the product, because OUR metering broke.
+    if (!r.ok) {
+      console.error("GOLSZ reserve_free_ai_question failed:", r.status, JSON.stringify(await r.json().catch(() => null)));
+      return { allowed: true, used: 0, limit, reserved: false };
+    }
     const data = await r.json();
-    return data && typeof data === "object" ? data : { allowed: true, used: 0, limit };
-  } catch {
-    return { allowed: true, used: 0, limit };
+    if (!data || typeof data !== "object" || typeof data.allowed !== "boolean") {
+      console.error("GOLSZ reserve_free_ai_question returned an unusable body:", JSON.stringify(data));
+      return { allowed: true, used: 0, limit, reserved: false };
+    }
+    return { ...data, reserved: true };
+  } catch (e) {
+    console.error("GOLSZ reserve_free_ai_question threw:", e);
+    return { allowed: true, used: 0, limit, reserved: false };
   }
 }
 
@@ -5135,11 +5584,18 @@ async function recordScoutUsageCost(userId, cost, inputTokens, outputTokens) {
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!url || !key) return;
   try {
-    await fetch(url + "/rest/v1/rpc/record_scout_usage_cost", {
+    const r = await fetch(url + "/rest/v1/rpc/record_scout_usage_cost", {
       method: "POST",
       headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
       body: JSON.stringify({ p_user: userId, p_cost: cost || 0, p_input_tokens: inputTokens || 0, p_output_tokens: outputTokens || 0 }),
     });
+    // THE MOST CONSEQUENTIAL UNCHECKED WRITE IN THIS FILE.
+    // scout_daily_usage.total_cost is what getPlatformSpend() reads, and
+    // SCOUT_DAILY_SPEND_LIMIT / SCOUT_MONTHLY_SPEND_LIMIT are checked against
+    // it before a question is ever reserved. If these writes fail silently,
+    // recorded spend simply stops rising while real spend does not — the
+    // emergency brake never trips, and the first sign of it is the invoice.
+    if (!r.ok) console.error("GOLSZ record_scout_usage_cost rejected:", r.status, await r.text());
   } catch (e) { console.error("GOLSZ record_scout_usage_cost failed:", e); }
 }
 
@@ -5227,8 +5683,18 @@ async function continueIfTruncated(key, cfg, systemPrompt, systemDynamic, baseMe
   return out;
 }
 
-async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, baseConversation, deadlineMs, maxToolTurns) {
+// searchTools sits BEFORE maxToolTurns deliberately: a caller that wants to
+// cap the loop almost always wants to say something about the tools too, and
+// the two are set together at the one gate that owns both. Pass null to run
+// the reply with no tools at all — callAnthropic omits the key entirely
+// rather than sending an empty array, so the request is byte-identical to
+// the no-tools fallback the failover path already uses.
+async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, baseConversation, deadlineMs, searchTools, maxToolTurns) {
   const conversation = baseConversation.slice();
+  // Undefined means "the caller did not say" — keep the standard set, so
+  // every pre-existing call site stays correct as written. Only an explicit
+  // null drops them.
+  const TOOLS = searchTools === undefined ? SCOUT_SEARCH_TOOLS : (searchTools || null);
   // Free accounts get ONE verification turn (see FREE_VERIFY_TURNS at the
   // free-plan gate); everything else keeps the validated 4. Defaulting to 4
   // rather than requiring the argument keeps every existing call site — and
@@ -5266,7 +5732,7 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, ba
       systemDynamic,
       messages: conversation,
       maxTokens: deepTierConfig.max_output_tokens,
-      tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL, SEARCH_EVENTS_TOOL],
+      tools: TOOLS,
     });
     data = result.data;
     if (!result.ok) return { ok: false, data, toolBudgetExhausted };
@@ -5326,9 +5792,47 @@ export default async function handler(req, res) {
   if (typeof body === "string") { try { body = JSON.parse(body); } catch { body = {}; } }
   const messages = body && body.messages;
   if (!Array.isArray(messages)) return res.status(400).json({ error: "messages[] required" });
+  // ---- Request-size ceiling. THE ONE PLACE A PAYLOAD IS ACTUALLY REFUSED --
+  //
+  // Nothing here bounded the request before. MAX_MESSAGE_LENGTH was applied
+  // to latestUserText(), which reads only the FIRST text block of the last
+  // user turn, so a 2-character first block followed by a 600KB second block
+  // measured 2 — and nothing measured the OTHER turns at all. The only thing
+  // downstream that looks at total size is budgetGate(), and it never
+  // refused: it walked down the tiers and served the request on the cheapest
+  // one, so a caller could push arbitrarily many tokens through Haiku and the
+  // per-request cost ceiling those constants describe was never a ceiling.
+  //
+  // WHY 64KB. The real client (golsz-app.html, Scout.send) sends
+  // RECENT_TURNS = 6 messages plus a separate summary field. A user turn is
+  // capped at MAX_MESSAGE_LENGTH below and an assistant turn is bounded by
+  // the tier's max_output_tokens (2048 tokens, ~8KB of text), so a genuine
+  // worst-case conversation is roughly 48KB and a typical one is under 10KB.
+  // 64KB clears the honest worst case with room to spare while still being a
+  // real bound — it is not a number tuned to any observed request, it is the
+  // point past which the payload cannot have come from this product.
+  //
+  // Measured on the serialized array, not on text alone, because the cost is
+  // driven by everything the model receives (block wrappers, tool results
+  // echoed back into history) and because it is the one number that cannot be
+  // gamed by moving the bytes into a different field.
   const MAX_MESSAGE_LENGTH = 4000;
+  const MAX_CONVERSATION_BYTES = 64 * 1024;
+  // Turn count is a separate axis: 5,000 tiny turns is well under the byte
+  // cap and still a multi-thousand-message context. 40 is ~7x what the client
+  // sends, so no real conversation reaches it.
+  const MAX_CONVERSATION_TURNS = 40;
+  if (messages.length > MAX_CONVERSATION_TURNS) {
+    return res.status(400).json({ error: "That conversation is too long to send. Start a new chat and Scout will carry the summary over.", code: "conversation_too_large" });
+  }
+  let serializedSize = 0;
+  try { serializedSize = JSON.stringify(messages).length; } catch { serializedSize = Infinity; }
+  if (serializedSize > MAX_CONVERSATION_BYTES) {
+    return res.status(400).json({ error: "That conversation is too long to send. Start a new chat and Scout will carry the summary over.", code: "conversation_too_large" });
+  }
+  // Sums EVERY text block of the last user turn — see latestUserTextLength.
   const incomingText = latestUserText(messages);
-  if (incomingText && incomingText.length > MAX_MESSAGE_LENGTH) return res.status(400).json({ error: "Message is too long." });
+  if (latestUserTextLength(messages) > MAX_MESSAGE_LENGTH) return res.status(400).json({ error: "Message is too long." });
   const langName = LANG_NAMES[body && body.lang];
   // Language-adjusted only — the specialist framing (Phase 2d) is layered
   // in below, once recommendedSpecialist is known from classification.
@@ -5457,7 +5961,7 @@ export default async function handler(req, res) {
       // If the finished reply is still in the response cache, hand it back
       // instead. Only a request genuinely still in flight falls through to
       // the conflict.
-      const replayed = await getCachedResponse(`req:${requestId}`);
+      const replayed = await getCachedResponse(replayCacheKey(userId, requestId));
       if (replayed) {
         console.log("GOLSZ scout replaying completed reply for requestId:", requestId);
         return res.status(200).json(replayed);
@@ -5515,6 +6019,9 @@ export default async function handler(req, res) {
     athleteCountry = athleteState.country;
     stateDigest = athleteStateDigest(athleteState, plan, goalDefined);
     cacheFingerprint = responseCacheFingerprint(plan, goalText, athleteState);
+    // Identity, then state — in that order, and identity is not optional. See
+    // scopeFingerprintToAthlete() for why this cache stopped being shared.
+    cacheFingerprint = scopeFingerprintToAthlete(cacheFingerprint, userId);
     userPlan = plan;
     userIsAdmin = isAdmin;
     userAiUnlimited = aiUnlimited;
@@ -5691,7 +6198,15 @@ A newer source always beats an older one at the same level. If memory says one t
 
     if (!isAdmin && !aiUnlimited) {
       const reservation = await reserveScoutQuestion(userId, dailyLimit);
-      reservedQuestion = true;
+      // ONLY TRUE WHEN A SLOT WAS ACTUALLY TAKEN.
+      // This was set unconditionally, including on reserveScoutQuestion's
+      // fail-open path where the RPC never ran and nothing was counted. Every
+      // release site below is guarded on this flag, so a provider failure on
+      // a request whose metering had ALSO failed would call
+      // release_scout_question anyway and decrement a slot from a real,
+      // unrelated question the athlete had already asked — handing back
+      // allowance we never took. The flag now means what its name says.
+      reservedQuestion = reservation.reserved === true;
       questionsRemaining = Math.max(dailyLimit - (Number(reservation.used) || 0), 0);
       if (!reservation.allowed) {
         const message = plan === "elite"
@@ -5869,7 +6384,35 @@ A newer source always beats an older one at the same level. If memory says one t
     // while web_lookup falls through capped at FREE_VERIFY_TURNS.
     const FREE_VERIFY_TURNS = 1;
     let maxToolTurns = 4;
-    if (userPlan === "free" && classification && classification.needs_tool && !userIsAdmin && !userAiUnlimited) {
+    // Whether the answering call may carry the search tools at all. Only the
+    // no-classification branch below ever drops them — see there for why.
+    let searchToolsAllowed = true;
+    // A CLASSIFICATION WE COULD NOT USE IS NOT A CLASSIFICATION SAYING "NO
+    // TOOL NEEDED", AND THE GUARD USED TO READ IT AS ONE.
+    //
+    // `classification` is null whenever the 7s cap above expires, and carries
+    // .error (provider failure) or .raw (unparseable JSON) otherwise — three
+    // distinct failures, all of which made `classification && needs_tool`
+    // falsy, so the whole block was skipped and the request went on to the
+    // full four-turn Sonnet loop WITH the player-database tool. That is
+    // precisely the spend the block exists to prevent, reachable on a free
+    // account by nothing more than the classifier being slow. The same three
+    // failures already route to Sonnet by design (shouldRouteToHaiku returns
+    // false for each), so they land on the most expensive path available and
+    // then find no gate there.
+    //
+    // Unknown means "may need a tool", not "needs none": cap the loop and
+    // drop the tools. A free athlete still gets a real Sonnet answer from
+    // their own record, which is what almost every question needs — what
+    // they lose is a research loop nobody established they needed. Dropping
+    // the tools costs the shared prompt-cache prefix on this one request;
+    // that is cents against a four-turn loop's dollars.
+    //
+    // Deliberately narrow: paid tiers, admins and ai_unlimited accounts are
+    // untouched in all three failure cases, exactly as before.
+    const classificationUsable = !!(classification && !classification.error && !classification.raw);
+    const freeAccountGated = userPlan === "free" && !userIsAdmin && !userAiUnlimited;
+    if (freeAccountGated && classificationUsable && classification.needs_tool) {
       if (classification.intent === "db_lookup") {
         if (reservedQuestion) await releaseScoutQuestion(userId);
         if (reservedFreeAi) await releaseFreeAiQuestion(userId);
@@ -5880,6 +6423,10 @@ A newer source always beats an older one at the same level. If memory says one t
         });
       }
       maxToolTurns = FREE_VERIFY_TURNS;
+    } else if (freeAccountGated && !classificationUsable) {
+      maxToolTurns = FREE_VERIFY_TURNS;
+      searchToolsAllowed = false;
+      console.log("GOLSZ free account with no usable classification — tools dropped, tool turns capped at", FREE_VERIFY_TURNS);
     }
 
     // ---- Multi-Model tier selection (approved Cost-Control plan) ----
@@ -5909,6 +6456,26 @@ A newer source always beats an older one at the same level. If memory says one t
     const cachedInputTokens = Math.ceil(systemStatic.length / 4);
     const freshInputTokens = Math.ceil((systemDynamic.length + JSON.stringify(conversation).length) / 4);
     modelTier = await budgetGate(modelTier, planForRouting, freshInputTokens, cachedInputTokens);
+    // null means not even the economy tier fits this plan's hard per-request
+    // ceiling — so there is no model to answer on, and the honest thing is to
+    // say so rather than to run it anyway on the cheapest one (which is what
+    // happened before budgetGate could refuse). The reservation is released
+    // first: no answer was produced, and "retries caused by our own limits
+    // must not count as additional user questions" applies here exactly as it
+    // does on the failover path. Practically unreachable behind the 64KB
+    // request ceiling in the handler preamble; kept because the two bounds
+    // are meant to be independent.
+    if (!modelTier) {
+      if (reservedQuestion) await releaseScoutQuestion(userId);
+      if (reservedFreeAi) await releaseFreeAiQuestion(userId);
+      console.error("GOLSZ scout refused a request no tier can afford:", JSON.stringify({ plan: planForRouting, freshInputTokens, cachedInputTokens }));
+      await logError("api/scout.js", "Request exceeds the per-request cost ceiling on every tier", { detail: JSON.stringify({ plan: planForRouting, freshInputTokens, cachedInputTokens }) });
+      return res.status(400).json({
+        error: "That message is too long for Scout to work with. Try asking it in fewer words, or start a new chat.",
+        code: "request_too_expensive",
+        scout_usage: reservedQuestion ? { remaining: questionsRemaining, limit: dailyLimit } : undefined,
+      });
+    }
     const byTier = await getModelConfigByTier();
     const tierConfig = byTier[modelTier] || ANTHROPIC_DEFAULTS[modelTier];
     const useHaiku = modelTier === "economy" || modelTier === "standard";
@@ -5962,7 +6529,13 @@ A newer source always beats an older one at the same level. If memory says one t
         systemDynamic,
         messages: conversationForModel,
         maxTokens: tierConfig.max_output_tokens,
-        tools: [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL, SEARCH_EVENTS_TOOL],
+        // Normally carried even though the classifier said no tool is needed
+        // (see the block comment above — it keeps the cacheable prefix over
+        // Haiku's 4,096-token minimum). Dropped only when the free-plan gate
+        // could not read a classification at all: web_search is server-hosted
+        // and Anthropic will actually run and bill it, so an unclassified
+        // free request must not be handed one.
+        tools: searchToolsAllowed ? SCOUT_SEARCH_TOOLS : null,
       });
       if (ok && data.stop_reason === "max_tokens") {
         data = await continueIfTruncated(key, tierConfig, systemStatic, systemDynamic, conversationForModel, data, handlerStartMs + SCOUT_BUDGET_MS);
@@ -5977,13 +6550,8 @@ A newer source always beats an older one at the same level. If memory says one t
         await persistProfileUpdates(userId, profileUpdates);
         await persistScoutContext(userId, scoutContextUpdates);
         await persistMemoryWrites(userId, withForcedCorrection(extractMemoryWrites(data), classification, latestText));
-        // Keyed by requestId so a client-side timeout retry can recover this
-        // exact reply rather than re-asking the athlete (and re-charging them).
-        // Short TTL: this is crash recovery, not a semantic cache.
-        if (requestId) await setCachedResponse(`req:${requestId}`, "replay", "n/a", data);
         data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
-    data.scout_summary = updatedSummary;
-        if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
+        data.scout_summary = updatedSummary;
         // next_move is THIS request's own classification result, not a fact
         // about the shared cached answer — attached only after
         // setCachedResponse's JSON.stringify has already run (synchronously,
@@ -5991,6 +6559,14 @@ A newer source always beats an older one at the same level. If memory says one t
         // never gets baked into what a different user sees on a future cache
         // hit for the same generic simple_knowledge answer.
         if (cacheKey && !profileUpdates && !scoutContextUpdates && !replyIsPlanSpecific(data)) await setCachedResponse(cacheKey, classification.intent, modelTier, data);
+        // scout_usage belongs BELOW the cache write for exactly the same
+        // reason as next_move, and used to sit above it. It is the WRITER's
+        // remaining-question count, so it was serialized into the shared
+        // entry — and an admin or ai_unlimited account never reserves, so it
+        // never overwrites the field on a hit and simply renders a stranger's
+        // "5 QUESTIONS LEFT TODAY". CLAUDE.md is explicit that the count is
+        // never shown for those accounts at all.
+        if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         data.next_move = extractNextBestAction(classification);
         // Same cache-safety ordering as next_move above — these are
         // this-athlete-specific suggestions, attached only after the cache
@@ -5999,6 +6575,20 @@ A newer source always beats an older one at the same level. If memory says one t
         data.suggested_dev_items = extractSuggestedDevItems(data);
         { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
         data.drafted_email = extractDraftedEmail(data);
+        // Keyed by requestId so a client-side timeout retry can recover this
+        // exact reply rather than re-asking the athlete (and re-charging them).
+        // Short TTL: this is crash recovery, not a semantic cache.
+        //
+        // WRITTEN LAST, IMMEDIATELY BEFORE THE RESPONSE. It used to be
+        // written before reply_text/scout_usage/next_move/suggested_*/
+        // drafted_email were attached, so the replay was a half-built payload
+        // missing every one of them. The client's 58s timeout retry then fell
+        // back to parsing raw JSON out of data.content itself — the path that
+        // bypasses sanitizeReplyText/stripInternalTerminology/
+        // stripMetaCommentary, which exist to keep internal terminology and
+        // the model's working-out away from the athlete. A replay must be
+        // byte-identical to the reply the client would have received.
+        if (requestId) await setCachedResponse(replayCacheKey(userId, requestId), "replay", "n/a", data);
         return res.status(200).json(data);
       }
       if (!ok) {
@@ -6021,7 +6611,7 @@ A newer source always beats an older one at the same level. If memory says one t
     const deepTierConfig = useHaiku ? (byTier.advanced || ANTHROPIC_DEFAULTS.advanced) : tierConfig;
 
     const scoutDeadline = handlerStartMs + SCOUT_BUDGET_MS;
-    let sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline, maxToolTurns);
+    let sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline, searchToolsAllowed ? SCOUT_SEARCH_TOOLS : null, maxToolTurns);
     if (!sonnetResult.ok) {
       // Automatic failover, step 1: retry the WHOLE reply once, from a fresh
       // conversation copy (runDeepReply never mutates the caller's array) —
@@ -6035,7 +6625,7 @@ A newer source always beats an older one at the same level. If memory says one t
         console.log("GOLSZ sonnet call failed, retrying once:", JSON.stringify(sonnetResult.data));
         if (timeoutReason === "none") timeoutReason = "provider_error";
         fallbackUsed = "sonnet_retry";
-        sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline, maxToolTurns);
+        sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline, searchToolsAllowed ? SCOUT_SEARCH_TOOLS : null, maxToolTurns);
       } else {
         console.log("GOLSZ sonnet call failed, skipping retry (budget left ms:", retryRoom, "):", JSON.stringify(sonnetResult.data));
         timeoutReason = "retry_skipped";
@@ -6068,20 +6658,25 @@ A newer source always beats an older one at the same level. If memory says one t
         await persistProfileUpdates(userId, applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext), currentGoalText, currentGoalSource));
         await persistScoutContext(userId, extractScoutContextUpdates(data));
         await persistMemoryWrites(userId, withForcedCorrection(extractMemoryWrites(data), classification, latestText));
-        // Keyed by requestId so a client-side timeout retry can recover this
-        // exact reply rather than re-asking the athlete (and re-charging them).
-        // Short TTL: this is crash recovery, not a semantic cache.
-        if (requestId) await setCachedResponse(`req:${requestId}`, "replay", "n/a", data);
         data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
-    data.scout_summary = updatedSummary;
+        data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         data.next_move = extractNextBestAction(classification);
         data.suggested_targets = extractSuggestedTargets(data);
         data.suggested_dev_items = extractSuggestedDevItems(data);
         { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
         data.drafted_email = extractDraftedEmail(data);
-        // Deliberately never cached — a degraded, apologetic reply shouldn't
-        // get served back to a different athlete once things recover.
+        // Keyed by requestId so a client-side timeout retry can recover this
+        // exact reply rather than re-asking the athlete (and re-charging them).
+        // Short TTL: this is crash recovery, not a semantic cache. Written
+        // last, immediately before the response, so the replay carries every
+        // derived field — see the same write on the Haiku path above for what
+        // a half-built replay costs the athlete.
+        if (requestId) await setCachedResponse(replayCacheKey(userId, requestId), "replay", "n/a", data);
+        // The RESPONSE cache (the shared one) is deliberately never written
+        // here — a degraded, apologetic reply shouldn't get served back to a
+        // different athlete once things recover. The replay above is a
+        // different mechanism: same athlete, same request, seconds later.
         return res.status(200).json(data);
       }
 
@@ -6180,10 +6775,6 @@ A newer source always beats an older one at the same level. If memory says one t
       // a platform-wide candidate awaiting admin verification.
       await persistKnowledgeCandidate(topicKey, note, searchSources, athleteSport, athleteCountry);
     }
-    // Keyed by requestId so a client-side timeout retry can recover this
-    // exact reply rather than re-asking the athlete (and re-charging them).
-    // Short TTL: this is crash recovery, not a semantic cache.
-    if (requestId) await setCachedResponse(`req:${requestId}`, "replay", "n/a", data);
     data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
     data.scout_summary = updatedSummary;
     if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
@@ -6192,6 +6783,15 @@ A newer source always beats an older one at the same level. If memory says one t
     data.suggested_dev_items = extractSuggestedDevItems(data);
     { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
     data.drafted_email = extractDraftedEmail(data);
+    // Keyed by requestId so a client-side timeout retry can recover this
+    // exact reply rather than re-asking the athlete (and re-charging them).
+    // Short TTL: this is crash recovery, not a semantic cache. Written last,
+    // immediately before the response, so the replay carries every derived
+    // field — see the same write on the Haiku path above for what a
+    // half-built replay costs the athlete. This is the path where it matters
+    // most: a reply that ran a four-turn tool loop is exactly the reply slow
+    // enough to hit the client's 58s timeout in the first place.
+    if (requestId) await setCachedResponse(replayCacheKey(userId, requestId), "replay", "n/a", data);
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
     if (reservedQuestion) await releaseScoutQuestion(userId);
@@ -6200,3 +6800,54 @@ A newer source always beats an older one at the same level. If memory says one t
     return res.status(502).json({ error: "Upstream model call failed", detail: String(e) });
   }
 }
+
+// ---- Mirror guard: POSITIONLESS_SPORTS vs _readiness.js ------------------
+//
+// The repo's usual answer to a hand-mirrored constant is a test that diffs
+// the two (api/_plan-catalog.js: "tests/test_cad_pricing.cjs diffs the two so
+// they cannot drift"). That is not available here — the mirror exists
+// precisely BECAUSE the suite that covers this code eval()s the region in
+// isolation, so the suite is the one place that cannot see both lists at
+// once. This runs the same diff at module load instead: once per cold start,
+// no I/O, and it names the exact drift rather than leaving a Golf athlete
+// quietly un-assessable again. Placed at the foot of the file so it sits
+// outside every test's extraction window.
+function assertPositionlessSportsMirror() {
+  const canonical = [...SPORTS_WITHOUT_POSITION].sort().join("|");
+  const mirror = [...POSITIONLESS_SPORTS].sort().join("|");
+  if (canonical !== mirror) {
+    console.error("GOLSZ POSITIONLESS_SPORTS has drifted from api/_readiness.js's SPORTS_WITHOUT_POSITION:",
+      JSON.stringify({ readiness: SPORTS_WITHOUT_POSITION, scout: POSITIONLESS_SPORTS }));
+  }
+}
+assertPositionlessSportsMirror();
+
+// ---- Benchmark CSV ingestion: exported, deliberately NOT routed ----------
+//
+// These are named exports and nothing more. There is no route, no HTTP
+// method and no request body that reaches them, by choice.
+//
+// Why not an endpoint. Benchmark populations are what every athlete's
+// percentile is computed against, so one bad write is not one bad row — it
+// silently moves every comparison built on it. The existing admin surfaces
+// (api/admin-user-action.js) gate a write behind verify-the-token ->
+// look up profiles.is_admin with the service key, and that pattern is sound,
+// but it protects a per-user action whose blast radius is one account. The
+// import path's blast radius is the whole reference layer, its input is a
+// file a human is mid-way through hand-editing, and its output is currently
+// a report nobody has decided where to store. An endpoint would also mean
+// adding a body-dispatch branch ahead of the messages[] contract in this
+// file's single handler, which is Scout's hot path.
+//
+// So the smaller, safer shape: the pipeline is real, tested and callable —
+// from a maintainer script, a one-off `node -e`, or a future admin route —
+// and it cannot be reached by an unauthenticated request today because it
+// cannot be reached by a request at all. The exact remaining wiring, and the
+// auth it would need, is written out in data/benchmark-templates/README.md.
+//
+// Adding `export` here rather than on the declarations keeps the `export`
+// keyword out of the region tests/test_benchmark_import.cjs and
+// tests/test_benchmark_csv.cjs eval() — the foot of the file is outside
+// every test's extraction window, same reason the mirror guard above sits
+// here.
+export { parseCsvRecords, parseBenchmarkCsv, importBenchmarkCsv };

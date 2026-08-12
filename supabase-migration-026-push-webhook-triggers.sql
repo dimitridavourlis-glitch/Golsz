@@ -47,7 +47,17 @@ begin
     url := 'https://golsz.vercel.app/api/send-push',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'x-webhook-secret', '2209b4e6446eab5feeed1a7817fad4797e8278cc2452dacf023738485d07fbb5'
+      -- SUBSTITUTE AT PASTE TIME — DO NOT COMMIT A REAL SECRET HERE.
+      -- Replace REPLACE_WITH_SUPABASE_WEBHOOK_SECRET with the live value in
+      -- the Supabase SQL Editor immediately before running this statement.
+      -- It must match Vercel's SUPABASE_WEBHOOK_SECRET env var exactly —
+      -- api/send-push.js compares the incoming x-webhook-secret header
+      -- against that env var and rejects the call if they differ, so a
+      -- mismatch silently kills every push notification.
+      -- The real value lives in Vercel's env settings and nowhere else in
+      -- this repo: a secret committed to git is a leaked secret, even after
+      -- it is later removed, because the history keeps it.
+      'x-webhook-secret', 'REPLACE_WITH_SUPABASE_WEBHOOK_SECRET'
     ),
     body := jsonb_build_object(
       'type', TG_OP,

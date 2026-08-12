@@ -1,8 +1,93 @@
 # GOLSZ benchmark dataset templates
 
-Drop a completed CSV here and it can be fed to `importBenchmarkDataset()` in
-`api/scout.js`. **These templates contain header rows and commented examples
-only — there is deliberately no real performance data in this repository.**
+**These templates contain header rows and commented examples only — there is
+deliberately no real performance data in this repository.**
+
+## The CSV pipeline
+
+Fill a copy of the template in, then hand the file text to
+`importBenchmarkCsv()` in `api/scout.js`:
+
+```bash
+node --input-type=module -e '
+import { importBenchmarkCsv } from "./api/scout.js";
+import { readFileSync } from "node:fs";
+const r = importBenchmarkCsv(readFileSync(process.argv[1], "utf8"));
+console.log(JSON.stringify(r, null, 2));
+' data/benchmark-templates/soccer_benchmark_populations.csv
+```
+
+It parses the file, binds each value to its column **by header name**, and
+passes the rows to the existing `importBenchmarkDataset()` — the same
+validation, unchanged. The CSV route weakens no rule: `reference_type`,
+evidence tier, sample-size gates, unit conversion, required provenance and
+duplicate detection all still apply, and `tests/test_benchmark_csv.cjs`
+asserts each of them still fires through this path.
+
+**Read the report, not the exit.** The result is
+`importBenchmarkDataset()`'s own report with the parse stage attached:
+
+| field | meaning |
+|---|---|
+| `ok` | the FILE was readable as the contract. Says nothing about the rows. |
+| `stage` | `"parse"` if it stopped at the header, `"import"` if rows were validated |
+| `parse.header` | the header as found, in file order |
+| `parse.errors` | why the file was refused (`missing_column:source_url`, …) |
+| `parse.skipped` | `#` comment rows and blank rows ignored |
+| `parse.malformed_rows` | rows refused before validation (wrong field count, bad quoting), each with its **line number in your file** |
+| `accepted` | the only thing that ever counted as imported |
+| `rejected` | rows the importer refused, each with `errors` and its source `line` |
+
+A row that appears in neither `accepted` nor `rejected` did not exist. If
+`accepted_count` is lower than the number of rows you wrote, something was
+dropped — find it in `rejected` or `parse.malformed_rows`.
+
+### What the parser does and does not do to your data
+
+- **RFC 4180.** Quoted fields, commas inside quotes (`measurement_protocol`
+  always has one), newlines inside quotes, `""` for a literal quote, CRLF and
+  LF mixed in one file, a final row with no trailing newline, and the UTF-8
+  BOM Excel writes.
+- **`#` comment rows and blank rows are skipped**, so the three commented
+  example lines both templates ship with never reach the importer and never
+  clutter the rejection report. A `#` inside a quoted value is data.
+- **Binding is by name.** Reorder the columns in your spreadsheet and the
+  import is still correct. A header missing a contract column, carrying an
+  unrecognised one, or repeating one is **refused outright** — never imported
+  with every value shifted one place.
+- **Ragged rows are rejected, never padded or truncated** into shape.
+- **Values stay strings.** `""` reaches the importer as `""`, which means
+  "the source did not report this" — the parser never turns it into `0` or
+  `null`. The importer does all coercion.
+- Only two transformations happen anywhere: an **unquoted** field is trimmed
+  (spreadsheets leave spaces after commas), and a CRLF **inside** quotes
+  becomes LF so the same prose does not compare unequal depending on which OS
+  saved the file. Whitespace inside quotes is the source's and is kept.
+
+### Where it runs — and what is still yours to decide
+
+`parseBenchmarkCsv()` and `importBenchmarkCsv()` are **named exports of
+`api/scout.js` with no route attached**, on purpose. Benchmark populations
+are what every athlete's percentile is computed against, so one bad write is
+not one bad row — it moves every comparison built on it. Today the pipeline
+is reachable from a maintainer's shell and from nothing else.
+
+Two things are deliberately left undone:
+
+1. **Nothing is persisted.** `importBenchmarkCsv()` returns a report and
+   writes nowhere. There is no benchmark-population table — the reference
+   pool is `BENCHMARK_BANDS` in `api/scout.js`, and it is still `[]`. Landing
+   `accepted` somewhere (a migration and a service-role write, or generating
+   the `BENCHMARK_BANDS` entries and committing them) is a separate decision,
+   and every entry must still satisfy `validateBenchmarkBand()`.
+2. **There is no endpoint.** If one is ever wanted, copy the gate
+   `api/admin-user-action.js` already uses — verify the Supabase access token
+   against `/auth/v1/user`, then look up `profiles.is_admin` with the service
+   key, and refuse everything else — and put it in its own file rather than
+   in `api/scout.js`'s handler, which is Scout's hot path and contracts on
+   `messages[]`. Do **not** expose it unauthenticated in any form.
+
+The rest of this document is the schema contract, and it is accurate.
 
 ## The one rule
 

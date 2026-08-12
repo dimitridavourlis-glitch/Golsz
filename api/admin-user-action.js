@@ -161,7 +161,17 @@ export default async function handler(req, res) {
   if (!targetId || typeof targetId !== "string" || !UUID_RE.test(targetId)) {
     return res.status(400).json({ error: "Missing or invalid targetId" });
   }
-  if (targetId === callerId) return res.status(400).json({ error: "Cannot act on your own account this way." });
+  // Compared case-insensitively on purpose. UUID_RE above carries the /i
+  // flag, and Postgres/GoTrue resolve uuids case-insensitively, so
+  // "3F2B...A1" and "3f2b...a1" are the SAME account to every layer below
+  // this one — but not to ===. An admin who upper-cased their own id walked
+  // straight past this guard and reached the delete branch, which cascades
+  // through auth.users. The self-targeting block is the only thing standing
+  // between a fat-fingered admin and deleting themselves out of the product,
+  // so it has to match on identity, not on byte equality.
+  if (targetId.toLowerCase() === String(callerId).toLowerCase()) {
+    return res.status(400).json({ error: "Cannot act on your own account this way." });
+  }
 
   try {
     if (action === "ban" || action === "unban") {

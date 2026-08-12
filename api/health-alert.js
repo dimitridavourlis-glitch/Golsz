@@ -36,10 +36,18 @@
 // closed (401) when CRON_SECRET is unset or the header doesn't match, so
 // the URL cannot be triggered by a random public request.
 //
+// It also stamps a heartbeat on every successful run (ops_heartbeat,
+// migration 127) so that something else can notice when THIS job stops —
+// see stampHeartbeat() below and the watchdog in
+// api/target-followup-reminders.js. A monitor cannot report its own death.
+//
 // Required env vars:
 //   CRON_SECRET
 //   SUPABASE_URL / SUPABASE_SERVICE_KEY
 //   VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT
+// Required table:
+//   ops_heartbeat (migration 127) — if absent, the check still runs and
+//   still alerts; only the dead-man's switch is offline, and loudly.
 // Optional:
 //   HEALTH_WINDOW_MINUTES   default 20 (cron runs every 15 — deliberate
 //                           overlap so a failure straddling a boundary is
@@ -70,6 +78,45 @@ export function shouldAlert({ totalCalls, failedCalls, errorCount }, cfg) {
   }
 
   return { alert: reasons.length > 0, reasons };
+}
+
+// DEAD-MAN'S SWITCH, HALF ONE: leave proof that this job ran.
+//
+// This monitor's failure mode is silence — and silence is also what it looks
+// like when everything is fine. The specific way it dies is documented in
+// .github/workflows/health-alert.yml: GitHub disables `schedule:` triggers
+// after 60 days of repository inactivity, without telling anyone, and a
+// pre-launch repo is exactly the kind that goes quiet for 60 days. Nothing in
+// that workflow can detect it, because the thing that stops is the workflow.
+//
+// So each check leaves a timestamp behind and something on a DIFFERENT
+// scheduler reads it: api/target-followup-reminders.js (the single Vercel
+// cron, daily at 13:00 UTC) alarms when this stamp goes stale. Two
+// schedulers, and only one of them has to be alive to report the other's
+// death. No external heartbeat service, which was the owner's condition.
+//
+// STAMPED ON EVERY SUCCESSFUL RUN, INCLUDING RUNS THAT FIRE AN ALERT.
+// last_ok_at means "the monitor completed a check", not "the system is
+// healthy". Conflating the two would make a real outage — the moment this
+// file is doing its loudest and most useful work — also look like a dead
+// monitor, and page twice for one problem.
+//
+// One statement, no read in front of it: `on_conflict=name` +
+// resolution=merge-duplicates upserts the row, so ops_heartbeat needs no
+// seed row (migration 127 deliberately ships none — a seeded row would
+// assert a run that never happened).
+async function stampHeartbeat(supaUrl, serviceKey, name) {
+  const res = await fetch(`${supaUrl}/rest/v1/ops_heartbeat?on_conflict=name`, {
+    method: "POST",
+    headers: {
+      apikey: serviceKey,
+      Authorization: "Bearer " + serviceKey,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=minimal",
+    },
+    body: JSON.stringify({ name, last_ok_at: new Date().toISOString() }),
+  });
+  if (!res.ok) throw new Error(`ops_heartbeat write returned ${res.status}`);
 }
 
 async function supaCount(supaUrl, serviceKey, path) {
@@ -158,6 +205,26 @@ export default async function handler(req, res) {
     // indistinguishable from a monitor that has stopped running.
     console.log("GOLSZ health check:", JSON.stringify({ windowMinutes, totalCalls, failedCalls, errorCount, alert, reasons }));
 
+    // The heartbeat is stamped HERE — after the counts came back, so it
+    // attests to a check that actually completed, and before the push, so a
+    // dead admin subscription cannot make a working monitor look stopped.
+    //
+    // Its failure is logged and then swallowed. The heartbeat exists to
+    // report on this job; letting it decide whether this job succeeds
+    // inverts that, and would turn a missing ops_heartbeat table (migration
+    // 127 not yet applied) into a red monitor and a GitHub issue for a Scout
+    // outage that is not happening. The console line is the signal: it lands
+    // in the same Vercel log as the check above, next to the one thing that
+    // would explain a stale-heartbeat alert firing while the monitor is
+    // demonstrably alive.
+    let heartbeat = "ok";
+    try {
+      await stampHeartbeat(supaUrl, serviceKey, "health-alert");
+    } catch (e) {
+      heartbeat = "failed";
+      console.error("GOLSZ health-alert heartbeat write failed (watchdog in api/target-followup-reminders.js will eventually alert on this):", e);
+    }
+
     let pushed = 0;
     if (alert) {
       pushed = await pushAdmins(
@@ -167,7 +234,7 @@ export default async function handler(req, res) {
       );
     }
 
-    return res.status(200).json({ ok: true, windowMinutes, totalCalls, failedCalls, errorCount, alert, reasons, pushed });
+    return res.status(200).json({ ok: true, windowMinutes, totalCalls, failedCalls, errorCount, alert, reasons, pushed, heartbeat });
   } catch (e) {
     console.error("GOLSZ health-alert failed:", e);
     return res.status(500).json({ error: String(e) });

@@ -26,6 +26,41 @@
 // ============================================================
 
 import webpush from "web-push";
+import crypto from "crypto";
+
+// Constant-time comparison of the shared webhook secret. The `!==` this
+// replaces short-circuits on the first differing byte, so response timing
+// leaks a prefix-match oracle: an attacker who can send requests can
+// recover the secret one character at a time instead of brute-forcing it.
+// api/stripe-webhook.js already uses crypto.timingSafeEqual for exactly
+// this; the two auth paths in this codebase should not disagree about it.
+//
+// The length check is required, not decorative — timingSafeEqual THROWS on
+// a length mismatch. It does leak the secret's length, which is a far
+// weaker disclosure than the per-byte oracle and is unavoidable with this
+// primitive.
+function secretMatches(provided, expected) {
+  if (typeof provided !== "string" || typeof expected !== "string") return false;
+  const a = Buffer.from(provided, "utf8");
+  const b = Buffer.from(expected, "utf8");
+  if (a.length !== b.length) return false;
+  try {
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+// Supabase ids are UUIDs. record.* comes from a Database Webhook payload,
+// which is trusted only as far as the shared secret above — and these values
+// are interpolated straight into service-role PostgREST URLs, which bypass
+// RLS entirely. An unvalidated value could smuggle extra query parameters
+// through the "&" that separates PostgREST filters (e.g. an id of
+// `x&select=*` or one adding an `or=` clause) and turn a scoped lookup into
+// a wider one. Same pattern, and the same reason, as the UUID_RE check in
+// api/stripe-webhook.js and api/admin-user-action.js.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (v) => typeof v === "string" && UUID_RE.test(v);
 
 async function supaSelect(supaUrl, serviceKey, path) {
   const res = await fetch(`${supaUrl}/rest/v1/${path}`, {
@@ -71,7 +106,9 @@ export default async function handler(req, res) {
   if (!supaUrl || !serviceKey) return res.status(500).json({ error: "Server missing SUPABASE_URL/SUPABASE_SERVICE_KEY" });
   if (!vapidPublic || !vapidPrivate || !vapidSubject) return res.status(500).json({ error: "Server missing VAPID_* env vars" });
 
-  if (req.headers["x-webhook-secret"] !== webhookSecret) return res.status(401).json({ error: "Invalid webhook secret" });
+  if (!secretMatches(req.headers["x-webhook-secret"], webhookSecret)) {
+    return res.status(401).json({ error: "Invalid webhook secret" });
+  }
 
   webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
 
@@ -82,12 +119,23 @@ export default async function handler(req, res) {
 
   try {
     if (table === "messages") {
+      // Both ids are validated BEFORE either reaches a URL. A bad shape is a
+      // skip, not a 500: a malformed row is not worth failing the webhook
+      // over, and Supabase retries would just replay it.
+      if (!isUuid(record.recipient_id) || !isUuid(record.sender_id)) {
+        console.warn("GOLSZ send-push: non-UUID id on messages row, skipping");
+        return res.status(200).json({ skipped: true, reason: "invalid_id" });
+      }
       targetUserId = record.recipient_id;
       const [sender] = await supaSelect(supaUrl, serviceKey, `public_profile_names?id=eq.${record.sender_id}&select=full_name`);
       title = "New message";
       body = `${(sender && sender.full_name) || "Someone"}: ${String(record.body || "").slice(0, 120)}`;
       url = "/golsz-app.html?page=messages";
     } else if (table === "follows") {
+      if (!isUuid(record.followed_id) || !isUuid(record.follower_id)) {
+        console.warn("GOLSZ send-push: non-UUID id on follows row, skipping");
+        return res.status(200).json({ skipped: true, reason: "invalid_id" });
+      }
       targetUserId = record.followed_id;
       const [follower] = await supaSelect(supaUrl, serviceKey, `public_profile_names?id=eq.${record.follower_id}&select=full_name`);
       title = "New follower";
@@ -97,7 +145,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ skipped: true });
     }
 
-    if (!targetUserId) return res.status(200).json({ skipped: true });
+    if (!isUuid(targetUserId)) return res.status(200).json({ skipped: true });
 
     const subs = await supaSelect(supaUrl, serviceKey, `push_subscriptions?user_id=eq.${targetUserId}&select=id,endpoint,p256dh,auth`);
     const payload = JSON.stringify({ title, body, url });

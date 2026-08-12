@@ -1,0 +1,19 @@
+# GOLSZ — https://golsz.com
+#
+# Host chosen from the rel="canonical" tags on index/contact/terms/privacy,
+# which all point at https://golsz.com — not the golsz.vercel.app deployment
+# hostname. Keep this in step with those tags if the canonical domain moves.
+
+User-agent: *
+Allow: /
+
+# golsz-app.html is the signed-in React app, not a landing page. It renders
+# nothing without a Supabase session and its content is entirely behind auth,
+# so there is nothing here for a crawler to index — and indexing it would put
+# an empty shell in search results above the real marketing pages.
+Disallow: /golsz-app.html
+
+# Serverless functions. Never a page.
+Disallow: /api/
+
+Sitemap: https://golsz.com/sitemap.xml

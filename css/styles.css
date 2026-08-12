@@ -30,8 +30,31 @@
      wide, not just on the homepage. */
   --ink-muted: #8096B2;
   --ink-faint: #7A90AD;
+  /* Re-audited against --surface-raised (#263349), which was added after the
+     note above and is not covered by it: --ink-muted measures 4.19:1 there
+     and --ink-faint 3.89:1, both under the 4.5:1 body-text minimum. NEITHER
+     IS ACTUALLY RENDERED ON IT — all three --surface-raised call sites
+     (.pp-avatar's gradient, and .sc-line.is-me's .sc-dot and .sc-bubble) set
+     --ink (11.55:1) or --gold-bright (7.71:1), and the more specific
+     `.sc-line.is-me .sc-bubble` rule overrides the base .sc-bubble's
+     --ink-muted. So no value change was needed here. Recorded because the
+     margin is thin and the next rule that pairs muted or faint text with a
+     raised surface WILL fail — check this before adding one. */
   --border: #1B263B;
-  --border-strong: #415A77;
+  /* --border-strong was #415A77: 2.66:1 against the --navy page background
+     and 2.76:1 against the --navy-deep field fill, both under the 3:1 that
+     WCAG 2.1 AA (1.4.11 Non-text Contrast) requires for the visual boundary
+     of a user-interface component. That mattered more than the numbers
+     suggest, because --navy-deep vs --navy is 1.04:1 — an input's fill is
+     indistinguishable from the page it sits on, so this border is the ONLY
+     thing marking where the field is. On the waitlist form, the site's only
+     conversion surface, it meant a control a low-vision visitor could not
+     locate at all. #496686 holds the same blue-grey hue and clears the bar
+     against BOTH adjacent colours: 3.18:1 on --navy, 3.30:1 on --navy-deep.
+     (Ornamental card rules drawn in this token against --surface land at
+     2.54:1, which is fine: 1.4.11 governs component boundaries and
+     meaningful graphics, not decoration.) */
+  --border-strong: #496686;
   --gold-border: rgba(212, 175, 55, 0.4);
   --amber: #B58A1A;
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -92,6 +115,20 @@ h1 { font-size: clamp(2.4rem, 5vw + 1rem, 4.2rem); }
 h2 { font-size: clamp(1.9rem, 3vw + 1rem, 2.75rem); }
 h3 { font-size: clamp(1.3rem, 1.2vw + 1rem, 1.6rem); }
 h4 { font-size: 1.15rem; }
+
+/* ---- Heading LEVEL vs heading SIZE --------------------------------------
+   The rules directly above fuse the two: the only way to get a smaller
+   heading was to pick a deeper level. That is how every page in this site
+   ended up with a broken outline — contact.html ran <h1> straight to <h3>
+   with no <h2> anywhere, terms.html and privacy.html did the same, and all
+   four footers jumped to <h4>. A screen-reader user navigating by heading
+   hears a level that does not exist and cannot tell what is nested inside
+   what (WCAG 1.3.1 Info and Relationships).
+   The levels are now correct. These utilities carry the visual size, so the
+   rendering is unchanged — use one whenever the right level is not the size
+   the design wants, rather than reaching for a deeper heading again. */
+.size-h3 { font-size: clamp(1.3rem, 1.2vw + 1rem, 1.6rem); }
+.legal-body h2 { font-size: clamp(1.3rem, 1.2vw + 1rem, 1.6rem); }
 
 p { margin: 0 0 1em; color: var(--ink-muted); }
 
@@ -593,7 +630,10 @@ textarea:focus-visible,
   color: var(--gold);
 }
 
-.card h3 { margin-bottom: 0.5em; }
+/* h2 included: contact.html's direct-contact cards are top-level page
+   sections and carry <h2 class="size-h3">, not <h3>. See the heading
+   level/size note near the top of this file. */
+.card h2, .card h3 { margin-bottom: 0.5em; }
 .card p:last-child { margin-bottom: 0; }
 
 .card-link {
@@ -767,8 +807,22 @@ textarea {
   font-size: 0.98rem;
 }
 input::placeholder, textarea::placeholder { color: var(--ink-faint); }
+/* Focus used to be a 1px border-colour swap and nothing else. A single
+   hairline changing hue is the weakest indicator WCAG allows you to claim,
+   and it is invisible to anyone who cannot resolve a 1px line or tell gold
+   from blue-grey — which is the same person the border fix above is for.
+   This adds a real ring: an outline OUTSIDE the box (so no reflow, no
+   1px jump) plus a soft halo, on top of the border change that already
+   existed. --gold measures 8.99:1 on --navy and 9.35:1 on --navy-deep, far
+   past the 3:1 that 1.4.11 asks of a focus indicator.
+   :focus-visible (line ~166) already gives keyboard users an outline; this
+   is the :focus case — pointer and programmatic focus included — and the
+   two are deliberately consistent rather than competing. */
 input:focus, select:focus, textarea:focus {
   border-color: var(--gold);
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.18);
 }
 
 select {
@@ -813,7 +867,7 @@ select {
   text-align: left;
 }
 .form-success.is-visible { display: block; }
-.form-success h3 { color: var(--gold-bright); }
+.form-success h2, .form-success h3 { color: var(--gold-bright); }
 
 .consent-note {
   font-size: 0.8rem;
@@ -843,7 +897,11 @@ select {
 
 .footer-brand p { max-width: 32ch; }
 
-.footer-col h4 {
+/* Was `.footer-col h4`. The footers now use <h2> — the columns are
+   siblings of the page's main sections, not subsections four levels deep,
+   and <h4> after an <h2> was a skipped level on every page. The explicit
+   font-size below is what keeps them looking identical. */
+.footer-col h2 {
   font-size: 0.82rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -866,6 +924,11 @@ select {
   color: var(--ink-faint);
 }
 
+/* Currently UNUSED. The three footers that carried a .social-row all pointed
+   their links at a bare "#", so the markup was removed rather than left as a
+   broken affordance (see the comment in each footer). These rules are kept
+   deliberately: the moment real profile URLs exist the block goes straight
+   back in and styles itself. Delete them if that decision is reversed. */
 .social-row {
   display: flex;
   gap: 12px;

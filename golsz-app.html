@@ -114,6 +114,9 @@ const C = {
   elite: "var(--elite)", eliteBorder: "var(--elite-border)",
   info: "var(--info)", infoBorder: "var(--info-border)",
   passportWash: "var(--passport-wash)", passportStrip: "var(--passport-strip)",
+  limeWash: "var(--lime-wash)", limeGlow: "var(--lime-glow)", amberWash: "var(--amber-wash)",
+  infoWash: "var(--info-wash)", eliteWash: "var(--elite-wash)",
+  danger: "var(--danger)", dangerBorder: "var(--danger-border)",
   ink: "#0D1210",
 };
 
@@ -135,6 +138,77 @@ function useIsDesktop() {
     return () => { if (mq.removeEventListener) mq.removeEventListener("change", handler); else mq.removeListener(handler); };
   }, []);
   return isDesktop;
+}
+
+/* ============ MODAL FOCUS MANAGEMENT (a11y) ============
+   One hook, wired into every dialog with a single call. It covers the three
+   things this app had no focus handling for at all:
+     1. restores focus to whatever was focused before the dialog opened, so
+        closing a modal no longer dumps keyboard focus onto <body> and force
+        the user to tab from the top of the page again;
+     2. moves focus onto the dialog panel on open (each panel carries
+        tabIndex of -1), so the next Tab lands inside the dialog and screen
+        readers announce the dialog's own label;
+     3. traps Tab / Shift+Tab inside the panel while it is open.
+   Pass onClose as the third argument to also get Escape-to-dismiss; the
+   three modals that already had their own Escape effect keep it and pass
+   nothing, so Escape never fires twice.
+
+   lastFocusedEl exists because SettingsButton's trigger deliberately blurs
+   the active element before opening (mobile keyboard / focus-ring
+   behaviour) — by the time the effect runs document.activeElement is
+   already <body>, so without this the most-used modal in the app would
+   have nothing to restore focus to. */
+let lastFocusedEl = null;
+if (typeof document !== "undefined") {
+  document.addEventListener("focusin", (e) => {
+    if (e.target && e.target !== document.body && typeof e.target.focus === "function") lastFocusedEl = e.target;
+  }, true);
+}
+const FOCUSABLE_SEL = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+function focusablesIn(node) {
+  if (!node || !node.querySelectorAll) return [];
+  return Array.prototype.slice.call(node.querySelectorAll(FOCUSABLE_SEL))
+    .filter((el) => el.offsetWidth > 0 || el.offsetHeight > 0 || el === document.activeElement);
+}
+function focusEl(el) {
+  if (!el || !el.focus) return;
+  try { el.focus({ preventScroll: true }); } catch (e) { try { el.focus(); } catch (e2) {} }
+}
+function useModalFocus(ref, isOpen, onClose) {
+  useEffect(() => {
+    if (isOpen === false) return undefined;
+    const restoreTo = document.activeElement && document.activeElement !== document.body ? document.activeElement : lastFocusedEl;
+    focusEl(ref && ref.current);
+    const onKey = (e) => {
+      const node = ref && ref.current;
+      if (!node) return;
+      // Only the topmost dialog reacts. Portals append to <body> in mount
+      // order, so the last aria-modal element in the DOM is the one on top —
+      // without this, two stacked sheets would both trap Tab and fight over
+      // focus on every keypress.
+      const open = document.querySelectorAll('[aria-modal="true"]');
+      if (open.length > 1 && open[open.length - 1] !== node) return;
+      if (e.key === "Escape" && onClose) { onClose(); return; }
+      if (e.key !== "Tab") return;
+      const items = focusablesIn(node);
+      if (items.length === 0) { e.preventDefault(); return; }
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      const inside = node.contains(active);
+      if (e.shiftKey) {
+        if (!inside || active === first || active === node) { e.preventDefault(); focusEl(last); }
+      } else if (!inside || active === last) {
+        e.preventDefault(); focusEl(first);
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("keydown", onKey, true);
+      if (restoreTo && restoreTo.focus && document.contains(restoreTo)) focusEl(restoreTo);
+    };
+  }, [isOpen]);
 }
 
 /* ============ THEME (dark / light background) ============
@@ -168,6 +242,9 @@ function useTheme() {
 const I18N = {
   en: {
     loading: "Loading…", yes: "Yes", no: "No",
+    alt_post_image: "Photo in this post", alt_scout_photo: "Photo attached to this message",
+    a11y_close: "Close", a11y_send: "Send message", a11y_status: "Status", a11y_focus_area: "Focus area",
+    a11y_day: "Day", a11y_month: "Month", a11y_year: "Year",
     moderation_blocked: "That doesn't look appropriate for GOLSZ — please keep things sports-related.",
     VALUE_LABELS: { "American Football": "American Football", "Archery": "Archery", "Badminton": "Badminton", "Baseball": "Baseball", "Basketball": "Basketball", "Bowling": "Bowling", "Boxing": "Boxing", "Cheerleading": "Cheerleading", "Cricket": "Cricket", "Cross Country": "Cross Country", "Cycling": "Cycling", "Diving": "Diving", "Equestrian": "Equestrian", "Fencing": "Fencing", "Field Hockey": "Field Hockey", "Futsal": "Futsal", "Golf": "Golf", "Gymnastics": "Gymnastics", "Handball": "Handball", "Hockey": "Hockey", "Lacrosse": "Lacrosse", "Martial Arts": "Martial Arts", "Racquetball": "Racquetball", "Rowing": "Rowing", "Rugby": "Rugby", "Sailing": "Sailing", "Skiing": "Skiing", "Snowboarding": "Snowboarding", "Soccer": "Soccer", "Softball": "Softball", "Squash": "Squash", "Swimming": "Swimming", "Table Tennis": "Table Tennis", "Tennis": "Tennis", "Track": "Track", "Triathlon": "Triathlon", "Volleyball": "Volleyball", "Water Polo": "Water Polo", "Weightlifting": "Weightlifting", "Wrestling": "Wrestling", "Other": "Other", "Player": "Player", "Parent": "Parent", "Scout": "Scout", "Agent": "Agent", "Coach": "Coach", "Physio": "Physio" },
     nav_home: "Home", nav_discover: "Discover", nav_scout: "Scout", nav_ai_scout: "AI Scout",
@@ -197,6 +274,9 @@ const I18N = {
     auth_send_reset: "Send reset link", auth_sending: "Sending…",
     auth_reset_sent_pre: "If an account exists for ",
     auth_reset_sent_post: ", a reset link is on its way. Open it to set a new password.",
+    auth_paid_notice: "Payment received! If this is the only tab open, log in below once you've confirmed your email. Otherwise close this tab and go back to where you signed up — it'll sign you in automatically the moment your email is confirmed, from whatever device you use to confirm it.",
+    auth_reset_failed: "Couldn't send reset email.",
+    auth_resend_failed: "Couldn't resend the confirmation email. Try again in a minute.",
     auth_working: "Working…", auth_create_free: "Create free account",
     auth_continue_payment: "Continue to payment — ", auth_per_month: "/month", prices_currency_note: "All prices in EUR.",
     auth_couldnt_signup: "COULDN'T COMPLETE SIGNUP", auth_couldnt_login: "COULDN'T LOG IN",
@@ -490,6 +570,9 @@ const I18N = {
   },
   fr: {
     loading: "Chargement…", yes: "Oui", no: "Non",
+    alt_post_image: "Photo de cette publication", alt_scout_photo: "Photo jointe à ce message",
+    a11y_close: "Fermer", a11y_send: "Envoyer le message", a11y_status: "Statut", a11y_focus_area: "Domaine de travail",
+    a11y_day: "Jour", a11y_month: "Mois", a11y_year: "Année",
     moderation_blocked: "Cela ne semble pas approprié pour GOLSZ — merci de rester sur des sujets sportifs.",
     VALUE_LABELS: { "American Football": "Football américain", "Archery": "Tir à l'arc", "Badminton": "Badminton", "Baseball": "Baseball", "Basketball": "Basketball", "Bowling": "Bowling", "Boxing": "Boxe", "Cheerleading": "Cheerleading", "Cricket": "Cricket", "Cross Country": "Cross-country", "Cycling": "Cyclisme", "Diving": "Plongeon", "Equestrian": "Équitation", "Fencing": "Escrime", "Field Hockey": "Hockey sur gazon", "Futsal": "Futsal", "Golf": "Golf", "Gymnastics": "Gymnastique", "Handball": "Handball", "Hockey": "Hockey sur glace", "Lacrosse": "Crosse", "Martial Arts": "Arts martiaux", "Racquetball": "Racquetball", "Rowing": "Aviron", "Rugby": "Rugby", "Sailing": "Voile", "Skiing": "Ski", "Snowboarding": "Snowboard", "Soccer": "Football", "Softball": "Softball", "Squash": "Squash", "Swimming": "Natation", "Table Tennis": "Tennis de table", "Tennis": "Tennis", "Track": "Athlétisme", "Triathlon": "Triathlon", "Volleyball": "Volleyball", "Water Polo": "Water-polo", "Weightlifting": "Haltérophilie", "Wrestling": "Lutte", "Other": "Autre", "Player": "Athlète", "Parent": "Parent", "Scout": "Recruteur", "Agent": "Agent", "Coach": "Entraîneur", "Physio": "Physiothérapeute" },
     nav_home: "Accueil", nav_discover: "Découvrir", nav_scout: "Agent", nav_ai_scout: "Agent IA",
@@ -519,6 +602,9 @@ const I18N = {
     auth_send_reset: "Envoyer le lien", auth_sending: "Envoi…",
     auth_reset_sent_pre: "Si un compte existe pour ",
     auth_reset_sent_post: ", un lien de réinitialisation est en route. Ouvrez-le pour définir un nouveau mot de passe.",
+    auth_paid_notice: "Paiement reçu ! Si cet onglet est le seul ouvert, connectez-vous ci-dessous une fois votre e-mail confirmé. Sinon, fermez cet onglet et retournez là où vous vous êtes inscrit — la connexion se fera automatiquement dès que votre e-mail sera confirmé, quel que soit l'appareil utilisé pour le confirmer.",
+    auth_reset_failed: "Impossible d'envoyer l'e-mail de réinitialisation.",
+    auth_resend_failed: "Impossible de renvoyer l'e-mail de confirmation. Réessayez dans une minute.",
     auth_working: "Chargement…", auth_create_free: "Créer un compte gratuit",
     auth_continue_payment: "Continuer vers le paiement — ", auth_per_month: "/mois", prices_currency_note: "Tous les prix sont en EUR.",
     auth_couldnt_signup: "INSCRIPTION IMPOSSIBLE", auth_couldnt_login: "CONNEXION IMPOSSIBLE",
@@ -812,6 +898,9 @@ const I18N = {
   },
   es: {
     loading: "Cargando…", yes: "Sí", no: "No",
+    alt_post_image: "Foto de esta publicación", alt_scout_photo: "Foto adjunta a este mensaje",
+    a11y_close: "Cerrar", a11y_send: "Enviar mensaje", a11y_status: "Estado", a11y_focus_area: "Área de enfoque",
+    a11y_day: "Día", a11y_month: "Mes", a11y_year: "Año",
     moderation_blocked: "Eso no parece apropiado para GOLSZ — por favor, mantén el contenido relacionado con el deporte.",
     VALUE_LABELS: { "American Football": "Fútbol americano", "Archery": "Tiro con arco", "Badminton": "Bádminton", "Baseball": "Béisbol", "Basketball": "Baloncesto", "Bowling": "Bolos", "Boxing": "Boxeo", "Cheerleading": "Animación", "Cricket": "Críquet", "Cross Country": "Campo a través", "Cycling": "Ciclismo", "Diving": "Salto de trampolín", "Equestrian": "Hípica", "Fencing": "Esgrima", "Field Hockey": "Hockey sobre hierba", "Futsal": "Fútbol sala", "Golf": "Golf", "Gymnastics": "Gimnasia", "Handball": "Balonmano", "Hockey": "Hockey sobre hielo", "Lacrosse": "Lacrosse", "Martial Arts": "Artes marciales", "Racquetball": "Racquetball", "Rowing": "Remo", "Rugby": "Rugby", "Sailing": "Vela", "Skiing": "Esquí", "Snowboarding": "Snowboard", "Soccer": "Fútbol", "Softball": "Sóftbol", "Squash": "Squash", "Swimming": "Natación", "Table Tennis": "Tenis de mesa", "Tennis": "Tenis", "Track": "Atletismo", "Triathlon": "Triatlón", "Volleyball": "Voleibol", "Water Polo": "Waterpolo", "Weightlifting": "Halterofilia", "Wrestling": "Lucha", "Other": "Otro", "Player": "Deportista", "Parent": "Madre/Padre", "Scout": "Ojeador", "Agent": "Agente", "Coach": "Entrenador", "Physio": "Fisioterapeuta" },
     nav_home: "Inicio", nav_discover: "Descubrir", nav_scout: "Agente", nav_ai_scout: "Agente IA",
@@ -841,6 +930,9 @@ const I18N = {
     auth_send_reset: "Enviar enlace", auth_sending: "Enviando…",
     auth_reset_sent_pre: "Si existe una cuenta para ",
     auth_reset_sent_post: ", un enlace de restablecimiento está en camino. Ábrelo para establecer una nueva contraseña.",
+    auth_paid_notice: "¡Pago recibido! Si esta es la única pestaña abierta, inicia sesión abajo en cuanto confirmes tu correo. Si no, cierra esta pestaña y vuelve a donde te registraste — se iniciará sesión automáticamente en el momento en que confirmes tu correo, desde el dispositivo que uses para confirmarlo.",
+    auth_reset_failed: "No se pudo enviar el correo de restablecimiento.",
+    auth_resend_failed: "No se pudo reenviar el correo de confirmación. Inténtalo de nuevo en un minuto.",
     auth_working: "Procesando…", auth_create_free: "Crear cuenta gratuita",
     auth_continue_payment: "Continuar al pago — ", auth_per_month: "/mes", prices_currency_note: "Todos los precios en EUR.",
     auth_couldnt_signup: "NO SE PUDO COMPLETAR EL REGISTRO", auth_couldnt_login: "NO SE PUDO INICIAR SESIÓN",
@@ -1134,6 +1226,9 @@ const I18N = {
   },
   el: {
     loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
+    alt_post_image: "Φωτογραφία αυτής της δημοσίευσης", alt_scout_photo: "Φωτογραφία συνημμένη σε αυτό το μήνυμα",
+    a11y_close: "Κλείσιμο", a11y_send: "Αποστολή μηνύματος", a11y_status: "Κατάσταση", a11y_focus_area: "Τομέας εστίασης",
+    a11y_day: "Ημέρα", a11y_month: "Μήνας", a11y_year: "Έτος",
     moderation_blocked: "Αυτό δεν φαίνεται κατάλληλο για το GOLSZ — παρακαλούμε μείνετε σε θέματα σχετικά με τον αθλητισμό.",
     VALUE_LABELS: { "American Football": "Αμερικανικό ποδόσφαιρο", "Archery": "Τοξοβολία", "Badminton": "Μπάντμιντον", "Baseball": "Μπέιζμπολ", "Basketball": "Μπάσκετ", "Bowling": "Μπόουλινγκ", "Boxing": "Πυγμαχία", "Cheerleading": "Τσιρλίντινγκ", "Cricket": "Κρίκετ", "Cross Country": "Ανώμαλος δρόμος", "Cycling": "Ποδηλασία", "Diving": "Καταδύσεις", "Equestrian": "Ιππασία", "Fencing": "Ξιφασκία", "Field Hockey": "Χόκεϊ επί χόρτου", "Futsal": "Φούτσαλ", "Golf": "Γκολφ", "Gymnastics": "Γυμναστική", "Handball": "Χάντμπολ", "Hockey": "Χόκεϊ επί πάγου", "Lacrosse": "Λακρός", "Martial Arts": "Πολεμικές τέχνες", "Racquetball": "Ρακετμπόλ", "Rowing": "Κωπηλασία", "Rugby": "Ράγκμπι", "Sailing": "Ιστιοπλοΐα", "Skiing": "Σκι", "Snowboarding": "Σνόουμπορντ", "Soccer": "Ποδόσφαιρο", "Softball": "Σόφτμπολ", "Squash": "Σκουός", "Swimming": "Κολύμβηση", "Table Tennis": "Επιτραπέζια αντισφαίριση", "Tennis": "Τένις", "Track": "Στίβος", "Triathlon": "Τρίαθλο", "Volleyball": "Βόλεϊ", "Water Polo": "Πόλο", "Weightlifting": "Άρση βαρών", "Wrestling": "Πάλη", "Other": "Άλλο", "Player": "Αθλητής", "Parent": "Γονέας", "Scout": "Σκάουτερ", "Agent": "Ατζέντης", "Coach": "Προπονητής", "Physio": "Φυσιοθεραπευτής" },
     nav_home: "Αρχική", nav_discover: "Ανακάλυψη", nav_scout: "Σκάουτ", nav_ai_scout: "AI Σκάουτ",
@@ -1163,6 +1258,9 @@ const I18N = {
     auth_send_reset: "Αποστολή συνδέσμου", auth_sending: "Αποστολή…",
     auth_reset_sent_pre: "Αν υπάρχει λογαριασμός για ",
     auth_reset_sent_post: ", ένας σύνδεσμος επαναφοράς είναι καθ' οδόν. Ανοίξτε τον για να ορίσετε νέο κωδικό.",
+    auth_paid_notice: "Η πληρωμή ελήφθη! Αν αυτή είναι η μόνη ανοιχτή καρτέλα, συνδεθείτε παρακάτω μόλις επιβεβαιώσετε το email σας. Διαφορετικά, κλείστε αυτήν την καρτέλα και επιστρέψτε εκεί όπου κάνατε την εγγραφή — η σύνδεση θα γίνει αυτόματα τη στιγμή που θα επιβεβαιωθεί το email σας, από όποια συσκευή κι αν το επιβεβαιώσετε.",
+    auth_reset_failed: "Δεν ήταν δυνατή η αποστολή του email επαναφοράς.",
+    auth_resend_failed: "Δεν ήταν δυνατή η εκ νέου αποστολή του email επιβεβαίωσης. Δοκιμάστε ξανά σε ένα λεπτό.",
     auth_working: "Επεξεργασία…", auth_create_free: "Δημιουργία δωρεάν λογαριασμού",
     auth_continue_payment: "Συνέχεια στην πληρωμή — ", auth_per_month: "/μήνα", prices_currency_note: "Όλες οι τιμές σε EUR.",
     auth_couldnt_signup: "Η ΕΓΓΡΑΦΗ ΑΠΕΤΥΧΕ", auth_couldnt_login: "Η ΣΥΝΔΕΣΗ ΑΠΕΤΥΧΕ",
@@ -1484,7 +1582,10 @@ function translateValue(lang, value) {
 function useLang() {
   const ctx = useContext(LangContext);
   if (ctx) return ctx;
-  return { lang: "en", setLang: () => {}, t: (k) => (I18N.en[k] || k), tv: (v) => translateValue("en", v) };
+  // Key *presence* is what counts, not truthiness — a deliberately-empty
+  // translation ("") is a real value and must render as empty, not fall
+  // through to the literal key name.
+  return { lang: "en", setLang: () => {}, t: (k) => (k in I18N.en ? I18N.en[k] : k), tv: (v) => translateValue("en", v) };
 }
 function LangProvider({ children }) {
   const [lang, setLang] = useState(() => {
@@ -1494,7 +1595,10 @@ function LangProvider({ children }) {
   useEffect(() => {
     try { localStorage.setItem("golsz-lang", lang); } catch (e) {}
   }, [lang]);
-  const t = (key) => (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+  // Same rule as useLang()'s no-provider fallback: test key presence, not
+  // truthiness, so an intentionally-empty string stays empty instead of
+  // rendering the raw key name (e.g. messages_request_banner_pre, admin_ago).
+  const t = (key) => (I18N[lang] && key in I18N[lang] ? I18N[lang][key] : key in I18N.en ? I18N.en[key] : key);
   const tv = (value) => translateValue(lang, value);
   return <LangContext.Provider value={{ lang, setLang, t, tv }}>{children}</LangContext.Provider>;
 }
@@ -1636,10 +1740,20 @@ function NotificationBell() {
    place to add more app-wide preferences later without redesigning. */
 function SettingsButton({ openSignal }) {
   const [open, setOpen] = useState(false);
+  const panelRef = useRef(null);
+  useModalFocus(panelRef, open);
   // Lets GolszApp's "Account" nav item (brief §14) open this same modal
   // without lifting all of this component's state out — openSignal is a
   // counter that starts at 0 (no-op) and increments on each nav tap.
   useEffect(() => { if (openSignal) setOpen(true); }, [openSignal]);
+  // Escape closes the modal — a11y: a dialog a keyboard-only user can open
+  // must be dismissible without hunting for the close button.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
   const [theme, setTheme] = useTheme();
   const { lang, setLang, t } = useLang();
   const [uid, setUid] = useState(null);
@@ -1831,23 +1945,23 @@ function SettingsButton({ openSignal }) {
       </button>
       {open && ReactDOM.createPortal(
         <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000a6", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }} onClick={() => setOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 420, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
+          <div ref={panelRef} tabIndex={-1} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={t("settings_title")} className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 420, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
               <div style={{ fontWeight: 800, fontSize: 16 }}>{t("settings_title")}</div>
-              <button onClick={() => setOpen(false)} style={iconBtn(C.chalk)}><X size={18} /></button>
+              <button onClick={() => setOpen(false)} aria-label={t("a11y_close")} style={iconBtn(C.chalk)}><X size={18} /></button>
             </div>
             <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_background")}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
               <button onClick={() => setTheme("dark")} style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
                 cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
-                background: theme === "dark" ? "#D4AF371a" : C.turf, color: theme === "dark" ? C.lime : C.chalk,
+                background: theme === "dark" ? C.limeWash : C.turf, color: theme === "dark" ? C.lime : C.chalk,
                 border: `1.5px solid ${theme === "dark" ? C.lime : C.line2}`,
               }}><Moon size={16} /> {t("settings_dark")}</button>
               <button onClick={() => setTheme("light")} style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
                 cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
-                background: theme === "light" ? "#D4AF371a" : C.turf, color: theme === "light" ? C.lime : C.chalk,
+                background: theme === "light" ? C.limeWash : C.turf, color: theme === "light" ? C.lime : C.chalk,
                 border: `1.5px solid ${theme === "light" ? C.lime : C.line2}`,
               }}><Sun size={16} /> {t("settings_light")}</button>
             </div>
@@ -1855,7 +1969,7 @@ function SettingsButton({ openSignal }) {
               <div style={{ marginBottom: 18 }}>
                 <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_plan")}</div>
                 {paymentPastDue && (
-                  <div style={{ background: "#B58A1A1a", border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "10px 12px", marginBottom: 10, fontSize: 12, color: C.warnText, lineHeight: 1.4 }}>
+                  <div style={{ background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "10px 12px", marginBottom: 10, fontSize: 12, color: C.warnText, lineHeight: 1.4 }}>
                     {t("settings_payment_past_due")}
                   </div>
                 )}
@@ -1865,7 +1979,7 @@ function SettingsButton({ openSignal }) {
                     return (
                       <button key={pl.id} onClick={() => choosePlan(pl.id)} disabled={planBusy || isCurrent} style={{
                         textAlign: "left", cursor: isCurrent ? "default" : "pointer", fontFamily: "inherit",
-                        background: isCurrent ? "#D4AF371a" : C.turf, border: `1.5px solid ${isCurrent ? C.lime : C.line2}`,
+                        background: isCurrent ? C.limeWash : C.turf, border: `1.5px solid ${isCurrent ? C.lime : C.line2}`,
                         borderRadius: 12, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
                         opacity: planBusy && !isCurrent ? 0.6 : 1,
                       }}>
@@ -1891,13 +2005,13 @@ function SettingsButton({ openSignal }) {
                   <button onClick={() => toggleNotifs(true)} disabled={notifBusy} style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
                     cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, opacity: notifBusy ? 0.6 : 1,
-                    background: notifEnabled ? "#D4AF371a" : C.turf, color: notifEnabled ? C.lime : C.chalk,
+                    background: notifEnabled ? C.limeWash : C.turf, color: notifEnabled ? C.lime : C.chalk,
                     border: `1.5px solid ${notifEnabled ? C.lime : C.line2}`,
                   }}><Bell size={16} /> {t("settings_notif_on")}</button>
                   <button onClick={() => toggleNotifs(false)} disabled={notifBusy} style={{
                     display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: 12,
                     cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700, opacity: notifBusy ? 0.6 : 1,
-                    background: !notifEnabled ? "#D4AF371a" : C.turf, color: !notifEnabled ? C.lime : C.chalk,
+                    background: !notifEnabled ? C.limeWash : C.turf, color: !notifEnabled ? C.lime : C.chalk,
                     border: `1.5px solid ${!notifEnabled ? C.lime : C.line2}`,
                   }}>{t("settings_notif_off")}</button>
                 </div>
@@ -1918,9 +2032,9 @@ function SettingsButton({ openSignal }) {
                       <div style={{ fontSize: 13, color: C.lime, fontWeight: 700 }}>{t("reset_pw_updated")}</div>
                     ) : (
                       <>
-                        <input value={pw} onChange={(e) => setPw(e.target.value)} type="password" placeholder={t("reset_pw_new_ph")}
+                        <input value={pw} onChange={(e) => setPw(e.target.value)} type="password" aria-label={t("reset_pw_new_ph")} placeholder={t("reset_pw_new_ph")}
                           style={{ width: "100%", background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
-                        <input value={pw2} onChange={(e) => setPw2(e.target.value)} type="password" placeholder={t("reset_pw_confirm_ph")}
+                        <input value={pw2} onChange={(e) => setPw2(e.target.value)} type="password" aria-label={t("reset_pw_confirm_ph")} placeholder={t("reset_pw_confirm_ph")}
                           style={{ width: "100%", background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
                         {pwErr && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8 }}>{pwErr}</div>}
                         <div style={{ display: "flex", gap: 8 }}>
@@ -1950,7 +2064,7 @@ function SettingsButton({ openSignal }) {
                       ) : (
                         <>
                           {currentEmail && <div style={{ fontSize: 11.5, color: C.slate, marginBottom: 8 }}>{t("settings_current_email")}{currentEmail}</div>}
-                          <input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} type="email" placeholder={t("settings_new_email_ph")}
+                          <input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} type="email" aria-label={t("settings_new_email_ph")} placeholder={t("settings_new_email_ph")}
                             style={{ width: "100%", background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
                           {emailErr && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8 }}>{emailErr}</div>}
                           <div style={{ display: "flex", gap: 8 }}>
@@ -1976,9 +2090,9 @@ function SettingsButton({ openSignal }) {
                       padding: "12px 14px", color: C.warnText, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
                     }}>{t("settings_delete_account")}</button>
                   ) : (
-                    <div style={{ background: "#B58A1A1a", border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: 14 }}>
+                    <div style={{ background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: 14 }}>
                       <div style={{ fontSize: 12, color: C.warnText, lineHeight: 1.4, marginBottom: 10 }}>{t("settings_delete_warning")}</div>
-                      <input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder={t("settings_delete_confirm_ph")}
+                      <input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} aria-label={t("settings_delete_confirm_ph")} placeholder={t("settings_delete_confirm_ph")}
                         style={{ width: "100%", background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
                       {deleteErr && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 8 }}>{deleteErr}</div>}
                       {blockingChildren.length > 0 && (
@@ -2024,7 +2138,7 @@ function SettingsButton({ openSignal }) {
                 <button key={code} onClick={() => setLang(code)} style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "12px", borderRadius: 12,
                   cursor: "pointer", fontFamily: "inherit", fontSize: 13.5, fontWeight: 700,
-                  background: lang === code ? "#D4AF371a" : C.turf, color: lang === code ? C.lime : C.chalk,
+                  background: lang === code ? C.limeWash : C.turf, color: lang === code ? C.lime : C.chalk,
                   border: `1.5px solid ${lang === code ? C.lime : C.line2}`,
                 }}><Globe size={15} /> {label}</button>
               ))}
@@ -2175,7 +2289,7 @@ function Badge({ label }) {
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 3, fontSize: 9.5, fontWeight: 700,
-      color: C.lime, background: "#D4AF371a", border: `1px solid #D4AF3744`,
+      color: C.lime, background: C.limeWash, border: `1px solid ${C.limeBorder}`,
       padding: "2px 6px", borderRadius: 5, letterSpacing: "0.04em",
     }}><BadgeCheck size={10} /> {label}</span>
   );
@@ -2204,7 +2318,7 @@ function RestrictedBanner() {
   }, []);
   if (!restricted) return null;
   return (
-    <div style={{ background: "#B58A1A1a", border: "1px solid #B58A1A44", borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+    <div style={{ background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
       <span style={{ fontSize: 18 }}>🔒</span>
       <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.4 }}>
         <b style={{ color: C.amber }}>{t("restricted_title")}</b> {t("restricted_body")}
@@ -2445,13 +2559,13 @@ function Feed({ onMessage, onViewProfile }) {
             <span style={{ fontSize: 11, letterSpacing: "0.12em", color: C.slate, fontWeight: 700 }}>{t("feed_new_post")}</span>
             <button onClick={() => { setComposeOpen(false); setComposeErr(""); clearImage(); }} style={iconBtn(C.slate)}><X size={16} /></button>
           </div>
-          <input autoFocus value={composeHeadline} onChange={(e) => setComposeHeadline(e.target.value)} placeholder={t("feed_whats_happening")} maxLength={120}
+          <input autoFocus value={composeHeadline} onChange={(e) => setComposeHeadline(e.target.value)} aria-label={t("feed_whats_happening")} placeholder={t("feed_whats_happening")} maxLength={120}
             style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 14, fontFamily: "inherit", outline: "none", marginBottom: 8, boxSizing: "border-box" }} />
-          <textarea value={composeBody} onChange={(e) => setComposeBody(e.target.value)} placeholder={t("feed_add_details")} rows={2}
+          <textarea value={composeBody} onChange={(e) => setComposeBody(e.target.value)} aria-label={t("feed_add_details")} placeholder={t("feed_add_details")} rows={2}
             style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13, fontFamily: "inherit", outline: "none", resize: "none", marginBottom: 8, boxSizing: "border-box" }} />
           {composeImagePreview && (
             <div style={{ position: "relative", marginBottom: 8, display: "inline-block" }}>
-              <img src={composeImagePreview} style={{ maxHeight: 160, maxWidth: "100%", borderRadius: 10, display: "block" }} />
+              <img src={composeImagePreview} alt="" style={{ maxHeight: 160, maxWidth: "100%", borderRadius: 10, display: "block" }} />
               <button onClick={clearImage} title={t("feed_remove_photo")} style={{
                 position: "absolute", top: 6, right: 6, background: "#000000cc", border: "none", borderRadius: "50%",
                 width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.chalk,
@@ -2476,7 +2590,7 @@ function Feed({ onMessage, onViewProfile }) {
           <Search size={16} color={C.slate} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }} />
           <input
             value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("feed_search")}
+            aria-label={t("feed_search")} placeholder={t("feed_search")}
             style={{
               width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12,
               color: C.chalk, padding: "11px 14px 11px 38px", fontSize: 13.5, fontFamily: "inherit",
@@ -2510,8 +2624,8 @@ function Feed({ onMessage, onViewProfile }) {
               <div style={{
                 width: 30, height: 30, borderRadius: "50%", flexShrink: 0, display: "flex",
                 alignItems: "center", justifyContent: "center",
-                background: p.kind === "perf" ? "#B58A1A1a" : "#D4AF371a",
-                border: `1px solid ${p.kind === "perf" ? C.amber : C.lime}44`,
+                background: p.kind === "perf" ? C.amberWash : C.limeWash,
+                border: `1px solid ${p.kind === "perf" ? C.amberBorder : C.limeBorder}`,
               }}>
                 {p.kind === "commit" && <Trophy size={14} color={C.lime} />}
                 {p.kind === "perf" && <Flame size={14} color={C.amber} />}
@@ -2529,7 +2643,7 @@ function Feed({ onMessage, onViewProfile }) {
             <div style={{ fontSize: 13.5, color: C.body, lineHeight: 1.5 }}><Linkify text={p.body} /></div>
           )}
           {p.image && (
-            <img src={p.image} loading="lazy" style={{ width: "100%", maxHeight: 360, objectFit: "cover", borderRadius: 12, marginTop: 10, border: `1px solid ${C.line2}` }} />
+            <img src={p.image} alt={t("alt_post_image")} loading="lazy" style={{ width: "100%", maxHeight: 360, objectFit: "cover", borderRadius: 12, marginTop: 10, border: `1px solid ${C.line2}` }} />
           )}
           <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
             {p.v.map((b) => <Badge key={b} label={b} />)}
@@ -2758,7 +2872,7 @@ function Discover({ onMessage, onViewProfile }) {
         <Search size={16} color={C.slate} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }} />
         <input
           value={query} onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("discover_search")}
+          aria-label={t("discover_search")} placeholder={t("discover_search")}
           style={{
             width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12,
             color: C.chalk, padding: "12px 14px 12px 38px", fontSize: 14, fontFamily: "inherit",
@@ -2841,6 +2955,8 @@ function Discover({ onMessage, onViewProfile }) {
    migration 011. */
 function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
   const { t, tv } = useLang();
+  const panelRef = useRef(null);
+  useModalFocus(panelRef, true);
   const [title, setTitle] = useState(initialTitle || "");
   const [sport, setSport] = useState("");
   const [location, setLocation] = useState("");
@@ -2851,6 +2967,14 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
   const [err, setErr] = useState("");
   const field = { width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
   const label = { fontSize: 9.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700, marginBottom: 5, display: "block" };
+
+  // Escape closes the modal — a11y: this dialog is only mounted while open,
+  // so no open-state guard is needed here.
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   async function save() {
     if (!sb || busy) return;
@@ -2880,23 +3004,23 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
   // header/bottom nav instead of getting trapped behind them.
   return ReactDOM.createPortal(
     <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 18, boxSizing: "border-box" }}>
-      <div style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 480, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }} className="noscroll">
+      <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t("events_add_title")} style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 480, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }} className="noscroll">
         <div style={{ position: "sticky", top: 0, zIndex: 2, background: C.pitch, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 8 }}>
           <div style={{ fontWeight: 800, fontSize: 16 }}>{t("events_add_title")}</div>
-          <button onClick={onClose} style={iconBtn(C.chalk)}><X size={18} /></button>
+          <button onClick={onClose} aria-label={t("a11y_close")} style={iconBtn(C.chalk)}><X size={18} /></button>
         </div>
 
         <div style={{ marginBottom: 12 }}>
           <span style={label}>{t("events_field_title")}</span>
-          <input style={field} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("events_title_ph")} />
+          <input style={field} aria-label={t("events_field_title")} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("events_title_ph")} />
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
           <div><span style={label}>{t("events_field_date")}</span>
-            <input type="date" style={field} value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+            <input type="date" style={field} aria-label={t("events_field_date")} value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
           </div>
           <div><span style={label}>{t("events_field_sport")}</span>
-            <select style={field} value={sport} onChange={(e) => setSport(e.target.value)}>
+            <select style={field} aria-label={t("events_field_sport")} value={sport} onChange={(e) => setSport(e.target.value)}>
               <option value="">—</option>
               {SPORTS.filter((s) => s !== "All").map((s) => <option key={s} value={s}>{tv(s)}</option>)}
             </select>
@@ -2905,16 +3029,16 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
           <div><span style={label}>{t("events_field_location")}</span>
-            <input style={field} value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t("events_location_ph")} />
+            <input style={field} aria-label={t("events_field_location")} value={location} onChange={(e) => setLocation(e.target.value)} placeholder={t("events_location_ph")} />
           </div>
           <div><span style={label}>{t("events_field_level")}</span>
-            <input style={field} value={level} onChange={(e) => setLevel(e.target.value)} placeholder={t("events_level_ph")} />
+            <input style={field} aria-label={t("events_field_level")} value={level} onChange={(e) => setLevel(e.target.value)} placeholder={t("events_level_ph")} />
           </div>
         </div>
 
         <div style={{ marginBottom: 12 }}>
           <span style={label}>{t("events_field_notes")}</span>
-          <textarea style={{ ...field, resize: "vertical", minHeight: 70 }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("events_notes_ph")} />
+          <textarea style={{ ...field, resize: "vertical", minHeight: 70 }} aria-label={t("events_field_notes")} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("events_notes_ph")} />
         </div>
 
         {err && <div style={{ color: C.amber, fontSize: 12, marginBottom: 10 }}>{err}</div>}
@@ -2969,7 +3093,10 @@ function Events() {
   const [uid, setUid] = useState(null);
 
   async function load() {
-    if (!sb) return;
+    // myEvents === null is the "Loading…" state, so every exit path has to
+    // resolve it — preview mode and a failed fetch both fall back to the
+    // honest empty state rather than spinning forever.
+    if (!sb) { setMyEvents([]); return; }
     try {
       const { data: { user } } = await sb.auth.getUser();
       if (user) setUid(user.id);
@@ -2982,7 +3109,7 @@ function Events() {
         .limit(60);
       if (error) throw error;
       setMyEvents((data || []).map(mapEvent));
-    } catch (e) { console.error("GOLSZ events fetch error:", e); }
+    } catch (e) { console.error("GOLSZ events fetch error:", e); setMyEvents((l) => l || []); }
   }
   useEffect(() => { load(); }, []);
 
@@ -3024,8 +3151,8 @@ function Events() {
 function Tag({ children, warn }) {
   return <span style={{
     fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 5,
-    color: warn ? C.amber : C.slate, background: warn ? "#B58A1A1a" : C.turf,
-    border: `1px solid ${warn ? "#B58A1A44" : C.line2}`,
+    color: warn ? C.amber : C.slate, background: warn ? C.amberWash : C.turf,
+    border: `1px solid ${warn ? C.amberBorder : C.line2}`,
   }}>{children}</span>;
 }
 
@@ -3256,7 +3383,7 @@ function Messages({ thread, setThread, onViewProfile }) {
     return (
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderBottom: `1px solid ${C.line}` }}>
-          <button onClick={() => setThread(null)} style={iconBtn(C.chalk)}><ChevronLeft size={20} /></button>
+          <button onClick={() => setThread(null)} aria-label={t("back")} style={iconBtn(C.chalk)}><ChevronLeft size={20} /></button>
           <button
             onClick={() => onViewProfile && onViewProfile(thread)}
             title={t("messages_view_passport")}
@@ -3330,11 +3457,11 @@ function Messages({ thread, setThread, onViewProfile }) {
             <div style={{ display: "flex", gap: 8, padding: "10px 12px", borderTop: `1px solid ${C.line}` }}>
               <input value={text} onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") send(); }}
-                placeholder={t("messages_placeholder")} style={{
+                aria-label={t("messages_placeholder")} placeholder={t("messages_placeholder")} style={{
                 flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10,
                 color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none",
               }} />
-              <button onClick={send} disabled={busy || !text.trim()} style={{
+              <button onClick={send} disabled={busy || !text.trim()} aria-label={t("a11y_send")} style={{
                 background: C.lime, border: "none", borderRadius: 10, width: 44, color: C.ink,
                 cursor: busy || !text.trim() ? "default" : "pointer", opacity: busy || !text.trim() ? 0.5 : 1,
               }}><Send size={16} /></button>
@@ -3346,7 +3473,7 @@ function Messages({ thread, setThread, onViewProfile }) {
   }
 
   const q = query.trim().toLowerCase();
-  const visibleConversations = conversations && (q ? conversations.filter((t) => t.who.toLowerCase().includes(q)) : conversations);
+  const visibleConversations = conversations && (q ? conversations.filter((conv) => conv.who.toLowerCase().includes(q)) : conversations);
 
   return (
     <div style={{ padding: "8px 12px 16px" }}>
@@ -3356,7 +3483,7 @@ function Messages({ thread, setThread, onViewProfile }) {
           <Search size={16} color={C.slate} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }} />
           <input
             value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("messages_search")}
+            aria-label={t("messages_search")} placeholder={t("messages_search")}
             style={{
               width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12,
               color: C.chalk, padding: "11px 14px 11px 38px", fontSize: 13.5, fontFamily: "inherit",
@@ -3442,10 +3569,13 @@ function FamilyAccess() {
   const [myLinks, setMyLinks] = useState([]);
 
   async function load() {
-    const { data: { user } } = await sb.auth.getUser();
-    if (!user) return;
-    setUid(user.id);
     try {
+      // getUser() has to be inside the try: load() is called bare from the
+      // effect below, so a network failure here would destructure undefined
+      // and escape as an unhandled rejection.
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return;
+      setUid(user.id);
       // real parent_links is (id, parent_id, athlete_id, relationship, approved_at, created_at) —
       // fetch both directions, then resolve counterpart names in a second pass instead of
       // embedding via a guessed FK constraint name.
@@ -3531,10 +3661,10 @@ function FamilyAccess() {
 
       <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("family_request_title")}</div>
       <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("family_email_ph")} style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+        <input value={email} onChange={(e) => setEmail(e.target.value)} aria-label={t("family_email_ph")} placeholder={t("family_email_ph")} style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
       </div>
       <div style={{ display: "flex", gap: 6 }}>
-        <input value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder={t("family_relationship_ph")} style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+        <input value={relationship} onChange={(e) => setRelationship(e.target.value)} aria-label={t("family_relationship_ph")} placeholder={t("family_relationship_ph")} style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
         <button onClick={requestLink} disabled={busy || !email.trim()} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: busy || !email.trim() ? 0.5 : 1 }}>{t("family_send")}</button>
       </div>
       {msg && <div style={{ fontSize: 11.5, color: C.slate, marginTop: 8 }}>{msg}</div>}
@@ -3589,8 +3719,8 @@ function Highlights({ viewUserId, manageMode }) {
         if (error) throw error;
         setItems(Array.isArray(data && data.highlights) ? data.highlights : []);
         setOwnerVerified(!!(prof && prof.identity_verified));
-        setLoaded(true);
       } catch (e) { console.error("GOLSZ highlights load error:", e); }
+      finally { setLoaded(true); }
     })();
   }, [viewUserId]);
 
@@ -3665,10 +3795,10 @@ function Highlights({ viewUserId, manageMode }) {
       ))}
       {sb && isOwner && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("highlights_title_ph")}
+          <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label={t("highlights_title_ph")} placeholder={t("highlights_title_ph")}
             style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", marginBottom: 6, boxSizing: "border-box" }} />
           <div style={{ display: "flex", gap: 6 }}>
-            <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder={t("highlights_link_ph")}
+            <input value={url} onChange={(e) => setUrl(e.target.value)} aria-label={t("highlights_link_ph")} placeholder={t("highlights_link_ph")}
               style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
             <button onClick={addHighlight} disabled={!title.trim() || !url.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!title.trim() || !url.trim() || busy) ? 0.5 : 1 }}>
               {busy ? "…" : t("highlights_add")}
@@ -3713,8 +3843,8 @@ function Timeline({ viewUserId, manageMode }) {
         // most recent milestone (this season, a commitment) before older
         // ones, not have to scroll past years of history first.
         setItems([...list].sort((a, b) => String(b.year).localeCompare(String(a.year))));
-        setLoaded(true);
       } catch (e) { console.error("GOLSZ timeline load error:", e); }
+      finally { setLoaded(true); }
     })();
   }, [viewUserId]);
 
@@ -3769,9 +3899,9 @@ function Timeline({ viewUserId, manageMode }) {
       {sb && isOwner && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
           <div style={{ display: "flex", gap: 6 }}>
-            <input value={year} onChange={(e) => setYear(e.target.value)} placeholder={t("timeline_year_ph")}
+            <input value={year} onChange={(e) => setYear(e.target.value)} aria-label={t("timeline_year_ph")} placeholder={t("timeline_year_ph")}
               style={{ width: 90, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
-            <input value={text} onChange={(e) => setText(e.target.value)} placeholder={t("timeline_text_ph")}
+            <input value={text} onChange={(e) => setText(e.target.value)} aria-label={t("timeline_text_ph")} placeholder={t("timeline_text_ph")}
               style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
             <button onClick={addEntry} disabled={!year.trim() || !text.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!year.trim() || !text.trim() || busy) ? 0.5 : 1 }}>
               {busy ? "…" : t("timeline_add")}
@@ -3984,19 +4114,19 @@ function Benchmarks({ viewUserId, manageId }) {
             {/* P1-2. A sport with a real schema gets its canonical metric
                 list; everything else keeps the original free-text field. */}
             {sportMetrics ? (
-              <select value={metricKey} onChange={(e) => pickMetric(e.target.value)} style={{ flex: "1 1 150px", ...inputStyle }}>
+              <select value={metricKey} onChange={(e) => pickMetric(e.target.value)} aria-label={t("bench_pick_metric")} style={{ flex: "1 1 150px", ...inputStyle }}>
                 <option value="">{t("bench_pick_metric")}</option>
                 {sportMetrics.map((m) => <option key={m.key} value={m.key}>{m.label} ({m.unit})</option>)}
                 <option value="__other">{t("bench_other_metric")}</option>
               </select>
             ) : (
-              <input value={metric} onChange={(e) => setMetric(e.target.value)} placeholder={t("benchmarks_metric_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
+              <input value={metric} onChange={(e) => setMetric(e.target.value)} aria-label={t("benchmarks_metric_ph")} placeholder={t("benchmarks_metric_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
             )}
             {sportMetrics && metricKey === "__other" && (
-              <input value={metric} onChange={(e) => setMetric(e.target.value)} placeholder={t("benchmarks_metric_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
+              <input value={metric} onChange={(e) => setMetric(e.target.value)} aria-label={t("benchmarks_metric_ph")} placeholder={t("benchmarks_metric_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
             )}
-            <input value={value} onChange={(e) => setValue(e.target.value)} placeholder={t("benchmarks_value_ph")} inputMode="decimal" style={{ width: 90, ...inputStyle }} />
-            <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder={t("benchmarks_unit_ph")} style={{ width: 70, ...inputStyle }} />
+            <input value={value} onChange={(e) => setValue(e.target.value)} aria-label={t("benchmarks_value_ph")} placeholder={t("benchmarks_value_ph")} inputMode="decimal" style={{ width: 90, ...inputStyle }} />
+            <input value={unit} onChange={(e) => setUnit(e.target.value)} aria-label={t("benchmarks_unit_ph")} placeholder={t("benchmarks_unit_ph")} style={{ width: 70, ...inputStyle }} />
             <button onClick={addEntry} disabled={!metric.trim() || !value.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!metric.trim() || !value.trim() || busy) ? 0.5 : 1 }}>
               {busy ? "…" : t("benchmarks_add")}
             </button>
@@ -4012,7 +4142,7 @@ function Benchmarks({ viewUserId, manageId }) {
               <div style={{ fontSize: 10, color: C.slate, fontWeight: 700, marginBottom: 5 }}>{t("bench_protocol_title")}</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {protocolFields.map((dim) => (
-                  <select key={dim} value={protocol[dim] || ""} onChange={(e) => setProtocol((prev) => ({ ...prev, [dim]: e.target.value }))} style={{ flex: "1 1 140px", ...inputStyle }}>
+                  <select key={dim} value={protocol[dim] || ""} onChange={(e) => setProtocol((prev) => ({ ...prev, [dim]: e.target.value }))} aria-label={t("bench_dim_" + dim)} style={{ flex: "1 1 140px", ...inputStyle }}>
                     <option value="">{t("bench_protocol_unknown")} — {t("bench_dim_" + dim)}</option>
                     {(PROTOCOL_OPTIONS[dim] || []).map(([val, key]) => <option key={val} value={val}>{t(key)}</option>)}
                   </select>
@@ -4039,6 +4169,8 @@ function PostsGrid({ viewUserId }) {
   const { t } = useLang();
   const [posts, setPosts] = useState([]);
   const [openPost, setOpenPost] = useState(null);
+  const panelRef = useRef(null);
+  useModalFocus(panelRef, !!openPost, () => setOpenPost(null));
 
   useEffect(() => {
     if (!sb) return;
@@ -4071,7 +4203,7 @@ function PostsGrid({ viewUserId }) {
               aspectRatio: "1 / 1", background: C.turf, border: `1px solid ${C.line}`,
             }}>
               {p.image_url ? (
-                <img src={p.image_url} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <img src={p.image_url} alt={t("alt_post_image")} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (
                 <div style={{ width: "100%", height: "100%", padding: 8, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center", boxSizing: "border-box" }}>
                   <span style={{
@@ -4092,9 +4224,9 @@ function PostsGrid({ viewUserId }) {
           modals — see ProfileEditor's comment above its own portal. */}
       {openPost && ReactDOM.createPortal(
         <div onClick={() => setOpenPost(null)} className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 18, boxSizing: "border-box" }}>
-          <div onClick={(e) => e.stopPropagation()} className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 480, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
+          <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={openPost.headline || t("passport_posts_title")} onClick={(e) => e.stopPropagation()} className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 480, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button onClick={() => setOpenPost(null)} style={iconBtn(C.chalk)}><X size={18} /></button>
+              <button onClick={() => setOpenPost(null)} aria-label={t("a11y_close")} style={iconBtn(C.chalk)}><X size={18} /></button>
             </div>
             {openPost.headline && <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{openPost.headline}</div>}
             {openPost.kind === "clip" && openPost.body && safeHref(openPost.body) ? (
@@ -4105,7 +4237,7 @@ function PostsGrid({ viewUserId }) {
               <div style={{ fontSize: 13.5, color: C.body, lineHeight: 1.5 }}><Linkify text={openPost.body} /></div>
             )}
             {openPost.image_url && (
-              <img src={openPost.image_url} style={{ width: "100%", borderRadius: 12, marginTop: 10, border: `1px solid ${C.line2}` }} />
+              <img src={openPost.image_url} alt={t("alt_post_image")} style={{ width: "100%", borderRadius: 12, marginTop: 10, border: `1px solid ${C.line2}` }} />
             )}
             <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.line}`, fontSize: 12, color: C.slate }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Heart size={14} /> {openPost.likes_count || 0}</span>
@@ -4399,6 +4531,7 @@ function PublicPassport({ userId, token }) {
 
   return (
     <div style={{ minHeight: "100vh", background: C.pitch, color: C.chalk, fontFamily: "'Archivo', system-ui, sans-serif", padding: "28px 16px" }}>
+      <style>{CSS}</style>
       <div style={{ maxWidth: 420, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <img src="/assets/logo-mark.png" alt="" style={{ width: 40, height: 40, marginBottom: 6 }} />
@@ -4480,10 +4613,20 @@ function PublicPassport({ userId, token }) {
 // than editing a stranger.
 function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
   const { t, tv } = useLang();
+  const panelRef = useRef(null);
+  useModalFocus(panelRef, true);
   const [form, setForm] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  // Escape closes the editor — a11y. Skipped when locked, since that mode
+  // deliberately hides the close button (onboarding must be completed).
+  useEffect(() => {
+    if (locked) return;
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [locked, onClose]);
   const field = { width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
   const label = { fontSize: 9.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700, marginBottom: 5, display: "block" };
   const row = (children) => <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>{children}</div>;
@@ -4546,7 +4689,7 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
   // header/bottom nav instead of getting trapped behind them.
   return ReactDOM.createPortal(
     <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000cc", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 18, boxSizing: "border-box" }}>
-      <div style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 480, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }} className="noscroll">
+      <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t("editor_title")} style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 480, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 18, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }} className="noscroll">
         {/* Sticky, not just top-padded: on a tall sheet that's still
             scrolled to a mid-point (or any residual viewport-height edge
             case), Save/Close must never require scrolling back up to
@@ -4558,16 +4701,16 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
               background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "6px 12px",
               fontWeight: 800, fontSize: 12, fontFamily: "inherit", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1, whiteSpace: "nowrap",
             }}>{busy ? t("editor_saving") : t("editor_save")}</button>
-            {!locked && <button onClick={onClose} style={{ ...iconBtn(C.chalk), padding: 4 }}><X size={17} /></button>}
+            {!locked && <button onClick={onClose} aria-label={t("a11y_close")} style={{ ...iconBtn(C.chalk), padding: 4 }}><X size={17} /></button>}
           </div>
         </div>
         {locked && <div style={{ fontSize: 12, color: C.lime, marginBottom: 14 }}>{t("editor_locked_notice")}</div>}
         {err && <div style={{ color: C.amber, fontSize: 12, marginBottom: 14 }}>{err}</div>}
 
-        {group(t("editor_name_label"), <input style={field} value={form.full_name || ""} onChange={set("full_name")} placeholder={t("editor_name_ph")} />)}
+        {group(t("editor_name_label"), <input style={field} aria-label={t("editor_name_label")} value={form.full_name || ""} onChange={set("full_name")} placeholder={t("editor_name_ph")} />)}
 
         {group(t("auth_occupation"), (
-          <select style={field} value={form.occupation || ""} onChange={set("occupation")}>
+          <select style={field} aria-label={t("auth_occupation")} value={form.occupation || ""} onChange={set("occupation")}>
             <option value="">{t("editor_select")}</option>
             {OCCUPATIONS.map((o) => <option key={o} value={o}>{tv(o)}</option>)}
           </select>
@@ -4575,14 +4718,14 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
 
         {!isParent && row(<>
           <div><span style={label}>{t("editor_sport_label")}</span>
-            <select style={field} value={form.sport || ""} onChange={set("sport")}>
+            <select style={field} aria-label={t("editor_sport_label")} value={form.sport || ""} onChange={set("sport")}>
               <option value="">{t("editor_select")}</option>
               {(isPlayer ? SPORTS.filter((s) => s !== "All") : NON_PLAYER_SPORTS).map((s) => <option key={s} value={s}>{tv(s)}</option>)}
             </select>
           </div>
           {isPlayer && !SPORTS_WITHOUT_POSITION.includes(form.sport) ? (
             <div><span style={label}>{SPORT_POSITION_LABEL[form.sport] || t("editor_position_label")}</span>
-              <input style={field} list="position-options" value={form.position || ""} onChange={set("position")} placeholder={form.sport ? `e.g. ${(SPORT_POSITIONS[form.sport] || POSITIONS)[0]}` : t("editor_position_pick_sport")} />
+              <input style={field} list="position-options" aria-label={SPORT_POSITION_LABEL[form.sport] || t("editor_position_label")} value={form.position || ""} onChange={set("position")} placeholder={form.sport ? `e.g. ${(SPORT_POSITIONS[form.sport] || POSITIONS)[0]}` : t("editor_position_pick_sport")} />
               <datalist id="position-options">{(SPORT_POSITIONS[form.sport] || POSITIONS.filter((p) => p !== "All")).map((p) => <option key={p} value={p} />)}</datalist>
             </div>
           ) : <div />}
@@ -4598,19 +4741,19 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
 
         {isPlayer && row(<>
           <div><span style={label}>{t("editor_gender_label")}</span>
-            <select style={field} value={form.gender || ""} onChange={set("gender")}>
+            <select style={field} aria-label={t("editor_gender_label")} value={form.gender || ""} onChange={set("gender")}>
               <option value="">{t("editor_select")}</option>
               {GENDERS.filter((g) => g[0] !== "All").map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           <div><span style={label}>{t("editor_grad_year_label")}</span>
-            <input style={field} type="number" value={form.grad_year || ""} onChange={set("grad_year")} placeholder="2027" />
+            <input style={field} type="number" aria-label={t("editor_grad_year_label")} value={form.grad_year || ""} onChange={set("grad_year")} placeholder="2027" />
           </div>
         </>)}
 
         {isPlayer && row(<>
           <div><span style={label}>{t("editor_school_level_label")}</span>
-            <select style={field} value={form.education_level || ""} onChange={set("education_level")}>
+            <select style={field} aria-label={t("editor_school_level_label")} value={form.education_level || ""} onChange={set("education_level")}>
               <option value="">—</option>
               {SCHOOL_LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
             </select>
@@ -4620,10 +4763,10 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
 
         {isPlayer && row(<>
           <div><span style={label}>{t("editor_height_label")}</span>
-            <input style={field} type="number" value={form.height_cm || ""} onChange={set("height_cm")} placeholder="180" />
+            <input style={field} type="number" aria-label={t("editor_height_label")} value={form.height_cm || ""} onChange={set("height_cm")} placeholder="180" />
           </div>
           <div><span style={label}>{t("editor_weight_label")}</span>
-            <input style={field} type="number" value={form.weight_kg || ""} onChange={set("weight_kg")} placeholder="75" />
+            <input style={field} type="number" aria-label={t("editor_weight_label")} value={form.weight_kg || ""} onChange={set("weight_kg")} placeholder="75" />
           </div>
         </>)}
 
@@ -4631,11 +4774,11 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
           const pref = SPORT_PREFERENCE[form.sport];
           return row(<>
             <div><span style={label}>{t("editor_gpa_label")}</span>
-              <input style={field} type="number" step="0.01" min="0" max="5" value={form.gpa || ""} onChange={set("gpa")} placeholder="3.8" />
+              <input style={field} type="number" step="0.01" min="0" max="5" aria-label={t("editor_gpa_label")} value={form.gpa || ""} onChange={set("gpa")} placeholder="3.8" />
             </div>
             {pref ? (
               <div><span style={label}>{pref.label}</span>
-                <select style={field} value={form.foot || ""} onChange={set("foot")}>
+                <select style={field} aria-label={pref.label} value={form.foot || ""} onChange={set("foot")}>
                   <option value="">—</option>
                   {pref.options.map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
@@ -4645,11 +4788,11 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
         })()}
 
         {!isPlayer && !isParent && group(t("editor_license_label"), (
-          <input style={field} value={form.license || ""} onChange={set("license")} placeholder={t("editor_license_ph")} />
+          <input style={field} aria-label={t("editor_license_label")} value={form.license || ""} onChange={set("license")} placeholder={t("editor_license_ph")} />
         ))}
 
         {!isPlayer && !isParent && group(t("editor_looking_label"), (
-          <select style={field} value={form.looking_for_players || ""} onChange={set("looking_for_players")}>
+          <select style={field} aria-label={t("editor_looking_label")} value={form.looking_for_players || ""} onChange={set("looking_for_players")}>
             <option value="">—</option>
             <option value="true">{t("yes")}</option>
             <option value="false">{t("no")}</option>
@@ -4658,16 +4801,16 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
 
         {!isParent && row(<>
           <div><span style={label}>{t("editor_country_label")}</span>
-            <input style={field} list="country-options" value={form.country || ""} onChange={set("country")} placeholder={t("editor_country_ph")} />
+            <input style={field} list="country-options" aria-label={t("editor_country_label")} value={form.country || ""} onChange={set("country")} placeholder={t("editor_country_ph")} />
             <datalist id="country-options">{COUNTRIES.filter((c) => c !== "All").map((c) => <option key={c} value={c} />)}</datalist>
           </div>
           <div><span style={label}>{t("editor_club_label")}</span>
-            <input style={field} value={form.club_name || ""} onChange={set("club_name")} placeholder={t("editor_club_ph")} />
+            <input style={field} aria-label={t("editor_club_label")} value={form.club_name || ""} onChange={set("club_name")} placeholder={t("editor_club_ph")} />
           </div>
         </>)}
 
         {isPlayer && group(t("editor_status_label"), (
-          <select style={field} value={form.recruiting_status || ""} onChange={set("recruiting_status")}>
+          <select style={field} aria-label={t("editor_status_label")} value={form.recruiting_status || ""} onChange={set("recruiting_status")}>
             <option value="">—</option>
             <option value="Open to offers">Open to offers</option>
             <option value="In contact">In contact</option>
@@ -4677,7 +4820,7 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
         ))}
 
         {group(t("editor_bio_label"), (
-          <textarea style={{ ...field, resize: "vertical", minHeight: 80 }} maxLength={600} value={form.bio || ""} onChange={set("bio")} placeholder={t("editor_bio_ph")} />
+          <textarea style={{ ...field, resize: "vertical", minHeight: 80 }} maxLength={600} aria-label={t("editor_bio_label")} value={form.bio || ""} onChange={set("bio")} placeholder={t("editor_bio_ph")} />
         ))}
       </div>
     </div>,
@@ -4978,7 +5121,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         )}
       </div>
       {shareMsg && (
-        <div style={{ background: "#D4AF371a", border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: C.chalk, wordBreak: "break-all" }}>{shareMsg}</div>
+        <div style={{ background: C.limeWash, border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: C.chalk, wordBreak: "break-all" }}>{shareMsg}</div>
       )}
       {/* Revocable share links (migration 078) — each row is its own
           ?share=<token> link the athlete has actually sent out; "Revoke"
@@ -5029,7 +5172,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       )}
 
       {viewingOther && p.occupation && p.occupation !== "Player" && p.verifiedTier === "none" && (
-        <div style={{ background: "#B58A1A1a", border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, display: "flex", alignItems: "flex-start", gap: 10 }}>
           <ShieldAlert size={16} color={C.amber} style={{ flexShrink: 0, marginTop: 1 }} />
           <div style={{ fontSize: 12, color: C.chalk, lineHeight: 1.45 }}>
             {t("passport_unverified_warning").replace("{occupation}", p.occupation)}
@@ -5038,7 +5181,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       )}
 
       {incomplete && (
-        <div onClick={() => setEditing(true)} style={{ background: "#D4AF371a", border: `1px solid ${C.limeBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+        <div onClick={() => setEditing(true)} style={{ background: C.limeWash, border: `1px solid ${C.limeBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
           <Pencil size={16} color={C.lime} />
           <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.4 }}>
             <b style={{ color: C.lime }}>{t("passport_finish_bold")}</b>{t("passport_finish_rest")}
@@ -5194,7 +5337,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
                   display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 700,
                   padding: "5px 9px", borderRadius: 6, transform: "rotate(-1.5deg)",
                   color: b.on ? C.lime : C.slate,
-                  background: b.on ? "#D4AF371a" : "transparent",
+                  background: b.on ? C.limeWash : "transparent",
                   border: `1.5px solid ${b.on ? C.lime : C.line2}`,
                   opacity: b.on ? 1 : 0.55,
                 }}>
@@ -5454,7 +5597,7 @@ function BlockedAccounts() {
   const count = blocked === null ? null : blocked.length;
 
   return (
-    <div style={{ ...card, border: `1px solid ${count ? C.amber + "44" : C.line}` }}>
+    <div style={{ ...card, border: `1px solid ${count ? C.amberBorder : C.line}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
         <Ban size={16} color={count ? C.amber : C.slate} />
         <span style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>{t("blocked_title")}</span>
@@ -5538,7 +5681,7 @@ function VerificationRequest({ occupation }) {
       ) : (
         <React.Fragment>
           <div style={{ fontSize: 12.5, color: C.slate, marginBottom: 10, lineHeight: 1.5 }}>{t("verify_desc")}</div>
-          <input value={proofUrl} onChange={(e) => setProofUrl(e.target.value)} placeholder={t("verify_proof_placeholder")}
+          <input value={proofUrl} onChange={(e) => setProofUrl(e.target.value)} aria-label={t("verify_proof_placeholder")} placeholder={t("verify_proof_placeholder")}
             style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13, fontFamily: "inherit", boxSizing: "border-box", marginBottom: 10 }} />
           <button onClick={submit} disabled={busy} style={{
             width: "100%", background: "transparent", color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 10,
@@ -6277,7 +6420,7 @@ function AdminPanel({ onBack }) {
   return (
     <div style={{ padding: "8px 12px 20px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "4px 2px 12px" }}>
-        <button onClick={onBack} style={iconBtn(C.chalk)}><ChevronLeft size={20} /></button>
+        <button onClick={onBack} aria-label={t("back")} style={iconBtn(C.chalk)}><ChevronLeft size={20} /></button>
         <SectionTitle noMargin>{t("admin_title")}</SectionTitle>
       </div>
 
@@ -6482,7 +6625,7 @@ function AdminPanel({ onBack }) {
         <div>
           <input value={userQuery} onChange={(e) => setUserQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") loadUsers(userQuery); }}
-            placeholder={t("admin_search_name")} style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
+            aria-label={t("admin_search_name")} placeholder={t("admin_search_name")} style={{ ...field, width: "100%", boxSizing: "border-box", marginBottom: 10 }} />
           {users === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
           {users && users.map((u) => (
             <div key={u.id} style={{ ...card, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, opacity: u.is_banned ? 0.6 : 1 }}>
@@ -6526,14 +6669,14 @@ function AdminPanel({ onBack }) {
                   already used, so the row's default state is calm and the
                   serious actions take one deliberate extra tap to reach. */}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
-                <select value={u.plan} onChange={(e) => setUserPlan(u.id, e.target.value)} style={{ ...field, padding: "5px 7px", fontSize: 11.5 }}>
+                <select value={u.plan} onChange={(e) => setUserPlan(u.id, e.target.value)} aria-label={t("settings_plan")} style={{ ...field, padding: "5px 7px", fontSize: 11.5 }}>
                   <option value="free">free</option><option value="starter">basic</option><option value="pro">pro</option><option value="elite">elite</option>
                 </select>
                 <div style={{ display: "flex", gap: 4 }}>
                   {["none", "pro", "elite"].map((tier) => {
                     const active = (u.verified_tier || "none") === tier;
                     const tierColor = tier === "elite" ? C.elite : tier === "pro" ? C.lime : C.slate;
-                    const tierBg = tier === "elite" ? "#415A771a" : tier === "pro" ? "#D4AF371a" : "transparent";
+                    const tierBg = tier === "elite" ? C.eliteWash : tier === "pro" ? C.limeWash : "transparent";
                     return (
                       <button key={tier} onClick={() => setUserVerifiedTier(u.id, tier)} style={{
                         fontSize: 10, fontWeight: 700, padding: "5px 8px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
@@ -6545,7 +6688,7 @@ function AdminPanel({ onBack }) {
                 </div>
                 <button onClick={() => toggleUserActivity(u.id)} title={t("admin_view_activity")} style={{
                   display: "flex", alignItems: "center", padding: "5px 7px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                  background: expandedActivityId === u.id ? "#D4AF371a" : "transparent", color: expandedActivityId === u.id ? C.lime : C.slate,
+                  background: expandedActivityId === u.id ? C.limeWash : "transparent", color: expandedActivityId === u.id ? C.lime : C.slate,
                   border: `1px solid ${expandedActivityId === u.id ? C.lime : C.line2}`,
                 }}>{expandedActivityId === u.id ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>
               </div>
@@ -6555,16 +6698,16 @@ function AdminPanel({ onBack }) {
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
                     <button onClick={() => setUserAdmin(u.id, !u.is_admin)} style={{
                       fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                      background: u.is_admin ? "#D4AF371a" : "transparent", color: u.is_admin ? C.lime : C.slate, border: `1px solid ${u.is_admin ? C.lime : C.line2}`,
+                      background: u.is_admin ? C.limeWash : "transparent", color: u.is_admin ? C.lime : C.slate, border: `1px solid ${u.is_admin ? C.lime : C.line2}`,
                     }}>{u.is_admin ? t("admin_revoke_admin") : t("admin_make_admin")}</button>
                     <button onClick={() => setUserAiUnlimited(u.id, !u.ai_unlimited)} title={t("admin_ai_unlimited_hint")} style={{
                       fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                      background: u.ai_unlimited ? "#415A771a" : "transparent", color: u.ai_unlimited ? C.elite : C.slate, border: `1px solid ${u.ai_unlimited ? C.elite : C.line2}`,
+                      background: u.ai_unlimited ? C.eliteWash : "transparent", color: u.ai_unlimited ? C.elite : C.slate, border: `1px solid ${u.ai_unlimited ? C.elite : C.line2}`,
                     }}>{u.ai_unlimited ? t("admin_revoke_ai_unlimited") : t("admin_grant_ai_unlimited")}</button>
                     {u.id !== myUid && (
                       <button onClick={() => setUserBanned(u.id, !u.is_banned)} style={{
                         fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
-                        background: u.is_banned ? "#B58A1A1a" : "transparent", color: u.is_banned ? C.amber : C.slate, border: `1px solid ${u.is_banned ? C.amber : C.line2}`,
+                        background: u.is_banned ? C.amberWash : "transparent", color: u.is_banned ? C.amber : C.slate, border: `1px solid ${u.is_banned ? C.amber : C.line2}`,
                       }}>{u.is_banned ? t("admin_unblock_user") : t("admin_block_user")}</button>
                     )}
                     {u.id !== myUid && (
@@ -6826,7 +6969,7 @@ function AdminPanel({ onBack }) {
                       <div key={row.plan} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${C.line}` }}>
                         <span style={{ fontSize: 12 }}>{(PLANS.find((p) => p.id === row.plan) || {}).name || row.plan}</span>
                         <span style={{ fontSize: 10.5, color: C.slate }}>{row.subscribers} · ${row.cost.toFixed(2)} / ${row.revenue.toFixed(0)}</span>
-                        <span style={{ fontSize: 12, fontWeight: 800, color: row.overTarget ? "#ff5c5c" : C.lime, fontFamily: "'Space Mono', monospace" }}>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: row.overTarget ? C.danger : C.lime, fontFamily: "'Space Mono', monospace" }}>
                           {row.costPct.toFixed(1)}%{row.overTarget ? ` ⚠ ${t("admin_scout_over_target")}` : ""}
                         </span>
                       </div>
@@ -6975,19 +7118,19 @@ function AdminPanel({ onBack }) {
                   <input
                     value={scoutDebugId}
                     onChange={(e) => setScoutDebugId(e.target.value)}
-                    placeholder={t("admin_scout_lookup")}
+                    aria-label={t("admin_scout_lookup")} placeholder={t("admin_scout_lookup")}
                     style={{ ...field, flex: 1, fontFamily: "'Space Mono', monospace", fontSize: 11.5 }}
                   />
                   <button
                     onClick={() => loadScoutDebug(scoutDebugId)}
                     disabled={scoutDebugBusy || !scoutDebugId.trim()}
-                    style={{ background: C.lime, color: "#0B0B0C", border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 12, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", opacity: scoutDebugBusy || !scoutDebugId.trim() ? 0.5 : 1 }}
+                    style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontSize: 12, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", opacity: scoutDebugBusy || !scoutDebugId.trim() ? 0.5 : 1 }}
                   >{t("admin_scout_load")}</button>
                 </div>
               </div>
 
               {scoutDebug && scoutDebug.error && (
-                <div style={{ ...card, color: "#FF6B6B", fontSize: 12 }}>{scoutDebug.error}</div>
+                <div style={{ ...card, color: C.danger, fontSize: 12 }}>{scoutDebug.error}</div>
               )}
               {scoutDebug && scoutDebug.found === false && (
                 <div style={{ ...card, color: C.slate, fontSize: 12.5 }}>{t("admin_scout_not_found")}</div>
@@ -7064,7 +7207,7 @@ function AdminPanel({ onBack }) {
                     <button
                       onClick={() => resetScoutIntelligence(scoutDebugId)}
                       disabled={scoutDebugBusy}
-                      style={{ width: "100%", background: "transparent", color: "#FF6B6B", border: "1px solid #FF6B6B55", borderRadius: 12, padding: "11px 14px", fontSize: 12.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", opacity: scoutDebugBusy ? 0.5 : 1 }}
+                      style={{ width: "100%", background: "transparent", color: C.danger, border: `1px solid ${C.dangerBorder}`, borderRadius: 12, padding: "11px 14px", fontSize: 12.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", opacity: scoutDebugBusy ? 0.5 : 1 }}
                     >{t("admin_scout_reset")}</button>
                   </div>
                 );
@@ -7264,9 +7407,9 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
         if (prof && prof.full_name) seeded.name = prof.full_name;
         if (prof && prof.occupation) seeded.occupation = prof.occupation;
         if (prof && prof.dob) {
-          const b = new Date(prof.dob), t = new Date();
-          let a = t.getFullYear() - b.getFullYear();
-          if (t.getMonth() < b.getMonth() || (t.getMonth() === b.getMonth() && t.getDate() < b.getDate())) a--;
+          const b = new Date(prof.dob), now = new Date();
+          let a = now.getFullYear() - b.getFullYear();
+          if (now.getMonth() < b.getMonth() || (now.getMonth() === b.getMonth() && now.getDate() < b.getDate())) a--;
           seeded.age = a;
         }
         if (ath) {
@@ -7647,7 +7790,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
   async function addSuggestedTargets(msgIndex, targets) {
     if (!sb || !uidRef.current || !targets || !targets.length) return;
     try {
-      const rows = targets.map((t) => ({ user_id: uidRef.current, name: t.name, fit_reasoning: t.reasoning || null }));
+      const rows = targets.map((tg) => ({ user_id: uidRef.current, name: tg.name, fit_reasoning: tg.reasoning || null }));
       const { error } = await sb.from("outreach_targets").insert(rows);
       if (error) throw error;
       setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedTargets: null, targetsAdded: true, actionError: null } : msg)));
@@ -7750,7 +7893,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
           it says something true. */}
       <div style={{ padding: "9px 14px", borderBottom: `1px solid ${C.line}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 99, border: `1.5px solid ${C.lime}`, background: "#D4AF3714", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <div style={{ width: 26, height: 26, borderRadius: 99, border: `1.5px solid ${C.lime}`, background: C.limeWash, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <Radar size={13} color={C.lime} />
           </div>
           <span style={{ fontWeight: 800, letterSpacing: "0.1em", fontSize: 11.5, flexShrink: 0 }}>{t("scout_header")}</span>
@@ -7796,7 +7939,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
           {!loaded && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
           {msgs && msgs.map((m, i) => (
             <div key={i} className="msg" style={m.role === "user" ? bubbleUser : bubbleAgent}>
-              {m.photo && <img src={m.photo} style={{ display: "block", maxWidth: "100%", borderRadius: 10, marginBottom: m.text ? 6 : 0 }} />}
+              {m.photo && <img src={m.photo} alt={t("alt_scout_photo")} style={{ display: "block", maxWidth: "100%", borderRadius: 10, marginBottom: m.text ? 6 : 0 }} />}
               {m.text && <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>}
               {m.failedInput && (
                 <button
@@ -7899,7 +8042,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
               )}
               {m.draftedEmail && savingEmailFor === i && (
                 <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <select value={selectedEmailTarget} onChange={(e) => setSelectedEmailTarget(e.target.value)} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "7px 8px", fontSize: 12, fontFamily: "inherit", flex: "1 1 140px" }}>
+                  <select value={selectedEmailTarget} onChange={(e) => setSelectedEmailTarget(e.target.value)} aria-label={t("scout_save_email_pick")} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "7px 8px", fontSize: 12, fontFamily: "inherit", flex: "1 1 140px" }}>
                     <option value="">{t("scout_save_email_pick")}</option>
                     {(emailTargets || []).map((tg) => <option key={tg.id} value={tg.id}>{tg.name}</option>)}
                   </select>
@@ -7949,7 +8092,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
           {photo && (
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px 8px" }}>
               <div style={{ position: "relative", flexShrink: 0 }}>
-                <img src={photo.dataUrl} style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 10, border: `1px solid ${C.line2}`, display: "block" }} />
+                <img src={photo.dataUrl} alt="" style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 10, border: `1px solid ${C.line2}`, display: "block" }} />
                 <button onClick={clearPhoto} title={t("feed_remove_photo")} style={{ position: "absolute", top: -6, right: -6, background: "#000000cc", border: "none", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.chalk, padding: 0 }}>
                   <X size={11} />
                 </button>
@@ -7966,7 +8109,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
             {/* Send sits INSIDE the field (mockup) — one input affordance
                 instead of a separate adjacent button. */}
             <div style={{ flex: 1, position: "relative", display: "flex" }}>
-              <textarea rows={1} value={input} placeholder={t("scout_input_ph")} onChange={(e) => setInput(e.target.value)}
+              <textarea rows={1} value={input} aria-label={t("scout_input_ph")} placeholder={t("scout_input_ph")} onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
                 style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, color: C.chalk, padding: "11px 44px 11px 13px", fontSize: 14, fontFamily: "inherit", resize: "none", outline: "none" }} />
               <button onClick={() => send(input)} disabled={pending || !loaded || (!input.trim() && !photo)} title={t("scout_send")}
@@ -8050,11 +8193,11 @@ function PathNode({ Icon, label, sub, filled, current, onClick, size, color }) {
     <div onClick={onClick} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, minWidth: 0, cursor: onClick ? "pointer" : "default", flexShrink: 0 }}>
       <div style={{
         width: d, height: d, borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center",
-        background: filled ? (color ? "#4A9EFF1a" : "#D4AF371a") : "transparent",
+        background: filled ? (color ? C.infoWash : C.limeWash) : "transparent",
         border: `2px solid ${filled ? accent : C.line2}`,
         // The athlete's current position gets a soft halo — the mockup's
         // "YOU / NOW" node is the one thing that should catch the eye first.
-        boxShadow: current ? `0 0 0 4px ${color ? "#4A9EFF1f" : "#D4AF371f"}` : "none",
+        boxShadow: current ? `0 0 0 4px ${color ? C.infoWash : C.limeWash}` : "none",
       }}>
         <Icon size={d * 0.52} color={filled ? accent : C.slate} />
       </div>
@@ -8207,7 +8350,7 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan }) {
 
       {editing ? (
         <div>
-          <textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t("goal_card_placeholder")} maxLength={300} style={inputStyle} />
+          <textarea value={draft} onChange={(e) => setDraft(e.target.value)} aria-label={t("goal_card_placeholder")} placeholder={t("goal_card_placeholder")} maxLength={300} style={inputStyle} />
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
             <button onClick={save} disabled={busy} style={btn(C.lime, C.ink)}>{busy ? t("goal_card_saving") : t("goal_card_save")}</button>
             <button onClick={() => { setEditing(false); setErr(""); }} disabled={busy} style={btn("transparent", C.slate)}>{t("goal_card_cancel")}</button>
@@ -8698,7 +8841,7 @@ function BackupPlanCard({ athlete, loaded, actingFor, onSaved }) {
     return (
       <div style={{ ...card }}>
         {label}
-        <textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t("plan_backup_placeholder")} maxLength={300}
+        <textarea value={draft} onChange={(e) => setDraft(e.target.value)} aria-label={t("plan_backup_placeholder")} placeholder={t("plan_backup_placeholder")} maxLength={300}
           style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 10, color: C.chalk, padding: "10px 12px", fontSize: 13.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box", resize: "vertical", minHeight: 58 }} />
         <div style={{ fontSize: 8.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700, margin: "10px 0 6px" }}>
           {t("plan_backup_suggestions").replace("{sport}", sport || t("plan_backup_your_sport"))}
@@ -8952,9 +9095,9 @@ function Targets({ plan, onUpgrade, actingFor }) {
         {showAddTarget && (
           <div style={{ ...card }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={t("targets_name_ph")} style={{ flex: "1 1 160px", ...inputStyle }} />
-              <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder={t("targets_contact_name_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
-              <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder={t("targets_contact_email_ph")} type="email" style={{ flex: "1 1 140px", ...inputStyle }} />
+              <input autoFocus value={name} onChange={(e) => setName(e.target.value)} aria-label={t("targets_name_ph")} placeholder={t("targets_name_ph")} style={{ flex: "1 1 160px", ...inputStyle }} />
+              <input value={contactName} onChange={(e) => setContactName(e.target.value)} aria-label={t("targets_contact_name_ph")} placeholder={t("targets_contact_name_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
+              <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} aria-label={t("targets_contact_email_ph")} placeholder={t("targets_contact_email_ph")} type="email" style={{ flex: "1 1 140px", ...inputStyle }} />
               <button onClick={addTarget} disabled={!name.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!name.trim() || busy) ? 0.5 : 1 }}>
                 {busy ? "…" : t("targets_add")}
               </button>
@@ -8972,9 +9115,9 @@ function Targets({ plan, onUpgrade, actingFor }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 {editingTarget === it.id ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <input value={tDraft.name} onChange={(e) => setTDraft((d) => ({ ...d, name: e.target.value }))} placeholder={t("targets_name_ph")} style={{ ...inputStyle, fontSize: 13 }} />
-                    <input value={tDraft.contact_name} onChange={(e) => setTDraft((d) => ({ ...d, contact_name: e.target.value }))} placeholder={t("targets_contact_name_ph")} style={{ ...inputStyle, fontSize: 12 }} />
-                    <input value={tDraft.contact_email} onChange={(e) => setTDraft((d) => ({ ...d, contact_email: e.target.value }))} placeholder={t("targets_contact_email_ph")} style={{ ...inputStyle, fontSize: 12 }} />
+                    <input value={tDraft.name} onChange={(e) => setTDraft((d) => ({ ...d, name: e.target.value }))} aria-label={t("targets_name_ph")} placeholder={t("targets_name_ph")} style={{ ...inputStyle, fontSize: 13 }} />
+                    <input value={tDraft.contact_name} onChange={(e) => setTDraft((d) => ({ ...d, contact_name: e.target.value }))} aria-label={t("targets_contact_name_ph")} placeholder={t("targets_contact_name_ph")} style={{ ...inputStyle, fontSize: 12 }} />
+                    <input value={tDraft.contact_email} onChange={(e) => setTDraft((d) => ({ ...d, contact_email: e.target.value }))} aria-label={t("targets_contact_email_ph")} placeholder={t("targets_contact_email_ph")} style={{ ...inputStyle, fontSize: 12 }} />
                     <div style={{ display: "flex", gap: 8 }}>
                       <button onClick={() => { if (tDraft.name.trim()) { updateTarget(it.id, { name: tDraft.name.trim(), contact_name: tDraft.contact_name.trim() || null, contact_email: tDraft.contact_email.trim() || null }); setEditingTarget(null); } }}
                         style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "6px 12px", fontSize: 11.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>{t("goal_card_save")}</button>
@@ -8994,7 +9137,7 @@ function Targets({ plan, onUpgrade, actingFor }) {
                 )}
                 {it.fit_reasoning && <div style={{ fontSize: 11, color: C.lime, marginTop: 2 }}>{it.fit_reasoning}</div>}
               </div>
-              <select value={it.status} onChange={(e) => updateTarget(it.id, { status: e.target.value })} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "6px 8px", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
+              <select value={it.status} onChange={(e) => updateTarget(it.id, { status: e.target.value })} aria-label={t("a11y_status")} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "6px 8px", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
                 {TARGET_STATUSES.map((s) => <option key={s} value={s}>{t("targets_status_" + s)}</option>)}
               </select>
               <button onClick={() => setExpandedId(expandedId === it.id ? null : it.id)} style={{ ...iconBtn(C.slate), flexShrink: 0 }}>{expandedId === it.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>
@@ -9002,11 +9145,11 @@ function Targets({ plan, onUpgrade, actingFor }) {
             </div>
             {expandedId === it.id && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
-                <textarea defaultValue={it.fit_reasoning || ""} onBlur={(e) => updateTarget(it.id, { fit_reasoning: e.target.value })} placeholder={t("targets_fit_reasoning_ph")}
+                <textarea defaultValue={it.fit_reasoning || ""} onBlur={(e) => updateTarget(it.id, { fit_reasoning: e.target.value })} aria-label={t("targets_fit_reasoning_ph")} placeholder={t("targets_fit_reasoning_ph")}
                   style={{ width: "100%", minHeight: 40, resize: "vertical", marginBottom: 8, ...inputStyle }} />
-                <textarea defaultValue={it.notes || ""} onBlur={(e) => updateTarget(it.id, { notes: e.target.value })} placeholder={t("targets_notes_ph")}
+                <textarea defaultValue={it.notes || ""} onBlur={(e) => updateTarget(it.id, { notes: e.target.value })} aria-label={t("targets_notes_ph")} placeholder={t("targets_notes_ph")}
                   style={{ width: "100%", minHeight: 50, resize: "vertical", marginBottom: 8, ...inputStyle }} />
-                <textarea defaultValue={it.draft_email || ""} onBlur={(e) => updateTarget(it.id, { draft_email: e.target.value })} placeholder={t("targets_draft_ph")}
+                <textarea defaultValue={it.draft_email || ""} onBlur={(e) => updateTarget(it.id, { draft_email: e.target.value })} aria-label={t("targets_draft_ph")} placeholder={t("targets_draft_ph")}
                   style={{ width: "100%", minHeight: 80, resize: "vertical", ...inputStyle }} />
               </div>
             )}
@@ -9129,7 +9272,7 @@ function DevelopmentPlan({ viewUserId, manageId }) {
               <div style={{ fontSize: 9, letterSpacing: "0.1em", color: C.lime, fontWeight: 700, marginBottom: 2 }}>{t("dev_plan_focus_" + it.focus_area)}</div>
               {editingDev === it.id ? (
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <input autoFocus value={devDraft} onChange={(e) => setDevDraft(e.target.value)}
+                  <input autoFocus value={devDraft} onChange={(e) => setDevDraft(e.target.value)} aria-label={t("dev_plan_goal_ph")}
                     onKeyDown={(e) => { if (e.key === "Enter" && devDraft.trim()) { updateItem(it.id, { goal: devDraft.trim() }); setEditingDev(null); } if (e.key === "Escape") setEditingDev(null); }}
                     style={{ ...inputStyle, flex: 1, fontSize: 13 }} />
                   <button onClick={() => { if (devDraft.trim()) { updateItem(it.id, { goal: devDraft.trim() }); setEditingDev(null); } }} style={{ background: "none", border: "none", color: C.lime, fontSize: 11, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", padding: 0 }}>{t("goal_card_save")}</button>
@@ -9142,7 +9285,7 @@ function DevelopmentPlan({ viewUserId, manageId }) {
                 <div onClick={() => { setDevDraft(it.goal || ""); setEditingDev(it.id); }} title={t("targets_edit_hint")} style={{ fontSize: 13, fontWeight: 700, color: C.chalk, textDecoration: it.status === "done" ? "line-through" : "none", opacity: it.status === "done" ? 0.6 : 1 , cursor: "text" }}>{it.goal}</div>
               )}
             </div>
-            <select value={it.status} onChange={(e) => updateItem(it.id, { status: e.target.value })} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "6px 8px", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
+            <select value={it.status} onChange={(e) => updateItem(it.id, { status: e.target.value })} aria-label={t("a11y_status")} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "6px 8px", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
               {DEV_STATUSES.map((s) => <option key={s} value={s}>{t("dev_plan_status_" + s)}</option>)}
             </select>
             <button onClick={() => setExpandedId(expandedId === it.id ? null : it.id)} style={{ ...iconBtn(C.slate), flexShrink: 0 }}>{expandedId === it.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>
@@ -9156,7 +9299,7 @@ function DevelopmentPlan({ viewUserId, manageId }) {
                   load-bearing, not decoration. */}
               <textarea value={noteDraft[it.id] !== undefined ? noteDraft[it.id] : (it.notes || "")}
                 onChange={(e) => setNoteDraft((d) => ({ ...d, [it.id]: e.target.value }))}
-                placeholder={t("dev_plan_notes_ph")}
+                aria-label={t("dev_plan_notes_ph")} placeholder={t("dev_plan_notes_ph")}
                 style={{ width: "100%", minHeight: 50, resize: "vertical", marginTop: 8, ...inputStyle }} />
               {(noteDraft[it.id] !== undefined && noteDraft[it.id] !== (it.notes || "")) && (
                 <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
@@ -9174,10 +9317,10 @@ function DevelopmentPlan({ viewUserId, manageId }) {
       {sb && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <select value={focusArea} onChange={(e) => setFocusArea(e.target.value)} style={{ ...inputStyle, flex: "0 0 auto" }}>
+            <select value={focusArea} onChange={(e) => setFocusArea(e.target.value)} aria-label={t("a11y_focus_area")} style={{ ...inputStyle, flex: "0 0 auto" }}>
               {DEV_FOCUS_AREAS.map((f) => <option key={f} value={f}>{t("dev_plan_focus_" + f)}</option>)}
             </select>
-            <input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder={t("dev_plan_goal_ph")} style={{ flex: "1 1 160px", ...inputStyle }} />
+            <input value={goal} onChange={(e) => setGoal(e.target.value)} aria-label={t("dev_plan_goal_ph")} placeholder={t("dev_plan_goal_ph")} style={{ flex: "1 1 160px", ...inputStyle }} />
             <button onClick={addItem} disabled={!goal.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!goal.trim() || busy) ? 0.5 : 1 }}>
               {busy ? "…" : t("dev_plan_add")}
             </button>
@@ -9455,16 +9598,16 @@ function PathwayPlan({ viewUserId, onChange }) {
             {exists && <button onClick={() => setEditingGoal(false)} style={{ ...iconBtn(C.slate), fontSize: 11 }}>{t("pathway_collapse")}</button>}
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-            <select value={pathwayType} onChange={(e) => { setPathwayType(e.target.value); }} onBlur={() => save({ pathway_type: pathwayType })} style={{ flex: "1 1 160px", ...inputStyle }}>
+            <select value={pathwayType} onChange={(e) => { setPathwayType(e.target.value); }} aria-label={t("pathway_plan_title")} onBlur={() => save({ pathway_type: pathwayType })} style={{ flex: "1 1 160px", ...inputStyle }}>
               {PATHWAY_TYPES.map((p) => <option key={p} value={p}>{t("pathway_type_" + p)}</option>)}
             </select>
-            <input value={timeline} onChange={(e) => setTimeline(e.target.value)} onBlur={() => save({})} placeholder={t("pathway_timeline_ph")} style={{ flex: "1 1 140px", ...inputStyle }} />
+            <input value={timeline} onChange={(e) => setTimeline(e.target.value)} onBlur={() => save({})} aria-label={t("pathway_timeline_ph")} placeholder={t("pathway_timeline_ph")} style={{ flex: "1 1 140px", ...inputStyle }} />
           </div>
           {/* select's onChange alone won't fire a save (no blur on
               programmatic value change) — this button covers the common
               case of just changing the dropdown without touching timeline. */}
           <button onClick={() => save({})} disabled={busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 14px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>{t("pathway_save")}</button>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => save({})} placeholder={t("pathway_notes_ph")}
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => save({})} aria-label={t("pathway_notes_ph")} placeholder={t("pathway_notes_ph")}
             style={{ width: "100%", minHeight: 50, resize: "vertical", ...inputStyle }} />
         </div>
       ) : (
@@ -9476,10 +9619,10 @@ function PathwayPlan({ viewUserId, onChange }) {
         {milestones.length === 0 && <div style={{ fontSize: 12, color: C.slate, marginBottom: 6 }}>{t("pathway_milestones_empty")}</div>}
         {milestones.map((m) => (
           <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
-            <input type="checkbox" checked={!!m.done} onChange={() => toggleMilestone(m.id)} style={{ flexShrink: 0 }} />
+            <input type="checkbox" checked={!!m.done} onChange={() => toggleMilestone(m.id)} aria-label={m.label} style={{ flexShrink: 0 }} />
             {editingMilestone === m.id ? (
               <>
-                <input autoFocus value={milestoneDraft} onChange={(e) => setMilestoneDraft(e.target.value)}
+                <input autoFocus value={milestoneDraft} onChange={(e) => setMilestoneDraft(e.target.value)} aria-label={m.label}
                   onKeyDown={(e) => { if (e.key === "Enter") { renameMilestone(m.id, milestoneDraft); setEditingMilestone(null); } if (e.key === "Escape") setEditingMilestone(null); }}
                   style={{ ...inputStyle, flex: 1, padding: "5px 9px", fontSize: 12.5 }} />
                 <button onClick={() => { renameMilestone(m.id, milestoneDraft); setEditingMilestone(null); }} style={{ background: "none", border: "none", color: C.lime, fontSize: 11, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", padding: 0, flexShrink: 0 }}>{t("goal_card_save")}</button>
@@ -9497,7 +9640,7 @@ function PathwayPlan({ viewUserId, onChange }) {
           </div>
         ))}
         <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-          <input value={newMilestone} onChange={(e) => setNewMilestone(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addMilestone(); }} placeholder={t("pathway_milestone_ph")} style={{ flex: 1, ...inputStyle }} />
+          <input value={newMilestone} onChange={(e) => setNewMilestone(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addMilestone(); }} aria-label={t("pathway_milestone_ph")} placeholder={t("pathway_milestone_ph")} style={{ flex: 1, ...inputStyle }} />
           <button onClick={addMilestone} disabled={!newMilestone.trim()} style={{ background: C.turf, color: C.chalk, border: `1px solid ${C.line2}`, borderRadius: 9, padding: "8px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", opacity: !newMilestone.trim() ? 0.5 : 1 }}>{t("pathway_milestone_add")}</button>
         </div>
       </div>
@@ -9563,7 +9706,7 @@ function UpdateBar({ onDismiss }) {
   return ReactDOM.createPortal(
     <div style={{
       position: "fixed", top: 0, left: 0, right: 0, zIndex: 90,
-      background: C.lime, color: "#0B0B0C",
+      background: C.lime, color: C.ink,
       display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
       padding: "9px 14px", paddingTop: "calc(9px + env(safe-area-inset-top, 0px))",
       fontSize: 12.5, fontWeight: 700, fontFamily: "'Archivo', system-ui, sans-serif",
@@ -9572,7 +9715,7 @@ function UpdateBar({ onDismiss }) {
       <span>{t("update_available")}</span>
       <button
         onClick={() => window.location.reload()}
-        style={{ background: "#0B0B0C", color: C.lime, border: "none", borderRadius: 999, padding: "5px 13px", fontSize: 12, fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}
+        style={{ background: C.ink, color: C.lime, border: "none", borderRadius: 999, padding: "5px 13px", fontSize: 12, fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}
       >{t("update_refresh")}</button>
       <button
         onClick={onDismiss}
@@ -9592,7 +9735,7 @@ function ManagingBanner({ name, onExit, t }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
-      background: "#4A9EFF1a", border: `1px solid ${C.info}`, borderRadius: 12,
+      background: C.infoWash, border: `1px solid ${C.info}`, borderRadius: 12,
       padding: "9px 12px", marginBottom: 12,
     }}>
       <User size={15} color={C.info} style={{ flexShrink: 0 }} />
@@ -9956,7 +10099,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
               return (
                 <button key={n.id} onClick={() => go(n.id)} style={{
                   display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 10,
-                  background: active ? "#D4AF371a" : "transparent", border: "none", cursor: locked ? "default" : "pointer", fontFamily: "inherit",
+                  background: active ? C.limeWash : "transparent", border: "none", cursor: locked ? "default" : "pointer", fontFamily: "inherit",
                   color: active ? C.lime : C.chalk, fontSize: 14, fontWeight: active ? 700 : 600, textAlign: "left",
                   opacity: locked ? 0.35 : 1,
                 }}>
@@ -10053,7 +10196,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
             return (
               <button key={n.id} onClick={() => go(n.id)} style={{
                 background: C.lime, color: C.ink, border: `3px solid ${C.pitch}`, borderRadius: "50%",
-                width: 58, height: 58, marginTop: -22, boxShadow: `0 8px 20px -6px #D4AF3766`,
+                width: 58, height: 58, marginTop: -22, boxShadow: `0 8px 20px -6px ${C.limeGlow}`,
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                 cursor: locked ? "default" : "pointer", fontFamily: "inherit",
                 opacity: locked ? 0.35 : 1,
@@ -10096,9 +10239,11 @@ function GolszApp({ onSignOut, startOnboarding }) {
 // "we've learned about you" reveal, just see plans and pick one.
 function UpgradeScreen({ uid, onDismiss, title, body }) {
   const { t } = useLang();
+  const panelRef = useRef(null);
+  useModalFocus(panelRef, true, onDismiss);
   return ReactDOM.createPortal(
     <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000a6", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
-      <div className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 440, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 22, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
+      <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title || t("conversion_title")} className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 440, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 22, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
         <div style={{ textAlign: "center", marginBottom: 8 }}><Radar size={26} color={C.lime} /></div>
         <div style={{ fontSize: 18, fontWeight: 900, textAlign: "center", marginBottom: 8, lineHeight: 1.3 }}>{title || t("conversion_title")}</div>
         <div style={{ fontSize: 13, color: C.slate, textAlign: "center", marginBottom: 20, lineHeight: 1.5 }}>{body || t("conversion_body")}</div>
@@ -10145,9 +10290,11 @@ function UpgradeScreen({ uid, onDismiss, title, body }) {
 // existing mustFinishProfile -> Passport flow already in place.
 function EliteWelcome({ onDismiss }) {
   const { t } = useLang();
+  const panelRef = useRef(null);
+  useModalFocus(panelRef, true, onDismiss);
   return ReactDOM.createPortal(
     <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000a6", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
-      <div style={{ background: C.pitch, border: `1px solid ${C.elite}`, borderRadius: 18, maxWidth: 420, width: "100%", padding: 26, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)", textAlign: "center" }}>
+      <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t("elite_welcome_title")} style={{ background: C.pitch, border: `1px solid ${C.elite}`, borderRadius: 18, maxWidth: 420, width: "100%", padding: 26, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)", textAlign: "center" }}>
         <div style={{ fontSize: 10, letterSpacing: "0.2em", color: C.elite, fontWeight: 800, marginBottom: 10 }}>{t("elite_welcome_eyebrow")}</div>
         <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 12, lineHeight: 1.3 }}>{t("elite_welcome_title")}</div>
         <div style={{ fontSize: 13, color: C.slate, lineHeight: 1.6, marginBottom: 22 }}>{t("elite_welcome_body")}</div>
@@ -10161,6 +10308,8 @@ function EliteWelcome({ onDismiss }) {
 const GUIDED_STEPS = ["goal", "passport", "missing", "readiness", "next_move", "ready"];
 function GuidedAssessment({ uid, onDismiss }) {
   const { t } = useLang();
+  const panelRef = useRef(null);
+  useModalFocus(panelRef, true, onDismiss);
   const [step, setStep] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [goal, setGoal] = useState("");
@@ -10215,7 +10364,7 @@ function GuidedAssessment({ uid, onDismiss }) {
 
   return ReactDOM.createPortal(
     <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000a6", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
-      <div className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 440, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 22, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
+      <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t("conversion_title")} className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 440, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 22, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
         {!loaded ? (
           <div style={{ textAlign: "center", padding: "30px 0", color: C.slate, fontSize: 13 }}>{t("loading")}</div>
         ) : !showPlans ? (
@@ -10318,6 +10467,17 @@ const CSS = `
        genuinely different route rather than more of the same emphasis. */
     --info: #4A9EFF; --info-border: rgba(74,158,255,0.4);
     --passport-wash: transparent; --passport-strip: rgba(212,175,55,0.1);
+    /* Tinted washes + a danger accent. These exist for the same reason
+       --lime-border and --amber-border do: var(--lime) with alpha digits
+       glued on the end is not valid CSS, so an alpha-suffixed hex literal
+       was being written straight into inline style objects instead — which
+       silently kept a dark-theme gold wash on the light theme. Every wash
+       below is the themed accent at the same alpha, so it re-tints with
+       the rest of the palette. */
+    --lime-wash: rgba(212,175,55,0.1); --lime-glow: rgba(212,175,55,0.4);
+    --amber-wash: rgba(181,138,26,0.1); --info-wash: rgba(74,158,255,0.1);
+    --elite-wash: rgba(107,132,163,0.1);
+    --danger: #FF6B6B; --danger-border: rgba(255,107,107,0.35);
   }
   html[data-theme="light"] {
     --pitch: #FDF9F2; --turf: #ECE8DC; --card: #FFFFFF; --lime: #B58A1A;
@@ -10328,6 +10488,10 @@ const CSS = `
     --info: #1D6FD0; --info-border: rgba(29,111,208,0.35);
     --passport-wash: linear-gradient(180deg, #F7F4EA 0%, #FDF9F2 340px);
     --passport-strip: #F7F4EA;
+    --lime-wash: rgba(181,138,26,0.1); --lime-glow: rgba(181,138,26,0.35);
+    --amber-wash: rgba(181,138,26,0.1); --info-wash: rgba(29,111,208,0.1);
+    --elite-wash: rgba(65,90,119,0.1);
+    --danger: #C0392B; --danger-border: rgba(192,57,43,0.35);
   }
 
   /* .app-shell sets its own font-family inline, which portaled modals
@@ -10630,7 +10794,7 @@ function Auth({ onDone, paidReturn }) {
   const [turnstileToken, setTurnstileToken] = useState(""); // Cloudflare Turnstile — see TurnstileWidget/TURNSTILE_SITE_KEY above; stays "" (harmless) whenever Turnstile isn't configured
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [notice, setNotice] = useState(paidReturn ? "Payment received! If this is the only tab open, log in below once you've confirmed your email. Otherwise close this tab and go back to where you signed up — it'll sign you in automatically the moment your email is confirmed, from whatever device you use to confirm it." : "");
+  const [notice, setNotice] = useState(paidReturn ? t("auth_paid_notice") : "");
   const [forgotMode, setForgotMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [confirmPolling, setConfirmPolling] = useState(false);
@@ -10691,7 +10855,7 @@ function Auth({ onDone, paidReturn }) {
       if (error) throw error;
       setResetSent(true);
     } catch (e) {
-      setErr((e && e.message) || "Couldn't send reset email.");
+      setErr((e && e.message) || t("auth_reset_failed"));
     } finally { setBusy(false); }
   }
 
@@ -10713,7 +10877,7 @@ function Auth({ onDone, paidReturn }) {
       setResendSent(true);
       startConfirmPolling(unconfirmedEmail, pw);
     } catch (e) {
-      setErr((e && e.message) || "Couldn't resend the confirmation email. Try again in a minute.");
+      setErr((e && e.message) || t("auth_resend_failed"));
     } finally { setResendBusy(false); }
   }
 
@@ -10983,7 +11147,7 @@ function Auth({ onDone, paidReturn }) {
           {forgotMode ? (
             resetSent ? (
               <>
-                <div style={{ background: "#D4AF371a", border: "1px solid #D4AF3744", borderRadius: 10, padding: "10px 12px", marginBottom: 14 }}>
+                <div style={{ background: C.limeWash, border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 14 }}>
                   <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
                   <div style={{ color: C.chalk, fontSize: 12.5, lineHeight: 1.4 }}>{t("auth_reset_sent_pre")}{email.trim()}{t("auth_reset_sent_post")}</div>
                 </div>
@@ -10993,9 +11157,9 @@ function Auth({ onDone, paidReturn }) {
               <>
                 <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>{t("auth_reset_title")}</div>
                 <div style={{ fontSize: 12.5, color: C.slate, marginBottom: 14, lineHeight: 1.4 }}>{t("auth_reset_desc")}</div>
-                <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("auth_email")} type="email" style={field} />
+                <input value={email} onChange={(e) => setEmail(e.target.value)} aria-label={t("auth_email")} placeholder={t("auth_email")} type="email" style={field} />
                 {err && (
-                  <div style={{ background: "#B58A1A1a", border: "1px solid #B58A1A44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+                  <div style={{ background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
                     <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
                   </div>
                 )}
@@ -11016,7 +11180,7 @@ function Auth({ onDone, paidReturn }) {
                   return (
                     <button key={pl.id} onClick={() => setPlan(pl.id)} style={{
                       textAlign: "left", cursor: "pointer", fontFamily: "inherit", position: "relative",
-                      background: on ? "#D4AF371a" : C.turf, border: `1.5px solid ${on ? C.lime : C.line2}`,
+                      background: on ? C.limeWash : C.turf, border: `1.5px solid ${on ? C.lime : C.line2}`,
                       borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 10,
                     }}>
                       {pl.id === "pro" && (
@@ -11056,9 +11220,9 @@ function Auth({ onDone, paidReturn }) {
               style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
             />
           )}
-          {isSignupLike && <input value={name} onChange={(e) => setName(e.target.value)} placeholder={isParentSignup ? t("auth_your_name") : t("auth_full_name")} style={field} />}
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder={isParentSignup ? t("auth_your_email") : t("auth_email")} type="email" style={field} />
-          <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder={t("auth_password")} type="password" style={{ ...field, marginBottom: isSignupLike ? 12 : 4 }} />
+          {isSignupLike && <input value={name} onChange={(e) => setName(e.target.value)} aria-label={isParentSignup ? t("auth_your_name") : t("auth_full_name")} placeholder={isParentSignup ? t("auth_your_name") : t("auth_full_name")} style={field} />}
+          <input value={email} onChange={(e) => setEmail(e.target.value)} aria-label={isParentSignup ? t("auth_your_email") : t("auth_email")} placeholder={isParentSignup ? t("auth_your_email") : t("auth_email")} type="email" style={field} />
+          <input value={pw} onChange={(e) => setPw(e.target.value)} aria-label={t("auth_password")} placeholder={t("auth_password")} type="password" style={{ ...field, marginBottom: isSignupLike ? 12 : 4 }} />
           {!isSignupLike && (
             <div style={{ textAlign: "right", marginBottom: 10 }}>
               <span onClick={() => { setForgotMode(true); setErr(""); setResetSent(false); }} style={{ color: C.slate, fontSize: 12, cursor: "pointer" }}>{t("auth_forgot")}</span>
@@ -11069,16 +11233,16 @@ function Auth({ onDone, paidReturn }) {
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("auth_dob")}</div>
               <div style={{ display: "flex", gap: 8 }}>
-                <input value={dobDay} onChange={(e) => setDobDay(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="DD" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
-                <input value={dobMonth} onChange={(e) => setDobMonth(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="MM" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
-                <input value={dobYear} onChange={(e) => setDobYear(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} placeholder="YYYY" inputMode="numeric" maxLength={4} style={{ ...dobField, flex: 1.4 }} />
+                <input value={dobDay} onChange={(e) => setDobDay(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} aria-label={t("auth_dob") + " — " + t("a11y_day")} placeholder="DD" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
+                <input value={dobMonth} onChange={(e) => setDobMonth(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} aria-label={t("auth_dob") + " — " + t("a11y_month")} placeholder="MM" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
+                <input value={dobYear} onChange={(e) => setDobYear(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} aria-label={t("auth_dob") + " — " + t("a11y_year")} placeholder="YYYY" inputMode="numeric" maxLength={4} style={{ ...dobField, flex: 1.4 }} />
               </div>
               {/* Corrected pre-launch directive: under 16 cannot self-signup
                   at all — this replaces the old "self-signup + note a
                   parent's email" pattern with a hard block + a real path
                   into the parent-creates-the-account flow instead. */}
               {requiresParentAccount && (
-                <div style={{ marginTop: 10, background: "#B58A1A1a", border: `1px solid ${C.amberBorder || "#B58A1A44"}`, borderRadius: 10, padding: "10px 12px" }}>
+                <div style={{ marginTop: 10, background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 10, padding: "10px 12px" }}>
                   <div style={{ fontSize: 12, color: C.warnText, marginBottom: 8, lineHeight: 1.4 }}>{t("auth_under16_notice")}</div>
                   <button onClick={() => { setMode("parent-signup"); setErr(""); setChildName(name); setChildDobDay(dobDay); setChildDobMonth(dobMonth); setChildDobYear(dobYear); setName(""); }} style={{ background: "none", border: "none", color: C.lime, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", padding: 0 }}>{t("auth_switch_to_parent")}</button>
                 </div>
@@ -11094,12 +11258,12 @@ function Auth({ onDone, paidReturn }) {
           {isParentSignup && (
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("auth_athlete_info")}</div>
-              <input value={childName} onChange={(e) => setChildName(e.target.value)} placeholder={t("auth_athlete_name")} style={field} />
+              <input value={childName} onChange={(e) => setChildName(e.target.value)} aria-label={t("auth_athlete_name")} placeholder={t("auth_athlete_name")} style={field} />
               <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("auth_athlete_dob")}</div>
               <div style={{ display: "flex", gap: 8 }}>
-                <input value={childDobDay} onChange={(e) => setChildDobDay(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="DD" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
-                <input value={childDobMonth} onChange={(e) => setChildDobMonth(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} placeholder="MM" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
-                <input value={childDobYear} onChange={(e) => setChildDobYear(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} placeholder="YYYY" inputMode="numeric" maxLength={4} style={{ ...dobField, flex: 1.4 }} />
+                <input value={childDobDay} onChange={(e) => setChildDobDay(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} aria-label={t("auth_athlete_dob") + " — " + t("a11y_day")} placeholder="DD" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
+                <input value={childDobMonth} onChange={(e) => setChildDobMonth(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} aria-label={t("auth_athlete_dob") + " — " + t("a11y_month")} placeholder="MM" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
+                <input value={childDobYear} onChange={(e) => setChildDobYear(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} aria-label={t("auth_athlete_dob") + " — " + t("a11y_year")} placeholder="YYYY" inputMode="numeric" maxLength={4} style={{ ...dobField, flex: 1.4 }} />
               </div>
               {childDobOk && !childAgeOk && (
                 <div style={{ marginTop: 8, fontSize: 11.5, color: C.amber, lineHeight: 1.4 }}>{t("auth_athlete_16_notice")}</div>
@@ -11113,14 +11277,14 @@ function Auth({ onDone, paidReturn }) {
           {isSignupLike && TURNSTILE_SITE_KEY && <TurnstileWidget onToken={setTurnstileToken} />}
 
           {notice && (
-            <div style={{ background: "#D4AF371a", border: "1px solid #D4AF3744", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+            <div style={{ background: C.limeWash, border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
               <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
               <div style={{ color: C.chalk, fontSize: 12.5, lineHeight: 1.4 }}>{notice}</div>
             </div>
           )}
 
           {err && (
-            <div style={{ background: "#B58A1A1a", border: "1px solid #B58A1A44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+            <div style={{ background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
               <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignupLike ? t("auth_couldnt_signup") : t("auth_couldnt_login")}</div>
               <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
               {unconfirmedEmail && !resendSent && (
@@ -11222,10 +11386,10 @@ function ResetPassword({ onDone }) {
             <>
               <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>{t("reset_pw_set_new")}</div>
               <div style={{ fontSize: 12.5, color: C.slate, marginBottom: 14 }}>{t("reset_pw_choose")}</div>
-              <input value={pw} onChange={(e) => setPw(e.target.value)} placeholder={t("reset_pw_new_ph")} type="password" style={field} />
-              <input value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder={t("reset_pw_confirm_ph")} type="password" style={{ ...field, marginBottom: 14 }} />
+              <input value={pw} onChange={(e) => setPw(e.target.value)} aria-label={t("reset_pw_new_ph")} placeholder={t("reset_pw_new_ph")} type="password" style={field} />
+              <input value={pw2} onChange={(e) => setPw2(e.target.value)} aria-label={t("reset_pw_confirm_ph")} placeholder={t("reset_pw_confirm_ph")} type="password" style={{ ...field, marginBottom: 14 }} />
               {err && (
-                <div style={{ background: "#B58A1A1a", border: "1px solid #B58A1A44", borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+                <div style={{ background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
                   <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
                 </div>
               )}
@@ -11281,7 +11445,7 @@ function BannedScreen({ onSignOut }) {
             <div style={{ fontSize: 12.5, color: C.lime, marginBottom: 16 }}>{t("appeal_submitted")}</div>
           ) : showAppeal ? (
             <div style={{ marginBottom: 16, textAlign: "left" }}>
-              <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={4} placeholder={t("appeal_placeholder")}
+              <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={4} aria-label={t("appeal_placeholder")} placeholder={t("appeal_placeholder")}
                 style={{ width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 10, color: C.chalk, padding: 10, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box", marginBottom: 8 }} />
               <button onClick={submitAppeal} disabled={!reason.trim() || busy} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 10, padding: "11px", fontWeight: 700, fontSize: 13, cursor: reason.trim() ? "pointer" : "default", opacity: reason.trim() ? 1 : 0.5, fontFamily: "inherit" }}>
                 {t("appeal_submit")}
