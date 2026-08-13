@@ -84,6 +84,11 @@ const History = svg('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
 const Search = svg('<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>');
 const CalendarPlus = svg('<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M10 16h4"/><path d="M12 14v4"/>');
 const Target = svg('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>');
+// Added for the Pathway next-step card and date chips. Paths lifted from
+// golsz-final-look.html so the shipped icons match the reference exactly.
+const Flag = svg('<path d="M5 21V4h13l-2.5 4L18 12H5"/>');
+const Check = svg('<path d="m4 12.5 5.5 5.5L20 6.5"/>');
+const Calendar = svg('<rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M8 2.5v5M16 2.5v5M3.5 11h17"/>');
 const Star = svg('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>');
 const GitBranch = svg('<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>');
 const Shield = svg('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>');
@@ -294,6 +299,7 @@ const I18N = {
     next_move_title: "MY NEXT MOVE", next_move_act: "Do this", next_move_dismiss: "Mark done", next_move_locked: "Scout found your next move — upgrade to see it.",
     next_move_type_complete_profile: "Finish your Passport.", next_move_type_define_goal: "Tell Scout what you're aiming for.", next_move_type_invite_to_pathway: "Build your Pathway.", next_move_type_establish_baseline: "Set your baseline with Scout.", next_move_type_build_pathway: "Build your Pathway with Scout.", next_move_type_target_work: "Identify your first targets.", next_move_type_follow_up: "Follow up on a stale target.", next_move_type_retest: "Time to log a new benchmark.", next_move_type_review_progress: "Review your progress.",
     next_move_why_ask_scout: "Based on what you told Scout", next_move_why_complete_profile: "Your Passport is missing some basics", next_move_why_share_passport: "You're ready to be seen — share your Passport",
+    home_next_why_goal: "Everything else — your pathway, your targets, what Scout tells you — is built from this one answer.", home_next_why_film: "Coaches open film first. A Passport without it rarely gets a reply.", home_next_why_benchmark: "One recorded number makes your Passport comparable to the athletes you're up against.", home_next_why_pathway: "A mapped route turns your goal into steps you can take this season.", home_next_why_follow_up: "Targets go cold quietly. A short follow-up is what keeps a conversation alive.", home_next_why_review: "Nothing is blocking you. Keep the plan moving and log what changes.",
     nav_home: "Home", home_greeting: "Welcome back, {name}.", home_readiness_title: "PASSPORT STRENGTH", home_assessment_title: "SCOUT'S READ ON YOU", home_assessment_level: "WHERE SCOUT THINKS YOU CAN GET TO", home_assessment_strengths: "WHAT'S WORKING", home_assessment_gaps: "WHAT'S IN THE WAY", home_assessment_focus: "NEXT 90 DAYS", home_assessment_dated: "Scout's read as of", home_profile_quality: "PROFILE QUALITY", home_verification: "VERIFICATION",
     home_verify_status_none: "Not started", home_verify_status_pending: "Pending review", home_verify_status_verified: "Verified",
     home_readiness_fraction: "{n} of {total} areas strong", home_readiness_composite: "PASSPORT STRENGTH", home_performance: "PERFORMANCE", home_performance_sub: "{n} metrics tracked", home_development: "DEVELOPMENT", home_pathway: "PATHWAY", home_pathway_sub: "{n} active targets", home_pathway_none: "No pathway set", home_pathway_empty: "Pathway started \u2014 no milestones yet",
@@ -428,6 +434,10 @@ const I18N = {
     plan_next_30_title: "NEXT 30 DAYS", plan_empty_season: "No milestones set for this season yet. Add one above, or ask Scout to map the season out.", plan_empty_targets: "No target schools or clubs yet. Ask Scout to build you a target list.", plan_empty_90: "Nothing here yet. Ask Scout to build a development plan and the focus areas will land here.", plan_next_90_title: "NEXT 90 DAYS", plan_season_title: "{a} / {b} SEASON",
     plan_next30_profile: "Complete your Passport", plan_next30_film: "Upload match footage", plan_next30_benchmark: "Record a performance benchmark",
     pathway_milestones_title: "Milestones", pathway_milestones_empty: "Nothing scheduled yet — add the first step below, or ask Scout to map your route.", pathway_milestone_edit: "Tap to edit", pathway_milestone_up: "Move up", pathway_milestone_down: "Move down", pathway_milestone_ph: "Add a milestone", pathway_milestone_add: "Add",
+    pathway_next_title: "Do this next", pathway_next_done: "Mark done", pathway_next_change: "Change", pathway_all_done: "Every step is done.", pathway_all_done_sub: "Add the next one whenever you’re ready.", pathway_no_date: "Add a date", pathway_overdue: "overdue", pathway_today: "Today", pathway_tomorrow: "Tomorrow", pathway_done: "Done", pathway_on_track: "On track", pathway_unfiled: "Not filed under a stage yet", pathway_add_to_stage: "Add a step to {stage}", pathway_route_blurb: "The usual route for your goal. Add steps under each stage — or let Scout draft them and change whatever you disagree with.", pathway_draft_with_scout: "Let Scout draft my steps",
+    home_read_only_here: "Read-only here",
+    scout_pathway_add_steps: "Add these steps", scout_pathway_replace_instead: "Replace my plan instead", scout_pathway_keeps: "Your {old} steps stay ({done} already done).", scout_pathway_replace_confirm: "Yes, replace my plan",
+    pathway_step_deleted: "Step deleted", action_undo: "Undo", pathway_sugg_film: "Add film of a full match or session", pathway_sugg_film_sub: "Unedited, so a coach can see context", pathway_sugg_coach: "Email one coach on your target list", pathway_sugg_coach_sub: "About 20 minutes", pathway_sugg_benchmark: "Record one benchmark", pathway_sugg_benchmark_sub: "A number a coach can compare",
     scout_pathway_current: "YOUR PATHWAY NOW",
     scout_pathway_incoming: "SCOUT PROPOSES",
     scout_pathway_replace_warning: "Replacing your {old} milestones ({done} done) with these {new}.",
@@ -622,6 +632,7 @@ const I18N = {
     next_move_title: "VOTRE PROCHAINE ÉTAPE", next_move_act: "Faire ça", next_move_dismiss: "Marquer comme fait", next_move_locked: "Scout a trouvé votre prochaine étape — passez à un forfait supérieur pour la voir.",
     next_move_type_complete_profile: "Terminez votre Passeport.", next_move_type_define_goal: "Dites à Scout votre objectif.", next_move_type_invite_to_pathway: "Construisez votre Parcours.", next_move_type_establish_baseline: "Établissez votre niveau de référence avec Scout.", next_move_type_build_pathway: "Construisez votre Parcours avec Scout.", next_move_type_target_work: "Identifiez vos premières cibles.", next_move_type_follow_up: "Relancez une cible en attente.", next_move_type_retest: "Il est temps d'enregistrer un nouveau repère.", next_move_type_review_progress: "Consultez vos progrès.",
     next_move_why_ask_scout: "D'après ce que vous avez dit à Scout", next_move_why_complete_profile: "Il manque des informations de base à votre Passeport", next_move_why_share_passport: "Vous êtes prêt à être vu — partagez votre Passeport",
+    home_next_why_goal: "Tout le reste — votre parcours, vos cibles, ce que Scout vous dit — se construit à partir de cette seule réponse.", home_next_why_film: "Les entraîneurs regardent d'abord les vidéos. Un Passeport sans vidéo reçoit rarement une réponse.", home_next_why_benchmark: "Un seul chiffre enregistré rend votre Passeport comparable aux athlètes qui vous font face.", home_next_why_pathway: "Un parcours tracé transforme votre objectif en étapes réalisables dès cette saison.", home_next_why_follow_up: "Les cibles s'éteignent en silence. Une relance courte garde la conversation vivante.", home_next_why_review: "Rien ne vous bloque. Faites avancer le plan et notez ce qui change.",
     nav_home: "Accueil", home_greeting: "Bon retour, {name}.", home_readiness_title: "FORCE DU PASSEPORT", home_assessment_title: "L'ANALYSE DE SCOUT", home_assessment_level: "OÙ SCOUT PENSE QUE VOUS POUVEZ ALLER", home_assessment_strengths: "CE QUI FONCTIONNE", home_assessment_gaps: "CE QUI VOUS FREINE", home_assessment_focus: "90 PROCHAINS JOURS", home_assessment_dated: "Analyse de Scout au", home_profile_quality: "QUALITÉ DU PROFIL", home_verification: "VÉRIFICATION",
     home_verify_status_none: "Non commencé", home_verify_status_pending: "En cours de révision", home_verify_status_verified: "Vérifié",
     home_readiness_fraction: "{n} sur {total} domaines solides", home_readiness_composite: "FORCE DU PASSEPORT", home_performance: "PERFORMANCE", home_performance_sub: "{n} indicateurs suivis", home_development: "DÉVELOPPEMENT", home_pathway: "PARCOURS", home_pathway_sub: "{n} cibles actives", home_pathway_none: "Aucun parcours défini", home_pathway_empty: "Parcours commencé \u2014 aucun jalon",
@@ -760,6 +771,10 @@ const I18N = {
     scout_pathway_first_build: "Cela cr\u00e9era votre parcours avec {new} jalons.",
     plan_next30_profile: "Complétez votre Passeport", plan_next30_film: "Ajoutez des vidéos de match", plan_next30_benchmark: "Enregistrez un repère de performance",
     pathway_milestones_title: "Étapes clés", pathway_milestones_empty: "Rien de prévu — ajoutez une première étape ci-dessous, ou demandez à Scout de tracer votre parcours.", pathway_milestone_edit: "Toucher pour modifier", pathway_milestone_up: "Monter", pathway_milestone_down: "Descendre", pathway_milestone_ph: "Ajouter une étape", pathway_milestone_add: "Ajouter",
+    pathway_next_title: "À faire maintenant", pathway_next_done: "Marquer fait", pathway_next_change: "Modifier", pathway_all_done: "Toutes les étapes sont faites.", pathway_all_done_sub: "Ajoutez la suivante quand vous voulez.", pathway_no_date: "Ajouter une date", pathway_overdue: "en retard", pathway_today: "Aujourd’hui", pathway_tomorrow: "Demain", pathway_done: "Fait", pathway_on_track: "Sur la bonne voie", pathway_unfiled: "Pas encore rattachée à une étape", pathway_add_to_stage: "Ajouter une étape à {stage}", pathway_route_blurb: "Le parcours habituel pour votre objectif. Ajoutez des étapes sous chaque palier, ou laissez Scout les proposer et modifiez ce qui ne vous convient pas.", pathway_draft_with_scout: "Laisser Scout proposer mes étapes",
+    home_read_only_here: "Lecture seule ici",
+    scout_pathway_add_steps: "Ajouter ces étapes", scout_pathway_replace_instead: "Remplacer mon plan à la place", scout_pathway_keeps: "Vos {old} étapes restent ({done} déjà faites).", scout_pathway_replace_confirm: "Oui, remplacer mon plan",
+    pathway_step_deleted: "Étape supprimée", action_undo: "Annuler", pathway_sugg_film: "Ajouter une vidéo d’un match ou d’une séance complète", pathway_sugg_film_sub: "Non monté, pour que le coach voie le contexte", pathway_sugg_coach: "Écrire à un entraîneur de votre liste", pathway_sugg_coach_sub: "Environ 20 minutes", pathway_sugg_benchmark: "Enregistrer une mesure de référence", pathway_sugg_benchmark_sub: "Un chiffre que le coach peut comparer",
     pathway_type_ncaa: "NCAA", pathway_type_naia: "NAIA", pathway_type_juco: "JUCO", pathway_type_canadian_university: "Université canadienne", pathway_type_academy: "Académie", pathway_type_european_club: "Parcours club européen", pathway_type_professional: "Parcours professionnel", pathway_type_development: "Développement", pathway_type_agent_representation: "Représentation par un agent", pathway_type_trainer_performance: "Entraîneur / développement de la performance", pathway_type_other: "Autre",
     pathway_collapse: "Réduire", pathway_edit_goal: "Modifier le parcours", pathway_alt_branch_note: "{branch} est aussi une voie parallèle courante pour ce sport.",
     pathway_stage_academy: "Académie", pathway_stage_u19_u21: "U19/U21", pathway_stage_senior: "Senior", pathway_stage_professional: "Professionnel",
@@ -950,6 +965,7 @@ const I18N = {
     next_move_title: "TU PRÓXIMO PASO", next_move_act: "Hacer esto", next_move_dismiss: "Marcar como hecho", next_move_locked: "Scout encontró tu próximo paso — mejora tu plan para verlo.",
     next_move_type_complete_profile: "Termina tu Pasaporte.", next_move_type_define_goal: "Dile a Scout cuál es tu meta.", next_move_type_invite_to_pathway: "Construye tu Trayectoria.", next_move_type_establish_baseline: "Establece tu línea base con Scout.", next_move_type_build_pathway: "Construye tu Trayectoria con Scout.", next_move_type_target_work: "Identifica tus primeros objetivos.", next_move_type_follow_up: "Da seguimiento a un objetivo pendiente.", next_move_type_retest: "Hora de registrar un nuevo referente.", next_move_type_review_progress: "Revisa tu progreso.",
     next_move_why_ask_scout: "Basado en lo que le contaste a Scout", next_move_why_complete_profile: "A tu Pasaporte le faltan datos básicos", next_move_why_share_passport: "Estás listo para que te vean — comparte tu Pasaporte",
+    home_next_why_goal: "Todo lo demás — tu trayectoria, tus objetivos, lo que te dice Scout — se construye a partir de esa única respuesta.", home_next_why_film: "Los entrenadores ven el vídeo primero. Un Pasaporte sin vídeo rara vez recibe respuesta.", home_next_why_benchmark: "Un solo dato registrado hace que tu Pasaporte sea comparable con los atletas con los que compites.", home_next_why_pathway: "Una ruta trazada convierte tu meta en pasos que puedes dar esta temporada.", home_next_why_follow_up: "Los objetivos se enfrían en silencio. Un seguimiento breve mantiene viva la conversación.", home_next_why_review: "Nada te está frenando. Sigue avanzando con el plan y registra lo que cambie.",
     nav_home: "Inicio", home_greeting: "Bienvenido de nuevo, {name}.", home_readiness_title: "FUERZA DEL PASAPORTE", home_assessment_title: "LA LECTURA DE SCOUT", home_assessment_level: "HASTA DÓNDE CREE SCOUT QUE PUEDES LLEGAR", home_assessment_strengths: "LO QUE FUNCIONA", home_assessment_gaps: "LO QUE TE FRENA", home_assessment_focus: "PRÓXIMOS 90 DÍAS", home_assessment_dated: "Lectura de Scout del", home_profile_quality: "CALIDAD DEL PERFIL", home_verification: "VERIFICACIÓN",
     home_verify_status_none: "No iniciado", home_verify_status_pending: "En revisión", home_verify_status_verified: "Verificado",
     home_readiness_fraction: "{n} de {total} áreas sólidas", home_readiness_composite: "FUERZA DEL PASAPORTE", home_performance: "RENDIMIENTO", home_performance_sub: "{n} marcas registradas", home_development: "DESARROLLO", home_pathway: "TRAYECTORIA", home_pathway_sub: "{n} objetivos activos", home_pathway_none: "Sin trayectoria definida", home_pathway_empty: "Trayectoria iniciada \u2014 sin hitos",
@@ -1088,6 +1104,10 @@ const I18N = {
     plan_next_30_title: "PRÓXIMOS 30 DÍAS", plan_empty_season: "Aún no hay hitos para esta temporada. Añade uno arriba o pídele a Scout que planifique la temporada.", plan_empty_targets: "Aún no hay escuelas o clubes objetivo. Pídele a Scout que cree tu lista.", plan_empty_90: "Nada por ahora. Pídele a Scout un plan de desarrollo y las áreas de trabajo aparecerán aquí.", plan_next_90_title: "PRÓXIMOS 90 DÍAS", plan_season_title: "TEMPORADA {a} / {b}",
     plan_next30_profile: "Completa tu Pasaporte", plan_next30_film: "Sube vídeos de partidos", plan_next30_benchmark: "Registra una marca de rendimiento",
     pathway_milestones_title: "Hitos", pathway_milestones_empty: "Nada programado — añade el primer paso abajo, o pídele a Scout que trace tu ruta.", pathway_milestone_edit: "Toca para editar", pathway_milestone_up: "Subir", pathway_milestone_down: "Bajar", pathway_milestone_ph: "Añadir un hito", pathway_milestone_add: "Añadir",
+    pathway_next_title: "Haz esto ahora", pathway_next_done: "Marcar hecho", pathway_next_change: "Cambiar", pathway_all_done: "Todos los pasos están hechos.", pathway_all_done_sub: "Añade el siguiente cuando quieras.", pathway_no_date: "Añadir fecha", pathway_overdue: "atrasado", pathway_today: "Hoy", pathway_tomorrow: "Mañana", pathway_done: "Hecho", pathway_on_track: "En camino", pathway_unfiled: "Sin etapa asignada", pathway_add_to_stage: "Añadir un paso a {stage}", pathway_route_blurb: "La ruta habitual para tu objetivo. Añade pasos en cada etapa, o deja que Scout los proponga y cambia lo que no te convenza.", pathway_draft_with_scout: "Deja que Scout redacte mis pasos",
+    home_read_only_here: "Solo lectura aquí",
+    scout_pathway_add_steps: "Añadir estos pasos", scout_pathway_replace_instead: "Reemplazar mi plan", scout_pathway_keeps: "Tus {old} pasos se mantienen ({done} ya hechos).", scout_pathway_replace_confirm: "Sí, reemplazar mi plan",
+    pathway_step_deleted: "Paso eliminado", action_undo: "Deshacer", pathway_sugg_film: "Añade vídeo de un partido o sesión completa", pathway_sugg_film_sub: "Sin editar, para que el entrenador vea el contexto", pathway_sugg_coach: "Escribe a un entrenador de tu lista", pathway_sugg_coach_sub: "Unos 20 minutos", pathway_sugg_benchmark: "Registra una marca de referencia", pathway_sugg_benchmark_sub: "Un dato que el entrenador puede comparar",
     pathway_type_ncaa: "NCAA", pathway_type_naia: "NAIA", pathway_type_juco: "JUCO", pathway_type_canadian_university: "Universidad canadiense", pathway_type_academy: "Academia", pathway_type_european_club: "Trayectoria en club europeo", pathway_type_professional: "Trayectoria profesional", pathway_type_development: "Desarrollo", pathway_type_agent_representation: "Representación por agente", pathway_type_trainer_performance: "Entrenador / desarrollo del rendimiento", pathway_type_other: "Otro",
     pathway_collapse: "Contraer", pathway_edit_goal: "Editar camino", pathway_alt_branch_note: "{branch} también es una vía paralela común para este deporte.",
     pathway_stage_academy: "Academia", pathway_stage_u19_u21: "U19/U21", pathway_stage_senior: "Sénior", pathway_stage_professional: "Profesional",
@@ -1278,6 +1298,7 @@ const I18N = {
     next_move_title: "Η ΕΠΟΜΕΝΗ ΣΟΥ ΚΙΝΗΣΗ", next_move_act: "Κάνε το", next_move_dismiss: "Ολοκληρώθηκε", next_move_locked: "Ο Scout βρήκε την επόμενή σου κίνηση — αναβάθμισε για να τη δεις.",
     next_move_type_complete_profile: "Ολοκλήρωσε το Διαβατήριό σου.", next_move_type_define_goal: "Πες στον Scout τον στόχο σου.", next_move_type_invite_to_pathway: "Δημιούργησε την Πορεία σου.", next_move_type_establish_baseline: "Καθόρισε το σημείο εκκίνησής σου με τον Scout.", next_move_type_build_pathway: "Δημιούργησε την Πορεία σου με τον Scout.", next_move_type_target_work: "Εντόπισε τους πρώτους σου στόχους.", next_move_type_follow_up: "Κάνε follow-up σε έναν στόχο.", next_move_type_retest: "Ώρα να καταγράψεις νέο δείκτη επίδοσης.", next_move_type_review_progress: "Δες την πρόοδό σου.",
     next_move_why_ask_scout: "Με βάση όσα είπες στον Scout", next_move_why_complete_profile: "Στο Διαβατήριό σου λείπουν βασικά στοιχεία", next_move_why_share_passport: "Είσαι έτοιμος να σε δουν — μοιράσου το Διαβατήριό σου",
+    home_next_why_goal: "Όλα τα υπόλοιπα — η πορεία σου, οι στόχοι σου, όσα σου λέει ο Scout — χτίζονται πάνω σε αυτή τη μία απάντηση.", home_next_why_film: "Οι προπονητές βλέπουν πρώτα το βίντεο. Ένα Διαβατήριο χωρίς βίντεο σπάνια παίρνει απάντηση.", home_next_why_benchmark: "Ένας καταγεγραμμένος αριθμός κάνει το Διαβατήριό σου συγκρίσιμο με τους αθλητές που έχεις απέναντί σου.", home_next_why_pathway: "Μια χαραγμένη πορεία μετατρέπει τον στόχο σου σε βήματα που μπορείς να κάνεις φέτος.", home_next_why_follow_up: "Οι στόχοι κρυώνουν αθόρυβα. Ένα σύντομο follow-up κρατάει τη συζήτηση ζωντανή.", home_next_why_review: "Τίποτα δεν σε μπλοκάρει. Κράτα το πλάνο σε κίνηση και κατέγραψε ό,τι αλλάζει.",
     nav_home: "Αρχική", home_greeting: "Καλώς όρισες πάλι, {name}.", home_readiness_title: "ΙΣΧΥΣ ΔΙΑΒΑΤΗΡΙΟΥ", home_assessment_title: "Η ΕΚΤΙΜΗΣΗ ΤΟΥ SCOUT", home_assessment_level: "ΠΟΥ ΠΙΣΤΕΥΕΙ Ο SCOUT ΟΤΙ ΜΠΟΡΕΙΣ ΝΑ ΦΤΑΣΕΙΣ", home_assessment_strengths: "ΤΙ ΛΕΙΤΟΥΡΓΕΙ", home_assessment_gaps: "ΤΙ ΣΕ ΕΜΠΟΔΙΖΕΙ", home_assessment_focus: "ΕΠΟΜΕΝΕΣ 90 ΜΕΡΕΣ", home_assessment_dated: "Εκτίμηση Scout από", home_profile_quality: "ΠΟΙΟΤΗΤΑ ΠΡΟΦΙΛ", home_verification: "ΕΠΑΛΗΘΕΥΣΗ",
     home_verify_status_none: "Δεν ξεκίνησε", home_verify_status_pending: "Υπό εξέταση", home_verify_status_verified: "Επαληθευμένο",
     home_readiness_fraction: "{n} από {total} τομείς δυνατοί", home_readiness_composite: "ΙΣΧΥΣ ΔΙΑΒΑΤΗΡΙΟΥ", home_performance: "ΑΠΟΔΟΣΗ", home_performance_sub: "{n} δείκτες υπό παρακολούθηση", home_development: "ΑΝΑΠΤΥΞΗ", home_pathway: "ΠΟΡΕΙΑ", home_pathway_sub: "{n} ενεργοί στόχοι", home_pathway_none: "Δεν έχει οριστεί πορεία", home_pathway_empty: "Η πορεία ξεκίνησε \u2014 χωρίς ορόσημα",
@@ -1416,6 +1437,10 @@ const I18N = {
     plan_next_30_title: "ΕΠΟΜΕΝΕΣ 30 ΜΕΡΕΣ", plan_empty_season: "Δεν έχουν οριστεί ορόσημα για τη σεζόν. Προσθέστε ένα ή ζητήστε από τον Scout να σχεδιάσει τη σεζόν.", plan_empty_targets: "Δεν υπάρχουν σχολές ή σύλλογοι-στόχοι ακόμη. Ζητήστε από τον Scout να φτιάξει τη λίστα.", plan_empty_90: "Τίποτα ακόμη. Ζητήστε από τον Scout ένα πλάνο ανάπτυξης και οι τομείς θα εμφανιστούν εδώ.", plan_next_90_title: "ΕΠΟΜΕΝΕΣ 90 ΜΕΡΕΣ", plan_season_title: "ΣΕΖΟΝ {a} / {b}",
     plan_next30_profile: "Ολοκλήρωσε το Διαβατήριό σου", plan_next30_film: "Ανέβασε βίντεο αγώνων", plan_next30_benchmark: "Κατέγραψε έναν δείκτη απόδοσης",
     pathway_milestones_title: "Ορόσημα", pathway_milestones_empty: "Τίποτα προγραμματισμένο — πρόσθεσε το πρώτο βήμα, ή ζήτα από τον Scout να σχεδιάσει τη διαδρομή σου.", pathway_milestone_edit: "Πάτα για επεξεργασία", pathway_milestone_up: "Πάνω", pathway_milestone_down: "Κάτω", pathway_milestone_ph: "Προσθήκη οροσήμου", pathway_milestone_add: "Προσθήκη",
+    pathway_next_title: "Κάνε αυτό τώρα", pathway_next_done: "Ολοκληρώθηκε", pathway_next_change: "Αλλαγή", pathway_all_done: "Κάθε βήμα ολοκληρώθηκε.", pathway_all_done_sub: "Πρόσθεσε το επόμενο όποτε θέλεις.", pathway_no_date: "Πρόσθεσε ημερομηνία", pathway_overdue: "εκπρόθεσμο", pathway_today: "Σήμερα", pathway_tomorrow: "Αύριο", pathway_done: "Έγινε", pathway_on_track: "Σε πορεία", pathway_unfiled: "Χωρίς στάδιο ακόμη", pathway_add_to_stage: "Προσθήκη βήματος στο {stage}", pathway_route_blurb: "Η συνήθης διαδρομή για τον στόχο σου. Πρόσθεσε βήματα σε κάθε στάδιο — ή άφησε το Scout να τα γράψει και άλλαξε ό,τι δεν σου ταιριάζει.", pathway_draft_with_scout: "Άσε το Scout να γράψει τα βήματα",
+    home_read_only_here: "Μόνο ανάγνωση εδώ",
+    scout_pathway_add_steps: "Πρόσθεσε αυτά τα βήματα", scout_pathway_replace_instead: "Αντικατάσταση του πλάνου μου", scout_pathway_keeps: "Τα {old} βήματά σου παραμένουν ({done} ήδη ολοκληρωμένα).", scout_pathway_replace_confirm: "Ναι, αντικατέστησε το πλάνο μου",
+    pathway_step_deleted: "Το βήμα διαγράφηκε", action_undo: "Αναίρεση", pathway_sugg_film: "Πρόσθεσε βίντεο από πλήρη αγώνα ή προπόνηση", pathway_sugg_film_sub: "Χωρίς μοντάζ, ώστε να δει ο προπονητής το πλαίσιο", pathway_sugg_coach: "Στείλε email σε έναν προπονητή από τη λίστα σου", pathway_sugg_coach_sub: "Περίπου 20 λεπτά", pathway_sugg_benchmark: "Κατέγραψε μία μέτρηση αναφοράς", pathway_sugg_benchmark_sub: "Ένας αριθμός που μπορεί να συγκρίνει ο προπονητής",
     pathway_type_ncaa: "NCAA", pathway_type_naia: "NAIA", pathway_type_juco: "JUCO", pathway_type_canadian_university: "Καναδικό πανεπιστήμιο", pathway_type_academy: "Ακαδημία", pathway_type_european_club: "Πορεία σε ευρωπαϊκό σύλλογο", pathway_type_professional: "Επαγγελματική πορεία", pathway_type_development: "Ανάπτυξη", pathway_type_agent_representation: "Εκπροσώπηση από ατζέντη", pathway_type_trainer_performance: "Προπονητής / ανάπτυξη απόδοσης", pathway_type_other: "Άλλο",
     pathway_collapse: "Σύμπτυξη", pathway_edit_goal: "Επεξεργασία μονοπατιού", pathway_alt_branch_note: "Το {branch} είναι επίσης μια συνηθισμένη παράλληλη διαδρομή για αυτό το άθλημα.",
     pathway_stage_academy: "Ακαδημία", pathway_stage_u19_u21: "U19/U21", pathway_stage_senior: "Ανδρών/Γυναικών", pathway_stage_professional: "Επαγγελματικό",
@@ -7310,9 +7335,11 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
   // Scout has picked up, as opposed to `profile`'s hard Passport facts.
   const [scoutContext, setScoutContext] = useState({});
   // The athlete's CURRENT Pathway, held here only so a proposed rebuild can
-  // be previewed against it. addSuggestedPathway() upserts milestones as a
-  // straight REPLACE, so an athlete with six milestones and three ticked off
-  // loses all of it in one tap. Showing the incoming Pathway alone does not
+  // be previewed against it, and so ADD mode has something to append to.
+  // This used to describe a straight REPLACE on a single tap — an athlete with
+  // six milestones and three ticked lost all of it. That is fixed: the write
+  // now appends by default and refuses to run without an explicit mode.
+  // Showing the incoming Pathway alone still does not
   // prevent that; showing what is being destroyed does.
   const [currentPathway, setCurrentPathway] = useState(null);
   // Latest value per metric from athlete_benchmarks (migration 071) — a
@@ -7820,18 +7847,32 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
   // Pathway is the moment GOLSZ actually has enough about the athlete to
   // call their baseline established — no separate "record a baseline"
   // flow exists (or is needed) beyond this.
-  async function addSuggestedPathway(msgIndex, pathway) {
+  // ADD IS THE DEFAULT; REPLACE IS A DELIBERATE SECOND CHOICE.
+  //
+  // This used to upsert pathway.milestones wholesale on a single tap, which
+  // destroyed athlete-written steps, their ticks, and — since the rebuild —
+  // their dates and stages too. An athlete who had built a plan over weeks
+  // could lose it by tapping a button whose label said "add".
+  //
+  // Nothing here writes until the caller passes an explicit mode, and the UI
+  // will not pass one until a second, specific tap.
+  async function addSuggestedPathway(msgIndex, pathway, mode) {
     if (!sb || !uidRef.current || !pathway) return;
+    if (mode !== "add" && mode !== "replace") return;   // no default write path
+    const incoming = (pathway.milestones || []).map(normalizeMilestone);
+    const existing = (currentPathway && Array.isArray(currentPathway.milestones))
+      ? currentPathway.milestones.map(normalizeMilestone) : [];
+    const merged = mode === "replace" ? incoming : existing.concat(incoming);
     try {
       const { error } = await sb.from("pathway_plan").upsert(
-        { user_id: uidRef.current, pathway_type: pathway.pathway_type, target_timeline: pathway.target_timeline || null, milestones: pathway.milestones, baseline_complete: true, updated_at: new Date().toISOString() },
+        { user_id: uidRef.current, pathway_type: pathway.pathway_type, target_timeline: pathway.target_timeline || null, milestones: merged, baseline_complete: true, updated_at: new Date().toISOString() },
         { onConflict: "user_id" }
       );
       if (error) throw error;
       // What is now on file, so a SECOND proposal in the same conversation
       // previews against the Pathway they actually have rather than the one
       // they had when Scout loaded.
-      setCurrentPathway({ pathway_type: pathway.pathway_type, target_timeline: pathway.target_timeline || null, milestones: pathway.milestones });
+      setCurrentPathway({ pathway_type: pathway.pathway_type, target_timeline: pathway.target_timeline || null, milestones: merged });
       setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedPathway: null, pathwayAdded: true, actionError: null } : msg)));
     } catch (e) {
       console.error("GOLSZ add suggested pathway error:", e);
@@ -8016,9 +8057,41 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
               })()}
               {m.suggestedPathway && (
                 !planKnown(plan) ? null : featureUnlocked(plan, "pathway_plan") ? (
-                  <button onClick={() => addSuggestedPathway(i, m.suggestedPathway)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                  m.pathwayConfirm ? (() => {
+                    const inc = (m.suggestedPathway.milestones || []).length;
+                    const mine = (currentPathway && Array.isArray(currentPathway.milestones)) ? currentPathway.milestones : [];
+                    const mineDone = mine.filter((x) => x && x.done).length;
+                    const replacing = m.pathwayConfirm === "replace";
+                    return (
+                      <div style={{ marginTop: 8, border: `1px solid ${replacing ? C.danger : C.limeBorder}`, background: replacing ? "none" : C.limeWash, borderRadius: 12, padding: 12 }}>
+                        <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.55, marginBottom: 10 }}>
+                          {replacing
+                            ? (mine.length
+                                ? t("scout_pathway_replace_warning").replace("{old}", mine.length).replace("{done}", mineDone).replace("{new}", inc)
+                                : t("scout_pathway_first_build").replace("{new}", inc))
+                            : (mine.length
+                                ? t("scout_pathway_keeps").replace("{old}", mine.length).replace("{done}", mineDone)
+                                : t("scout_pathway_first_build").replace("{new}", inc))}
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                          <button onClick={() => addSuggestedPathway(i, m.suggestedPathway, replacing ? "replace" : "add")}
+                            style={{ ...primaryBtn, minHeight: 44, fontSize: 12.5, ...(replacing ? { background: "none", borderColor: C.danger, color: C.danger } : {}) }}>
+                            {replacing ? t("scout_pathway_replace_confirm") : t("scout_pathway_add_steps")}
+                          </button>
+                          {!replacing && mine.length > 0 && (
+                            <button onClick={() => setMsgs((ms) => ms.map((x, xi) => (xi === i ? { ...x, pathwayConfirm: "replace" } : x)))}
+                              style={{ ...quietBtn, minHeight: 44, fontSize: 12.5, color: C.danger }}>{t("scout_pathway_replace_instead")}</button>
+                          )}
+                          <button onClick={() => setMsgs((ms) => ms.map((x, xi) => (xi === i ? { ...x, pathwayConfirm: null } : x)))}
+                            style={{ ...quietBtn, minHeight: 44, fontSize: 12.5 }}>{t("goal_card_cancel")}</button>
+                        </div>
+                      </div>
+                    );
+                  })() : (
+                  <button onClick={() => setMsgs((ms) => ms.map((x, xi) => (xi === i ? { ...x, pathwayConfirm: "choose" } : x)))} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", minHeight: 44, fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
                     <Compass size={13} /> {t("scout_build_pathway")}
                   </button>
+                  )
                 ) : (
                   <button onClick={onUpgrade} style={{ marginTop: 8, background: C.turf, color: C.slate, border: `1px dashed ${C.line2}`, borderRadius: 9, padding: "8px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
                     <Lock size={12} /> {t("scout_build_pathway_locked")}
@@ -8151,16 +8224,109 @@ function msgTime(at) {
   try { return new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); } catch (e) { return ""; }
 }
 
-function ReadinessCard({ label, score, sub }) {
-  const color = score >= 70 ? C.lime : score >= 40 ? C.amber : C.slate;
+/* ============ Option 1 — "Status / Workspace" presentation language ============
+   Home REPORTS, Plan OWNS. These four primitives are what makes that
+   readable at a glance, and they are shared so Home and Plan can never
+   drift into looking like two different products again.
+
+   1. Eyebrow  — the label lives INSIDE the card it names.
+   2. AfterSection — a hairline, not another box.
+   3. StatusRow — status is a LIST, never a grid of tiles.
+   4. JumpRow  — the route out of a read-only card, at a real touch size.
+*/
+
+// A heading that sits ABOVE the box it names (SectionTitle) leaves a screen
+// reading as a stack of orphaned labels and unrelated boxes. The same words
+// INSIDE the card make the card a statement about exactly one thing. 9.5px
+// at 0.15em/900 is deliberately small: it is a label, and it must never
+// compete with the one sentence the card actually carries.
+function Eyebrow({ children, color, style }) {
   return (
-    <div style={{ ...card, marginBottom: 0, textAlign: "center", padding: "16px 10px" }}>
-      <div style={{ fontSize: 24, fontWeight: 900, color, fontFamily: "'Space Mono', monospace" }}>{score}</div>
-      <div style={{ fontSize: 10.5, fontWeight: 700, color: C.chalk, marginTop: 4 }}>{label}</div>
-      {sub && <div style={{ fontSize: 10, color: C.slate, marginTop: 2 }}>{sub}</div>}
+    <div style={{ fontSize: 9.5, letterSpacing: "0.15em", fontWeight: 900, textTransform: "uppercase",
+      color: color || C.slate, lineHeight: 1.35, overflowWrap: "anywhere", ...(style || {}) }}>{children}</div>
+  );
+}
+
+// Vertical rhythm instead of more chrome. A card inside a card reads as "a
+// different KIND of thing"; most of the time it is the same kind of thing,
+// further down the page — which is what a rule and some air say.
+function AfterSection({ title, children, style }) {
+  return (
+    <div style={{ marginTop: 19, paddingTop: 16, borderTop: `1px solid ${C.line}`, ...(style || {}) }}>
+      {title ? <Eyebrow style={{ fontSize: 10.5, letterSpacing: "0.16em", marginBottom: 8 }}>{title}</Eyebrow> : null}
+      {children}
     </div>
   );
 }
+
+// STATUS IS A LIST, NOT A GRID.
+// Four 9px words side by side fit English and nothing else: Greek runs
+// 30–40% longer than English, so a 4-up tile grid either clips the status
+// word or wraps every tile to three lines and stops being scannable. A
+// full-width row gives the label the whole width it needs and puts the
+// value hard right, where the eye already is. 54px minimum is also a real
+// touch target, which the tiles never were.
+function StatusRow({ icon: Icon, label, sub, value, valueColor, dim, mono, onClick, ariaLabel, last, done, dot }) {
+  const base = {
+    display: "flex", alignItems: "center", gap: 12, width: "100%", minHeight: 54,
+    padding: "12px 0", textAlign: "left",
+    borderBottom: last ? "none" : `1px solid ${C.line}`,
+  };
+  const inner = (
+    <>
+      {dot === undefined ? null : (
+        <span aria-hidden="true" style={{ width: 10, height: 10, flex: "0 0 10px", borderRadius: "50%",
+          border: `2px solid ${dot ? C.lime : C.line2}`, background: dot ? C.lime : "transparent" }} />
+      )}
+      {Icon ? <Icon size={15} color={valueColor || C.slate} style={{ flexShrink: 0 }} /> : null}
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, lineHeight: 1.3, overflowWrap: "anywhere",
+          color: done ? C.slate : C.chalk, textDecoration: done ? "line-through" : "none" }}>{label}</span>
+        {sub ? <span style={{ display: "block", fontSize: 11.5, color: C.slate, marginTop: 2, lineHeight: 1.4, overflowWrap: "anywhere" }}>{sub}</span> : null}
+      </span>
+      {value === null || value === undefined || value === "" ? null : (
+        <span style={{ flex: "0 0 auto", maxWidth: "46%", textAlign: "right", overflowWrap: "anywhere",
+          fontSize: 14, fontWeight: dim ? 700 : 900, color: valueColor || (dim ? C.slate : C.chalk),
+          fontFamily: mono ? "'Space Mono', monospace" : "inherit" }}>{value}</span>
+      )}
+      {onClick ? <ChevronRight size={15} color={C.slate} style={{ flexShrink: 0 }} /> : null}
+    </>
+  );
+  if (!onClick) return <div style={base}>{inner}</div>;
+  return (
+    <button type="button" onClick={onClick} aria-label={ariaLabel}
+      style={{ ...base, background: "none", border: "none", borderBottom: base.borderBottom, color: C.chalk, fontFamily: "inherit", cursor: "pointer" }}>
+      {inner}
+    </button>
+  );
+}
+
+// The route out of a card that only REPORTS. It used to be an 11px text
+// link in the top-right corner — the lowest-salience position on a card and
+// well under a thumb's width. If a card's whole job is to hand you to the
+// page that owns the thing, the handing-off cannot be the smallest element
+// on it.
+function JumpRow({ label, onClick, ariaLabel }) {
+  return (
+    <button type="button" onClick={onClick} aria-label={ariaLabel}
+      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, width: "100%",
+        background: "none", border: "none", borderTop: `1px solid ${C.line}`, color: C.lime, fontFamily: "inherit",
+        fontSize: 12.5, fontWeight: 800, padding: "13px 0 0", marginTop: 13, cursor: "pointer", minHeight: 44, textAlign: "left" }}>
+      <span>{label}</span>
+      <ChevronRight size={15} color={C.lime} />
+    </button>
+  );
+}
+
+// One statement, one button. Full width so the action never has to be
+// hunted for, 50px so it is a real target on a phone.
+const primaryBtn = { display: "flex", alignItems: "center", justifyContent: "center", gap: 7, width: "100%",
+  minHeight: 50, background: C.lime, color: C.ink, border: `1px solid ${C.lime}`, borderRadius: 11,
+  fontFamily: "inherit", fontSize: 14, fontWeight: 800, cursor: "pointer", padding: "13px 17px" };
+const quietBtn = { ...primaryBtn, background: "none", borderColor: C.line2, color: C.chalk };
+// Same three tiers the old ReadinessCard used, kept exactly — only the
+// container changed from a tile to a row.
+const scoreTone = (n) => (n >= 70 ? C.lime : n >= 40 ? C.amber : C.slate);
 
 // Home dashboard tab — Passport Strength (brief §6's 5 named sub-scores, all
 // computed from data that already exists elsewhere in the app — nothing
@@ -8343,18 +8509,20 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan }) {
   return (
     <div style={{ ...card, margin: compact ? 0 : undefined, marginBottom: compact ? 10 : undefined,
       borderLeft: readOnly ? `2px solid ${C.line2}` : `3px solid ${C.lime}` }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-        <Trophy size={13} color={C.lime} />
-        <span style={{ fontSize: 8.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700 }}>{t("goal_card_title")}</span>
-        {!editing && (readOnly ? (
-          <button onClick={() => onOpenPlan && onOpenPlan()} style={{ marginLeft: "auto", background: "none", border: "none", color: C.slate, fontSize: 11, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
-            {t("goal_card_open_plan")}<ChevronRight size={13} color={C.slate} />
-          </button>
-        ) : (
-          <button onClick={startEdit} style={{ marginLeft: "auto", background: "none", border: "none", color: C.lime, fontSize: 11, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", padding: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+        <Trophy size={12} color={C.lime} style={{ flexShrink: 0 }} />
+        <Eyebrow>{t("goal_card_title")}</Eyebrow>
+        {/* Says in words what the 2px slate rule says in weight. Only in
+            read-only mode — on Plan this same card IS editable, and labelling
+            it read-only there would be the lie. */}
+        {readOnly && (
+          <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 800, letterSpacing: ".1em", color: C.slate, textTransform: "uppercase", flexShrink: 0 }}>{t("home_read_only_here")}</span>
+        )}
+        {!editing && !readOnly && (
+          <button onClick={startEdit} style={{ marginLeft: "auto", background: "none", border: "none", color: C.lime, fontSize: 11.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", padding: "4px 0", minHeight: 28 }}>
             {hasGoal ? t("goal_card_edit") : t("goal_card_set")}
           </button>
-        ))}
+        )}
       </div>
 
       {editing ? (
@@ -8370,7 +8538,7 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan }) {
           {/* The athlete's own sentence, first and largest. The pathway
               category below it is metadata ABOUT the goal, never a stand-in
               for it. */}
-          <div style={{ fontSize: 14, fontWeight: 800, color: C.chalk, lineHeight: 1.35 }}>{goalText}</div>
+          <div style={{ fontSize: readOnly ? 14.5 : 16, fontWeight: readOnly ? 700 : 800, color: C.chalk, lineHeight: 1.35, overflowWrap: "anywhere" }}>{goalText}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 7, flexWrap: "wrap" }}>
             {pathwayType && (
               <span style={{ fontSize: 10, fontWeight: 700, color: C.slate }}>
@@ -8383,9 +8551,16 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan }) {
           </div>
         </div>
       ) : (
+        // EMPTY IS A LABEL PLUS THE ACTION THAT FILLS IT — never a blank.
+        // On Plan (editable) that action is the editor itself; on Home the
+        // JumpRow below hands the athlete to Plan instead, because Home is
+        // not allowed to own this.
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.chalk }}>{t("goal_card_empty")}</div>
-          <div style={{ fontSize: 11.5, color: C.slate, marginTop: 4, lineHeight: 1.45 }}>{t("goal_card_empty_hint")}</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: C.chalk, lineHeight: 1.35, overflowWrap: "anywhere" }}>{t("goal_card_empty")}</div>
+          <div style={{ fontSize: 12.5, color: C.slate, marginTop: 6, lineHeight: 1.5 }}>{t("goal_card_empty_hint")}</div>
+          {!readOnly && (
+            <button onClick={startEdit} style={{ ...quietBtn, marginTop: 14 }}>{t("goal_card_set")}</button>
+          )}
         </div>
       )}
 
@@ -8400,14 +8575,7 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan }) {
           thing, the handing-off cannot be the smallest element on screen.
           This is the same navigation, given the weight the rule implies. */}
       {readOnly && !editing && onOpenPlan && (
-        <button onClick={onOpenPlan}
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-            width: "100%", background: "none", border: "none", borderTop: `1px solid ${C.line}`,
-            color: C.lime, fontFamily: "inherit", fontSize: 12, fontWeight: 800,
-            padding: "12px 0 0", marginTop: 12, cursor: "pointer", minHeight: 44, textAlign: "left" }}>
-          <span>{hasGoal ? t("goal_card_open_plan") : t("goal_card_set")}</span>
-          <ChevronRight size={15} color={C.lime} />
-        </button>
+        <JumpRow label={hasGoal ? t("goal_card_open_plan") : t("goal_card_set")} onClick={onOpenPlan} />
       )}
     </div>
   );
@@ -8429,7 +8597,6 @@ function PlanCrumb({ from }) {
 }
 
 function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
-  const current = (athlete && (athlete.club_name || athlete.recruiting_status)) || t("home_path_developing");
   const hasGoal = !!pathwayRow;
   const goalLabel = hasGoal ? t("pathway_type_" + pathwayRow.pathway_type) : t("home_path_goal_placeholder");
   const config = SPORT_PATHWAY_STAGES[athlete && athlete.sport] || SPORT_PATHWAY_STAGES.__default;
@@ -8442,15 +8609,39 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
   // real fact and gets said in their own words instead.
   const statedSecondary = statedContextValue(athlete && athlete.scout_context, "secondary_goal");
   const showAltBranch = config.altBranch && (!hasGoal || pathwayRow.pathway_type !== config.altBranch);
-  const Line = () => <div style={{ width: 10, flexShrink: 0, height: 2, background: C.line2, marginTop: 15 }} />;
+  const stageIdx = currentStageIndex(athlete, config.stages.length);
   return (
     <div style={{ padding: "6px 4px 14px" }}>
-      <div style={{ display: "flex", alignItems: "flex-start" }}>
-        <div style={{ flex: "1 1 0", minWidth: 0 }}><PathNode Icon={Home} label={t("home_path_you")} sub={t("home_path_now")} filled current /></div>
-        <Line />
-        <div style={{ flex: "1 1 0", minWidth: 0 }}><PathNode Icon={Shield} label={current} filled={!!(athlete && athlete.club_name)} /></div>
-        <Line />
-        <div style={{ flex: "1 1 0", minWidth: 0 }}><PathNode Icon={Star} label={goalLabel} filled={hasGoal} onClick={hasGoal ? undefined : () => onNavigate("scout")} /></div>
+      {/* ONE OBJECT, ONE PICTURE. This used to render YOU -> current club ->
+          goal while PathwayMap on Plan rendered the sport's real stage
+          sequence. Two drawings of the same thing, so an athlete comparing the
+          two screens saw a contradiction that did not exist in the data. Same
+          stages, same source (SPORT_PATHWAY_STAGES), same current-stage
+          derivation as Plan — compact here because Home reports and Plan owns. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+        {config.stages.map((key, i) => (
+          <React.Fragment key={key}>
+            {i > 0 && <span style={{ color: C.slate, fontSize: 11, flexShrink: 0 }}>→</span>}
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, borderRadius: 20,
+              padding: "5px 10px", minHeight: 30, whiteSpace: "nowrap",
+              color: i === stageIdx ? C.chalk : i < stageIdx ? C.lime : C.slate,
+              background: i < stageIdx ? C.limeWash : "none",
+              border: `1px solid ${i === stageIdx ? C.lime : i < stageIdx ? C.limeBorder : C.line2}`,
+            }}>{t("pathway_stage_" + key)}</span>
+          </React.Fragment>
+        ))}
+        <span style={{ color: C.slate, fontSize: 11, flexShrink: 0 }}>→</span>
+        {/* The athlete's own goal is the last node. Not a stage — the thing the
+            stages lead to — so it reads as theirs, and when it is unset it is
+            an invitation rather than a blank. */}
+        <span onClick={hasGoal ? undefined : () => onNavigate("scout")} style={{
+          display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, borderRadius: 20,
+          padding: "5px 10px", minHeight: 30, whiteSpace: "nowrap", cursor: hasGoal ? "default" : "pointer",
+          color: hasGoal ? C.lime : C.slate,
+          background: hasGoal ? C.limeWash : "none",
+          border: `1px ${hasGoal ? "solid" : "dashed"} ${hasGoal ? C.limeBorder : C.line2}`,
+        }}>{goalLabel}</span>
       </div>
       {statedSecondary ? (
         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: 4 }}>
@@ -8472,7 +8663,7 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
 }
 
 function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
-  const { t, tv } = useLang();
+  const { t, tv, lang } = useLang();
   const [loaded, setLoaded] = useState(!sb);
   const [athlete, setAthlete] = useState(null);
   const [quality, setQuality] = useState(null);
@@ -8526,7 +8717,10 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
         setPerformance(computePerformanceScore(benchmarks));
         setDevelopment(computeDevelopmentScore(devItems));
         setPathway(computePathwayScore(pathwayRow, (targets || []).length));
-        setPathwayRow(pathwayRow || null);
+        // Fourth read path. Without this, Home sorts and dates raw rows while
+        // Plan sorts normalised ones, and the two screens can disagree about
+        // which step is next — the exact split this rebuild exists to close.
+        setPathwayRow(pathwayRow ? { ...pathwayRow, milestones: (pathwayRow.milestones || []).map(normalizeMilestone) } : null);
         // Most-recently-recorded entry per metric, top 3 — "recent benchmark
         // progress" for the command-center card (brief §14).
         const latestByMetric = {};
@@ -8549,7 +8743,28 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
 
   useEffect(() => { reload(); }, [reload]);
 
-  if (!loaded) return <div style={{ padding: "40px 20px", textAlign: "center", color: C.slate, fontSize: 13 }}>{t("loading")}</div>;
+  // LOADING IS A SKELETON, NEVER A NUMBER AND NEVER A WORD.
+  // A centred "Loading…" is the same shape as an error and nothing like the
+  // page that follows, so the whole screen jumps once the fetch lands. These
+  // hold the real heights of the identity row, the recommended action and
+  // the two cards under it — nothing moves when the data arrives, and no
+  // zero, no empty string and no paywall is ever shown in the meantime.
+  if (!loaded) {
+    return (
+      <div aria-busy="true" aria-label={t("loading")} style={{ padding: "8px 12px 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "4px 2px 18px" }}>
+          <SkeletonLine height={48} width={48} radius="50%" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <SkeletonLine height={15} width="62%" />
+            <SkeletonLine height={11} width="84%" style={{ marginTop: 8 }} />
+          </div>
+        </div>
+        <SkeletonCard height={148} />
+        <SkeletonCard height={104} />
+        <SkeletonCard height={168} />
+      </div>
+    );
+  }
 
   // Time-of-day greeting ("Good morning, Harry" — §5) — local device time,
   // no server round trip needed for something this low-stakes.
@@ -8596,163 +8811,265 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
     // AND hasPathway ("...and it has milestones"). Rendering that through a
     // single boolean collapsed the middle state onto "Not set", so an athlete
     // with a real pathway and no milestones yet saw the goal card say
-    // "Pathway: Professional pathway" and this tile say "PATHWAY — Not set"
-    // ON THE SAME SCREEN. The paid ReadinessCard below already handled all
-    // three; only this free-tier tile was binary, so the page disagreed with
-    // itself depending on plan.
+    // "Pathway: Professional pathway" and this row say "PATHWAY — Not set"
+    // ON THE SAME SCREEN. The paid sub-score breakdown below already handled
+    // all three; only this free-tier row was binary, so the page disagreed
+    // with itself depending on plan.
     { key: "pathway", ok: !!(pathway && pathway.hasPathway), started: !!(pathway && pathway.pathwayStarted) },
   ];
+
+  // MY NEXT MOVE — the one statement Home leads with, and the only thing on
+  // this page set at 20px.
+  //
+  // A dashboard that reports six things equally tells an athlete to decide
+  // which of them matters, which is the job they came here to have done for
+  // them. This is a deterministic ladder over data this component ALREADY
+  // fetched — no new schema, no new query, no AI call, nothing invented —
+  // ordered by what blocks the most downstream value: there is no useful
+  // pathway without a goal, and no credible profile without a sport.
+  //
+  // Every string here already existed and is already translated in all four
+  // languages; only the six "why" lines are new (home_next_why_*).
+  //
+  // A RECOMMENDATION MUST BE ONE THE ATHLETE CAN ACTUALLY CARRY OUT.
+  // Benchmarks, Targets and the Pathway plan are Starter+; recommending one
+  // of them to a Free athlete would walk them into a paywall from the single
+  // most prominent element on their Home screen. Those rungs are therefore
+  // skipped unless the feature is really unlocked — and since
+  // featureUnlocked() returns false for a plan that has not loaded yet, an
+  // unknown plan behaves like the safe case rather than the paid one. The
+  // first three rungs and the fallback are open to every plan, so Free (and
+  // plan-not-yet-known) always lands on something real.
+  const canBenchmarks = featureUnlocked(plan, "benchmarks");
+  const canTargets = featureUnlocked(plan, "targets");
+  // The athletes own stated next step outranks anything GOLSZ infers for them.
+  // canTargets gates it, so Free — and plan-not-yet-known — never lands here.
+  const pathwayNext = canTargets && pathwayRow ? nextMilestone(pathwayRow.milestones) : null;
+
+  const nextMove = !profileComplete
+    ? { label: "next_move_type_complete_profile", why: "next_move_why_complete_profile", go: "profile" }
+    : !goalDefined
+      ? { label: "next_move_type_define_goal", why: "home_next_why_goal", go: "scout" }
+      : !filmAdded
+        ? { label: "plan_next30_film", why: "home_next_why_film", go: "profile" }
+        : (canBenchmarks && !(performance && performance.metricsTracked > 0))
+          ? { label: "plan_next30_benchmark", why: "home_next_why_benchmark", go: "profile" }
+          : (canTargets && !(pathway && pathway.hasPathway))
+            ? { label: "next_move_type_build_pathway", why: "home_next_why_pathway", go: "targets" }
+            : pathwayNext
+              ? { labelText: pathwayNext.label,
+                  whyText: [milestoneDateLabel(pathwayNext, lang, t).text,
+                            pathwayNext.stage ? t("pathway_stage_" + pathwayNext.stage) : null].filter(Boolean).join(" · "),
+                  go: "targets" }
+            : (canTargets && monthly && monthly.staleTargets > 0)
+              ? { label: "next_move_type_follow_up", why: "home_next_why_follow_up", go: "targets" }
+              : { label: "next_move_type_review_progress", why: "home_next_why_review", go: canTargets ? "targets" : "profile" };
+
   return (
     <div style={{ padding: "8px 12px 20px" }}>
-      {name && (
-        <div style={{ margin: "4px 2px 10px" }}>
-          <div style={{ fontSize: 12, color: C.slate, fontWeight: 700 }}>{t(greetingKey)}</div>
-          <div style={{ fontSize: 22, fontWeight: 900 }}>{name.split(" ")[0]}</div>
-        </div>
-      )}
-      {athlete && (athlete.sport || athlete.club_name) && (
-        // The identity row IS the Passport, summarised — so it opens it.
+      {(name || (athlete && (athlete.sport || athlete.club_name))) && (
+        // ONE identity block, not a greeting stacked on top of a separate
+        // profile row. The greeting is the eyebrow, the name is the
+        // statement, the athlete's own facts are the sub-line — the same
+        // three-part shape every card on this page now uses. It IS the
+        // Passport, summarised, so it still opens it.
         <div onClick={() => onNavigate("profile")} role="button" tabIndex={0}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate("profile"); } }}
-          style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 2px 16px", cursor: "pointer" }}>
-          <div style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0, overflow: "hidden", border: `1.5px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg, ${C.turf}, ${C.line2})`, fontWeight: 800, fontSize: 17, color: C.lime, fontFamily: "'Space Mono', monospace" }}>
+          style={{ display: "flex", alignItems: "center", gap: 12, margin: "4px 2px 18px", cursor: "pointer", minHeight: 48 }}>
+          <div style={{ width: 48, height: 48, borderRadius: "50%", flexShrink: 0, overflow: "hidden", border: `1.5px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg, ${C.turf}, ${C.line2})`, fontWeight: 800, fontSize: 16, color: C.lime, fontFamily: "'Space Mono', monospace" }}>
             {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(name || "?")}
           </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: C.chalk, display: "flex", alignItems: "center", gap: 5 }}>
-              {name}{verification && verification.status === "verified" && <BadgeCheck size={14} color={C.lime} />}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            {name && <Eyebrow>{t(greetingKey)}</Eyebrow>}
+            <div style={{ fontSize: 17, fontWeight: 900, letterSpacing: "-0.01em", color: C.chalk, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: name ? 3 : 0, overflowWrap: "anywhere" }}>
+              {name || t("nav_passport")}{verification && verification.status === "verified" && <BadgeCheck size={15} color={C.lime} />}
             </div>
-            <div style={{ fontSize: 11.5, color: C.slate, lineHeight: 1.5 }}>
-              {[tv(athlete.sport), athlete.position].filter(Boolean).join(" · ")}
-              {athlete.club_name && <><br />{athlete.club_name}</>}
-              {(athlete.height_cm || athlete.weight_kg || athlete.grad_year) && <><br />
-                {[athlete.height_cm && `${athlete.height_cm} cm`, athlete.weight_kg && `${athlete.weight_kg} kg`, athlete.grad_year && t("home_grad_prefix") + athlete.grad_year].filter(Boolean).join(" · ")}
-              </>}
-            </div>
+            {athlete && (
+              <div style={{ fontSize: 11.5, color: C.slate, lineHeight: 1.5, marginTop: 2, overflowWrap: "anywhere" }}>
+                {[tv(athlete.sport), athlete.position].filter(Boolean).join(" · ")}
+                {athlete.club_name && <><br />{athlete.club_name}</>}
+                {(athlete.height_cm || athlete.weight_kg || athlete.grad_year) && <><br />
+                  {[athlete.height_cm && `${athlete.height_cm} cm`, athlete.weight_kg && `${athlete.weight_kg} kg`, athlete.grad_year && t("home_grad_prefix") + athlete.grad_year].filter(Boolean).join(" · ")}
+                </>}
+              </div>
+            )}
           </div>
+          <ChevronRight size={16} color={C.slate} style={{ flexShrink: 0 }} />
         </div>
       )}
+
+      {/* ONE STATEMENT, AT SIZE, WITH THE BUTTON THAT DOES IT.
+          The largest type on Home, because it is the only thing on Home an
+          athlete is asked to act on right now. The muted line under it is
+          the WHY — a recommendation with no reason behind it is just an
+          instruction, and athletes stop reading instructions. */}
+      <div style={{ ...card, padding: 16 }}>
+        <Eyebrow>{t("next_move_title")}</Eyebrow>
+        <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.24, letterSpacing: "-0.018em", color: C.chalk, margin: "10px 0 0", overflowWrap: "anywhere" }}>
+          {nextMove.labelText || t(nextMove.label)}
+        </div>
+        <div style={{ fontSize: 13, color: C.slate, lineHeight: 1.55, marginTop: 9 }}>{nextMove.whyText || t(nextMove.why)}</div>
+        <button onClick={() => onNavigate(nextMove.go)} style={{ ...primaryBtn, marginTop: 15 }}>
+          {t("next_move_act")}
+        </button>
+      </div>
 
       {/* P0-5: the athlete's goal in their own words, above the path strip
           it is supposed to explain. The strip below shows the pathway
           CATEGORY as a node; without this card that category was the only
-          representation of the goal anywhere in the product. */}
+          representation of the goal anywhere in the product.
+          Read-only here, with its own route into Plan — Home reports, Plan
+          owns. The 2px slate left rule is what says so at a glance. */}
       <GoalCard actingFor={actingFor} readOnly onOpenPlan={() => onNavigate("targets", "goal")} />
 
-      <SectionTitle>{t("home_path_title")}</SectionTitle>
-      <PathwayStrip athlete={athlete} pathwayRow={pathwayRow} t={t} onNavigate={onNavigate} />
+      {/* YOUR PATH — the heading moved INSIDE the card it names, and the
+          card gained the route into the page that owns the pathway. */}
+      <div style={{ ...card }}>
+        {/* The count Plan owns, reported here in the card the athlete actually
+            reads. Deliberately NOT on the sub-score row above: that row sits
+            behind featureUnlocked(plan, "readiness"), so a Free athlete would
+            never see their own step count. Same treatment as PathwayPlan's
+            counter, so the two screens visibly report the same number. */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, minHeight: 20 }}>
+          <Eyebrow>{t("home_path_title")}</Eyebrow>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: ".1em", color: C.slate, textTransform: "uppercase", flexShrink: 0 }}>{t("home_read_only_here")}</span>
+          {pathway && pathway.milestonesTotal > 0 && (
+            <span style={{ fontSize: 14, fontWeight: 900, color: C.lime, fontFamily: "'Space Mono', monospace", flexShrink: 0 }}>{pathway.milestonesDone}/{pathway.milestonesTotal}</span>
+          )}
+          </div>
+        </div>
+        <PathwayStrip athlete={athlete} pathwayRow={pathwayRow} t={t} onNavigate={onNavigate} />
+        <JumpRow label={t("goal_card_open_plan")} onClick={() => onNavigate("targets", "pathway")} />
+      </div>
 
-      <SectionTitle>{t("home_readiness_title")}</SectionTitle>
       {/* Home is a dashboard: every card is a way INTO the page that owns the
           thing it is describing. Passport Strength is computed from Passport
           content, so the card opens Passport. Without this the score was a
-          dead end — an athlete could see FILM: Needed and have nowhere to go. */}
+          dead end — an athlete could see FILM: Needed and have nowhere to go.
+          The four status words used to be a 4-up tile grid at 9px; they are
+          rows now. Tiles fit English and nothing else — Greek is 30–40%
+          longer and either clipped or wrapped every tile to three lines. */}
       <div onClick={() => onNavigate("profile")} role="button" tabIndex={0}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate("profile"); } }}
-        style={{ ...card, marginBottom: 10, cursor: "pointer" }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
-          <span style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span style={{ fontSize: 26, fontWeight: 900, color: compositeColor, fontFamily: "'Space Mono', monospace" }}>{composite}%</span>
-            {/* A percentage alone tells an athlete nothing they can act on.
-                The four tiles below ARE the breakdown, so say how many are
-                done — "2 of 4 areas strong" points at the two that are not. */}
-            <span style={{ fontSize: 11, color: C.slate, fontWeight: 700 }}>
-              {t("home_readiness_fraction").replace("{n}", readinessStatus.filter((x) => x.ok).length).replace("{total}", readinessStatus.length)}
-            </span>
-          </span>
-          <span style={{ fontSize: 9, letterSpacing: "0.14em", color: C.slate, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>{t("home_readiness_composite")}<ChevronRight size={12} color={C.slate} /></span>
+        style={{ ...card, cursor: "pointer" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <Eyebrow>{t("home_readiness_composite")}</Eyebrow>
+          <ChevronRight size={14} color={C.slate} style={{ flexShrink: 0 }} />
         </div>
-        <div style={{ height: 6, borderRadius: 99, background: C.turf, overflow: "hidden", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 9, flexWrap: "wrap", marginTop: 11 }}>
+          <span style={{ fontSize: 30, fontWeight: 900, lineHeight: 1, color: compositeColor, fontFamily: "'Space Mono', monospace" }}>{composite}%</span>
+          {/* A percentage alone tells an athlete nothing they can act on.
+              The four rows below ARE the breakdown, so say how many are
+              done — "2 of 4 areas strong" points at the two that are not. */}
+          <span style={{ fontSize: 12, color: C.slate, fontWeight: 700 }}>
+            {t("home_readiness_fraction").replace("{n}", readinessStatus.filter((x) => x.ok).length).replace("{total}", readinessStatus.length)}
+          </span>
+        </div>
+        <div style={{ height: 8, borderRadius: 99, background: C.turf, overflow: "hidden", margin: "11px 0 4px" }}>
           <div style={{ height: "100%", width: `${composite}%`, borderRadius: 99, background: compositeColor, transition: "width .3s ease" }} />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
-          {readinessStatus.map((s) => {
-            const Icon = READINESS_STATUS_ICON[s.key];
-            return (
-              <div key={s.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, textAlign: "center" }}>
-                <Icon size={17} color={s.ok ? C.lime : s.started ? C.amber : C.slate} />
-                <span style={{ fontSize: 9, color: C.slate, fontWeight: 700, letterSpacing: "0.03em" }}>{t("home_readiness_row_" + s.key)}</span>
-                <span style={{ fontSize: 9.5, fontWeight: 800, color: s.ok ? C.lime : s.started ? C.amber : C.slate }}>{t("home_readiness_status_" + s.key + "_" + (s.ok ? "ok" : s.started ? "started" : "no"))}</span>
-              </div>
-            );
-          })}
-        </div>
+        {readinessStatus.map((s, i) => {
+          const Icon = READINESS_STATUS_ICON[s.key];
+          const tone = s.ok ? C.lime : s.started ? C.amber : C.slate;
+          return (
+            <StatusRow key={s.key} icon={Icon} valueColor={tone} last={i === readinessStatus.length - 1}
+              label={t("home_readiness_row_" + s.key)}
+              value={t("home_readiness_status_" + s.key + "_" + (s.ok ? "ok" : s.started ? "started" : "no"))} />
+          );
+        })}
       </div>
 
+      {/* ENTITLEMENT IS THREE-VALUED. planKnown() first, always: a plan that
+          has not loaded yet renders NOTHING here, never the upgrade prompt
+          below — a paying athlete being shown a paywall for the two seconds
+          their subscription takes to load is the exact bug this guard
+          exists for. Unchanged from before; only the presentation moved. */}
       {!planKnown(plan) ? null : featureUnlocked(plan, "readiness") ? (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-            <ReadinessCard label={t("home_profile_quality")} score={subScores.profile_quality} sub={quality ? `${quality.filled}/${quality.total}` : ""} />
-            <ReadinessCard label={t("home_verification")} score={subScores.verification} sub={t("home_verify_status_" + (verification ? verification.status : "none"))} />
-            <ReadinessCard label={t("home_performance")} score={subScores.performance} sub={performance ? t("home_performance_sub").replace("{n}", performance.metricsTracked) : ""} />
-            <ReadinessCard label={t("home_development")} score={subScores.development} sub={development ? `${development.done}/${development.total}` : ""} />
-            <div style={{ gridColumn: "1 / -1" }}>
-              <ReadinessCard label={t("home_pathway")} score={subScores.pathway} sub={pathway && pathway.hasPathway ? t("home_pathway_sub").replace("{n}", pathway.targetsCount) : pathway && pathway.pathwayStarted ? t("home_pathway_empty") : t("home_pathway_none")} />
+          {/* The five sub-scores WERE a 2-up grid of five centred tiles, each
+              a card of its own — five boxes to say one thing. They are the
+              answer to "why this score", so they now live inside that card,
+              as rows, above the sentence that names the weakest one. */}
+          <div style={{ ...card }}>
+            <Eyebrow>{t("home_readiness_why_title")}</Eyebrow>
+            <div style={{ marginTop: 6 }}>
+              <StatusRow label={t("home_profile_quality")} sub={quality ? `${quality.filled}/${quality.total}` : ""} value={subScores.profile_quality} valueColor={scoreTone(subScores.profile_quality)} mono />
+              <StatusRow label={t("home_verification")} sub={t("home_verify_status_" + (verification ? verification.status : "none"))} value={subScores.verification} valueColor={scoreTone(subScores.verification)} mono />
+              <StatusRow label={t("home_performance")} sub={performance ? t("home_performance_sub").replace("{n}", performance.metricsTracked) : ""} value={subScores.performance} valueColor={scoreTone(subScores.performance)} mono />
+              <StatusRow label={t("home_development")} sub={development ? `${development.done}/${development.total}` : ""} value={subScores.development} valueColor={scoreTone(subScores.development)} mono />
+              <StatusRow last label={t("home_pathway")} value={subScores.pathway} valueColor={scoreTone(subScores.pathway)} mono
+                sub={pathway && pathway.hasPathway ? t("home_pathway_sub").replace("{n}", pathway.targetsCount) : pathway && pathway.pathwayStarted ? t("home_pathway_empty") : t("home_pathway_none")} />
             </div>
-          </div>
-          <div style={{ ...card, marginBottom: 14 }}>
-            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("home_readiness_why_title")}</div>
-            <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.6, marginBottom: 10 }}>{t("home_readiness_weakest_" + weakest)}</div>
-            <button onClick={() => onNavigate("profile")} style={{ ...iconBtn(C.lime), fontSize: 12 }}>{t("home_readiness_improve")}</button>
+            <div style={{ marginTop: 16, paddingTop: 15, borderTop: `1px solid ${C.line}` }}>
+              <div style={{ fontSize: 13, color: C.chalk, lineHeight: 1.6 }}>{t("home_readiness_weakest_" + weakest)}</div>
+              <button onClick={() => onNavigate("profile")} style={{ ...quietBtn, marginTop: 13 }}>{t("home_readiness_improve")}</button>
+            </div>
           </div>
 
           {/* Command-center enrichment (brief §14: "pathway progress",
               "recent benchmark progress", "monthly actions" on Home) —
-              the deeper interpretation layer, stays Pro+. */}
+              the deeper interpretation layer, stays Pro+. A rule and some
+              air, not two more boxes: these are the same kind of thing as
+              the cards above, further down the page. */}
           {monthly && (monthly.activeDevItems > 0 || monthly.staleTargets > 0) && (
-            <div style={{ ...card, marginBottom: 10 }}>
-              <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("home_this_month_title")}</div>
-              {monthly.activeDevItems > 0 && <div style={{ fontSize: 12.5, color: C.chalk, marginBottom: monthly.staleTargets > 0 ? 4 : 0 }}>{t("home_this_month_dev").replace("{n}", monthly.activeDevItems)}</div>}
-              {monthly.staleTargets > 0 && (
-                <div style={{ fontSize: 12.5, color: C.amber, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                  <span>{t("home_this_month_targets").replace("{n}", monthly.staleTargets)}</span>
-                  <button onClick={() => onNavigate("targets")} style={{ ...iconBtn(C.amber), fontSize: 11, flexShrink: 0 }}>{t("home_this_month_review")}</button>
-                </div>
+            <AfterSection title={t("home_this_month_title")}>
+              {monthly.activeDevItems > 0 && (
+                <StatusRow label={t("home_this_month_dev").replace("{n}", monthly.activeDevItems)} last={!(monthly.staleTargets > 0)} />
               )}
-            </div>
+              {monthly.staleTargets > 0 && (
+                <StatusRow last onClick={() => onNavigate("targets")} valueColor={C.amber}
+                  label={t("home_this_month_targets").replace("{n}", monthly.staleTargets)}
+                  value={t("home_this_month_review")} ariaLabel={t("home_this_month_review")} />
+              )}
+            </AfterSection>
           )}
           {recentBenchmarks.length > 0 && (
-            <div style={{ ...card, marginBottom: 14 }}>
-              <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("home_benchmark_progress_title")}</div>
+            <AfterSection title={t("home_benchmark_progress_title")}>
               {recentBenchmarks.map((b, i) => (
-                <div key={b.metric} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 0", borderTop: i > 0 ? `1px solid ${C.line}` : "none" }}>
-                  <span style={{ fontSize: 12.5, color: C.chalk }}>{b.metric}</span>
-                  <span style={{ fontSize: 12.5, fontWeight: 800, color: C.lime, fontFamily: "'Space Mono', monospace" }}>{b.value}{b.unit ? ` ${b.unit}` : ""}</span>
-                </div>
+                <StatusRow key={b.metric} label={b.metric} mono valueColor={C.lime}
+                  value={`${b.value}${b.unit ? ` ${b.unit}` : ""}`} last={i === recentBenchmarks.length - 1} />
               ))}
-            </div>
+            </AfterSection>
           )}
         </>
       ) : (
         // Value-first, not a blank lock box (§14): names the SPECIFIC
         // deeper thing paid unlocks, using the athlete's own weakest real
         // dimension rather than generic "upgrade" copy.
-        <div onClick={onUpgrade} style={{ ...card, cursor: "pointer", marginBottom: 14, borderStyle: "dashed" }}>
-          <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.6, marginBottom: 8 }}>{t("home_readiness_teaser_" + weakest)}</div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: C.lime }}>{t("feature_lock_cta")} →</div>
+        <div onClick={onUpgrade} role="button" tabIndex={0}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onUpgrade(); } }}
+          style={{ ...card, cursor: "pointer", borderStyle: "dashed" }}>
+          <Eyebrow color={C.lime}>{t("home_readiness_why_title")}</Eyebrow>
+          <div style={{ fontSize: 13, color: C.chalk, lineHeight: 1.6, margin: "10px 0 0" }}>{t("home_readiness_teaser_" + weakest)}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: C.lime, marginTop: 13, display: "flex", alignItems: "center", gap: 6, minHeight: 24 }}>{t("feature_lock_cta")}<ChevronRight size={14} color={C.lime} /></div>
         </div>
       )}
 
       {quality && quality.missing.length > 0 && (
-        <div style={{ ...card }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("home_missing_title")}</div>
-          <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.6, marginBottom: 10 }}>{quality.missing.join(" · ")}</div>
-          <button onClick={() => onNavigate("profile")} style={{ ...iconBtn(C.lime), fontSize: 12 }}>{t("home_finish_profile")}</button>
-        </div>
+        <AfterSection title={t("home_missing_title")}>
+          <div style={{ fontSize: 13, color: C.chalk, lineHeight: 1.6 }}>{quality.missing.join(" · ")}</div>
+          <button onClick={() => onNavigate("profile")} style={{ ...quietBtn, marginTop: 13 }}>{t("home_finish_profile")}</button>
+        </AfterSection>
       )}
 
       {/* Scout entry (§5: "[ Ask Scout anything... ]") — a tappable field-
           styled row, not another square tile, so it reads as "type here"
-          the way the real composer on Scout itself does. */}
-      <div onClick={() => onNavigate("scout")} style={{ display: "flex", alignItems: "center", gap: 10, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, padding: "12px 14px", marginTop: 6, marginBottom: 14, cursor: "pointer" }}>
-        <Radar size={16} color={C.lime} style={{ flexShrink: 0 }} />
-        <span style={{ fontSize: 13, color: C.slate }}>{t("home_scout_ask_ph")}</span>
-      </div>
+          the way the real composer on Scout itself does. A real <button>
+          rather than a bare clickable div, so it is reachable by keyboard
+          and announces itself. */}
+      <AfterSection>
+        <button onClick={() => onNavigate("scout")}
+          style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: 48, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+          <Radar size={16} color={C.lime} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: C.slate }}>{t("home_scout_ask_ph")}</span>
+        </button>
 
-      <div style={{ display: "flex", gap: 18, padding: "0 2px" }}>
-        <button onClick={() => onNavigate("profile")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 5 }}><User size={14} color={C.lime} />{t("nav_passport")}</button>
-        <button onClick={() => onNavigate("targets")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 5 }}><Target size={14} color={C.lime} />{t("nav_plan")}</button>
-      </div>
+        <div style={{ display: "flex", gap: 20, padding: "0 2px", marginTop: 6 }}>
+          <button onClick={() => onNavigate("profile")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: "12px 0", minHeight: 44, display: "flex", alignItems: "center", gap: 6 }}><User size={14} color={C.lime} />{t("nav_passport")}</button>
+          <button onClick={() => onNavigate("targets")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: "12px 0", minHeight: 44, display: "flex", alignItems: "center", gap: 6 }}><Target size={14} color={C.lime} />{t("nav_plan")}</button>
+        </div>
+      </AfterSection>
     </div>
   );
 }
@@ -8786,6 +9103,16 @@ function SkeletonCard({ height, compact }) {
       backgroundSize: "200% 100%", animation: "golszShimmer 1.4s ease-in-out infinite" }} />
   );
 }
+// The same treatment at line scale, for skeletons that are not a whole card
+// (an avatar, a name, a one-line subtitle). Shares SkeletonCard's shimmer so
+// "still loading" looks like one thing everywhere in the app.
+function SkeletonLine({ height, width, radius, style }) {
+  return (
+    <div aria-hidden="true" style={{ height: height || 12, width: width || "100%", borderRadius: radius || 7, opacity: 0.45,
+      background: `linear-gradient(90deg, ${C.turf} 0%, ${C.line2} 50%, ${C.turf} 100%)`,
+      backgroundSize: "200% 100%", animation: "golszShimmer 1.4s ease-in-out infinite", flexShrink: 0, ...(style || {}) }} />
+  );
+}
 
 // EMPTY is not a score. `0/0` was rendered in C.lime — the same green as
 // "2/3" — so "nothing here yet" looked exactly like "all done", which is the
@@ -8794,22 +9121,28 @@ function SkeletonCard({ height, compact }) {
 function CollapsibleRow({ title, count, total, expanded, onToggle, children, emptyLabel }) {
   const isEmpty = total === 0 || total == null;
   return (
-    <div style={{ ...card, marginBottom: 10 }}>
-      <div onClick={onToggle} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-        <span style={{ fontSize: 9, letterSpacing: "0.14em", color: C.slate, fontWeight: 700 }}>{title}</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div style={{ ...card, marginBottom: 10, paddingTop: 4, paddingBottom: expanded ? 14 : 4 }}>
+      {/* The header IS a row: eyebrow left, value hard right, 54px tall, the
+          same shape as every other status row in the app. It was a bare
+          clickable div with no role and no keyboard handler; it is a real
+          control now. */}
+      <div onClick={onToggle} role="button" tabIndex={0} aria-expanded={!!expanded}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, minHeight: 54, padding: "12px 0", cursor: "pointer" }}>
+        <Eyebrow>{title}</Eyebrow>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           {total != null && (
             isEmpty
-              ? <span style={{ fontSize: 11, fontWeight: 800, color: C.slate, fontFamily: "'Space Mono', monospace" }}>—</span>
-              : <span style={{ fontSize: 11, fontWeight: 800, color: C.lime, fontFamily: "'Space Mono', monospace" }}>{count != null ? `${count}/${total}` : total}</span>
+              ? <span style={{ fontSize: 14, fontWeight: 700, color: C.slate, fontFamily: "'Space Mono', monospace" }}>—</span>
+              : <span style={{ fontSize: 14, fontWeight: 900, color: C.lime, fontFamily: "'Space Mono', monospace" }}>{count != null ? `${count}/${total}` : total}</span>
           )}
-          {expanded ? <ChevronUp size={15} color={C.slate} /> : <ChevronDown size={15} color={C.slate} />}
+          {expanded ? <ChevronUp size={16} color={C.slate} /> : <ChevronDown size={16} color={C.slate} />}
         </div>
       </div>
       {expanded && (
-        <div style={{ marginTop: 12 }}>
+        <div style={{ paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
           {isEmpty && emptyLabel
-            ? <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.45 }}>{emptyLabel}</div>
+            ? <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55 }}>{emptyLabel}</div>
             : children}
         </div>
       )}
@@ -8867,15 +9200,17 @@ function BackupPlanCard({ athlete, loaded, actingFor, onSaved }) {
   }
 
   const label = (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-      <GraduationCap size={13} color={C.info} />
-      <span style={{ fontSize: 8.5, letterSpacing: "0.1em", color: C.slate, fontWeight: 700 }}>{t("plan_backup_title")}</span>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+      <GraduationCap size={12} color={C.info} style={{ flexShrink: 0 }} />
+      <Eyebrow>{t("plan_backup_title")}</Eyebrow>
       {stated && !editing && (
-        <button onClick={() => { setDraft(stated); setEditing(true); }} style={{ marginLeft: "auto", background: "none", border: "none", color: C.lime, fontSize: 11, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", padding: 0 }}>{t("goal_card_edit")}</button>
+        <button onClick={() => { setDraft(stated); setEditing(true); }} style={{ marginLeft: "auto", background: "none", border: "none", color: C.lime, fontSize: 11.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", padding: "4px 0", minHeight: 28 }}>{t("goal_card_edit")}</button>
       )}
     </div>
   );
-  const btn = (bg, fg) => ({ background: bg, color: fg, border: "none", borderRadius: 9, padding: "7px 13px", fontSize: 12, fontWeight: 800, fontFamily: "inherit", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 });
+  // Same button metrics as everywhere else on this screen — 44px minimum,
+  // so a three-answer question is answerable with a thumb.
+  const btn = (bg, fg) => ({ background: bg, color: fg, border: `1px solid ${bg === "transparent" ? C.line2 : bg}`, borderRadius: 10, padding: "10px 14px", minHeight: 44, fontSize: 12.5, fontWeight: 800, fontFamily: "inherit", cursor: busy ? "default" : "pointer", opacity: busy ? 0.6 : 1 });
   const errLine = err ? <div style={{ fontSize: 11.5, color: C.amber, marginTop: 8 }}>{err}</div> : null;
 
   if (editing) {
@@ -8909,8 +9244,8 @@ function BackupPlanCard({ athlete, loaded, actingFor, onSaved }) {
     return (
       <div style={{ ...card }}>
         {label}
-        <div style={{ fontSize: 12.5, fontWeight: 800, color: C.chalk, lineHeight: 1.35 }}>{stated}</div>
-        <div style={{ fontSize: 10, color: C.slate, fontWeight: 700, marginTop: 6 }}>{t("goal_card_by_you")}</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.chalk, lineHeight: 1.35, overflowWrap: "anywhere" }}>{stated}</div>
+        <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginTop: 6 }}>{t("goal_card_by_you")}</div>
         {errLine}
       </div>
     );
@@ -8923,8 +9258,8 @@ function BackupPlanCard({ athlete, loaded, actingFor, onSaved }) {
     return (
       <div style={{ ...card }}>
         {label}
-        <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.45 }}>{t("plan_backup_ask").replace("{x}", inferred)}</div>
-        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 14.5, fontWeight: 700, color: C.chalk, lineHeight: 1.4, overflowWrap: "anywhere" }}>{t("plan_backup_ask").replace("{x}", inferred)}</div>
+        <div style={{ display: "flex", gap: 8, marginTop: 13, flexWrap: "wrap" }}>
           <button disabled={busy} onClick={() => write("secondary_goal", inferred)} style={btn(C.lime, C.ink)}>{t("plan_backup_yes")}</button>
           <button disabled={busy} onClick={() => write("secondary_goal_declined", "declined")} style={btn(C.turf, C.chalk)}>{t("plan_backup_no")}</button>
           <button disabled={busy} onClick={() => { setDraft(""); setEditing(true); }} style={btn("transparent", C.slate)}>{t("plan_backup_unsure")}</button>
@@ -8937,15 +9272,16 @@ function BackupPlanCard({ athlete, loaded, actingFor, onSaved }) {
   return (
     <div style={{ ...card }}>
       {label}
-      <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.45 }}>{t("plan_backup_none")}</div>
-      <div style={{ fontSize: 11.5, color: C.slate, opacity: 0.8, marginTop: 4 }}>{t("plan_backup_none_hint")}</div>
-      <button onClick={() => { setDraft(""); setEditing(true); }} style={{ ...btn(C.turf, C.chalk), marginTop: 10 }}>{t("plan_backup_add")}</button>
+      {/* EMPTY IS AN EXPLICIT LABEL PLUS THE ACTION THAT FILLS IT. */}
+      <div style={{ fontSize: 15, fontWeight: 800, color: C.chalk, lineHeight: 1.35 }}>{t("plan_backup_none")}</div>
+      <div style={{ fontSize: 12.5, color: C.slate, marginTop: 6, lineHeight: 1.5 }}>{t("plan_backup_none_hint")}</div>
+      <button onClick={() => { setDraft(""); setEditing(true); }} style={{ ...quietBtn, marginTop: 14 }}>{t("plan_backup_add")}</button>
       {errLine}
     </div>
   );
 }
 
-function Targets({ plan, onUpgrade, actingFor }) {
+function Targets({ plan, onUpgrade, actingFor, onNavigate }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
   // Bumped by GoalCard on a successful save so PathwayPlan below re-reads
@@ -9037,7 +9373,19 @@ function Targets({ plan, onUpgrade, actingFor }) {
     catch (e) { console.error("GOLSZ target delete error:", e); }
   }
 
-  if (!loaded) return <div style={{ padding: "40px 20px", textAlign: "center", color: C.slate, fontSize: 13 }}>{t("loading")}</div>;
+  // Loading is a skeleton here too, for the same reason it is on Home: a
+  // centred "Loading…" is the same shape as an error, and nothing like the
+  // page that replaces it. These hold the heights of the goal card, the
+  // backup plan and the pathway map.
+  if (!loaded) {
+    return (
+      <div aria-busy="true" aria-label={t("loading")} style={{ padding: "8px 12px 20px" }}>
+        <SkeletonCard height={104} />
+        <SkeletonCard height={92} />
+        <SkeletonCard height={200} />
+      </div>
+    );
+  }
 
   // PLAN UNKNOWN IS NOT PLAN FREE.
   //
@@ -9099,34 +9447,25 @@ function Targets({ plan, onUpgrade, actingFor }) {
           destination now (brief §14's nav concept) rather than buried on
           Passport — pathway_plan and targets share the same Pro+ minimum
           plan, so the page-level gate above already covers both. */}
-      <PathwayPlan key={goalVersion} viewUserId={null} onChange={setPathwayState} />
+      <PathwayPlan key={goalVersion} viewUserId={null} onChange={setPathwayState} onNavigate={onNavigate} />
 
       <CollapsibleRow title={t("plan_next_30_title")} count={next30Done} total={next30.length} expanded={expandedSection === "30"} onToggle={() => setExpandedSection(expandedSection === "30" ? null : "30")}>
-        {next30.map((i) => (
-          <div key={i.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0" }}>
-            {i.done ? <BadgeCheck size={15} color={C.lime} /> : <div style={{ width: 14, height: 14, borderRadius: 4, border: `1.5px solid ${C.line2}`, flexShrink: 0 }} />}
-            <span style={{ fontSize: 12.5, color: i.done ? C.slate : C.chalk, textDecoration: i.done ? "line-through" : "none" }}>{i.label}</span>
-          </div>
+        {next30.map((i, idx) => (
+          <StatusRow key={i.key} dot={i.done} done={i.done} label={i.label} last={idx === next30.length - 1} />
         ))}
       </CollapsibleRow>
 
       <CollapsibleRow title={t("plan_next_90_title")} emptyLabel={t("plan_empty_90")} count={next90Done} total={devItems.length} expanded={expandedSection === "90"} onToggle={() => setExpandedSection(expandedSection === "90" ? null : "90")}>
-        {devItems.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("dev_plan_empty")}</div>}
-        {devItems.map((i) => (
-          <div key={i.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0" }}>
-            {i.status === "done" ? <BadgeCheck size={15} color={C.lime} /> : <div style={{ width: 14, height: 14, borderRadius: 4, border: `1.5px solid ${C.line2}`, flexShrink: 0 }} />}
-            <span style={{ fontSize: 12.5, color: i.status === "done" ? C.slate : C.chalk, textDecoration: i.status === "done" ? "line-through" : "none" }}>{i.goal}</span>
-          </div>
+        {devItems.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55 }}>{t("dev_plan_empty")}</div>}
+        {devItems.map((i, idx) => (
+          <StatusRow key={i.id} dot={i.status === "done"} done={i.status === "done"} label={i.goal} last={idx === devItems.length - 1} />
         ))}
       </CollapsibleRow>
 
       <CollapsibleRow title={seasonLabel} emptyLabel={t("plan_empty_season")} count={seasonDone} total={seasonMilestones.length} expanded={expandedSection === "season"} onToggle={() => setExpandedSection(expandedSection === "season" ? null : "season")}>
-        {seasonMilestones.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("pathway_milestones_empty")}</div>}
-        {seasonMilestones.map((m) => (
-          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0" }}>
-            {m.done ? <BadgeCheck size={15} color={C.lime} /> : <div style={{ width: 14, height: 14, borderRadius: 4, border: `1.5px solid ${C.line2}`, flexShrink: 0 }} />}
-            <span style={{ fontSize: 12.5, color: m.done ? C.slate : C.chalk, textDecoration: m.done ? "line-through" : "none" }}>{m.label}</span>
-          </div>
+        {seasonMilestones.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55 }}>{t("pathway_milestones_empty")}</div>}
+        {seasonMilestones.map((m, idx) => (
+          <StatusRow key={m.id} dot={!!m.done} done={!!m.done} label={m.label} last={idx === seasonMilestones.length - 1} />
         ))}
       </CollapsibleRow>
 
@@ -9135,7 +9474,10 @@ function Targets({ plan, onUpgrade, actingFor }) {
           {!showAddTarget && <button onClick={() => setShowAddTarget(true)} style={{ ...iconBtn(C.lime), fontSize: 12 }}><Plus size={13} /> {t("targets_add")}</button>}
         </div>
         {showAddTarget && (
-          <div style={{ ...card }}>
+          // Flattened out of its own nested card — a box inside a box reads
+          // as a different kind of thing, and this is just this section's
+          // own input.
+          <div style={{ paddingBottom: 12, marginBottom: 4, borderBottom: `1px solid ${C.line}` }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               <input autoFocus value={name} onChange={(e) => setName(e.target.value)} aria-label={t("targets_name_ph")} placeholder={t("targets_name_ph")} style={{ flex: "1 1 160px", ...inputStyle }} />
               <input value={contactName} onChange={(e) => setContactName(e.target.value)} aria-label={t("targets_contact_name_ph")} placeholder={t("targets_contact_name_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
@@ -9149,11 +9491,12 @@ function Targets({ plan, onUpgrade, actingFor }) {
           </div>
         )}
 
-        {items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, padding: "10px 2px" }}>{t("targets_empty")}</div>}
+        {items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55, padding: "6px 0 2px" }}>{t("targets_empty")}</div>}
 
-        {items.map((it) => (
-          <div key={it.id} style={{ ...card }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {items.map((it, ti) => (
+          // A target is a ROW in this section, not a card inside a card.
+          <div key={it.id} style={{ padding: "12px 0", borderBottom: ti === items.length - 1 ? "none" : `1px solid ${C.line}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 44 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {editingTarget === it.id ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -9431,7 +9774,7 @@ function stageIcon(i, total) {
   if (i === total - 1) return Trophy;
   return Shield;
 }
-function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal }) {
+function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing }) {
   const config = SPORT_PATHWAY_STAGES[sport] || SPORT_PATHWAY_STAGES.__default;
   const stages = config.stages;
   const curIdx = currentStageIndex(athlete, stages.length);
@@ -9454,6 +9797,10 @@ function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal }) {
   const total = stages.length;
   return (
     <div style={{ ...card, position: "relative", overflow: "hidden" }}>
+      {/* The label lives inside the card it names, like every other card on
+          Home and Plan. Before this, the map was an unlabelled box: an
+          athlete had to infer from the icons what they were looking at. */}
+      <Eyebrow style={{ position: "relative", marginBottom: 4 }}>{t("pathway_plan_title")}</Eyebrow>
       {/* Faint pitch marking — a centre-circle arc, purely atmospheric, so
           the map reads as "on a pitch" without a raster asset. */}
       <div aria-hidden="true" style={{ position: "absolute", left: "50%", top: 6, width: 118, height: 118, marginLeft: -59, borderRadius: "50%", border: `1px solid ${C.line}`, opacity: 0.28, pointerEvents: "none" }} />
@@ -9496,6 +9843,14 @@ function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal }) {
           </div>
         </div>
       )}
+      {/* The edit affordance belongs to the thing it edits. It used to float
+          below the card as a 12px text link, which read as page furniture
+          rather than as this map's own control. */}
+      {onEditGoal && !editing && (
+        <button onClick={onEditGoal} style={{ ...quietBtn, marginTop: 14, position: "relative" }}>
+          <Pencil size={13} color={C.chalk} /> {t("pathway_edit_goal")}
+        </button>
+      )}
     </div>
   );
 }
@@ -9505,9 +9860,60 @@ function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal }) {
 // per athlete (not a list) — this is THE stated pathway, upserted rather
 // than inserted-many like Targets/Benchmarks/DevelopmentPlan. Private to
 // the owner, same viewUserId convention as those.
+// Sport-neutral deliberately. The prototype seeded soccer-specific steps
+// ("90 minutes of match film", "CPL academy coach", "sprint time"), but
+// SPORT_PATHWAY_STAGES covers ten sports including Golf and Tennis, where a
+// sprint time is meaningless. stage is null on purpose — these land unfiled
+// and the athlete files them, same rule as the migration case.
+const SUGGESTED_FIRST_STEPS = [
+  { labelKey: "pathway_sugg_film", reasonKey: "pathway_sugg_film_sub" },
+  { labelKey: "pathway_sugg_coach", reasonKey: "pathway_sugg_coach_sub" },
+  { labelKey: "pathway_sugg_benchmark", reasonKey: "pathway_sugg_benchmark_sub" },
+];
 const PATHWAY_TYPES = ["ncaa", "naia", "juco", "canadian_university", "academy", "european_club", "professional", "development", "agent_representation", "trainer_performance", "other"];
-function PathwayPlan({ viewUserId, onChange }) {
-  const { t } = useLang();
+// Milestones predate dates and stages (migration 076 shipped {id,label,done}).
+// Both new fields are optional and normalised ON READ, never on write: an athlete
+// who never opens this screen must not have their row silently rewritten, and
+// Scout's suggested pathways arrive without either field.
+function normalizeMilestone(m) {
+  return {
+    id: m && m.id ? m.id : ((typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random()),
+    label: String((m && m.label) || "").slice(0, 120),
+    done: !!(m && m.done),
+    due: (m && typeof m.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(m.due)) ? m.due : null,
+    stage: (m && typeof m.stage === "string" && m.stage) ? m.stage : null,
+  };
+}
+// THE RULE behind "what do I do now" — stated, never inferred:
+// the earliest-dated step that is not done; if nothing carries a date, the first
+// undone step in list order. Overdue therefore rises on its own, with no second
+// rule for it. Returns null when everything is done — the caller must render a
+// completion state, not an empty card.
+function nextMilestone(milestones) {
+  const undone = (milestones || []).filter((m) => !m.done);
+  if (!undone.length) return null;
+  const dated = undone.filter((m) => m.due);
+  if (!dated.length) return undone[0];
+  return dated.slice().sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0))[0];
+}
+// Locale follows the app language; "3d overdue" beats "2026-07-29" for a
+// 15-year-old deciding what to do this week.
+function milestoneDateLabel(m, lang, t) {
+  const loc = lang === "el" ? "el-GR" : lang === "fr" ? "fr-FR" : lang === "es" ? "es-ES" : "en-GB";
+  if (!m.due) return { text: t("pathway_no_date"), tone: "none" };
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const d = new Date(m.due + "T00:00:00");
+  const short = d.toLocaleDateString(loc, { day: "numeric", month: "short" });
+  if (m.done) return { text: t("pathway_done") + " · " + short, tone: "flat" };
+  const n = Math.round((d - today) / 864e5);
+  if (n < 0) { const a = -n; return { text: (a < 14 ? a + "d " : Math.round(a / 7) + "w ") + t("pathway_overdue"), tone: "over" }; }
+  if (n === 0) return { text: t("pathway_today"), tone: "due" };
+  if (n === 1) return { text: t("pathway_tomorrow"), tone: "due" };
+  if (n < 7) return { text: d.toLocaleDateString(loc, { weekday: "long" }), tone: "due" };
+  return { text: short, tone: "due" };
+}
+function PathwayPlan({ viewUserId, onChange, onNavigate }) {
+  const { t, lang } = useLang();
   const [uid, setUid] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [athlete, setAthlete] = useState(null);
@@ -9518,6 +9924,14 @@ function PathwayPlan({ viewUserId, onChange }) {
   const [editingMilestone, setEditingMilestone] = useState(null);
   const [milestoneDraft, setMilestoneDraft] = useState("");
   const [newMilestone, setNewMilestone] = useState("");
+  // Editing a step edits its date too, so the draft is a pair, not a string.
+  const [dueDraft, setDueDraft] = useState("");
+  // Which stage's inline "add a step" row is open. null = none.
+  const [addingStage, setAddingStage] = useState(null);
+  // Holds a deleted step and its index until the next action, so delete can be
+  // undone rather than confirmed. A confirm dialog on a reversible action is a
+  // tax on the 99 correct deletes to catch the one mistake.
+  const [trash, setTrash] = useState(null);
   const [exists, setExists] = useState(false);
   const [busy, setBusy] = useState(false);
   // Mirrors this component's own state up to Targets (the "Pathway/Plan"
@@ -9555,7 +9969,7 @@ function PathwayPlan({ viewUserId, onChange }) {
           setPathwayType(data.pathway_type);
           setTimeline(data.target_timeline || "");
           setNotes(data.notes || "");
-          setMilestones(Array.isArray(data.milestones) ? data.milestones : []);
+          setMilestones(Array.isArray(data.milestones) ? data.milestones.map(normalizeMilestone) : []);
         } else {
           setEditingGoal(true);
         }
@@ -9581,11 +9995,16 @@ function PathwayPlan({ viewUserId, onChange }) {
     finally { setBusy(false); }
   }
 
-  function addMilestone() {
+  function addMilestone(stageKey) {
     if (!newMilestone.trim()) return;
-    const next = [...milestones, { id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()), label: newMilestone.trim().slice(0, 120), done: false }];
+    const next = [...milestones, normalizeMilestone({ label: newMilestone.trim(), stage: stageKey || null })];
     setNewMilestone("");
     save({ milestones: next });
+  }
+
+
+  function setMilestoneStage(id, stage) {
+    save({ milestones: milestones.map((m) => (m.id === id ? { ...m, stage: stage || null } : m)) });
   }
 
   function toggleMilestone(id) {
@@ -9610,12 +10029,51 @@ function PathwayPlan({ viewUserId, onChange }) {
   // Order is meaning here — these are steps toward a goal, not a set. Up/down
   // rather than drag: it works on touch, with a keyboard, and without a
   // gesture library, which matters more than the nicer interaction.
-  function moveMilestone(id, delta) {
-    const i = milestones.findIndex((m) => m.id === id);
-    const j = i + delta;
-    if (i < 0 || j < 0 || j >= milestones.length) return;
+  //
+  // Swaps WITHIN THE STAGE GROUP, not across the flat array. Once the list is
+  // grouped by stage, a flat-array swap moves a step into a neighbouring
+  // stage's group — visually it jumps a heading, and the athlete's own filing
+  // is silently rewritten by a button labelled "move up".
+  function moveMilestone(id, dir) {
+    const me = milestones.find((m) => m.id === id);
+    if (!me) return;
+    const group = milestones.filter((m) => (m.stage || null) === (me.stage || null));
+    const gi = group.indexOf(me), gj = gi + dir;
+    if (gi < 0 || gj < 0 || gj >= group.length) return;
+    const a = milestones.indexOf(group[gi]), b = milestones.indexOf(group[gj]);
     const next = milestones.slice();
-    [next[i], next[j]] = [next[j], next[i]];
+    next[a] = group[gj]; next[b] = group[gi];
+    save({ milestones: next });
+  }
+
+  function openEditor(m) {
+    setMilestoneDraft(m.label);
+    setDueDraft(m.due || "");
+    setEditingMilestone(m.id);
+  }
+  // Label and date commit together — the editor edits one step, not two fields
+  // that can disagree. An empty label is a no-op, not a delete.
+  function commitEdit(id) {
+    const clean = milestoneDraft.trim().slice(0, 120);
+    const due = /^\d{4}-\d{2}-\d{2}$/.test(dueDraft) ? dueDraft : null;
+    setEditingMilestone(null);
+    if (!clean) return;
+    save({ milestones: milestones.map((m) => (m.id === id ? { ...m, label: clean, due } : m)) });
+  }
+  // Delete keeps the item AND its index, so undo is a real restore rather than
+  // a re-add at the end — position is meaning in an ordered plan.
+  function deleteMilestone(id) {
+    const at = milestones.findIndex((m) => m.id === id);
+    if (at < 0) return;
+    setTrash({ item: milestones[at], at });
+    setEditingMilestone(null);
+    save({ milestones: milestones.filter((m) => m.id !== id) });
+  }
+  function undoDelete() {
+    if (!trash) return;
+    const next = milestones.slice();
+    next.splice(trash.at, 0, trash.item);
+    setTrash(null);
     save({ milestones: next });
   }
 
@@ -9628,16 +10086,42 @@ function PathwayPlan({ viewUserId, onChange }) {
   if (!loaded) return <SkeletonCard height={232} />;
 
   const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
+  const editorLabel = { fontSize: 9.5, fontWeight: 900, letterSpacing: ".14em", color: C.slate, textTransform: "uppercase", display: "block", marginBottom: 6 };
+  // The native date picker renders white-on-black otherwise. Read at render
+  // rather than via useTheme() — the root already owns that hook, and a second
+  // subscription would re-run its side effects.
+  const dateScheme = (typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "light") ? "light" : "dark";
+  const stages = (SPORT_PATHWAY_STAGES[athlete && athlete.sport] || SPORT_PATHWAY_STAGES.__default).stages;
+  const doneCount = milestones.filter((m) => m.done).length;
+  const todayIso = new Date(); todayIso.setHours(0, 0, 0, 0);
+  const overdueCount = milestones.filter((m) => !m.done && m.due && new Date(m.due + "T00:00:00") < todayIso).length;
+  const nextStep = nextMilestone(milestones);
+  const nextDate = nextStep ? milestoneDateLabel(nextStep, lang, t) : null;
+  // Stage groups in sequence, then an "unfiled" group LAST for milestones that
+  // predate stages (migration 076) or arrived from Scout without one. They are
+  // never auto-assigned — the athlete files them, one tap, from the picker on
+  // the row. Guessing here and rendering the guess as fact is the failure this
+  // app spent the week removing.
+  const unfiled = milestones.filter((m) => !m.stage);
+  const stageGroups = stages.map((key) => {
+    const items = milestones.filter((m) => m.stage === key);
+    return { key, name: t("pathway_stage_" + key), items, complete: items.length > 0 && items.every((m) => m.done), current: false };
+  });
+  const firstOpen = stageGroups.find((g) => g.items.length > 0 && !g.complete);
+  if (firstOpen) firstOpen.current = true;
+  if (unfiled.length) stageGroups.push({ key: "__unfiled", name: t("pathway_unfiled"), items: unfiled, complete: false, current: false });
 
   return (
     <>
-      <PathwayMap sport={athlete && athlete.sport} athlete={athlete} pathwayType={exists ? pathwayType : null} t={t} onEditGoal={() => setEditingGoal((v) => !v)} />
+      <PathwayMap sport={athlete && athlete.sport} athlete={athlete} pathwayType={exists ? pathwayType : null} t={t} onEditGoal={() => setEditingGoal((v) => !v)} editing={editingGoal} />
 
       {editingGoal ? (
-        <div style={{ ...card }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700 }}>{t("pathway_plan_title")}</div>
-            {exists && <button onClick={() => setEditingGoal(false)} style={{ ...iconBtn(C.slate), fontSize: 11 }}>{t("pathway_collapse")}</button>}
+        <div style={{ ...card, borderLeft: `3px solid ${C.lime}` }}>
+          {/* Gold left rule = you can change this here. The same signal
+              GoalCard uses, so "owned" looks the same everywhere on Plan. */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <Eyebrow>{t("pathway_edit_goal")}</Eyebrow>
+            {exists && <button onClick={() => setEditingGoal(false)} style={{ ...iconBtn(C.slate), fontSize: 11.5, padding: "4px 0", minHeight: 28 }}>{t("pathway_collapse")}</button>}
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
             <select value={pathwayType} onChange={(e) => { setPathwayType(e.target.value); }} aria-label={t("pathway_plan_title")} onBlur={() => save({ pathway_type: pathwayType })} style={{ flex: "1 1 160px", ...inputStyle }}>
@@ -9652,40 +10136,155 @@ function PathwayPlan({ viewUserId, onChange }) {
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} onBlur={() => save({})} aria-label={t("pathway_notes_ph")} placeholder={t("pathway_notes_ph")}
             style={{ width: "100%", minHeight: 50, resize: "vertical", ...inputStyle }} />
         </div>
+      ) : null}
+
+      {/* THE NEXT STEP — Plan owns the object, Home echoes it. Rendered from
+          nextMilestone(), which is a stated rule (earliest date, else list
+          order), never a guess about what matters most. */}
+      {milestones.length > 0 && (nextStep ? (
+        <div style={{ border: `1px solid ${C.limeBorder}`, borderRadius: 14, padding: 16, marginBottom: 12, background: C.limeWash }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 9.5, fontWeight: 900, letterSpacing: ".15em", color: C.lime, textTransform: "uppercase" }}>
+            <Flag size={13} />{t("pathway_next_title")}
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 900, color: C.chalk, lineHeight: 1.24, letterSpacing: "-0.018em", margin: "9px 0 5px", overflowWrap: "anywhere" }}>{nextStep.label}</div>
+          <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.5, marginBottom: 14, overflowWrap: "anywhere" }}>
+            {nextDate.tone !== "none" && <b style={{ color: nextDate.tone === "over" ? C.danger : C.lime }}>{nextDate.text}</b>}
+            {nextDate.tone !== "none" && nextStep.stage ? " · " : ""}
+            {nextStep.stage ? t("pathway_stage_" + nextStep.stage) : (nextDate.tone === "none" ? t("pathway_no_date") : "")}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => toggleMilestone(nextStep.id)} style={{ ...primaryBtn, minHeight: 44 }}>{t("pathway_next_done")}</button>
+            <button onClick={() => { setMilestoneDraft(nextStep.label); setDueDraft(nextStep.due || ""); setEditingMilestone(nextStep.id); }} style={{ ...quietBtn, minHeight: 44 }}>{t("pathway_next_change")}</button>
+          </div>
+        </div>
       ) : (
-        <button onClick={() => setEditingGoal(true)} style={{ ...iconBtn(C.lime), fontSize: 12, margin: "0 0 12px 2px" }}><Pencil size={12} /> {t("pathway_edit_goal")}</button>
-      )}
+        <div style={{ border: `1px solid ${C.limeBorder}`, borderRadius: 14, padding: "18px 16px", marginBottom: 12, background: C.limeWash, textAlign: "center" }}>
+          <div style={{ fontSize: 16, fontWeight: 900, color: C.chalk, margin: "8px 0 4px" }}>{t("pathway_all_done")}</div>
+          <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.5 }}>{t("pathway_all_done_sub")}</div>
+        </div>
+      ))}
 
       <div style={{ ...card }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: C.chalk, marginBottom: 6 }}>{t("pathway_milestones_title")}{milestones.length > 0 ? ` · ${milestones.filter((m) => m.done).length}/${milestones.length}` : ""}</div>
-        {milestones.length === 0 && <div style={{ fontSize: 12, color: C.slate, marginBottom: 6 }}>{t("pathway_milestones_empty")}</div>}
-        {milestones.map((m) => (
-          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
-            <input type="checkbox" checked={!!m.done} onChange={() => toggleMilestone(m.id)} aria-label={m.label} style={{ flexShrink: 0 }} />
-            {editingMilestone === m.id ? (
-              <>
-                <input autoFocus value={milestoneDraft} onChange={(e) => setMilestoneDraft(e.target.value)} aria-label={m.label}
-                  onKeyDown={(e) => { if (e.key === "Enter") { renameMilestone(m.id, milestoneDraft); setEditingMilestone(null); } if (e.key === "Escape") setEditingMilestone(null); }}
-                  style={{ ...inputStyle, flex: 1, padding: "5px 9px", fontSize: 12.5 }} />
-                <button onClick={() => { renameMilestone(m.id, milestoneDraft); setEditingMilestone(null); }} style={{ background: "none", border: "none", color: C.lime, fontSize: 11, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", padding: 0, flexShrink: 0 }}>{t("goal_card_save")}</button>
-                <button onClick={() => setEditingMilestone(null)} style={{ background: "none", border: "none", color: C.slate, fontSize: 11, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", padding: 0, flexShrink: 0 }}>{t("goal_card_cancel")}</button>
-              </>
-            ) : (
-              <>
-                <div onClick={() => { setMilestoneDraft(m.label); setEditingMilestone(m.id); }} title={t("pathway_milestone_edit")}
-                  style={{ flex: 1, fontSize: 12.5, color: C.chalk, textDecoration: m.done ? "line-through" : "none", opacity: m.done ? 0.6 : 1, cursor: "text" }}>{m.label}</div>
-                <button onClick={() => moveMilestone(m.id, -1)} aria-label={t("pathway_milestone_up")} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><ChevronUp size={13} /></button>
-                <button onClick={() => moveMilestone(m.id, 1)} aria-label={t("pathway_milestone_down")} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><ChevronDown size={13} /></button>
-              </>
-            )}
-            <button onClick={() => removeMilestone(m.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><X size={13} /></button>
-          </div>
-        ))}
-        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-          <input value={newMilestone} onChange={(e) => setNewMilestone(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addMilestone(); }} aria-label={t("pathway_milestone_ph")} placeholder={t("pathway_milestone_ph")} style={{ flex: 1, ...inputStyle }} />
-          <button onClick={addMilestone} disabled={!newMilestone.trim()} style={{ background: C.turf, color: C.chalk, border: `1px solid ${C.line2}`, borderRadius: 9, padding: "8px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", opacity: !newMilestone.trim() ? 0.5 : 1 }}>{t("pathway_milestone_add")}</button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 4, minHeight: 26 }}>
+          <Eyebrow>{t("pathway_milestones_title")}</Eyebrow>
         </div>
+
+        {milestones.length === 0 ? (
+          <div>
+            <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55, margin: "8px 0 13px" }}>{t("pathway_route_blurb")}</div>
+            <button onClick={() => { if (onNavigate) onNavigate("scout"); }} style={{ ...primaryBtn, marginBottom: 13 }}>{t("pathway_draft_with_scout")}</button>
+            {SUGGESTED_FIRST_STEPS.map((s, si) => (
+              <button key={si} onClick={() => save({ milestones: [...milestones, normalizeMilestone({ label: t(s.labelKey), stage: null })] })}
+                style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", background: "none", border: `1px dashed ${C.line2}`, borderRadius: 11, padding: "11px 13px", marginBottom: 8, cursor: "pointer", textAlign: "left", color: C.chalk, minHeight: 54, fontFamily: "inherit" }}>
+                <span style={{ width: 22, height: 22, flex: "0 0 22px", borderRadius: "50%", border: `1.5px solid ${C.lime}`, color: C.lime, display: "grid", placeItems: "center", fontSize: 15, fontWeight: 700, lineHeight: 1 }}>+</span>
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.35, display: "block", overflowWrap: "anywhere" }}>{t(s.labelKey)}</span>
+                  <span style={{ fontSize: 11, color: C.slate, marginTop: 2, display: "block" }}>{t(s.reasonKey)}</span>
+                </span>
+              </button>
+            ))}
+            <div style={{ display: "flex", gap: 6, marginTop: 9 }}>
+              <input value={newMilestone} onChange={(e) => setNewMilestone(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addMilestone(null); }} aria-label={t("pathway_milestone_ph")} placeholder={t("pathway_milestone_ph")} style={{ flex: 1, minWidth: 0, minHeight: 46, ...inputStyle }} />
+              <button onClick={() => addMilestone(null)} disabled={!newMilestone.trim()} style={{ background: "none", color: C.lime, border: `1px solid ${C.lime}`, borderRadius: 10, padding: "0 15px", minHeight: 46, fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, opacity: !newMilestone.trim() ? 0.5 : 1 }}>{t("pathway_milestone_add")}</button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 11, margin: "10px 0 14px" }}>
+              <span style={{ fontSize: 12, fontWeight: 900, color: C.chalk, flex: "0 0 auto" }}>{doneCount} / {milestones.length}</span>
+              <span style={{ flex: 1, display: "block", height: 7, background: C.turf, borderRadius: 4, overflow: "hidden" }}>
+                <span style={{ display: "block", height: "100%", width: Math.round((doneCount / milestones.length) * 100) + "%", background: C.lime, borderRadius: 4 }} />
+              </span>
+              <span style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: ".15em", textTransform: "uppercase", flex: "0 0 auto", color: overdueCount ? C.danger : C.slate }}>
+                {overdueCount ? overdueCount + " " + t("pathway_overdue") : t("pathway_on_track")}
+              </span>
+            </div>
+            {stageGroups.map((g, gi) => (
+              <div key={g.key} style={{ marginBottom: 2 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 0 7px" }}>
+                  <span style={{ width: 14, height: 14, flex: "0 0 14px", borderRadius: "50%", border: `2px solid ${g.complete || g.current ? C.lime : C.line2}`, background: g.complete ? C.lime : C.card, boxShadow: g.current ? `0 0 0 4px ${C.limeWash}` : "none" }} />
+                  <span style={{ fontSize: 12.5, fontWeight: 900, letterSpacing: ".03em", overflowWrap: "anywhere", color: g.current ? C.chalk : C.slate }}>{g.name}</span>
+                  {g.items.length > 0 && <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 800, color: C.slate, flex: "0 0 auto", paddingLeft: 8 }}>{g.items.filter((m) => m.done).length} / {g.items.length}</span>}
+                </div>
+                <div style={{ marginLeft: 6, paddingLeft: 19, borderLeft: `2px solid ${gi === stageGroups.length - 1 ? "transparent" : (g.complete || g.current ? C.lime : C.line)}` }}>
+                  {g.items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55, padding: "7px 0 2px" }}>{t("pathway_milestones_empty")}</div>}
+                  {g.items.map((m, mi) => (editingMilestone === m.id ? (
+                    <div key={m.id} style={{ border: `1px solid ${C.limeBorder}`, background: C.limeWash, borderRadius: 12, padding: 12, margin: "6px 0 10px" }}>
+                      <label style={editorLabel}>{t("pathway_milestones_title")}</label>
+                      <input autoFocus value={milestoneDraft} maxLength={120} onChange={(e) => setMilestoneDraft(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") commitEdit(m.id); if (e.key === "Escape") setEditingMilestone(null); }}
+                        aria-label={m.label} style={{ ...inputStyle, width: "100%", minHeight: 46, fontSize: 14 }} />
+                      <div style={{ height: 10 }} />
+                      <label style={editorLabel}>{t("pathway_no_date")}</label>
+                      <input type="date" value={dueDraft} onChange={(e) => setDueDraft(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") commitEdit(m.id); if (e.key === "Escape") setEditingMilestone(null); }}
+                        aria-label={t("pathway_no_date")} style={{ ...inputStyle, width: "100%", minHeight: 46, fontSize: 14, colorScheme: dateScheme }} />
+                      <div style={{ display: "flex", gap: 7, marginTop: 9 }}>
+                        <button onClick={() => commitEdit(m.id)} style={{ ...primaryBtn, flex: 1, minHeight: 44, fontSize: 12.5 }}>{t("goal_card_save")}</button>
+                        <button onClick={() => setEditingMilestone(null)} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5 }}>{t("goal_card_cancel")}</button>
+                        <button onClick={() => deleteMilestone(m.id)} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, color: C.danger, borderColor: C.danger }}>{t("action_delete")}</button>
+                      </div>
+                      <div style={{ display: "flex", gap: 7, marginTop: 7 }}>
+                        <button onClick={() => moveMilestone(m.id, -1)} disabled={mi === 0} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, opacity: mi === 0 ? 0.35 : 1 }}><ChevronUp size={14} />{t("pathway_milestone_up")}</button>
+                        <button onClick={() => moveMilestone(m.id, 1)} disabled={mi === g.items.length - 1} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, opacity: mi === g.items.length - 1 ? 0.35 : 1 }}><ChevronDown size={14} />{t("pathway_milestone_down")}</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={m.id} style={{ display: "flex", gap: 11, alignItems: "flex-start", padding: "10px 0", borderBottom: mi === g.items.length - 1 ? "none" : `1px solid ${C.line}` }}>
+                      <button onClick={() => toggleMilestone(m.id)} aria-label={m.label} style={{ width: 23, height: 23, flex: "0 0 23px", borderRadius: 7, border: `2px solid ${m.done ? C.lime : C.line2}`, background: m.done ? C.lime : "none", cursor: "pointer", display: "grid", placeItems: "center", marginTop: 1, padding: 0 }}>
+                        {m.done && <Check size={12} color={C.ink} />}
+                      </button>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <button onClick={() => openEditor(m)} style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4, overflowWrap: "anywhere", cursor: "pointer", background: "none", border: "none", textAlign: "left", padding: 0, width: "100%", display: "block", fontFamily: "inherit", color: m.done ? C.slate : C.chalk, textDecoration: m.done ? "line-through" : "none" }}>{m.label}</button>
+                        <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginTop: 4 }}>
+                          {(() => {
+                            const d = milestoneDateLabel(m, lang, t);
+                            const tone = d.tone === "over" ? C.danger : d.tone === "due" ? C.lime : C.slate;
+                            if (d.tone === "flat") return <span style={{ fontSize: 11, fontWeight: 800, color: C.slate, padding: "3px 0", minHeight: 26, display: "inline-flex", alignItems: "center" }}>{d.text}</span>;
+                            return (
+                              <button onClick={() => openEditor(m)} style={{ fontSize: 11, fontWeight: 800, borderRadius: 7, padding: "3px 8px", minHeight: 26, display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer", background: "none", fontFamily: "inherit", color: tone, border: `1px ${d.tone === "none" ? "dashed" : "solid"} ${d.tone === "none" ? C.line2 : tone}` }}>
+                                <Calendar size={12} />{d.text}
+                              </button>
+                            );
+                          })()}
+                          {!m.stage && (
+                            <select value="" onChange={(e) => setMilestoneStage(m.id, e.target.value)} aria-label={t("pathway_unfiled")} style={{ ...inputStyle, fontSize: 11, padding: "3px 8px", minHeight: 26 }}>
+                              <option value="">{t("pathway_unfiled")}</option>
+                              {stages.map((s) => <option key={s} value={s}>{t("pathway_stage_" + s)}</option>)}
+                            </select>
+                          )}
+                        </div>
+                      </div>
+                      <button onClick={() => openEditor(m)} aria-label={t("pathway_milestone_edit")} style={{ flex: "0 0 30px", width: 30, minHeight: 30, color: C.slate, opacity: 0.45, cursor: "pointer", background: "none", border: "none", display: "grid", placeItems: "center", padding: 0 }}><Pencil size={15} /></button>
+                    </div>
+                  )))}
+                  {addingStage === g.key ? (
+                    <div style={{ display: "flex", gap: 7, margin: "9px 0 4px" }}>
+                      <input autoFocus value={newMilestone} onChange={(e) => setNewMilestone(e.target.value)} maxLength={120}
+                        onKeyDown={(e) => { if (e.key === "Enter") { addMilestone(g.key); setAddingStage(null); } if (e.key === "Escape") setAddingStage(null); }}
+                        aria-label={t("pathway_add_to_stage").replace("{stage}", g.name)} placeholder={t("pathway_add_to_stage").replace("{stage}", g.name)}
+                        style={{ flex: 1, minWidth: 0, minHeight: 46, fontSize: 13.5, ...inputStyle }} />
+                      <button onClick={() => { addMilestone(g.key); setAddingStage(null); }} style={{ background: "none", border: `1px solid ${C.lime}`, color: C.lime, borderRadius: 10, padding: "0 15px", minHeight: 46, fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{t("pathway_milestone_add")}</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setNewMilestone(""); setAddingStage(g.key); }} style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", background: "none", border: `1px dashed ${C.line2}`, borderRadius: 10, color: C.slate, fontSize: 12.5, fontWeight: 700, padding: "10px 12px", minHeight: 44, cursor: "pointer", margin: "9px 0 4px", textAlign: "left", fontFamily: "inherit" }}>
+                      <span style={{ width: 22, height: 22, flex: "0 0 22px", borderRadius: "50%", border: `1.5px solid ${C.lime}`, color: C.lime, display: "grid", placeItems: "center", fontSize: 15, fontWeight: 700, lineHeight: 1 }}>+</span>
+                      {t("pathway_add_to_stage").replace("{stage}", g.name)}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {trash && (
+        <div style={{ position: "sticky", bottom: 14, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, padding: "11px 13px", display: "flex", alignItems: "center", gap: 10, fontSize: 12.5, fontWeight: 700, color: C.chalk, marginBottom: 12, boxShadow: "0 10px 26px rgba(0,0,0,.4)" }}>
+          <span style={{ flex: 1, minWidth: 0 }}>{t("pathway_step_deleted")}</span>
+          <button onClick={undoDelete} style={{ background: "none", border: "none", color: C.lime, fontWeight: 900, fontSize: 12.5, cursor: "pointer", padding: "6px 2px", fontFamily: "inherit", minHeight: 32 }}>{t("action_undo")}</button>
+        </div>
+      )}
     </>
   );
 }
@@ -10179,7 +10778,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
             {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
             {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} />}
             {page === "scout" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} /></div>}
-            {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} /></>}
+            {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} onNavigate={go} /></>}
             {page === "events" && <Events />}
             {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
             {page === "messages" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Messages thread={thread} setThread={setThread} onViewProfile={viewProfile} /></div>}
@@ -10230,7 +10829,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} />}
         {page === "scout" && <Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} />}
-        {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} /></>}
+        {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} onNavigate={go} /></>}
         {page === "events" && <Events />}
         {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
         {page === "messages" && <Messages thread={thread} setThread={setThread} onViewProfile={viewProfile} />}
@@ -10507,7 +11106,16 @@ const CSS = `
        --lime is kept as the variable NAME (hundreds of C.lime references
        throughout this file) but holds Helios Gold — used selectively
        (nav, verification, milestones), not as a wash over the app. */
-    --pitch: #0A0A0A; --turf: #1B263B; --card: #131519; --lime: #D4AF37;
+    /* --turf was #1B263B, a navy left over from the original navy/gold brand.
+       It is the fill behind every secondary button and every input — 72 call
+       sites — so on a near-black + cream + gold app it put a cold blue-grey
+       under "Add a backup plan", "Add a milestone" and every text field,
+       reading as another product's component set dropped into this one. The
+       light theme never had the problem: there --turf is #ECE8DC, a warm
+       cream taken from the palette itself. This is the dark-theme equivalent
+       — a lifted neutral in the same warm family as --card, so the surface
+       still separates from the page without introducing a second hue. */
+    --pitch: #0A0A0A; --turf: #1C1E22; --card: #131519; --lime: #D4AF37;
     --chalk: #F7F4EA; --slate: #8B96A8; --line: rgba(247,244,234,0.08); --line2: rgba(247,244,234,0.16);
     --amber: #B58A1A; --body-text: #ECE8DC; --warn-text: #E6C76A; --msg-name: #8B96A8;
     --lime-border: rgba(212,175,55,0.35); --amber-border: rgba(181,138,26,0.35);

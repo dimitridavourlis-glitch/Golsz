@@ -168,7 +168,18 @@ ck("the benchmark insert has it for 114", /migration 114 not applied\) — savin
 
 console.log("\n-- P0-5: the client actually shows and edits the goal --");
 ck("GoalCard exists", /function GoalCard\(/.test(APP), true);
-ck("it renders goal_text itself, not a category", /<div style=\{\{ fontSize: 14, fontWeight: 800, color: C\.chalk, lineHeight: 1\.35 \}\}>\{goalText\}<\/div>/.test(APP), true);
+// This used to pin the exact inline style object of the goal sentence
+// (fontSize: 14, fontWeight: 800, ...). That froze a presentational detail,
+// not the guarantee: the Option 1 pass gives the READ-ONLY echo on Home and
+// the EDITABLE statement on Plan deliberately different weights (14.5/700 vs
+// 16/800), which is the whole point of "Home reports, Plan owns". The
+// guarantee is that this card renders the athlete's own sentence — goalText —
+// as its headline, and never the pathway CATEGORY in its place. That is what
+// is asserted now, plus the fact that the category can only ever appear as
+// labelled metadata underneath.
+ck("it renders goal_text itself, not a category", /color: C\.chalk, lineHeight: 1\.35, overflowWrap: "anywhere" \}\}>\{goalText\}<\/div>/.test(APP), true);
+ck("...and the pathway category stays labelled metadata under it",
+   /\{t\("goal_card_pathway"\)\}: <span style=\{\{ color: C\.info \}\}>\{t\("pathway_type_" \+ pathwayType\)\}<\/span>/.test(APP), true);
 ck("it writes goal_text", /goal_text: clean,/.test(APP), true);
 ck("...and derives goal_defined in the same write", /goal_defined: true,/.test(APP), true);
 ck("...and marks it athlete-authored", /goal_source: "athlete_edited",/.test(APP), true);

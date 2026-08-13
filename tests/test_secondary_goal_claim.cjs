@@ -75,8 +75,12 @@ ck("Plan's secondary goal comes from what they said",
    /const stated = statedContextValue\(ctx, "secondary_goal"\);/.test(APP), true);
 ck("...and Plan renders the card rather than deriving it inline",
    /<BackupPlanCard athlete=\{pathwayState\.athlete\}/.test(APP), true);
+// The Option 1 pass gave this statement `overflowWrap: "anywhere"` — a long
+// stated backup plan in Greek otherwise runs past the card edge. The
+// guarantee is unchanged and still asserted: the value rendered is `stated`
+// (their words), never a pathway_type_* category label.
 ck("...and the card renders their words, not the category label",
-   /lineHeight: 1\.35 \}\}>\{stated\}<\/div>/.test(APP), true);
+   /lineHeight: 1\.35, overflowWrap: "anywhere" \}\}>\{stated\}<\/div>/.test(APP), true);
 // An inference may only ever be a question. If it can reach a value render,
 // the whole card is back to asserting something the athlete never said.
 ck("an inference is offered as a question, never as a value",

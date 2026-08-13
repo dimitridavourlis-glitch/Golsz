@@ -154,8 +154,32 @@ ck("a first-time build says so instead of warning about a replacement",
    /cur\.length[\s\S]{0,120}scout_pathway_first_build/.test(APP), true);
 ck("the warning is highlighted only when something is actually destroyed",
    /color: cur\.length \? C\.amber : C\.slate/.test(APP), true);
-ck("the preview sits ABOVE the button that commits it",
-   APP.indexOf("scout_pathway_replace_warning") < APP.indexOf("addSuggestedPathway(i, m.suggestedPathway)"), true);
+// The old anchor was `addSuggestedPathway(i, m.suggestedPathway)` — the
+// one-tap commit button, which no longer exists: the button now opens a
+// confirm panel and nothing writes until a second, mode-carrying tap. So the
+// ordering claim is re-stated against what actually commits now, and the
+// stronger property it was reaching for is asserted directly below.
+ck("the preview sits ABOVE anything that can commit it",
+   APP.indexOf("scout_pathway_replace_warning") < APP.indexOf('addSuggestedPathway(i, m.suggestedPathway, replacing'), true);
+
+// THE INVARIANT THE OLD TEST ONLY GESTURED AT.
+// A single tap used to overwrite every milestone the athlete owned, including
+// ticks, dates and stages. addSuggestedPathway now refuses to write at all
+// without an explicit mode, so a future edit that reintroduces a one-tap call
+// site fails here rather than shipping.
+ck("addSuggestedPathway refuses to write without an explicit mode",
+   /if \(mode !== "add" && mode !== "replace"\) return;/.test(APP), true);
+ck("...and every call site passes one",
+   [...APP.matchAll(/addSuggestedPathway\(([^)]*)\)/g)]
+     .map((m) => m[1])
+     .filter((a) => a.trim() && !/^msgIndex/.test(a))   // "" is prose in a comment, not a call
+     .filter((a) => !/, *(?:"add"|"replace"|replacing)/.test(a)), []);
+ck("add is the default and replace is the deliberate branch",
+   /const merged = mode === "replace" \? incoming : existing\.concat\(incoming\)/.test(APP), true);
+ck("both branches normalise, so Scout's dateless/stageless steps are repaired",
+   /const incoming = \(pathway\.milestones \|\| \[\]\)\.map\(normalizeMilestone\)/.test(APP), true);
+ck("replacing states what is lost before it writes",
+   /pathwayConfirm === "replace"[\s\S]{0,600}scout_pathway_replace_warning/.test(APP), true);
 ck("Scout holds the current Pathway to compare against", /const \[currentPathway, setCurrentPathway\]/.test(APP), true);
 ck("...read on mount alongside the other athlete reads",
    /sb\.from\("pathway_plan"\)\.select\("pathway_type, target_timeline, milestones"\)/.test(APP), true);

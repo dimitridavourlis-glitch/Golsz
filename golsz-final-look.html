@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GOLSZ — Home + Plan, final look</title>
+<style>
+:root{
+  --pitch:#0A0A0A;--card:#131519;--turf:#1C1E22;
+  --chalk:#F7F4EA;--body:#ECE8DC;--slate:#8B96A8;
+  --line:rgba(247,244,234,0.09);--line2:rgba(247,244,234,0.18);
+  --lime:#D4AF37;--ink:#0D1210;--skel:rgba(247,244,234,0.07);--bad:#FF6B6B;--info:#5AA6FF;
+  --limeSoft:rgba(212,175,55,.08);--limeBorder:rgba(212,175,55,.35);--shell:#16181c;
+}
+body.light{
+  --pitch:#FDF9F2;--card:#FFFFFF;--turf:#ECE8DC;
+  --chalk:#1B263B;--body:#1B263B;--slate:#5A6A7D;
+  --line:#EAE4D7;--line2:#D5CDBC;--lime:#96700F;--ink:#FFFFFF;--skel:rgba(27,38,59,.07);--bad:#C0392B;--info:#1D6FD0;
+  --limeSoft:rgba(150,112,15,.07);--limeBorder:rgba(150,112,15,.35);--shell:#cfc7b6;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{background:#050505;color:var(--body);
+  font-family:'Archivo','Helvetica Neue',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  font-size:15px;line-height:1.5;padding:18px 16px 60px;-webkit-font-smoothing:antialiased}
+body.light{background:#E8E2D6}
+button,input,select{font:inherit}
+input,select{-webkit-appearance:none;appearance:none}
+
+/* ---------- prototype chrome ---------- */
+.controls{max-width:1240px;margin:0 auto 14px;display:flex;flex-wrap:wrap;gap:9px;align-items:center;justify-content:center;
+  background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
+.cgroup{display:flex;gap:4px;background:var(--pitch);border:1px solid var(--line);border-radius:10px;padding:4px}
+.cgroup button{border:none;background:none;color:var(--slate);font-size:12px;font-weight:700;
+  padding:8px 12px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.cgroup button[aria-pressed="true"]{background:var(--lime);color:var(--ink)}
+.clabel{font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--slate);align-self:center}
+.note{max-width:1240px;margin:0 auto 18px;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--lime);
+  border-radius:13px;padding:14px 16px;font-size:12.5px;line-height:1.65;color:var(--slate)}
+.note b{color:var(--chalk)}
+.stage{max-width:1240px;margin:0 auto;display:flex;justify-content:center;gap:22px;flex-wrap:wrap}
+
+/* ---------- device shells ---------- */
+.phone{width:404px;max-width:100%;background:var(--pitch);border-radius:36px;border:9px solid var(--shell);
+  box-shadow:0 26px 60px rgba(0,0,0,.45);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.desk{width:100%;max-width:1180px;background:var(--pitch);border-radius:18px;border:1px solid var(--line2);
+  box-shadow:0 26px 60px rgba(0,0,0,.45);overflow:hidden;display:flex;min-height:720px}
+.rail{width:196px;flex:0 0 196px;border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:3px}
+.rail .wm{padding:0 10px 18px}
+.rail button{display:flex;align-items:center;gap:11px;width:100%;background:none;border:none;color:var(--slate);
+  font-size:13px;font-weight:800;padding:11px 12px;border-radius:10px;cursor:pointer;text-align:left;min-height:44px}
+.rail button[aria-current="page"]{background:var(--limeSoft);color:var(--lime)}
+.panes{flex:1;display:flex;min-width:0}
+.pane{flex:1;min-width:0;padding:20px 20px 26px;overflow-y:auto;max-height:760px}
+.pane+.pane{border-left:1px solid var(--line)}
+.panehead{display:flex;align-items:baseline;gap:9px;margin-bottom:13px}
+.panehead h2{font-size:15px;font-weight:900;color:var(--chalk);letter-spacing:-.01em}
+.panehead span{font-size:10px;font-weight:800;letter-spacing:.13em;color:var(--slate);text-transform:uppercase}
+
+.bar{height:52px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 18px 0}
+.wm{font-size:15px;font-weight:900;letter-spacing:.055em;color:var(--chalk)}
+.wm i{color:var(--lime);font-style:normal}
+.scroll{flex:1;height:640px;overflow-y:auto;overflow-x:hidden;padding:8px 15px 20px;scrollbar-width:thin}
+.scroll::-webkit-scrollbar{width:5px}
+.scroll::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+.tabs{flex:0 0 auto;display:flex;border-top:1px solid var(--line);background:var(--pitch);padding:6px 4px 10px}
+.tabs button{flex:1;background:none;border:none;color:var(--slate);font-size:9.5px;font-weight:800;letter-spacing:.06em;
+  cursor:pointer;padding:7px 2px;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:52px;text-transform:uppercase}
+.tabs button[aria-current="page"]{color:var(--lime)}
+
+/* ---------- shared primitives ---------- */
+.eyebrow{font-size:9.5px;font-weight:900;letter-spacing:.15em;color:var(--slate);text-transform:uppercase;display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px;margin-bottom:11px}
+.card.owns{border-left:3px solid var(--lime)}      /* you can change this here */
+.card.echo{border-left:2px solid var(--line2)}     /* this lives somewhere else */
+.btn{border:1px solid var(--lime);background:var(--lime);color:var(--ink);font-size:13.5px;font-weight:800;
+  padding:12px 15px;border-radius:11px;cursor:pointer;min-height:48px;display:flex;align-items:center;
+  justify-content:center;gap:7px;width:100%}
+.btn.quiet{background:none;border-color:var(--line2);color:var(--chalk)}
+.btn.sm{min-height:42px;font-size:12.5px;padding:9px 12px;border-radius:10px}
+.btn.danger{color:var(--bad);border-color:var(--bad);background:none}
+.btn:active{transform:translateY(1px)}
+.jump{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:none;border:none;
+  border-top:1px solid var(--line);color:var(--lime);font-size:12px;font-weight:800;padding:12px 0 0;margin-top:12px;
+  cursor:pointer;min-height:44px;text-align:left}
+.ro{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:var(--slate);text-transform:uppercase}
+.hint{font-size:11.5px;color:var(--slate);line-height:1.5;margin-top:11px;display:flex;gap:7px;align-items:flex-start}
+.hint svg{flex:0 0 auto;margin-top:2px}
+.crumb{display:flex;align-items:center;gap:8px;border:1px dashed var(--limeBorder);border-radius:11px;padding:10px 12px;
+  margin-bottom:10px;color:var(--lime);font-size:11.5px;font-weight:800}
+
+/* identity */
+.idrow{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.av{width:46px;height:46px;flex:0 0 46px;border-radius:14px;background:var(--turf);border:1px solid var(--line2);
+  display:grid;place-items:center;font-size:15px;font-weight:900;color:var(--lime)}
+.idrow .n{font-size:16px;font-weight:900;color:var(--chalk);letter-spacing:-.01em;line-height:1.2}
+.idrow .s{font-size:11.5px;color:var(--slate);margin-top:2px}
+
+/* status rows (Home reports) */
+.srow{display:flex;align-items:center;gap:12px;width:100%;background:none;border:none;border-top:1px solid var(--line);
+  padding:13px 0;cursor:pointer;text-align:left;min-height:54px;color:var(--body)}
+.srow:first-of-type{border-top:none}
+.srow .lbl{flex:1;min-width:0}
+.srow .lbl b{display:block;font-size:13px;font-weight:800;color:var(--chalk)}
+.srow .lbl span{display:block;font-size:11.5px;color:var(--slate);margin-top:2px}
+.srow .val{font-size:15px;font-weight:900;flex:0 0 auto}
+
+/* NEXT — Home owns it, computed, editable nowhere */
+.next{border:1px solid var(--limeBorder);border-radius:14px;padding:16px;margin-bottom:11px;background:var(--limeSoft)}
+.next .k{font-size:9.5px;font-weight:900;letter-spacing:.15em;color:var(--lime);text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.next .lb{font-size:20px;font-weight:900;color:var(--chalk);line-height:1.24;letter-spacing:-.018em;margin:9px 0 5px;overflow-wrap:anywhere}
+.next .sub{font-size:12.5px;color:var(--slate);line-height:1.5;margin-bottom:14px;overflow-wrap:anywhere}
+.next .sub b{color:var(--lime)}
+.next .sub b.over{color:var(--bad)}
+.next .acts{display:flex;gap:8px}
+.allDone{border:1px solid var(--limeBorder);border-radius:14px;padding:18px 16px;margin-bottom:11px;background:var(--limeSoft);text-align:center}
+.allDone .lb{font-size:16px;font-weight:900;color:var(--chalk);margin:8px 0 4px}
+.allDone .sub{font-size:12.5px;color:var(--slate);line-height:1.5}
+
+/* conflict */
+.conflict{border:1px solid var(--info);border-radius:12px;padding:12px 13px;margin-bottom:11px;
+  font-size:12px;color:var(--chalk);line-height:1.5;display:flex;gap:9px;align-items:flex-start}
+.conflict b{color:var(--info)}
+.conflict .go{color:var(--info);font-weight:900;background:none;border:none;cursor:pointer;font-size:12px;padding:0;white-space:nowrap}
+
+/* progress */
+.prog{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.track{flex:1;display:block;height:7px;background:var(--skel);border-radius:4px;overflow:hidden}
+.fill{display:block;height:100%;background:var(--lime);border-radius:4px;transition:width .25s ease}
+.pnum{font-size:12px;font-weight:900;color:var(--chalk);flex:0 0 auto}
+
+/* THE SPINE */
+.stagegrp{margin-bottom:2px}
+.sthead{display:flex;align-items:center;gap:11px;padding:12px 0 7px}
+.stdot{width:14px;height:14px;flex:0 0 14px;border-radius:50%;border:2px solid var(--line2);background:var(--pitch)}
+.stagegrp.done .stdot{background:var(--lime);border-color:var(--lime)}
+.stagegrp.now .stdot{border-color:var(--lime);box-shadow:0 0 0 4px var(--limeSoft)}
+.stname{font-size:12.5px;font-weight:900;color:var(--slate);letter-spacing:.03em;overflow-wrap:anywhere}
+.stagegrp.now .stname{color:var(--chalk)}
+.stmeta{margin-left:auto;font-size:10.5px;font-weight:800;color:var(--slate);flex:0 0 auto;padding-left:8px}
+.stbody{margin-left:6px;padding-left:19px;border-left:2px solid var(--line)}
+.stagegrp.done .stbody,.stagegrp.now .stbody{border-left-color:var(--lime)}
+.stagegrp:last-child .stbody{border-left-color:transparent}
+
+.ms{display:flex;gap:11px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.ms.last{border-bottom:none}
+.ms.drop{box-shadow:0 -2px 0 var(--lime)}
+.ms.ghost{opacity:.35}
+.tick{width:23px;height:23px;flex:0 0 23px;border-radius:7px;border:2px solid var(--line2);background:none;cursor:pointer;
+  display:grid;place-items:center;margin-top:1px}
+.tick.on{background:var(--lime);border-color:var(--lime)}
+.mstx{flex:1;min-width:0}
+.mslabel{font-size:14px;font-weight:700;color:var(--chalk);line-height:1.4;overflow-wrap:anywhere;cursor:pointer;
+  background:none;border:none;text-align:left;padding:0;width:100%;display:block}
+.ms.isdone .mslabel{color:var(--slate);text-decoration:line-through}
+.msmeta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:4px}
+.chip{font-size:11px;font-weight:800;border-radius:7px;padding:3px 8px;border:1px solid var(--line2);color:var(--slate);
+  background:none;cursor:pointer;min-height:26px;display:inline-flex;align-items:center;gap:5px}
+.chip.due{color:var(--lime);border-color:var(--limeBorder)}
+.chip.over{color:var(--bad);border-color:var(--bad)}
+.chip.none{border-style:dashed}
+.chip.flat{border:none;padding:3px 0;cursor:default}
+.grab{flex:0 0 30px;width:30px;min-height:30px;color:var(--slate);opacity:.45;cursor:grab;background:none;border:none;
+  display:grid;place-items:center;touch-action:none;margin:-3px -6px 0 0}
+.grab:hover{opacity:1}
+
+.editor{border:1px solid var(--limeBorder);background:var(--limeSoft);border-radius:12px;padding:12px;margin:6px 0 10px}
+.editor label{font-size:9.5px;font-weight:900;letter-spacing:.14em;color:var(--slate);text-transform:uppercase;display:block;margin-bottom:6px}
+.fld{width:100%;background:var(--card);border:1px solid var(--line2);border-radius:10px;color:var(--body);
+  font-size:14px;padding:11px 12px;min-height:46px}
+.fld:focus{outline:none;border-color:var(--lime)}
+.datefld{color-scheme:dark}
+body.light .datefld{color-scheme:light}
+.eacts,.moverow{display:flex;gap:7px;margin-top:9px}
+.eacts .btn,.moverow .btn{flex:1}
+
+.addghost{display:flex;align-items:center;gap:9px;width:100%;background:none;border:1px dashed var(--line2);border-radius:10px;
+  color:var(--slate);font-size:12.5px;font-weight:700;padding:10px 12px;min-height:44px;cursor:pointer;margin:9px 0 4px;text-align:left}
+.addghost:hover{border-color:var(--lime);color:var(--lime)}
+.addrow{display:flex;gap:7px;margin:9px 0 4px}
+.addrow .fld{flex:1;min-width:0;font-size:13.5px}
+.addrow button{background:none;border:1px solid var(--lime);color:var(--lime);border-radius:10px;padding:0 15px;min-height:46px;
+  font-weight:800;font-size:13px;cursor:pointer;flex:0 0 auto}
+.plus{width:22px;height:22px;flex:0 0 22px;border-radius:50%;border:1.5px solid var(--lime);color:var(--lime);
+  display:grid;place-items:center;font-size:15px;font-weight:700;line-height:1}
+.sugg{border:1px dashed var(--line2);border-radius:11px;padding:11px 13px;display:flex;align-items:center;gap:11px;
+  margin-bottom:8px;cursor:pointer;background:none;width:100%;text-align:left;color:var(--chalk);min-height:54px}
+.sugg:hover{border-color:var(--lime);border-style:solid}
+.sugg .st{font-size:13.5px;font-weight:700;line-height:1.35;display:block}
+.sugg .ss{font-size:11px;color:var(--slate);margin-top:2px;display:block}
+
+.toast{position:absolute;left:14px;right:14px;bottom:78px;background:var(--turf);border:1px solid var(--line2);border-radius:12px;
+  padding:11px 13px;display:flex;align-items:center;gap:10px;font-size:12.5px;font-weight:700;color:var(--chalk);
+  box-shadow:0 10px 26px rgba(0,0,0,.4);z-index:9}
+.desk .toast{bottom:16px;left:auto;right:16px;width:300px}
+.toast button{margin-left:auto;background:none;border:none;color:var(--lime);font-weight:900;font-size:12.5px;cursor:pointer;padding:6px 2px}
+.stub{font-size:12.5px;color:var(--slate);line-height:1.55}
+.pathstrip{display:flex;align-items:center;gap:5px;margin:11px 0 2px;flex-wrap:wrap}
+.pnode{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--slate);
+  border:1px solid var(--line2);border-radius:20px;padding:5px 10px;min-height:30px}
+.pnode.on{color:var(--chalk);border-color:var(--lime)}
+.pnode.fill{background:var(--limeSoft);color:var(--lime);border-color:var(--limeBorder)}
+.pdash{color:var(--slate);font-size:11px}
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <span class="clabel">LAYOUT</span>
+  <div class="cgroup" id="ly">
+    <button data-v="phone" aria-pressed="true">Phone</button>
+    <button data-v="desk" aria-pressed="false">Desktop</button>
+  </div>
+  <span class="clabel">DATA</span>
+  <div class="cgroup" id="g">
+    <button data-v="live" aria-pressed="true">Plan in progress</button>
+    <button data-v="empty" aria-pressed="false">Empty plan</button>
+  </div>
+  <span class="clabel">THEME</span>
+  <div class="cgroup" id="th">
+    <button data-v="dark" aria-pressed="true">Dark</button>
+    <button data-v="light" aria-pressed="false">Light</button>
+  </div>
+  <span class="clabel">LANG</span>
+  <div class="cgroup" id="lg">
+    <button data-v="en" aria-pressed="true">EN</button>
+    <button data-v="el" aria-pressed="false">ΕΛ</button>
+  </div>
+</div>
+
+<div class="note" id="note"></div>
+<div class="stage" id="stage"></div>
+
+<script>
+/* ==========================================================
+   GOLSZ — Home + Plan, one object model, both screens live.
+   THE RULE: every object is editable in exactly one place.
+   Home reports. Plan owns. Every echo carries a route.
+   Tick a step in Plan and watch Home's next move change.
+   ========================================================== */
+
+var T={
+en:{
+ home:"Home",plan:"Plan",passport:"Passport",scout:"Scout",
+ homeSub:"What's true right now",planSub:"Where you change it",
+ next:"Do this next",markdone:"Mark done",open:"Open in Plan",edit:"Edit in Plan",
+ pathway:"Pathway",goal:"Goal",readonly:"Read-only here",
+ strength:"Passport strength",strengthSub:"{n} of 6 areas strong",
+ perf:"Performance",perfSub:"{n} metrics tracked",
+ targets:"Targets",targetsSub:"{n} schools and clubs",
+ dev:"Development",devSub:"{n} focus areas",
+ conflict:"Your goal says <b>Play for the CPL</b>. Your pathway ends at <b>Canadian university</b>.",
+ resolve:"Resolve in Plan",goalRight:"Goal is right",pathRight:"Pathway is right",
+ crumb:"From Home · Pathway",crumbGoal:"From Home · Goal",
+ route:"Your route",routeblurb:"The usual route for your goal. Add steps under each stage — or let Scout draft them and change whatever you disagree with.",
+ draft:"Let Scout draft my steps",orstart:"Or start with one of these",own:"Or write your own step…",
+ add:"Add",addstep:"Add a step to",change:"Change",nodate:"Add a date",
+ overdue:"overdue",today:"Today",tomorrow:"Tomorrow",done:"Done",
+ allc:"Every step is done.",allsub:"Add the next one whenever you're ready.",
+ nothing:"Nothing here yet — add a step whenever you like.",
+ step:"Step",date:"Date (optional)",save:"Save",cancel:"Cancel",del:"Delete",
+ up:"Move up",down:"Move down",deleted:"Step deleted",undo:"Undo",
+ hint:"Tap a step to rename it, tap its date to change it, drag to reorder.",
+ hint2:"Anything you add can be renamed, re-dated, reordered or deleted at any time.",
+ target:"Target",ontrack:"On track",editing:"Editing",noplan:"No steps yet",
+ tasks:"Next 30 days",tasksSub:"Owned here — unchanged in this pass.",
+ backup:"Backup plan",backupSub:"Owned here — unchanged in this pass.",
+ untouched:"Untouched by this pass. Same screen as today.",
+ s1:"Get 90 minutes of match film",s1s:"Most common first step",
+ s2:"Email one CPL academy coach",s2s:"Takes 20 minutes",
+ s3:"Record a benchmark sprint time",s3s:"You have none on file yet"
+},
+el:{
+ home:"Αρχική",plan:"Πλάνο",passport:"Διαβατήριο",scout:"Scout",
+ homeSub:"Τι ισχύει τώρα",planSub:"Εδώ το αλλάζεις",
+ next:"Κάνε αυτό τώρα",markdone:"Ολοκληρώθηκε",open:"Άνοιγμα στο Πλάνο",edit:"Επεξεργασία στο Πλάνο",
+ pathway:"Διαδρομή",goal:"Στόχος",readonly:"Μόνο ανάγνωση εδώ",
+ strength:"Ισχύς διαβατηρίου",strengthSub:"{n} από 6 τομείς δυνατοί",
+ perf:"Απόδοση",perfSub:"{n} μετρήσεις",
+ targets:"Στόχοι",targetsSub:"{n} σχολές και σύλλογοι",
+ dev:"Ανάπτυξη",devSub:"{n} τομείς εστίασης",
+ conflict:"Ο στόχος σου λέει <b>CPL</b>. Η διαδρομή σου καταλήγει σε <b>καναδικό πανεπιστήμιο</b>.",
+ resolve:"Επίλυση στο Πλάνο",goalRight:"Ισχύει ο στόχος",pathRight:"Ισχύει η διαδρομή",
+ crumb:"Από την Αρχική · Διαδρομή",crumbGoal:"Από την Αρχική · Στόχος",
+ route:"Η διαδρομή σου",routeblurb:"Η συνήθης διαδρομή για τον στόχο σου. Πρόσθεσε βήματα κάτω από κάθε στάδιο — ή άφησε το Scout να τα γράψει.",
+ draft:"Άσε το Scout να γράψει τα βήματα",orstart:"Ή ξεκίνα με ένα από αυτά",own:"Ή γράψε το δικό σου βήμα…",
+ add:"Προσθήκη",addstep:"Προσθήκη βήματος στο",change:"Αλλαγή",nodate:"Πρόσθεσε ημερομηνία",
+ overdue:"εκπρόθεσμο",today:"Σήμερα",tomorrow:"Αύριο",done:"Έγινε",
+ allc:"Κάθε βήμα ολοκληρώθηκε.",allsub:"Πρόσθεσε το επόμενο όποτε θέλεις.",
+ nothing:"Τίποτα εδώ ακόμη — πρόσθεσε ένα βήμα όποτε θέλεις.",
+ step:"Βήμα",date:"Ημερομηνία (προαιρετική)",save:"Αποθήκευση",cancel:"Άκυρο",del:"Διαγραφή",
+ up:"Πάνω",down:"Κάτω",deleted:"Το βήμα διαγράφηκε",undo:"Αναίρεση",
+ hint:"Πάτησε ένα βήμα για μετονομασία, την ημερομηνία για αλλαγή, σύρε για αναδιάταξη.",
+ hint2:"Ό,τι προσθέσεις μπορεί να αλλάξει οποτεδήποτε.",
+ target:"Στόχος",ontrack:"Σε πορεία",editing:"Επεξεργασία",noplan:"Κανένα βήμα ακόμη",
+ tasks:"Επόμενες 30 ημέρες",tasksSub:"Ανήκει εδώ — αμετάβλητο σε αυτό το πέρασμα.",
+ backup:"Εναλλακτικό πλάνο",backupSub:"Ανήκει εδώ — αμετάβλητο σε αυτό το πέρασμα.",
+ untouched:"Αμετάβλητο σε αυτό το πέρασμα.",
+ s1:"Βίντεο 90 λεπτών από αγώνα",s1s:"Το πιο συνηθισμένο πρώτο βήμα",
+ s2:"Στείλε email σε προπονητή CPL",s2s:"Παίρνει 20 λεπτά",
+ s3:"Κατέγραψε χρόνο σπριντ",s3s:"Δεν έχεις κανέναν καταγεγραμμένο"
+}};
+function t(k,n){ var s=T[S.lang][k]||T.en[k]||k; return n===undefined?s:s.replace("{n}",n); }
+
+var STAGES=[{id:"aca",name:"ACADEMY"},{id:"u19",name:"U19 · CS SAINT-LAURENT"},
+            {id:"sen",name:"SENIOR"},{id:"cpl",name:"CPL",target:"2027"}];
+
+var TODAY=new Date(); TODAY.setHours(0,0,0,0);
+function iso(off){var d=new Date(TODAY.getTime()+off*864e5);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+var SEED=[
+ {s:"aca",l:"Two full seasons at Lakeshore",d:iso(-420),done:true},
+ {s:"aca",l:"Club-verified appearances",d:iso(-400),done:true},
+ {s:"u19",l:"Film the Kingsway match",d:iso(-4),done:true},
+ {s:"u19",l:"Cut a 90-second highlight reel",d:iso(3),done:false},
+ {s:"u19",l:"Trial with the senior side",d:iso(-14),done:false},
+ {s:"u19",l:"Record a benchmark sprint time",d:null,done:false},
+ {s:"sen",l:"Email one CPL academy coach",d:iso(44),done:false},
+ {s:"sen",l:"Attend an open trial",d:null,done:false}];
+var DRAFT=[
+ {s:"u19",l:"Film two full matches this month",d:iso(12),done:false},
+ {s:"u19",l:"Cut a 90-second highlight reel",d:iso(21),done:false},
+ {s:"u19",l:"Record a benchmark sprint time",d:iso(9),done:false},
+ {s:"sen",l:"Email three CPL academy coaches",d:iso(60),done:false},
+ {s:"sen",l:"Attend one open trial",d:null,done:false}];
+
+var uid=0;
+var S={lang:"en",theme:"dark",layout:"phone",page:"home",from:null,
+       items:[],editing:null,adding:null,drag:null,trash:null,conflict:true};
+
+function load(kind){
+  S.editing=null;S.adding=null;S.trash=null;S.conflict=true;
+  S.items=(kind==="live"?SEED:[]).map(function(x){
+    return {id:"m"+(++uid),stage:x.s,label:x.l,due:x.d,done:x.done};});
+}
+function inStage(id){return S.items.filter(function(i){return i.stage===id;});}
+function byId(id){for(var i=0;i<S.items.length;i++) if(S.items[i].id===id) return S.items[i];return null;}
+function days(d){return Math.round((new Date(d+"T00:00:00")-TODAY)/864e5);}
+function dateText(it){
+  if(!it.due) return {txt:t("nodate"),cls:"none"};
+  var n=days(it.due),dd=new Date(it.due+"T00:00:00"),loc=S.lang==="el"?"el-GR":"en-GB";
+  var sh=dd.toLocaleDateString(loc,{day:"numeric",month:"short"});
+  if(it.done) return {txt:t("done")+" · "+sh,cls:"flat"};
+  if(n<0){var a=-n;return {txt:(a<14?a+"d ":Math.round(a/7)+"w ")+t("overdue"),cls:"over"};}
+  if(n===0) return {txt:t("today"),cls:"due"};
+  if(n===1) return {txt:t("tomorrow"),cls:"due"};
+  if(n<7) return {txt:dd.toLocaleDateString(loc,{weekday:"long"}),cls:"due"};
+  return {txt:sh,cls:"due"};
+}
+/* the one rule behind "what do I do now" — stated, never guessed */
+function nextItem(){
+  var u=S.items.filter(function(i){return !i.done;});
+  if(!u.length) return null;
+  var d=u.filter(function(i){return i.due;});
+  return d.length?d.sort(function(a,b){return a.due<b.due?-1:1;})[0]:u[0];
+}
+function stageOf(id){for(var i=0;i<STAGES.length;i++) if(STAGES[i].id===id) return STAGES[i];return {name:""};}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+
+var IC={
+ check:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5.5 5.5L20 6.5"/></svg>',
+ grab:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 7h.01M8 12h.01M8 17h.01M16 7h.01M16 12h.01M16 17h.01"/></svg>',
+ pen:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L20 8l-4-4L4 16v4Z"/></svg>',
+ spark:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 3 2.2 5.9L20 11l-5.8 2.1L12 19l-2.2-5.9L4 11l5.8-2.1Z"/></svg>',
+ arrow:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+ cal:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M8 2.5v5M16 2.5v5M3.5 11h17"/></svg>',
+ flag:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h13l-2.5 4L18 12H5"/></svg>',
+ chev:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg>',
+ down:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>',
+ info:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.1"/></svg>',
+ nav:{home:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10.5 9-7 9 7V20a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 20Z"/></svg>',
+  plan:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.5h8M6.5 7.5h11a1.5 1.5 0 0 1 1.5 1.5v10.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5V9a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="m9 13.5 2 2 4-4"/></svg>',
+  passport:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="2.5" width="15" height="19" rx="2.5"/><circle cx="12" cy="10" r="3"/><path d="M9 17h6"/></svg>',
+  scout:'<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>'}
+};
+
+/* ---------------- Plan: the spine ---------------- */
+function msRow(it,last){
+  if(S.editing===it.id) return editor(it);
+  var dt=dateText(it);
+  return '<div class="ms'+(it.done?" isdone":"")+(last?" last":"")+(S.drag===it.id?" ghost":"")+'" data-row="'+it.id+'">'+
+    '<button class="tick'+(it.done?" on":"")+'" data-act="tick" data-id="'+it.id+'" aria-label="'+t("done")+'">'+(it.done?IC.check:"")+'</button>'+
+    '<div class="mstx"><button class="mslabel" data-act="edit" data-id="'+it.id+'">'+esc(it.label)+'</button>'+
+      '<div class="msmeta"><button class="chip '+dt.cls+'" data-act="'+(dt.cls==="flat"?"noop":"edit")+'" data-id="'+it.id+'">'+
+        (dt.cls==="flat"?"":IC.cal)+'<span>'+esc(dt.txt)+'</span></button></div></div>'+
+    '<button class="grab" draggable="true" data-drag="'+it.id+'" aria-label="'+t("up")+'">'+IC.grab+'</button></div>';
+}
+function editor(it){
+  var list=inStage(it.stage),ix=list.indexOf(it);
+  return '<div class="editor">'+
+    '<label>'+t("step")+'</label><input class="fld" id="ed_label" value="'+esc(it.label)+'" maxlength="120" />'+
+    '<div style="height:10px"></div><label>'+t("date")+'</label>'+
+    '<input class="fld datefld" id="ed_date" type="date" value="'+(it.due||"")+'" />'+
+    '<div class="eacts"><button class="btn sm" data-act="save" data-id="'+it.id+'">'+t("save")+'</button>'+
+      '<button class="btn quiet sm" data-act="cancel">'+t("cancel")+'</button>'+
+      '<button class="btn danger sm" data-act="del" data-id="'+it.id+'">'+t("del")+'</button></div>'+
+    '<div class="moverow"><button class="btn quiet sm" data-act="up" data-id="'+it.id+'"'+(ix===0?' disabled style="opacity:.35"':'')+'>'+
+      IC.arrow+' '+t("up")+'</button>'+
+      '<button class="btn quiet sm" data-act="down" data-id="'+it.id+'"'+(ix===list.length-1?' disabled style="opacity:.35"':'')+'>'+
+      '<span style="display:inline-flex;transform:rotate(180deg)">'+IC.arrow+'</span> '+t("down")+'</button></div></div>';
+}
+function stageBlock(st){
+  var list=inStage(st.id),doneN=list.filter(function(i){return i.done;}).length;
+  var cls=list.length&&doneN===list.length?"done":"";
+  if(!cls){var open=STAGES.filter(function(x){var l=inStage(x.id);
+    return !(l.length&&l.filter(function(i){return i.done;}).length===l.length);})[0];
+    if(open&&open.id===st.id&&list.length) cls="now";}
+  var meta=st.target?t("target")+" · "+st.target:(list.length?doneN+" / "+list.length:"");
+  var inner=list.length?list.map(function(i,ix){return msRow(i,ix===list.length-1);}).join("")
+    :'<div class="stub" style="padding:7px 0 2px">'+t("nothing")+'</div>';
+  var add=S.adding===st.id
+    ?'<div class="addrow"><input class="fld" id="add_'+st.id+'" placeholder="'+t("addstep")+' '+esc(st.name.split(" · ")[0])+'…" maxlength="120" />'+
+      '<button data-act="addsave" data-id="'+st.id+'">'+t("add")+'</button></div>'
+    :'<button class="addghost" data-act="addopen" data-id="'+st.id+'"><span class="plus">+</span>'+t("addstep")+' '+esc(st.name.split(" · ")[0])+'</button>';
+  return '<div class="stagegrp '+cls+'"><div class="sthead"><span class="stdot"></span>'+
+    '<span class="stname">'+esc(st.name)+'</span>'+(meta?'<span class="stmeta">'+meta+'</span>':'')+'</div>'+
+    '<div class="stbody">'+inner+add+'</div></div>';
+}
+function planBody(){
+  if(!S.items.length){
+    return '<div class="card owns"><span class="eyebrow">'+t("route")+'</span>'+
+      '<div class="pathstrip"><span class="pnode on">U19</span><span class="pdash">→</span>'+
+        '<span class="pnode">Senior</span><span class="pdash">→</span><span class="pnode fill">CPL</span></div>'+
+      '<div class="stub" style="margin-top:9px">'+t("routeblurb")+'</div>'+
+      '<div style="margin-top:13px"><button class="btn" data-act="scout">'+IC.spark+' '+t("draft")+'</button></div></div>'+
+    '<div class="card owns"><span class="eyebrow">'+t("orstart")+'</span><div style="height:11px"></div>'+
+      '<button class="sugg" data-act="sugg" data-i="0"><span class="plus">+</span><span><span class="st">'+t("s1")+'</span><span class="ss">'+t("s1s")+' · U19</span></span></button>'+
+      '<button class="sugg" data-act="sugg" data-i="1"><span class="plus">+</span><span><span class="st">'+t("s2")+'</span><span class="ss">'+t("s2s")+' · Senior</span></span></button>'+
+      '<button class="sugg" data-act="sugg" data-i="2"><span class="plus">+</span><span><span class="st">'+t("s3")+'</span><span class="ss">'+t("s3s")+' · U19</span></span></button>'+
+      '<div class="addrow"><input class="fld" id="add_free" placeholder="'+t("own")+'" maxlength="120" /><button data-act="addfree">'+t("add")+'</button></div>'+
+      '<div class="hint">'+IC.pen+'<span>'+t("hint2")+'</span></div></div>';
+  }
+  var total=S.items.length,doneN=S.items.filter(function(i){return i.done;}).length;
+  var over=S.items.filter(function(i){return !i.done&&i.due&&days(i.due)<0;}).length;
+  return '<div class="card owns">'+
+    '<div class="prog"><span class="pnum">'+doneN+" / "+total+'</span>'+
+    '<span class="track"><span class="fill" style="width:'+Math.round(doneN/total*100)+'%"></span></span>'+
+    '<span class="eyebrow" style="color:'+(over&&!S.editing?"var(--bad)":"var(--slate)")+'">'+
+      (S.editing?t("editing"):(over?over+" "+t("overdue"):t("ontrack")))+'</span></div>'+
+    STAGES.map(stageBlock).join("")+
+    '<div class="hint">'+IC.pen+'<span>'+t("hint")+'</span></div></div>';
+}
+function planPage(){
+  var crumb=S.from==="pathway"?'<div class="crumb">'+IC.down+'<span>'+t("crumb")+'</span></div>'
+           :S.from==="goal"?'<div class="crumb">'+IC.down+'<span>'+t("crumbGoal")+'</span></div>':'';
+  var conflict=S.conflict?'<div class="card owns" style="border-color:var(--info);border-left-color:var(--info)">'+
+    '<span class="eyebrow" style="color:var(--info)">'+t("goal")+' · '+t("pathway")+'</span>'+
+    '<div style="font-size:13px;line-height:1.55;color:var(--chalk);margin:8px 0 12px">'+t("conflict")+'</div>'+
+    '<div style="display:flex;gap:8px"><button class="btn quiet sm" data-act="resolve" style="flex:1">'+t("goalRight")+'</button>'+
+    '<button class="btn quiet sm" data-act="resolve" style="flex:1">'+t("pathRight")+'</button></div></div>':'';
+  return crumb+conflict+planBody()+
+    '<div class="card owns"><span class="eyebrow">'+t("tasks")+'</span><div class="stub" style="margin-top:7px">'+t("tasksSub")+'</div></div>'+
+    '<div class="card owns"><span class="eyebrow">'+t("backup")+'</span><div class="stub" style="margin-top:7px">'+t("backupSub")+'</div></div>';
+}
+
+/* ---------------- Home: reports only ---------------- */
+function homePage(){
+  var n=nextItem(),head;
+  if(!S.items.length){
+    head='<div class="next"><div class="k">'+IC.flag+' '+t("next")+'</div>'+
+      '<div class="lb">'+t("noplan")+'</div><div class="sub">'+t("routeblurb")+'</div>'+
+      '<div class="acts"><button class="btn" data-act="goplan" data-from="pathway">'+t("open")+'</button></div></div>';
+  } else if(n){
+    var dt=dateText(n),st=stageOf(n.stage).name.split(" · ")[0];
+    head='<div class="next"><div class="k">'+IC.flag+' '+t("next")+'</div>'+
+      '<div class="lb">'+esc(n.label)+'</div>'+
+      '<div class="sub">'+(dt.cls==="none"?st:'<b class="'+(dt.cls==="over"?"over":"")+'">'+esc(dt.txt)+'</b> · '+st)+'</div>'+
+      '<div class="acts"><button class="btn" data-act="tick" data-id="'+n.id+'">'+t("markdone")+'</button>'+
+      '<button class="btn quiet" data-act="goplan" data-from="pathway">'+t("change")+'</button></div></div>';
+  } else {
+    head='<div class="allDone">'+IC.spark+'<div class="lb">'+t("allc")+'</div><div class="sub">'+t("allsub")+'</div></div>';
+  }
+  var doneN=S.items.filter(function(i){return i.done;}).length;
+  var conflict=S.conflict?'<div class="conflict">'+IC.info+'<span>'+t("conflict")+' '+
+    '<button class="go" data-act="goplan" data-from="goal">'+t("resolve")+' →</button></span></div>':'';
+  return '<div class="card"><div class="idrow"><div class="av">DD</div>'+
+      '<div><div class="n">Dimitri D.</div><div class="s">Soccer · Midfielder · CS Saint-Laurent</div></div></div></div>'+
+    head+conflict+
+    '<div class="card echo"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+      '<span class="eyebrow">'+t("pathway")+'</span><span class="ro">'+t("readonly")+'</span></div>'+
+      '<div class="pathstrip"><span class="pnode fill">Academy</span><span class="pdash">→</span>'+
+        '<span class="pnode on">U19</span><span class="pdash">→</span><span class="pnode">Senior</span>'+
+        '<span class="pdash">→</span><span class="pnode">CPL</span></div>'+
+      '<div class="stub" style="margin-top:8px">'+doneN+' / '+S.items.length+' '+t("step").toLowerCase()+'s '+t("done").toLowerCase()+'</div>'+
+      '<button class="jump" data-act="goplan" data-from="pathway"><span>'+t("open")+'</span>'+IC.chev+'</button></div>'+
+    '<div class="card echo"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+      '<span class="eyebrow">'+t("goal")+'</span><span class="ro">'+t("readonly")+'</span></div>'+
+      '<div style="font-size:15px;font-weight:900;color:var(--chalk);margin:9px 0 2px;line-height:1.3">Play for the CPL</div>'+
+      '<div class="stub">Canadian university · 2027</div>'+
+      '<button class="jump" data-act="goplan" data-from="goal"><span>'+t("edit")+'</span>'+IC.chev+'</button></div>'+
+    '<div class="card">'+
+      srow(t("strength"),t("strengthSub",4),"4/6","var(--lime)")+
+      srow(t("perf"),t("perfSub",12),"12","var(--chalk)")+
+      srow(t("targets"),t("targetsSub",7),"7","var(--chalk)")+
+      srow(t("dev"),t("devSub",3),"3","var(--chalk)")+
+    '</div>';
+}
+function srow(a,b,v,c){
+  return '<button class="srow" data-act="noop"><span class="lbl"><b>'+a+'</b><span>'+b+'</span></span>'+
+    '<span class="val" style="color:'+c+'">'+v+'</span>'+IC.chev+'</button>';
+}
+function stubPage(name){
+  return '<div class="card"><span class="eyebrow">'+name+'</span><div class="stub" style="margin-top:8px">'+t("untouched")+'</div></div>';
+}
+function pageBody(p){
+  return p==="home"?homePage():p==="plan"?planPage():stubPage(t(p));
+}
+
+/* ---------------- shells ---------------- */
+var NAV=["home","plan","passport","scout"];
+function phoneShell(){
+  return '<div class="phone" id="shell"><div class="bar"><span class="wm">GOLSZ<i>.</i></span>'+
+    '<span class="eyebrow">'+t(S.page)+'</span></div>'+
+    '<div class="scroll" id="out">'+pageBody(S.page)+'</div>'+
+    '<div class="tabs">'+NAV.map(function(p){
+      return '<button data-nav="'+p+'"'+(S.page===p?' aria-current="page"':'')+'>'+IC.nav[p]+'<span>'+t(p)+'</span></button>';}).join("")+
+    '</div><div id="toast"></div></div>';
+}
+function deskShell(){
+  return '<div class="desk" style="position:relative"><div class="rail"><div class="wm">GOLSZ<i>.</i></div>'+
+    NAV.map(function(p){return '<button data-nav="'+p+'"'+(S.page===p?' aria-current="page"':'')+'>'+IC.nav[p]+' '+t(p)+'</button>';}).join("")+
+    '</div><div class="panes" id="out">'+
+      '<div class="pane"><div class="panehead"><h2>'+t("home")+'</h2><span>'+t("homeSub")+'</span></div>'+homePage()+'</div>'+
+      '<div class="pane"><div class="panehead"><h2>'+t("plan")+'</h2><span>'+t("planSub")+'</span></div>'+planPage()+'</div>'+
+    '</div><div id="toast"></div></div>';
+}
+function render(){
+  document.body.classList.toggle("light",S.theme==="light");
+  document.getElementById("stage").innerHTML=S.layout==="desk"?deskShell():phoneShell();
+  document.getElementById("note").innerHTML=NOTE[S.layout==="desk"?"desk":S.page]||NOTE.home;
+  document.getElementById("toast").innerHTML=S.trash
+    ?'<div class="toast"><span>'+t("deleted")+'</span><button data-act="undo">'+t("undo")+'</button></div>':"";
+  var e=document.getElementById("ed_label");
+  if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length);}
+  if(S.adding){var a=document.getElementById("add_"+S.adding);if(a)a.focus();}
+}
+
+/* ---------------- actions ---------------- */
+function addItem(stage,label,due){S.items.push({id:"m"+(++uid),stage:stage,label:label,due:due||null,done:false});}
+function commitEdit(){
+  if(!S.editing) return;
+  var it=byId(S.editing);if(!it) return;
+  var l=document.getElementById("ed_label"),d=document.getElementById("ed_date");
+  if(l&&l.value.trim()) it.label=l.value.trim().slice(0,120);
+  if(d) it.due=d.value||null;
+  S.editing=null;
+}
+function move(id,dir){
+  var it=byId(id),list=inStage(it.stage),ix=list.indexOf(it),j=ix+dir;
+  if(j<0||j>=list.length) return;
+  var a=S.items.indexOf(list[ix]),b=S.items.indexOf(list[j]);
+  S.items[a]=list[j];S.items[b]=list[ix];
+}
+document.getElementById("stage").addEventListener("click",function(e){
+  var nav=e.target.closest("[data-nav]");
+  if(nav){ commitEdit(); S.page=nav.getAttribute("data-nav"); S.from=null; S.trash=null; render(); return; }
+  var b=e.target.closest("[data-act]"); if(!b) return;
+  var act=b.getAttribute("data-act"),id=b.getAttribute("data-id");
+  if(act==="noop") return;
+  if(act==="goplan"){ commitEdit(); S.page="plan"; S.from=b.getAttribute("data-from"); }
+  else if(act==="tick"){ var it=byId(id); it.done=!it.done; if(S.editing===id) S.editing=null; }
+  else if(act==="edit"){ commitEdit(); S.editing=id; S.adding=null; }
+  else if(act==="save"){ commitEdit(); }
+  else if(act==="cancel"){ S.editing=null; }
+  else if(act==="del"){ var x=byId(id); S.trash={item:x,at:S.items.indexOf(x)};
+    S.items.splice(S.items.indexOf(x),1); S.editing=null; }
+  else if(act==="undo"){ S.items.splice(S.trash.at,0,S.trash.item); S.trash=null; }
+  else if(act==="up"){ commitEdit(); move(id,-1); S.editing=id; }
+  else if(act==="down"){ commitEdit(); move(id,1); S.editing=id; }
+  else if(act==="addopen"){ commitEdit(); S.adding=id; }
+  else if(act==="addsave"){ var f=document.getElementById("add_"+id);
+    if(f&&f.value.trim()) addItem(id,f.value.trim().slice(0,120),null); S.adding=null; }
+  else if(act==="addfree"){ var g=document.getElementById("add_free");
+    if(g&&g.value.trim()) addItem("u19",g.value.trim().slice(0,120),null); }
+  else if(act==="sugg"){ var m=[["u19",t("s1")],["sen",t("s2")],["u19",t("s3")]][+b.getAttribute("data-i")];
+    addItem(m[0],m[1],null); }
+  else if(act==="scout"){ DRAFT.forEach(function(x){addItem(x.s,x.l,x.d);}); }
+  else if(act==="resolve"){ S.conflict=false; }
+  if(act!=="del"&&act!=="undo") S.trash=null;
+  render();
+});
+document.getElementById("stage").addEventListener("keydown",function(e){
+  var id=e.target.id||"";
+  if(e.key==="Enter"){
+    if(id==="ed_label"||id==="ed_date"){ commitEdit(); render(); }
+    else if(id.indexOf("add_")===0){
+      var b=document.querySelector('[data-act="'+(id==="add_free"?"addfree":"addsave")+'"]'); if(b) b.click();
+    }
+  } else if(e.key==="Escape"){ S.editing=null; S.adding=null; render(); }
+});
+var stg=document.getElementById("stage");
+stg.addEventListener("dragstart",function(e){
+  var h=e.target.closest("[data-drag]"); if(!h) return;
+  S.drag=h.getAttribute("data-drag");
+  e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",S.drag);
+});
+stg.addEventListener("dragover",function(e){
+  if(!S.drag) return; var r=e.target.closest("[data-row]"); if(!r) return;
+  var a=byId(S.drag),b=byId(r.getAttribute("data-row"));
+  if(!a||!b||a.stage!==b.stage||a===b) return;
+  e.preventDefault();
+  document.querySelectorAll(".ms.drop").forEach(function(x){x.classList.remove("drop");});
+  r.classList.add("drop");
+});
+stg.addEventListener("drop",function(e){
+  if(!S.drag) return; var r=e.target.closest("[data-row]"); if(!r) return;
+  e.preventDefault();
+  var a=byId(S.drag),b=byId(r.getAttribute("data-row"));
+  if(a&&b&&a.stage===b.stage&&a!==b){ S.items.splice(S.items.indexOf(a),1); S.items.splice(S.items.indexOf(b),0,a); }
+  S.drag=null; render();
+});
+stg.addEventListener("dragend",function(){ S.drag=null; render(); });
+
+var NOTE={
+ home:"<b>Home reports. It edits nothing.</b> Every card that shows an object owned elsewhere carries a 2px slate rule and a route into Plan; the one thing Home owns — <i>Do this next</i> — is computed, not typed. Tick it here and the whole app moves: open Plan and the step is ticked, the stage counter has changed, and the next step has already taken its place.",
+ plan:"<b>Plan owns. Gold 3px rule = you can change this here.</b> Steps sit under the stage they belong to, so the map and the checklist are the same object. Tap a label or a date to edit in place, drag to reorder, delete with undo. Nothing navigates away mid-edit. The blue card is the goal/pathway contradiction — it only resolves here.",
+ passport:"Untouched by this pass — it will read as older work until it gets the same treatment. That gap gets <i>more</i> visible once Home and Plan agree, not less.",
+ scout:"Untouched by this pass. Scout still writes the plan; it now has to write dates and stages with it.",
+ desk:"<b>Side by side, the division of labour is the whole design.</b> Left reports, right owns — no object appears as editable twice. Tick a step on the right and the left column updates in the same frame, because there is one object model behind both. On phone this is two tabs and a jump row; the rule doesn't change."
+};
+
+[["ly",function(v){S.layout=v;}],["g",function(v){load(v);}],["th",function(v){S.theme=v;}],["lg",function(v){S.lang=v;}]]
+.forEach(function(p){
+  document.getElementById(p[0]).addEventListener("click",function(e){
+    var b=e.target.closest("button"); if(!b) return;
+    p[1](b.getAttribute("data-v"));
+    document.querySelectorAll("#"+p[0]+" button").forEach(function(x){x.setAttribute("aria-pressed",String(x===b));});
+    render();
+  });
+});
+
+load("live");
+render();
+</script>
+</body>
+</html>
