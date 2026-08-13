@@ -8608,7 +8608,6 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
   // clearly not theirs. If they HAVE told Scout a secondary goal, that is a
   // real fact and gets said in their own words instead.
   const statedSecondary = statedContextValue(athlete && athlete.scout_context, "secondary_goal");
-  const showAltBranch = config.altBranch && (!hasGoal || pathwayRow.pathway_type !== config.altBranch);
   const stageIdx = currentStageIndex(athlete, config.stages.length);
   return (
     <div style={{ padding: "6px 4px 14px" }}>
@@ -8651,13 +8650,7 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
             <div style={{ fontSize: 12, fontWeight: 800, color: C.info }}>{statedSecondary}</div>
           </div>
         </div>
-      ) : showAltBranch && (
-        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6, marginTop: 4, opacity: 0.62 }}>
-          <span style={{ fontSize: 9.5, color: C.slate, fontWeight: 700 }}>{t("home_path_also_possible")}</span>
-          <GraduationCap size={13} color={C.slate} />
-          <span style={{ fontSize: 10.5, color: C.slate, fontWeight: 800 }}>{t("pathway_type_" + config.altBranch)}</span>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -9779,7 +9772,6 @@ function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing }) {
   const stages = config.stages;
   const curIdx = currentStageIndex(athlete, stages.length);
   const hasGoal = !!pathwayType;
-  const showAltBranch = config.altBranch && pathwayType !== config.altBranch;
   // Per-node sub-label: real detail under each stage where GOLSZ actually
   // knows it (the athlete's own club at their current stage, their grad
   // year at the goal) — blank rather than invented anywhere else.
@@ -9824,25 +9816,12 @@ function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing }) {
           <PathNode Icon={Star} label={hasGoal ? t("pathway_type_" + pathwayType) : t("home_path_goal_placeholder")} sub={hasGoal && gradYear ? String(gradYear) : ""} filled={hasGoal} onClick={onEditGoal} />
         </div>
       </div>
-      {/* Alternate route (usually NCAA) — drawn in blue, branching DOWN and
-          away from the gold spine, so it reads as a genuinely different
-          door rather than another step on the same one.
-          It is captioned. Unlabelled, this node claimed nothing and therefore
-          implied everything: an athlete could read it as a stage they were on,
-          a goal they had set, or a step still to come. It is none of those —
-          it is a route this sport has, which they have not chosen. The
-          "SECONDARY GOAL" card that used to sit above the map is gone unless
-          they actually stated one, so this caption is now the only thing
-          explaining the node. */}
-      {showAltBranch && (
-        <div style={{ position: "relative", display: "flex", justifyContent: "flex-end", alignItems: "flex-start", marginTop: -2, paddingRight: 4 }}>
-          <div aria-hidden="true" style={{ width: 34, height: 22, marginRight: 12, marginTop: -2, borderLeft: `2px dashed ${C.info}`, borderBottom: `2px dashed ${C.info}`, borderBottomLeftRadius: 14 }} />
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, letterSpacing: "0.08em", color: C.slate, fontWeight: 700, marginBottom: 2 }}>{t("home_path_also_possible")}</div>
-            <PathNode Icon={GraduationCap} label={t("pathway_type_" + config.altBranch)} sub={gradYear ? String(gradYear) : ""} filled color={C.info} onClick={onEditGoal} size={28} />
-          </div>
-        </div>
-      )}
+      // The derived alt-branch node that used to sit here is gone. It came from
+      // SPORT_PATHWAY_STAGES.altBranch, so EVERY Soccer athlete saw "NCAA — also
+      // possible" on a screen they read as being about them, with no control
+      // anywhere that could remove it. A fact about the SPORT rendered as a fact
+      // about the ATHLETE. A secondary route now appears only when they have
+      // stated one, which BackupPlanCard owns.
       {/* The edit affordance belongs to the thing it edits. It used to float
           below the card as a 12px text link, which read as page furniture
           rather than as this map's own control. */}
@@ -9926,8 +9905,6 @@ function PathwayPlan({ viewUserId, onChange, onNavigate }) {
   const [newMilestone, setNewMilestone] = useState("");
   // Editing a step edits its date too, so the draft is a pair, not a string.
   const [dueDraft, setDueDraft] = useState("");
-  // Which stage's inline "add a step" row is open. null = none.
-  const [addingStage, setAddingStage] = useState(null);
   // Holds a deleted step and its index until the next action, so delete can be
   // undone rather than confirmed. A confirm dialog on a reversible action is a
   // tax on the 99 correct deletes to catch the one mistake.
@@ -9961,7 +9938,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate }) {
         setUid(user.id);
         const [{ data }, { data: ath }] = await Promise.all([
           sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, notes").eq("user_id", user.id).maybeSingle(),
-          sb.from("athletes").select("sport, club_name, recruiting_status").eq("id", user.id).single(),
+          sb.from("athletes").select("sport, club_name, recruiting_status, scout_context").eq("id", user.id).single(),
         ]);
         setAthlete(ath || null);
         if (data) {
@@ -10003,10 +9980,6 @@ function PathwayPlan({ viewUserId, onChange, onNavigate }) {
   }
 
 
-  function setMilestoneStage(id, stage) {
-    save({ milestones: milestones.map((m) => (m.id === id ? { ...m, stage: stage || null } : m)) });
-  }
-
   function toggleMilestone(id) {
     const next = milestones.map((m) => (m.id === id ? { ...m, done: !m.done } : m));
     save({ milestones: next });
@@ -10034,15 +10007,16 @@ function PathwayPlan({ viewUserId, onChange, onNavigate }) {
   // grouped by stage, a flat-array swap moves a step into a neighbouring
   // stage's group — visually it jumps a heading, and the athlete's own filing
   // is silently rewritten by a button labelled "move up".
+  // Flat swap: the list is rendered as one sequence again, so up/down must
+  // move a step past its visible neighbour. It still must never touch `stage` —
+  // the field survives on the data even though nothing renders by it, so a
+  // future grouped view finds the athlete's filing intact.
   function moveMilestone(id, dir) {
-    const me = milestones.find((m) => m.id === id);
-    if (!me) return;
-    const group = milestones.filter((m) => (m.stage || null) === (me.stage || null));
-    const gi = group.indexOf(me), gj = gi + dir;
-    if (gi < 0 || gj < 0 || gj >= group.length) return;
-    const a = milestones.indexOf(group[gi]), b = milestones.indexOf(group[gj]);
+    const i = milestones.findIndex((m) => m.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= milestones.length) return;
     const next = milestones.slice();
-    next[a] = group[gj]; next[b] = group[gi];
+    next[i] = milestones[j]; next[j] = milestones[i];
     save({ milestones: next });
   }
 
@@ -10091,25 +10065,11 @@ function PathwayPlan({ viewUserId, onChange, onNavigate }) {
   // rather than via useTheme() — the root already owns that hook, and a second
   // subscription would re-run its side effects.
   const dateScheme = (typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "light") ? "light" : "dark";
-  const stages = (SPORT_PATHWAY_STAGES[athlete && athlete.sport] || SPORT_PATHWAY_STAGES.__default).stages;
   const doneCount = milestones.filter((m) => m.done).length;
   const todayIso = new Date(); todayIso.setHours(0, 0, 0, 0);
   const overdueCount = milestones.filter((m) => !m.done && m.due && new Date(m.due + "T00:00:00") < todayIso).length;
   const nextStep = nextMilestone(milestones);
   const nextDate = nextStep ? milestoneDateLabel(nextStep, lang, t) : null;
-  // Stage groups in sequence, then an "unfiled" group LAST for milestones that
-  // predate stages (migration 076) or arrived from Scout without one. They are
-  // never auto-assigned — the athlete files them, one tap, from the picker on
-  // the row. Guessing here and rendering the guess as fact is the failure this
-  // app spent the week removing.
-  const unfiled = milestones.filter((m) => !m.stage);
-  const stageGroups = stages.map((key) => {
-    const items = milestones.filter((m) => m.stage === key);
-    return { key, name: t("pathway_stage_" + key), items, complete: items.length > 0 && items.every((m) => m.done), current: false };
-  });
-  const firstOpen = stageGroups.find((g) => g.items.length > 0 && !g.complete);
-  if (firstOpen) firstOpen.current = true;
-  if (unfiled.length) stageGroups.push({ key: "__unfiled", name: t("pathway_unfiled"), items: unfiled, complete: false, current: false });
 
   return (
     <>
@@ -10199,82 +10159,64 @@ function PathwayPlan({ viewUserId, onChange, onNavigate }) {
                 {overdueCount ? overdueCount + " " + t("pathway_overdue") : t("pathway_on_track")}
               </span>
             </div>
-            {stageGroups.map((g, gi) => (
-              <div key={g.key} style={{ marginBottom: 2 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 0 7px" }}>
-                  <span style={{ width: 14, height: 14, flex: "0 0 14px", borderRadius: "50%", border: `2px solid ${g.complete || g.current ? C.lime : C.line2}`, background: g.complete ? C.lime : C.card, boxShadow: g.current ? `0 0 0 4px ${C.limeWash}` : "none" }} />
-                  <span style={{ fontSize: 12.5, fontWeight: 900, letterSpacing: ".03em", overflowWrap: "anywhere", color: g.current ? C.chalk : C.slate }}>{g.name}</span>
-                  {g.items.length > 0 && <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 800, color: C.slate, flex: "0 0 auto", paddingLeft: 8 }}>{g.items.filter((m) => m.done).length} / {g.items.length}</span>}
+            {/* ONE LIST, IN ORDER. Grouping by stage was tried and taken back
+                out: it split a short plan across four headings, and most steps
+                had no stage at all so the largest group was "Not filed under a
+                stage yet". `stage` is still carried on every milestone and
+                still normalised — nothing renders by it today, so a future
+                grouped or per-stage view finds the athlete's filing intact
+                rather than having to reconstruct it. */}
+            {milestones.map((m, mi) => (editingMilestone === m.id ? (
+              <div key={m.id} style={{ border: `1px solid ${C.limeBorder}`, background: C.limeWash, borderRadius: 12, padding: 12, margin: "6px 0 10px" }}>
+                <label style={editorLabel}>{t("pathway_milestones_title")}</label>
+                <input autoFocus value={milestoneDraft} maxLength={120} onChange={(e) => setMilestoneDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") commitEdit(m.id); if (e.key === "Escape") setEditingMilestone(null); }}
+                  aria-label={m.label} style={{ ...inputStyle, width: "100%", minHeight: 46, fontSize: 14 }} />
+                <div style={{ height: 10 }} />
+                <label style={editorLabel}>{t("pathway_no_date")}</label>
+                <input type="date" value={dueDraft} onChange={(e) => setDueDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") commitEdit(m.id); if (e.key === "Escape") setEditingMilestone(null); }}
+                  aria-label={t("pathway_no_date")} style={{ ...inputStyle, width: "100%", minHeight: 46, fontSize: 14, colorScheme: dateScheme }} />
+                <div style={{ display: "flex", gap: 7, marginTop: 9 }}>
+                  <button onClick={() => commitEdit(m.id)} style={{ ...primaryBtn, flex: 1, minHeight: 44, fontSize: 12.5 }}>{t("goal_card_save")}</button>
+                  <button onClick={() => setEditingMilestone(null)} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5 }}>{t("goal_card_cancel")}</button>
+                  <button onClick={() => deleteMilestone(m.id)} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, color: C.danger, borderColor: C.danger }}>{t("action_delete")}</button>
                 </div>
-                <div style={{ marginLeft: 6, paddingLeft: 19, borderLeft: `2px solid ${gi === stageGroups.length - 1 ? "transparent" : (g.complete || g.current ? C.lime : C.line)}` }}>
-                  {g.items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55, padding: "7px 0 2px" }}>{t("pathway_milestones_empty")}</div>}
-                  {g.items.map((m, mi) => (editingMilestone === m.id ? (
-                    <div key={m.id} style={{ border: `1px solid ${C.limeBorder}`, background: C.limeWash, borderRadius: 12, padding: 12, margin: "6px 0 10px" }}>
-                      <label style={editorLabel}>{t("pathway_milestones_title")}</label>
-                      <input autoFocus value={milestoneDraft} maxLength={120} onChange={(e) => setMilestoneDraft(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") commitEdit(m.id); if (e.key === "Escape") setEditingMilestone(null); }}
-                        aria-label={m.label} style={{ ...inputStyle, width: "100%", minHeight: 46, fontSize: 14 }} />
-                      <div style={{ height: 10 }} />
-                      <label style={editorLabel}>{t("pathway_no_date")}</label>
-                      <input type="date" value={dueDraft} onChange={(e) => setDueDraft(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") commitEdit(m.id); if (e.key === "Escape") setEditingMilestone(null); }}
-                        aria-label={t("pathway_no_date")} style={{ ...inputStyle, width: "100%", minHeight: 46, fontSize: 14, colorScheme: dateScheme }} />
-                      <div style={{ display: "flex", gap: 7, marginTop: 9 }}>
-                        <button onClick={() => commitEdit(m.id)} style={{ ...primaryBtn, flex: 1, minHeight: 44, fontSize: 12.5 }}>{t("goal_card_save")}</button>
-                        <button onClick={() => setEditingMilestone(null)} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5 }}>{t("goal_card_cancel")}</button>
-                        <button onClick={() => deleteMilestone(m.id)} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, color: C.danger, borderColor: C.danger }}>{t("action_delete")}</button>
-                      </div>
-                      <div style={{ display: "flex", gap: 7, marginTop: 7 }}>
-                        <button onClick={() => moveMilestone(m.id, -1)} disabled={mi === 0} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, opacity: mi === 0 ? 0.35 : 1 }}><ChevronUp size={14} />{t("pathway_milestone_up")}</button>
-                        <button onClick={() => moveMilestone(m.id, 1)} disabled={mi === g.items.length - 1} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, opacity: mi === g.items.length - 1 ? 0.35 : 1 }}><ChevronDown size={14} />{t("pathway_milestone_down")}</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div key={m.id} style={{ display: "flex", gap: 11, alignItems: "flex-start", padding: "10px 0", borderBottom: mi === g.items.length - 1 ? "none" : `1px solid ${C.line}` }}>
-                      <button onClick={() => toggleMilestone(m.id)} aria-label={m.label} style={{ width: 23, height: 23, flex: "0 0 23px", borderRadius: 7, border: `2px solid ${m.done ? C.lime : C.line2}`, background: m.done ? C.lime : "none", cursor: "pointer", display: "grid", placeItems: "center", marginTop: 1, padding: 0 }}>
-                        {m.done && <Check size={12} color={C.ink} />}
-                      </button>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <button onClick={() => openEditor(m)} style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4, overflowWrap: "anywhere", cursor: "pointer", background: "none", border: "none", textAlign: "left", padding: 0, width: "100%", display: "block", fontFamily: "inherit", color: m.done ? C.slate : C.chalk, textDecoration: m.done ? "line-through" : "none" }}>{m.label}</button>
-                        <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginTop: 4 }}>
-                          {(() => {
-                            const d = milestoneDateLabel(m, lang, t);
-                            const tone = d.tone === "over" ? C.danger : d.tone === "due" ? C.lime : C.slate;
-                            if (d.tone === "flat") return <span style={{ fontSize: 11, fontWeight: 800, color: C.slate, padding: "3px 0", minHeight: 26, display: "inline-flex", alignItems: "center" }}>{d.text}</span>;
-                            return (
-                              <button onClick={() => openEditor(m)} style={{ fontSize: 11, fontWeight: 800, borderRadius: 7, padding: "3px 8px", minHeight: 26, display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer", background: "none", fontFamily: "inherit", color: tone, border: `1px ${d.tone === "none" ? "dashed" : "solid"} ${d.tone === "none" ? C.line2 : tone}` }}>
-                                <Calendar size={12} />{d.text}
-                              </button>
-                            );
-                          })()}
-                          {!m.stage && (
-                            <select value="" onChange={(e) => setMilestoneStage(m.id, e.target.value)} aria-label={t("pathway_unfiled")} style={{ ...inputStyle, fontSize: 11, padding: "3px 8px", minHeight: 26 }}>
-                              <option value="">{t("pathway_unfiled")}</option>
-                              {stages.map((s) => <option key={s} value={s}>{t("pathway_stage_" + s)}</option>)}
-                            </select>
-                          )}
-                        </div>
-                      </div>
-                      <button onClick={() => openEditor(m)} aria-label={t("pathway_milestone_edit")} style={{ flex: "0 0 30px", width: 30, minHeight: 30, color: C.slate, opacity: 0.45, cursor: "pointer", background: "none", border: "none", display: "grid", placeItems: "center", padding: 0 }}><Pencil size={15} /></button>
-                    </div>
-                  )))}
-                  {addingStage === g.key ? (
-                    <div style={{ display: "flex", gap: 7, margin: "9px 0 4px" }}>
-                      <input autoFocus value={newMilestone} onChange={(e) => setNewMilestone(e.target.value)} maxLength={120}
-                        onKeyDown={(e) => { if (e.key === "Enter") { addMilestone(g.key); setAddingStage(null); } if (e.key === "Escape") setAddingStage(null); }}
-                        aria-label={t("pathway_add_to_stage").replace("{stage}", g.name)} placeholder={t("pathway_add_to_stage").replace("{stage}", g.name)}
-                        style={{ flex: 1, minWidth: 0, minHeight: 46, fontSize: 13.5, ...inputStyle }} />
-                      <button onClick={() => { addMilestone(g.key); setAddingStage(null); }} style={{ background: "none", border: `1px solid ${C.lime}`, color: C.lime, borderRadius: 10, padding: "0 15px", minHeight: 46, fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{t("pathway_milestone_add")}</button>
-                    </div>
-                  ) : (
-                    <button onClick={() => { setNewMilestone(""); setAddingStage(g.key); }} style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", background: "none", border: `1px dashed ${C.line2}`, borderRadius: 10, color: C.slate, fontSize: 12.5, fontWeight: 700, padding: "10px 12px", minHeight: 44, cursor: "pointer", margin: "9px 0 4px", textAlign: "left", fontFamily: "inherit" }}>
-                      <span style={{ width: 22, height: 22, flex: "0 0 22px", borderRadius: "50%", border: `1.5px solid ${C.lime}`, color: C.lime, display: "grid", placeItems: "center", fontSize: 15, fontWeight: 700, lineHeight: 1 }}>+</span>
-                      {t("pathway_add_to_stage").replace("{stage}", g.name)}
-                    </button>
-                  )}
+                <div style={{ display: "flex", gap: 7, marginTop: 7 }}>
+                  <button onClick={() => moveMilestone(m.id, -1)} disabled={mi === 0} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, opacity: mi === 0 ? 0.35 : 1 }}><ChevronUp size={14} />{t("pathway_milestone_up")}</button>
+                  <button onClick={() => moveMilestone(m.id, 1)} disabled={mi === milestones.length - 1} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, opacity: mi === milestones.length - 1 ? 0.35 : 1 }}><ChevronDown size={14} />{t("pathway_milestone_down")}</button>
                 </div>
               </div>
-            ))}
+            ) : (
+              <div key={m.id} style={{ display: "flex", gap: 11, alignItems: "flex-start", padding: "10px 0", borderBottom: mi === milestones.length - 1 ? "none" : `1px solid ${C.line}` }}>
+                <button onClick={() => toggleMilestone(m.id)} aria-label={m.label} style={{ width: 23, height: 23, flex: "0 0 23px", borderRadius: 7, border: `2px solid ${m.done ? C.lime : C.line2}`, background: m.done ? C.lime : "none", cursor: "pointer", display: "grid", placeItems: "center", marginTop: 1, padding: 0 }}>
+                  {m.done && <Check size={12} color={C.ink} />}
+                </button>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <button onClick={() => openEditor(m)} style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4, overflowWrap: "anywhere", cursor: "pointer", background: "none", border: "none", textAlign: "left", padding: 0, width: "100%", display: "block", fontFamily: "inherit", color: m.done ? C.slate : C.chalk, textDecoration: m.done ? "line-through" : "none" }}>{m.label}</button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginTop: 4 }}>
+                    {(() => {
+                      const d = milestoneDateLabel(m, lang, t);
+                      const tone = d.tone === "over" ? C.danger : d.tone === "due" ? C.lime : C.slate;
+                      if (d.tone === "flat") return <span style={{ fontSize: 11, fontWeight: 800, color: C.slate, padding: "3px 0", minHeight: 26, display: "inline-flex", alignItems: "center" }}>{d.text}</span>;
+                      return (
+                        <button onClick={() => openEditor(m)} style={{ fontSize: 11, fontWeight: 800, borderRadius: 7, padding: "3px 8px", minHeight: 26, display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer", background: "none", fontFamily: "inherit", color: tone, border: `1px ${d.tone === "none" ? "dashed" : "solid"} ${d.tone === "none" ? C.line2 : tone}` }}>
+                          <Calendar size={12} />{d.text}
+                        </button>
+                      );
+                    })()}
+                  </div>
+                </div>
+                <button onClick={() => openEditor(m)} aria-label={t("pathway_milestone_edit")} style={{ flex: "0 0 30px", width: 30, minHeight: 30, color: C.slate, opacity: 0.45, cursor: "pointer", background: "none", border: "none", display: "grid", placeItems: "center", padding: 0 }}><Pencil size={15} /></button>
+              </div>
+            )))}
+            <div style={{ display: "flex", gap: 6, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
+              <input value={newMilestone} onChange={(e) => setNewMilestone(e.target.value)} maxLength={120}
+                onKeyDown={(e) => { if (e.key === "Enter") addMilestone(null); }}
+                aria-label={t("pathway_milestone_ph")} placeholder={t("pathway_milestone_ph")}
+                style={{ flex: 1, minWidth: 0, minHeight: 46, ...inputStyle }} />
+              <button onClick={() => addMilestone(null)} disabled={!newMilestone.trim()} style={{ background: "none", color: C.lime, border: `1px solid ${C.lime}`, borderRadius: 10, padding: "0 15px", minHeight: 46, fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, opacity: !newMilestone.trim() ? 0.5 : 1 }}>{t("pathway_milestone_add")}</button>
+            </div>
           </div>
         )}
       </div>

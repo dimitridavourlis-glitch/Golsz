@@ -100,9 +100,22 @@ ck("Home reads the same field", /statedContextValue\(athlete && athlete\.scout_c
 // The alternative route may still be SHOWN — an athlete who has never
 // considered college should be able to discover it exists. It just may not be
 // described as theirs.
-ck("an unstated alternative is still surfaced", /home_path_also_possible/.test(APP), true);
-ck("...and is not called a goal",
-   /\{t\("home_path_also_possible"\)\}/.test(APP), true);
+// REVERSED 2026-08-13. These two used to assert that the derived alternative
+// WAS surfaced, captioned so it was not mistaken for the athlete's own goal.
+// Captioning it was an improvement on an unlabelled node, but it did not fix
+// the actual defect: SPORT_PATHWAY_STAGES.altBranch is a fact about the SPORT,
+// so every Soccer athlete saw "NCAA — also possible" on a screen they read as
+// being about them, with no control anywhere that could remove it. Inferred,
+// rendered, unremovable. The caption made it honest, not theirs.
+//
+// It is gone. A secondary route appears only when the athlete has stated one —
+// which BackupPlanCard owns, and which the assertions above already cover.
+ck("the derived alt-branch is not rendered", /config\.altBranch/.test(APP), false);
+ck("...and no component still computes it", /showAltBranch/.test(APP), false);
+// The i18n key stays in all four dictionaries. Deleting a key from one breaks
+// parity, and parity is the invariant — the key being unused is not a reason
+// to touch four dictionaries. Same call as pathway_milestone_ph.
+ck("home_path_also_possible remains in the dictionaries", /home_path_also_possible/.test(APP), true);
 
 // PathwayPlan must actually load the column, or Plan silently never has a
 // secondary goal — a green test over data that was never fetched.

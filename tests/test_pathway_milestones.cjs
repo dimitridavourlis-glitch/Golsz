@@ -79,10 +79,18 @@ ck("undefined is tolerated", nextMilestone(undefined), null);
 // precisely that the flat-array version looks correct in isolation.
 const mv = APP.slice(APP.indexOf("function moveMilestone(id, dir)"));
 const mvBody = mv.slice(0, mv.indexOf("\n  }") + 4);
-ck("moveMilestone builds a stage group before swapping",
-   /const group = milestones\.filter\(\(m\) => \(m\.stage \|\| null\) === \(me\.stage \|\| null\)\)/.test(mvBody), true);
-ck("...and bounds-checks against the GROUP, not the flat array",
-   /gj < 0 \|\| gj >= group\.length/.test(mvBody), true);
+// REVERSED 2026-08-13 with the render. Grouping by stage was taken back out —
+// it split a short plan across four headings — so up/down moves a step past
+// its VISIBLE neighbour again, which means the flat list.
+//
+// These two used to pin the grouped implementation. Pinning an implementation
+// is what made them fail the moment the design changed, while the property
+// that actually matters kept holding. So the structural checks are gone and
+// the executed invariant below carries the weight.
+ck("moveMilestone bounds-checks against the flat list",
+   /j < 0 \|\| j >= milestones\.length/.test(mvBody), true);
+ck("...and does not reintroduce stage grouping",
+   /m\.stage \|\| null\) === \(me\.stage \|\| null/.test(mvBody), false);
 // The old flat-array form must be gone, or "move up" jumps a stage heading.
 ck("the flat-array swap is gone",
    /\[next\[i\], next\[j\]\] = \[next\[j\], next\[i\]\]/.test(mvBody), false);
