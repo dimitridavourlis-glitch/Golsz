@@ -9845,12 +9845,15 @@ function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing, stage
           <PathNode Icon={Star} label={hasGoal ? t("pathway_type_" + pathwayType) : t("home_path_goal_placeholder")} sub={hasGoal && gradYear ? String(gradYear) : ""} filled={hasGoal} onClick={onEditGoal} />
         </div>
       </div>
-      // The derived alt-branch node that used to sit here is gone. It came from
-      // SPORT_PATHWAY_STAGES.altBranch, so EVERY Soccer athlete saw "NCAA — also
-      // possible" on a screen they read as being about them, with no control
-      // anywhere that could remove it. A fact about the SPORT rendered as a fact
-      // about the ATHLETE. A secondary route now appears only when they have
-      // stated one, which BackupPlanCard owns.
+      {/* The derived alt-branch node that used to sit here is gone. It came
+          from SPORT_PATHWAY_STAGES.altBranch, so EVERY Soccer athlete saw
+          "NCAA — also possible" on a screen they read as being about them,
+          with no control anywhere that could remove it. A fact about the
+          SPORT rendered as a fact about the ATHLETE. A secondary route now
+          appears only when they have stated one, which BackupPlanCard owns.
+          KEEP THIS AS A JSX COMMENT BLOCK. Written as double-slash lines it
+          is not a comment inside JSX — it is TEXT, and it rendered on the Plan
+          page in production on 2026-08-13. */}
       {/* The edit affordance belongs to the thing it edits. It used to float
           below the card as a 12px text link, which read as page furniture
           rather than as this map's own control. */}

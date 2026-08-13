@@ -89,6 +89,55 @@ const undeclared = undeclaredIn(CODE, "golsz-app.html");
 console.log(`   parsed ${CODE.length.toLocaleString()} chars of client JSX`);
 ck("no identifier is referenced without a binding", undeclared, []);
 
+// ---- NO COMMENT LEAKS INTO THE PAGE AS TEXT -----------------------------
+// 2026-08-13, shipped to production and seen on a phone: a {/* */} block was
+// rewritten as `//` lines inside JSX. There, `//` is not a comment — it is
+// text. Six lines of source commentary about SPORT_PATHWAY_STAGES rendered on
+// the Plan page, in the middle of an athlete's pathway.
+//
+// Every check in this repo passed, before and after: the JSX parses, the scope
+// is clean, the i18n keys are intact. Syntax and scope cannot see "this is
+// visible garbage". That was a whole class with no coverage, not a slip.
+//
+// JSXText that begins with // or contains /* is a leaked comment. Real copy
+// never starts that way — and if it ever legitimately must, it belongs in the
+// dictionaries, not inline.
+const leaked = [];
+traverse(parser.parse(CODE, { sourceType: "script", plugins: ["jsx"] }), {
+  JSXText(p) {
+    const raw = p.node.value;
+    for (const line of raw.split("\n")) {
+      const t = line.trim();
+      if (!t) continue;
+      if (t.startsWith("//") || t.includes("/*") || t.includes("*/")) {
+        leaked.push(t.slice(0, 70) + (p.node.loc ? "  (line " + p.node.loc.start.line + ")" : ""));
+      }
+    }
+  },
+});
+ck("no source comment renders as page text", leaked, []);
+
+// The detector must fire on the real shape, or it is decoration.
+const LEAK_FIXTURE = `
+  function W() {
+    return (
+      <div>
+        // this is not a comment here, it is text
+        <span>ok</span>
+      </div>
+    );
+  }
+`;
+const fixtureLeaks = [];
+traverse(parser.parse(LEAK_FIXTURE, { sourceType: "script", plugins: ["jsx"] }), {
+  JSXText(p) {
+    for (const line of p.node.value.split("\n")) {
+      if (line.trim().startsWith("//")) fixtureLeaks.push(line.trim());
+    }
+  },
+});
+ck("...and it fires on a deliberately leaked comment", fixtureLeaks.length, 1);
+
 // ---- the suite must fail on a known-broken input ------------------------
 // A detector is only worth its green if the thing it looks for is ABSENT from
 // the failure case. The write-error scan written earlier today searched for
