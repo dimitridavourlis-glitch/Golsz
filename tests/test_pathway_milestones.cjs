@@ -156,6 +156,109 @@ ck("PathwayPlan normalises what it reads from the database",
 ck("first-step suggestions are added with stage: null",
    /normalizeMilestone\(\{ label: t\(s\.labelKey\), stage: null \}\)/.test(APP), true);
 
+// ---- ONE PATHWAY, ONE READER --------------------------------------------
+// Home and Plan must draw the same pathway. That held for free while stages
+// were a constant; once an athlete can rename or add one, a second reader of
+// SPORT_PATHWAY_STAGES means the two screens drift — the "two pictures of one
+// object" failure this week removed, returning through a different door.
+//
+// So exactly one function may read the config, and this is the whole
+// protection. Without it the rule decays the first time someone adds a third
+// surface, silently and with every test still green.
+const CODE_ONLY = APP
+  .replace(/\/\*[\s\S]*?\*\//g, "")          // block comments
+  .replace(/^[ \t]*\/\/.*$/gm, "");          // line comments
+// Count READS THAT LIE OUTSIDE the resolver, not total occurrences: the
+// resolver's own fallback names the config twice on one line
+// (`SPORT_PATHWAY_STAGES[sport] || SPORT_PATHWAY_STAGES.__default`), so a
+// naive count of 1 asserts a coincidence of syntax rather than the invariant.
+// First version of this check did exactly that and failed on correct code.
+const _rs = CODE_ONLY.indexOf("function athleteStages(");
+if (_rs < 0) throw new Error("athleteStages not found — this suite is not reading what it thinks it is");
+let _d = 0, _re = CODE_ONLY.indexOf("{", _rs);
+for (; _re < CODE_ONLY.length; _re++) {
+  if (CODE_ONLY[_re] === "{") _d++;
+  else if (CODE_ONLY[_re] === "}") { _d--; if (!_d) break; }
+}
+const RESOLVER = CODE_ONLY.slice(_rs, _re + 1);
+const total = [...CODE_ONLY.matchAll(/SPORT_PATHWAY_STAGES\s*[[.]/g)].length;
+const inside = [...RESOLVER.matchAll(/SPORT_PATHWAY_STAGES\s*[[.]/g)].length;
+ck("every read of SPORT_PATHWAY_STAGES is inside athleteStages()", total - inside, 0);
+ck("...and the resolver really does read it", inside > 0, true);
+ck("PathwayMap takes stages as a prop rather than deriving them",
+   /function PathwayMap\(\{[^}]*stages: stagesProp/.test(APP), true);
+ck("PathwayStrip resolves through the same function",
+   /const stages = athleteStages\(athlete, pathwayRow\)/.test(APP), true);
+// Empty custom stages must fall back, or every existing athlete's map empties.
+ck("an athlete with no custom stages still gets the sport's",
+   /if \(custom\.length\)/.test(APP), true);
+// A rename must not orphan milestones, which store the stage id.
+ck("a stage id is stringified, never derived from the label",
+   /id: String\(s\.id\)/.test(APP), true);
+
+// ---- CUSTOM STAGES: the three ways this loses an athlete's work ----------
+// These are source assertions rather than executed ones: the writers close over
+// component state and there is no UI calling them yet, so there is nothing to
+// drive. Stated plainly because a pattern match is weaker evidence than an
+// execution — when the editor lands, the delete case in particular deserves a
+// real executed test.
+// EXECUTED, not pattern-matched. This is the one where being wrong costs an
+// athlete their steps: they asked to remove a heading, not to lose the work
+// underneath it. A source regex proves the shape of one line; running it proves
+// the outcome however the function is rewritten.
+const delFn = APP.slice(APP.indexOf("function deleteStage(id)"));
+const delBody = delFn.slice(0, delFn.indexOf("\n  }") + 4);
+const FIX = [
+  { id: "a", label: "a", done: true,  due: null, stage: "u19" },
+  { id: "b", label: "b", done: false, due: null, stage: "u19" },
+  { id: "c", label: "c", done: false, due: null, stage: "senior" },
+  { id: "d", label: "d", done: false, due: null, stage: null },
+];
+const STAGES = [{ id: "u19", label: "U19" }, { id: "senior", label: "Senior" }];
+let wroteStages = null, wroteExtra = null, setLocal = null;
+const runDelete = new Function(
+  "milestones", "materialisedStages", "saveStages", "setEditingStage", "setMilestones", "currentStageId",
+  delBody.replace("function deleteStage(id)", "return function (id)")
+);
+runDelete(
+  FIX,
+  () => STAGES.slice(),
+  (next, extra) => { wroteStages = next; wroteExtra = extra; },
+  () => {},
+  (m) => { setLocal = m; },
+  "u19"
+)("u19");
+ck("deleting a stage removes only that stage", wroteStages.map((x) => x.id), ["senior"]);
+ck("...and loses no milestone", wroteExtra.milestones.length, FIX.length);
+ck("...unfiling the ones that were under it", wroteExtra.milestones.filter((m) => m.stage === null).map((m) => m.id), ["a", "b", "d"]);
+ck("...leaving other stages' milestones filed", wroteExtra.milestones.find((m) => m.id === "c").stage, "senior");
+ck("...preserving their done state", wroteExtra.milestones.find((m) => m.id === "a").done, true);
+ck("...and clearing current_stage_id when it pointed at the deleted stage", wroteExtra.current_stage_id, null);
+ck("...updating local state in the same call", setLocal.length, FIX.length);
+// If the id moved with the label, every step filed under a renamed section
+// would be orphaned the first time an athlete fixed a typo.
+ck("renaming a stage preserves its id", /st\.id === id \? \{ id: st\.id, label: clean \}/.test(APP), true);
+ck("an empty rename is a no-op, not a delete", /if \(!clean\) return;/.test(APP), true);
+ck("the seven-section cap exists", /const MAX_STAGES = 7;/.test(APP), true);
+ck("...and is checked before adding", /length >= MAX_STAGES\) return;/.test(APP), true);
+// A new section must not reach storage unnamed. addStage() used to persist
+// { label: "" } on tap while renameStage() rejected empty, so an abandoned
+// section became a blank heading the athlete could not name and could only
+// delete. Nothing writes until there is a name.
+ck("adding a section does not write before it is named",
+   /function addStage\(\)[\s\S]{0,400}?\n  \}/.exec(APP)[0].includes("saveStages"), false);
+ck("...it is held as pending instead", /setPendingStage\(id\)/.test(APP), true);
+ck("cancelling discards the pending section", /setPendingStage\(null\);\s*\/\/ an unnamed section is discarded/.test(APP), true);
+ck("committing a pending section appends it, an existing one renames in place",
+   /pendingStage === id\s*\?\s*base\.concat\(\[\{ id, label: clean \}\]\)/.test(APP), true);
+// Empty stored stages must keep meaning "the sport's", or every athlete who
+// never edits gets an empty map.
+ck("the first edit materialises the sport defaults rather than backfilling",
+   /if \(customStages\.length\) return customStages\.slice\(\)/.test(APP), true);
+ck("stages and current_stage_id are read from the row",
+   /select\("pathway_type, target_timeline, milestones, notes, stages, current_stage_id"\)/.test(APP), true);
+ck("...and persisted on save", /stages: customStages, current_stage_id: currentStageId/.test(APP), true);
+
 // ---- i18n parity --------------------------------------------------------
 // The number is a consequence; parity is the invariant. Asserting a hard count
 // alone is what pushes the next person to pad a dictionary to hit it.

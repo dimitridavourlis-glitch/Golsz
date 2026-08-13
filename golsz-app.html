@@ -8599,7 +8599,7 @@ function PlanCrumb({ from }) {
 function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
   const hasGoal = !!pathwayRow;
   const goalLabel = hasGoal ? t("pathway_type_" + pathwayRow.pathway_type) : t("home_path_goal_placeholder");
-  const config = SPORT_PATHWAY_STAGES[athlete && athlete.sport] || SPORT_PATHWAY_STAGES.__default;
+  const stages = athleteStages(athlete, pathwayRow);
   // A ROUTE THIS SPORT HAS IS NOT A GOAL THIS ATHLETE SET.
   // This branch used to render for every Soccer athlete whose pathway was not
   // NCAA, labelled only "NCAA" and hanging off a dashed line — and Plan called
@@ -8608,7 +8608,7 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
   // clearly not theirs. If they HAVE told Scout a secondary goal, that is a
   // real fact and gets said in their own words instead.
   const statedSecondary = statedContextValue(athlete && athlete.scout_context, "secondary_goal");
-  const stageIdx = currentStageIndex(athlete, config.stages.length);
+  const stageIdx = currentStageIndex(athlete, stages.length);
   return (
     <div style={{ padding: "6px 4px 14px" }}>
       {/* ONE OBJECT, ONE PICTURE. This used to render YOU -> current club ->
@@ -8618,8 +8618,8 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
           stages, same source (SPORT_PATHWAY_STAGES), same current-stage
           derivation as Plan — compact here because Home reports and Plan owns. */}
       <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-        {config.stages.map((key, i) => (
-          <React.Fragment key={key}>
+        {stages.map((stage, i) => (
+          <React.Fragment key={stage.id}>
             {i > 0 && <span style={{ color: C.slate, fontSize: 11, flexShrink: 0 }}>→</span>}
             <span style={{
               display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, borderRadius: 20,
@@ -8627,7 +8627,7 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
               color: i === stageIdx ? C.chalk : i < stageIdx ? C.lime : C.slate,
               background: i < stageIdx ? C.limeWash : "none",
               border: `1px solid ${i === stageIdx ? C.lime : i < stageIdx ? C.limeBorder : C.line2}`,
-            }}>{t("pathway_stage_" + key)}</span>
+            }}>{stageLabel(stage, t)}</span>
           </React.Fragment>
         ))}
         <span style={{ color: C.slate, fontSize: 11, flexShrink: 0 }}>→</span>
@@ -9767,9 +9767,38 @@ function stageIcon(i, total) {
   if (i === total - 1) return Trophy;
   return Shield;
 }
-function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing }) {
-  const config = SPORT_PATHWAY_STAGES[sport] || SPORT_PATHWAY_STAGES.__default;
-  const stages = config.stages;
+// THE ONLY READER OF SPORT_PATHWAY_STAGES.
+//
+// Home and Plan must draw the same pathway, so they must not each decide what
+// the stages are. That held while stages were a constant; the moment an athlete
+// can rename or add one, a second reader means the two screens drift — which is
+// the "two pictures of one object" failure this week's work removed. A suite
+// assertion enforces that nothing else references the config.
+//
+// Empty `stages` means "use the sport's", so an athlete who never edits sees
+// exactly what they see today and nothing was backfilled into their row.
+//
+// A returned stage is { id, label }. label === null means "translate via id"
+// (a sport default); a string is the athlete's own words, rendered verbatim
+// because it is not translatable. `id` is stable and never derived from the
+// label — milestones store it in `stage`, so a rename must not orphan them.
+function athleteStages(athlete, pathwayRow) {
+  const custom = pathwayRow && Array.isArray(pathwayRow.stages) ? pathwayRow.stages : [];
+  if (custom.length) {
+    return custom
+      .filter((s) => s && s.id)
+      .map((s) => ({ id: String(s.id), label: typeof s.label === "string" ? s.label : "" }));
+  }
+  const cfg = SPORT_PATHWAY_STAGES[(athlete && athlete.sport)] || SPORT_PATHWAY_STAGES.__default;
+  return cfg.stages.map((key) => ({ id: key, label: null }));
+}
+function stageLabel(stage, t) {
+  return stage.label === null ? t("pathway_stage_" + stage.id) : stage.label;
+}
+function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing, stages: stagesProp }) {
+  // Stages arrive resolved from the owner (PathwayPlan). This component does
+  // not read SPORT_PATHWAY_STAGES itself — see athleteStages above.
+  const stages = stagesProp && stagesProp.length ? stagesProp : athleteStages(athlete, null);
   const curIdx = currentStageIndex(athlete, stages.length);
   const hasGoal = !!pathwayType;
   // Per-node sub-label: real detail under each stage where GOLSZ actually
@@ -9797,13 +9826,13 @@ function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing }) {
           the map reads as "on a pitch" without a raster asset. */}
       <div aria-hidden="true" style={{ position: "absolute", left: "50%", top: 6, width: 118, height: 118, marginLeft: -59, borderRadius: "50%", border: `1px solid ${C.line}`, opacity: 0.28, pointerEvents: "none" }} />
       <div style={{ position: "relative", display: "flex", alignItems: "flex-start", paddingTop: Math.min(total - 1, 3) * RISE + 4, paddingBottom: 4 }}>
-        {stages.map((stageKey, i) => {
+        {stages.map((stage, i) => {
           const reached = i <= curIdx;
           const Icon = stageIcon(i, total);
           return (
-            <React.Fragment key={stageKey}>
+            <React.Fragment key={stage.id}>
               <div style={{ transform: `translateY(${lift(i)}px)`, flex: "1 1 0", minWidth: 0 }}>
-                <PathNode Icon={Icon} label={t("pathway_stage_" + stageKey)} sub={subFor(i)} filled={reached} current={i === curIdx} />
+                <PathNode Icon={Icon} label={stageLabel(stage, t)} sub={subFor(i)} filled={reached} current={i === curIdx} />
               </div>
               {i < total - 1 && (
                 <div style={{ width: 10, flexShrink: 0, height: 2, marginTop: 15, background: i < curIdx ? C.lime : C.line2, transform: `translateY(${lift(i) - RISE / 2}px) rotate(-${RISE / 3}deg)` }} />
@@ -9900,6 +9929,24 @@ function PathwayPlan({ viewUserId, onChange, onNavigate }) {
   const [timeline, setTimeline] = useState("");
   const [notes, setNotes] = useState("");
   const [milestones, setMilestones] = useState([]);
+  // The athlete's own stages, once they have any. Empty means "use the sport's",
+  // which athleteStages() handles.
+  //
+  // DELIBERATELY NOT IN THE SELECT YET. Migration 128 adds pathway_plan.stages;
+  // selecting a column that does not exist makes PostgREST reject the whole
+  // request, so the Plan page would fail to load for every athlete the moment
+  // this shipped ahead of the migration. It joins the select in the next step,
+  // after 128 is applied and verified by query.
+  const [customStages, setCustomStages] = useState([]);
+  // Where the athlete says they are. Only meaningful once stages are theirs —
+  // currentStageIndex() infers position from recruiting_status against the
+  // SPORT's sequence, which means nothing for a stage they wrote themselves.
+  const [currentStageId, setCurrentStageId] = useState(null);
+  const [editingStage, setEditingStage] = useState(null);
+  // Id of a section being named for the first time. Never in customStages until
+  // commitStage() puts it there, so an abandoned one leaves no trace.
+  const [pendingStage, setPendingStage] = useState(null);
+  const [stageDraft, setStageDraft] = useState("");
   const [editingMilestone, setEditingMilestone] = useState(null);
   const [milestoneDraft, setMilestoneDraft] = useState("");
   const [newMilestone, setNewMilestone] = useState("");
@@ -9937,7 +9984,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate }) {
         if (!user) return;
         setUid(user.id);
         const [{ data }, { data: ath }] = await Promise.all([
-          sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, notes").eq("user_id", user.id).maybeSingle(),
+          sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, notes, stages, current_stage_id").eq("user_id", user.id).maybeSingle(),
           sb.from("athletes").select("sport, club_name, recruiting_status, scout_context").eq("id", user.id).single(),
         ]);
         setAthlete(ath || null);
@@ -9947,6 +9994,8 @@ function PathwayPlan({ viewUserId, onChange, onNavigate }) {
           setTimeline(data.target_timeline || "");
           setNotes(data.notes || "");
           setMilestones(Array.isArray(data.milestones) ? data.milestones.map(normalizeMilestone) : []);
+          setCustomStages(Array.isArray(data.stages) ? data.stages.filter((x) => x && x.id).map((x) => ({ id: String(x.id), label: String(x.label || "") })) : []);
+          setCurrentStageId(data.current_stage_id || null);
         } else {
           setEditingGoal(true);
         }
@@ -9961,6 +10010,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate }) {
     const next = {
       pathway_type: pathwayType, target_timeline: timeline.trim().slice(0, 100) || null,
       notes: notes.trim().slice(0, 1000) || null, milestones,
+      stages: customStages, current_stage_id: currentStageId,
       ...overrides,
     };
     try {
@@ -9970,6 +10020,84 @@ function PathwayPlan({ viewUserId, onChange, onNavigate }) {
       if (next.milestones) setMilestones(next.milestones);
     } catch (e) { console.error("GOLSZ pathway plan save error:", e); }
     finally { setBusy(false); }
+  }
+
+  // ---- STAGES ARE THE ATHLETE'S ONCE THEY TOUCH THEM ----------------------
+  // Empty customStages means "use the sport's". The first edit MATERIALISES the
+  // sport defaults into stored rows, so there is something concrete to rename
+  // or reorder — and from then on the athlete owns the whole list. Nothing is
+  // backfilled for athletes who never edit: their row stays empty and they keep
+  // rendering the sport's route.
+  const MAX_STAGES = 7;
+  function materialisedStages() {
+    if (customStages.length) return customStages.slice();
+    return athleteStages(athlete, null).map((st) => ({ id: st.id, label: t("pathway_stage_" + st.id) }));
+  }
+  function saveStages(next, extra) {
+    setCustomStages(next);
+    save(Object.assign({ stages: next }, extra || {}));
+  }
+  // A NEW SECTION IS NOT PERSISTED UNTIL IT HAS A NAME. The first version
+  // saved { label: "" } on tap, and renameStage rejects empty — so abandoning
+  // the editor left a blank heading the athlete could not name and could only
+  // delete. The pending section lives in state until it is named; cancelling
+  // discards it and nothing was ever written.
+  function addStage() {
+    if (materialisedStages().length >= MAX_STAGES) return;
+    const id = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random();
+    setPendingStage(id);
+    setStageDraft("");
+    setEditingStage(id);
+  }
+  function cancelStageEdit() {
+    setPendingStage(null);      // an unnamed section is discarded, not stored
+    setEditingStage(null);
+    setStageDraft("");
+  }
+  // Commit handles both cases: naming the pending section appends it, naming an
+  // existing one renames in place. Empty stays a no-op either way.
+  function commitStage(id, label) {
+    const clean = String(label || "").trim().slice(0, 40);
+    if (!clean) { if (pendingStage === id) cancelStageEdit(); return; }
+    const base = materialisedStages();
+    const next = pendingStage === id
+      ? base.concat([{ id, label: clean }])
+      : base.map((st) => (st.id === id ? { id: st.id, label: clean } : st));
+    setPendingStage(null);
+    setEditingStage(null);
+    setStageDraft("");
+    saveStages(next);
+  }
+  function renameStage(id, label) {
+    const clean = String(label || "").trim().slice(0, 40);
+    if (!clean) return;                       // empty is a no-op, not a delete
+    // The id is NEVER derived from the label. Milestones store it in `stage`,
+    // so a rename must not orphan the steps filed under this section.
+    saveStages(materialisedStages().map((st) => (st.id === id ? { id: st.id, label: clean } : st)));
+  }
+  function moveStage(id, dir) {
+    const base = materialisedStages();
+    const i = base.findIndex((st) => st.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= base.length) return;
+    const next = base.slice();
+    next[i] = base[j]; next[j] = base[i];
+    saveStages(next);
+  }
+  // DELETING A SECTION NEVER DELETES ITS STEPS. They fall back to unfiled and
+  // stay visible in the list, because a cascade here is the destructive-write
+  // bug removed from Scout wearing a different hat: the athlete asked to remove
+  // a heading, not to lose the work underneath it.
+  function deleteStage(id) {
+    const next = materialisedStages().filter((st) => st.id !== id);
+    const freed = milestones.map((m) => (m.stage === id ? Object.assign({}, m, { stage: null }) : m));
+    setEditingStage(null);
+    setMilestones(freed);
+    saveStages(next, { milestones: freed, current_stage_id: currentStageId === id ? null : currentStageId });
+  }
+  function setCurrentStage(id) {
+    setCurrentStageId(id);
+    save({ current_stage_id: id, stages: materialisedStages() });
   }
 
   function addMilestone(stageKey) {
@@ -10073,7 +10201,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate }) {
 
   return (
     <>
-      <PathwayMap sport={athlete && athlete.sport} athlete={athlete} pathwayType={exists ? pathwayType : null} t={t} onEditGoal={() => setEditingGoal((v) => !v)} editing={editingGoal} />
+      <PathwayMap sport={athlete && athlete.sport} athlete={athlete} pathwayType={exists ? pathwayType : null} t={t} onEditGoal={() => setEditingGoal((v) => !v)} editing={editingGoal} stages={athleteStages(athlete, { stages: customStages })} />
 
       {editingGoal ? (
         <div style={{ ...card, borderLeft: `3px solid ${C.lime}` }}>
