@@ -249,8 +249,16 @@ ck("adding a section does not write before it is named",
    /function addStage\(\)[\s\S]{0,400}?\n  \}/.exec(APP)[0].includes("saveStages"), false);
 ck("...it is held as pending instead", /setPendingStage\(id\)/.test(APP), true);
 ck("cancelling discards the pending section", /setPendingStage\(null\);\s*\/\/ an unnamed section is discarded/.test(APP), true);
-ck("committing a pending section appends it, an existing one renames in place",
-   /pendingStage === id\s*\?\s*base\.concat\(\[\{ id, label: clean \}\]\)/.test(APP), true);
+// Was pinned to `base.concat(...)` and broke when insert-before/after landed —
+// a pending section now splices in at the position the athlete tapped, which is
+// the whole point of hanging "add" off a node instead of a button at the end.
+// Asserting the branch exists, not the array method it uses.
+ck("a pending section is inserted, an existing one renamed in place",
+   /if \(pendingStage === id\) \{[\s\S]{0,200}?splice\(pendingAt === null \? next\.length : pendingAt, 0, \{ id, label: clean \}\)/.test(APP), true);
+ck("...and renaming still goes through the id-preserving map",
+   /next = base\.map\(\(st\) => \(st\.id === id \? \{ id: st\.id, label: clean \} : st\)\)/.test(APP), true);
+ck("insert refuses past the cap", /function insertStage\(nearId, offset\)[\s\S]{0,300}?length >= MAX_STAGES\) return;/.test(APP), true);
+ck("...and writes nothing until named", /function insertStage\(nearId, offset\)[\s\S]{0,600}?\n  \}/.exec(APP)[0].includes("saveStages"), false);
 // Empty stored stages must keep meaning "the sport's", or every athlete who
 // never edits gets an empty map.
 ck("the first edit materialises the sport defaults rather than backfilling",
