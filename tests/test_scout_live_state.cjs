@@ -181,8 +181,12 @@ ck("both branches normalise, so Scout's dateless/stageless steps are repaired",
 ck("replacing states what is lost before it writes",
    /pathwayConfirm === "replace"[\s\S]{0,600}scout_pathway_replace_warning/.test(APP), true);
 ck("Scout holds the current Pathway to compare against", /const \[currentPathway, setCurrentPathway\]/.test(APP), true);
+// Pinned the exact column list, so it broke when `stages, current_stage_id`
+// were added for the node editor. The property is that Scout reads the Pathway
+// on mount — not which columns it happened to need in August. Asserting the
+// columns it actually depends on, and leaving room for more.
 ck("...read on mount alongside the other athlete reads",
-   /sb\.from\("pathway_plan"\)\.select\("pathway_type, target_timeline, milestones"\)/.test(APP), true);
+   /sb\.from\("pathway_plan"\)\.select\("pathway_type, target_timeline, milestones[^"]*"\)/.test(APP), true);
 ck("...and refreshed after an apply so a second proposal compares correctly",
    /setCurrentPathway\(\{ pathway_type: pathway\.pathway_type/.test(APP), true);
 ck("all four preview strings are translated in every language",

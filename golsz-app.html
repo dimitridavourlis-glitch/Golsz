@@ -7423,7 +7423,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
           sb.from("profiles").select("full_name, dob, occupation").eq("id", who).single(),
           sb.from("athletes").select("sport, position, grad_year, gpa, country, club_name, recruiting_status, license, looking_for_players, education_level, scout_context").eq("id", who).single(),
           sb.from("athlete_benchmarks").select("metric, value, unit, recorded_date").eq("user_id", who).order("recorded_date", { ascending: false }),
-          sb.from("pathway_plan").select("pathway_type, target_timeline, milestones").eq("user_id", who).maybeSingle(),
+          sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, stages, current_stage_id").eq("user_id", who).maybeSingle(),
         ]);
         setCurrentPathway(pathwayNow || null);
         if (Array.isArray(benchmarks) && benchmarks.length) {
@@ -8612,7 +8612,9 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
   // clearly not theirs. If they HAVE told Scout a secondary goal, that is a
   // real fact and gets said in their own words instead.
   const statedSecondary = statedContextValue(athlete && athlete.scout_context, "secondary_goal");
-  const stageIdx = currentStageIndex(athlete, stages.length);
+  const statedIdx = (pathwayRow && pathwayRow.current_stage_id)
+    ? stages.findIndex((st) => st.id === pathwayRow.current_stage_id) : -1;
+  const stageIdx = statedIdx >= 0 ? statedIdx : currentStageIndex(athlete, stages.length);
   return (
     <div style={{ padding: "6px 4px 14px" }}>
       {/* ONE OBJECT, ONE PICTURE. This used to render YOU -> current club ->
@@ -8699,7 +8701,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           sb.from("verification_requests").select("status").eq("user_id", who).order("created_at", { ascending: false }).limit(1),
           sb.from("athlete_benchmarks").select("metric, value, unit, recorded_date").eq("user_id", who).order("recorded_date", { ascending: false }),
           sb.from("development_plan_items").select("status").eq("user_id", who),
-          sb.from("pathway_plan").select("pathway_type, milestones, baseline_complete").eq("user_id", who).maybeSingle(),
+          sb.from("pathway_plan").select("pathway_type, milestones, baseline_complete, stages, current_stage_id").eq("user_id", who).maybeSingle(),
           sb.from("outreach_targets").select("id, status, updated_at").eq("user_id", who),
         ]);
         if (prof && prof.full_name) setName(prof.full_name);

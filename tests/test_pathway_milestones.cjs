@@ -189,6 +189,29 @@ ck("PathwayMap takes stages as a prop rather than deriving them",
    /function PathwayMap\(\{[^}]*stages: stagesProp/.test(APP), true);
 ck("PathwayStrip resolves through the same function",
    /const stages = athleteStages\(athlete, pathwayRow\)/.test(APP), true);
+
+// EVERY SCREEN THAT DRAWS THE PATHWAY MUST READ THE COLUMNS THAT DEFINE IT.
+// One resolver was not enough. Home called athleteStages() correctly but its
+// fetch never selected `stages`, so `custom.length` was 0 and it fell back to
+// the sport defaults — Plan drew the athlete's renamed sections, Home drew
+// Academy/U19/Senior/Professional. The resolver made the two screens agree on
+// HOW to read; nothing made them agree on WHAT to read, and the fallback is
+// silent by design because it is the correct behaviour for an unedited row.
+//
+// So: any select on pathway_plan whose result reaches athleteStages() must
+// carry stages. Asserted per call site rather than in aggregate, because the
+// aggregate passed while Home was wrong.
+const pathwaySelects = [...APP.matchAll(/from\("pathway_plan"\)\.select\("([^"]+)"\)/g)].map((m) => m[1]);
+ck("more than one component selects from pathway_plan", pathwaySelects.length > 1, true);
+const drawing = pathwaySelects.filter((sel) => /milestones/.test(sel));
+ck("every select that reads milestones also reads stages",
+   drawing.filter((sel) => !/\bstages\b/.test(sel)), []);
+ck("...and current_stage_id, so stated position survives the trip",
+   drawing.filter((sel) => !/current_stage_id/.test(sel)), []);
+// Stated beats inferred: currentStageIndex() guesses from recruiting_status
+// against the SPORT's sequence and cannot know what a self-written section is.
+ck("a stated current stage overrides the heuristic",
+   /statedIdx >= 0 \? statedIdx : currentStageIndex\(/.test(APP), true);
 // Empty custom stages must fall back, or every existing athlete's map empties.
 ck("an athlete with no custom stages still gets the sport's",
    /if \(custom\.length\)/.test(APP), true);
