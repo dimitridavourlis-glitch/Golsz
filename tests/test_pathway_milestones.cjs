@@ -290,6 +290,22 @@ ck("stages and current_stage_id are read from the row",
    /select\("pathway_type, target_timeline, milestones, notes, stages, current_stage_id"\)/.test(APP), true);
 ck("...and persisted on save", /stages: customStages, current_stage_id: currentStageId/.test(APP), true);
 
+// ---- the Scout note explains, it never blocks ----------------------------
+// Free is locked out of Scout's pathway help at Starter, so the note has three
+// states, not two. A plan that has not loaded must behave like the safe case:
+// rendering a paywall during a fetch is the bug that once showed "Upgrade to
+// unlock" to paying athletes on every gated page.
+const note = /\{planKnown\(plan\) && \([\s\S]{0,1400}?pathway_scout_help_locked[\s\S]{0,200}?\)\}/.exec(APP);
+ck("the Scout note is gated on planKnown, not on the plan value", !!note, true);
+ck("...and only then asks whether the feature is unlocked",
+   note[0].indexOf("planKnown(plan)") < note[0].indexOf('featureUnlocked(plan, "pathway_plan")'), true);
+// FeatureLock REPLACES content. Here the manual controls must stay usable —
+// building a pathway by hand is free and always has been.
+ck("the pathway card never uses FeatureLock",
+   /pathway_scout_help_locked[\s\S]{0,300}FeatureLock/.test(APP), false);
+ck("the locked copy points at what they can do instead",
+   /pathway_scout_help_locked/.test(APP), true);
+
 // ---- i18n parity --------------------------------------------------------
 // The number is a consequence; parity is the invariant. Asserting a hard count
 // alone is what pushes the next person to pad a dictionary to hit it.
