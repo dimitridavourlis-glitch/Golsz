@@ -5369,7 +5369,7 @@ async function getAthleteState(userId) {
   } catch {}
   // The Plan, in full. milestones is jsonb; each entry is {label, done}.
   try {
-    const p = await fetch(url + "/rest/v1/pathway_plan?user_id=eq." + userId + "&select=pathway_type,target_timeline,milestones,baseline_complete", { headers });
+    const p = await fetch(url + "/rest/v1/pathway_plan?user_id=eq." + userId + "&select=pathway_type,target_timeline,milestones,baseline_complete,stages,current_stage_id", { headers });
     const pRows = await p.json();
     if (Array.isArray(pRows) && pRows[0]) {
       pathwayRow = pRows[0];
@@ -5431,6 +5431,51 @@ async function getAthleteState(userId) {
   }
   const milestoneCount = milestones.length;
   const milestonesDone = milestones.filter((m) => m && m.done).length;
+
+  // ---- STAGES: the athlete's own, or the sport's — never conflated --------
+  // athleteStages() in the client is the reference. Empty stored stages means
+  // "use the sport's", so a default section must NEVER be described as
+  // something the athlete chose. That is the same inferred-as-stated failure
+  // the client spent a week removing, and Scout saying "the U19 stage you set
+  // up" about a row nobody touched is the worst version of it.
+  const storedStages = (pathwayRow && Array.isArray(pathwayRow.stages))
+    ? pathwayRow.stages.filter((x) => x && x.id).map((x) => ({ id: String(x.id), label: String(x.label || "") }))
+    : [];
+  const stagesAreCustom = storedStages.length > 0;
+  const stageNameOf = (id) => {
+    if (!id) return null;
+    const hit = storedStages.find((x) => x.id === id);
+    return hit ? hit.label : id;      // sport-default ids are the key itself
+  };
+  const currentStageId = (pathwayRow && pathwayRow.current_stage_id) || null;
+
+  // ---- MILESTONES: the actual steps, capped -------------------------------
+  // Same caps as extractScoutContextUpdates: first 10, labels to 200 chars.
+  // A 40-step plan must not blow the prompt budget.
+  const undone = milestones.filter((m) => m && !m.done);
+  const dated = undone.filter((m) => m && typeof m.due === "string" && m.due);
+  const nextMilestoneRow = dated.length
+    ? dated.slice().sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0))[0]
+    : (undone[0] || null);
+  const openMilestones = undone.slice(0, 10).map((m) => ({
+    label: String(m.label || "").slice(0, 200),
+    due: (typeof m.due === "string" && m.due) ? m.due : null,
+    stage: stageNameOf(m.stage),
+  }));
+  const openMilestonesTruncated = Math.max(0, undone.length - openMilestones.length);
+  const nextMilestone = nextMilestoneRow ? {
+    label: String(nextMilestoneRow.label || "").slice(0, 200),
+    due: (typeof nextMilestoneRow.due === "string" && nextMilestoneRow.due) ? nextMilestoneRow.due : null,
+    stage: stageNameOf(nextMilestoneRow.stage),
+  } : null;
+
+  // ---- FILM: that it exists and what it shows, never the URLs -------------
+  // Scout does not need to repeat links back at the athlete, and a URL in the
+  // prompt is a URL the model can mangle into a plausible-looking wrong one.
+  const highlightsArr = (athleteRow && Array.isArray(athleteRow.highlights)) ? athleteRow.highlights : [];
+  const timelineArr = (athleteRow && Array.isArray(athleteRow.timeline)) ? athleteRow.timeline : [];
+  const highlightTitles = highlightsArr.slice(0, 10).map((h) => String((h && h.title) || "").slice(0, 120)).filter(Boolean);
+  const timelineTitles = timelineArr.slice(0, 10).map((tl) => String((tl && (tl.title || tl.label)) || "").slice(0, 120)).filter(Boolean);
   // The app's own diagnosis, computed from the same rows Home uses and by
   // the same functions. Scout is handed the RESULT, not the ingredients, so
   // it reports the athlete's score rather than forming a second opinion.
@@ -5452,6 +5497,11 @@ async function getAthleteState(userId) {
     profileComplete, pathwayCreated, baselineComplete, sportSupportLevel, sport, country,
     structuredSportKnowledge: hasStructuredSportKnowledge(sport),
     pathwayType, pathwayTimeline, milestoneCount, milestonesDone,
+    openMilestones, openMilestonesTruncated, nextMilestone,
+    stagesAreCustom, stageNames: storedStages.map((x) => x.label).filter(Boolean),
+    currentStageName: stageNameOf(currentStageId),
+    highlightCount: highlightsArr.length, highlightTitles,
+    timelineCount: timelineArr.length, timelineTitles,
     // D — a Pathway with no milestones is a shell, not a Pathway. One flag,
     // computed once here, so Home, Plan and Scout cannot disagree about it.
     pathwayComplete: pathwayCreated && milestoneCount > 0,
@@ -6061,6 +6111,47 @@ export default async function handler(req, res) {
     // only pathway_created=true here and was therefore unable to answer
     // "fix what my plan says".
     athleteBlock += `\n\nTHEIR PLAN (the Plan tab, live): pathway_type=${athleteState.pathwayType || "none"}, target_timeline=${athleteState.pathwayTimeline || "none"}, milestones=${athleteState.milestonesDone}/${athleteState.milestoneCount} done, pathway_complete=${athleteState.pathwayComplete ? "yes" : "no"}.`;
+    // THE ACTUAL STEPS, not just a count. Scout could see 3/8 and still not
+    // answer "what should I do this week", because it had never been told what
+    // the eight were. Capped at 10 open steps and 200-char labels, matching
+    // extractScoutContextUpdates, so a 40-step plan cannot blow the budget.
+    // Done steps are a count only — their labels add tokens and change nothing.
+    if (athleteState.openMilestones && athleteState.openMilestones.length) {
+      athleteBlock += `\n\nTHEIR OPEN STEPS (${athleteState.milestonesDone} of ${athleteState.milestoneCount} already done):`;
+      for (const m of athleteState.openMilestones) {
+        athleteBlock += `\n- ${m.label}${m.due ? ` — due ${m.due}` : " — no date set"}${m.stage ? ` (section: ${m.stage})` : ""}`;
+      }
+      if (athleteState.openMilestonesTruncated > 0) {
+        athleteBlock += `\n- ...and ${athleteState.openMilestonesTruncated} more not listed here.`;
+      }
+      if (athleteState.nextMilestone) {
+        athleteBlock += `\nNEXT BY THE APP'S OWN RULE (earliest dated step not done, else the first undone one — this is what Home shows them): "${athleteState.nextMilestone.label}"${athleteState.nextMilestone.due ? ` due ${athleteState.nextMilestone.due}` : " (no date)"}. Do not nominate a different "next" step; theirs is on screen.`;
+      }
+    }
+
+    // SECTIONS: theirs, or the sport's. Never conflated. Describing a default
+    // section as something they chose is the inferred-as-stated failure this
+    // product spent a week removing.
+    if (athleteState.stagesAreCustom && athleteState.stageNames && athleteState.stageNames.length) {
+      athleteBlock += `\n\nTHEIR PATHWAY SECTIONS (they wrote these themselves — use their words): ${athleteState.stageNames.join(" -> ")}.`;
+    } else {
+      athleteBlock += `\n\nPATHWAY SECTIONS: they are still on the DEFAULT sequence for their sport — they have not named or customised any section. Never describe a default section as one they set up or chose.`;
+    }
+    if (athleteState.currentStageName) {
+      athleteBlock += ` They have said they are currently at: ${athleteState.currentStageName}.`;
+    }
+
+    // FILM: that it exists and what it shows. Titles, never URLs — Scout has no
+    // reason to read a link back at them, and a URL in the prompt is a URL the
+    // model can mangle into a plausible wrong one.
+    if (athleteState.highlightCount) {
+      athleteBlock += `\n\nTHEIR FILM: ${athleteState.highlightCount} highlight${athleteState.highlightCount === 1 ? "" : "s"} on their Passport${athleteState.highlightTitles.length ? `: ${athleteState.highlightTitles.join("; ")}` : ""}. Film EXISTS — do not tell them to add their first highlight.`;
+    } else {
+      athleteBlock += `\n\nTHEIR FILM: none on their Passport yet.`;
+    }
+    if (athleteState.timelineCount) {
+      athleteBlock += `\nTHEIR CAREER TIMELINE: ${athleteState.timelineCount} entr${athleteState.timelineCount === 1 ? "y" : "ies"}${athleteState.timelineTitles.length ? `: ${athleteState.timelineTitles.join("; ")}` : ""}.`;
+    }
     if (athleteState.pathwayCreated && !athleteState.pathwayComplete) {
       athleteBlock += ` This Pathway has NO milestones — it is a shell, not a finished Pathway. Do not describe it as built, done or in place. Offer to fill it in.`;
     }
