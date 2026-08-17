@@ -512,6 +512,7 @@ const I18N = {
     admin_search_name: "Search by name…", admin_no_name: "(no name)", admin_minor: "MINOR", admin_admin: "ADMIN",
     admin_joined: "joined ", admin_ago: " ago", admin_revoke_admin: "Revoke admin", admin_make_admin: "Make admin",
     admin_ai_unlimited_badge: "Unlimited AI", admin_grant_ai_unlimited: "Grant unlimited AI", admin_revoke_ai_unlimited: "Revoke unlimited AI", admin_ai_unlimited_hint: "Lifts their daily Scout question cap — no plan or billing change.",
+    admin_full_access_badge: "Full access", admin_grant_full_access: "Grant full access", admin_revoke_full_access: "Revoke full access", admin_full_access_hint: "Paid features without a paid plan. Does not change their plan or billing.",
     admin_add_event: "ADD EVENT", admin_title_ph: "Title", admin_location_ph: "Location", admin_level_ph: "Level",
     admin_spots_ph: "Spots available", admin_create_event: "Create event",
     admin_banned: "BANNED", admin_block_user: "Block", admin_unblock_user: "Unblock",
@@ -847,6 +848,7 @@ const I18N = {
     admin_search_name: "Rechercher par nom…", admin_no_name: "(sans nom)", admin_minor: "MINEUR", admin_admin: "ADMIN",
     admin_joined: "inscrit il y a ", admin_ago: "", admin_revoke_admin: "Révoquer admin", admin_make_admin: "Nommer admin",
     admin_ai_unlimited_badge: "IA illimitée", admin_grant_ai_unlimited: "Accorder IA illimitée", admin_revoke_ai_unlimited: "Révoquer IA illimitée", admin_ai_unlimited_hint: "Supprime son plafond quotidien de questions Scout — aucun changement de forfait ou de facturation.",
+    admin_full_access_badge: "Accès complet", admin_grant_full_access: "Accorder l'accès complet", admin_revoke_full_access: "Révoquer l'accès complet", admin_full_access_hint: "Fonctions payantes sans forfait payant. Ne modifie ni le forfait ni la facturation.",
     admin_banned: "BANNI", admin_block_user: "Bloquer", admin_unblock_user: "Débloquer",
     admin_unverified: "non vérifié", admin_verify_user_err: "Impossible de mettre à jour le statut de vérification.",
     admin_tier_none: "Non vérifié", admin_tier_pro: "Vérif. Pro", admin_tier_elite: "Vérif. Elite",
@@ -1182,6 +1184,7 @@ const I18N = {
     admin_search_name: "Buscar por nombre…", admin_no_name: "(sin nombre)", admin_minor: "MENOR", admin_admin: "ADMIN",
     admin_joined: "se unió hace ", admin_ago: "", admin_revoke_admin: "Revocar admin", admin_make_admin: "Hacer admin",
     admin_ai_unlimited_badge: "IA ilimitada", admin_grant_ai_unlimited: "Otorgar IA ilimitada", admin_revoke_ai_unlimited: "Revocar IA ilimitada", admin_ai_unlimited_hint: "Elimina su límite diario de preguntas a Scout — sin cambio de plan ni de facturación.",
+    admin_full_access_badge: "Acceso completo", admin_grant_full_access: "Conceder acceso completo", admin_revoke_full_access: "Revocar acceso completo", admin_full_access_hint: "Funciones de pago sin plan de pago. No cambia su plan ni la facturación.",
     admin_banned: "BANEADO", admin_block_user: "Bloquear", admin_unblock_user: "Desbloquear",
     admin_unverified: "no verificado", admin_verify_user_err: "No se pudo actualizar el estado de verificación.",
     admin_tier_none: "No verificado", admin_tier_pro: "Verif. Pro", admin_tier_elite: "Verif. Elite",
@@ -1517,6 +1520,7 @@ const I18N = {
     admin_search_name: "Αναζήτηση με όνομα…", admin_no_name: "(χωρίς όνομα)", admin_minor: "ΑΝΗΛΙΚΟΣ", admin_admin: "ADMIN",
     admin_joined: "εγγράφηκε πριν από ", admin_ago: "", admin_revoke_admin: "Ανάκληση admin", admin_make_admin: "Ορισμός ως admin",
     admin_ai_unlimited_badge: "Απεριόριστο AI", admin_grant_ai_unlimited: "Χορήγηση απεριόριστου AI", admin_revoke_ai_unlimited: "Ανάκληση απεριόριστου AI", admin_ai_unlimited_hint: "Αφαιρεί το ημερήσιο όριο ερωτήσεων στο Scout — καμία αλλαγή στο πλάνο ή τη χρέωση.",
+    admin_full_access_badge: "Πλήρης πρόσβαση", admin_grant_full_access: "Χορήγηση πλήρους πρόσβασης", admin_revoke_full_access: "Ανάκληση πλήρους πρόσβασης", admin_full_access_hint: "Πληρωμένες λειτουργίες χωρίς συνδρομή. Δεν αλλάζει το πλάνο ή τη χρέωση.",
     admin_banned: "ΑΠΟΚΛΕΙΣΜΕΝΟΣ", admin_block_user: "Αποκλεισμός", admin_unblock_user: "Άρση αποκλεισμού",
     admin_unverified: "μη επαληθευμένο", admin_verify_user_err: "Δεν ήταν δυνατή η ενημέρωση της κατάστασης επαλήθευσης.",
     admin_tier_none: "Μη επαληθευμένο", admin_tier_pro: "Επαλ. Pro", admin_tier_elite: "Επαλ. Elite",
@@ -4467,14 +4471,34 @@ function statedContextValue(scoutContext, field) {
   return value.trim();
 }
 
-function featureUnlocked(plan, feature) {
+// fullAccess is an admin-granted comp: paid features without a paid plan. It is
+// checked AFTER planKnown() deliberately — the three-valued rule survives, so a
+// still-loading profile never renders as unlocked. Before that check it would
+// reintroduce the bug that showed "Upgrade to unlock" to paying athletes, only
+// inverted: a comped user would flash full access before their plan resolved.
+//
+// It does NOT touch plan. A comped user stays 'free' in profiles.plan and in
+// Stripe; this is a second fact alongside billing, not a rewrite of it. That is
+// what keeps "how many are paying" answerable later.
+// Set once from the profile fetch. Read by the gate when no explicit value is
+// passed. Reset to false on sign-out with the rest of the session state, so a
+// comp cannot survive into the next account on a shared device.
+let CURRENT_FULL_ACCESS = false;
+function setCurrentFullAccess(v) { CURRENT_FULL_ACCESS = !!v; }
+function featureUnlocked(plan, feature, fullAccess) {
   if (!planKnown(plan)) return false;
+  if (fullAccess === undefined ? CURRENT_FULL_ACCESS : fullAccess) return true;
   const min = FEATURE_MIN_PLAN[feature];
   if (!min) return true;
   return PLAN_RANK[plan] >= PLAN_RANK[min];
 }
 
-function featureLocked(plan, feature) {
+function featureLocked(plan, feature, fullAccess) {
+  // Must mirror featureUnlocked exactly. A component asking "is this locked"
+  // and one asking "is this unlocked" have to get consistent answers for the
+  // same athlete, or a comped user sees a paywall next to a working feature.
+  if (!planKnown(plan)) return false;
+  if (fullAccess === undefined ? CURRENT_FULL_ACCESS : fullAccess) return false;
   return planKnown(plan) && !featureUnlocked(plan, feature);
 }
 
@@ -5915,7 +5939,7 @@ function AdminPanel({ onBack }) {
 
   async function loadUsers(query) {
     try {
-      let q = sb.from("profiles").select("id, full_name, plan, is_minor, is_admin, is_banned, occupation, verified_tier, ai_unlimited, created_at").order("created_at", { ascending: false }).limit(100);
+      let q = sb.from("profiles").select("id, full_name, plan, is_minor, is_admin, is_banned, occupation, verified_tier, ai_unlimited, full_access, created_at").order("created_at", { ascending: false }).limit(100);
       if (query && query.trim()) q = q.ilike("full_name", `%${query.trim()}%`);
       const { data, error } = await q;
       if (error) throw error;
@@ -5974,6 +5998,16 @@ function AdminPanel({ onBack }) {
   // is_admin (grants nothing but a higher Scout ceiling, no Admin Panel
   // access) and from plan (no billing change) — api/scout.js's meter()
   // checks this directly and skips the daily-limit check when it's true.
+  // migration 131 — profiles.full_access. An admin comp: paid features without
+  // a paid plan. Deliberately does NOT touch plan, so the athlete stays 'free'
+  // in profiles.plan and in Stripe and "how many are paying" stays answerable.
+  // The enforcement is protect_profile_columns(), which is an allowlist and
+  // therefore pins full_access automatically — this button is a convenience on
+  // top of that, not the thing that makes it safe.
+  async function setUserFullAccess(id, val) {
+    try { const { error } = await sb.from("profiles").update({ full_access: val }).eq("id", id); if (error) throw error; logAdmin(val ? "grant_full_access" : "revoke_full_access", id); loadUsers(); }
+    catch (e) { console.error("GOLSZ admin full-access error:", e); }
+  }
   async function setUserAiUnlimited(id, val) {
     try { const { error } = await sb.from("profiles").update({ ai_unlimited: val }).eq("id", id); if (error) throw error; logAdmin(val ? "grant_ai_unlimited" : "revoke_ai_unlimited", id); loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin ai-unlimited error:", e); }
@@ -6668,6 +6702,7 @@ function AdminPanel({ onBack }) {
                   {u.is_minor && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_minor")}</span>}
                   {u.is_admin && <span style={{ fontSize: 9, color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_admin")}</span>}
                   {u.is_banned && <span style={{ fontSize: 9, color: C.amber, border: `1px solid ${C.amberBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_banned")}</span>}
+                  {u.full_access && <span style={{ fontSize: 9, color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 5, padding: "1px 5px", fontWeight: 800, letterSpacing: ".04em" }}>{t("admin_full_access_badge")}</span>}
                   {u.ai_unlimited && <span style={{ fontSize: 9, color: C.elite, border: `1px solid ${C.eliteBorder}`, borderRadius: 5, padding: "1px 5px" }}>{t("admin_ai_unlimited_badge")}</span>}
                   {u.occupation && u.occupation !== "Player" && (
                     <span style={{
@@ -6737,6 +6772,10 @@ function AdminPanel({ onBack }) {
                       fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
                       background: u.ai_unlimited ? C.eliteWash : "transparent", color: u.ai_unlimited ? C.elite : C.slate, border: `1px solid ${u.ai_unlimited ? C.elite : C.line2}`,
                     }}>{u.ai_unlimited ? t("admin_revoke_ai_unlimited") : t("admin_grant_ai_unlimited")}</button>
+                    <button onClick={() => setUserFullAccess(u.id, !u.full_access)} title={t("admin_full_access_hint")} style={{
+                      fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
+                      background: u.full_access ? C.limeWash : "transparent", color: u.full_access ? C.lime : C.slate, border: `1px solid ${u.full_access ? C.lime : C.line2}`,
+                    }}>{u.full_access ? t("admin_revoke_full_access") : t("admin_grant_full_access")}</button>
                     {u.id !== myUid && (
                       <button onClick={() => setUserBanned(u.id, !u.is_banned)} style={{
                         fontSize: 10.5, fontWeight: 700, padding: "5px 9px", borderRadius: 7, cursor: "pointer", fontFamily: "inherit",
@@ -10779,11 +10818,14 @@ function GolszApp({ onSignOut, startOnboarding }) {
         if (!user) return;
         setUserUid(user.id);
         const [{ data }, { data: ath }] = await Promise.all([
-          sb.from("profiles").select("plan, onboarding_conversion_shown, free_ai_lifetime_used, goal_defined").eq("id", user.id).single(),
+          sb.from("profiles").select("plan, onboarding_conversion_shown, free_ai_lifetime_used, goal_defined, full_access").eq("id", user.id).single(),
           sb.from("athletes").select("scout_context").eq("id", user.id).single(),
         ]);
         if (!data) return;
         setUserPlan(data.plan || "free");
+        // An admin comp: paid features on a free plan. plan and Stripe stay
+        // untouched, so "how many are paying" remains answerable.
+        setCurrentFullAccess(!!data.full_access);
         // Canonical readiness (Prompt #1): api/scout.js's isAssessmentReady()
         // is the ONE definition of "GOLSZ knows enough to assess", and it
         // writes its verdict to scout_context.ai_meta.assessment_ready on

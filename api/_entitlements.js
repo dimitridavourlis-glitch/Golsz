@@ -66,7 +66,13 @@ function planRank(plan) {
   return typeof r === "number" ? r : 0;
 }
 
-function hasFeature(plan, feature) {
+// Mirrors featureUnlocked() in golsz-app.html, including the full_access
+// override. If these two disagree the client offers what the server refuses,
+// which for a comped user means being shown a feature and then denied it.
+// There is no planKnown() equivalent here: the server always has the row it is
+// deciding about, so "not loaded yet" is not a state that exists on this side.
+function hasFeature(plan, feature, fullAccess) {
+  if (fullAccess) return true;
   const min = FEATURE_MIN_PLAN[feature];
   if (!min) return true;
   return planRank(plan) >= planRank(min);

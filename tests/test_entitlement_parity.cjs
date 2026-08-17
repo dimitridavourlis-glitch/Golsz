@@ -38,10 +38,15 @@ const featSrc = APP.match(/const FEATURE_MIN_PLAN = \{[\s\S]*?\n\};/);
 // upgrade prompt on every page load. The server keeps hasFeature() — for
 // ENFORCEMENT, denying an unknown plan is correct.
 const knownSrc = APP.match(/function planKnown\(plan\) \{[^}]*\}/);
-const unlockedSrc = APP.match(/function featureUnlocked\(plan, feature\) \{[\s\S]*?\n\}/);
-const lockedSrc = APP.match(/function featureLocked\(plan, feature\) \{[\s\S]*?\n\}/);
+// Signature-tolerant: pinning the exact arg list broke the moment full_access
+// was added. The property is that the function exists and can be extracted.
+const unlockedSrc = APP.match(/function featureUnlocked\([^)]*\) \{[\s\S]*?\n\}/);
+const lockedSrc = APP.match(/function featureLocked\([^)]*\) \{[\s\S]*?\n\}/);
 if (!rankSrc || !featSrc || !knownSrc || !unlockedSrc || !lockedSrc) throw new Error("client entitlement source not found — markers moved, update this suite");
-const client = eval(`${rankSrc[0]}\n${featSrc[0]}\n${knownSrc[0]}\n${unlockedSrc[0]}\n${lockedSrc[0]}\n({ PLAN_RANK, FEATURE_MIN_PLAN, planKnown, featureUnlocked, featureLocked })`);
+// featureUnlocked/featureLocked now read a module-level flag when no explicit
+// third argument is passed. Declared here so the extracted source evaluates,
+// and left false so every existing assertion measures the plan-only path.
+const client = eval(`let CURRENT_FULL_ACCESS = false;\n${rankSrc[0]}\n${featSrc[0]}\n${knownSrc[0]}\n${unlockedSrc[0]}\n${lockedSrc[0]}\n({ PLAN_RANK, FEATURE_MIN_PLAN, planKnown, featureUnlocked, featureLocked })`);
 
 // ---- the diff that makes drift impossible --------------------------------
 ck("PLAN_RANK identical", ent.PLAN_RANK, client.PLAN_RANK);
@@ -162,6 +167,54 @@ ck("silence is the default when nothing is locked",
   // The whole point: an athlete in good shape must be un-sellable, no matter
   // how long the conversation runs.
   ck("a healthy account resolves to no upgrade", ent.evaluateEntitlements("free", deriveEntitlementNeeds(healthy)).upgradeTo, null);
+}
+
+
+// ---- THE full_access OVERRIDE MUST AGREE ON BOTH SIDES ------------------
+// A comped user gets paid features without a paid plan. If the two gates
+// disagree, the client shows a feature and the server refuses it — which for a
+// comped user is worse than being locked out, because it looks like a bug in
+// something they were told they had.
+for (const feature of Object.keys(ent.FEATURE_MIN_PLAN)) {
+  for (const plan of ["free", "starter", "pro", "elite"]) {
+    ck(`full_access unlocks ${feature} for ${plan} on both sides`,
+       [ent.hasFeature(plan, feature, true), client.featureUnlocked(plan, feature, true)], [true, true]);
+  }
+}
+// And it must not leak the other way: absent or false behaves exactly as before.
+for (const feature of Object.keys(ent.FEATURE_MIN_PLAN)) {
+  ck(`full_access=false leaves ${feature} gated as before (server)`,
+     ent.hasFeature("free", feature, false), ent.hasFeature("free", feature));
+  ck(`...and on the client`,
+     client.featureUnlocked("free", feature, false), client.featureUnlocked("free", feature));
+}
+// THE ORDERING RULE. planKnown() is checked BEFORE full_access, so a plan that
+// has not loaded never renders as unlocked even for a comped user. Reversing
+// those two lines would flash full access during every page load.
+ck("an unknown plan stays locked even with full_access",
+   client.featureUnlocked(null, "development_plan", true), false);
+ck("...and undefined too", client.featureUnlocked(undefined, "pathway_plan", true), false);
+// The server has no planKnown equivalent — it always holds the row it decides
+// about — so this asymmetry is deliberate, not a parity failure.
+// ORDERING, as a property rather than as a syntax match. The first version of
+// this pinned the literal two lines and broke the moment the override started
+// reading a module-level default — while the behavioural assertions above kept
+// passing, because the behaviour was never wrong. Assert that planKnown is
+// consulted before anything full_access-related, however that is written.
+{
+  const fnSrc = /function featureUnlocked\([^)]*\) \{[\s\S]*?\n\}/.exec(APP)[0];
+  // Search the BODY only: `fullAccess` is a PARAMETER NAME, so it appears in the
+  // signature before planKnown and the first version of this failed on correct
+  // code. The claim is about the order of the checks, not of the characters.
+  const fnBody = fnSrc.slice(fnSrc.indexOf("{"));
+  const kIdx = fnBody.indexOf("planKnown(plan)");
+  const fIdx = fnBody.search(/fullAccess|CURRENT_FULL_ACCESS/);
+  ck("featureUnlocked consults planKnown before full_access", kIdx >= 0 && kIdx < fIdx, true);
+  const lockSrc = /function featureLocked\([^)]*\) \{[\s\S]*?\n\}/.exec(APP)[0];
+  const lockBody = lockSrc.slice(lockSrc.indexOf("{"));
+  const lk = lockBody.indexOf("planKnown(plan)");
+  const lf = lockBody.search(/fullAccess|CURRENT_FULL_ACCESS/);
+  ck("...and so does featureLocked", lk >= 0 && lk < lf, true);
 }
 
 console.log(`\n${p}/${p + f} passed`);
