@@ -3787,11 +3787,11 @@ function Highlights({ viewUserId, manageMode }) {
       await saveList(next);
       setItems(next);
       setTitle(""); setUrl("");
-      // also share it to Feed as a clip post, same as any other post — the
-      // 'clip' kind already existed in posts' schema and the original demo
-      // Feed data for exactly this ("New defensive highlight reel is live")
-      try { const { error } = await sb.from("posts").insert({ author_id: targetId, kind: "clip", headline: entry.title, body: entry.url }); if (error) throw error; }
-      catch (e) { console.error("GOLSZ clip post error:", e); }
+      // The Feed clip-share that used to sit here is gone. It inserted into
+      // posts as kind:'clip' and had produced ZERO rows in production —
+      // failing silently since it shipped, swallowed by a console.error. The
+      // highlight itself is already saved by saveList() above, into
+      // athletes.highlights, so nothing here affected whether it persisted.
     } catch (e) {
       setErr((e && e.message) ? e.message : t("highlights_add_err"));
     } finally { setBusy(false); }
@@ -10859,7 +10859,11 @@ function GolszApp({ onSignOut, startOnboarding }) {
     setCameFrom(from || null);
     setPage(id); if (id !== "messages") setThread(null); setViewProfileId(null); setProfileStack([]);
   };
-  const openThread = (id) => { if (mustFinishProfile) return; setThread(id); setPage("messages"); setProfileStack([]); };
+  // Messages is retired. Its only callers were Feed and Discover, both
+  // removed above. Left as an explicit no-op rather than deleted, because a
+  // caller that does nothing beats one that routes to a page which no longer
+  // renders — that would be a blank screen, not a missing feature.
+  const openThread = () => {};
   const viewProfile = (id) => {
     if (mustFinishProfile) return;
     setProfileStack((s) => [...s, { page, viewProfileId }]);
@@ -10956,14 +10960,11 @@ function GolszApp({ onSignOut, startOnboarding }) {
               <MyAthletes children={linkedChildren} onManage={manageAthlete} onView={viewProfile} t={t} />
             )}
             {page === "home" && !actingFor && isParentAccount && linkedChildren && linkedChildren.length === 0 && <FamilyAccess />}
-            {page === "feed" && <Feed onMessage={openThread} onViewProfile={viewProfile} />}
-            {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
             {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} />}
             {page === "scout" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} /></div>}
             {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} onNavigate={go} /></>}
             {page === "events" && <Events />}
             {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
-            {page === "messages" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Messages thread={thread} setThread={setThread} onViewProfile={viewProfile} /></div>}
             {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
           </div>
         </main>
@@ -11007,14 +11008,11 @@ function GolszApp({ onSignOut, startOnboarding }) {
         {page === "home" && !actingFor && isParentAccount && linkedChildren && linkedChildren.length === 0 && (
           <div style={{ padding: "8px 12px 0" }}><FamilyAccess /></div>
         )}
-        {page === "feed" && <Feed onMessage={openThread} onViewProfile={viewProfile} />}
-        {page === "discover" && <Discover onMessage={openThread} onViewProfile={viewProfile} />}
         {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} />}
         {page === "scout" && <Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} />}
         {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} onNavigate={go} /></>}
         {page === "events" && <Events />}
         {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
-        {page === "messages" && <Messages thread={thread} setThread={setThread} onViewProfile={viewProfile} />}
         {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
       </main>
 
