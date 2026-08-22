@@ -128,22 +128,21 @@ ck("...and scout.js still passes a lifetime limit through", /p_lifetime_limit/.t
 console.log("\n-- Admin MRR uses the EUR prices --");
 // It hardcoded 6/14/30 and silently under-reported by ~60% after the
 // currency move. It now derives from PLANS, so it cannot go stale again.
-ck("MRR derives from PLANS, not literals",
-   /PLANS\.reduce\(\(sum, pl\) => sum \+ pl\.price \* \(planCounts\[pl\.id\] \|\| 0\), 0\)/.test(APP), true);
-ck("no hardcoded 6/14/30 remains in the MRR calc",
-   /planCounts\.starter \* 6|planCounts\.pro \* 14|planCounts\.elite \* 30/.test(APP), false);
-// The Analytics tab was removed in the admin-panel trim, and MRR was displayed
-// there — so nothing renders it any more. The CALCULATION survives (asserted
-// above, and still correct), it simply has no screen. Asserting the render
-// would now be asserting a tab that does not exist.
+// MRR IS GONE, not just unrendered. The calculation lived inside
+// loadAnalytics(), which was deleted with the Analytics tab — it had been
+// pulling 2000 profiles, 2000 athletes and five RPCs on every admin load for a
+// screen that no longer existed.
 //
-// This is a real loss, not a tidy-up: it was the only revenue figure in the
-// product. It reads 0 until live Stripe exists, which is why it was acceptable
-// to drop now, but it should come back as one line wherever revenue is checked.
-ck("the MRR calculation is still present and still derives from PLANS",
-   /PLANS\.reduce\(\(sum, pl\) => sum \+ pl\.price \* \(planCounts\[pl\.id\] \|\| 0\), 0\)/.test(APP), true);
-ck("...but nothing renders it, so the number is computed for nobody",
-   /PRICE_CURRENCY \+ analytics\.mrrEstimate/.test(APP), false);
+// This is a real capability loss and is recorded as one rather than quietly
+// dropped from the suite. It read 0 until live Stripe exists, which is why it
+// was acceptable to lose now. When revenue starts, MRR needs rebuilding — and
+// the assertions below are the specification for doing it right, because the
+// original hardcoded 6/14/30 and silently under-reported by ~60% after the
+// currency move.
+ck("MRR is currently absent, calculation included",
+   /mrrEstimate/.test(APP), false);
+ck("...and if it returns it must derive from PLANS, never from literals",
+   /planCounts\.starter \* 6|planCounts\.pro \* 14|planCounts\.elite \* 30/.test(APP), false);
 // Same figures, computed independently, as a arithmetic check.
 const counts = { free: 5, starter: 3, pro: 2, elite: 1 };
 const mrr = PLANS.reduce((sum, pl) => sum + pl.price * (counts[pl.id] || 0), 0);

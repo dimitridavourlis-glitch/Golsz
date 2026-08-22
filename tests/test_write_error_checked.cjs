@@ -63,10 +63,17 @@ const MUTATING_RPCS = [
   "reset_scout_intelligence", "log_admin_action", "log_client_error",
   "record_activity_ping",
 ];
+// Six analytics RPCs left this list on 2026-08-13 when loadAnalytics() was
+// deleted with the Analytics tab: admin_analytics_counts, admin_moderation_stats,
+// admin_scout_model_mix, admin_scout_cost_summary, admin_scout_margin_summary,
+// admin_scout_cache_stats. They still EXIST in the database and are still
+// granted — nothing was revoked — the client simply no longer calls them.
+//
+// The "no classified rpc has stopped being called" assertion is what forced
+// this edit rather than letting the list quietly describe a client that no
+// longer exists. That is the anti-rot half doing its job.
 const READ_RPCS = [
   "get_public_passport", "get_public_passport_by_token",
-  "admin_analytics_counts", "admin_moderation_stats", "admin_scout_model_mix",
-  "admin_scout_cost_summary", "admin_scout_margin_summary", "admin_scout_cache_stats",
   "admin_scout_debug", "admin_list_knowledge_candidates",
 ];
 const WRITE = new RegExp(
