@@ -3371,6 +3371,12 @@ function Messages({ thread, setThread, onViewProfile }) {
     setBusy(true); setErr("");
     const body = text.trim().slice(0, 2000);
     try {
+      // ⚠ direct_message IS RETIRED from api/moderate.js VALID_CONTENT_TYPES.
+      // This call is unreachable — Messages no longer renders — so it never
+      // fires. But if messaging ever comes back, DO NOT just un-hide the
+      // component: an unrecognised content_type falls back to "post" on the
+      // server, so every DM would be filed as a Feed post, silently, in the
+      // moderation record. Re-add the type server-side and deploy that first.
       const { decision } = await moderateContent({ text: body, contentType: "direct_message", surface: "private_thread", recipientId: thread });
       if (decision === "block") { setErr(t("moderation_blocked")); setBusy(false); return; }
       // Idempotent (migration 037) — no-ops if a request already exists in
