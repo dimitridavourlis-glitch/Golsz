@@ -239,11 +239,31 @@ async function post(reqBody, { auth = "Bearer adult", method = "POST" } = {}) {
 
   classifier = { decision: "allow", primary_reason_code: "CLEAN", reason_codes: [], confidence: 0.9,
                  minor_safety_triggered: false, rationale: "ok", sports_relevance: "low" };
+  // REWRITTEN 2026-08-13, and NOT relaxed. The low-sports-relevance escalation
+  // fires only for content_type "post" on surface "public_feed". Both are
+  // retired — Feed was removed from the client and "post" is no longer in
+  // VALID_CONTENT_TYPES — so the rule is DORMANT, not broken, and a test that
+  // still asserted it escalates would be asserting something the server can no
+  // longer be asked to do.
+  //
+  // What is worth testing now is the retirement itself, and the property that
+  // makes it safe: an unrecognised type lands as "unknown" rather than quietly
+  // wearing the name of a real category.
   r = await post({ text: "buy crypto here", contentType: "post", surface: "public_feed" });
-  ck("low sports relevance on a PUBLIC POST is escalated to a block", r.payload.decision, "block");
-  ck("...with the reason recorded", r.payload.primary_reason_code, "LOW_SPORTS_RELEVANCE");
+  ck("a retired content_type is not silently accepted", r.sent.content_type, "unknown");
+  ck("...and the dormant escalation does not fire for it", r.payload.decision, "allow");
   r = await post({ text: "buy crypto here", contentType: "direct_message", surface: "private_thread" });
-  ck("...but the same content in a DM is not force-blocked", r.payload.decision, "allow");
+  ck("direct_message is retired too", r.sent.content_type, "unknown");
+  ck("...and is still not force-blocked", r.payload.decision, "allow");
+  // A LIVE type must still pass through under its own name.
+  r = await post({ text: "buy crypto here", contentType: "scout_message", surface: "scout" });
+  ck("a live content_type survives intact", r.sent.content_type, "scout_message");
+  // The rule itself must remain in the source, ready for a posting surface to
+  // return. Deleting it would mean rediscovering the requirement, not
+  // re-enabling it.
+  const MOD = require("fs").readFileSync(require("path").join(__dirname, "..", "api/moderate.js"), "utf8");
+  ck("the low-sports-relevance rule is still present, just unreachable",
+     /sports_relevance === "low" && classifierInput\.content_type === "post"/.test(MOD), true);
 
   classifier = { decision: "allow", primary_reason_code: "CLEAN", reason_codes: [], confidence: 0.9,
                  minor_safety_triggered: false, rationale: "ok" };
@@ -295,7 +315,13 @@ async function post(reqBody, { auth = "Bearer adult", method = "POST" } = {}) {
   r = await post({ text: "x".repeat(9000) });
   ck("oversized text is truncated to 4000 before the model sees it", r.sent.text.length, 4000);
   r = await post({ text: "hi", contentType: "nonsense", surface: "nonsense" });
-  ck("an unknown content_type falls back to 'post'", r.sent.content_type, "post");
+  // The fallback is now "unknown", not "post". "post" was itself retired, so
+  // the old default would have written a value outside VALID_CONTENT_TYPES —
+  // and more importantly a mislabelled row was indistinguishable from a real
+  // one. "unknown" is an alarm, not a category.
+  ck("an unrecognised content_type lands as 'unknown', not a real category", r.sent.content_type, "unknown");
+  ck("...and it is a value the contract actually allows",
+     /VALID_CONTENT_TYPES = \[[^\]]*"unknown"/.test(require("fs").readFileSync(require("path").join(__dirname, "..", "api/moderate.js"), "utf8")), true);
   ck("an unknown surface falls back to 'public_feed'", r.sent.surface, "public_feed");
   r = await post(JSON.stringify({ text: "a string body still parses" }));
   ck("a raw string body is parsed", r.status, 200);

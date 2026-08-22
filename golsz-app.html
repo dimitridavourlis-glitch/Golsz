@@ -2474,6 +2474,10 @@ function Feed({ onMessage, onViewProfile }) {
     if (!sb || !uid || (!composeHeadline.trim() && !composeImageFile) || composeBusy) return;
     setComposeBusy(true); setComposeErr("");
     try {
+      // ⚠ "post" IS RETIRED from api/moderate.js VALID_CONTENT_TYPES. Feed no
+      // longer renders, so this never fires. If a posting surface returns,
+      // re-add the type server-side and deploy that first; otherwise this lands
+      // as "unknown".
       const { decision } = await moderateContent({ text: `${composeHeadline}\n${composeBody}`, contentType: "post", surface: "public_feed" });
       if (decision === "block") { setComposeErr(t("moderation_blocked")); setComposeBusy(false); return; }
       let imageUrl = null;
@@ -3373,10 +3377,10 @@ function Messages({ thread, setThread, onViewProfile }) {
     try {
       // ⚠ direct_message IS RETIRED from api/moderate.js VALID_CONTENT_TYPES.
       // This call is unreachable — Messages no longer renders — so it never
-      // fires. But if messaging ever comes back, DO NOT just un-hide the
-      // component: an unrecognised content_type falls back to "post" on the
-      // server, so every DM would be filed as a Feed post, silently, in the
-      // moderation record. Re-add the type server-side and deploy that first.
+      // fires. If messaging comes back, re-add the type server-side and deploy
+      // THAT FIRST: an unrecognised content_type now lands as "unknown", which
+      // is visible in the queue rather than disguised as a real category, but
+      // it is still a row nobody can attribute.
       const { decision } = await moderateContent({ text: body, contentType: "direct_message", surface: "private_thread", recipientId: thread });
       if (decision === "block") { setErr(t("moderation_blocked")); setBusy(false); return; }
       // Idempotent (migration 037) — no-ops if a request already exists in
