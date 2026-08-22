@@ -348,13 +348,20 @@ async function incrementModerationUsage(supaUrl, serviceKey, userId) {
 // content already exists in its own table). Uses the service role key
 // directly (bypasses RLS) since moderation_queue has no authenticated
 // write policy at all — see migration 033.
-async function logModerationItem(supaUrl, serviceKey, authorId, input, result) {
+async function logModerationItem(supaUrl, serviceKey, authorId, input, result, recipientId) {
   try {
     const r = await fetch(`${supaUrl}/rest/v1/moderation_queue`, {
       method: "POST",
       headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
       body: JSON.stringify({
         author_id: authorId,
+        // NULL on every row today: the only caller that passes a recipient is
+        // the unreachable DM send, and Scout deliberately omits it. Recorded
+        // anyway because the ABSENCE of this column is why 237 direct_message
+        // rows are permanently unattributable — discovered after they existed,
+        // when nothing could be done. If a recipient-bearing type returns, the
+        // record captures it from the first row.
+        recipient_id: recipientId || null,
         content_type: input.content_type,
         text: input.text,
         surface: input.surface,
@@ -474,8 +481,14 @@ export default async function handler(req, res) {
   }
 
   let recipient = null;
-  if (supaUrl && serviceKey && body.recipientId && typeof body.recipientId === "string" && UUID_RE.test(body.recipientId)) {
-    const ctx = await getProfileContext(supaUrl, serviceKey, body.recipientId);
+  // Validated separately from `recipient` because it is written to a uuid
+  // column. Passing the raw body value would let a malformed id fail the
+  // WHOLE moderation_queue insert — losing the entire record, not just the
+  // recipient. Losing the row is far worse than losing one field on it.
+  let recipientId = null;
+  if (typeof body.recipientId === "string" && UUID_RE.test(body.recipientId)) recipientId = body.recipientId;
+  if (supaUrl && serviceKey && recipientId) {
+    const ctx = await getProfileContext(supaUrl, serviceKey, recipientId);
     if (ctx) recipient = { role: ctx.role, is_minor: ctx.is_minor };
   }
 
@@ -560,7 +573,7 @@ export default async function handler(req, res) {
     }
 
     if (result.decision !== "allow" && supaUrl && serviceKey) {
-      await logModerationItem(supaUrl, serviceKey, userId, classifierInput, result);
+      await logModerationItem(supaUrl, serviceKey, userId, classifierInput, result, recipientId);
       if (result.minor_safety_triggered) {
         await alertAdmins(supaUrl, serviceKey, "Security alert", "A minor-safety rule was just triggered — check the Moderation tab.");
       }

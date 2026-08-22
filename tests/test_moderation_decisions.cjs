@@ -358,6 +358,27 @@ async function post(reqBody, { auth = "Bearer adult", method = "POST" } = {}) {
   ck("no reimplementation lives in this file",
      /^(async )?function handler\(req, res\)/m.test(fs.readFileSync(__filename, "utf8")), false);
 
-  console.log(`\n${p}/${p + f} passed`);
+  
+// ---- the moderation record captures WHO content was aimed at -------------
+// NULL on every row today: the only caller passing a recipient is the
+// unreachable DM send, and Scout deliberately omits it. Asserted anyway,
+// because the ABSENCE of this field is why 237 direct_message rows are
+// permanently unattributable — Scout text and user-to-user DMs shared a
+// content_type, and a null recipient would have told them apart for free.
+// That was discovered after the rows existed. This captures it from row one
+// if a recipient-bearing type ever returns.
+const MODSRC = require("fs").readFileSync(require("path").join(__dirname, "..", "api/moderate.js"), "utf8");
+ck("logModerationItem writes recipient_id", /recipient_id: recipientId \|\| null/.test(MODSRC), true);
+ck("...and the caller passes it", /logModerationItem\([^)]*result, recipientId\)/.test(MODSRC), true);
+
+// THE ID IS VALIDATED BEFORE IT REACHES A UUID COLUMN.
+// A malformed value would fail the WHOLE insert, losing the entire moderation
+// record rather than one field on it. Losing the row is far worse.
+ck("a non-uuid recipient never reaches the write",
+   /if \(typeof body\.recipientId === "string" && UUID_RE\.test\(body\.recipientId\)\) recipientId = body\.recipientId;/.test(MODSRC), true);
+ck("...and the raw body value is not passed to the logger",
+   /logModerationItem\([^)]*body\.recipientId\)/.test(MODSRC), false);
+
+console.log(`\n${p}/${p + f} passed`);
   process.exit(f ? 1 : 0);
 })().catch((e) => { console.error("FAIL  suite threw:", e); process.exit(1); });
