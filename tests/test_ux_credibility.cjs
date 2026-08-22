@@ -120,7 +120,15 @@ ck("...nor the review one", /revoke execute on function admin_review_knowledge\(
 // Nothing may promote itself.
 ck("the migration contains no automatic promotion", /set verification_status = 'verified'\s+where/.test(MIG), false);
 
-ck("the admin panel has a Knowledge sub-view", /\["knowledge", t\("admin_view_knowledge"\)\]/.test(APP), true);
+// Knowledge review moved from a Safety sub-tab to Health > Advanced in the
+// admin-panel trim: it is a content chore, not a safety queue. The assertion
+// pinned its LOCATION, which is why it broke while the capability was intact.
+// What matters is that an admin can still review candidates.
+ck("knowledge candidates are still reviewable", /reviewKnowledge\(/.test(APP), true);
+ck("...and the section is still rendered, with a heading",
+   /sectionHead\(t\("admin_view_knowledge"\)\)/.test(APP), true);
+ck("...from inside the Advanced collapse, not a top-level tab",
+   /\["knowledge", t\("admin_view_knowledge"\)\]/.test(APP), false);
 ck("it loads through the RPC, not a direct select",
    /sb\.rpc\("admin_list_knowledge_candidates", \{ p_limit: 50 \}\)/.test(APP), true);
 ck("...because the read policy would return nothing otherwise",

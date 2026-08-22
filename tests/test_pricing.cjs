@@ -132,7 +132,18 @@ ck("MRR derives from PLANS, not literals",
    /PLANS\.reduce\(\(sum, pl\) => sum \+ pl\.price \* \(planCounts\[pl\.id\] \|\| 0\), 0\)/.test(APP), true);
 ck("no hardcoded 6/14/30 remains in the MRR calc",
    /planCounts\.starter \* 6|planCounts\.pro \* 14|planCounts\.elite \* 30/.test(APP), false);
-ck("MRR renders with the currency symbol", /PRICE_CURRENCY \+ analytics\.mrrEstimate/.test(APP), true);
+// The Analytics tab was removed in the admin-panel trim, and MRR was displayed
+// there — so nothing renders it any more. The CALCULATION survives (asserted
+// above, and still correct), it simply has no screen. Asserting the render
+// would now be asserting a tab that does not exist.
+//
+// This is a real loss, not a tidy-up: it was the only revenue figure in the
+// product. It reads 0 until live Stripe exists, which is why it was acceptable
+// to drop now, but it should come back as one line wherever revenue is checked.
+ck("the MRR calculation is still present and still derives from PLANS",
+   /PLANS\.reduce\(\(sum, pl\) => sum \+ pl\.price \* \(planCounts\[pl\.id\] \|\| 0\), 0\)/.test(APP), true);
+ck("...but nothing renders it, so the number is computed for nobody",
+   /PRICE_CURRENCY \+ analytics\.mrrEstimate/.test(APP), false);
 // Same figures, computed independently, as a arithmetic check.
 const counts = { free: 5, starter: 3, pro: 2, elite: 1 };
 const mrr = PLANS.reduce((sum, pl) => sum + pl.price * (counts[pl.id] || 0), 0);
