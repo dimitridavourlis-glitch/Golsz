@@ -50,7 +50,11 @@ Your job is to classify a single content item and return a decision. You do not 
 You receive a JSON object:
 
 {
-  "content_type": "post" | "comment" | "direct_message" | "profile_field" | "media_caption" | "connection_request",
+  "content_type": "post" | "comment" | "direct_message" | "profile_field" | "media_caption" | "scout_message" | "connection_request",
+    // scout_message is the athlete talking to Scout, GOLSZ's AI advisor — not a
+    // message to another person. Treat it with the same minor-safety rules as
+    // anything else; it is listed separately so the moderation record can tell
+    // an AI conversation apart from a message between two accounts.
   "text": string,
   "media_description": string | null,
   "author": { "role": "athlete" | "coach" | "club" | "scout" | "agent" | "parent", "is_minor": boolean, "verified": boolean },
