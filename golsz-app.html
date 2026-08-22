@@ -7677,7 +7677,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor }) {
       // No human recipient here (recipientId omitted) — Scout is a
       // private 1:1 exchange with an AI, which "direct_message" fits
       // more honestly than any of the other content types.
-      const { decision } = await moderateContent({ text: content, contentType: "direct_message", surface: "private_thread" });
+      const { decision } = await moderateContent({ text: content, contentType: "scout_message", surface: "private_thread" });
       if (decision === "block") { setModErr(t("moderation_blocked")); return; }
     }
     setInput("");
