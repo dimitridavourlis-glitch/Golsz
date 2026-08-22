@@ -6040,3 +6040,103 @@ comment on function set_athlete_context_field(uuid, text, text) is
 --   -- clearing:
 --   select set_athlete_context_field(auth.uid(), 'secondary_goal', null);
 --   select scout_context ? 'secondary_goal' from athletes where id = auth.uid();  -- false
+
+
+-- ############################################################################
+-- RECONCILIATION: migrations 129, 130 and 132 (applied and verified 2026-08-13)
+-- ############################################################################
+--
+-- WHY THIS IS APPENDED RATHER THAN EDITED IN PLACE
+-- This file is append-ordered: the LAST definition of a name is the live one.
+-- Several names are already defined more than once (posts_write three times,
+-- get_public_passport three times), so editing the earlier occurrences would
+-- have been both error-prone and misleading. Restating the end state here keeps
+-- a replay of this file correct AND gives a reader who reaches the bottom the
+-- truth. Earlier occurrences above are HISTORY, not current state.
+--
+-- Before this block the file disagreed with production in three tables. Anyone
+-- reading it to answer "what can a client do" got a pre-129 answer — including
+-- posts_read as `using (true)`, which had not been true for hours.
+--
+-- WHAT CHANGED, AND WHY
+-- GOLSZ is one-to-one: an athlete, their parent, and Scout. There is no
+-- communication between accounts. Feed, Discover and Messages were removed from
+-- the client; these are the matching data-layer closures.
+--
+-- NOTHING WAS DELETED. 7 posts, 3 post_likes, 21 messages, 1 message_request
+-- and 6 follows all remain. Retiring a surface must not destroy what athletes
+-- already wrote, and re-granting policies later is far cheaper than restoring
+-- data that no longer exists.
+
+-- ---- 129: posts and follows were WORLD-READABLE ---------------------------
+-- Both were `using (true)` — no condition at all, so the `anon` role passed
+-- them, and the anon key ships in the client bundle by design. Passport
+-- HIGHLIGHTS were stored in posts as kind='clip' with the video URL in body, so
+-- every athlete's highlight reel was readable by a stranger who never signed
+-- up. These are minors.
+drop policy if exists posts_read on posts;
+create policy posts_read on posts for select using (
+  author_id = auth.uid() or is_parent_of(author_id) or is_admin()
+);
+drop policy if exists follows_read on follows;
+create policy follows_read on follows for select using (
+  follower_id = auth.uid() or followed_id = auth.uid() or is_admin()
+);
+
+-- ---- 130: close the writes to the retired surfaces ------------------------
+-- Hiding a screen is not closing a door: anything the policies still permit is
+-- writable by a direct PostgREST call.
+drop policy if exists posts_write  on posts;
+drop policy if exists posts_update on posts;
+drop policy if exists posts_delete on posts;
+drop policy if exists post_likes_write  on post_likes;
+drop policy if exists post_likes_delete on post_likes;
+drop policy if exists messages_write  on messages;
+drop policy if exists messages_update on messages;
+drop policy if exists messages_delete on messages;
+
+-- Admins keep DELETE on both: the moderation queue holds 11 post entries and
+-- 237 direct_message entries, and resolving one may mean removing the row it
+-- points at. A queue whose entries cannot be actioned is not a queue.
+drop policy if exists posts_admin_delete on posts;
+create policy posts_admin_delete on posts for delete using (is_admin());
+drop policy if exists messages_admin_delete on messages;
+create policy messages_admin_delete on messages for delete using (is_admin());
+
+-- message_requests HAS NO WRITE POLICY, and never did. Its only writers are
+-- these two SECURITY DEFINER functions, which bypass RLS by definition — so a
+-- `drop policy` here would have executed cleanly, verified cleanly, and closed
+-- nothing. Revoking execute is what actually shuts it.
+revoke execute on function ensure_message_request(uuid) from authenticated;
+revoke execute on function respond_to_message_request(uuid, boolean) from authenticated;
+
+-- ---- 132: the last account-to-account write path --------------------------
+-- follows was missed by 129 (which scoped only the READ) and by 130. It was
+-- also still reachable in the UI: Feed's and Discover's toggles are dead, but
+-- Passport's was live, because a parent reaches a child's Passport through
+-- MyAthletes.
+drop policy if exists follows_write  on follows;
+drop policy if exists follows_delete on follows;
+
+-- ---- LEFT OPEN DELIBERATELY -----------------------------------------------
+-- None of these is account-to-account communication:
+--   blocks                      — protective
+--   request_parent_link         — the parent/child flow
+--   create_passport_share_token — a link the athlete generates for a coach,
+--                                 one-directional with no reply path
+--   content_reports             — safety machinery, same reasoning as blocks
+--   product_capabilities        — plan/feature config, public by design
+--   platform_insights           — keyed insight content, no athlete data
+
+-- ---- VERIFY (run separately; do not trust this file) ----------------------
+--   select tablename, policyname, cmd from pg_policies
+--    where tablename in ('posts','post_likes','messages','message_requests','follows')
+--    order by tablename, cmd;
+-- Expect exactly:
+--   follows          follows_read          SELECT
+--   messages         messages_read         SELECT
+--   messages         messages_admin_delete DELETE
+--   message_requests message_requests_read SELECT
+--   post_likes       post_likes_read       SELECT
+--   posts            posts_read            SELECT
+--   posts            posts_admin_delete    DELETE
