@@ -447,6 +447,120 @@ textarea:focus-visible,
 
 .hero-mega .field-hint { color: var(--ink-faint); margin-top: 1rem; }
 
+/* ==========================================================================
+   Hero variant: THE PATH
+   No photograph, so no scrim, so nothing for the type to lose against. The
+   rail is the product's own diagram — same stage-icon order the app uses —
+   and it is captioned as an example, never as the visitor's own pathway.
+   ========================================================================== */
+
+.hero-mega.hero-path {
+  /* .hero-mega is display:flex for the old left-aligned photo hero. This
+     variant is a centred column, and as a flex ITEM the container would size
+     to its content and refuse to shrink below it — which overflowed the
+     viewport horizontally on a phone and clipped the headline off the right
+     edge. Block layout, so the container is free to be narrower than 820px. */
+  display: block;
+  padding: clamp(2rem, 6vh, 3.5rem) 0;
+  min-height: clamp(560px, 88vh, 820px);
+  background-image:
+    radial-gradient(78% 58% at 50% 108%, rgba(212, 175, 55, 0.16), transparent 62%),
+    radial-gradient(60% 50% at 50% -10%, rgba(212, 175, 55, 0.10), transparent 60%),
+    linear-gradient(170deg, var(--charcoal) 0%, var(--navy-deep) 62%);
+}
+
+.hero-path-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 820px;
+  min-width: 0;
+  margin: 0 auto;
+  text-align: center;
+  padding: clamp(1.6rem, 4vw, 3rem) 0;
+}
+.hero-path-inner h1 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(1.8rem, 5.4vw, 3.6rem);
+  line-height: 1.04;
+  overflow-wrap: break-word;
+  letter-spacing: -0.015em;
+  margin: 0 0 1.1rem;
+  /* Two sentences of very different length; balance stops the second one
+     breaking into a one-word orphan line. Ignored where unsupported. */
+  text-wrap: balance;
+}
+.hero-path-inner h1 .line-main { color: var(--ink); display: block; }
+/* The second sentence is the promise, not the claim — it steps back a tone
+   so the first line lands, and it is still 4.5:1 on this background. */
+.hero-path-inner h1 .line-dim { color: var(--ink-muted); display: block; }
+.hero-path-inner .lede { max-width: 520px; margin: 0 auto; }
+
+/* ---- the rail ---- */
+.pathrail {
+  list-style: none;
+  margin: clamp(2rem, 4.5vw, 3rem) auto 0;
+  padding: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  max-width: 720px;
+}
+.pathrail-node { flex: 1 1 0; min-width: 0; text-align: center; }
+.pathrail-dot {
+  width: 54px; height: 54px; margin: 0 auto;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(9, 12, 10, 0.5);
+}
+.pathrail-dot svg { width: 22px; height: 22px; fill: none; stroke: var(--ink-muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.pathrail-label { display: block; margin-top: 0.65rem; font-size: 0.82rem; color: var(--ink-muted); }
+
+.pathrail-node.is-done .pathrail-dot { border-color: var(--gold-border); background: rgba(212, 175, 55, 0.10); }
+.pathrail-node.is-done .pathrail-dot svg { stroke: var(--gold); }
+
+.pathrail-node.is-now .pathrail-dot {
+  border-color: var(--gold-bright);
+  background: rgba(212, 175, 55, 0.18);
+  box-shadow: 0 0 0 6px rgba(212, 175, 55, 0.10), 0 0 26px rgba(212, 175, 55, 0.32);
+}
+.pathrail-node.is-now .pathrail-dot svg { stroke: var(--gold-bright); }
+.pathrail-node.is-now .pathrail-label { color: var(--gold-bright); font-weight: 800; }
+
+.pathrail-link { flex: 0 0 28px; height: 2px; margin-top: 27px; background: var(--border-strong); border-radius: 2px; }
+.pathrail-link.is-done { background: var(--gold); }
+
+.pathrail-note {
+  margin: 1.1rem auto 0;
+  max-width: 460px;
+  font-size: 0.84rem;
+  color: var(--ink-faint);
+}
+
+.hero-path-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  justify-content: center;
+  margin-top: 1.8rem;
+}
+
+/* A five-node rail cannot hold its labels on a phone. It becomes a column,
+   which is also how a pathway actually reads on a small screen: top to
+   bottom, one stage per line, with the current one still the loud one. */
+@media (max-width: 720px) {
+  .pathrail { flex-direction: column; align-items: stretch; max-width: 260px; gap: 0; text-align: left; }
+  .pathrail-node { display: flex; align-items: center; gap: 0.9rem; text-align: left; }
+  .pathrail-dot { width: 44px; height: 44px; flex: 0 0 44px; margin: 0; }
+  .pathrail-dot svg { width: 18px; height: 18px; }
+  .pathrail-label { margin-top: 0; font-size: 0.92rem; text-align: left; }
+  /* 21px = half the 44px dot minus half the 2px rule, so the connector runs
+     through the centre of the circles above and below it. */
+  .pathrail-link { flex: 0 0 20px; width: 2px; height: 20px; margin: 0 0 0 21px; }
+}
+
 /* ---- AI Scout promo panel ---- */
 
 .scout-panel {

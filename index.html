@@ -84,13 +84,72 @@
   <!-- Hero. Leads with the PRODUCT, not the price: "JOIN FOR FREE!" told a
        visitor nothing about what GOLSZ is. Free-to-start now sits under the
        CTA as reassurance rather than as the headline. -->
-  <section class="hero-mega" id="hero" data-hero-region>
+  <!-- HERO: THE PATH.
+       The photo hero is gone, and the reason is contrast, not taste. The
+       headline, the lede and both buttons sat on top of a three-athlete
+       photograph whose brightness varies wildly across viewport widths; the
+       scrim scoped to the text column was already a patch over that, and at
+       most widths the type still lost. Nothing here sits on a photograph.
+
+       What replaces it is the product's own idea: a pathway with stages,
+       drawn the same way the app draws it (same icon order as stageIcon()
+       in golsz-app.html — home, shield, shield, trophy, star). A visitor
+       understands what GOLSZ does before reading a word of body copy.
+
+       THE RAIL IS LABELLED AS AN EXAMPLE. It is not this visitor's pathway
+       and must never read as one — the caption under it says so, in the
+       same voice the app uses when it doesn't know something.
+
+       data-hero-region is deliberately dropped: initHeroRegion() in
+       js/main.js no-ops when the attribute is absent, so the region photos
+       simply stop being injected here. The images are still in assets/ and
+       the endpoint is untouched. -->
+  <section class="hero-mega hero-path" id="hero">
     <div class="container">
-      <div class="hero-mega-inner reveal">
-        <p class="eyebrow">The intelligent sports platform</p>
-        <h1><span class="line-main">Know where you stand.</span><span class="line-main">Know where you're going.</span></h1>
-        <p class="lede">Build your Sports Passport. Give AI Scout your goal. Get a personalised path for what to do next.</p>
-        <div style="display:flex; flex-wrap:wrap; gap:0.7rem; margin-top:1.6rem;">
+      <div class="hero-path-inner reveal">
+        <p class="eyebrow" style="justify-content:center;">Every goal has a path</p>
+        <h1><span class="line-main">Know where you stand.</span><span class="line-dim">Know where you&rsquo;re going.</span></h1>
+        <p class="lede mx-auto">Scout turns your goal into a pathway with real stages &mdash; then tells you the next step on it.</p>
+
+        <ol class="pathrail" aria-label="Example pathway: Academy, Club, current stage, Showcase, NCAA Division 1">
+          <li class="pathrail-node is-done">
+            <span class="pathrail-dot" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 11 L12 4 L20 11 V20 H4 Z"/></svg>
+            </span>
+            <span class="pathrail-label">Academy</span>
+          </li>
+          <li class="pathrail-link is-done" aria-hidden="true"></li>
+          <li class="pathrail-node is-done">
+            <span class="pathrail-dot" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3 L20 6 V12 C20 17 12 21 12 21 C12 21 4 17 4 12 V6 Z"/></svg>
+            </span>
+            <span class="pathrail-label">Club</span>
+          </li>
+          <li class="pathrail-link is-done" aria-hidden="true"></li>
+          <li class="pathrail-node is-now">
+            <span class="pathrail-dot" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3 L20 6 V12 C20 17 12 21 12 21 C12 21 4 17 4 12 V6 Z"/></svg>
+            </span>
+            <span class="pathrail-label">You are here</span>
+          </li>
+          <li class="pathrail-link" aria-hidden="true"></li>
+          <li class="pathrail-node">
+            <span class="pathrail-dot" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M7 4 h10 v5 a5 5 0 0 1 -10 0 z"/><path d="M12 14 v4"/><path d="M8 20 h8"/></svg>
+            </span>
+            <span class="pathrail-label">Showcase</span>
+          </li>
+          <li class="pathrail-link" aria-hidden="true"></li>
+          <li class="pathrail-node">
+            <span class="pathrail-dot" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 4 l2.3 5 5.2 .5 -3.9 3.6 1.1 5.4 -4.7 -2.8 -4.7 2.8 1.1 -5.4 -3.9 -3.6 5.2 -.5 z"/></svg>
+            </span>
+            <span class="pathrail-label">NCAA D1</span>
+          </li>
+        </ol>
+        <p class="pathrail-note">An example pathway. Yours is built from your sport, your level and the goal you give Scout.</p>
+
+        <div class="hero-path-cta">
           <a href="golsz-app.html" class="btn btn-primary">Build my Sports Passport <span aria-hidden="true">&rarr;</span></a>
           <a href="index.html#how-it-works" class="btn btn-ghost">See how it works</a>
         </div>

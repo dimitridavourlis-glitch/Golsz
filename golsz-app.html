@@ -5203,25 +5203,21 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         </div>
       )}
 
+      {/* Follow and Message are gone. GOLSZ is one-to-one — an athlete, their
+          parent, and Scout — with no communication between accounts. Feed,
+          Discover and Messages were removed earlier; these two were the last
+          reachable account-to-account controls, still live here because a
+          parent reaches a child's Passport through MyAthletes.
+
+          The writes are closed at the database too (migration 132 drops the
+          follows insert/delete policies), so hiding the buttons is not the only
+          thing stopping it. Existing follow rows are kept: re-granting two
+          policies is a one-line migration, rebuilding a graph is not.
+
+          Report stays. It is safety machinery, not communication — same
+          reasoning as blocks. */}
       {viewingOther && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          <button onClick={toggleFollowThis} style={{
-            flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-            background: following ? C.lime : "transparent", color: following ? C.ink : C.chalk,
-            border: `1px solid ${following ? C.lime : C.line2}`,
-          }}>
-            <Users size={15} fill={following ? C.lime : "none"} /> {following ? t("passport_following") : t("passport_follow")}
-          </button>
-          {onMessage && (
-            <button onClick={() => onMessage(viewUserId)} style={{
-              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-              background: "transparent", color: C.chalk, border: `1px solid ${C.line2}`,
-            }}>
-              <MessageSquare size={15} /> {t("passport_message")}
-            </button>
-          )}
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, justifyContent: "flex-end" }}>
           <button onClick={reportProfile} style={{ ...iconBtn(reportedProfile ? C.amber : C.slate), fontSize: 11 }}>
             {reportedProfile ? t("action_reported") : t("action_report")}
           </button>
@@ -8666,30 +8662,34 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
           two screens saw a contradiction that did not exist in the data. Same
           stages, same source (SPORT_PATHWAY_STAGES), same current-stage
           derivation as Plan — compact here because Home reports and Plan owns. */}
-      <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+      {/* THE SAME DRAWING PLAN MAKES, AT HOME'S SIZE.
+          This was a row of text pills while Plan drew circular nodes with
+          icons, so the two screens rendered one object two ways and an
+          athlete had to work out that they were the same pathway. It now
+          uses PathNode — literally the component PathwayMap uses — with the
+          same stageIcon() sequence, so the pictures match. What stays
+          different is only what Home's job requires: no rise, no tap-to-edit,
+          smaller nodes. */}
+      <div style={{ display: "flex", alignItems: "flex-start", paddingTop: 2 }}>
         {stages.map((stage, i) => (
           <React.Fragment key={stage.id}>
-            {i > 0 && <span style={{ color: C.slate, fontSize: 11, flexShrink: 0 }}>→</span>}
-            <span style={{
-              display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, borderRadius: 20,
-              padding: "5px 10px", minHeight: 30, whiteSpace: "nowrap",
-              color: i === stageIdx ? C.chalk : i < stageIdx ? C.lime : C.slate,
-              background: i < stageIdx ? C.limeWash : "none",
-              border: `1px solid ${i === stageIdx ? C.lime : i < stageIdx ? C.limeBorder : C.line2}`,
-            }}>{stageLabel(stage, t)}</span>
+            {i > 0 && (
+              <div aria-hidden="true" style={{ flex: "0 0 8px", height: 2, marginTop: 16, borderRadius: 2, background: i <= stageIdx ? C.lime : C.line2 }} />
+            )}
+            <div style={{ flex: "1 1 0", minWidth: 0 }}>
+              <PathNode Icon={stageIcon(i, stages.length)} label={stageLabel(stage, t)} size={34}
+                filled={i <= stageIdx} current={i === stageIdx} />
+            </div>
           </React.Fragment>
         ))}
-        <span style={{ color: C.slate, fontSize: 11, flexShrink: 0 }}>→</span>
+        <div aria-hidden="true" style={{ flex: "0 0 8px", height: 2, marginTop: 16, borderRadius: 2, background: C.line2 }} />
         {/* The athlete's own goal is the last node. Not a stage — the thing the
             stages lead to — so it reads as theirs, and when it is unset it is
             an invitation rather than a blank. */}
-        <span onClick={hasGoal ? undefined : () => onNavigate("scout")} style={{
-          display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 800, borderRadius: 20,
-          padding: "5px 10px", minHeight: 30, whiteSpace: "nowrap", cursor: hasGoal ? "default" : "pointer",
-          color: hasGoal ? C.lime : C.slate,
-          background: hasGoal ? C.limeWash : "none",
-          border: `1px ${hasGoal ? "solid" : "dashed"} ${hasGoal ? C.limeBorder : C.line2}`,
-        }}>{goalLabel}</span>
+        <div style={{ flex: "1 1 0", minWidth: 0 }}>
+          <PathNode Icon={Star} label={goalLabel} size={34} filled={hasGoal}
+            onClick={hasGoal ? undefined : () => onNavigate("scout")} />
+        </div>
       </div>
       {statedSecondary ? (
         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: 4 }}>
@@ -8794,12 +8794,20 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
   if (!loaded) {
     return (
       <div aria-busy="true" aria-label={t("loading")} style={{ padding: "8px 12px 20px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "4px 2px 18px" }}>
-          <SkeletonLine height={48} width={48} radius="50%" />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <SkeletonLine height={15} width="62%" />
-            <SkeletonLine height={11} width="84%" style={{ marginTop: 8 }} />
+        {/* Same shapes the loaded screen uses — the 86px ring, the name, the
+            score at size — so nothing moves when the data lands. Shapes, not
+            figures: a 0% while the fetch is in flight is a lie about the
+            athlete, and it is the one number they look at first. */}
+        <div style={{ margin: "-8px -12px 0", padding: "18px 14px 20px", borderBottom: `1px solid ${C.line}`, background: `linear-gradient(180deg, ${C.turf}, ${C.pitch})` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
+            <SkeletonLine height={86} width={86} radius="50%" />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SkeletonLine height={9} width="34%" />
+              <SkeletonLine height={20} width="72%" style={{ marginTop: 9 }} />
+              <SkeletonLine height={11} width="56%" style={{ marginTop: 8 }} />
+            </div>
           </div>
+          <SkeletonLine height={44} width={132} style={{ marginTop: 18 }} />
         </div>
         <SkeletonCard height={148} />
         <SkeletonCard height={104} />
@@ -8907,6 +8915,42 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
               ? { label: "next_move_type_follow_up", why: "home_next_why_follow_up", go: "targets" }
               : { label: "next_move_type_review_progress", why: "home_next_why_review", go: canTargets ? "targets" : "profile" };
 
+  // THE SAME STAGES PLAN DRAWS, RESOLVED ONCE HERE.
+  // athleteStages() is the only reader of SPORT_PATHWAY_STAGES; Home asks it
+  // the same question Plan does, and honours the athlete's own stated stage
+  // (current_stage_id) over the derived one — an athlete who has said where
+  // they are outranks anything GOLSZ infers for them.
+  const homeStages = athleteStages(athlete, pathwayRow);
+  const homeStatedIdx = (pathwayRow && pathwayRow.current_stage_id)
+    ? homeStages.findIndex((st) => st.id === pathwayRow.current_stage_id) : -1;
+  const homeStageIdx = homeStatedIdx >= 0 ? homeStatedIdx : currentStageIndex(athlete, homeStages.length);
+  const currentStage = homeStageIdx >= 0 ? homeStages[homeStageIdx] : null;
+
+  // The next three open steps, ordered exactly the way nextMilestone() orders
+  // them — dated first, soonest first, then undated. That is what makes the
+  // first row of this list the same step the card above calls "my next move";
+  // any other sort and Home contradicts itself on one screen.
+  const allMilestones = pathwayRow ? (pathwayRow.milestones || []) : [];
+  const openMilestones = (() => {
+    if (!canTargets || !pathwayRow) return [];
+    const undone = allMilestones.filter((m) => !m.done);
+    const dated = undone.filter((m) => m.due).slice().sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0));
+    return dated.concat(undone.filter((m) => !m.due)).slice(0, 3);
+  })();
+  const milestonesDone = allMilestones.filter((m) => m.done).length;
+
+  // Bars are built here, not in the JSX, so the "is there anything to show"
+  // question is answered once. An empty array renders no rule and no gap.
+  const homeBars = [];
+  if (quality && quality.total > 0) {
+    homeBars.push({ key: "passport", label: t("nav_passport"), value: `${quality.filled}/${quality.total}`,
+      pct: Math.round((quality.filled / quality.total) * 100) });
+  }
+  if (canTargets && allMilestones.length > 0) {
+    homeBars.push({ key: "milestones", label: t("pathway_milestones_title"), value: `${milestonesDone}/${allMilestones.length}`,
+      pct: Math.round((milestonesDone / allMilestones.length) * 100) });
+  }
+
   return (
     <div style={{ padding: "8px 12px 20px" }}>
       {(name || (athlete && (athlete.sport || athlete.club_name))) && (
@@ -8915,28 +8959,59 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
         // statement, the athlete's own facts are the sub-line — the same
         // three-part shape every card on this page now uses. It IS the
         // Passport, summarised, so it still opens it.
+        // THE IDENTITY BLOCK IS THE TOP OF THE SCREEN, NOT A ROW ON IT.
+        // Full-bleed (negative margins cancel this page's 12px gutter) so the
+        // light sits behind the portrait the way it does on a club's own
+        // player page. Both gradient stops are tokens, never raw hex, so this
+        // flips with the theme instead of being dark-mode-only forever.
+        // It is still the Passport, summarised, so it still opens it.
         <div onClick={() => onNavigate("profile")} role="button" tabIndex={0}
           onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNavigate("profile"); } }}
-          style={{ display: "flex", alignItems: "center", gap: 12, margin: "4px 2px 18px", cursor: "pointer", minHeight: 48 }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", flexShrink: 0, overflow: "hidden", border: `1.5px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg, ${C.turf}, ${C.line2})`, fontWeight: 800, fontSize: 16, color: C.lime, fontFamily: "'Space Mono', monospace" }}>
-            {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(name || "?")}
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            {name && <Eyebrow>{t(greetingKey)}</Eyebrow>}
-            <div style={{ fontSize: 17, fontWeight: 900, letterSpacing: "-0.01em", color: C.chalk, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: name ? 3 : 0, overflowWrap: "anywhere" }}>
-              {name || t("nav_passport")}{verification && verification.status === "verified" && <BadgeCheck size={15} color={C.lime} />}
-            </div>
-            {athlete && (
-              <div style={{ fontSize: 11.5, color: C.slate, lineHeight: 1.5, marginTop: 2, overflowWrap: "anywhere" }}>
-                {[tv(athlete.sport), athlete.position].filter(Boolean).join(" · ")}
-                {athlete.club_name && <><br />{athlete.club_name}</>}
-                {(athlete.height_cm || athlete.weight_kg || athlete.grad_year) && <><br />
-                  {[athlete.height_cm && `${athlete.height_cm} cm`, athlete.weight_kg && `${athlete.weight_kg} kg`, athlete.grad_year && t("home_grad_prefix") + athlete.grad_year].filter(Boolean).join(" · ")}
-                </>}
+          style={{ margin: "-8px -12px 0", padding: "18px 14px 52px", cursor: "pointer",
+            background: `radial-gradient(120% 76% at 24% 0%, ${C.limeWash}, transparent 64%), linear-gradient(180deg, ${C.turf}, ${C.pitch})` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 13, minHeight: 48 }}>
+            {/* 86px ring. A gold ring forgives the crop on whatever photo a
+                15-year-old actually uploads; a square hero image does not. */}
+            <div style={{ position: "relative", flexShrink: 0 }}>
+              <div style={{ width: 86, height: 86, borderRadius: "50%", boxSizing: "border-box", padding: 3, border: `2px solid ${C.lime}` }}>
+                <div style={{ width: "100%", height: "100%", borderRadius: "50%", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(150deg, ${C.turf}, ${C.card})`, fontWeight: 800, fontSize: 24, color: C.lime, fontFamily: "'Space Mono', monospace" }}>
+                  {avatarUrl ? <img src={avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(name || "?")}
+                </div>
               </div>
-            )}
+              {/* The badge names the stage the athlete is AT — only when there
+                  is one. No stage is a fact GOLSZ has; it is never guessed. */}
+              {currentStage && (
+                <span style={{ position: "absolute", right: -4, bottom: -2, maxWidth: 104, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: C.lime, color: C.ink, fontFamily: "'Space Mono', monospace", fontSize: 8.5, fontWeight: 700, letterSpacing: "0.04em", padding: "3px 7px", borderRadius: 20 }}>
+                  {stageLabel(currentStage, t)}
+                </span>
+              )}
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              {name && <Eyebrow>{t(greetingKey)}</Eyebrow>}
+              {/* Set the way the wordmark in the header is set — Archivo at
+                  width 125, uppercase. The loaded font has a 125 width axis
+                  and no condensed one, so this is the app's own display
+                  treatment rather than a face borrowed from the OS that half
+                  of iOS would silently substitute. */}
+              <div style={{ fontSize: 21, fontWeight: 900, fontStretch: "expanded", textTransform: "uppercase", letterSpacing: "0.005em", lineHeight: 1.06, color: C.chalk, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: name ? 4 : 0, overflowWrap: "anywhere" }}>
+                {name || t("nav_passport")}{verification && verification.status === "verified" && <BadgeCheck size={15} color={C.lime} />}
+              </div>
+              {athlete && (
+                <div style={{ fontSize: 11.5, color: C.slate, lineHeight: 1.5, marginTop: 5, overflowWrap: "anywhere" }}>
+                  {[tv(athlete.sport), athlete.position].filter(Boolean).join(" · ")}
+                  {athlete.club_name && <><br />{athlete.club_name}</>}
+                </div>
+              )}
+            </div>
+            <ChevronRight size={16} color={C.slate} style={{ flexShrink: 0 }} />
           </div>
-          <ChevronRight size={16} color={C.slate} style={{ flexShrink: 0 }} />
+          {/* The score at size, under the name it belongs to. Same number,
+              same colour tiers and the same label as the breakdown card
+              further down — this is a bigger telling of it, not a second one. */}
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 11, marginTop: 18 }}>
+            <span style={{ fontSize: 56, fontWeight: 900, lineHeight: 0.86, color: compositeColor, fontFamily: "'Space Mono', monospace" }}>{composite}%</span>
+            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase", color: C.slate, paddingBottom: 7 }}>{t("home_readiness_composite")}</span>
+          </div>
         </div>
       )}
 
@@ -8945,7 +9020,10 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           athlete is asked to act on right now. The muted line under it is
           the WHY — a recommendation with no reason behind it is just an
           instruction, and athletes stop reading instructions. */}
-      <div style={{ ...card, padding: 16 }}>
+      {/* The sheet. It overlaps the light above it (negative margin) so the
+          frost has something to blur — a translucent panel over a flat
+          background is just a lighter box. */}
+      <div className="home-sheet" style={{ ...card, background: undefined, padding: 16, marginTop: -34, borderRadius: 18, position: "relative" }}>
         <Eyebrow>{t("next_move_title")}</Eyebrow>
         <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.24, letterSpacing: "-0.018em", color: C.chalk, margin: "10px 0 0", overflowWrap: "anywhere" }}>
           {nextMove.labelText || t(nextMove.label)}
@@ -8954,14 +9032,36 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
         <button onClick={() => onNavigate(nextMove.go)} style={{ ...primaryBtn, marginTop: 15 }}>
           {t("next_move_act")}
         </button>
+        {/* TWO BARS, NOT SIX. Both are counts this athlete can close, both
+            come from data already fetched above, and both are free-tier
+            safe: the Passport fraction is the same one the "missing fields"
+            section reports to every plan, and the milestone fraction only
+            renders where canTargets already lets the athlete have milestones
+            at all. No sub-score is shown here — those stay behind
+            featureUnlocked(plan, "readiness") in the card below. */}
+        {(homeBars.length > 0) && (
+          <div style={{ marginTop: 15, paddingTop: 13, borderTop: `1px solid ${C.line}` }}>
+            {homeBars.map((b, i) => (
+              <div key={b.key} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: i === homeBars.length - 1 ? 0 : 10 }}>
+                <span style={{ flex: "0 0 82px", fontSize: 9, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: C.slate }}>{b.label}</span>
+                <span style={{ flex: 1, height: 4, borderRadius: 99, background: C.turf, overflow: "hidden" }}>
+                  <span style={{ display: "block", height: "100%", width: `${b.pct}%`, borderRadius: 99, background: C.lime }} />
+                </span>
+                <span style={{ flex: "0 0 auto", fontSize: 11.5, fontWeight: 900, color: C.lime, fontFamily: "'Space Mono', monospace" }}>{b.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* P0-5: the athlete's goal in their own words, above the path strip
-          it is supposed to explain. The strip below shows the pathway
-          CATEGORY as a node; without this card that category was the only
-          representation of the goal anywhere in the product.
-          Read-only here, with its own route into Plan — Home reports, Plan
-          owns. The 2px slate left rule is what says so at a glance. */}
+      {/* THE GOAL CARD STAYS, AND A TEST IS THE REASON.
+          I removed it, on the grounds that the identity block above could say
+          the same sentence in one line. test_launch_p0 failed: Home must
+          render the goal WITH ITS SOURCE — "Scout wrote this" vs "you wrote
+          this" — and with its own route into Plan. My one-liner carried the
+          words and dropped the authorship, which is the part that lets an
+          athlete correct a goal Scout misheard. The 2px slate left rule is
+          the echo rule: this lives somewhere else. */}
       <GoalCard actingFor={actingFor} readOnly onOpenPlan={() => onNavigate("targets", "goal")} />
 
       {/* YOUR PATH — the heading moved INSIDE the card it names, and the
@@ -8985,6 +9085,50 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
         <JumpRow label={t("goal_card_open_plan")} onClick={() => onNavigate("targets", "pathway")} />
       </div>
 
+      {/* MILESTONES, REPORTED. The steps themselves, not just the count —
+          the athlete had to open Plan to find out what the 3/8 referred to.
+          Read-only by construction: no add field, no edit pencil, no reorder
+          arrows, no checkbox. Those exist on Plan and only on Plan; the one
+          route out of this card is the JumpRow into it.
+          Three rows, never the whole list: Home reports what is next, Plan
+          owns the rest. The count next to the title is the same number the
+          pathway card above reports, from the same array.
+          canTargets gates this the same way it gates the next-move rung that
+          reads the same data — a Free athlete is never shown a paid surface
+          on Home, and a plan that has not loaded yet behaves like Free. */}
+      {canTargets && pathwayRow && allMilestones.length > 0 && (
+        <div style={{ ...card }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, minHeight: 20 }}>
+            <Eyebrow>{t("pathway_milestones_title")}</Eyebrow>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+              <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: ".1em", color: C.slate, textTransform: "uppercase", flexShrink: 0 }}>{t("home_read_only_here")}</span>
+              <span style={{ fontSize: 14, fontWeight: 900, color: C.lime, fontFamily: "'Space Mono', monospace", flexShrink: 0 }}>{milestonesDone}/{allMilestones.length}</span>
+            </div>
+          </div>
+          <div style={{ marginTop: 6 }}>
+            {openMilestones.map((m, i) => {
+              const d = milestoneDateLabel(m, lang, t);
+              const st = m.stage ? homeStages.find((s) => s.id === m.stage) : null;
+              return (
+                // dot={false} draws the same open circle Plan puts next to an
+                // unfinished step. It is deliberately NOT a checkbox: these
+                // rows report, and a control that looks tappable but is not
+                // is worse than no control. Ticking one happens in Plan.
+                <StatusRow key={m.id} last={i === openMilestones.length - 1} label={m.label} dot={false}
+                  sub={st ? stageLabel(st, t) : null}
+                  value={d.text} valueColor={d.tone === "over" ? C.danger : C.slate} dim />
+              );
+            })}
+            {/* Every step done is a real state, and it is a good one — it
+                gets said, rather than leaving an empty card. */}
+            {openMilestones.length === 0 && (
+              <div style={{ fontSize: 13, color: C.chalk, lineHeight: 1.6, padding: "10px 0 2px" }}>{t("pathway_milestones_empty")}</div>
+            )}
+          </div>
+          <JumpRow label={t("goal_card_open_plan")} onClick={() => onNavigate("targets", "pathway")} />
+        </div>
+      )}
+
       {/* Home is a dashboard: every card is a way INTO the page that owns the
           thing it is describing. Passport Strength is computed from Passport
           content, so the card opens Passport. Without this the score was a
@@ -8999,18 +9143,16 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           <Eyebrow>{t("home_readiness_composite")}</Eyebrow>
           <ChevronRight size={14} color={C.slate} style={{ flexShrink: 0 }} />
         </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 9, flexWrap: "wrap", marginTop: 11 }}>
-          <span style={{ fontSize: 30, fontWeight: 900, lineHeight: 1, color: compositeColor, fontFamily: "'Space Mono', monospace" }}>{composite}%</span>
-          {/* A percentage alone tells an athlete nothing they can act on.
-              The four rows below ARE the breakdown, so say how many are
-              done — "2 of 4 areas strong" points at the two that are not. */}
-          <span style={{ fontSize: 12, color: C.slate, fontWeight: 700 }}>
-            {t("home_readiness_fraction").replace("{n}", readinessStatus.filter((x) => x.ok).length).replace("{total}", readinessStatus.length)}
-          </span>
+        {/* THE NUMBER MOVED, IT DID NOT MULTIPLY. The 30px composite and its
+            progress bar used to live here; both are now the 56px figure in
+            the identity block at the top of this screen. Repeating them here
+            said the same thing twice within one scroll and made the card look
+            like a second, competing score. What is left is the part the big
+            number cannot say: WHICH areas are strong and which are not. */}
+        <div style={{ fontSize: 12.5, color: C.slate, fontWeight: 700, marginTop: 9 }}>
+          {t("home_readiness_fraction").replace("{n}", readinessStatus.filter((x) => x.ok).length).replace("{total}", readinessStatus.length)}
         </div>
-        <div style={{ height: 8, borderRadius: 99, background: C.turf, overflow: "hidden", margin: "11px 0 4px" }}>
-          <div style={{ height: "100%", width: `${composite}%`, borderRadius: 99, background: compositeColor, transition: "width .3s ease" }} />
-        </div>
+        <div style={{ height: 4 }} />
         {readinessStatus.map((s, i) => {
           const Icon = READINESS_STATUS_ICON[s.key];
           const tone = s.ok ? C.lime : s.started ? C.amber : C.slate;
@@ -11378,6 +11520,23 @@ const CSS = `
      (document.body children, not its descendants — see .fixed-sheet
      usages) don't inherit. Setting it here too covers those directly. */
   body { margin: 0; background: ${C.pitch}; font-family: 'Archivo', system-ui, sans-serif; color: ${C.chalk}; }
+
+  /* Home's lead card sits ON the identity light rather than beside it, so it
+     is a frosted sheet rather than another opaque box. Written as a class,
+     not an inline style, for one reason: the translucent version needs a
+     FALLBACK. color-mix() and backdrop-filter are both widely supported now,
+     but an inline style can only carry one value per property — if it were
+     inline and unsupported, the background would resolve to nothing and the
+     card would render as bare text over a gradient. Here the opaque card is
+     the base and the frost is applied only where the browser says it can. */
+  .home-sheet { background: ${C.card}; }
+  @supports (background: color-mix(in srgb, red 50%, transparent)) and (backdrop-filter: blur(2px)) {
+    .home-sheet {
+      background: color-mix(in srgb, ${C.card} 82%, transparent);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+  }
   /* iOS Safari's address bar collapses/expands as you scroll, but 100vh
      is locked to the tallest (address-bar-hidden) case — the shell would
      render taller than the actually-visible viewport whenever the bar was
