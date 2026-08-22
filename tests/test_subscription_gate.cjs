@@ -24,6 +24,7 @@ eval(slice("function isLiveStripeLink(", "const VAPID_PUBLIC_KEY"));
 eval(slice("const STRIPE_LINKS = {", "// A Stripe Payment Link is test-mode") +
   "\nfunction __l() { return STRIPE_LINKS; }");
 const STRIPE_LINKS = __l();
+const stripeLinkForTest = (p) => (isLiveStripeLink(STRIPE_LINKS[p]) ? STRIPE_LINKS[p] : null);
 
 let p = 0, f = 0;
 const ck = (l, a, e) => {
@@ -40,13 +41,41 @@ ck("a lookalike host is refused", isLiveStripeLink("https://buy.stripe.com.evil.
 ck("http is refused", isLiveStripeLink("http://buy.stripe.com/abc"), false);
 ck("empty/null are refused", [isLiveStripeLink(""), isLiveStripeLink(null), isLiveStripeLink(undefined)], [false, false, false]);
 
-console.log("\n-- today's links are still sandbox, and the app knows it --");
-for (const plan of ["starter", "pro", "elite"]) {
+console.log("\n-- link mode: all three must agree --");
+const PAID = ["starter", "pro", "elite"];
+for (const plan of PAID) {
   ck(`${plan} link is present`, typeof STRIPE_LINKS[plan], "string");
-  // This assertion is expected to FLIP when the owner pastes live links in.
-  // That is the point: it documents the current, verified state rather than
-  // letting "code exists" read as "payments work".
-  ck(`${plan} is currently a TEST link (owner action pending)`, isLiveStripeLink(STRIPE_LINKS[plan]), false);
+}
+
+// THE FAILURE THIS EXISTS FOR IS THE SWITCHOVER, NOT THE CURRENT STATE.
+// Going live means replacing three URLs by hand. Replace two and miss one, and
+// the app does not break — stripeLinkFor() returns null for the straggler, so
+// that single plan quietly shows "not available yet" while the other two sell.
+// Nobody reports it, because the two they tried worked. A mixed state is the
+// one arrangement that is always wrong, whichever direction it is mid-move.
+const live = PAID.filter((p) => isLiveStripeLink(STRIPE_LINKS[p]));
+const test = PAID.filter((p) => !isLiveStripeLink(STRIPE_LINKS[p]));
+ck("no plan is left behind in the other mode", live.length === 0 || test.length === 0, true);
+if (live.length && test.length) {
+  console.log("   LIVE: " + live.join(", ") + "   |   STILL TEST: " + test.join(", "));
+}
+console.log("   current mode: " + (live.length ? "LIVE" : "test/sandbox"));
+
+// The assertion the owner asked for, and it can only be meaningful once the
+// switch has happened: with live links in place, NOTHING may still be test.
+// Written as a conditional rather than a hard `=== false` so the suite stays
+// truthful in both states instead of going red on the day payments start.
+if (live.length) {
+  ck("with live links in place, no test_ link survives",
+     PAID.filter((p) => /\/test_/.test(STRIPE_LINKS[p])), []);
+  ck("...and every live link is a real Stripe Payment Link",
+     PAID.filter((p) => !/^https:\/\/buy\.stripe\.com\/[A-Za-z0-9]/.test(STRIPE_LINKS[p])), []);
+} else {
+  // Still pre-launch. Record it as a verified fact rather than letting
+  // "the code exists" read as "payments work".
+  ck("checkout is deliberately dark: every link is still sandbox",
+     PAID.every((p) => /\/test_/.test(STRIPE_LINKS[p])), true);
+  ck("...and the gate refuses all of them", PAID.map((p) => stripeLinkForTest(p)), [null, null, null]);
 }
 ck("every checkout entry point goes through the gate",
    (APP.match(/stripeLinkFor\(/g) || []).length >= 8, true);
