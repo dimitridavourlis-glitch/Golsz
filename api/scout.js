@@ -2936,9 +2936,28 @@ function extractSuggestedPathway(data) {
       ? p.milestones.filter((m) => m && typeof m.label === "string" && m.label.trim()).slice(0, 10).map((m) => ({ label: m.label.trim().slice(0, 200), done: false }))
       : [];
     if (!milestones.length) return null; // "at least one concrete milestone" per the prompt's own rule
+    // STAGES ARE OPTIONAL, AND REPAIRED HERE rather than at the use site.
+    // THE ID IS OURS, NEVER THE MODEL'S. A stage's identity has to survive a
+    // rename because milestones store it in `stage`, and the model cannot know
+    // the ids of sections that already exist — an invented one could collide
+    // and orphan every step filed under the section it landed on. Any id the
+    // model sends is discarded.
+    // Capped at 7 to match MAX_STAGES in the client. A model that returns
+    // twelve gets the first seven rather than a rejected payload: a partial
+    // pathway is more use to the athlete than none.
+    const stages = Array.isArray(p.stages)
+      ? p.stages
+          .filter((x) => x && typeof x.label === "string" && x.label.trim())
+          .slice(0, 7)
+          .map((x) => ({
+            id: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random(),
+            label: x.label.trim().slice(0, 40),
+          }))
+      : [];
     return {
       pathway_type: p.pathway_type,
       target_timeline: typeof p.target_timeline === "string" ? p.target_timeline.trim().slice(0, 100) : null,
+      stages,
       milestones,
     };
   } catch {
@@ -3979,6 +3998,11 @@ Output as valid JSON only:
   "suggested_pathway": {
     "pathway_type": "ncaa|naia|juco|canadian_university|academy|european_club|professional|development|agent_representation|trainer_performance|other",
     "target_timeline": "description",
+    "stages": [
+      {
+        "label": "section name in THEIR words, max 40 chars"
+      }
+    ],
     "milestones": [
       {
         "label": "milestone label",
@@ -3988,6 +4012,21 @@ Output as valid JSON only:
   },
   "drafted_email": "full email text if this reply IS a drafted outreach email, else null"
 }
+
+"stages" are the athlete's own pathway sections — the labelled steps on their
+map, like "Academy", "U19 / CS Saint-Laurent", or "Trials in Portugal".
+- Maximum 7. Fewer is better: three or four honest sections beat seven vague ones.
+- Use THEIR words wherever they have given them. A section named for their real
+  club is worth more than a generic tier name.
+- Do NOT propose stages just because you can. Only when they ask to build or
+  restructure their pathway, or when what they have plainly cannot reach their
+  stated goal. If their existing sections are fine, omit the field entirely.
+- NEVER include an "id". The server assigns them. A section's identity has to
+  survive a rename, and you cannot know the ids of sections that already exist.
+- Accepting REPLACES their whole section list. That is rewriting their map, not
+  adding to it, so say so plainly in your reply and let them decide.
+- Their steps are never lost by this: a step filed under a removed section
+  becomes unfiled, not deleted. Do not warn them that they will lose work.
 
 Only set fields that actually changed this reply. Use null for unchanged fields. memory_writes must always be present (empty array [] if nothing new). Everything else is optional and may be null or omitted.`;
 

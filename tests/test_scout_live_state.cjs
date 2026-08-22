@@ -178,8 +178,24 @@ ck("add is the default and replace is the deliberate branch",
    /const merged = mode === "replace" \? incoming : existing\.concat\(incoming\)/.test(APP), true);
 ck("both branches normalise, so Scout's dateless/stageless steps are repaired",
    /const incoming = \(pathway\.milestones \|\| \[\]\)\.map\(normalizeMilestone\)/.test(APP), true);
-ck("replacing states what is lost before it writes",
-   /pathwayConfirm === "replace"[\s\S]{0,600}scout_pathway_replace_warning/.test(APP), true);
+// Was a PROXIMITY check — replace-branch within 600 chars of the warning — so
+// it broke when the sections block was inserted between them, while the
+// property it cares about never changed. Proximity is not the claim; ORDER is:
+// the athlete must be told what is lost before anything can commit it.
+{
+  const panel = /m\.pathwayConfirm \? \(\(\) => \{[\s\S]*?\}\)\(\) : \(/.exec(APP);
+  ck("the confirm panel was found", !!panel, true);
+  const warn = panel[0].indexOf("scout_pathway_replace_warning");
+  const commit = panel[0].indexOf("addSuggestedPathway(i, m.suggestedPathway, replacing");
+  ck("replacing states what is lost BEFORE anything can commit it",
+     warn >= 0 && commit >= 0 && warn < commit, true);
+  // Sections rewrite the map, so a proposal that includes them has to say so
+  // in the same panel, and say that steps survive.
+  ck("a sections proposal is disclosed too", panel[0].includes("scout_stages_replace"), true);
+  ck("...and states that steps are not lost", panel[0].includes("scout_stages_steps_safe"), true);
+  ck("...before the commit button as well",
+     panel[0].indexOf("scout_stages_replace") < commit, true);
+}
 ck("Scout holds the current Pathway to compare against", /const \[currentPathway, setCurrentPathway\]/.test(APP), true);
 // Pinned the exact column list, so it broke when `stages, current_stage_id`
 // were added for the node editor. The property is that Scout reads the Pathway

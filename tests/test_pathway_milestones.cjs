@@ -136,10 +136,25 @@ ck("Scout's incoming milestones are normalised once, before either branch",
    /const incoming = \(pathway\.milestones \|\| \[\]\)\.map\(normalizeMilestone\)/.test(APP), true);
 ck("...and the athlete's existing steps are normalised too, not trusted raw",
    /currentPathway\.milestones\.map\(normalizeMilestone\)/.test(APP), true);
+// Pinned `milestones: merged, baseline_complete` — adjacency, not the property
+// — so it broke when `stages:` was inserted between them. What matters is that
+// the upsert writes `merged`, whatever follows it.
 ck("the upsert writes the merged list, not Scout's alone",
-   /milestones: merged, baseline_complete/.test(APP), true);
+   /pathway_plan"\)\.upsert\([\s\S]{0,300}?milestones: merged\b/.test(APP), true);
+// Sections are always a replace, never appended — two half-maps concatenated
+// is not a route — but proposing none must leave the athlete's own intact
+// rather than clearing them.
+ck("Scout's sections replace, and an empty proposal keeps theirs",
+   /const nextStages = proposedStages\.length \? proposedStages : existingStages;/.test(APP), true);
+ck("...and stages reach the upsert", /milestones: merged, stages: nextStages/.test(APP), true);
+// Also pinned adjacency — `milestones: merged })` — and broke when stages were
+// added between them. The claim is that the local mirror carries the same
+// merged list the upsert wrote, so a SECOND proposal in the same conversation
+// previews against what is actually on file.
 ck("...and setCurrentPathway mirrors the same merged list",
-   /setCurrentPathway\(\{[^)]*milestones: merged \}\)/.test(APP), true);
+   /setCurrentPathway\(\{[\s\S]{0,200}?milestones: merged\b/.test(APP), true);
+ck("...including the sections, or a second proposal compares against stale ones",
+   /setCurrentPathway\(\{[\s\S]{0,200}?stages: nextStages/.test(APP), true);
 ck("no un-normalised `milestones: pathway.milestones` remains",
    /milestones: pathway\.milestones\b/.test(APP), false);
 // The whole point: an athlete's ticked, dated, self-written steps survive.
