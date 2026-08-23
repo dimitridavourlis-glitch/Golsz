@@ -188,7 +188,17 @@ ck("...and marks it athlete-authored", /goal_source: "athlete_edited",/.test(APP
 // and hands off to Plan; Plan is the workspace and owns the edit. Both render
 // the same component so the two views cannot drift, which is why this asserts
 // the props rather than just the presence of the tag.
-ck("Home renders it", /<GoalCard actingFor=\{actingFor\} readOnly onOpenPlan=/.test(APP), true);
+// Pinned the exact PROP SEQUENCE, so adding `flush` between readOnly and
+// onOpenPlan broke it while every property it cares about still held. The
+// claim is that Home renders the shared component, read-only, with a route
+// into Plan — not the order the attributes happen to be written in.
+{
+  const tag = /<GoalCard\b[^>]*>/.exec(APP);
+  ck("Home renders it", !!tag, true);
+  ck("...passing the athlete it is acting for", /actingFor=\{actingFor\}/.test(tag[0]), true);
+  ck("...read-only, so Home never edits", /\breadOnly\b/.test(tag[0]), true);
+  ck("...with a route into the page that owns it", /onOpenPlan=/.test(tag[0]), true);
+}
 ck("...read-only, so Home never edits", /<GoalCard actingFor=\{actingFor\} readOnly/.test(APP), true);
 // The optional second argument is the hand-off ORIGIN, which Plan reads to
 // render its breadcrumb. This assertion used to require exactly

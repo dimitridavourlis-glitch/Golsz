@@ -7978,7 +7978,7 @@ function PathNode({ Icon, label, sub, filled, current, onClick, size, color }) {
 // goal and hands you to Plan to change it. Plan is the workspace: it owns
 // editing. Same component, one prop, so the two can never drift out of sync
 // the way two copies would.
-function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan }) {
+function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan, flush }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [goalText, setGoalText] = useState("");
@@ -8088,7 +8088,7 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan }) {
     // with a taller sibling and push its JumpRow to the bottom edge. In normal
     // flow — which is how Plan renders it — height:100% resolves to auto and
     // nothing changes, so this costs the other call site nothing.
-    <div style={{ ...card, margin: compact ? 0 : undefined, marginBottom: compact ? 10 : undefined,
+    <div style={{ ...card, margin: compact ? 0 : undefined, marginBottom: flush ? 0 : (compact ? 10 : undefined),
       display: "flex", flexDirection: "column", height: "100%",
       borderLeft: readOnly ? `2px solid ${C.line2}` : `3px solid ${C.lime}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
@@ -8624,11 +8624,11 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           unchanged — this spends the desktop width reclaimed in 57aca9e rather
           than hiding anything. */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 12, alignItems: "stretch" }}>
-      <GoalCard actingFor={actingFor} readOnly onOpenPlan={() => onNavigate("targets", "goal")} />
+      <GoalCard actingFor={actingFor} readOnly flush onOpenPlan={() => onNavigate("targets", "goal")} />
 
       {/* YOUR PATH — the heading moved INSIDE the card it names, and the
           card gained the route into the page that owns the pathway. */}
-      <div style={{ ...card }}>
+      <div style={{ ...card, marginBottom: 0 }}>
         {/* The count Plan owns, reported here in the card the athlete actually
             reads. Deliberately NOT on the sub-score row above: that row sits
             behind featureUnlocked(plan, "readiness"), so a Free athlete would
