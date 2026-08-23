@@ -10672,7 +10672,18 @@ function GolszApp({ onSignOut, startOnboarding }) {
 
         {/* main content */}
         <main style={{ flex: 1, overflowY: "auto" }} className="noscroll">
-          <div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 32px 60px" }}>
+          {/* WIDTH IS PER-PAGE, because these screens want different things.
+              At maxWidth 720 the column sat in 1176px of available space and
+              left a 228px dead gutter on BOTH sides — measured, not guessed:
+              720 of a 1408px viewport, just over half the screen. The layout
+              was the phone layout centred in a desktop shell.
+
+              Scout stays narrow on purpose. It is prose, and a 1040px chat
+              line is roughly 130 characters — past the point where the eye
+              loses its place returning to the next line. Widening everything
+              equally would have fixed the gutter and hurt the one screen
+              people read continuously. */}
+          <div style={{ maxWidth: page === "scout" ? 860 : 1040, margin: "0 auto", padding: "28px 32px 60px" }}>
             {actingFor && <ManagingBanner name={actingFor.name} onExit={exitManaging} t={t} />}
             {page === "home" && !actingFor && linkedChildren && linkedChildren.length > 0 && (
               <MyAthletes children={linkedChildren} onManage={manageAthlete} onView={viewProfile} t={t} />
