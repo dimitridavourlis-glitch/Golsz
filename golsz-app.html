@@ -8084,7 +8084,12 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan }) {
   // can change this here". Weight and colour do the work at a glance, in both
   // themes, in every language.
   return (
+    // display:flex + height:100% so this card can fill a grid row it shares
+    // with a taller sibling and push its JumpRow to the bottom edge. In normal
+    // flow — which is how Plan renders it — height:100% resolves to auto and
+    // nothing changes, so this costs the other call site nothing.
     <div style={{ ...card, margin: compact ? 0 : undefined, marginBottom: compact ? 10 : undefined,
+      display: "flex", flexDirection: "column", height: "100%",
       borderLeft: readOnly ? `2px solid ${C.line2}` : `3px solid ${C.lime}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
         <Trophy size={12} color={C.lime} style={{ flexShrink: 0 }} />
@@ -8151,8 +8156,17 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan }) {
           phone. If Home's whole job is to hand you to the page that owns the
           thing, the handing-off cannot be the smallest element on screen.
           This is the same navigation, given the weight the rule implies. */}
+      {/* marginTop auto, so when this card is stretched the route out lands on
+          the bottom edge — level with the same control on the card beside it.
+          Stretching alone would have moved the dead space inside the card
+          rather than removing it.
+          NOTE: this comment sits ABOVE the conditional on purpose. Inside
+          `&& (` it is a second child where one expression is expected, and the
+          parse fails — which is exactly what happened writing it. */}
       {readOnly && !editing && onOpenPlan && (
-        <JumpRow label={hasGoal ? t("goal_card_open_plan") : t("goal_card_set")} onClick={onOpenPlan} />
+        <div style={{ marginTop: "auto" }}>
+          <JumpRow label={hasGoal ? t("goal_card_open_plan") : t("goal_card_set")} onClick={onOpenPlan} />
+        </div>
       )}
     </div>
   );
@@ -8609,7 +8623,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           them back to one column below ~440px each, so the phone layout is
           unchanged — this spends the desktop width reclaimed in 57aca9e rather
           than hiding anything. */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 12, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 12, alignItems: "stretch" }}>
       <GoalCard actingFor={actingFor} readOnly onOpenPlan={() => onNavigate("targets", "goal")} />
 
       {/* YOUR PATH — the heading moved INSIDE the card it names, and the
