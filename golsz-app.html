@@ -8248,6 +8248,13 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
   const [development, setDevelopment] = useState(null);
   const [pathway, setPathway] = useState(null);
   const [pathwayRow, setPathwayRow] = useState(null);
+  // WHY THIS SCORE is collapsed by default. It is the largest block on Home
+  // (467px measured) and sits directly under PASSPORT STRENGTH, which already
+  // gives the composite, the four status words and the route into Passport.
+  // Two answers to one question, stacked. Nothing is removed — one tap opens
+  // the full breakdown — and the guardrail on Home was about not REMOVING the
+  // checklists, which this does not do.
+  const [whyOpen, setWhyOpen] = useState(false);
   const [recentBenchmarks, setRecentBenchmarks] = useState([]);
   const [monthly, setMonthly] = useState(null);
   const [name, setName] = useState("");
@@ -8596,6 +8603,13 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           words and dropped the authorship, which is the part that lets an
           athlete correct a goal Scout misheard. The 2px slate left rule is
           the echo rule: this lives somewhere else. */}
+      {/* PAIRED, not merged. Both are echo cards for objects Plan owns, both
+          are short, and stacked they cost ~354px of a 2073px page. Side by side
+          on a wide screen they cost the taller of the two. auto-fit collapses
+          them back to one column below ~440px each, so the phone layout is
+          unchanged — this spends the desktop width reclaimed in 57aca9e rather
+          than hiding anything. */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 12, alignItems: "start" }}>
       <GoalCard actingFor={actingFor} readOnly onOpenPlan={() => onNavigate("targets", "goal")} />
 
       {/* YOUR PATH — the heading moved INSIDE the card it names, and the
@@ -8662,6 +8676,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           <JumpRow label={t("goal_card_open_plan")} onClick={() => onNavigate("targets", "pathway")} />
         </div>
       )}
+      </div>
 
       {/* Home is a dashboard: every card is a way INTO the page that owns the
           thing it is describing. Passport Strength is computed from Passport
@@ -8710,7 +8725,21 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
               answer to "why this score", so they now live inside that card,
               as rows, above the sentence that names the weakest one. */}
           <div style={{ ...card }}>
-            <Eyebrow>{t("home_readiness_why_title")}</Eyebrow>
+            {/* THE BIGGEST BLOCK ON HOME, and the most duplicative: 467px of
+                sub-scores directly under a PASSPORT STRENGTH card that already
+                gives the composite, the four status words and the CTA. Nothing
+                is removed — every row is one tap away — but Home stops opening
+                with two answers to the same question stacked on top of each
+                other. Measured before and after, not eyeballed. */}
+            <button onClick={() => setWhyOpen((v) => !v)} style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, width: "100%",
+              background: "none", border: "none", padding: 0, minHeight: 32, cursor: "pointer",
+              fontFamily: "inherit", textAlign: "left",
+            }} aria-expanded={whyOpen}>
+              <Eyebrow>{t("home_readiness_why_title")}</Eyebrow>
+              {whyOpen ? <ChevronUp size={15} color={C.slate} /> : <ChevronDown size={15} color={C.slate} />}
+            </button>
+            {whyOpen && (<>
             <div style={{ marginTop: 6 }}>
               <StatusRow label={t("home_profile_quality")} sub={quality ? `${quality.filled}/${quality.total}` : ""} value={subScores.profile_quality} valueColor={scoreTone(subScores.profile_quality)} mono />
               <StatusRow label={t("home_verification")} sub={t("home_verify_status_" + (verification ? verification.status : "none"))} value={subScores.verification} valueColor={scoreTone(subScores.verification)} mono />
@@ -8723,6 +8752,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
               <div style={{ fontSize: 13, color: C.chalk, lineHeight: 1.6 }}>{t("home_readiness_weakest_" + weakest)}</div>
               <button onClick={() => onNavigate("profile")} style={{ ...quietBtn, marginTop: 13 }}>{t("home_readiness_improve")}</button>
             </div>
+            </>)}
           </div>
 
           {/* Command-center enrichment (brief §14: "pathway progress",
