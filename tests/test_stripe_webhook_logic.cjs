@@ -89,7 +89,21 @@ global.fetch = async (url, opts = {}) => {
     // CUSTOMER id, looked it up as a profile key, found nothing and reported
     // zero rows updated. A substring that looks specific and is not.
     if (patchHttpStatus) {
-      return { ok: false, status: patchHttpStatus, text: async () => '{"message":"column does not exist"}' };
+      return { ok: false, status: patchHttpStatus, text: async () => '{"message":"column does not exist"}',
+               json: async () => ({ message: "column does not exist" }) };
+    }
+    // The mock HONOURS Prefer, because the header is half the contract. With
+    // `return=minimal` PostgREST answers 204 with an EMPTY BODY — r.ok is
+    // true and r.json() throws. Code that requires a row back would then
+    // treat every SUCCESSFUL write as "matched no profile" and 500 forever,
+    // which is worse than the bug it replaced. A mock that answers rows no
+    // matter what Prefer says cannot see that, and this one could not: the
+    // header was reverted during a CI dry-run and every assertion still
+    // passed.
+    const prefer = String((opts.headers || {}).Prefer || "");
+    if (!prefer.includes("return=representation")) {
+      return { ok: true, status: 204, json: async () => { throw new SyntaxError("Unexpected end of JSON input"); },
+               text: async () => "" };
     }
     const byId = /[?&]id=eq\.([^&]+)/.exec(u);
     const byCustomer = /stripe_customer_id=eq\.([^&]+)/.exec(u);

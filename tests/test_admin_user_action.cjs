@@ -121,6 +121,14 @@ global.fetch = async (url, opts = {}) => {
       return { ok: false, status: 400, text: async () => '{"message":"column does not exist"}',
                json: async () => ({ message: "column does not exist" }) };
     }
+    // Honours Prefer for the same reason the stripe suite does: `return=minimal`
+    // answers 204 with an empty body, so requiring a row back would turn every
+    // successful ban into a 500. See that file's note.
+    const prefer = String((opts.headers || {}).Prefer || "");
+    if (!prefer.includes("return=representation")) {
+      return { ok: true, status: 204, json: async () => { throw new SyntaxError("Unexpected end of JSON input"); },
+               text: async () => "" };
+    }
     const m = /[?&]id=eq\.([^&]+)/.exec(u);
     const rows = patchMode === "zero" || !m ? [] : [{ id: m[1], ...(parsed || {}) }];
     return { ok: true, json: async () => rows };

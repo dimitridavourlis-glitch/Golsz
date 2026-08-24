@@ -1,0 +1,70 @@
+# Run `npm run check` on every push and pull request.
+#
+# WHY THIS EXISTS
+# The repo had 60 suites and ~2,600 assertions that gated nothing unattended.
+# `npm run check` only ever ran when someone typed it, or via `npm run deploy`
+# — and pushing to main deploys production through the Vercel git integration
+# WITHOUT going through that script. So the tests could be green for weeks
+# while a push shipped something they would have caught. That is the same
+# shape as the bugs this suite exists to catch: a check that exists but cannot
+# be observed failing.
+#
+# NOT SUBJECT TO THE 60-DAY PROBLEM
+# health-alert.yml carries a long note about GitHub silently disabling
+# `schedule:` triggers after 60 days of repository inactivity. That applies to
+# scheduled workflows only. `push:` and `pull_request:` are event-driven and
+# are never disabled for inactivity, so this file needs no watchdog of its own.
+#
+# NO SECRETS, BY VERIFICATION NOT BY ASSUMPTION
+# Every suite that needs configuration assigns its own process.env values (7
+# of them do). The full suite was run under `env -i` with nothing but PATH and
+# HOME and produced the identical 60/60 and 2,599 assertions — so a missing
+# secret cannot make this pass vacuously. If a future suite starts depending
+# on a real secret, it will fail here rather than silently skipping, which is
+# the correct direction.
+#
+# `npm ci` (not `npm install`) so the lockfile is authoritative, and it
+# installs devDependencies by default — @babel/parser and @babel/traverse are
+# devDeps and four suites parse source with them.
+
+name: check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege: this workflow only ever reads the repo.
+permissions:
+  contents: read
+
+# A newer push to the same ref makes an in-flight run irrelevant.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      # Report both versions rather than stopping at the first failure — which
+      # one broke is the useful information.
+      fail-fast: false
+      matrix:
+        # 24.x is what these suites were written and verified on locally.
+        # 22.x is Vercel's default runtime, so it is the version that actually
+        # serves production; package.json pins no `engines`, so the two can
+        # drift apart silently. Testing both is what makes that visible.
+        node: ["22.x", "24.x"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      # `npm run check` = node --check on every api/*.js, then all 60 suites.
+      - run: npm run check
