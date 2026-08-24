@@ -354,11 +354,16 @@
   </section>
 
   <!-- ======================= PRICING ======================= -->
-  <!-- CAD as of 2026-08-10, matching PLANS in golsz-app.html and
-       planFromAmount() in api/stripe-webhook.js. Fixed amounts — never
-       converted from another currency at runtime. Changing one of these
-       means changing all three, plus new Stripe Payment Links (Stripe
-       Prices are immutable). -->
+  <!-- EUR. The amounts below (0 / 6 / 15 / 30) must match PLAN_CATALOG in
+       api/_plan-catalog.js, which holds them in Stripe minor units
+       (600 / 1500 / 3000) and is the server-side source of truth.
+       Fixed amounts — never converted from another currency at runtime.
+       Changing one means changing all three, plus new Stripe Prices
+       (Stripe Prices are immutable) and the Payment Links that use them.
+       This comment used to cite planFromAmount(), which no longer exists:
+       deciding a plan from how much was paid was removed precisely because
+       tax, coupons and proration move the amount without changing the
+       product. See the header of api/_plan-catalog.js. -->
   <section class="section-pad" style="background: var(--charcoal); border-top:1px solid var(--border-strong); border-bottom:1px solid var(--border-strong);" id="pricing">
     <div class="container">
       <div class="reveal text-center mx-auto" style="max-width: 620px;">
@@ -426,7 +431,7 @@
         </article>
       </div>
 
-      <p class="field-hint text-center" style="margin-top:1.6rem;">All prices in CAD &middot; No card needed to start &middot; Cancel any time &middot; Under 16? A parent creates and manages the account.</p>
+      <p class="field-hint text-center" style="margin-top:1.6rem;">All prices in EUR &middot; No card needed to start &middot; Cancel any time &middot; Under 16? A parent creates and manages the account.</p>
     </div>
   </section>
 

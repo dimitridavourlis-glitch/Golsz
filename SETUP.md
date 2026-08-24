@@ -45,9 +45,33 @@ The app automatically attaches the signed-in user's token to Scout calls, so the
 
 ## 3) Payments (from earlier)
 
-Create Stripe Payment Links for Pro/Elite, set each link's post-payment redirect to your app URL + `?checkout=success`, then paste them into `STRIPE_LINKS`. Money is paid out to your connected bank; Stripe's Canadian rate is 2.9% + C$0.30 per charge.
+GOLSZ is a Nicosia (Cyprus) business and prices in **EUR**. Create the three
+recurring Prices — €6 / €15 / €30 per month — and a Payment Link for each, set
+each link's post-payment redirect to your app URL + `?checkout=success`, then
+paste the links into `STRIPE_LINKS` in `golsz-app.html`.
 
-> Note: Payment Links collect money but don't yet *gate* features. To lock Pro to paying members, add a Stripe **webhook** that writes to the `subscriptions` table — that's the next build.
+Per-charge fees depend on the card's origin (EEA / UK / international) and are
+not quoted here on purpose — a rate written into a README goes stale silently.
+See [Stripe's pricing page](https://stripe.com/en-cy/pricing) for the current
+Cyprus figures.
+
+Three things that are easy to get wrong, each of which fails **silently**:
+
+- **`golsz_plan` metadata on the Payment Link must be `starter`, not `basic`.**
+  The display name is "Basic" but the DB enum — and `VALID_PLANS` in
+  `api/_plan-catalog.js` — is `starter`. A link tagged `basic` resolves to no
+  plan at all.
+- **The links must be live, not test.** `isLiveStripeLink()` in
+  `golsz-app.html` rejects any URL containing `/test_`, which is why checkout
+  currently reads "not available yet".
+- **`STRIPE_WEBHOOK_SECRET` is per-endpoint and per-mode.** A sandbox secret
+  will not verify live events; every real payment would 400 and Stripe would
+  retry it forever while the athlete gets nothing.
+
+> The webhook that gates features **already exists** (`api/stripe-webhook.js`).
+> It writes `profiles.plan` and resolves which plan was bought from the Price
+> id, `lookup_key` or explicit metadata — never from the amount paid. Set
+> `STRIPE_PRICE_BASIC` / `_PRO` / `_ELITE` in Vercel to the live Price ids.
 
 ---
 

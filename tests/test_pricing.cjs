@@ -93,6 +93,23 @@ ck("they read 0 / 6 / 15 / 30 in euro", prices.map((x) => x.replace(/&euro;/g, "
    ["\u20AC0", "\u20AC6/mo", "\u20AC15/mo", "\u20AC30/mo"]);
 ck("no CAD symbol survives on the homepage", /C\$\d/.test(HOME), false);
 ck("currency is labelled for international visitors", /All prices in euro \(EUR\)/.test(HOME), true);
+// BOTH of the two lines above passed on 2026-08-24 while the homepage carried
+// "All prices in CAD" in its pricing footnote, directly contradicting the "All
+// prices in euro (EUR)" line 60 lines above it. Each check could only fail in
+// one direction: the first looks for the SYMBOL C$ followed by a digit, which
+// the word "CAD" does not contain; the second confirms the right claim is
+// PRESENT and says nothing about a wrong one sitting beside it.
+//
+// GOLSZ is a Nicosia (Cyprus) business selling in EUR. The currency word is
+// the claim customers actually read, so assert the wrong word is ABSENT, not
+// merely that the right one appears somewhere.
+ck("the word CAD appears nowhere on the homepage", /\bCAD\b/.test(HOME), false);
+ck("...nor any other Canadian-business claim", /\bCanadian\b/.test(HOME), false);
+// Every currency statement must agree. One page cannot name two currencies.
+const currencyClaims = [...HOME.matchAll(/All prices in ([A-Za-z()\s]+?)(?:\s*&middot;|\.|<)/g)]
+  .map((m) => m[1].trim());
+ck("every 'All prices in ...' statement was found", currencyClaims.length >= 2, true);
+ck("...and they all name EUR", [...new Set(currencyClaims.map((c) => /eur/i.test(c)))], [true]);
 ck("Pro is still the featured plan", /class="card plan is-featured/.test(HOME), true);
 
 console.log("\n-- the in-app currency note is localised --");
