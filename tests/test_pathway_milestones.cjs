@@ -398,5 +398,39 @@ ck("...and that condition is derived from milestones that really are filed",
      filedIn([{ stage: "gone" }, { stage: null }], stages), false);
 }
 
+// ---- prefix-built keys must reconcile with the sets that build them ------
+// t("pathway_stage_" + st.id) and friends resolve a key from a VALUE, so
+// neither direction is visible to an ordinary dead-key scan:
+//   * a key with no value behind it is dead weight nothing can reach;
+//   * a value with no key behind it renders the RAW KEY STRING to a user,
+//     which is the direction that actually hurts and the one nothing checked.
+// Both are asserted here against the real source arrays.
+{
+  const setFrom = (re, src) => [...new Set([...src.matchAll(re)].map((m) => m[1]))];
+  const stageBlock = APP.slice(APP.indexOf("const SPORT_PATHWAY_STAGES = {"),
+                               APP.indexOf("\n};", APP.indexOf("const SPORT_PATHWAY_STAGES = {")));
+  const stageIds = new Set();
+  for (const m of stageBlock.matchAll(/stages:\s*\[([^\]]*)\]/g))
+    for (const q of m[1].matchAll(/"([a-z0-9_]+)"/g)) stageIds.add(q[1]);
+
+  const groups = [
+    ["pathway_stage_", [...stageIds]],
+    ["pathway_type_", setFrom(/"([a-z_]+)"/g, (/const PATHWAY_TYPES = \[([^\]]*)\]/.exec(APP) || [])[1] || "")],
+    ["targets_status_", setFrom(/"([a-z_]+)"/g, (/const TARGET_STATUSES = \[([^\]]*)\]/.exec(APP) || [])[1] || "")],
+    ["dev_plan_status_", setFrom(/"([a-z_]+)"/g, (/const DEV_STATUSES = \[([^\]]*)\]/.exec(APP) || [])[1] || "")],
+    ["dev_plan_focus_", setFrom(/"([a-z_]+)"/g, (/DEV_FOCUS_AREAS = \[([^\]]*)\]/.exec(APP) || [])[1] || "")],
+    ["home_readiness_weakest_", setFrom(/"([a-z_]+)"/g, (/READINESS_DIMENSIONS = \[([^\]]*)\]/.exec(APP) || [])[1] || "")],
+    ["home_readiness_teaser_", setFrom(/"([a-z_]+)"/g, (/READINESS_DIMENSIONS = \[([^\]]*)\]/.exec(APP) || [])[1] || "")],
+  ];
+  for (const [prefix, values] of groups) {
+    ck(`${prefix}* has values to build from`, values.length > 0, true);
+    const defined = [...new Set([...APP.matchAll(new RegExp("\\b(" + prefix + "[a-z0-9_]+)\\s*:", "g"))].map((m) => m[1]))];
+    ck(`${prefix}* — every value has a key (a missing one renders raw)`,
+       values.map((v) => prefix + v).filter((k) => !defined.includes(k)), []);
+    ck(`${prefix}* — every key has a value behind it`,
+       defined.filter((k) => !values.map((v) => prefix + v).includes(k)), []);
+  }
+}
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
