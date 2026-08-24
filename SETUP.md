@@ -77,8 +77,50 @@ Three things that are easy to get wrong, each of which fails **silently**:
 
 ## What's real now vs. next
 
-**Real:** accounts, sessions, sign-out, per-user data isolation, a working hosted Scout with your key protected and free-tier limits.
+Rewritten 2026-08-24. The previous version of this section described an app
+that no longer exists — it listed Feed and Discover as "still mock" months
+after the social model was retired outright, and called a `programs` dataset
+"the moat" when no such table has ever existed. A stale status section is
+worse than none: it is the thing a new contributor reads first.
 
-**Still mock (reads from hardcoded arrays):** Feed, Discover, Events, and the Passport display. Point each at its Supabase table when ready. The big one is seeding `programs` with real schools/coaches — that dataset is the moat.
+**Real and live:** accounts and sessions, per-user data isolation via RLS,
+parent-managed accounts for under-16s (`api/create-child-account.js`,
+`parent_links`), the hosted AI Scout with the key server-side and per-plan
+limits, the pathway planner with custom stages, Targets, Benchmarks, the
+admin panel, AI moderation of profile text and Scout output
+(`api/moderate.js`), and four languages at full key parity.
 
-**Compliance before real launch:** parent-linked accounts for under-18 users, and safeguards on any adult-to-minor messaging.
+Six pages render today: home, scout, targets, profile, events, admin.
+
+**Deliberately retired, not pending:** posts, the feed, follows, direct
+messages and the whole social layer. GOLSZ is a growth and organiser app, not
+a sports LinkedIn. Be precise about what "retired" means here, because the
+code has not all been deleted:
+
+- The **tables still exist and still hold their original rows.** Nothing an
+  athlete wrote was destroyed. Reads are scoped and writes are closed at the
+  RLS layer (migrations 129, 130, 132).
+- Some **client components remain but are unreachable** — the Messages
+  component still has send/delete/read code, and there is no `page ===
+  "messages"` route to it and no nav entry. The closure does not depend on
+  that UI being hidden: migration 130 DROPPED `messages_write` / `_update` /
+  `_delete`, so with RLS enabled there is no policy permitting an insert at
+  all. Admins keep DELETE, because the moderation queue still points at real
+  rows and a queue whose entries cannot be actioned is not a queue.
+
+Do not "finish" any of this. If it is ever genuinely dropped, the client code
+is the safe part to delete; the tables are not, because they hold real
+history.
+
+**Never built:** there is no `programs` table. The idea of seeding real
+schools and coaches remains just that — an idea, and still the most plausible
+defensible asset if it is ever built.
+
+**The actual blocker:** payments. No live Stripe account exists yet; see
+section 3 above. Nothing can be charged, so nothing has been.
+
+**Compliance, already in place rather than pending:** under-16s cannot self
+register — a parent creates and manages the account
+(`api/create-child-account.js`, `parent_links`, `profiles.parent_managed`).
+Adult-to-minor direct messaging is closed at the database, not merely hidden:
+no account can write to `messages` at all.
