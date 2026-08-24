@@ -354,7 +354,7 @@ for (const l of ["en", "fr", "es", "el"]) {
 }
 console.log("   dictionary size: " + en.size + " unique keys per language");
 const NEW = ["pathway_next_title", "pathway_all_done", "pathway_no_date", "pathway_overdue",
-             "pathway_on_track", "pathway_unfiled", "pathway_add_to_stage", "pathway_draft_with_scout",
+             "pathway_on_track", "pathway_draft_with_scout",
              "pathway_step_deleted", "action_undo", "pathway_sugg_film", "pathway_sugg_benchmark"];
 ck("every new pathway key landed in all four dictionaries",
    NEW.filter((k) => !["en", "fr", "es", "el"].every((l) => sets[l].includes(k))), []);
