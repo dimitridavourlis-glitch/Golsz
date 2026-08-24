@@ -129,11 +129,27 @@ export default async function handler(req, res) {
     // handle_new_user() runs synchronously on the auth.users insert above
     // (it's a database trigger), so profiles/athletes rows already exist
     // by the time we get here — safe to PATCH/insert against them next.
-    await fetch(`${supaUrl}/rest/v1/profiles?id=eq.${childId}`, {
+    // `parent_managed` is the flag that marks this as a managed MINOR's
+    // account. Discarding this response meant a rejected PATCH was
+    // indistinguishable from a successful one (`await fetch()` resolves on
+    // 4xx/5xx), and `return=minimal` answers 204 even when the filter matched
+    // ZERO rows — so the account could exist without ever being flagged.
+    //
+    // Handled exactly like the parent_links failure below, which is the
+    // convention this file already set: surface it, name the childId, do not
+    // return a 200 for a setup that only half completed.
+    const flagRes = await fetch(`${supaUrl}/rest/v1/profiles?id=eq.${childId}`, {
       method: "PATCH",
-      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=representation" },
       body: JSON.stringify({ parent_managed: true }),
     });
+    let flagRows = null;
+    if (flagRes.ok) { try { flagRows = await flagRes.json(); } catch { flagRows = null; } }
+    if (!flagRes.ok || !Array.isArray(flagRows) || flagRows.length === 0) {
+      const flagErr = flagRes.ok ? "PATCH matched no profile row" : await flagRes.text().catch(() => "");
+      await logError(supaUrl, serviceKey, "api/create-child-account.js", "parent_managed flag was not set", { detail: String(flagErr).slice(0, 300), parentId, childId });
+      return res.status(502).json({ error: "Account created but setup didn't finish — contact support.", childId });
+    }
 
     const linkRes = await fetch(`${supaUrl}/rest/v1/parent_links`, {
       method: "POST",

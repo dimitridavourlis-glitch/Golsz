@@ -51,12 +51,34 @@ async function supaSelect(supaUrl, serviceKey, path) {
   return res.json();
 }
 
+// Its one caller writes `last_reminded_at` AFTER the push has already gone
+// out. So a silent failure is not "nothing happened" - it is sent-but-not-
+// recorded, and the next run sees a target that looks un-reminded and pushes
+// the identical notification again. And the run after that. Unbounded spam
+// from a write nobody watched.
+//
+// Returns a boolean instead of throwing: the caller is mid-loop over every
+// target, and one failed bookkeeping write must not abandon the rest.
 async function supaPatch(supaUrl, serviceKey, path, body) {
-  await fetch(`${supaUrl}/rest/v1/${path}`, {
-    method: "PATCH",
-    headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
-    body: JSON.stringify(body),
-  });
+  try {
+    const r = await fetch(`${supaUrl}/rest/v1/${path}`, {
+      method: "PATCH",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const detail = await r.text().catch(() => "");
+      throw new Error(`PATCH ${path} failed: ${r.status} ${detail.slice(0, 200)}`);
+    }
+    let rows = null;
+    try { rows = await r.json(); } catch { rows = null; }
+    if (!Array.isArray(rows) || rows.length === 0) throw new Error(`PATCH ${path} matched no rows`);
+    return true;
+  } catch (e) {
+    console.error("GOLSZ supaPatch failed:", e);
+    await logError("api/target-followup-reminders.js", "A reminder was sent but not recorded — it will repeat", { detail: String(e), path });
+    return false;
+  }
 }
 
 async function logError(source, message, detail) {

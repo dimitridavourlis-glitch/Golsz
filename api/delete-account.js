@@ -80,12 +80,26 @@ async function deleteStoragePrefix(supaUrl, serviceKey, bucket, prefix) {
     const files = await listRes.json();
     if (!Array.isArray(files) || !files.length) return;
     const paths = files.map((f) => `${prefix}/${f.name}`);
-    await fetch(`${supaUrl}/storage/v1/object/${bucket}`, {
+    // The one write in this flow whose silent failure LEAVES DATA BEHIND: the
+    // account is gone but the athlete's photos are still in the bucket. On a
+    // platform serving minors that is a retention problem, and the old bare
+    // catch could not see it, because `await fetch()` resolves on 4xx/5xx.
+    //
+    // Does not throw - account deletion must continue even if a bucket sweep
+    // fails - but the orphaned files are now named somewhere a human looks.
+    const delRes = await fetch(`${supaUrl}/storage/v1/object/${bucket}`, {
       method: "DELETE",
       headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
       body: JSON.stringify({ prefixes: paths }),
     });
-  } catch (e) { console.error(`GOLSZ storage cleanup (${bucket}) failed:`, e); }
+    if (!delRes.ok) {
+      const detail = await delRes.text().catch(() => "");
+      throw new Error(`storage DELETE ${bucket} failed: ${delRes.status} ${detail.slice(0, 200)}`);
+    }
+  } catch (e) {
+    console.error(`GOLSZ storage cleanup (${bucket}) failed:`, e);
+    await logError(supaUrl, serviceKey, "api/delete-account.js", "Storage files were NOT deleted with the account", { detail: String(e), bucket, prefix });
+  }
 }
 
 export default async function handler(req, res) {

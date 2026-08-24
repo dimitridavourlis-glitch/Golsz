@@ -5601,13 +5601,28 @@ async function releaseScoutQuestion(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!url || !key) return;
+  // This is a REFUND, so a silent failure bills the athlete for an answer they
+  // never received. It backs today's scout_daily_usage count.
+  //
+  // It must NOT throw: the request it is refunding has already failed, and
+  // turning a provider outage into a second error helps nobody. But it must
+  // not be invisible either - `await fetch()` RESOLVES on 4xx/5xx, so the old
+  // bare catch only ever saw network throws and a rejected refund looked
+  // exactly like a successful one. Downgraded to error_log, not swallowed.
   try {
-    await fetch(url + "/rest/v1/rpc/release_scout_question", {
+    const r = await fetch(url + "/rest/v1/rpc/release_scout_question", {
       method: "POST",
       headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
       body: JSON.stringify({ p_user: userId }),
     });
-  } catch (e) { console.error("GOLSZ release_scout_question failed:", e); }
+    if (!r.ok) {
+      const detail = await r.text().catch(() => "");
+      throw new Error(`release_scout_question returned ${r.status} ${detail.slice(0, 200)}`);
+    }
+  } catch (e) {
+    console.error("GOLSZ release_scout_question failed:", e);
+    await logError("api/scout.js", "A question reservation was NOT refunded", { detail: String(e), userId });
+  }
 }
 
 // Lifetime counterpart to reserveScoutQuestion/releaseScoutQuestion above —
@@ -5655,13 +5670,28 @@ async function releaseFreeAiQuestion(userId) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!url || !key) return;
+  // This is a REFUND, so a silent failure bills the athlete for an answer they
+  // never received. It backs profiles.free_ai_lifetime_used, which NEVER resets - so a lost refund here is permanent.
+  //
+  // It must NOT throw: the request it is refunding has already failed, and
+  // turning a provider outage into a second error helps nobody. But it must
+  // not be invisible either - `await fetch()` RESOLVES on 4xx/5xx, so the old
+  // bare catch only ever saw network throws and a rejected refund looked
+  // exactly like a successful one. Downgraded to error_log, not swallowed.
   try {
-    await fetch(url + "/rest/v1/rpc/release_free_ai_question", {
+    const r = await fetch(url + "/rest/v1/rpc/release_free_ai_question", {
       method: "POST",
       headers: { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" },
       body: JSON.stringify({ p_user: userId }),
     });
-  } catch (e) { console.error("GOLSZ release_free_ai_question failed:", e); }
+    if (!r.ok) {
+      const detail = await r.text().catch(() => "");
+      throw new Error(`release_free_ai_question returned ${r.status} ${detail.slice(0, 200)}`);
+    }
+  } catch (e) {
+    console.error("GOLSZ release_free_ai_question failed:", e);
+    await logError("api/scout.js", "A question reservation was NOT refunded", { detail: String(e), userId });
+  }
 }
 
 // Adds the real token/cost numbers to today's scout_daily_usage row once a
