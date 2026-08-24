@@ -50,20 +50,70 @@ async function getUserId(authHeader, supaUrl, serviceKey) {
   }
 }
 
+// "This user is not an admin" and "we could not find out" used to arrive here
+// as the same `false`, and the difference matters more than it looks: the
+// not-an-admin path pushes a Security alert to EVERY admin's device. So a
+// transient Supabase error accused a real, innocent user of attempting
+// privilege escalation — and an alert that cries wolf is worth less than no
+// alert, because this is the one that has to stay believable.
+//
+// It THROWS on an undetermined result rather than returning a third value.
+// There is no safe boolean for "unknown": returned as false it alerts, as
+// true it is a privilege escalation. A thrown error cannot be accidentally
+// coerced into either. The caller turns it into a 503, which fails closed —
+// nothing is acted on — without accusing anyone.
+//
+// An empty array is NOT undetermined: it means the lookup worked and this
+// account has no profile row. A valid session with no profile hitting an
+// admin endpoint is genuinely suspicious, so that keeps the alert.
 async function isAdmin(supaUrl, serviceKey, userId) {
   const r = await fetch(`${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=is_admin`, {
     headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
   });
-  const rows = await r.json();
-  return !!(Array.isArray(rows) && rows[0] && rows[0].is_admin);
+  if (!r.ok) {
+    const detail = await r.text().catch(() => "");
+    throw new Error(`is_admin lookup failed: ${r.status} ${detail.slice(0, 200)}`);
+  }
+  let rows = null;
+  try { rows = await r.json(); } catch { rows = null; }
+  if (!Array.isArray(rows)) throw new Error("is_admin lookup returned a non-array body");
+  return !!(rows[0] && rows[0].is_admin);
 }
 
+// Two things make an unchecked write here worse than it looks, and they are
+// the same two that hid in api/stripe-webhook.js (see the long note there):
+//   1. `await fetch()` RESOLVES on 4xx/5xx. It rejects only on a network
+//      failure, so ignoring the response means a rejected write is
+//      indistinguishable from a successful one.
+//   2. `Prefer: return=minimal` answers 204 for a PATCH that matched ZERO
+//      rows — the same 204 a successful update returns.
+//
+// What makes it worse HERE than in the webhook: this runs AFTER the
+// auth-layer ban has already landed. So a silent failure is not "nothing
+// happened" — it is split-brain. The account genuinely cannot get a session,
+// while `profiles.is_banned` still says false, so the Admin Panel shows the
+// user as active and the next admin to look sees no ban to lift. The two
+// halves of one action disagree, and nothing anywhere says so.
+//
+// `return=representation` + a row check makes both cases throw. The handler's
+// existing catch turns that into a 500 and a real error_log row, which is the
+// Errors tab. That machinery already existed; nothing ever reached it.
 async function patchProfile(supaUrl, serviceKey, targetId, body) {
-  await fetch(`${supaUrl}/rest/v1/profiles?id=eq.${targetId}`, {
+  const r = await fetch(`${supaUrl}/rest/v1/profiles?id=eq.${targetId}`, {
     method: "PATCH",
-    headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+    headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=representation" },
     body: JSON.stringify(body),
   });
+  if (!r.ok) {
+    const detail = await r.text().catch(() => "");
+    throw new Error(`profiles PATCH id=eq.${targetId} failed: ${r.status} ${detail.slice(0, 300)}`);
+  }
+  let rows = null;
+  try { rows = await r.json(); } catch { rows = null; }
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw new Error(`profiles PATCH id=eq.${targetId} matched no profile — the auth-layer change landed but the profile flag did not`);
+  }
+  return rows;
 }
 
 // Writes directly via service role (bypasses RLS the same way every
@@ -71,13 +121,33 @@ async function patchProfile(supaUrl, serviceKey, targetId, body) {
 // RPC — that RPC exists for the client-side admin actions, which don't
 // otherwise have a trusted way to write this table at all.
 async function logAdminAction(supaUrl, serviceKey, adminId, action, targetId, detail) {
+  // Same unchecked-write bug as patchProfile above, with the opposite
+  // resolution. This must NOT throw: by the time it runs the ban or delete
+  // has already happened, and failing the request would tell the admin the
+  // action failed when it did not — inviting a retry of a delete that already
+  // cascaded through auth.users.
+  //
+  // But it must not stay silent either. This is the append-only audit log for
+  // a platform serving minors; an admin action with no audit row is precisely
+  // the record you cannot reconstruct later. So the failure is downgraded, not
+  // swallowed: it goes to error_log, which surfaces in the Admin Panel's
+  // Errors tab, while the action itself still reports the truth (it succeeded).
   try {
-    await fetch(`${supaUrl}/rest/v1/admin_action_log`, {
+    const r = await fetch(`${supaUrl}/rest/v1/admin_action_log`, {
       method: "POST",
       headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
       body: JSON.stringify({ admin_id: adminId, action, target_id: targetId, detail: detail || null }),
     });
-  } catch (e) { console.error("GOLSZ admin audit log error:", e); }
+    if (!r.ok) {
+      const body = await r.text().catch(() => "");
+      throw new Error(`admin_action_log POST failed: ${r.status} ${body.slice(0, 300)}`);
+    }
+  } catch (e) {
+    console.error("GOLSZ admin audit log error:", e);
+    await logError("api/admin-user-action.js", "Admin action was NOT written to the audit log", {
+      detail: String(e), action, targetId, adminId,
+    });
+  }
 }
 
 // See api/scout.js for the full rationale — writes a real failure to
@@ -147,7 +217,17 @@ export default async function handler(req, res) {
 
   const callerId = await getUserId(req.headers.authorization, supaUrl, serviceKey);
   if (!callerId) return res.status(401).json({ error: "Sign in required." });
-  if (!(await isAdmin(supaUrl, serviceKey, callerId))) {
+  // 503 and 403 are deliberately different answers. 403 means "we checked and
+  // you may not"; 503 means "we could not check". Only the first is grounds
+  // for alerting every admin.
+  let callerIsAdmin;
+  try {
+    callerIsAdmin = await isAdmin(supaUrl, serviceKey, callerId);
+  } catch (e) {
+    await logError("api/admin-user-action.js", "Could not determine admin status", { detail: String(e), callerId });
+    return res.status(503).json({ error: "Could not verify permissions right now. Try again." });
+  }
+  if (!callerIsAdmin) {
     await alertAdmins(supaUrl, serviceKey, "Security alert", "A signed-in user attempted an admin action without permission.");
     return res.status(403).json({ error: "Admins only." });
   }

@@ -229,17 +229,54 @@ async function selectProfile(supaUrl, serviceKey, filterQuery, select) {
   }
 }
 
+// THE WRITE THAT TURNS A PAYMENT INTO A PLAN. It used to discard its result
+// entirely, and it failed in two different silent ways.
+//
+// 1. `await fetch` RESOLVES on 4xx and 5xx. An RLS rejection, a constraint
+//    violation or a transient 500 looked exactly like success, the handler
+//    returned 200, and STRIPE MARKED THE EVENT DELIVERED AND NEVER RETRIED.
+//    The athlete had paid and did not have their plan, with nothing recorded
+//    anywhere. Same class as the client-side writes fixed on 2026-08-13, still
+//    live on the server, on the one path that takes money.
+//
+// 2. WORSE, AND ONLY VISIBLE ONCE THE FIRST WAS FIXED: `Prefer: return=minimal`
+//    returns 204 for a PATCH that matched ZERO ROWS. So an event for a customer
+//    whose profile has no stripe_customer_id — because an earlier write failed,
+//    or a subscription event arrived before checkout — updated nothing and
+//    reported success. "0 rows updated" is not an error in PostgREST, which is
+//    the same trap the post_likes trigger hit: liking someone else's post
+//    matched no row and returned normally.
+//
+// So: return=representation, check the status, AND check that a row actually
+// changed. Both failures throw.
+//
+// THROWING IS THE POINT. The handler's catch returns 500, and Stripe retries a
+// non-2xx with backoff for roughly three days before surfacing it as failed.
+// That machinery already existed and was unreachable because nothing threw.
+// A retry that eventually gives up loudly beats a success that was never true.
 async function patchProfile(supaUrl, serviceKey, filterQuery, body) {
-  await fetch(`${supaUrl}/rest/v1/profiles?${filterQuery}`, {
+  const r = await fetch(`${supaUrl}/rest/v1/profiles?${filterQuery}`, {
     method: "PATCH",
     headers: {
       apikey: serviceKey,
       Authorization: "Bearer " + serviceKey,
       "Content-Type": "application/json",
-      Prefer: "return=minimal",
+      Prefer: "return=representation",
     },
     body: JSON.stringify(body),
   });
+  if (!r.ok) {
+    const detail = await r.text().catch(() => "");
+    throw new Error(`profiles PATCH ${filterQuery} failed: ${r.status} ${detail.slice(0, 300)}`);
+  }
+  let rows = null;
+  try { rows = await r.json(); } catch { rows = null; }
+  if (!Array.isArray(rows) || rows.length === 0) {
+    // The filter matched nobody. For a billing event this is never benign: it
+    // means the profile this payment belongs to was not found.
+    throw new Error(`profiles PATCH ${filterQuery} matched no profile — nothing was updated`);
+  }
+  return rows;
 }
 
 export default async function handler(req, res) {

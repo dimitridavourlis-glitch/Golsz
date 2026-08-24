@@ -73,6 +73,14 @@ const TOKENS = { "Bearer admin": ADMIN, "Bearer plain": NON_ADMIN };
 const ADMINS = new Set([ADMIN, OTHER_ADMIN]);
 let authApiOk = true;
 let rpcOk = true;
+// "ok" = a normal PATCH that matches the target row.
+// "zero" = a 204/[] answer matching NO rows — the case `return=minimal` could
+//          not distinguish from success.
+// "http400" = PostgREST rejects it — the case `await fetch()` RESOLVES on.
+let patchMode = "ok";
+let auditOk = true;
+// The is_admin lookup answering 5xx — NOT the same thing as answering "no".
+let adminLookupOk = true;
 
 global.fetch = async (url, opts = {}) => {
   const u = String(url);
@@ -92,11 +100,36 @@ global.fetch = async (url, opts = {}) => {
     return { ok: true, json: async () => [{ endpoint: "https://push.example/1", p256dh: "k", auth: "a" }] };
   }
   if (method === "GET" && u.includes("/rest/v1/profiles")) {
-    const m = /id=eq\.([^&]+)/.exec(u);
+    if (!adminLookupOk) {
+      return { ok: false, status: 503, text: async () => "upstream unavailable",
+               json: async () => ({ message: "upstream unavailable" }) };
+    }
+    // Anchored: /id=eq\./ also matches inside "stripe_customer_id=eq." and
+    // any other *_id column. Cost six failing assertions elsewhere today.
+    const m = /[?&]id=eq\.([^&]+)/.exec(u);
     return { ok: true, json: async () => [{ is_admin: ADMINS.has(m && m[1]) }] };
   }
   if (u.includes("/auth/v1/admin/users/")) {
     return { ok: authApiOk, status: authApiOk ? 200 : 500, json: async () => ({}) };
+  }
+  // The profile PATCH used to fall through to the catch-all below, which
+  // answers []. That was invisible while patchProfile discarded its result:
+  // the ban assertions passed against a write that matched nothing. Modelling
+  // it explicitly is what makes those assertions mean anything.
+  if (method === "PATCH" && u.includes("/rest/v1/profiles")) {
+    if (patchMode === "http400") {
+      return { ok: false, status: 400, text: async () => '{"message":"column does not exist"}',
+               json: async () => ({ message: "column does not exist" }) };
+    }
+    const m = /[?&]id=eq\.([^&]+)/.exec(u);
+    const rows = patchMode === "zero" || !m ? [] : [{ id: m[1], ...(parsed || {}) }];
+    return { ok: true, json: async () => rows };
+  }
+  if (u.includes("/rest/v1/admin_action_log")) {
+    return auditOk
+      ? { ok: true, json: async () => [] }
+      : { ok: false, status: 500, text: async () => "audit table unavailable",
+          json: async () => ({ message: "audit table unavailable" }) };
   }
   if (u.includes("/rpc/admin_delete_profile_data")) {
     return { ok: rpcOk, status: rpcOk ? 200 : 500, json: async () => ({}) };
@@ -131,6 +164,7 @@ async function call({ auth = "Bearer admin", method = "POST", body = {}, origin 
     patches: calls.filter((c) => c.method === "PATCH" && c.url.includes("/rest/v1/profiles")),
     audit: calls.filter((c) => c.url.includes("/rest/v1/admin_action_log")),
     rpcs: calls.filter((c) => c.url.includes("/rpc/admin_delete_profile_data")),
+    errorLogs: calls.filter((c) => c.url.includes("/rest/v1/error_log")),
   };
 }
 
@@ -269,6 +303,88 @@ async function call({ auth = "Bearer admin", method = "POST", body = {}, origin 
   ck("a known origin is echoed back", r.resHeaders["Access-Control-Allow-Origin"], "https://golsz.com");
   r = await call({ body: { action: "ban", targetId: TARGET }, origin: "https://evil.example" });
   ck("an unknown origin is not", r.resHeaders["Access-Control-Allow-Origin"], undefined);
+
+  console.log("\n-- a write that does not land must not be reported as success --");
+  // patchProfile runs AFTER the auth-layer ban has already succeeded, so a
+  // silent failure here is not "nothing happened" - it is split-brain: the
+  // account cannot get a session, while the panel still shows it as active.
+  // Both halves of the old bug produced exactly that, and both produced a 200.
+  {
+    // Positive control first. A 500 below has to mean "the write failed" and
+    // not "this fixture never wrote anything" - which is what the ban
+    // assertions above were silently doing until the mock modelled the PATCH.
+    patchMode = "ok";
+    r = await call({ body: { action: "ban", targetId: TARGET } });
+    ck("control: a normal ban is a 200", r.status, 200);
+
+    patchMode = "zero";
+    r = await call({ body: { action: "ban", targetId: TARGET } });
+    ck("a profile PATCH matching zero rows is a 500, not a silent 200", r.status, 500);
+    ck("...and it is written to error_log, so the Errors tab shows it", r.errorLogs.length, 1);
+    ck("...and no audit row claims a ban that only half happened", r.audit.length, 0);
+
+    patchMode = "http400";
+    r = await call({ body: { action: "ban", targetId: TARGET } });
+    ck("a 4xx on the profile PATCH is a 500, not a swallowed 200", r.status, 500);
+    ck("...and reaches error_log too", r.errorLogs.length, 1);
+
+    patchMode = "ok";
+    r = await call({ body: { action: "ban", targetId: TARGET } });
+    ck("...and a 200 returns once the failure is removed", r.status, 200);
+  }
+
+  console.log("\n-- a lost audit row is downgraded, never swallowed --");
+  // The opposite resolution to the block above, on purpose. The ban has
+  // already landed by the time the audit write runs, so failing the request
+  // would report a failure that did not happen and invite a retry - of a
+  // delete that already cascaded through auth.users. So: still a 200, but the
+  // loss is recorded where someone will see it.
+  {
+    auditOk = false;
+    r = await call({ body: { action: "ban", targetId: TARGET } });
+    ck("the ban still reports success, because the ban really succeeded", r.status, 200);
+    ck("...the auth-layer ban did happen", r.authApi.length, 1);
+    ck("...but the lost audit row is written to error_log", r.errorLogs.length, 1);
+    ck("...naming what was lost rather than a generic failure",
+       /audit log/i.test(String(r.errorLogs[0].body.message)), true);
+
+    // A delete must behave the same way, and it is the one where a retry is
+    // destructive - so it is asserted separately rather than assumed.
+    r = await call({ body: { action: "delete", targetId: TARGET } });
+    ck("a delete whose audit row is lost still reports success", r.status, 200);
+    ck("...and records the loss", r.errorLogs.length, 1);
+    auditOk = true;
+
+    r = await call({ body: { action: "ban", targetId: TARGET } });
+    ck("...and nothing is logged once the audit write works again", r.errorLogs.length, 0);
+  }
+
+  console.log("\n-- \"not an admin\" and \"could not check\" are different answers --");
+  // Both used to be `false`, and the 403 path pushes a Security alert to every
+  // admin. So a transient Supabase error accused an innocent user of trying to
+  // escalate privileges. The alert has to stay believable to be worth having.
+  {
+    adminLookupOk = false;
+    r = await call({ body: { action: "ban", targetId: TARGET } });
+    ck("an unreachable is_admin lookup is 503, not 403", r.status, 503);
+    ck("...and says it could not check, rather than accusing the caller",
+       /could not verify/i.test(String(r.payload.error)), true);
+    ck("...NO security alert is pushed at anyone", r.pushes.length, 0);
+    ck("...it fails closed: nothing was acted on",
+       [r.authApi.length, r.patches.length, r.rpcs.length], [0, 0, 0]);
+    ck("...and the real cause reaches error_log", r.errorLogs.length, 1);
+
+    adminLookupOk = true;
+    r = await call({ body: { action: "ban", targetId: TARGET } });
+    ck("...and a working lookup bans normally again", r.status, 200);
+
+    // The distinction is only worth anything if the OTHER side still alerts.
+    // A change that made everything a quiet 503 would pass every assertion
+    // above and silently remove the alert entirely.
+    r = await call({ auth: "Bearer plain", body: { action: "ban", targetId: TARGET } });
+    ck("a genuine non-admin is still 403, and still alerts",
+       [r.status, r.pushes.length > 0], [403, true]);
+  }
 
   console.log("\n-- this suite runs the shipping handler --");
   ck("the handler came out of api/admin-user-action.js", typeof handler, "function");

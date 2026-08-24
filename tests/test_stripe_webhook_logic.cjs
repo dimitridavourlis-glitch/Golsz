@@ -64,6 +64,9 @@ const ck = (l, a, e) => {
 // than by a boolean handed to the handler.
 let calls = [];
 let profiles = {};
+// 0 = respond normally. Set to a status code to make the next profiles PATCH
+// answer 4xx, the case `await fetch()` resolves rather than throwing on.
+let patchHttpStatus = 0;
 
 global.fetch = async (url, opts = {}) => {
   const u = String(url);
@@ -72,9 +75,34 @@ global.fetch = async (url, opts = {}) => {
   try { body = opts.body ? JSON.parse(opts.body) : null; } catch { body = opts.body; }
   calls.push({ url: u, method, body });
   if (method === "GET" && u.includes("/rest/v1/profiles")) {
-    const m = /id=eq\.([^&]+)/.exec(u);
+    const m = /[?&]id=eq\.([^&]+)/.exec(u);   // anchored: see the PATCH branch below
     const row = m ? profiles[m[1]] : undefined;
     return { ok: true, json: async () => (row ? [row] : []) };
+  }
+  // PATCH now asks for Prefer: return=representation and REQUIRES a row back —
+  // a PATCH matching zero rows is a real failure the old `return=minimal` form
+  // could not distinguish from success. The mock has to model that or it tests
+  // a contract the code no longer uses.
+  if (method === "PATCH" && u.includes("/rest/v1/profiles")) {
+    // ANCHORED to a query-string boundary on purpose: /id=eq\./ also matches
+    // inside "stripe_customer_id=eq.", so an unanchored version captured the
+    // CUSTOMER id, looked it up as a profile key, found nothing and reported
+    // zero rows updated. A substring that looks specific and is not.
+    if (patchHttpStatus) {
+      return { ok: false, status: patchHttpStatus, text: async () => '{"message":"column does not exist"}' };
+    }
+    const byId = /[?&]id=eq\.([^&]+)/.exec(u);
+    const byCustomer = /stripe_customer_id=eq\.([^&]+)/.exec(u);
+    let matched = [];
+    if (byId) {
+      const row = profiles[byId[1]];
+      if (row) matched = [row];
+    } else if (byCustomer) {
+      matched = Object.values(profiles).filter((p) => p.stripe_customer_id === byCustomer[1]);
+    }
+    // Apply the patch so later assertions see the effect, then return the rows.
+    for (const row of matched) Object.assign(row, body || {});
+    return { ok: true, json: async () => matched };
   }
   return { ok: true, json: async () => [] };
 };
@@ -139,6 +167,12 @@ const BASIC_PRICE = { id: process.env.STRIPE_PRICE_BASIC, currency: "eur", unit_
   // bad signature or missing env, every assertion below would "pass" by
   // writing nothing. So prove a good request gets a 200 AND a real write
   // before believing anything else in this file.
+  // The profile this customer belongs to must EXIST for the write to land.
+  // Before 2026-08-13 these fixtures had none and still passed, because a PATCH
+  // matching zero rows returned 204 and the handler discarded the result — the
+  // suite was asserting a write that never happened. patchProfile now requires
+  // a row back, which is what surfaced it.
+  profiles = { [OWNER_ID]: { id: OWNER_ID, stripe_customer_id: CUSTOMER } };
   let r = await post(subEvent("active", PRO_PRICE));
   ck("a correctly signed event is accepted", r.status, 200);
   ck("...and the body says so", r.payload, { received: true });
@@ -256,6 +290,9 @@ const BASIC_PRICE = { id: process.env.STRIPE_PRICE_BASIC, currency: "eur", unit_
   ck("...and writes nothing", r.patches.length, 0);
 
   console.log("\n-- signature verification --");
+  // Same reason as above: these care about the SIGNATURE being accepted, but
+  // acceptance now requires the write to succeed, and the write needs a target.
+  profiles = { [OWNER_ID]: { id: OWNER_ID, stripe_customer_id: CUSTOMER } };
   const good = subEvent("active", PRO_PRICE);
   r = await post(good, { secrets: [SECRET] });
   ck("a single correct v1 is accepted", r.status, 200);
@@ -314,6 +351,42 @@ const BASIC_PRICE = { id: process.env.STRIPE_PRICE_BASIC, currency: "eur", unit_
   ck("an unsubscribed event type is a clean 200 with no writes", [r.status, r.patches.length], [200, 0]);
   r = await post(good, { sig: `t=${Math.floor(Date.now() / 1000)},v1=${hmac(SECRET, Math.floor(Date.now() / 1000), "{not json")}` });
   ck("a body that is not JSON is rejected", r.status, 400);
+
+  console.log("\n-- a write that does not land must not be reported as success --");
+  // The audit's headline finding, in two parts. Both ended with an athlete
+  // paying and not getting their plan, and neither produced a log line:
+  //   (1) `await fetch()` RESOLVES on 4xx/5xx - it only rejects on a network
+  //       failure. patchProfile ignored r.ok, so a rejected write returned 200
+  //       to Stripe, and Stripe never retries a 200.
+  //   (2) `Prefer: return=minimal` answers 204 for a PATCH matching ZERO rows,
+  //       which is indistinguishable from 204 for a successful one. An event
+  //       for a customer with no linked profile updated nothing, silently.
+  // The 500 is the whole point: the handler's catch already returned 500, and
+  // Stripe already retries a 500. That machinery existed and was unreachable
+  // because nothing ever threw.
+  {
+    // Positive control FIRST, so a 500 below means "the write failed" and not
+    // "this fixture was broken all along" - which is exactly how (2) hid here.
+    profiles = { [OWNER_ID]: { id: OWNER_ID, stripe_customer_id: CUSTOMER } };
+    r = await post(subEvent("active", PRO_PRICE));
+    ck("control: with the profile present the event is a 200", r.status, 200);
+
+    profiles = {};
+    r = await post(subEvent("active", PRO_PRICE));
+    ck("a PATCH matching zero rows is a 500, so Stripe retries", r.status, 500);
+
+    profiles = { [OWNER_ID]: { id: OWNER_ID, stripe_customer_id: CUSTOMER } };
+    patchHttpStatus = 400;
+    r = await post(subEvent("active", PRO_PRICE));
+    ck("a 4xx from PostgREST is a 500, not a swallowed 200", r.status, 500);
+    patchHttpStatus = 0;
+
+    // Both failures above are only meaningful if the hook actually turned off:
+    // a stuck hook would make every later assertion in this file "pass" by
+    // failing, which is the same shape as the bug being tested.
+    r = await post(subEvent("active", PRO_PRICE));
+    ck("...and a 200 returns once the failure is removed", r.status, 200);
+  }
 
   console.log("\n-- this suite tests the shipping handler, not a copy --");
   // Anchored to column 0 so the quoted snippet in this file's header (which
