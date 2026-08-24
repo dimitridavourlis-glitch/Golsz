@@ -34,6 +34,76 @@ const ck = (l, a, e) => {
 };
 
 console.log("-- the live/test gate --");
+console.log("\n-- cancelling must be possible, and downgrading must not fake it --");
+// THE BUG THIS PINS
+// choosePlan("free") wrote plan:"free" straight to profiles. That removes
+// ACCESS and does not touch Stripe, so a subscriber ended up on a Free-tier
+// account while still being charged full price — and a monthly renewal does
+// not fire customer.subscription.updated, so nothing ever put it back. The
+// only warning appeared AFTER the click, and pointed at a receipt email.
+// index.html promises "Cancel any time" on the same page.
+{
+  ck("a live portal link is accepted",
+     isLivePortalLink("https://billing.stripe.com/p/login/9B6cN79hvdG4"), true);
+  ck("a TEST portal link is refused",
+     isLivePortalLink("https://billing.stripe.com/p/login/test_9B6cN79hvdG4"), false);
+  ck("a Payment Link is not a portal link",
+     isLivePortalLink("https://buy.stripe.com/9B6cN79hvdG43i83BFbQY02"), false);
+  ck("a lookalike host is refused",
+     isLivePortalLink("https://billing.stripe.com.evil.tld/p/login/abc"), false);
+  ck("http is refused", isLivePortalLink("http://billing.stripe.com/p/login/abc"), false);
+  ck("empty is refused rather than treated as a link", isLivePortalLink(""), false);
+  // Unset today, on purpose: there is no activated live Stripe account yet.
+  // The gate must make that read as "not available", never as a dead link.
+  ck("no portal link is configured yet, so the gate returns null", stripePortalLink(), null);
+
+  // Ordering, not adjacency: the guard must stand BETWEEN entering the "free"
+  // branch and the write. Asserting the two strings merely exist would pass
+  // with the guard sitting uselessly after the update.
+  const fn = APP.slice(APP.indexOf("async function choosePlan("), APP.indexOf("async function choosePlan(") + 2200);
+  const guard = fn.indexOf("if (stripeCustomerId)");
+  const write = fn.indexOf('update({ plan: "free" })');
+  ck("the free branch still performs a plan write at all", write > -1, true);
+  ck("...and the billing guard exists", guard > -1, true);
+  ck("...and the guard comes BEFORE the write", guard > -1 && guard < write, true);
+  ck("...and it can send the user to the real portal", /stripePortalLink\(\)/.test(fn), true);
+  ck("...and refuses to downgrade when no portal is configured yet",
+     /settings_plan_cancel_via_stripe/.test(fn), true);
+
+  // The signal is a Stripe customer, NOT plan !== "free" — an admin-granted
+  // paid plan has no subscription behind it and must stay downgradeable.
+  ck("the guard keys on a Stripe customer, not on the plan name",
+     /if \(stripeCustomerId\)/.test(fn) && !/plan !== "free"/.test(fn), true);
+
+  // The Manage-billing affordance is what makes "Cancel any time" true.
+  // Structural, not proximity. The first version of this used a 400-character
+  // window between the conditional and the label and failed on the button's
+  // own style block — a window is a guess about formatting, not a property.
+  // This asks the real question: is the label INSIDE the guard's subtree?
+  const parser = require("@babel/parser");
+  const mm = /<script[^>]*type=["']text\/babel["'][^>]*>/.exec(APP);
+  const CODE = APP.slice(mm.index + mm[0].length, APP.indexOf("</script>", mm.index));
+  const ast = parser.parse(CODE, { sourceType: "script", plugins: ["jsx"] });
+  let guardedLabels = [];
+  (function walk(n) {
+    if (!n || typeof n !== "object") return;
+    if (Array.isArray(n)) return n.forEach(walk);
+    if (n.type === "LogicalExpression" && n.operator === "&&" &&
+        n.left.type === "Identifier" && n.left.name === "stripeCustomerId") {
+      const src = CODE.slice(n.start, n.end);
+      if (src.includes("settings_plan_manage_billing")) guardedLabels.push(true);
+    }
+    for (const k of Object.keys(n)) if (k !== "loc" && k !== "start" && k !== "end") walk(n[k]);
+  })(ast.program.body);
+  ck("Manage billing sits inside a stripeCustomerId guard", guardedLabels.length, 1);
+  // ...and nowhere else, so it cannot also be rendered ungated somewhere.
+  ck("...and the label is used exactly once",
+     (CODE.match(/t\("settings_plan_manage_billing"\)/g) || []).length, 1);
+  ck("...and every language has the cancel copy",
+     (APP.match(/settings_plan_cancel_via_stripe:/g) || []).length, 4);
+  ck("...and the manage-billing copy", (APP.match(/settings_plan_manage_billing:/g) || []).length, 4);
+}
+
 ck("a live Payment Link is accepted", isLiveStripeLink("https://buy.stripe.com/9B6cN79hvdG43i83BFbQY02"), true);
 ck("a TEST Payment Link is refused", isLiveStripeLink("https://buy.stripe.com/test_9B6cN79hvdG43i83BFbQY02"), false);
 ck("a non-Stripe URL is refused", isLiveStripeLink("https://example.com/pay"), false);
