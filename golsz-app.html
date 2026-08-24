@@ -14,11 +14,33 @@
 <meta name="apple-mobile-web-app-title" content="GOLSZ" />
 <link rel="apple-touch-icon" href="/assets/favicon.png" />
 <link rel="manifest" href="/manifest.json" />
+<!-- Every render-blocking script below comes from one of these two origins,
+     and neither connection exists yet when the parser reaches them. Warming
+     both here overlaps DNS + TCP + TLS with parsing the rest of this head,
+     which is the one part of the load path that costs nothing to fix. -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
   html[data-theme="light"] body{background:#F5F7F3;}
   #root{min-height:100vh;min-height:100dvh;}
+  /* MEASURED 2026-08-24: domContentLoaded 1313ms, first-contentful-paint
+     3132ms. The ~1.8s gap is Babel compiling 884KB of JSX in the browser,
+     and until now every one of those milliseconds was a blank screen — on a
+     mid-range phone, several times longer. This does not make the app load
+     faster; it stops the wait from looking like a broken page, which is the
+     part that costs signups. React replaces #root on mount, so it clears
+     itself with no teardown code and no way to get stuck on screen. */
+  #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;}
+  #boot .m{font:700 11px/1 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.22em;color:#7C8B84;}
+  #boot .b{width:132px;height:2px;border-radius:2px;background:#1E2A24;overflow:hidden;}
+  #boot .b i{display:block;width:40%;height:100%;background:#B8FF2E;border-radius:2px;animation:bootslide 1.1s ease-in-out infinite;}
+  @keyframes bootslide{0%{transform:translateX(-100%)}100%{transform:translateX(330%)}}
+  html[data-theme="light"] #boot .m{color:#5A6B62;}
+  html[data-theme="light"] #boot .b{background:#DCE4DC;}
+  /* prefers-reduced-motion: hold the bar still rather than animate it. */
+  @media (prefers-reduced-motion: reduce){#boot .b i{animation:none;width:100%;opacity:.5;}}
 </style>
 <script>try{if(localStorage.getItem("golsz-theme")==="light")document.documentElement.setAttribute("data-theme","light");}catch(e){}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
@@ -28,7 +50,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" integrity="sha384-aGlMNK3U/x0wl4lEH5jD1PGhJlX9hApuPmIiA5gtiYCOQ1J8ejIdC0btaU/TMoBD" crossorigin="anonymous"></script>
 </head>
 <body>
-<div id="root"></div>
+<div id="root"><div id="boot" role="status" aria-live="polite"><div class="m">GOLSZ</div><div class="b"><i></i></div></div></div>
 <script type="text/babel" data-presets="react">
 const { useState, useRef, useEffect, useContext } = React;
 
