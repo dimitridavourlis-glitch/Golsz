@@ -355,6 +355,8 @@ const I18N = {
     settings_update_email_btn: "Update email", settings_email_invalid: "Enter a valid email address.",
     settings_email_same: "That's already your current email.",
     settings_danger_zone: "DANGER ZONE", settings_delete_account: "Delete account",
+    settings_your_data: "YOUR DATA", settings_export_data: "Download my data", settings_export_sub: "Everything GOLSZ holds about you, as a JSON file.",
+    settings_export_busy: "Preparing your file…", settings_export_done: "Downloaded.", settings_export_partial: "Downloaded — but part of it could not be read. The file lists what was missed under _errors.", settings_export_err: "Couldn't prepare your file — try again.",
     settings_delete_warning: "This permanently deletes your account, profile, and uploaded photos. This cannot be undone. Type DELETE to confirm.",
     settings_delete_confirm_ph: "Type DELETE to confirm", settings_delete_confirm_btn: "Permanently delete",
     settings_email_sent: "Check {email} for a confirmation link to finish the change.",
@@ -698,6 +700,8 @@ const I18N = {
     settings_update_email_btn: "Mettre à jour l'e-mail", settings_email_invalid: "Entrez une adresse e-mail valide.",
     settings_email_same: "C'est déjà votre e-mail actuel.",
     settings_danger_zone: "ZONE DE DANGER", settings_delete_account: "Supprimer le compte",
+    settings_your_data: "VOS DONNÉES", settings_export_data: "Télécharger mes données", settings_export_sub: "Tout ce que GOLSZ détient sur vous, en fichier JSON.",
+    settings_export_busy: "Préparation du fichier…", settings_export_done: "Téléchargé.", settings_export_partial: "Téléchargé — mais une partie n'a pas pu être lue. Le fichier liste les manques sous _errors.", settings_export_err: "Impossible de préparer le fichier — réessayez.",
     settings_delete_warning: "Cela supprime définitivement votre compte, votre profil et vos photos. Cette action est irréversible. Tapez DELETE pour confirmer.",
     settings_delete_confirm_ph: "Tapez DELETE pour confirmer", settings_delete_confirm_btn: "Supprimer définitivement",
     settings_email_sent: "Consultez {email} pour un lien de confirmation afin de finaliser le changement.",
@@ -1041,6 +1045,8 @@ const I18N = {
     settings_update_email_btn: "Actualizar correo", settings_email_invalid: "Introduce una dirección de correo válida.",
     settings_email_same: "Ese ya es tu correo actual.",
     settings_danger_zone: "ZONA DE PELIGRO", settings_delete_account: "Eliminar cuenta",
+    settings_your_data: "TUS DATOS", settings_export_data: "Descargar mis datos", settings_export_sub: "Todo lo que GOLSZ tiene sobre ti, en un archivo JSON.",
+    settings_export_busy: "Preparando tu archivo…", settings_export_done: "Descargado.", settings_export_partial: "Descargado — pero parte no se pudo leer. El archivo indica lo que falta en _errors.", settings_export_err: "No se pudo preparar el archivo — inténtalo de nuevo.",
     settings_delete_warning: "Esto elimina permanentemente tu cuenta, perfil y fotos subidas. No se puede deshacer. Escribe DELETE para confirmar.",
     settings_delete_confirm_ph: "Escribe DELETE para confirmar", settings_delete_confirm_btn: "Eliminar permanentemente",
     settings_email_sent: "Revisa {email} para un enlace de confirmación y completar el cambio.",
@@ -1384,6 +1390,8 @@ const I18N = {
     settings_update_email_btn: "Ενημέρωση email", settings_email_invalid: "Εισαγάγετε έγκυρη διεύθυνση email.",
     settings_email_same: "Αυτό είναι ήδη το τρέχον email σας.",
     settings_danger_zone: "ΕΠΙΚΙΝΔΥΝΗ ΖΩΝΗ", settings_delete_account: "Διαγραφή λογαριασμού",
+    settings_your_data: "ΤΑ ΔΕΔΟΜΕΝΑ ΣΟΥ", settings_export_data: "Λήψη των δεδομένων μου", settings_export_sub: "Ό,τι κρατά το GOLSZ για σένα, σε αρχείο JSON.",
+    settings_export_busy: "Ετοιμάζεται το αρχείο…", settings_export_done: "Έγινε λήψη.", settings_export_partial: "Έγινε λήψη — αλλά ένα μέρος δεν διαβάστηκε. Το αρχείο τα αναφέρει στο _errors.", settings_export_err: "Δεν ήταν δυνατή η προετοιμασία — δοκίμασε ξανά.",
     settings_delete_warning: "Αυτό διαγράφει οριστικά τον λογαριασμό, το προφίλ και τις φωτογραφίες σας. Δεν αναιρείται. Πληκτρολογήστε DELETE για επιβεβαίωση.",
     settings_delete_confirm_ph: "Πληκτρολογήστε DELETE για επιβεβαίωση", settings_delete_confirm_btn: "Οριστική διαγραφή",
     settings_email_sent: "Ελέγξτε το {email} για σύνδεσμο επιβεβαίωσης για να ολοκληρώσετε την αλλαγή.",
@@ -1825,6 +1833,8 @@ function SettingsButton({ openSignal }) {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [paymentPastDue, setPaymentPastDue] = useState(false);
   const [stripeCustomerId, setStripeCustomerId] = useState(null);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportMsg, setExportMsg] = useState("");
   const [planBusy, setPlanBusy] = useState(false);
   const [planMsg, setPlanMsg] = useState("");
   const [notifEnabled, setNotifEnabled] = useState(false);
@@ -1892,6 +1902,71 @@ function SettingsButton({ openSignal }) {
       } catch (e) { console.error("GOLSZ settings push status error:", e); }
     })();
   }, []);
+
+  // GDPR Article 20 — the athlete's own data, in a portable format, without
+  // having to email anyone and wait. Every table below is read through the
+  // SAME RLS the app already runs under: this endpoint grants nothing new, it
+  // just collects what this user can already see about themselves.
+  //
+  // The retired social tables are included deliberately. Posts and messages
+  // are still the athlete's own words even though the feature is gone, and an
+  // export that quietly omits them would be a worse answer than no export.
+  //
+  // A table that FAILS is recorded in _errors rather than dropped. A silent
+  // omission looks identical to "you had no data there", which is exactly the
+  // failure mode this codebase keeps finding elsewhere.
+  const EXPORT_TABLES = [
+    ["profile", "profiles", "id"],
+    ["athlete", "athletes", "id"],
+    ["pathway_plan", "pathway_plan", "user_id"],
+    ["benchmarks", "athlete_benchmarks", "user_id"],
+    ["outreach_targets", "outreach_targets", "user_id"],
+    ["development_plan", "development_plan_items", "user_id"],
+    ["scout_history", "scout_history", "user_id"],
+    ["verification_requests", "verification_requests", "user_id"],
+    ["posts", "posts", "author_id"],
+    ["messages_sent", "messages", "sender_id"],
+    ["messages_received", "messages", "recipient_id"],
+    ["parent_links_as_athlete", "parent_links", "athlete_id"],
+    ["parent_links_as_parent", "parent_links", "parent_id"],
+    ["hidden_conversations", "hidden_conversations", "user_id"],
+    ["daily_activity", "daily_activity", "user_id"],
+    ["post_likes", "post_likes", "profile_id"],
+    ["appeals", "moderation_appeals", "user_id"],
+    // Only the direction the athlete CAUSED. "who I followed" and "who I
+    // blocked" are their own actions; "who followed me" and "who blocked me"
+    // are other people's, and handing those over in a file the athlete may
+    // forward would expose someone else's choice about them.
+    ["follows_i_made", "follows", "follower_id"],
+    ["blocks_i_made", "blocks", "blocker_id"],
+  ];
+  async function exportMyData() {
+    if (!sb || !uid || exportBusy) return;
+    setExportBusy(true); setExportMsg("");
+    const out = { exported_at: new Date().toISOString(), user_id: uid, _errors: [] };
+    try {
+      for (const [label, table, col] of EXPORT_TABLES) {
+        const { data, error } = await sb.from(table).select("*").eq(col, uid);
+        if (error) { out._errors.push({ section: label, table, message: error.message }); continue; }
+        out[label] = data || [];
+      }
+      const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `golsz-my-data-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      // Say so when part of it could not be read, rather than handing over a
+      // file that looks complete.
+      setExportMsg(out._errors.length ? t("settings_export_partial") : t("settings_export_done"));
+    } catch (e) {
+      console.error("GOLSZ data export failed:", e);
+      setExportMsg(t("settings_export_err"));
+    } finally {
+      setExportBusy(false);
+    }
+  }
 
   async function choosePlan(planId) {
     if (!sb || !uid || planBusy || planId === currentPlan) return;
@@ -2182,6 +2257,18 @@ function SettingsButton({ openSignal }) {
                       )}
                     </div>
                   )}
+                </div>
+                <div style={{ marginTop: 18, paddingTop: 14, borderTop: `1px solid ${C.line}` }}>
+                  <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_your_data")}</div>
+                  <button onClick={exportMyData} disabled={exportBusy} style={{
+                    width: "100%", minHeight: 44, textAlign: "left", background: C.turf, border: `1px solid ${C.line2}`,
+                    borderRadius: 12, padding: "12px 14px", color: C.chalk, fontSize: 13.5, fontWeight: 700,
+                    cursor: exportBusy ? "default" : "pointer", fontFamily: "inherit", opacity: exportBusy ? 0.6 : 1,
+                  }}>
+                    {exportBusy ? t("settings_export_busy") : t("settings_export_data")}
+                    <div style={{ fontSize: 11.5, fontWeight: 400, color: C.slate, marginTop: 2 }}>{t("settings_export_sub")}</div>
+                  </button>
+                  {exportMsg && <div style={{ fontSize: 11.5, color: C.slate, marginTop: 8, lineHeight: 1.4 }}>{exportMsg}</div>}
                 </div>
                 <div style={{ marginTop: 18, paddingTop: 14, borderTop: `1px solid ${C.line}` }}>
                   <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.amber, fontWeight: 700, marginBottom: 8 }}>{t("settings_danger_zone")}</div>
