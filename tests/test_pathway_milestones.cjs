@@ -354,13 +354,49 @@ for (const l of ["en", "fr", "es", "el"]) {
 }
 console.log("   dictionary size: " + en.size + " unique keys per language");
 const NEW = ["pathway_next_title", "pathway_all_done", "pathway_no_date", "pathway_overdue",
-             "pathway_on_track", "pathway_draft_with_scout",
+             "pathway_on_track", "pathway_unfiled", "pathway_draft_with_scout",
              "pathway_step_deleted", "action_undo", "pathway_sugg_film", "pathway_sugg_benchmark"];
 ck("every new pathway key landed in all four dictionaries",
    NEW.filter((k) => !["en", "fr", "es", "el"].every((l) => sets[l].includes(k))), []);
 // pathway_stage_* is what the spine's group headers read.
 ck("the stage-label keys the spine renders still exist",
    [...en].filter((k) => k.startsWith("pathway_stage_")).length > 0, true);
+
+// ---- pathway_unfiled must be RENDERED, not merely translated -------------
+// It sat in all four dictionaries, unused, from the day it was written. The
+// only assertion on it checked that it had "landed in all four dictionaries",
+// which is true of a key nothing reads — presence is not wiring, and a key
+// that is only ever defined is indistinguishable from a deleted one at
+// runtime. It was nearly deleted on 2026-08-24 for exactly that reason.
+ck("pathway_unfiled is defined in all four dictionaries",
+   (APP.match(/pathway_unfiled:/g) || []).length, 4);
+ck("...and something actually renders it", /t\("pathway_unfiled"\)/.test(APP), true);
+// Shown only in contrast. New steps land unfiled by default, so an
+// unconditional label would stamp "Not filed under a stage yet" on nearly
+// every row and carry no information.
+ck("...only when another row in the same list shows a stage",
+   /anyMilestoneFiled \? t\("pathway_unfiled"\)/.test(APP), true);
+ck("...and that condition is derived from milestones that really are filed",
+   /anyMilestoneFiled = openMilestones\.some\(/.test(APP), true);
+
+// The three cases, run against the REAL predicate lifted out of the source
+// rather than a retyped copy — a copy passes happily while production differs.
+{
+  const src = APP.slice(APP.indexOf("const anyMilestoneFiled = openMilestones.some("));
+  const body = src.slice(src.indexOf("("), src.indexOf(";") + 1);
+  const filedIn = eval("(openMilestones, homeStages) => openMilestones.some" + body.slice(0, body.lastIndexOf(")") + 1));
+  const stages = [{ id: "s1" }, { id: "s2" }];
+  ck("nothing filed -> no label, because every row would carry it",
+     filedIn([{ stage: null }, { stage: null }], stages), false);
+  ck("one filed -> the unfiled row is worth explaining",
+     filedIn([{ stage: "s1" }, { stage: null }], stages), true);
+  ck("no stages at all -> nothing to be filed under, so no label",
+     filedIn([{ stage: null }], []), false);
+  // A step still pointing at a stage that was DELETED is unfiled in practice.
+  // deleteStage() nulls it, but a stale row must not resurrect a missing stage.
+  ck("a stage that no longer exists does not count as filed",
+     filedIn([{ stage: "gone" }, { stage: null }], stages), false);
+}
 
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
