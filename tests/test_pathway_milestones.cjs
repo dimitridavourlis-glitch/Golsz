@@ -343,6 +343,15 @@ for (const l of ["fr", "es", "el"]) {
   ck(`${l} has every key en has`, [...en].filter((k) => !sets[l].includes(k)), []);
   ck(`${l} has no key en lacks`, sets[l].filter((k) => !en.has(k)), []);
 }
+// A duplicate key is legal JavaScript and silently keeps the LAST value, so
+// editing the first occurrence changes nothing and the edit looks applied.
+// nav_home was declared twice in all four dictionaries until 2026-08-24 —
+// harmless only because both copies happened to agree.
+for (const l of ["en", "fr", "es", "el"]) {
+  const names = sets[l], seen = new Set(), dup = [];
+  for (const k of names) { if (seen.has(k)) dup.push(k); seen.add(k); }
+  ck(`${l} declares no key twice`, dup, []);
+}
 console.log("   dictionary size: " + en.size + " unique keys per language");
 const NEW = ["pathway_next_title", "pathway_all_done", "pathway_no_date", "pathway_overdue",
              "pathway_on_track", "pathway_unfiled", "pathway_add_to_stage", "pathway_draft_with_scout",
