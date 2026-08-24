@@ -39,7 +39,7 @@ const ck = (l, a, e) => {
 };
 
 // The app is one <script type="text/babel"> block.
-const OPEN = /<script[^>]*type=["']text\/babel["'][^>]*>/;
+const OPEN = /<script[^>]*type=["']text\/babel(?:-deferred)?["'][^>]*>/;
 const m = OPEN.exec(HTML);
 if (!m) throw new Error("no text/babel script found — this suite is not reading what it thinks it is");
 const start = m.index + m[0].length;

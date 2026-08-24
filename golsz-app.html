@@ -51,7 +51,7 @@
 </head>
 <body>
 <div id="root"><div id="boot" role="status" aria-live="polite"><div class="m">GOLSZ</div><div class="b"><i></i></div></div></div>
-<script type="text/babel" data-presets="react">
+<script type="text/babel-deferred" data-presets="react">
 const { useState, useRef, useEffect, useContext } = React;
 
 function svg(inner){
@@ -12387,6 +12387,45 @@ class ErrorBoundary extends React.Component {
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(ErrorBoundary, null, React.createElement(LangProvider, null, React.createElement(Root))));
+</script>
+<script>
+(function () {
+  // WHY THE APP SCRIPT ABOVE IS "text/babel-deferred" AND NOT "text/babel"
+  //
+  // Babel compiles ~880KB of JSX in the browser and blocks the main thread for
+  // roughly 1.8s doing it. Left to Babel's own DOMContentLoaded hook, that
+  // compile begins before the browser has painted a single frame — so the boot
+  // state in #root never appears and the athlete watches a WHITE SCREEN for
+  // the whole time. Measured on a real logged-in load: first paint 3336ms.
+  //
+  // A boot state that the main thread never lets paint is not a boot state.
+  // The custom type keeps Babel's auto-hook from claiming the script; two
+  // animation frames later — after the browser has actually painted — the type
+  // is restored and the compile is triggered by hand.
+  //
+  // This does NOT make the compile faster. It makes the wait visible, which
+  // was the entire point of the boot state and did not previously work.
+  var tag = document.querySelector('script[type="text/babel-deferred"]');
+  var started = false;
+  function compile() {
+    if (started || !tag) return;
+    started = true;
+    tag.type = "text/babel";
+    try {
+      Babel.transformScriptTags();
+    } catch (e) {
+      console.error("GOLSZ: deferred compile failed", e);
+    }
+  }
+  // Two frames: the first is scheduled before the paint, the second runs after
+  // it, so the boot state is on screen before the main thread is taken.
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(function () { requestAnimationFrame(function () { compile(); }); });
+  }
+  // Background tabs never fire rAF. Without this the app would never boot in
+  // one, which is strictly worse than the blank screen this replaces.
+  setTimeout(compile, 300);
+})();
 </script>
 </body>
 </html>

@@ -325,7 +325,7 @@ ck("the locked copy points at what they can do instead",
 // The number is a consequence; parity is the invariant. Asserting a hard count
 // alone is what pushes the next person to pad a dictionary to hit it.
 const parser = require("@babel/parser");
-const m = /<script[^>]*type=["']text\/babel["'][^>]*>/.exec(APP);
+const m = /<script[^>]*type=["']text\/babel(?:-deferred)?["'][^>]*>/.exec(APP);
 const CODE = APP.slice(m.index + m[0].length, APP.indexOf("</script>", m.index));
 const ast = parser.parse(CODE, { sourceType: "script", plugins: ["jsx"] });
 let sets = null;

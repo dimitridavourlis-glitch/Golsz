@@ -81,7 +81,7 @@ console.log("\n-- cancelling must be possible, and downgrading must not fake it 
   // own style block — a window is a guess about formatting, not a property.
   // This asks the real question: is the label INSIDE the guard's subtree?
   const parser = require("@babel/parser");
-  const mm = /<script[^>]*type=["']text\/babel["'][^>]*>/.exec(APP);
+  const mm = /<script[^>]*type=["']text\/babel(?:-deferred)?["'][^>]*>/.exec(APP);
   const CODE = APP.slice(mm.index + mm[0].length, APP.indexOf("</script>", mm.index));
   const ast = parser.parse(CODE, { sourceType: "script", plugins: ["jsx"] });
   let guardedLabels = [];

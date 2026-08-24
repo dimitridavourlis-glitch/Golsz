@@ -27,7 +27,7 @@ const ck = (l, a, e) => {
 };
 
 console.log("-- the browser's script block parses as JSX --");
-const blocks = [...HTML.matchAll(/<script type="text\/babel"[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+const blocks = [...HTML.matchAll(/<script type="text\/babel(?:-deferred)?"[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
 ck("exactly one text/babel block exists", blocks.length, 1);
 
 let parseError = null;
