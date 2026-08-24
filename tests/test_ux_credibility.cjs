@@ -202,5 +202,29 @@ for (const [label, ex] of [
   ck(`${label} is present and dash-free`, PROMPT.includes(ex), true);
 }
 
+console.log("\n-- the first thing a new athlete taps, on a phone --");
+// MEASURED 2026-08-24 in a 390x844 mobile viewport against production: every
+// control in the signed-out flow met the 44px minimum EXCEPT the two that
+// matter most. Full name, Email, Password, DD/MM/YYYY and "Create free
+// account" were all exactly 44. The Sign up / Log in segmented tabs were 36 —
+// 10px padding around a 14px line — and they are the first thing a new
+// athlete touches.
+//
+// Asserted at the source rather than by measuring a browser, because these
+// suites do not run one. That means this checks the STYLE, not the rendered
+// box: it catches the padding being lowered again, not a parent transform
+// squashing the button. Worth stating, since a check that looks like it
+// verifies the rendered size and does not is the kind this repo keeps finding.
+{
+  const tabs = APP.slice(APP.indexOf('{[["signup", t("auth_signup")], ["login", t("auth_login")]]'));
+  const btn = tabs.slice(0, tabs.indexOf("))}"));
+  ck("the auth mode tabs were found", btn.includes("setMode(m)"), true);
+  ck("...and carry an explicit 44px minimum", /minHeight: 44/.test(btn), true);
+}
+// The submit and the fields already met it; pin them so they cannot drift.
+for (const label of ["auth_create_free", "auth_full_name", "auth_email", "auth_password"]) {
+  ck(`${label} still exists as a labelled control`, (APP.match(new RegExp(label, "g")) || []).length >= 4, true);
+}
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);

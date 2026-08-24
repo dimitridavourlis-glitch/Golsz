@@ -11959,7 +11959,7 @@ function Auth({ onDone, paidReturn }) {
 
         <div style={{ display: "flex", background: C.card, border: "1px solid " + C.line, borderRadius: 12, padding: 4, marginBottom: 16 }}>
           {[["signup", t("auth_signup")], ["login", t("auth_login")]].map(([m, l]) => (
-            <button key={m} onClick={() => { setMode(m); setErr(""); setNotice(""); }} style={{ flex: 1, padding: "10px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14, background: mode === m ? C.lime : "transparent", color: mode === m ? C.ink : C.slate }}>{l}</button>
+            <button key={m} onClick={() => { setMode(m); setErr(""); setNotice(""); }} style={{ flex: 1, padding: "10px", minHeight: 44, borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14, background: mode === m ? C.lime : "transparent", color: mode === m ? C.ink : C.slate }}>{l}</button>
           ))}
         </div>
 
