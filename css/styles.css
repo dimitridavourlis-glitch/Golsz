@@ -286,6 +286,16 @@ textarea:focus-visible,
 }
 .logo:hover { text-decoration: none; }
 .logo .mark { color: var(--gold); }
+/* The mark was missing here entirely — the app showed it, the marketing
+   site showed only the word. Inline vector, so it costs no request and
+   stays sharp; takes --gold so it cannot drift from the dot beside it. */
+.logo .logo-mark { width: 1.15em; height: 1.15em; fill: var(--gold); flex-shrink: 0; margin-right: .4em; }
+/* Size, fill, flex and gap are ALSO set as attributes/inline on the element.
+   Not belt-and-braces for its own sake: an SVG carrying only a viewBox has
+   no intrinsic size, so while this sheet was stale in a browser cache the
+   mark rendered 0x0 in the header and vanished with no error anywhere. The
+   element should be correct before CSS arrives; this rule then scales it
+   with the surrounding type. */
 
 .nav-links {
   display: flex;

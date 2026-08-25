@@ -33,12 +33,33 @@
      part that costs signups. React replaces #root on mount, so it clears
      itself with no teardown code and no way to get stuck on screen. */
   #boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;}
-  #boot .m{font:700 11px/1 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:.22em;color:#7C8B84;}
-  #boot .b{width:132px;height:2px;border-radius:2px;background:#1E2A24;overflow:hidden;}
-  #boot .b i{display:block;width:40%;height:100%;background:#B8FF2E;border-radius:2px;animation:bootslide 1.1s ease-in-out infinite;}
+  /* The real logo, INLINE. Not an <img>: a URL is a network request, and
+     the whole point of this screen is to paint before anything is fetched.
+     Not text either — the wordmark is set in Archivo, which has not loaded
+     at this moment, so text would render in a system font and then reflow.
+     Vector paths need neither.
+
+     Fills are set here rather than left as authored. The SVG ships #CBAE54
+     gold and #F7F4EB cream; the app's own accent is #D4AF37 and its chalk
+     #F7F4EA. Since this screen is on view seconds before the app's header
+     shows the SAME mark, the authored gold would read as a colour pop on
+     one logo. Matching the product wins here; whether the PRODUCT should
+     move to the brand gold is a separate question, and a real one. */
+  #boot .lg{width:min(58vw,208px);height:auto;}
+  #boot .lg #wordmark{fill:#F7F4EA;}
+  #boot .lg #mark,#boot .lg #dot{fill:#D4AF37;}
+  html[data-theme="light"] #boot .lg #wordmark{fill:#0D1210;}
+  html[data-theme="light"] #boot .lg #mark,
+  html[data-theme="light"] #boot .lg #dot{fill:#B58A1A;}
+  /* The bar was #B8FF2E — a bright green picked before this screen carried
+     the real logo, and belonging to no part of this palette. Gold, and a
+     track built from the same rgba line colour the app uses. */
+  #boot .b{width:132px;height:3px;border-radius:3px;background:rgba(247,244,234,0.10);overflow:hidden;}
+  #boot .b i{display:block;width:40%;height:100%;background:#D4AF37;border-radius:3px;animation:bootslide 1.1s ease-in-out infinite;}
   @keyframes bootslide{0%{transform:translateX(-100%)}100%{transform:translateX(330%)}}
   html[data-theme="light"] #boot .m{color:#5A6B62;}
-  html[data-theme="light"] #boot .b{background:#DCE4DC;}
+  html[data-theme="light"] #boot .b{background:rgba(13,18,16,0.10);}
+  html[data-theme="light"] #boot .b i{background:#B58A1A;}
   /* prefers-reduced-motion: hold the bar still rather than animate it. */
   @media (prefers-reduced-motion: reduce){#boot .b i{animation:none;width:100%;opacity:.5;}}
 </style>
@@ -50,7 +71,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js" integrity="sha384-aGlMNK3U/x0wl4lEH5jD1PGhJlX9hApuPmIiA5gtiYCOQ1J8ejIdC0btaU/TMoBD" crossorigin="anonymous"></script>
 </head>
 <body>
-<div id="root"><div id="boot" role="status" aria-live="polite"><div class="m">GOLSZ</div><div class="b"><i></i></div></div></div>
+<div id="root"><div id="boot" role="status" aria-live="polite" aria-label="GOLSZ is loading"><svg class="lg" viewBox="0 0 480.561 74.678" role="img" aria-hidden="true"><path id="mark" fill="#CBAE54" fill-rule="evenodd" d="M71.5 26.92L65.47 26.9C64.2 23.01 61.88 19.24 59.16 16.15C56.29 12.9 52.91 10.24 49.05 8.26C44.48 5.9 38.94 5.15 33.84 5.78C13.67 8.29 1.97 29.47 8.08 48.39C11.15 57.88 20.48 65.81 30.06 68.07C33.52 68.89 37.32 68.79 40.82 68.41C44.03 68.06 47.69 67.28 50.45 65.56C51.9 64.66 53.5 64.03 54.92 63.03C61.48 58.41 66.17 51.4 67.12 43.38C67.39 41.13 67.8 38.74 67.06 36.58L25.71 36.56L25.7 10.28L32.16 8L32.17 32.89L73.31 32.91C74.48 37.09 74.09 41.49 73.24 45.69C70.26 60.23 58.08 71.68 43.39 74.17C24.91 77.3 5.68 65.59 1.04 47.27C-4.1 26.98 10.09 4.6 30.6 0.71C34.1 0.04 37.79 -0.28 41.33 0.31C52.33 2.15 62.98 8.34 68.2 18.61C69.37 20.9 71.92 24.26 71.5 26.92ZM22.11 59.56L41.3 43.23L14.99 43.22L15.06 38.21L58.83 38.24L37.92 55.6L57.73 55.61C57.81 55.97 57.97 56.41 57.83 56.78C57.44 57.82 53.39 60.93 52.3 61.05C50.25 61.29 48.08 61.06 46.01 61.07C40.57 61.1 35.13 61.07 29.68 61.06C28.31 61.06 24.14 61.49 23.08 60.89C22.64 60.64 22.35 59.96 22.11 59.56Z"/>
+  <path id="wordmark" fill="#F7F4EB" fill-rule="evenodd" d="M164.67 29.41L148.34 29.42C147.45 28.53 147.22 27.21 146.24 26.4C141.06 22.12 132.42 22.12 126.28 24.22C119.76 26.45 117.99 32.78 118.76 39.04C118.98 40.88 119.26 43.01 120.45 44.52C125.2 50.54 133.01 49.68 139.85 49.14C142.85 48.91 147.67 47.2 147.24 43.55L132.58 43.53L132.56 33.38L165.09 33.39L165.09 61.21L154.93 61.22L153.59 56.25C151.45 56.12 147.3 59.27 144.72 60C138.18 61.85 131.63 62.16 124.85 61.82C115.79 61.36 105.55 56.77 102.2 47.78C101.16 45.02 100.83 42.1 100.48 39.18C99.78 33.47 100.84 26.8 104.31 22.09C108.24 16.74 112.77 14.5 118.95 12.73C120.79 12.2 122.71 11.5 124.6 11.22C126.64 10.91 128.76 11.02 130.82 10.89C134.64 10.66 138.68 10.51 142.47 11.17C149.97 12.49 158.27 14.83 162.77 21.54C163.08 22 163.12 22.59 163.4 23.07C164.38 24.77 165.26 27.48 164.67 29.41ZM209.79 62.05C207.57 62.21 205.39 61.85 203.18 61.61C194.26 60.67 184.62 57.92 179.31 49.99C172.45 39.75 174.65 24.79 184.48 17.26C187.48 14.97 190.75 13.8 194.31 12.75C196.4 12.14 198.48 11.29 200.68 11.13C212.56 10.26 225.65 10.73 234.81 19.33C244.81 28.71 243.27 46.63 232.88 54.98C226.37 60.21 217.88 61.41 209.79 62.05ZM308.65 44.3L325.38 44.3C325.78 45.39 325.86 46.95 326.57 47.91C328.84 50.98 336.96 50.86 340.43 50.54C342.78 50.33 347.75 50.46 347.76 47.06C346.73 43.81 339.56 44.1 336.78 43.52C335.05 43.17 333.28 43.18 331.53 42.92C323.61 41.77 313.06 39.73 310.14 31.16C309.06 27.98 309.06 24.49 310.42 21.36C314.98 10.77 331.74 10.55 341.35 10.81C344.45 10.89 349.62 11.26 352.43 12.54C353.84 13.18 355.4 13.48 356.77 14.2C360.96 16.38 366.03 21.64 364.17 26.85L347.76 26.86C347.08 25.72 346.95 24.53 345.95 23.52C343.47 21 336.84 21.23 333.64 21.74C331.65 22.05 328.22 22.18 327.76 24.71C328.41 28.26 336.33 27.9 339.02 28.45C341.48 28.95 343.98 29 346.46 29.36C355.51 30.69 366.62 34.27 366.27 45.37C366.21 47.18 365.88 49.39 365.09 51.03C358.42 64.87 333.75 62.67 321.47 60.17C315.4 58.94 310.03 54.53 308.77 48.37C308.49 46.99 308.25 45.66 308.65 44.3ZM251.47 61.22L251.48 11.44L269.3 11.44L269.3 47.5L301.42 47.5L301.43 61.22L251.47 61.22ZM373.13 61.22L373.19 55.95L401.81 23.89L375.3 23.89L375.3 11.44L431.53 11.44L431.58 16.61L402.74 48.92L432.38 48.91L432.39 61.22L373.13 61.22ZM210.44 49.55C218.2 48.72 223.15 44.22 223.2 36.21C223.22 33.4 222.69 30.62 221 28.31C217.55 23.64 210.74 22.53 205.35 23.13C203.63 23.32 202.09 24.09 200.58 24.85C195.11 27.6 193.2 31.74 193.8 37.87C194 39.87 194.3 41.83 195.42 43.55C198.6 48.4 204.93 50.12 210.44 49.55Z"/>
+  <path id="dot" fill="#CBAE54" fill-rule="evenodd" d="M461.71 61.23L461.71 46.24L480.56 46.24L480.56 61.23L461.71 61.23Z"/></svg><div class="b"><i></i></div></div></div>
 <script type="text/babel-deferred" data-presets="react">
 const { useState, useRef, useEffect, useContext } = React;
 
@@ -266,6 +289,27 @@ function useTheme() {
    get a working t() — extending coverage never requires touching this
    plumbing again, just adding keys to I18N and calling t() at the call
    site. */
+// Placed here, with the icons, NOT beside the Stripe helpers. Several
+// suites eval() a slice of that region to test pricing in isolation, and
+// plain eval cannot parse JSX — putting a component between those anchors
+// breaks them with a bare SyntaxError.
+// The GOLSZ mark, inline from assets/golsz-mark.svg.
+//
+// It was an <img> pointing at a 53KB PNG, fetched on every load to be drawn
+// at 24px — roughly 45x the bytes of the vector for a quarter of the sharpness
+// — and it needed a brightness/saturate filter to survive the light theme,
+// because the gold was baked into the pixels. A vector needs neither: it is
+// 1.2KB, exact at any size, and takes its colour from a fill the theme can
+// override.
+function LogoMark({ size = 24, style }) {
+  return (
+    <svg className="logo-mark" width={size} height={size} viewBox="0 0 74.043 74.678"
+      role="img" aria-hidden="true" focusable="false" style={style}>
+      <path fillRule="evenodd" d="M71.5 26.92L65.47 26.9C64.2 23.01 61.88 19.24 59.16 16.15C56.29 12.9 52.91 10.24 49.05 8.26C44.48 5.9 38.94 5.15 33.84 5.78C13.67 8.29 1.97 29.47 8.08 48.39C11.15 57.88 20.48 65.81 30.06 68.07C33.52 68.89 37.32 68.79 40.82 68.41C44.03 68.06 47.69 67.28 50.45 65.56C51.9 64.66 53.5 64.03 54.92 63.03C61.48 58.41 66.17 51.4 67.12 43.38C67.39 41.13 67.8 38.74 67.06 36.58L25.71 36.56L25.7 10.28L32.16 8L32.17 32.89L73.31 32.91C74.48 37.09 74.09 41.49 73.24 45.69C70.26 60.23 58.08 71.68 43.39 74.17C24.91 77.3 5.68 65.59 1.04 47.27C-4.1 26.98 10.09 4.6 30.6 0.71C34.1 0.04 37.79 -0.28 41.33 0.31C52.33 2.15 62.98 8.34 68.2 18.61C69.37 20.9 71.92 24.26 71.5 26.92ZM22.11 59.56L41.3 43.23L14.99 43.22L15.06 38.21L58.83 38.24L37.92 55.6L57.73 55.61C57.81 55.97 57.97 56.41 57.83 56.78C57.44 57.82 53.39 60.93 52.3 61.05C50.25 61.29 48.08 61.06 46.01 61.07C40.57 61.1 35.13 61.07 29.68 61.06C28.31 61.06 24.14 61.49 23.08 60.89C22.64 60.64 22.35 59.96 22.11 59.56Z" />
+    </svg>
+  );
+}
+
 const I18N = {
   en: {
     loading: "Loading…", yes: "Yes", no: "No",
@@ -4774,7 +4818,7 @@ function PublicPassport({ userId, token }) {
       <style>{CSS}</style>
       <div style={{ maxWidth: 420, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <img src="/assets/logo-mark.png" alt="" style={{ width: 40, height: 40, marginBottom: 6 }} />
+          <LogoMark size={40} style={{ marginBottom: 6 }} />
           <div style={{ fontWeight: 900, fontSize: 24, letterSpacing: "0.03em", fontStretch: "expanded" }}>GOLSZ<span style={{ color: C.lime }}>.</span></div>
         </div>
 
@@ -10845,7 +10889,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         <aside style={{ width: 232, flexShrink: 0, borderRight: `1px solid ${C.line}`, display: "flex", flexDirection: "column", padding: "22px 14px", position: "sticky", top: 0, height: "100vh" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 10px", marginBottom: 26 }}>
             <a href="index.html" style={{ display: "flex", alignItems: "center", gap: 7, fontWeight: 900, fontSize: 22, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none" }}>
-              <img src="/assets/logo-mark.png" alt="" className="logo-mark" style={{ width: 24, height: 24 }} />
+              <LogoMark size={24} />
               GOLSZ<span style={{ color: C.lime }}>.</span>
             </a>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -10922,7 +10966,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
       {/* top bar */}
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(12px + env(safe-area-inset-top, 0px)) 16px 10px", borderBottom: `1px solid ${C.line}`, flexShrink: 0 }}>
         <a href="index.html" style={{ display: "flex", alignItems: "center", gap: 7, fontWeight: 900, fontSize: 24, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none" }}>
-          <img src="/assets/logo-mark.png" alt="" className="logo-mark" style={{ width: 26, height: 26 }} />
+          <LogoMark size={26} />
           GOLSZ<span style={{ color: C.lime }}>.</span>
         </a>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -11322,12 +11366,11 @@ const CSS = `
   @media (prefers-reduced-motion: reduce){ .msg,.running span{ animation:none } }
   textarea::placeholder, input::placeholder { color: ${C.slate}; }
   button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid ${C.lime}; outline-offset: 2px; }
-  /* logo-mark.png is baked at the dark-theme gold (#D4AF37), which reads
-     fine on a near-black background but washes out against the light
-     theme's near-white one — darken/saturate it under data-theme="light"
-     so it stays legible, mirroring how --lime itself darkens for that
-     theme (see the CSS custom properties above). */
-  html[data-theme="light"] img.logo-mark { filter: brightness(0.55) saturate(1.3); }
+  /* The mark is now a vector, so the light theme adjusts a FILL rather than
+     pushing the whole image through brightness/saturate. Dark carries the
+     authored brand gold; light reuses --lime's own light value, since
+     #CBAE54 on a near-white page washes out exactly as the PNG did. */
+  .logo-mark { fill: ${C.lime}; }
   @media (min-width: 900px) {
     .discover-grid { grid-template-columns: repeat(3, 1fr) !important; }
     .pricing-grid { grid-template-columns: repeat(3, 1fr) !important; }
@@ -11952,7 +11995,7 @@ function Auth({ onDone, paidReturn }) {
       <style>{CSS}</style>
       <div style={{ width: "100%", maxWidth: (isSignup && !forgotMode && isDesktop) ? 920 : 430 }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <img src="/assets/logo-mark.png" alt="" className="logo-mark" style={{ width: 56, height: 56, marginBottom: 8 }} />
+          <LogoMark size={56} style={{ marginBottom: 8 }} />
           <div style={{ fontWeight: 900, fontSize: 40, letterSpacing: "0.03em", fontStretch: "expanded" }}>GOLSZ<span style={{ color: C.lime }}>.</span></div>
           <div style={{ fontSize: 10, letterSpacing: "0.3em", color: C.slate, fontWeight: 700, marginTop: 4 }}>{t("auth_tagline")}</div>
         </div>
