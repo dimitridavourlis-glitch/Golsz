@@ -2264,7 +2264,10 @@ function SettingsButton({ openSignal }) {
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 11, color: C.slate, fontWeight: 700 }}>{t("settings_currency")}</span>
                   {SUPPORTED_CURRENCIES.map((cur) => (
-                    <button key={cur} onClick={() => setCurrency(cur)} style={{
+                    <button key={cur} type="button" onClick={() => setCurrency(cur)}
+                      aria-pressed={currency === cur}
+                      aria-label={t("settings_currency") + " " + cur.toUpperCase()}
+                      style={{
                       minHeight: 44, minWidth: 52, padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
                       fontSize: 11.5, fontWeight: 700,
                       background: currency === cur ? C.limeWash : C.turf,

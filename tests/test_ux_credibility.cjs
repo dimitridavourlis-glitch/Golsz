@@ -243,8 +243,17 @@ console.log("\n-- currency is choosable BEFORE the choice becomes permanent --")
      (APP.match(/minHeight: 44, minWidth: 52, padding: "6px 10px"/g) || []).length, 2);
   // Screen readers need to know which one is active — colour alone does not
   // survive being read aloud.
-  ck("the active currency is exposed to assistive tech",
-     /aria-pressed=\{currency === cur\}/.test(APP), true);
+  // BOTH switchers, not just one. This was added to signup and missed on
+  // Settings, so that copy conveyed its active state by colour alone — which
+  // a screen reader cannot read. Counting is what caught it; asserting mere
+  // presence would have passed on the one that had it.
+  ck("both switchers expose the active currency to assistive tech",
+     (APP.match(/aria-pressed=\{currency === cur\}/g) || []).length, 2);
+  ck("...and both are labelled, not just coloured",
+     (APP.match(/aria-label=\{t\("settings_currency"\) \+ " " \+ cur\.toUpperCase\(\)\}/g) || []).length, 2);
+  // type="button" so neither can submit the signup form by accident.
+  ck("neither currency button can submit a form",
+     (APP.match(/<button key=\{cur\} type="button" onClick=\{\(\) => setCurrency\(cur\)\}/g) || []).length, 2);
 }
 
 console.log("\n-- the first thing a new athlete taps, on a phone --");
