@@ -349,7 +349,7 @@ const I18N = {
     auth_reset_failed: "Couldn't send reset email.",
     auth_resend_failed: "Couldn't resend the confirmation email. Try again in a minute.",
     auth_working: "Working…", auth_create_free: "Create free account",
-    auth_continue_payment: "Continue to payment — ", auth_per_month: "/month", prices_currency_note: "All prices in EUR.",
+    auth_continue_payment: "Continue to payment — ", auth_per_month: "/month", prices_currency_note: "All prices in {currency}.",
     auth_couldnt_signup: "COULDN'T COMPLETE SIGNUP", auth_couldnt_login: "COULDN'T LOG IN",
     plan_free_tag: "No card needed", plan_starter_tag: "Get started", plan_pro_tag: "Most popular", plan_elite_tag: "It's GOLSZ Time",
     plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport — profile, achievements & career history", plan_free_feat3: "AI Scout athlete intake & goal discovery", plan_free_feat4: "Passport Strength score & My Next Move",
@@ -428,6 +428,7 @@ const I18N = {
     settings_email_sent: "Check {email} for a confirmation link to finish the change.",
     settings_email_err: "Couldn't update email.",
     settings_plan: "PLAN", settings_plan_current: "Current", settings_plan_switch: "Choose",
+    settings_currency: "CURRENCY", settings_currency_note: "Prices follow where you are. Change it here if that's wrong \u2014 you can't switch after you subscribe.",
     settings_payment_past_due: "Your last payment didn't go through. Update your card with Stripe (check your receipt email) to keep your plan active.",
     settings_plan_checkout_unavailable: "Checkout isn't set up yet — check back soon.",
     settings_plan_downgrade_note: "Switched to Free. This won't cancel an existing paid subscription — use the receipt email Stripe sent you to manage or cancel billing.",
@@ -694,7 +695,7 @@ const I18N = {
     auth_reset_failed: "Impossible d'envoyer l'e-mail de réinitialisation.",
     auth_resend_failed: "Impossible de renvoyer l'e-mail de confirmation. Réessayez dans une minute.",
     auth_working: "Chargement…", auth_create_free: "Créer un compte gratuit",
-    auth_continue_payment: "Continuer vers le paiement — ", auth_per_month: "/mois", prices_currency_note: "Tous les prix sont en EUR.",
+    auth_continue_payment: "Continuer vers le paiement — ", auth_per_month: "/mois", prices_currency_note: "Tous les prix sont en {currency}.",
     auth_couldnt_signup: "INSCRIPTION IMPOSSIBLE", auth_couldnt_login: "CONNEXION IMPOSSIBLE",
     plan_free_tag: "Sans carte bancaire", plan_starter_tag: "Pour commencer", plan_pro_tag: "Le plus populaire", plan_elite_tag: "C'est l'heure GOLSZ",
     plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique — profil, palmarès & parcours", plan_free_feat3: "Découverte de l'athlète & de vos objectifs avec Scout", plan_free_feat4: "Score Force du Passeport & Ma Prochaine Étape",
@@ -773,6 +774,7 @@ const I18N = {
     settings_email_sent: "Consultez {email} pour un lien de confirmation afin de finaliser le changement.",
     settings_email_err: "Impossible de mettre à jour l'e-mail.",
     settings_plan: "FORMULE", settings_plan_current: "Actuelle", settings_plan_switch: "Choisir",
+    settings_currency: "DEVISE", settings_currency_note: "Les prix suivent votre localisation. Modifiez-la ici si elle est incorrecte \u2014 impossible de changer apr\u00e8s l'abonnement.",
     settings_payment_past_due: "Votre dernier paiement a échoué. Mettez à jour votre carte via Stripe (voir l'e-mail de reçu) pour garder votre formule active.",
     settings_plan_checkout_unavailable: "Le paiement n'est pas encore configuré — revenez bientôt.",
     settings_plan_downgrade_note: "Passé à Free. Cela n'annule pas un abonnement payant existant — utilisez l'e-mail de reçu envoyé par Stripe pour gérer ou annuler la facturation.",
@@ -1039,7 +1041,7 @@ const I18N = {
     auth_reset_failed: "No se pudo enviar el correo de restablecimiento.",
     auth_resend_failed: "No se pudo reenviar el correo de confirmación. Inténtalo de nuevo en un minuto.",
     auth_working: "Procesando…", auth_create_free: "Crear cuenta gratuita",
-    auth_continue_payment: "Continuar al pago — ", auth_per_month: "/mes", prices_currency_note: "Todos los precios en EUR.",
+    auth_continue_payment: "Continuar al pago — ", auth_per_month: "/mes", prices_currency_note: "Todos los precios en {currency}.",
     auth_couldnt_signup: "NO SE PUDO COMPLETAR EL REGISTRO", auth_couldnt_login: "NO SE PUDO INICIAR SESIÓN",
     plan_free_tag: "Sin tarjeta", plan_starter_tag: "Para empezar", plan_pro_tag: "Más popular", plan_elite_tag: "Es hora de GOLSZ",
     plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital — perfil, logros y trayectoria", plan_free_feat3: "Descubrimiento del atleta y tus objetivos con Scout", plan_free_feat4: "Puntuación Fuerza del Pasaporte y Tu Próximo Paso",
@@ -1118,6 +1120,7 @@ const I18N = {
     settings_email_sent: "Revisa {email} para un enlace de confirmación y completar el cambio.",
     settings_email_err: "No se pudo actualizar el correo.",
     settings_plan: "PLAN", settings_plan_current: "Actual", settings_plan_switch: "Elegir",
+    settings_currency: "MONEDA", settings_currency_note: "Los precios siguen tu ubicaci\u00f3n. C\u00e1mbiala aqu\u00ed si no es correcta \u2014 no podr\u00e1s cambiarla tras suscribirte.",
     settings_payment_past_due: "Tu último pago no se procesó. Actualiza tu tarjeta con Stripe (revisa el correo del recibo) para mantener tu plan activo.",
     settings_plan_checkout_unavailable: "El pago aún no está configurado — vuelve pronto.",
     settings_plan_downgrade_note: "Cambiado a Free. Esto no cancela una suscripción de pago existente — usa el correo del recibo de Stripe para gestionar o cancelar la facturación.",
@@ -1384,7 +1387,7 @@ const I18N = {
     auth_reset_failed: "Δεν ήταν δυνατή η αποστολή του email επαναφοράς.",
     auth_resend_failed: "Δεν ήταν δυνατή η εκ νέου αποστολή του email επιβεβαίωσης. Δοκιμάστε ξανά σε ένα λεπτό.",
     auth_working: "Επεξεργασία…", auth_create_free: "Δημιουργία δωρεάν λογαριασμού",
-    auth_continue_payment: "Συνέχεια στην πληρωμή — ", auth_per_month: "/μήνα", prices_currency_note: "Όλες οι τιμές σε EUR.",
+    auth_continue_payment: "Συνέχεια στην πληρωμή — ", auth_per_month: "/μήνα", prices_currency_note: "Όλες οι τιμές σε {currency}.",
     auth_couldnt_signup: "Η ΕΓΓΡΑΦΗ ΑΠΕΤΥΧΕ", auth_couldnt_login: "Η ΣΥΝΔΕΣΗ ΑΠΕΤΥΧΕ",
     plan_free_tag: "Χωρίς κάρτα", plan_starter_tag: "Ξεκινήστε", plan_pro_tag: "Δημοφιλέστερο", plan_elite_tag: "Είναι ώρα για GOLSZ",
     plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο — προφίλ, διακρίσεις & πορεία", plan_free_feat3: "Γνωριμία με τον αθλητή & τους στόχους σου μέσω του Scout", plan_free_feat4: "Βαθμολογία Ισχύος Διαβατηρίου & Η Επόμενή σου Κίνηση",
@@ -1463,6 +1466,7 @@ const I18N = {
     settings_email_sent: "Ελέγξτε το {email} για σύνδεσμο επιβεβαίωσης για να ολοκληρώσετε την αλλαγή.",
     settings_email_err: "Δεν ήταν δυνατή η ενημέρωση του email.",
     settings_plan: "ΠΑΚΕΤΟ", settings_plan_current: "Τρέχον", settings_plan_switch: "Επιλογή",
+    settings_currency: "ΝΟΜΙΣΜΑ", settings_currency_note: "Οι τιμές ακολουθούν την τοποθεσία σου. Άλλαξέ την εδώ αν δεν είναι σωστή — δεν αλλάζει μετά τη συνδρομή.",
     settings_payment_past_due: "Η τελευταία σας πληρωμή απέτυχε. Ενημερώστε την κάρτα σας μέσω Stripe (δείτε το email απόδειξης) για να διατηρήσετε το πακέτο σας ενεργό.",
     settings_plan_checkout_unavailable: "Η πληρωμή δεν έχει ρυθμιστεί ακόμα — ελέγξτε ξανά σύντομα.",
     settings_plan_downgrade_note: "Αλλάξατε σε Free. Αυτό δεν ακυρώνει τυχόν υπάρχουσα συνδρομή — χρησιμοποιήστε το email απόδειξης από το Stripe για να διαχειριστείτε ή να ακυρώσετε τη χρέωση.",
@@ -2257,7 +2261,19 @@ function SettingsButton({ openSignal }) {
                     );
                   })}
                 </div>
-                <div style={{ fontSize: 11, color: C.slate, marginTop: 8 }}>{t("prices_currency_note")}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 11, color: C.slate, fontWeight: 700 }}>{t("settings_currency")}</span>
+                  {SUPPORTED_CURRENCIES.map((cur) => (
+                    <button key={cur} onClick={() => setCurrency(cur)} style={{
+                      minHeight: 32, padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
+                      fontSize: 11.5, fontWeight: 700,
+                      background: currency === cur ? C.limeWash : C.turf,
+                      color: currency === cur ? C.lime : C.slate,
+                      border: `1px solid ${currency === cur ? C.lime : C.line2}`,
+                    }}>{cur.toUpperCase()}</button>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, color: C.slate, marginTop: 8 }}>{t("settings_currency_note")}</div>
                 {stripeCustomerId && (
                   <button onClick={() => {
                     const portal = stripePortalLink();
@@ -11112,7 +11128,7 @@ function UpgradeScreen({ uid, onDismiss, title, body }) {
             </button>
           ))}
         </div>
-        <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_currency_note")}</div>
+        <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_currency_note").replace("{currency}", currency.toUpperCase())}</div>
         <button onClick={onDismiss} style={{ width: "100%", textAlign: "center", background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 8 }}>{t("conversion_dismiss")}</button>
       </div>
     </div>,
@@ -11244,7 +11260,7 @@ function GuidedAssessment({ uid, onDismiss }) {
                   ))}
                 </div>
                 <button onClick={() => setShowPlans(true)} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "13px 14px", fontWeight: 800, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", marginBottom: 10 }}>{t("guided_continue_cta")}</button>
-                <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_currency_note")}</div>
+                <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_currency_note").replace("{currency}", currency.toUpperCase())}</div>
         <button onClick={onDismiss} style={{ width: "100%", textAlign: "center", background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 8 }}>{t("conversion_dismiss")}</button>
               </>
             )}
@@ -11272,7 +11288,7 @@ function GuidedAssessment({ uid, onDismiss }) {
                 </button>
               ))}
             </div>
-            <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_currency_note")}</div>
+            <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_currency_note").replace("{currency}", currency.toUpperCase())}</div>
         <button onClick={onDismiss} style={{ width: "100%", textAlign: "center", background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 8 }}>{t("conversion_dismiss")}</button>
           </>
         )}
@@ -12245,7 +12261,7 @@ function Auth({ onDone, paidReturn }) {
             <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: C.slate }}>{t("auth_secure_checkout")}</div>
           )}
           {isSignup && (
-            <div style={{ textAlign: "center", marginTop: 6, fontSize: 11, color: C.slate }}>{t("prices_currency_note")}</div>
+            <div style={{ textAlign: "center", marginTop: 6, fontSize: 11, color: C.slate }}>{t("prices_currency_note").replace("{currency}", currency.toUpperCase())}</div>
           )}
 
           {/* P0-3. Signup previously showed no Terms and no Privacy notice at

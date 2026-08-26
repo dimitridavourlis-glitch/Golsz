@@ -240,6 +240,19 @@ ck("every entry has its own lookup_key",
 ck("...and its own env var", new Set(PLAN_CATALOG.map((e) => e.priceEnv)).size, 9);
 ck("'free' is never grantable from Stripe", PLAN_CATALOG.some((e) => e.plan === "free"), false);
 
+// The copy under the prices said "All prices in EUR." on every screen, in
+// every region, while the numbers beside it were CAD or USD. A wrong currency
+// LABEL is worse than none: it is a specific, confident, false claim about
+// money, and it survived the whole multi-currency change until something read
+// it out loud.
+ck("the currency note is a template, not a hardcoded EUR",
+   /prices_currency_note: "[^"]*\{currency\}/.test(APP), true);
+ck("...in all four dictionaries", (APP.match(/prices_currency_note: "[^"]*\{currency\}/g) || []).length, 4);
+ck("...and no dictionary still names EUR outright",
+   /prices_currency_note: "[^"]*EUR/.test(APP), false);
+ck("...and every render site substitutes it",
+   (APP.match(/prices_currency_note"\)\.replace\("\{currency\}"/g) || []).length, 4);
+
 console.log("\n-- the client's prices match the catalogue that validates them --");
 // This is the check that matters. The client renders PLAN_PRICES; the server
 // validates against PLAN_CATALOG. If they drift, the page quotes one number
