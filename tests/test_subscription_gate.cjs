@@ -24,7 +24,12 @@ eval(slice("function isLiveStripeLink(", "const VAPID_PUBLIC_KEY"));
 eval(slice("const STRIPE_LINKS = {", "// A Stripe Payment Link is test-mode") +
   "\nfunction __l() { return STRIPE_LINKS; }");
 const STRIPE_LINKS = __l();
-const stripeLinkForTest = (p) => (isLiveStripeLink(STRIPE_LINKS[p]) ? STRIPE_LINKS[p] : null);
+// STRIPE_LINKS is keyed by currency first now — one Payment Link per
+// (currency, plan), because a Stripe subscription is locked to the currency
+// it was created in and links cannot be shared across them.
+const LINKS_FOR = (cur) => STRIPE_LINKS[cur] || {};
+const stripeLinkForTest = (p, cur = "eur") =>
+  (isLiveStripeLink(LINKS_FOR(cur)[p]) ? LINKS_FOR(cur)[p] : null);
 
 let p = 0, f = 0;
 const ck = (l, a, e) => {
@@ -114,7 +119,7 @@ ck("empty/null are refused", [isLiveStripeLink(""), isLiveStripeLink(null), isLi
 console.log("\n-- link mode: all three must agree --");
 const PAID = ["starter", "pro", "elite"];
 for (const plan of PAID) {
-  ck(`${plan} link is present`, typeof STRIPE_LINKS[plan], "string");
+  for (const cur of ["eur", "cad", "usd"]) ck(`${plan} link exists for ${cur}`, typeof LINKS_FOR(cur)[plan], "string");
 }
 
 // THE FAILURE THIS EXISTS FOR IS THE SWITCHOVER, NOT THE CURRENT STATE.
@@ -123,8 +128,8 @@ for (const plan of PAID) {
 // that single plan quietly shows "not available yet" while the other two sell.
 // Nobody reports it, because the two they tried worked. A mixed state is the
 // one arrangement that is always wrong, whichever direction it is mid-move.
-const live = PAID.filter((p) => isLiveStripeLink(STRIPE_LINKS[p]));
-const test = PAID.filter((p) => !isLiveStripeLink(STRIPE_LINKS[p]));
+const live = PAID.filter((p) => isLiveStripeLink(LINKS_FOR("eur")[p]));
+const test = PAID.filter((p) => !isLiveStripeLink(LINKS_FOR("eur")[p]));
 ck("no plan is left behind in the other mode", live.length === 0 || test.length === 0, true);
 if (live.length && test.length) {
   console.log("   LIVE: " + live.join(", ") + "   |   STILL TEST: " + test.join(", "));
@@ -137,22 +142,29 @@ console.log("   current mode: " + (live.length ? "LIVE" : "test/sandbox"));
 // truthful in both states instead of going red on the day payments start.
 if (live.length) {
   ck("with live links in place, no test_ link survives",
-     PAID.filter((p) => /\/test_/.test(STRIPE_LINKS[p])), []);
+     PAID.filter((p) => ["eur", "cad", "usd"].some((c) => /\/test_/.test(LINKS_FOR(c)[p] || ""))), []);
   ck("...and every live link is a real Stripe Payment Link",
      PAID.filter((p) => !/^https:\/\/buy\.stripe\.com\/[A-Za-z0-9]/.test(STRIPE_LINKS[p])), []);
 } else {
   // Still pre-launch. Record it as a verified fact rather than letting
   // "the code exists" read as "payments work".
-  ck("checkout is deliberately dark: every link is still sandbox",
-     PAID.every((p) => /\/test_/.test(STRIPE_LINKS[p])), true);
-  ck("...and the gate refuses all of them", PAID.map((p) => stripeLinkForTest(p)), [null, null, null]);
+  // The links are EMPTY now rather than sandbox URLs — the old test-mode ones
+  // were dropped when links split per currency. The property being asserted
+  // is the same and is the one that matters: nothing live, in any currency.
+  ck("checkout is deliberately dark: no live link in any currency",
+     ["eur", "cad", "usd"].flatMap((c) => PAID.map((p) => LINKS_FOR(c)[p]))
+       .some((u) => isLiveStripeLink(u)), false);
+  ck("...and the gate refuses all of them",
+     ["eur", "cad", "usd"].flatMap((c) => PAID.map((p) => stripeLinkForTest(p, c))).filter(Boolean), []);
 }
 ck("every checkout entry point goes through the gate",
    (APP.match(/stripeLinkFor\(/g) || []).length >= 8, true);
+// The single permitted read is inside stripeLinkFor() itself, which now
+// indexes by currency first.
 ck("no entry point reads STRIPE_LINKS directly any more",
-   APP.split("\n").filter((l) => /STRIPE_LINKS\[/.test(l) && !/const url = STRIPE_LINKS\[planId\]/.test(l)).length, 0);
+   APP.split("\n").filter((l) => /STRIPE_LINKS\[/.test(l) && !/const url = \(STRIPE_LINKS\[cur\]/.test(l)).length, 0);
 ck("signup refuses a paid plan while checkout is dark",
-   /if \(isSignup && selected\.price > 0 && !stripeLinkFor\(plan\)\) \{\s*\n\s*setErr\(t\("settings_plan_checkout_unavailable"\)\);/.test(APP), true);
+   /if \(isSignup && selected\.price > 0 && !stripeLinkFor\(plan, currency\)\) \{\s*\n\s*setErr\(t\("settings_plan_checkout_unavailable"\)\);/.test(APP), true);
 
 console.log("\n-- migration 116: a signup cannot grant itself a plan --");
 // Scoped to executable SQL only. Both the header and an in-body comment

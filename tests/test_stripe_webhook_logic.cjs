@@ -45,9 +45,9 @@ process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_KEY = "service-key";
 // Fake Price ids. test_pricing.cjs asserts no live Stripe id is ever
 // committed, so these must stay obviously synthetic.
-process.env.STRIPE_PRICE_BASIC = "price_TESTbasic000000001";
-process.env.STRIPE_PRICE_PRO = "price_TESTpro0000000001";
-process.env.STRIPE_PRICE_ELITE = "price_TESTelite00000001";
+process.env.STRIPE_PRICE_BASIC_EUR = "price_TESTbasic000000001";
+process.env.STRIPE_PRICE_PRO_EUR = "price_TESTpro0000000001";
+process.env.STRIPE_PRICE_ELITE_EUR = "price_TESTelite00000001";
 
 const handler = require("../api/stripe-webhook.js").default;
 
@@ -171,8 +171,8 @@ const subEvent = (status, price, type = "customer.subscription.updated") => ({
   type,
   data: { object: { customer: CUSTOMER, status, items: { data: price ? [{ price }] : [] } } },
 });
-const PRO_PRICE = { id: process.env.STRIPE_PRICE_PRO, currency: "eur", unit_amount: 1500 };
-const BASIC_PRICE = { id: process.env.STRIPE_PRICE_BASIC, currency: "eur", unit_amount: 600 };
+const PRO_PRICE = { id: process.env.STRIPE_PRICE_PRO_EUR, currency: "eur", unit_amount: 1500 };
+const BASIC_PRICE = { id: process.env.STRIPE_PRICE_BASIC_EUR, currency: "eur", unit_amount: 600 };
 
 (async () => {
   console.log("-- the harness actually reaches the handler --");
@@ -238,9 +238,9 @@ const BASIC_PRICE = { id: process.env.STRIPE_PRICE_BASIC, currency: "eur", unit_
   ck("an amount with no price id grants nothing", r.patch, { payment_past_due: false });
   r = await post(subEvent("active", { currency: "eur", unit_amount: 3000 }));
   ck("even an exactly-Elite amount grants nothing on its own", r.patch, { payment_past_due: false });
-  r = await post(subEvent("active", { id: process.env.STRIPE_PRICE_PRO, currency: "eur", unit_amount: 3000 }));
+  r = await post(subEvent("active", { id: process.env.STRIPE_PRICE_PRO_EUR, currency: "eur", unit_amount: 3000 }));
   ck("Pro's price id carrying Elite's money is refused, not upgraded", r.patch, { payment_past_due: false });
-  r = await post(subEvent("active", { id: process.env.STRIPE_PRICE_PRO, currency: "usd", unit_amount: 1500 }));
+  r = await post(subEvent("active", { id: process.env.STRIPE_PRICE_PRO_EUR, currency: "usd", unit_amount: 1500 }));
   ck("the right price in the wrong currency is refused", r.patch, { payment_past_due: false });
   const WEBHOOK = fs.readFileSync(REPO + "/api/stripe-webhook.js", "utf8");
   ck("...and the amount-inference function is still absent from the source",

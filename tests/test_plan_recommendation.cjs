@@ -207,11 +207,13 @@ ck("Free must still get real help", /Answer the question first, always/.test(SCO
 // ---- prices and limits untouched -----------------------------------------
 {
   const cat = require("../api/_plan-catalog.js");
-  const byPlan = Object.fromEntries(cat.PLAN_CATALOG.map((e) => [e.plan, e.unitAmount]));
-  ck("Basic still EUR 6.00", byPlan.starter, 600);
-  ck("Pro still EUR 15.00", byPlan.pro, 1500);
-  ck("Elite still EUR 30.00", byPlan.elite, 3000);
-  ck("currency still EUR", cat.EXPECTED_CURRENCY, "eur");
+  // Keyed by plan AND currency now — Object.fromEntries on plan alone would
+  // silently keep whichever currency happened to be last in the list.
+  const at = (plan, cur) => (cat.PLAN_CATALOG.find((e) => e.plan === plan && e.currency === cur) || {}).unitAmount;
+  ck("Basic still EUR 6.00", at("starter", "eur"), 600);
+  ck("Pro still EUR 15.00", at("pro", "eur"), 1500);
+  ck("Elite still EUR 30.00", at("elite", "eur"), 3000);
+  ck("EUR is still sold", cat.SUPPORTED_CURRENCIES.includes("eur"), true);
   ck("entitlement mapping unchanged", ent.FEATURE_MIN_PLAN,
      { pdf_export: "starter", readiness: "pro", targets: "starter", benchmarks: "starter", development_plan: "pro", pathway_plan: "starter" });
 }

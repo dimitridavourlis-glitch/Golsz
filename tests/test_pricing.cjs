@@ -34,9 +34,9 @@ const slice = (from, to) => {
 // Direct eval LEAKS function declarations into this scope but not consts,
 // so planPrice arrives on its own and only PRICE_CURRENCY needs extracting.
 // Destructuring planPrice here too would collide with the leaked function.
-eval(slice("const PRICE_CURRENCY =", "const VAPID_PUBLIC_KEY") +
-  "\nfunction __c() { return { PRICE_CURRENCY }; }");
-const { PRICE_CURRENCY } = __c();
+eval(slice("const CURRENCY_SYMBOL =", "const VAPID_PUBLIC_KEY") +
+  "\nfunction __c() { return { CURRENCY_SYMBOL, PLAN_PRICES, REGION_CURRENCY }; }");
+const { CURRENCY_SYMBOL, PLAN_PRICES, REGION_CURRENCY } = __c();
 eval(slice("const STRIPE_LINKS = {", "// A Stripe Payment Link is test-mode") + "\nfunction __sl() { return STRIPE_LINKS; }");
 const STRIPE_LINKS_LIVE = __sl();
 eval(slice("const PLANS = [", "\n// Supabase client") + "\nfunction __p() { return PLANS; }");
@@ -64,9 +64,30 @@ ck("no superseded CAD/USD amount survives in PLANS",
    PLANS.map((x) => x.price).filter((v) => [10, 24, 48, 14].includes(v)), []);
 
 console.log("\n-- one formatter owns the currency --");
-ck("the symbol is the euro sign", PRICE_CURRENCY, "\u20AC");
-ck("planPrice formats correctly", [planPrice(0), planPrice(6), planPrice(15), planPrice(30)],
+ck("the euro sign is still the euro sign", CURRENCY_SYMBOL.eur, "\u20AC");
+ck("dollars are disambiguated, not bare $", [CURRENCY_SYMBOL.cad, CURRENCY_SYMBOL.usd], ["CA$", "US$"]);
+// api/geo.js returns ca / us / eu / default. The first three map; "default"
+// and anything unexpected fall to USD rather than to nothing.
+ck("Canada -> CAD", currencyForRegion("ca"), "cad");
+ck("US -> USD", currencyForRegion("us"), "usd");
+ck("Europe -> EUR", currencyForRegion("eu"), "eur");
+ck("rest of world -> USD", currencyForRegion("default"), "usd");
+ck("an unknown region -> USD, never undefined", currencyForRegion("antarctica"), "usd");
+ck("...and a missing region too", currencyForRegion(undefined), "usd");
+
+
+// planPrice takes a PLAN and a CURRENCY now, not a bare amount — the amount
+// comes from the table, so a caller cannot pass a number the catalogue has
+// never heard of.
+ck("planPrice formats EUR", ["free", "starter", "pro", "elite"].map((p) => planPrice(p, "eur")),
    ["\u20AC0", "\u20AC6", "\u20AC15", "\u20AC30"]);
+ck("planPrice formats CAD", ["free", "starter", "pro", "elite"].map((p) => planPrice(p, "cad")),
+   ["CA$0", "CA$9", "CA$23", "CA$45"]);
+ck("planPrice formats USD", ["free", "starter", "pro", "elite"].map((p) => planPrice(p, "usd")),
+   ["US$0", "US$7", "US$16", "US$32"]);
+// An unknown currency must not render an empty price or "undefined".
+ck("an unknown currency falls back to USD", planPrice("pro", "gbp"), "US$16");
+ck("a missing currency falls back to USD", planPrice("pro"), "US$16");
 // Five render sites: settings picker, two upgrade sheets, the signup CTA
 // and the signup plan card. A raw "$" + price anywhere means one of them
 // drifted back.
@@ -184,59 +205,96 @@ console.log("\n-- PLAN IDENTITY COMES FROM STRIPE, NOT FROM MONEY --");
 // half can grant a plan alone.
 const CAT = fs.readFileSync(REPO + "/api/_plan-catalog.js", "utf8");
 const catalog = require(REPO + "/tests/_catalog-bridge.cjs");
-const { resolvePlanFromStripe, PLAN_CATALOG, EXPECTED_CURRENCY, readPriceFields } = catalog;
+const { resolvePlanFromStripe, PLAN_CATALOG, SUPPORTED_CURRENCIES, DEFAULT_CURRENCY, readPriceFields } = catalog;
 
 // A fake env standing in for configured live Price ids. Nothing real is
 // committed anywhere — the repo ships with these unset.
-const ENV = {
-  STRIPE_PRICE_BASIC: "price_TESTbasic0000000",
-  STRIPE_PRICE_PRO:   "price_TESTpro00000000",
-  STRIPE_PRICE_ELITE: "price_TESTelite000000",
-};
+// Nine now — one Price per (plan, currency). Built from the catalogue itself
+// so a tenth cannot appear without this env growing to match it.
+const ENV = Object.fromEntries(
+  PLAN_CATALOG.map((e, i) => [e.priceEnv, `price_TEST${e.plan}${e.currency}${String(i).padStart(4, "0")}`])
+);
+const idFor = (plan, cur) => ENV[PLAN_CATALOG.find((e) => e.plan === plan && e.currency === cur).priceEnv];
 const R = (o) => resolvePlanFromStripe(o, ENV);
 
-ck("catalogue holds exactly the three paid tiers", PLAN_CATALOG.map((e) => e.plan), ["starter", "pro", "elite"]);
-ck("catalogue amounts are the EUR prices in minor units", PLAN_CATALOG.map((e) => e.unitAmount), [600, 1500, 3000]);
-ck("expected currency is EUR", EXPECTED_CURRENCY, "eur");
+ck("catalogue holds exactly the three paid tiers",
+   [...new Set(PLAN_CATALOG.map((e) => e.plan))], ["starter", "pro", "elite"]);
+ck("...in exactly three currencies", SUPPORTED_CURRENCIES, ["eur", "cad", "usd"]);
+ck("...which is nine Price objects", PLAN_CATALOG.length, 9);
+ck("rest of the world is billed in USD", DEFAULT_CURRENCY, "usd");
+// The amounts, stated here so a silent edit to the catalogue has to come and
+// change this line too. These become IMMUTABLE Stripe Prices.
+ck("EUR is 6 / 15 / 30",
+   ["starter", "pro", "elite"].map((p) => PLAN_CATALOG.find((e) => e.plan === p && e.currency === "eur").unitAmount),
+   [600, 1500, 3000]);
+ck("CAD is 9 / 23 / 45",
+   ["starter", "pro", "elite"].map((p) => PLAN_CATALOG.find((e) => e.plan === p && e.currency === "cad").unitAmount),
+   [900, 2300, 4500]);
+ck("USD is 7 / 16 / 32",
+   ["starter", "pro", "elite"].map((p) => PLAN_CATALOG.find((e) => e.plan === p && e.currency === "usd").unitAmount),
+   [700, 1600, 3200]);
+ck("every (plan, currency) pair is present exactly once",
+   PLAN_CATALOG.length, new Set(PLAN_CATALOG.map((e) => e.plan + ":" + e.currency)).size);
+ck("every entry has its own lookup_key",
+   new Set(PLAN_CATALOG.map((e) => e.lookupKey)).size, 9);
+ck("...and its own env var", new Set(PLAN_CATALOG.map((e) => e.priceEnv)).size, 9);
 ck("'free' is never grantable from Stripe", PLAN_CATALOG.some((e) => e.plan === "free"), false);
 
+console.log("\n-- the client's prices match the catalogue that validates them --");
+// This is the check that matters. The client renders PLAN_PRICES; the server
+// validates against PLAN_CATALOG. If they drift, the page quotes one number
+// and Stripe charges another, and nothing else in the system would notice.
+{
+  const drift = [];
+  for (const e of PLAN_CATALOG) {
+    const shown = (PLAN_PRICES[e.plan] || {})[e.currency];
+    if (shown * 100 !== e.unitAmount) {
+      drift.push(`${e.plan}/${e.currency}: client ${shown} vs catalogue ${e.unitAmount / 100}`);
+    }
+  }
+  ck("no (plan, currency) pair disagrees between client and server", drift, []);
+  ck("the client prices every plan in every currency",
+     Object.keys(PLAN_PRICES).filter((p) => SUPPORTED_CURRENCIES.some((c) => typeof PLAN_PRICES[p][c] !== "number")), []);
+  ck("free is free in all three", SUPPORTED_CURRENCIES.map((c) => PLAN_PRICES.free[c]), [0, 0, 0]);
+}
+
 console.log("\n-- a correct Price resolves --");
-ck("Basic by price id", R({ priceId: ENV.STRIPE_PRICE_BASIC, currency: "eur", unitAmount: 600 }).plan, "starter");
-ck("Pro by price id", R({ priceId: ENV.STRIPE_PRICE_PRO, currency: "eur", unitAmount: 1500 }).plan, "pro");
-ck("Elite by price id", R({ priceId: ENV.STRIPE_PRICE_ELITE, currency: "eur", unitAmount: 3000 }).plan, "elite");
-ck("...and reports how it matched", R({ priceId: ENV.STRIPE_PRICE_PRO, currency: "eur", unitAmount: 1500 }).matchedBy, "price_id");
+ck("Basic by price id", R({ priceId: idFor("starter", "eur"), currency: "eur", unitAmount: 600 }).plan, "starter");
+ck("Pro by price id", R({ priceId: idFor("pro", "eur"), currency: "eur", unitAmount: 1500 }).plan, "pro");
+ck("Elite by price id", R({ priceId: idFor("elite", "eur"), currency: "eur", unitAmount: 3000 }).plan, "elite");
+ck("...and reports how it matched", R({ priceId: idFor("pro", "eur"), currency: "eur", unitAmount: 1500 }).matchedBy, "price_id");
 ck("lookup_key resolves when the id is unknown",
    R({ priceId: "price_somethingElse", lookupKey: "golsz_pro_eur_monthly", currency: "eur", unitAmount: 1500 }).plan, "pro");
 ck("explicit metadata resolves as a last resort",
    R({ metadataPlan: "elite", currency: "eur", unitAmount: 3000 }).plan, "elite");
 ck("uppercase currency from Stripe is accepted",
-   R({ priceId: ENV.STRIPE_PRICE_BASIC, currency: "EUR", unitAmount: 600 }).plan, "starter");
+   R({ priceId: idFor("starter", "eur"), currency: "EUR", unitAmount: 600 }).plan, "starter");
 
 console.log("\n-- AN INCORRECT CURRENCY CANNOT GRANT A PLAN --");
 for (const cur of ["usd", "cad", "gbp", "aud", "", null, undefined, 42]) {
   ck(`currency ${JSON.stringify(cur)} is refused`,
-     R({ priceId: ENV.STRIPE_PRICE_PRO, currency: cur, unitAmount: 1500 }).plan, null);
+     R({ priceId: idFor("pro", "eur"), currency: cur, unitAmount: 1500 }).plan, null);
 }
 ck("...and the reason names the mismatch",
-   R({ priceId: ENV.STRIPE_PRICE_PRO, currency: "usd", unitAmount: 1500 }).reason, "configuration_mismatch");
-ck("...naming the offending currency", R({ priceId: ENV.STRIPE_PRICE_PRO, currency: "usd", unitAmount: 1500 }).problems, ["currency:usd"]);
+   R({ priceId: idFor("pro", "eur"), currency: "usd", unitAmount: 1500 }).reason, "configuration_mismatch");
+ck("...naming the offending currency", R({ priceId: idFor("pro", "eur"), currency: "usd", unitAmount: 1500 }).problems, ["currency:usd"]);
 // The old bug in one line: 3000 units of anything used to mean Elite.
-ck("3000 USD does NOT grant Elite", R({ priceId: ENV.STRIPE_PRICE_ELITE, currency: "usd", unitAmount: 3000 }).plan, null);
-ck("...and 3000 CAD does not either", R({ priceId: ENV.STRIPE_PRICE_ELITE, currency: "cad", unitAmount: 3000 }).plan, null);
+ck("3000 USD does NOT grant Elite", R({ priceId: idFor("elite", "eur"), currency: "usd", unitAmount: 3000 }).plan, null);
+ck("...and 3000 CAD does not either", R({ priceId: idFor("elite", "eur"), currency: "cad", unitAmount: 3000 }).plan, null);
 
 console.log("\n-- AN INCORRECT AMOUNT CANNOT GRANT A PLAN --");
 for (const amt of [0, 1, 599, 601, 1499, 1501, 2999, 100000, -1500]) {
-  ck(`Pro price at ${amt} is refused`, R({ priceId: ENV.STRIPE_PRICE_PRO, currency: "eur", unitAmount: amt }).plan, null);
+  ck(`Pro price at ${amt} is refused`, R({ priceId: idFor("pro", "eur"), currency: "eur", unitAmount: amt }).plan, null);
 }
 for (const amt of [null, undefined, NaN, "1500"]) {
   ck(`non-numeric amount ${JSON.stringify(amt)} is refused`,
-     R({ priceId: ENV.STRIPE_PRICE_PRO, currency: "eur", unitAmount: amt }).plan, null);
+     R({ priceId: idFor("pro", "eur"), currency: "eur", unitAmount: amt }).plan, null);
 }
 ck("a missing amount is a problem, not a pass",
-   R({ priceId: ENV.STRIPE_PRICE_PRO, currency: "eur" }).problems, ["amount:missing"]);
+   R({ priceId: idFor("pro", "eur"), currency: "eur" }).problems, ["amount:missing"]);
 // Cross-wired configuration: right plan id, another plan's money.
 ck("Basic's price id with Pro's amount is refused",
-   R({ priceId: ENV.STRIPE_PRICE_BASIC, currency: "eur", unitAmount: 1500 }).plan, null);
+   R({ priceId: idFor("starter", "eur"), currency: "eur", unitAmount: 1500 }).plan, null);
 
 console.log("\n-- AN UNKNOWN IDENTIFIER CANNOT GRANT A PLAN --");
 for (const id of ["price_unknown123", "prod_notAPrice", "", null, "price_"]) {
@@ -262,7 +320,7 @@ ck("the customer id is bound even when the plan is unresolved",
    /Bind the Stripe customer to the profile ALWAYS/.test(WEBHOOK), true);
 ck("an unconfigured catalogue is logged loudly", /stripe catalog NOT configured/.test(WEBHOOK), true);
 ck("no live Stripe ids are committed", /price_[A-Za-z0-9]{10,}/.test(CAT), false);
-ck("price ids come from env", /STRIPE_PRICE_BASIC|STRIPE_PRICE_PRO|STRIPE_PRICE_ELITE/.test(CAT), true);
+ck("price ids come from env", /STRIPE_PRICE_\$\{|STRIPE_PRICE_/.test(CAT), true);
 
 console.log("\n-- readPriceFields pulls the right things --");
 ck("reads a Stripe price object",
@@ -272,7 +330,12 @@ ck("survives a missing price", readPriceFields(null), {});
 ck("...and a malformed one", readPriceFields({ id: 5, unit_amount: "1500" }), { priceId: null, lookupKey: null, currency: null, unitAmount: null });
 
 console.log("\n-- checkout stays disabled until live EUR Stripe exists --");
-ck("all three links are still test-mode", ["starter", "pro", "elite"].every((k) => /\/test_/.test(STRIPE_LINKS_LIVE[k])), true);
+// Nine links now, and they are EMPTY rather than sandbox — the old test-mode
+// URLs were removed with the currency split. What matters is unchanged: not
+// one of them is live, so checkout stays dark until the Cyprus account exists.
+ck("no link in any currency is live yet",
+   ["eur", "cad", "usd"].flatMap((c) => ["starter", "pro", "elite"].map((k) => (STRIPE_LINKS_LIVE[c] || {})[k]))
+     .some((u) => /^https:\/\/buy\.stripe\.com\//.test(u || "") && !/\/test_/.test(u || "")), false);
 ck("the gate keeps them dark", /function stripeLinkFor/.test(APP), true);
 
 console.log("\n-- tier naming is consistent in the legal copy --");
@@ -298,8 +361,12 @@ const TIERS = ["free", "starter", "pro", "elite"];
 const fromPLANS = Object.fromEntries(PLANS.map((x) => [x.id, x.price]));
 
 // 2. the server catalogue, converted out of minor units
+// EUR only. The other three surfaces below (plan_config, the margin SQL, and
+// the client's base PLANS row) are euro figures, and the catalogue now holds
+// nine entries — without this filter the loop would keep whichever currency
+// happened to be last and "compare" euros against dollars.
 const fromCatalog = { free: 0 };
-for (const e of PLAN_CATALOG) fromCatalog[e.plan] = e.unitAmount / 100;
+for (const e of PLAN_CATALOG) if (e.currency === "eur") fromCatalog[e.plan] = e.unitAmount / 100;
 
 // 3. the plan_config seed in the migration
 const fromPlanConfig = {};

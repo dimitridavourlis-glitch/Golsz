@@ -1724,7 +1724,7 @@ function useLang() {
   // Key *presence* is what counts, not truthiness — a deliberately-empty
   // translation ("") is a real value and must render as empty, not fall
   // through to the literal key name.
-  return { lang: "en", setLang: () => {}, t: (k) => (k in I18N.en ? I18N.en[k] : k), tv: (v) => translateValue("en", v) };
+  return { lang: "en", setLang: () => {}, t: (k) => (k in I18N.en ? I18N.en[k] : k), tv: (v) => translateValue("en", v), currency: "usd", setCurrency: () => {} };
 }
 function LangProvider({ children }) {
   const [lang, setLang] = useState(() => {
@@ -1737,9 +1737,46 @@ function LangProvider({ children }) {
   // Same rule as useLang()'s no-provider fallback: test key presence, not
   // truthiness, so an intentionally-empty string stays empty instead of
   // rendering the raw key name (e.g. messages_request_banner_pre, admin_ago).
+  // Currency rides in this provider rather than its own. It is the same kind
+  // of preference as language — "how this athlete sees the product" — with
+  // the same lifecycle, and one provider means one re-render when it changes.
+  //
+  // Order matters: a REMEMBERED choice always beats geo. Someone who switched
+  // to EUR must not be flipped back to CAD every time they land on a
+  // Canadian IP. Geo only fills the first visit; until it answers, the app
+  // shows USD rather than a blank price.
+  const [currency, setCurrencyState] = useState(() => {
+    try {
+      const saved = localStorage.getItem("golsz-currency");
+      if (saved && SUPPORTED_CURRENCIES.includes(saved)) return saved;
+    } catch (e) {}
+    return "usd";
+  });
+  const [currencyPinned, setCurrencyPinned] = useState(() => {
+    try { return !!localStorage.getItem("golsz-currency"); } catch (e) { return false; }
+  });
+  useEffect(() => {
+    if (currencyPinned) return;
+    let dead = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/geo", { cache: "no-store" });
+        if (!r.ok || dead) return;
+        const { region } = await r.json();
+        if (!dead && region) setCurrencyState(currencyForRegion(region));
+      } catch (e) { /* offline — USD stands, and they can switch */ }
+    })();
+    return () => { dead = true; };
+  }, [currencyPinned]);
+  const setCurrency = (next) => {
+    if (!SUPPORTED_CURRENCIES.includes(next)) return;
+    setCurrencyState(next);
+    setCurrencyPinned(true);
+    try { localStorage.setItem("golsz-currency", next); } catch (e) {}
+  };
   const t = (key) => (I18N[lang] && key in I18N[lang] ? I18N[lang][key] : key in I18N.en ? I18N.en[key] : key);
   const tv = (value) => translateValue(lang, value);
-  return <LangContext.Provider value={{ lang, setLang, t, tv }}>{children}</LangContext.Provider>;
+  return <LangContext.Provider value={{ lang, setLang, t, tv, currency, setCurrency }}>{children}</LangContext.Provider>;
 }
 
 /* ============ PUSH NOTIFICATIONS ============
@@ -1894,7 +1931,7 @@ function SettingsButton({ openSignal }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
   const [theme, setTheme] = useTheme();
-  const { lang, setLang, t } = useLang();
+  const { lang, setLang, t, currency, setCurrency } = useLang();
   const [uid, setUid] = useState(null);
   const [currentPlan, setCurrentPlan] = useState(null);
   const [paymentPastDue, setPaymentPastDue] = useState(false);
@@ -2058,7 +2095,7 @@ function SettingsButton({ openSignal }) {
         setCurrentPlan("free");
         setPlanMsg(t("settings_plan_downgrade_note"));
       } else {
-        const link = stripeLinkFor(planId);
+        const link = stripeLinkFor(planId, currency);
         if (!link) { setPlanMsg(t("settings_plan_checkout_unavailable")); return; }
         const { data: { user } } = await sb.auth.getUser();
         const checkoutUrl = new URL(link);
@@ -2211,7 +2248,7 @@ function SettingsButton({ openSignal }) {
                       }}>
                         <div>
                           <div style={{ fontSize: 13.5, fontWeight: 800, color: isCurrent ? C.lime : C.chalk }}>{pl.name}</div>
-                          <div style={{ fontSize: 11.5, color: C.slate }}>{pl.price === 0 ? "Free" : planPrice(pl.price) + " /mo"}</div>
+                          <div style={{ fontSize: 11.5, color: C.slate }}>{pl.price === 0 ? "Free" : planPrice(pl.id, currency) + " /mo"}</div>
                         </div>
                         <span style={{ fontSize: 11, fontWeight: 700, color: isCurrent ? C.lime : C.slate }}>
                           {isCurrent ? t("settings_plan_current") : t("settings_plan_switch")}
@@ -11048,7 +11085,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
 // random locked Targets button mid-session shouldn't replay a multi-step
 // "we've learned about you" reveal, just see plans and pick one.
 function UpgradeScreen({ uid, onDismiss, title, body }) {
-  const { t } = useLang();
+  const { t , currency } = useLang();
   const panelRef = useRef(null);
   useModalFocus(panelRef, true, onDismiss);
   return ReactDOM.createPortal(
@@ -11060,7 +11097,7 @@ function UpgradeScreen({ uid, onDismiss, title, body }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
           {PLANS.filter((pl) => pl.id !== "free").map((pl) => (
             <button key={pl.id} onClick={() => {
-              const link = stripeLinkFor(pl.id);
+              const link = stripeLinkFor(pl.id, currency);
               if (!link || !uid) return;
               const checkoutUrl = new URL(link);
               checkoutUrl.searchParams.set("client_reference_id", uid);
@@ -11071,7 +11108,7 @@ function UpgradeScreen({ uid, onDismiss, title, body }) {
               padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
             }}>
               <div style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>{pl.name}</div>
-              <div style={{ fontSize: 12.5, color: C.lime, fontWeight: 700 }}>{planPrice(pl.price)}/mo</div>
+              <div style={{ fontSize: 12.5, color: C.lime, fontWeight: 700 }}>{planPrice(pl.id, currency)}/mo</div>
             </button>
           ))}
         </div>
@@ -11117,7 +11154,7 @@ function EliteWelcome({ onDismiss }) {
 
 const GUIDED_STEPS = ["goal", "passport", "missing", "readiness", "next_move", "ready"];
 function GuidedAssessment({ uid, onDismiss }) {
-  const { t } = useLang();
+  const { t , currency } = useLang();
   const panelRef = useRef(null);
   useModalFocus(panelRef, true, onDismiss);
   const [step, setStep] = useState(0);
@@ -11220,7 +11257,7 @@ function GuidedAssessment({ uid, onDismiss }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
               {PLANS.filter((pl) => pl.id !== "free").map((pl) => (
                 <button key={pl.id} onClick={() => {
-                  const link = stripeLinkFor(pl.id);
+                  const link = stripeLinkFor(pl.id, currency);
                   if (!link || !uid) return;
                   const checkoutUrl = new URL(link);
                   checkoutUrl.searchParams.set("client_reference_id", uid);
@@ -11231,7 +11268,7 @@ function GuidedAssessment({ uid, onDismiss }) {
                   padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
                 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>{pl.name}</div>
-                  <div style={{ fontSize: 12.5, color: C.lime, fontWeight: 700 }}>{planPrice(pl.price)}/mo</div>
+                  <div style={{ fontSize: 12.5, color: C.lime, fontWeight: 700 }}>{planPrice(pl.id, currency)}/mo</div>
                 </button>
               ))}
             </div>
@@ -11448,13 +11485,46 @@ const SCOUT_ENDPOINT = "/api/scout";  // same-origin — works on any Vercel dep
 // webhook validates a Stripe Price against. tests/test_pricing.cjs diffs
 // this table against the catalogue, plan_config and the margin-summary SQL,
 // so all four cannot drift apart silently.
-const PRICE_CURRENCY = "\u20AC";
-function planPrice(amount) { return PRICE_CURRENCY + amount; }
+// Three presentment currencies, picked from where the athlete opens the app.
+// api/geo.js already resolves ca / us / eu / default from Vercel's edge
+// headers — it was built for the marketing hero image and needs no change.
+//
+// MIRRORS api/_plan-catalog.js. That file is the source of truth: it is what
+// validates the money Stripe actually charged. tests/test_pricing.cjs diffs
+// the two so they cannot drift apart, which is the only thing standing
+// between a page that says CA$23 and a Price that takes CA$45.
+const CURRENCY_SYMBOL = { eur: "\u20AC", cad: "CA$", usd: "US$" };
+const PLAN_PRICES = {
+  free:    { eur: 0,  cad: 0,  usd: 0 },
+  starter: { eur: 6,  cad: 9,  usd: 7 },
+  pro:     { eur: 15, cad: 23, usd: 16 },
+  elite:   { eur: 30, cad: 45, usd: 32 },
+};
+const SUPPORTED_CURRENCIES = ["eur", "cad", "usd"];
+// Geo is a GUESS — VPNs, travel, students abroad, expats. So it only chooses
+// the DEFAULT; every athlete can switch, and the choice is remembered. The
+// rest of the world gets USD rather than being made to pick before they can
+// see a price.
+const REGION_CURRENCY = { ca: "cad", us: "usd", eu: "eur" };
+function currencyForRegion(region) { return REGION_CURRENCY[region] || "usd"; }
+function planPrice(planId, currency) {
+  const row = PLAN_PRICES[planId];
+  const cur = SUPPORTED_CURRENCIES.includes(currency) ? currency : "usd";
+  return CURRENCY_SYMBOL[cur] + (row ? row[cur] : 0);
+}
 
+// Nine Payment Links — one per (plan, currency). A Stripe subscription is
+// locked to the currency it was created in, so these cannot be shared across
+// currencies. Each link's golsz_plan metadata must read starter / pro / elite
+// (NOT "basic" — the display name and the DB enum differ).
+//
+// OWNER: paste the live links here once the Cyprus account is activated.
+// isLiveStripeLink() below refuses anything containing /test_, so the empty
+// strings and the old sandbox links both read as "checkout not available".
 const STRIPE_LINKS = {
-  starter: "https://buy.stripe.com/test_9B6cN79hvdG43i83BFbQY02",
-  pro: "https://buy.stripe.com/test_28E14p2T7atSb0Ea03bQY03",
-  elite: "https://buy.stripe.com/test_bJedRb2T78lK3i86NRbQY04",
+  eur: { starter: "", pro: "", elite: "" },
+  cad: { starter: "", pro: "", elite: "" },
+  usd: { starter: "", pro: "", elite: "" },
 };
 // A Stripe Payment Link is test-mode iff its path segment starts with
 // "test_". One check, used by every upgrade entry point, so switching to live
@@ -11462,8 +11532,9 @@ const STRIPE_LINKS = {
 function isLiveStripeLink(url) {
   return typeof url === "string" && /^https:\/\/buy\.stripe\.com\//.test(url) && !/\/test_/.test(url);
 }
-function stripeLinkFor(planId) {
-  const url = STRIPE_LINKS[planId];
+function stripeLinkFor(planId, currency) {
+  const cur = SUPPORTED_CURRENCIES.includes(currency) ? currency : "usd";
+  const url = (STRIPE_LINKS[cur] || {})[planId];
   return isLiveStripeLink(url) ? url : null;
 }
 
@@ -11513,6 +11584,9 @@ const VAPID_PUBLIC_KEY = "BNrfmAAoP_PL4FocIjzfw5aaxzHsuCknwUeG5pX21v7cjvMCzt3PL2
 // shipped UI yet, so per §10 ("never promise future features as live") the
 // pricing copy does not list them until they're real.
 const PLANS = [
+  // `price` is the EUR figure and is NOT what renders — planPrice(id, currency)
+  // is. It stays so tests/test_pricing.cjs can keep diffing this file against
+  // plan_config and the margin SQL, which are euro surfaces.
   { id: "free",    name: "Free",    price: 0,  featKeys: ["plan_free_feat1", "plan_free_feat2", "plan_free_feat3", "plan_free_feat4"] },
   { id: "starter", name: "Basic",   price: 6,  featKeys: ["plan_starter_feat1", "plan_starter_feat2", "plan_starter_feat3", "plan_starter_feat4"] },
   { id: "pro",   name: "Pro",     price: 15, featKeys: ["plan_pro_feat1", "plan_pro_feat2", "plan_pro_feat3", "plan_pro_feat4", "plan_pro_feat5", "plan_pro_feat6"] },
@@ -11634,7 +11708,7 @@ async function createChildAccount(childFullName, childDobIso) {
 
 function Auth({ onDone, paidReturn }) {
   const isDesktop = useIsDesktop();
-  const { t } = useLang();
+  const { t, currency } = useLang();
   const [mode, setMode] = useState(paidReturn ? "login" : "signup");
   const [plan, setPlan] = useState("free");
   const [name, setName] = useState("");
@@ -11789,7 +11863,7 @@ function Auth({ onDone, paidReturn }) {
     // looks: migration 116 makes every new account start on 'free', so
     // without this an athlete would pick Pro, pay nothing, be given Free,
     // and never be told why. Say so before anything is created.
-    if (isSignup && selected.price > 0 && !stripeLinkFor(plan)) {
+    if (isSignup && selected.price > 0 && !stripeLinkFor(plan, currency)) {
       setErr(t("settings_plan_checkout_unavailable"));
       return;
     }
@@ -11810,7 +11884,7 @@ function Auth({ onDone, paidReturn }) {
     setResendSent(false);
     // preview mode: no backend configured -> behave like the demo
     if (!sb) {
-      if (isSignup && selected.price > 0 && stripeLinkFor(plan)) { window.location.href = stripeLinkFor(plan); return; }
+      if (isSignup && selected.price > 0 && stripeLinkFor(plan, currency)) { window.location.href = stripeLinkFor(plan, currency); return; }
       onDone(); return;
     }
     // Open a blank tab synchronously, before any `await` — browsers only
@@ -11821,7 +11895,7 @@ function Auth({ onDone, paidReturn }) {
     // separate tab (instead of navigating this one away) is what lets this
     // tab stay alive and keep polling for email confirmation the whole time.
     let checkoutTab = null;
-    if (isSignup && selected.price > 0 && stripeLinkFor(plan)) {
+    if (isSignup && selected.price > 0 && stripeLinkFor(plan, currency)) {
       checkoutTab = window.open("", "_blank");
     }
     setBusy(true);
@@ -11866,9 +11940,9 @@ function Auth({ onDone, paidReturn }) {
           hp: website.trim(),
         } } });
         if (error) throw error;
-        if (selected.price > 0 && stripeLinkFor(plan) && data.user) {
+        if (selected.price > 0 && stripeLinkFor(plan, currency) && data.user) {
           // attribute the checkout back to this account for the Stripe webhook
-          const checkoutUrl = new URL(stripeLinkFor(plan));
+          const checkoutUrl = new URL(stripeLinkFor(plan, currency));
           checkoutUrl.searchParams.set("client_reference_id", data.user.id);
           checkoutUrl.searchParams.set("prefilled_email", signupEmail);
           if (checkoutTab) {
@@ -11988,7 +12062,7 @@ function Auth({ onDone, paidReturn }) {
     : isParentSignup ? t("auth_create_athlete_account")
     : !isSignup ? t("auth_login")
     : selected.price === 0 ? t("auth_create_free")
-    : t("auth_continue_payment") + planPrice(selected.price) + t("auth_per_month");
+    : t("auth_continue_payment") + planPrice(selected.id, currency) + t("auth_per_month");
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "calc(28px + env(safe-area-inset-top, 0px)) 18px 28px", background: "radial-gradient(1100px 560px at 50% -12%, " + C.turf + ", " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
@@ -12056,7 +12130,7 @@ function Auth({ onDone, paidReturn }) {
                         </div>
                       </div>
                       <div>
-                        <span style={{ fontSize: 24, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.chalk }}>{pl.price === 0 ? "Free" : planPrice(pl.price)}</span>
+                        <span style={{ fontSize: 24, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: C.chalk }}>{pl.price === 0 ? "Free" : planPrice(pl.id, currency)}</span>
                         {pl.price > 0 && <span style={{ fontSize: 12, color: C.slate }}> /mo</span>}
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>

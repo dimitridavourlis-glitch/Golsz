@@ -54,39 +54,47 @@
 // The one place plan money is defined server-side. Mirrors PLANS in
 // golsz-app.html; tests/test_cad_pricing.cjs diffs the two so they cannot
 // drift. Amounts are Stripe minor units (cents).
-const EXPECTED_CURRENCY = "eur";
+// Three presentment currencies, chosen by where the athlete opens the app
+// (api/geo.js already resolves ca / us / eu / default from Vercel's edge
+// headers). Anyone outside those regions is shown USD and can switch.
+//
+// NINE Price objects, not three multi-currency ones. Stripe can attach
+// currency_options to a single Price, but then the subscription item reports
+// a BASE currency while the charge happens in another, and identifyPlan()
+// below exists precisely so that a plan is never inferred from something
+// ambiguous. One Price id -> exactly one (plan, currency) pair keeps the
+// check exact.
+//
+// Amounts are FIXED, never converted at runtime. An FX call in this path
+// would mean the price could move between the page and the charge, and that
+// a rate outage becomes a billing outage. They were chosen once, at rough
+// parity, and they are what the athlete agreed to.
+const SUPPORTED_CURRENCIES = ["eur", "cad", "usd"];
+const DEFAULT_CURRENCY = "usd";     // rest of world; see api/geo.js "default"
 
-const PLAN_CATALOG = [
-  {
-    plan: "starter",          // the DB enum value — NOT the display name
-    displayName: "Basic",
-    unitAmount: 600,          // EUR 6.00
-    currency: EXPECTED_CURRENCY,
-    lookupKey: "golsz_basic_eur_monthly",
-    priceEnv: "STRIPE_PRICE_BASIC",
-  },
-  {
-    plan: "pro",
-    displayName: "Pro",
-    unitAmount: 1500,         // EUR 15.00
-    currency: EXPECTED_CURRENCY,
-    lookupKey: "golsz_pro_eur_monthly",
-    priceEnv: "STRIPE_PRICE_PRO",
-  },
-  {
-    plan: "elite",
-    displayName: "Elite",
-    unitAmount: 3000,         // EUR 30.00
-    currency: EXPECTED_CURRENCY,
-    lookupKey: "golsz_elite_eur_monthly",
-    priceEnv: "STRIPE_PRICE_ELITE",
-  },
-];
+// Minor units, per Stripe. All three currencies happen to use 2 decimals —
+// do NOT assume that if a zero-decimal currency (JPY, KRW) is ever added.
+const PLAN_PRICING = {
+  starter: { displayName: "Basic", eur: 600,  cad: 900,  usd: 700 },
+  pro:     { displayName: "Pro",   eur: 1500, cad: 2300, usd: 1600 },
+  elite:   { displayName: "Elite", eur: 3000, cad: 4500, usd: 3200 },
+};
 
-// "free" is deliberately absent: it is the absence of a subscription, never
-// something Stripe grants. Nothing here can ever resolve to "free" — that
-// transition is driven by subscription.deleted / canceled, not by a price.
-const VALID_PLANS = PLAN_CATALOG.map((e) => e.plan);
+// Flattened to one entry per (plan, currency) so every lookup below stays a
+// straight find() rather than a nested one.
+const PLAN_CATALOG = Object.entries(PLAN_PRICING).flatMap(([plan, row]) =>
+  SUPPORTED_CURRENCIES.map((currency) => ({
+    plan,                                   // the DB enum value — NOT the display name
+    displayName: row.displayName,
+    currency,
+    unitAmount: row[currency],
+    // lookup_key survives Price recreation, which a price change forces.
+    lookupKey: `golsz_${plan === "starter" ? "basic" : plan}_${currency}_monthly`,
+    priceEnv: `STRIPE_PRICE_${plan === "starter" ? "BASIC" : plan.toUpperCase()}_${currency.toUpperCase()}`,
+  }))
+);
+
+const VALID_PLANS = [...new Set(PLAN_CATALOG.map((e) => e.plan))];
 
 // Reads the configured Price id at call time rather than module load, so a
 // Vercel env change takes effect on the next invocation without a redeploy.
@@ -99,7 +107,7 @@ function configuredPriceId(entry, env) {
 
 // STEP 1 — identity. Returns a catalogue entry or null. Money is not an
 // input to this function on purpose.
-function identifyPlan({ priceId, lookupKey, metadataPlan }, env) {
+function identifyPlan({ priceId, lookupKey, metadataPlan, currency }, env) {
   // Most trusted first. A Price id is unique to one Price object in one
   // Stripe account and cannot be spoofed by a customer.
   if (priceId) {
@@ -115,9 +123,17 @@ function identifyPlan({ priceId, lookupKey, metadataPlan }, env) {
   // Explicit metadata set by us on the Payment Link / Checkout Session.
   // Last because it is the easiest to set wrongly by hand — but it is still
   // an explicit declaration, not an inference from an amount.
+  // Metadata names a PLAN and nothing else, so with nine entries it can no
+  // longer pick one on its own — golsz_plan=pro matches three rows that
+  // differ only by currency. The currency comes from the Price on the event,
+  // which Stripe sets and a customer cannot forge; if it is missing or not
+  // one we sell in, this refuses rather than guessing a row.
   if (metadataPlan && VALID_PLANS.includes(metadataPlan)) {
-    const byMeta = PLAN_CATALOG.find((e) => e.plan === metadataPlan);
-    if (byMeta) return { entry: byMeta, matchedBy: "metadata" };
+    const cur = typeof currency === "string" ? currency.toLowerCase() : null;
+    if (cur && SUPPORTED_CURRENCIES.includes(cur)) {
+      const byMeta = PLAN_CATALOG.find((e) => e.plan === metadataPlan && e.currency === cur);
+      if (byMeta) return { entry: byMeta, matchedBy: "metadata" };
+    }
   }
   return null;
 }
@@ -181,7 +197,9 @@ function stripeCatalogConfigured(env) {
 
 export {
   PLAN_CATALOG,
-  EXPECTED_CURRENCY,
+  SUPPORTED_CURRENCIES,
+  DEFAULT_CURRENCY,
+  PLAN_PRICING,
   VALID_PLANS,
   identifyPlan,
   validateConfiguration,

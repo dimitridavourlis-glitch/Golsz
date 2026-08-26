@@ -7,7 +7,7 @@ const path = require("path");
 const src = fs.readFileSync(path.join(__dirname, "..", "api", "_plan-catalog.js"), "utf8");
 const body = src.slice(0, src.indexOf("export {"));
 module.exports = eval(body + `({
-  PLAN_CATALOG, EXPECTED_CURRENCY, VALID_PLANS, identifyPlan,
+  PLAN_CATALOG, SUPPORTED_CURRENCIES, DEFAULT_CURRENCY, PLAN_PRICING, VALID_PLANS, identifyPlan,
   validateConfiguration, resolvePlanFromStripe, readPriceFields,
   stripeCatalogConfigured, configuredPriceId,
 })`);
