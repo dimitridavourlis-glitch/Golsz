@@ -45,6 +45,10 @@
     fetch("/api/geo")
       .then(function (res) { return res.ok ? res.json() : null; })
       .then(function (data) {
+        // One /api/geo call serves both the hero image and the prices —
+        // a second fetch for the same answer would be a second chance to
+        // disagree with the first.
+        applyCurrency(data && data.region);
         var path = data && IMAGE_BY_REGION[data.region];
         if (!path) return;
         var img = new Image();
@@ -58,6 +62,41 @@
         img.src = path;
       })
       .catch(function () { /* fallback gradient stays — see .hero-mega */ });
+  }
+
+  // PRICES ON THE MARKETING PAGE
+  //
+  // The number and the currency WORD come from the same row, deliberately.
+  // This page shipped "All prices in CAD" underneath euro figures for weeks
+  // — a specific, confident, false claim about money that nothing caught,
+  // because the label and the amounts were two independent pieces of text.
+  // Reading both from one object is what makes that class of bug impossible
+  // rather than merely fixed.
+  //
+  // Mirrors PLAN_PRICES in golsz-app.html and PLAN_CATALOG in
+  // api/_plan-catalog.js; tests/test_pricing.cjs diffs all three.
+  var CURRENCIES = {
+    eur: { symbol: "\u20AC", label: "euro (EUR)", short: "EUR", free: 0, starter: 6, pro: 15, elite: 30 },
+    cad: { symbol: "CA$", label: "Canadian dollars (CAD)", short: "CAD", free: 0, starter: 9, pro: 23, elite: 45 },
+    usd: { symbol: "US$", label: "US dollars (USD)", short: "USD", free: 0, starter: 7, pro: 16, elite: 32 }
+  };
+  var REGION_CURRENCY = { ca: "cad", us: "usd", eu: "eur" };
+
+  function applyCurrency(region) {
+    // Rest of world gets USD. The static HTML ships EUR, so a visitor with
+    // JavaScript off, or a geo call that fails, still reads a coherent page
+    // rather than a blank price.
+    var row = CURRENCIES[REGION_CURRENCY[region] || "usd"];
+    if (!row) return;
+    document.querySelectorAll("[data-gz-price]").forEach(function (el) {
+      var plan = el.getAttribute("data-gz-price");
+      if (!(plan in row)) return;
+      var per = el.querySelector("small");
+      el.textContent = row.symbol + row[plan];
+      if (per) el.appendChild(per);          // keep the "/mo" that was there
+    });
+    document.querySelectorAll("[data-gz-currency-label]").forEach(function (el) { el.textContent = row.label; });
+    document.querySelectorAll("[data-gz-currency-short]").forEach(function (el) { el.textContent = row.short; });
   }
 
   function initFooterYear() {

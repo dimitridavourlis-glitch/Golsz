@@ -107,30 +107,57 @@ ck("the constant says so", /NOT converted from|not converted from/.test(APP), tr
 // cases amount-inference could never express.
 
 console.log("\n-- the homepage shows the same numbers --");
-const prices = [...HOME.matchAll(/<p class="plan-price">([^<]*(?:<small>[^<]*<\/small>)?)/g)]
+// The page is multi-currency now: JS reads /api/geo and rewrites both the
+// amounts and the currency WORD from one row in js/main.js. So the file no
+// longer contains a single set of prices, and the old assertions here — which
+// demanded euros everywhere and the absence of the word CAD — would now be
+// asserting the bug rather than against it.
+//
+// WHAT THEY WERE PROTECTING, KEPT: on 2026-08-24 this page carried "All
+// prices in CAD" underneath euro figures. Two checks covered that ground and
+// both passed, because each could only fail in one direction — one looked for
+// the SYMBOL C$ and the word "CAD" contains no C$; the other confirmed the
+// right claim was PRESENT and said nothing about a wrong one beside it.
+//
+// That class is now impossible by construction rather than by assertion: the
+// amount and the currency word come from the SAME object, so they cannot
+// drift. What is asserted below is that this stays true.
+const prices = [...HOME.matchAll(/<p class="plan-price"[^>]*>([^<]*(?:<small>[^<]*<\/small>)?)/g)]
   .map((m) => m[1].replace(/<[^>]+>/g, "").trim());
 ck("four price labels", prices.length, 4);
-ck("they read 0 / 6 / 15 / 30 in euro", prices.map((x) => x.replace(/&euro;/g, "\u20AC")),
+// The STATIC html ships EUR on purpose: a visitor with JavaScript off, or a
+// geo call that fails, must still read a coherent page rather than a blank
+// price. EUR because GOLSZ is a Cyprus business and that is its home currency.
+ck("the no-JS fallback is euros", prices.map((x) => x.replace(/&euro;/g, "\u20AC")),
    ["\u20AC0", "\u20AC6/mo", "\u20AC15/mo", "\u20AC30/mo"]);
-ck("no CAD symbol survives on the homepage", /C\$\d/.test(HOME), false);
-ck("currency is labelled for international visitors", /All prices in euro \(EUR\)/.test(HOME), true);
-// BOTH of the two lines above passed on 2026-08-24 while the homepage carried
-// "All prices in CAD" in its pricing footnote, directly contradicting the "All
-// prices in euro (EUR)" line 60 lines above it. Each check could only fail in
-// one direction: the first looks for the SYMBOL C$ followed by a digit, which
-// the word "CAD" does not contain; the second confirms the right claim is
-// PRESENT and says nothing about a wrong one sitting beside it.
-//
-// GOLSZ is a Nicosia (Cyprus) business selling in EUR. The currency word is
-// the claim customers actually read, so assert the wrong word is ABSENT, not
-// merely that the right one appears somewhere.
-ck("the word CAD appears nowhere on the homepage", /\bCAD\b/.test(HOME), false);
-ck("...nor any other Canadian-business claim", /\bCanadian\b/.test(HOME), false);
-// Every currency statement must agree. One page cannot name two currencies.
-const currencyClaims = [...HOME.matchAll(/All prices in ([A-Za-z()\s]+?)(?:\s*&middot;|\.|<)/g)]
-  .map((m) => m[1].trim());
-ck("every 'All prices in ...' statement was found", currencyClaims.length >= 2, true);
-ck("...and they all name EUR", [...new Set(currencyClaims.map((c) => /eur/i.test(c)))], [true]);
+ck("...and its currency word matches those numbers", /All prices in <span data-gz-currency-label>euro \(EUR\)<\/span>/.test(HOME), true);
+ck("...in the footnote too", /All prices in <span data-gz-currency-short>EUR<\/span>/.test(HOME), true);
+
+// Every element the script rewrites must be reachable, or the page silently
+// keeps its euro fallback for a Canadian visitor.
+ck("all four prices are addressable", (HOME.match(/data-gz-price="/g) || []).length, 4);
+ck("...one per plan", ["free", "starter", "pro", "elite"].filter((p) => !HOME.includes(`data-gz-price="${p}"`)), []);
+
+// THE STRUCTURAL GUARANTEE: label and amount live in one row.
+const MAIN = fs.readFileSync(REPO + "/js/main.js", "utf8");
+ck("js/main.js carries a currency table", /var CURRENCIES = \{/.test(MAIN), true);
+{
+  const block = MAIN.slice(MAIN.indexOf("var CURRENCIES = {"), MAIN.indexOf("var REGION_CURRENCY"));
+  const rows = {};
+  for (const m of block.matchAll(/(\w+): \{ symbol: "([^"]+)", label: "([^"]+)", short: "(\w+)", free: (\d+), starter: (\d+), pro: (\d+), elite: (\d+) \}/g)) {
+    rows[m[1]] = { short: m[4], starter: +m[6], pro: +m[7], elite: +m[8] };
+  }
+  ck("...for all three currencies", Object.keys(rows), ["eur", "cad", "usd"]);
+  ck("...each naming its own currency in its own label",
+     Object.entries(rows).filter(([k, v]) => v.short.toLowerCase() !== k), []);
+  // The catalogue comparison lives below, where PLAN_CATALOG exists.
+  global.__MARKETING_ROWS = rows;
+}
+// One geo call, not two — a second fetch for the same answer is a second
+// chance to disagree with the first.
+ck("prices reuse the hero's /api/geo call", (MAIN.match(/fetch\("\/api\/geo"\)/g) || []).length, 1);
+ck("...and rest of world falls back to USD", /REGION_CURRENCY\[region\] \|\| "usd"/.test(MAIN), true);
+
 ck("Pro is still the featured plan", /class="card plan is-featured/.test(HOME), true);
 
 console.log("\n-- the in-app currency note is localised --");
@@ -269,6 +296,21 @@ console.log("\n-- the client's prices match the catalogue that validates them --
   ck("the client prices every plan in every currency",
      Object.keys(PLAN_PRICES).filter((p) => SUPPORTED_CURRENCIES.some((c) => typeof PLAN_PRICES[p][c] !== "number")), []);
   ck("free is free in all three", SUPPORTED_CURRENCIES.map((c) => PLAN_PRICES.free[c]), [0, 0, 0]);
+}
+
+// The marketing page must quote what Stripe will actually charge. Checked
+// here rather than beside the rest of the homepage block, because that runs
+// before PLAN_CATALOG is required.
+{
+  const rows = global.__MARKETING_ROWS || {};
+  const drift = [];
+  for (const e of PLAN_CATALOG) {
+    const shown = (rows[e.currency] || {})[e.plan];
+    if (shown * 100 !== e.unitAmount) drift.push(`${e.plan}/${e.currency}: page ${shown} vs charge ${e.unitAmount / 100}`);
+  }
+  ck("the marketing page quotes what Stripe will charge", drift, []);
+  ck("...and covers every currency the catalogue sells in",
+     SUPPORTED_CURRENCIES.filter((c) => !rows[c]), []);
 }
 
 console.log("\n-- a correct Price resolves --");
