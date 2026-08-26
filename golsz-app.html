@@ -2265,7 +2265,7 @@ function SettingsButton({ openSignal }) {
                   <span style={{ fontSize: 11, color: C.slate, fontWeight: 700 }}>{t("settings_currency")}</span>
                   {SUPPORTED_CURRENCIES.map((cur) => (
                     <button key={cur} onClick={() => setCurrency(cur)} style={{
-                      minHeight: 32, padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
+                      minHeight: 44, minWidth: 52, padding: "6px 10px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
                       fontSize: 11.5, fontWeight: 700,
                       background: currency === cur ? C.limeWash : C.turf,
                       color: currency === cur ? C.lime : C.slate,
@@ -11724,7 +11724,7 @@ async function createChildAccount(childFullName, childDobIso) {
 
 function Auth({ onDone, paidReturn }) {
   const isDesktop = useIsDesktop();
-  const { t, currency } = useLang();
+  const { t, currency, setCurrency } = useLang();
   const [mode, setMode] = useState(paidReturn ? "login" : "signup");
   const [plan, setPlan] = useState("free");
   const [name, setName] = useState("");
@@ -12126,7 +12126,29 @@ function Auth({ onDone, paidReturn }) {
           <>
           {isSignup && (
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 10, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("auth_choose_plan")}</div>
+              {/* The currency control belongs HERE, not only in Settings.
+                  Settings needs a login, and a Stripe subscription is locked
+                  to the currency it was created in — so this screen is the one
+                  place the choice is irreversible, and it was the one place
+                  without a control. Geo is a guess; someone on a VPN, abroad,
+                  or an expat needs to correct it BEFORE they pay, not after. */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.16em", color: C.slate, fontWeight: 700 }}>{t("auth_choose_plan")}</div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {SUPPORTED_CURRENCIES.map((cur) => (
+                    <button key={cur} type="button" onClick={() => setCurrency(cur)}
+                      aria-pressed={currency === cur}
+                      aria-label={t("settings_currency") + " " + cur.toUpperCase()}
+                      style={{
+                        minHeight: 44, minWidth: 52, padding: "6px 10px", borderRadius: 9, cursor: "pointer",
+                        fontFamily: "inherit", fontSize: 11.5, fontWeight: 700,
+                        background: currency === cur ? C.limeWash : C.turf,
+                        color: currency === cur ? C.lime : C.slate,
+                        border: `1px solid ${currency === cur ? C.lime : C.line2}`,
+                      }}>{cur.toUpperCase()}</button>
+                  ))}
+                </div>
+              </div>
               <div className="pricing-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
                 {PLANS.map((pl) => {
                   const on = plan === pl.id;

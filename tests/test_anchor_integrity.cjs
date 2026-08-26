@@ -132,6 +132,11 @@ const REVIEWED_AMBIGUOUS = new Set([
   "revoke execute on function merge_scout_context",
   // section separator used only as an END anchor.
   "// ===============================================",
+  // Two currency switchers on purpose — Settings and signup. The ambiguity IS
+  // the assertion: test_ux_credibility counts these to prove the signup screen
+  // has one, because Settings needs a login and a Stripe subscription is
+  // locked to the currency it was created in. Counted, never sliced.
+  "setCurrency(cur)",
   // i18n keys: one occurrence per language plus the use site. Checked for
   // presence, never sliced.
   "scout_pathway_current", "scout_pathway_incoming", "scout_pathway_replace_warning",

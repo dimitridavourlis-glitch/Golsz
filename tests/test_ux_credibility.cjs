@@ -202,6 +202,51 @@ for (const [label, ex] of [
   ck(`${label} is present and dash-free`, PROMPT.includes(ex), true);
 }
 
+console.log("\n-- currency is choosable BEFORE the choice becomes permanent --");
+// A Stripe subscription is locked to the currency it was created in. Settings
+// requires a login, so for a while the only screen where the decision is
+// irreversible — signup — was the only screen with no control on it. Geo is a
+// guess: a VPN, a trip, a student abroad, an expat. They must be able to
+// correct it before they pay, not after.
+{
+  ck("the currency switcher renders in two places, not one",
+     (APP.match(/onClick=\{\(\) => setCurrency\(cur\)\}/g) || []).length, 2);
+  // One of them must be inside Auth, i.e. after the component starts.
+  const authAt = APP.indexOf("function Auth({ onDone, paidReturn })");
+  ck("Auth was found", authAt > 0, true);
+  ck("...and one switcher lives inside it",
+     APP.indexOf("setCurrency(cur)", authAt) > authAt, true);
+  // Structural, not proximity. The first version used a 900-character window
+  // between `{isSignup && (` and the switcher and failed on the plan grid in
+  // between — a window is a guess about formatting, not a property. This asks
+  // the real question: is the switcher inside that conditional's subtree?
+  {
+    const parser = require("@babel/parser");
+    const mm = /<script[^>]*type=["']text\/babel(?:-deferred)?["'][^>]*>/.exec(APP);
+    const CODE = APP.slice(mm.index + mm[0].length, APP.indexOf("</script>", mm.index));
+    const ast = parser.parse(CODE, { sourceType: "script", plugins: ["jsx"] });
+    let gated = 0;
+    (function walk(n) {
+      if (!n || typeof n !== "object") return;
+      if (Array.isArray(n)) return n.forEach(walk);
+      if (n.type === "LogicalExpression" && n.operator === "&&" &&
+          n.left.type === "Identifier" && n.left.name === "isSignup" &&
+          CODE.slice(n.start, n.end).includes("setCurrency(cur)")) gated++;
+      for (const k of Object.keys(n)) if (k !== "loc" && k !== "start" && k !== "end") walk(n[k]);
+    })(ast.program.body);
+    ck("...gated to the signup branch, not shown when logging in", gated >= 1, true);
+  }
+  ck("Auth can actually set it", /const \{ t, currency, setCurrency \} = useLang\(\);/.test(APP), true);
+  // Both switchers are real tap targets. The signup one especially: it is on
+  // a phone, on the critical path, next to the money.
+  ck("every currency button clears 44px",
+     (APP.match(/minHeight: 44, minWidth: 52, padding: "6px 10px"/g) || []).length, 2);
+  // Screen readers need to know which one is active — colour alone does not
+  // survive being read aloud.
+  ck("the active currency is exposed to assistive tech",
+     /aria-pressed=\{currency === cur\}/.test(APP), true);
+}
+
 console.log("\n-- the first thing a new athlete taps, on a phone --");
 // MEASURED 2026-08-24 in a 390x844 mobile viewport against production: every
 // control in the signed-out flow met the 44px minimum EXCEPT the two that
