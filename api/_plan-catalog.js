@@ -32,22 +32,25 @@
 // is refused; a correct amount with an unknown identifier is refused.
 //
 // NO LIVE STRIPE VALUES ARE COMMITTED HERE. Price ids come from environment
-// variables that are unset today, so resolution returns null and nothing is
-// granted — which is the correct posture while checkout is deliberately
-// disabled (isLiveStripeLink() in golsz-app.html).
+// variables, so this file stays safe to read and the ids can be rotated
+// without a code change. If they are unset, resolution returns null and
+// nothing is granted — the correct posture, not a silent default.
 //
 // ---------------------------------------------------------------
-// OWNER: when the live CAD Stripe configuration is created, set these in
-// Vercel (Production). Values come from Stripe; do not invent them.
+// STATUS: live since 2026-09-03. All nine are set in Vercel (Production)
+// against Stripe account acct_1TqxVCRtNFWlwsi4 (Canada), as Config (not
+// Secret) vars — a Price id identifies a product, it does not authorise
+// anything, so there is nothing to leak.
 //
-//   STRIPE_PRICE_BASIC   price_...   the recurring EUR 6.00/mo Price
-//   STRIPE_PRICE_PRO     price_...   the recurring EUR 15.00/mo Price
-//   STRIPE_PRICE_ELITE   price_...   the recurring EUR 30.00/mo Price
+//   STRIPE_PRICE_{BASIC,PRO,ELITE}_{CAD,USD,EUR}   price_...
 //
-// Optionally also set each Price's `lookup_key` in Stripe to the value in
-// LOOKUP_KEY below. A lookup_key survives Price recreation, so if a price
-// ever changes you can move the key to the new Price and this keeps
-// resolving without a redeploy.
+// Note BASIC, not STARTER: the Stripe product is "GOLSZ Basic" while the DB
+// enum value is "starter". priceEnv below does that translation in one place.
+//
+// NOT set: each Price's `lookup_key`. A lookup_key survives Price recreation
+// (which a price change forces), so setting them in Stripe to the LOOKUP_KEY
+// values below would let a future price change resolve without touching env
+// vars. Worth doing before the first price change, not urgent before then.
 // ---------------------------------------------------------------
 // ============================================================
 

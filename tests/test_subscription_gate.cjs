@@ -58,9 +58,13 @@ console.log("\n-- cancelling must be possible, and downgrading must not fake it 
      isLivePortalLink("https://billing.stripe.com.evil.tld/p/login/abc"), false);
   ck("http is refused", isLivePortalLink("http://billing.stripe.com/p/login/abc"), false);
   ck("empty is refused rather than treated as a link", isLivePortalLink(""), false);
-  // Unset today, on purpose: there is no activated live Stripe account yet.
-  // The gate must make that read as "not available", never as a dead link.
-  ck("no portal link is configured yet, so the gate returns null", stripePortalLink(), null);
+  // Configured since 2026-09-03. This previously asserted the gate returned
+  // null because no live account existed; now the fact worth holding is that
+  // a real portal exists, because the downgrade path below refuses to run
+  // without one — an empty portal link would silently block every cancellation.
+  ck("a portal link is configured", isLivePortalLink(stripePortalLink()), true);
+  ck("...and it is the login-link form, not a Payment Link",
+     /^https:\/\/billing\.stripe\.com\/p\/login\/[A-Za-z0-9]+$/.test(stripePortalLink() || ""), true);
 
   // Ordering, not adjacency: the guard must stand BETWEEN entering the "free"
   // branch and the write. Asserting the two strings merely exist would pass
@@ -122,41 +126,44 @@ for (const plan of PAID) {
   for (const cur of ["eur", "cad", "usd"]) ck(`${plan} link exists for ${cur}`, typeof LINKS_FOR(cur)[plan], "string");
 }
 
-// THE FAILURE THIS EXISTS FOR IS THE SWITCHOVER, NOT THE CURRENT STATE.
-// Going live means replacing three URLs by hand. Replace two and miss one, and
+// THE FAILURE THIS EXISTS FOR IS A PARTIAL SWITCHOVER, NOT THE CURRENT STATE.
+// Going live meant filling in NINE URLs by hand. Fill eight and miss one and
 // the app does not break — stripeLinkFor() returns null for the straggler, so
-// that single plan quietly shows "not available yet" while the other two sell.
-// Nobody reports it, because the two they tried worked. A mixed state is the
-// one arrangement that is always wrong, whichever direction it is mid-move.
-const live = PAID.filter((p) => isLiveStripeLink(LINKS_FOR("eur")[p]));
-const test = PAID.filter((p) => !isLiveStripeLink(LINKS_FOR("eur")[p]));
-ck("no plan is left behind in the other mode", live.length === 0 || test.length === 0, true);
-if (live.length && test.length) {
-  console.log("   LIVE: " + live.join(", ") + "   |   STILL TEST: " + test.join(", "));
+// that one plan quietly shows "not available yet" in that one currency while
+// the other eight sell. Nobody reports it, because the ones they tried worked.
+// A mixed state is the one arrangement that is always wrong.
+//
+// This used to sample EUR only, which would have missed exactly the bug it was
+// written to catch once links went per-currency: a hole in CAD or USD was
+// invisible to it. It now walks all nine cells.
+const CELLS = ["eur", "cad", "usd"].flatMap((c) => PAID.map((p) => ({ c, p, url: LINKS_FOR(c)[p] })));
+ck("nine cells, one per (plan, currency)", CELLS.length, 9);
+const liveCells = CELLS.filter((x) => isLiveStripeLink(x.url));
+const darkCells = CELLS.filter((x) => !isLiveStripeLink(x.url));
+ck("no cell is left behind in the other mode", liveCells.length === 0 || darkCells.length === 0, true);
+if (liveCells.length && darkCells.length) {
+  console.log("   LIVE: " + liveCells.map((x) => `${x.p}/${x.c}`).join(", ") +
+              "   |   NOT LIVE: " + darkCells.map((x) => `${x.p}/${x.c}`).join(", "));
 }
-console.log("   current mode: " + (live.length ? "LIVE" : "test/sandbox"));
+console.log("   current mode: " + (liveCells.length ? "LIVE" : "dark"));
 
-// The assertion the owner asked for, and it can only be meaningful once the
-// switch has happened: with live links in place, NOTHING may still be test.
-// Written as a conditional rather than a hard `=== false` so the suite stays
-// truthful in both states instead of going red on the day payments start.
-if (live.length) {
-  ck("with live links in place, no test_ link survives",
-     PAID.filter((p) => ["eur", "cad", "usd"].some((c) => /\/test_/.test(LINKS_FOR(c)[p] || ""))), []);
-  ck("...and every live link is a real Stripe Payment Link",
-     PAID.filter((p) => !/^https:\/\/buy\.stripe\.com\/[A-Za-z0-9]/.test(STRIPE_LINKS[p])), []);
-} else {
-  // Still pre-launch. Record it as a verified fact rather than letting
-  // "the code exists" read as "payments work".
-  // The links are EMPTY now rather than sandbox URLs — the old test-mode ones
-  // were dropped when links split per currency. The property being asserted
-  // is the same and is the one that matters: nothing live, in any currency.
-  ck("checkout is deliberately dark: no live link in any currency",
-     ["eur", "cad", "usd"].flatMap((c) => PAID.map((p) => LINKS_FOR(c)[p]))
-       .some((u) => isLiveStripeLink(u)), false);
-  ck("...and the gate refuses all of them",
-     ["eur", "cad", "usd"].flatMap((c) => PAID.map((p) => stripeLinkForTest(p, c))).filter(Boolean), []);
-}
+// Live since 2026-09-03, so this is now asserted outright rather than behind an
+// `if (live.length)`. Going dark again would be a regression, and the suite
+// should go red for it rather than quietly switching to congratulating itself
+// on a pre-launch invariant that no longer describes the product.
+ck("checkout is live in every currency", darkCells.map((x) => `${x.p}/${x.c}`), []);
+ck("no test_ link survives anywhere",
+   CELLS.filter((x) => /\/test_/.test(x.url || "")).map((x) => `${x.p}/${x.c}`), []);
+ck("every link is a real Stripe Payment Link",
+   CELLS.filter((x) => !/^https:\/\/buy\.stripe\.com\/[A-Za-z0-9]/.test(x.url || ""))
+     .map((x) => `${x.p}/${x.c}`), []);
+// Nine distinct URLs. Reusing one across two cells would bill in the wrong
+// currency or grant the wrong plan, and every check above would still pass.
+ck("all nine links are distinct", new Set(CELLS.map((x) => x.url)).size, 9);
+// The gate is what the app actually calls, so assert through it too, not just
+// against the raw table.
+ck("...and the gate returns all nine",
+   CELLS.map((x) => stripeLinkForTest(x.p, x.c)).filter(Boolean).length, 9);
 ck("every checkout entry point goes through the gate",
    (APP.match(/stripeLinkFor\(/g) || []).length >= 8, true);
 // The single permitted read is inside stripeLinkFor() itself, which now

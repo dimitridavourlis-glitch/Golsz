@@ -384,14 +384,23 @@ ck("reads a Stripe price object",
 ck("survives a missing price", readPriceFields(null), {});
 ck("...and a malformed one", readPriceFields({ id: 5, unit_amount: "1500" }), { priceId: null, lookupKey: null, currency: null, unitAmount: null });
 
-console.log("\n-- checkout stays disabled until live EUR Stripe exists --");
-// Nine links now, and they are EMPTY rather than sandbox — the old test-mode
-// URLs were removed with the currency split. What matters is unchanged: not
-// one of them is live, so checkout stays dark until the Cyprus account exists.
-ck("no link in any currency is live yet",
-   ["eur", "cad", "usd"].flatMap((c) => ["starter", "pro", "elite"].map((k) => (STRIPE_LINKS_LIVE[c] || {})[k]))
-     .some((u) => /^https:\/\/buy\.stripe\.com\//.test(u || "") && !/\/test_/.test(u || "")), false);
-ck("the gate keeps them dark", /function stripeLinkFor/.test(APP), true);
+console.log("\n-- checkout is live: all nine links, no gaps and no sandbox --");
+// Inverted on 2026-09-03. This used to assert that NOTHING was live, which was
+// the true and useful fact while checkout was deliberately dark. Now that the
+// Canadian account is activated, the fact worth defending is the opposite and
+// stricter one: every (plan, currency) cell is filled with a real live link.
+// A missing cell is the dangerous state — stripeLinkFor() returns null and the
+// athlete silently cannot pay in their own currency.
+const CELLS = ["eur", "cad", "usd"].flatMap((c) =>
+  ["starter", "pro", "elite"].map((k) => ({ c, k, url: (STRIPE_LINKS_LIVE[c] || {})[k] })));
+ck("there are exactly nine (plan, currency) cells", CELLS.length, 9);
+ck("every cell holds a live Payment Link",
+   CELLS.filter((x) => !(/^https:\/\/buy\.stripe\.com\/[A-Za-z0-9]/.test(x.url || "") && !/\/test_/.test(x.url || "")))
+     .map((x) => `${x.k}/${x.c}`), []);
+// Nine DISTINCT links. A copy-paste that reused one URL across two currencies
+// would charge in the wrong currency and still pass every check above.
+ck("all nine are distinct", new Set(CELLS.map((x) => x.url)).size, 9);
+ck("the gate is still what they pass through", /function stripeLinkFor/.test(APP), true);
 
 console.log("\n-- tier naming is consistent in the legal copy --");
 const TERMS = fs.readFileSync(REPO + "/terms.html", "utf8");

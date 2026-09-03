@@ -11537,13 +11537,31 @@ function planPrice(planId, currency) {
 // currencies. Each link's golsz_plan metadata must read starter / pro / elite
 // (NOT "basic" — the display name and the DB enum differ).
 //
-// OWNER: paste the live links here once the Cyprus account is activated.
-// isLiveStripeLink() below refuses anything containing /test_, so the empty
-// strings and the old sandbox links both read as "checkout not available".
+// Live since 2026-09-03, Stripe account acct_1TqxVCRtNFWlwsi4 (Canada).
+// isLiveStripeLink() below refuses anything containing /test_, so an empty
+// string and an old sandbox link both read as "checkout not available".
+//
+// These carry no golsz_plan metadata — Stripe's Payment Link dashboard has no
+// field for it. That is fine and not a gap: identifyPlan() in
+// api/_plan-catalog.js tries the Price id FIRST, and all nine STRIPE_PRICE_*
+// vars are set in Vercel Production, so every link resolves by Price id. The
+// metadata branch is only the third fallback.
 const STRIPE_LINKS = {
-  eur: { starter: "", pro: "", elite: "" },
-  cad: { starter: "", pro: "", elite: "" },
-  usd: { starter: "", pro: "", elite: "" },
+  eur: {
+    starter: "https://buy.stripe.com/7sY14pdwFbpD5NZ5NoaEE01",
+    pro:     "https://buy.stripe.com/9B600ldwFfFTfozdfQaEE04",
+    elite:   "https://buy.stripe.com/8x2cN72S1bpDccn6RsaEE07",
+  },
+  cad: {
+    starter: "https://buy.stripe.com/bJe5kF64dalzdgrcbMaEE00",
+    pro:     "https://buy.stripe.com/6oUaEZ509fFTb8j1x8aEE03",
+    elite:   "https://buy.stripe.com/bJe14p1NXctH7W73FgaEE06",
+  },
+  usd: {
+    starter: "https://buy.stripe.com/5kQ7sNdwF51f90b6RsaEE02",
+    pro:     "https://buy.stripe.com/bJe6oJ2S1dxLdgra3EaEE05",
+    elite:   "https://buy.stripe.com/14AbJ3akt65j0tF2BcaEE08",
+  },
 };
 // A Stripe Payment Link is test-mode iff its path segment starts with
 // "test_". One check, used by every upgrade entry point, so switching to live
@@ -11574,10 +11592,11 @@ function stripeLinkFor(planId, currency) {
 // already handles by setting the plan back to free — so the loop closes with
 // no new backend code.
 //
-// OWNER: paste the portal link from Stripe → Settings → Billing → Customer
-// portal, after the live account is activated. Empty until then, and the gate
-// below makes "empty" behave as "not available yet" rather than as a dead link.
-const STRIPE_PORTAL_LINK = "";
+// Live since 2026-09-03. The portal's Cancellations setting is "cancel at end
+// of billing period", so an athlete who cancels keeps the month they paid for
+// and customer.subscription.deleted arrives at period end — which is when the
+// webhook should, and does, drop them to free.
+const STRIPE_PORTAL_LINK = "https://billing.stripe.com/p/login/bJe5kF64dalzdgrcbMaEE00";
 function isLivePortalLink(url) {
   return typeof url === "string" && /^https:\/\/billing\.stripe\.com\/p\/login\//.test(url) && !/\/test_/.test(url);
 }
