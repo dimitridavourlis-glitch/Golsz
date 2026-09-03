@@ -11546,6 +11546,27 @@ function planPrice(planId, currency) {
 // api/_plan-catalog.js tries the Price id FIRST, and all nine STRIPE_PRICE_*
 // vars are set in Vercel Production, so every link resolves by Price id. The
 // metadata branch is only the third fallback.
+//
+// KNOWN LIMIT — Stripe Adaptive Pricing, measured 2026-09-03, not a guess.
+// Opening the CAD link from an EU IP shows €14.90 with an [EUR | CAD] selector,
+// defaulted to EUR, NOT CA$23. So the currency this table picks is only the
+// DEFAULT Stripe starts from; the visitor's location can move it.
+//
+//   * It cannot be switched off. Settings > Adaptive Pricing lists Payment
+//     Links as "Always on" with no toggle, and the supported-currency list is
+//     a read-only reference, not an allowlist.
+//   * Managed Payments is NOT the cause. Verified by creating an otherwise
+//     identical link with it disabled: still converted, to €14.90. All
+//     Managed Payments added was the VAT line (€2.84 on top, hence €17.77).
+//   * The only real fix is server-created Checkout Sessions with
+//     adaptive_pricing disabled, which needs STRIPE_SECRET_KEY — a key this
+//     app deliberately does not hold. Deferred on purpose, not overlooked.
+//
+// Why it is tolerable meanwhile: the athlete gets a SELECTOR, not a silent
+// override. They can pick the currency GOLSZ quoted, and no one is charged an
+// amount they did not see. The webhook is unaffected either way — the
+// subscription keeps the original Price, so validateConfiguration() still sees
+// the currency and unit_amount this catalogue expects.
 const STRIPE_LINKS = {
   eur: {
     starter: "https://buy.stripe.com/7sY14pdwFbpD5NZ5NoaEE01",
