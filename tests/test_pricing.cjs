@@ -406,7 +406,20 @@ console.log("\n-- tier naming is consistent in the legal copy --");
 const TERMS = fs.readFileSync(REPO + "/terms.html", "utf8");
 ck("terms no longer says 'Starter'", /Starter/.test(TERMS), false);
 ck("terms names the four current tiers", /Free, Basic, Pro and Elite/.test(TERMS), true);
-ck("...and states the billing currency", /euro \(EUR\)/.test(TERMS), true);
+// Was /euro \(EUR\)/ alone, written when GOLSZ billed only in EUR. It kept
+// passing after the currency split purely because the new sentence still
+// contains the words "euro (EUR)" — a green assertion that had stopped
+// testing its own description. The contract must name every currency we can
+// actually charge in, or a Canadian reading it is told the wrong thing.
+for (const cur of ["Canadian dollars (CAD)", "US dollars (USD)", "euro (EUR)"]) {
+  ck(`terms names ${cur} as a billing currency`, TERMS.includes(cur), true);
+}
+// Stripe converts to the visitor's local currency at checkout and it cannot be
+// disabled on Payment Links (see STRIPE_LINKS in golsz-app.html). Terms must
+// disclose that rather than let the athlete meet it for the first time on the
+// payment page.
+ck("...and discloses Stripe's local-currency conversion",
+   /local currency at its exchange rate/.test(TERMS), true);
 
 console.log("\n-- ALL FOUR PRICE LOCATIONS AGREE --");
 // The audit finding this section exists to prevent: a plan price lives in
