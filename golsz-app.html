@@ -8989,24 +8989,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
   const homeStageIdx = homeStatedIdx >= 0 ? homeStatedIdx : currentStageIndex(athlete, homeStages.length);
   const currentStage = homeStageIdx >= 0 ? homeStages[homeStageIdx] : null;
 
-  // The next three open steps, ordered exactly the way nextMilestone() orders
-  // them — dated first, soonest first, then undated. That is what makes the
-  // first row of this list the same step the card above calls "my next move";
-  // any other sort and Home contradicts itself on one screen.
   const allMilestones = pathwayRow ? (pathwayRow.milestones || []) : [];
-  const openMilestones = (() => {
-    if (!canTargets || !pathwayRow) return [];
-    const undone = allMilestones.filter((m) => !m.done);
-    const dated = undone.filter((m) => m.due).slice().sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0));
-    return dated.concat(undone.filter((m) => !m.due)).slice(0, 3);
-  })();
-  // "Not filed under a stage yet" is only worth saying when some OTHER row in
-  // the same list DOES show a stage — otherwise it is the answer to a question
-  // nobody asked. New steps land unfiled by default (see the pathway suggestion
-  // list, which sets stage: null on purpose), so labelling unconditionally
-  // would stamp it on nearly every row and mean nothing.
-  const anyMilestoneFiled = openMilestones.some(
-    (m) => m.stage && homeStages.some((st) => st.id === m.stage));
   const milestonesDone = allMilestones.filter((m) => m.done).length;
 
   // Bars are built here, not in the JSX, so the "is there anything to show"
@@ -9323,89 +9306,6 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
         </HomeZone>
       )}
 
-      <HomeZone label={t("home_zone_ahead")} span={1}>
-      {/* THE GOAL CARD STAYS, AND A TEST IS THE REASON.
-          I removed it, on the grounds that the identity block above could say
-          the same sentence in one line. test_launch_p0 failed: Home must
-          render the goal WITH ITS SOURCE — "Scout wrote this" vs "you wrote
-          this" — and with its own route into Plan. My one-liner carried the
-          words and dropped the authorship, which is the part that lets an
-          athlete correct a goal Scout misheard. The 2px slate left rule is
-          the echo rule: this lives somewhere else. */}
-      {/* PAIRED, not merged. Both are echo cards for objects Plan owns, both
-          are short, and stacked they cost ~354px of a 2073px page. Side by side
-          on a wide screen they cost the taller of the two. auto-fit collapses
-          them back to one column below ~440px each, so the phone layout is
-          unchanged — this spends the desktop width reclaimed in 57aca9e rather
-          than hiding anything. */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 12, alignItems: "stretch" }}>
-      <GoalCard actingFor={actingFor} readOnly flush onOpenPlan={() => onNavigate("targets", "goal")} />
-
-      {/* YOUR PATH — the heading moved INSIDE the card it names, and the
-          card gained the route into the page that owns the pathway. */}
-      <div style={{ paddingTop: 4 }}>
-        {/* The count Plan owns, reported here in the card the athlete actually
-            reads. Deliberately NOT on the sub-score row above: that row sits
-            behind featureUnlocked(plan, "readiness"), so a Free athlete would
-            never see their own step count. Same treatment as PathwayPlan's
-            counter, so the two screens visibly report the same number. */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, minHeight: 20 }}>
-          <Eyebrow>{t("home_path_title")}</Eyebrow>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          {pathway && pathway.milestonesTotal > 0 && (
-            <span style={{ fontSize: 14, fontWeight: 900, color: C.lime, fontFamily: "'Space Mono', monospace", flexShrink: 0 }}>{pathway.milestonesDone}/{pathway.milestonesTotal}</span>
-          )}
-          </div>
-        </div>
-        <PathwayStrip athlete={athlete} pathwayRow={pathwayRow} t={t} onNavigate={onNavigate} />
-        <JumpRow label={t("goal_card_open_plan")} onClick={() => onNavigate("targets", "pathway")} />
-      </div>
-
-      {/* MILESTONES, REPORTED. The steps themselves, not just the count —
-          the athlete had to open Plan to find out what the 3/8 referred to.
-          Read-only by construction: no add field, no edit pencil, no reorder
-          arrows, no checkbox. Those exist on Plan and only on Plan; the one
-          route out of this card is the JumpRow into it.
-          Three rows, never the whole list: Home reports what is next, Plan
-          owns the rest. The count next to the title is the same number the
-          pathway card above reports, from the same array.
-          canTargets gates this the same way it gates the next-move rung that
-          reads the same data — a Free athlete is never shown a paid surface
-          on Home, and a plan that has not loaded yet behaves like Free. */}
-      {canTargets && pathwayRow && allMilestones.length > 0 && (
-        <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, minHeight: 20 }}>
-            <Eyebrow>{t("pathway_milestones_title")}</Eyebrow>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-              <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: ".1em", color: C.slate, textTransform: "uppercase", flexShrink: 0 }}>{t("home_read_only_here")}</span>
-              <span style={{ fontSize: 14, fontWeight: 900, color: C.lime, fontFamily: "'Space Mono', monospace", flexShrink: 0 }}>{milestonesDone}/{allMilestones.length}</span>
-            </div>
-          </div>
-          <div style={{ marginTop: 6 }}>
-            {openMilestones.slice(0, 2).map((m, i) => {
-              const d = milestoneDateLabel(m, lang, t);
-              const st = m.stage ? homeStages.find((s) => s.id === m.stage) : null;
-              return (
-                // dot={false} draws the same open circle Plan puts next to an
-                // unfinished step. It is deliberately NOT a checkbox: these
-                // rows report, and a control that looks tappable but is not
-                // is worse than no control. Ticking one happens in Plan.
-                <StatusRow key={m.id} last={i === Math.min(openMilestones.length, 2) - 1} label={m.label} dot={false}
-                  sub={st ? stageLabel(st, t) : (anyMilestoneFiled ? t("pathway_unfiled") : null)}
-                  value={d.text} valueColor={d.tone === "over" ? C.danger : C.slate} dim />
-              );
-            })}
-            {/* Every step done is a real state, and it is a good one — it
-                gets said, rather than leaving an empty card. */}
-            {openMilestones.length === 0 && (
-              <div style={{ fontSize: 13, color: C.chalk, lineHeight: 1.6, padding: "10px 0 2px" }}>{t("pathway_milestones_empty")}</div>
-            )}
-          </div>
-        </div>
-      )}
-      </div>
-
-      </HomeZone>
       {/* Scout sits here, not at the bottom of the page. It used to be
           the last element on Home, under the benchmark rows, so the most
           valuable action on the screen was the one you had to scroll past
@@ -10817,6 +10717,12 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
   // Undated is its own band rather than being quietly filed as "later" —
   // "we don't know when" is a real state and hiding it inside a horizon is a
   // small lie the page would keep telling.
+  // Shown only in contrast, the same rule it carried on Home: new steps land
+  // unfiled by default, so an unconditional label would stamp "not filed yet"
+  // on nearly every row and carry no information. It only means something
+  // once another row in the same list IS filed.
+  const anyMilestoneFiled = milestones.some(
+    (m) => m.stage && materialisedStages().some((st) => st.id === m.stage));
   const stepCounts = milestones.reduce((acc, m) => {
     if (!m.stage) return acc;
     const c = acc[m.stage] || (acc[m.stage] = { done: 0, total: 0 });
@@ -10890,6 +10796,8 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
           <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginTop: 4 }}>
             {m.stage && stageLabelFor(m.stage) ? (
               <span style={{ fontSize: 11, fontWeight: 800, color: C.slate, border: `1px solid ${C.line}`, borderRadius: 7, padding: "3px 8px", minHeight: 26, display: "inline-flex", alignItems: "center" }}>{stageLabelFor(m.stage)}</span>
+            ) : anyMilestoneFiled ? (
+              <span style={{ fontSize: 11, fontWeight: 800, color: C.slate, opacity: 0.75, minHeight: 26, display: "inline-flex", alignItems: "center" }}>{t("pathway_unfiled")}</span>
             ) : null}
             {d.tone === "flat" ? (
               <span style={{ fontSize: 11, fontWeight: 800, color: C.slate, padding: "3px 0", minHeight: 26, display: "inline-flex", alignItems: "center" }}>{d.text}</span>

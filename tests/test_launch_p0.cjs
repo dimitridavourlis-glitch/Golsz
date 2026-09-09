@@ -192,33 +192,28 @@ ck("...and marks it athlete-authored", /goal_source: "athlete_edited",/.test(APP
 // moved. What changed is WHO OWNS EDITING IT. Home is a read-only dashboard
 // and hands off to Plan; Plan is the workspace and owns the edit. Both render
 // the same component so the two views cannot drift, which is why this asserts
-// the props rather than just the presence of the tag.
-// Pinned the exact PROP SEQUENCE, so adding `flush` between readOnly and
-// onOpenPlan broke it while every property it cares about still held. The
-// claim is that Home renders the shared component, read-only, with a route
-// into Plan — not the order the attributes happen to be written in.
-{
-  const tag = /<GoalCard\b[^>]*>/.exec(APP);
-  ck("Home renders it", !!tag, true);
-  ck("...passing the athlete it is acting for", /actingFor=\{actingFor\}/.test(tag[0]), true);
-  ck("...read-only, so Home never edits", /\breadOnly\b/.test(tag[0]), true);
-  ck("...with a route into the page that owns it", /onOpenPlan=/.test(tag[0]), true);
-}
-ck("...read-only, so Home never edits", /<GoalCard actingFor=\{actingFor\} readOnly/.test(APP), true);
-// The optional second argument is the hand-off ORIGIN, which Plan reads to
-// render its breadcrumb. This assertion used to require exactly
-// `onNavigate("targets")` and went red when the origin was added — a change
-// that strengthened the guarantee rather than weakening it. What P0-5 is
-// protecting is that Home routes the athlete to Plan to edit; the argument
-// count is not the guarantee. Destination is still asserted exactly.
-ck("...and hands off to Plan", /onOpenPlan=\{\(\) => onNavigate\("targets"(?:, "[a-z_]+")?\)\}/.test(APP), true);
-ck("...carrying where it came from, so Plan can say so", /onNavigate\("targets", "goal"\)/.test(APP), true);
+// HOME NO LONGER RENDERS THE GOAL CARD AT ALL.
+//
+// Removed 2026-09-10 at Dimitri's request: Home's "WHERE IT IS GOING" zone
+// was an echo of Plan — the goal, the pathway strip, the secondary goal and
+// the open steps, all owned and edited on Plan, redrawn read-only on Home.
+// P0-5's guarantee was never "Home shows the goal"; it was that the goal has
+// ONE editor and that a read-only copy can always reach it. With no copy on
+// Home there is nothing to route, so what is left to protect is that Plan
+// owns it and that no second editable copy appears anywhere.
+//
+// If a read-only goal ever returns to Home, restore the four assertions in
+// git history at b08139d — they are correct, they just have nothing to test
+// right now.
+ck("Home does not render its own copy of the goal",
+   /<GoalCard\b[^>]*\breadOnly\b/.test(APP), false);
+
 // "Editable" means Plan's call site does not pass readOnly — it does not mean
 // the prop list never grows. The original pinned the exact props, so adding a
 // presentation-only `hero` flag failed a test about editability. Now it
 // requires the compact Plan call site and asserts readOnly is absent from it.
 ck("Plan renders it editable", /<GoalCard actingFor=\{actingFor\} onSaved=\{[^}]+\} compact(?![^/>]*readOnly)[^/>]*\/>/.test(APP), true);
-ck("exactly two render sites — no third copy", (APP.match(/<GoalCard /g) || []).length, 2);
+ck("exactly one render site — Plan owns the goal", (APP.match(/<GoalCard /g) || []).length, 1);
 ck("Plan renders it", /<GoalCard actingFor=\{actingFor\} onSaved=\{\(\) => setGoalVersion/.test(APP), true);
 ck("the Plan card no longer substitutes the pathway category for the goal",
    /plan_primary_goal"\)\}<\/span>\s*<\/div>\s*<div[^>]*>\{hasPrimaryGoal/.test(APP), false);

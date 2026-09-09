@@ -389,28 +389,35 @@ ck("...and something actually renders it", /t\("pathway_unfiled"\)/.test(APP), t
 // Shown only in contrast. New steps land unfiled by default, so an
 // unconditional label would stamp "Not filed under a stage yet" on nearly
 // every row and carry no information.
+// The chip renders the stage name when there is one; the unfiled label is the
+// middle branch of that same ternary, so the guard reads anyMilestoneFiled ?
+// rather than anyMilestoneFiled ? t(...) directly.
 ck("...only when another row in the same list shows a stage",
-   /anyMilestoneFiled \? t\("pathway_unfiled"\)/.test(APP), true);
+   /\) : anyMilestoneFiled \? \(/.test(APP), true);
+// Renamed from openMilestones to milestones on 2026-09-10: the predicate moved
+// from Home's step echo (deleted) to Plan's step list, which is now the only
+// one. Same rule, same three cases below, different list.
 ck("...and that condition is derived from milestones that really are filed",
-   /anyMilestoneFiled = openMilestones\.some\(/.test(APP), true);
+   /anyMilestoneFiled = milestones\.some\(/.test(APP), true);
 
 // The three cases, run against the REAL predicate lifted out of the source
 // rather than a retyped copy — a copy passes happily while production differs.
 {
-  const src = APP.slice(APP.indexOf("const anyMilestoneFiled = openMilestones.some("));
+  const src = APP.slice(APP.indexOf("const anyMilestoneFiled = milestones.some("));
   const body = src.slice(src.indexOf("("), src.indexOf(";") + 1);
-  const filedIn = eval("(openMilestones, homeStages) => openMilestones.some" + body.slice(0, body.lastIndexOf(")") + 1));
+  const filedIn = eval("(milestones, materialisedStages) => milestones.some" + body.slice(0, body.lastIndexOf(")") + 1));
   const stages = [{ id: "s1" }, { id: "s2" }];
+  const fn = (list) => () => list;
   ck("nothing filed -> no label, because every row would carry it",
-     filedIn([{ stage: null }, { stage: null }], stages), false);
+     filedIn([{ stage: null }, { stage: null }], fn(stages)), false);
   ck("one filed -> the unfiled row is worth explaining",
-     filedIn([{ stage: "s1" }, { stage: null }], stages), true);
+     filedIn([{ stage: "s1" }, { stage: null }], fn(stages)), true);
   ck("no stages at all -> nothing to be filed under, so no label",
-     filedIn([{ stage: null }], []), false);
+     filedIn([{ stage: null }], fn([])), false);
   // A step still pointing at a stage that was DELETED is unfiled in practice.
   // deleteStage() nulls it, but a stale row must not resurrect a missing stage.
   ck("a stage that no longer exists does not count as filed",
-     filedIn([{ stage: "gone" }, { stage: null }], stages), false);
+     filedIn([{ stage: "gone" }, { stage: null }], fn(stages)), false);
 }
 
 // ---- prefix-built keys must reconcile with the sets that build them ------
