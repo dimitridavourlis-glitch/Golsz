@@ -178,8 +178,13 @@ ck("GoalCard exists", /function GoalCard\(/.test(APP), true);
 // is asserted now, plus the fact that the category can only ever appear as
 // labelled metadata underneath.
 ck("it renders goal_text itself, not a category", /color: C\.chalk, lineHeight: 1\.35, overflowWrap: "anywhere" \}\}>\{goalText\}<\/div>/.test(APP), true);
+// The guarantee is that the category renders as LABELLED METADATA under the
+// goal — "Pathway: <category>" — not that it is any particular colour. The
+// original pinned `color: C.info`, so recolouring the one cold blue on an
+// otherwise gold-and-cream page failed a test about labelling. The structure
+// is still asserted; only the token is now free. 2026-09-09.
 ck("...and the pathway category stays labelled metadata under it",
-   /\{t\("goal_card_pathway"\)\}: <span style=\{\{ color: C\.info \}\}>\{t\("pathway_type_" \+ pathwayType\)\}<\/span>/.test(APP), true);
+   /\{t\("goal_card_pathway"\)\}: <span style=\{\{ color: C\.\w+ \}\}>\{t\("pathway_type_" \+ pathwayType\)\}<\/span>/.test(APP), true);
 ck("it writes goal_text", /goal_text: clean,/.test(APP), true);
 ck("...and derives goal_defined in the same write", /goal_defined: true,/.test(APP), true);
 ck("...and marks it athlete-authored", /goal_source: "athlete_edited",/.test(APP), true);
@@ -208,7 +213,11 @@ ck("...read-only, so Home never edits", /<GoalCard actingFor=\{actingFor\} readO
 // count is not the guarantee. Destination is still asserted exactly.
 ck("...and hands off to Plan", /onOpenPlan=\{\(\) => onNavigate\("targets"(?:, "[a-z_]+")?\)\}/.test(APP), true);
 ck("...carrying where it came from, so Plan can say so", /onNavigate\("targets", "goal"\)/.test(APP), true);
-ck("Plan renders it editable", /<GoalCard actingFor=\{actingFor\} onSaved=\{[^}]+\} compact \/>/.test(APP), true);
+// "Editable" means Plan's call site does not pass readOnly — it does not mean
+// the prop list never grows. The original pinned the exact props, so adding a
+// presentation-only `hero` flag failed a test about editability. Now it
+// requires the compact Plan call site and asserts readOnly is absent from it.
+ck("Plan renders it editable", /<GoalCard actingFor=\{actingFor\} onSaved=\{[^}]+\} compact(?![^/>]*readOnly)[^/>]*\/>/.test(APP), true);
 ck("exactly two render sites — no third copy", (APP.match(/<GoalCard /g) || []).length, 2);
 ck("Plan renders it", /<GoalCard actingFor=\{actingFor\} onSaved=\{\(\) => setGoalVersion/.test(APP), true);
 ck("the Plan card no longer substitutes the pathway category for the goal",
