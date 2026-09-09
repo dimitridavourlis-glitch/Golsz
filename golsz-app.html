@@ -504,7 +504,7 @@ const I18N = {
     bench_timing_electronic: "Electronic / laser timing", bench_timing_hand: "Hand-timed (stopwatch)",
     bench_start_standing: "Standing start", bench_start_flying: "Flying / running start",
     bench_jump_standing: "Standing vertical (no run-up)", bench_jump_max: "Max vertical (with approach)",
-    plan_steps_group: "EVERYTHING ELSE IN YOUR PLAN", plan_next_30_title: "NEXT 30 DAYS", plan_empty_season: "No milestones set for this season yet. Add one above, or ask Scout to map the season out.", plan_empty_targets: "No target schools or clubs yet. Ask Scout to build you a target list.", plan_empty_90: "Nothing here yet. Ask Scout to build a development plan and the focus areas will land here.", plan_next_90_title: "NEXT 90 DAYS", plan_season_title: "{a} / {b} SEASON",
+    plan_timeline_title: "TIMELINE", plan_band_overdue: "OVERDUE", plan_band_later: "LATER", plan_band_undated: "NO DATE YET", targets_roster_summary: "{n} on the list", plan_next_30_title: "NEXT 30 DAYS", plan_next_90_title: "NEXT 90 DAYS",
     plan_next30_profile: "Complete your Passport", plan_next30_film: "Upload match footage", plan_next30_benchmark: "Record a performance benchmark",
     pathway_milestones_title: "Milestones", pathway_milestones_empty: "Nothing scheduled yet — add the first step below, or ask Scout to map your route.", pathway_milestone_edit: "Tap to edit", pathway_milestone_up: "Move up", pathway_milestone_down: "Move down", pathway_milestone_ph: "Add a milestone", pathway_milestone_add: "Add",
     pathway_next_title: "Do this next", pathway_next_done: "Mark done", pathway_next_change: "Change", pathway_all_done: "Every step is done.", pathway_all_done_sub: "Add the next one whenever you’re ready.", pathway_no_date: "Add a date", pathway_overdue: "overdue", pathway_today: "Today", pathway_tomorrow: "Tomorrow", pathway_done: "Done", pathway_on_track: "On track", pathway_unfiled: "Not filed under a stage yet", pathway_route_blurb: "The usual route for your goal. Add steps under each stage — or let Scout draft them and change whatever you disagree with.", pathway_draft_with_scout: "Let Scout draft my steps",
@@ -851,7 +851,7 @@ const I18N = {
     bench_timing_electronic: "Chronométrage électronique / laser", bench_timing_hand: "Chronomètre à la main",
     bench_start_standing: "Départ arrêté", bench_start_flying: "Départ lancé",
     bench_jump_standing: "Détente sans élan", bench_jump_max: "Détente avec élan",
-    plan_steps_group: "LE RESTE DE VOTRE PLAN", plan_next_30_title: "PROCHAINS 30 JOURS", plan_empty_90: "Rien pour l'instant. Demandez à Scout un plan de développement et les axes de travail apparaîtront ici.", plan_empty_season: "Aucun jalon pour cette saison. Ajoutez-en un ci-dessus ou demandez à Scout de planifier la saison.", plan_empty_targets: "Aucune école ou club ciblé. Demandez à Scout de créer votre liste.", plan_next_90_title: "PROCHAINS 90 JOURS", plan_season_title: "SAISON {a} / {b}",
+    plan_timeline_title: "CHRONOLOGIE", plan_band_overdue: "EN RETARD", plan_band_later: "PLUS TARD", plan_band_undated: "SANS DATE", targets_roster_summary: "{n} sur la liste", plan_next_30_title: "PROCHAINS 30 JOURS", plan_next_90_title: "PROCHAINS 90 JOURS",
     scout_pathway_current: "VOTRE PARCOURS ACTUEL",
     scout_pathway_incoming: "PROPOSITION DU SCOUT",
     scout_pathway_replace_warning: "Remplace vos {old} jalons ({done} termin\u00e9s) par ces {new}.",
@@ -1202,7 +1202,7 @@ const I18N = {
     scout_pathway_first_build: "Esto crear\u00e1 tu trayectoria con {new} hitos.",
     bench_start_standing: "Salida parada", bench_start_flying: "Salida lanzada",
     bench_jump_standing: "Salto sin carrera", bench_jump_max: "Salto máximo (con carrera)",
-    plan_steps_group: "EL RESTO DE TU PLAN", plan_next_30_title: "PRÓXIMOS 30 DÍAS", plan_empty_season: "Aún no hay hitos para esta temporada. Añade uno arriba o pídele a Scout que planifique la temporada.", plan_empty_targets: "Aún no hay escuelas o clubes objetivo. Pídele a Scout que cree tu lista.", plan_empty_90: "Nada por ahora. Pídele a Scout un plan de desarrollo y las áreas de trabajo aparecerán aquí.", plan_next_90_title: "PRÓXIMOS 90 DÍAS", plan_season_title: "TEMPORADA {a} / {b}",
+    plan_timeline_title: "CRONOLOGÍA", plan_band_overdue: "ATRASADO", plan_band_later: "MÁS ADELANTE", plan_band_undated: "SIN FECHA", targets_roster_summary: "{n} en la lista", plan_next_30_title: "PRÓXIMOS 30 DÍAS", plan_next_90_title: "PRÓXIMOS 90 DÍAS",
     plan_next30_profile: "Completa tu Pasaporte", plan_next30_film: "Sube vídeos de partidos", plan_next30_benchmark: "Registra una marca de rendimiento",
     pathway_milestones_title: "Hitos", pathway_milestones_empty: "Nada programado — añade el primer paso abajo, o pídele a Scout que trace tu ruta.", pathway_milestone_edit: "Toca para editar", pathway_milestone_up: "Subir", pathway_milestone_down: "Bajar", pathway_milestone_ph: "Añadir un hito", pathway_milestone_add: "Añadir",
     pathway_next_title: "Haz esto ahora", pathway_next_done: "Marcar hecho", pathway_next_change: "Cambiar", pathway_all_done: "Todos los pasos están hechos.", pathway_all_done_sub: "Añade el siguiente cuando quieras.", pathway_no_date: "Añadir fecha", pathway_overdue: "atrasado", pathway_today: "Hoy", pathway_tomorrow: "Mañana", pathway_done: "Hecho", pathway_on_track: "En camino", pathway_unfiled: "Sin etapa asignada", pathway_route_blurb: "La ruta habitual para tu objetivo. Añade pasos en cada etapa, o deja que Scout los proponga y cambia lo que no te convenza.", pathway_draft_with_scout: "Deja que Scout redacte mis pasos",
@@ -1549,7 +1549,7 @@ const I18N = {
     bench_timing_electronic: "Ηλεκτρονική / laser χρονομέτρηση", bench_timing_hand: "Χειροκίνητο χρονόμετρο",
     bench_start_standing: "Στατική εκκίνηση", bench_start_flying: "Εκκίνηση με φόρα",
     bench_jump_standing: "Κατακόρυφο άλμα χωρίς φόρα", bench_jump_max: "Μέγιστο άλμα (με φόρα)",
-    plan_steps_group: "ΤΑ ΥΠΟΛΟΙΠΑ ΤΟΥ ΣΧΕΔΙΟΥ", plan_next_30_title: "ΕΠΟΜΕΝΕΣ 30 ΜΕΡΕΣ", plan_empty_season: "Δεν έχουν οριστεί ορόσημα για τη σεζόν. Προσθέστε ένα ή ζητήστε από τον Scout να σχεδιάσει τη σεζόν.", plan_empty_targets: "Δεν υπάρχουν σχολές ή σύλλογοι-στόχοι ακόμη. Ζητήστε από τον Scout να φτιάξει τη λίστα.", plan_empty_90: "Τίποτα ακόμη. Ζητήστε από τον Scout ένα πλάνο ανάπτυξης και οι τομείς θα εμφανιστούν εδώ.", plan_next_90_title: "ΕΠΟΜΕΝΕΣ 90 ΜΕΡΕΣ", plan_season_title: "ΣΕΖΟΝ {a} / {b}",
+    plan_timeline_title: "ΧΡΟΝΟΔΙΑΓΡΑΜΜΑ", plan_band_overdue: "ΕΚΠΡΟΘΕΣΜΑ", plan_band_later: "ΑΡΓΟΤΕΡΑ", plan_band_undated: "ΧΩΡΙΣ ΗΜΕΡΟΜΗΝΙΑ", targets_roster_summary: "{n} στη λίστα", plan_next_30_title: "ΕΠΟΜΕΝΕΣ 30 ΜΕΡΕΣ", plan_next_90_title: "ΕΠΟΜΕΝΕΣ 90 ΜΕΡΕΣ",
     plan_next30_profile: "Ολοκλήρωσε το Διαβατήριό σου", plan_next30_film: "Ανέβασε βίντεο αγώνων", plan_next30_benchmark: "Κατέγραψε έναν δείκτη απόδοσης",
     pathway_milestones_title: "Ορόσημα", pathway_milestones_empty: "Τίποτα προγραμματισμένο — πρόσθεσε το πρώτο βήμα, ή ζήτα από τον Scout να σχεδιάσει τη διαδρομή σου.", pathway_milestone_edit: "Πάτα για επεξεργασία", pathway_milestone_up: "Πάνω", pathway_milestone_down: "Κάτω", pathway_milestone_ph: "Προσθήκη οροσήμου", pathway_milestone_add: "Προσθήκη",
     pathway_next_title: "Κάνε αυτό τώρα", pathway_next_done: "Ολοκληρώθηκε", pathway_next_change: "Αλλαγή", pathway_all_done: "Κάθε βήμα ολοκληρώθηκε.", pathway_all_done_sub: "Πρόσθεσε το επόμενο όποτε θέλεις.", pathway_no_date: "Πρόσθεσε ημερομηνία", pathway_overdue: "εκπρόθεσμο", pathway_today: "Σήμερα", pathway_tomorrow: "Αύριο", pathway_done: "Έγινε", pathway_on_track: "Σε πορεία", pathway_unfiled: "Χωρίς στάδιο ακόμη", pathway_route_blurb: "Η συνήθης διαδρομή για τον στόχο σου. Πρόσθεσε βήματα σε κάθε στάδιο — ή άφησε το Scout να τα γράψει και άλλαξε ό,τι δεν σου ταιριάζει.", pathway_draft_with_scout: "Άσε το Scout να γράψει τα βήματα",
@@ -9433,37 +9433,6 @@ function SkeletonLine({ height, width, radius, style }) {
 // "2/3" — so "nothing here yet" looked exactly like "all done", which is the
 // opposite meaning. An empty row now shows a muted dash and, when opened,
 // says what would put something in it.
-function CollapsibleRow({ title, count, total, expanded, onToggle, children, emptyLabel }) {
-  const isEmpty = total === 0 || total == null;
-  return (
-    <div style={{ ...card, marginBottom: 10, paddingTop: 4, paddingBottom: expanded ? 14 : 4 }}>
-      {/* The header IS a row: eyebrow left, value hard right, 54px tall, the
-          same shape as every other status row in the app. It was a bare
-          clickable div with no role and no keyboard handler; it is a real
-          control now. */}
-      <div onClick={onToggle} role="button" tabIndex={0} aria-expanded={!!expanded}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
-        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, minHeight: 54, padding: "12px 0", cursor: "pointer" }}>
-        <Eyebrow>{title}</Eyebrow>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          {total != null && (
-            isEmpty
-              ? <span style={{ fontSize: 14, fontWeight: 700, color: C.slate, fontFamily: "'Space Mono', monospace" }}>—</span>
-              : <span style={{ fontSize: 14, fontWeight: 900, color: C.lime, fontFamily: "'Space Mono', monospace" }}>{count != null ? `${count}/${total}` : total}</span>
-          )}
-          {expanded ? <ChevronUp size={16} color={C.slate} /> : <ChevronDown size={16} color={C.slate} />}
-        </div>
-      </div>
-      {expanded && (
-        <div style={{ paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
-          {isEmpty && emptyLabel
-            ? <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55 }}>{emptyLabel}</div>
-            : children}
-        </div>
-      )}
-    </div>
-  );
-}
 // The athlete's backup plan. Theirs, not the sport's.
 //
 // Three states, three different renders, because they are three different
@@ -9653,7 +9622,6 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate }) {
   const [devItems, setDevItems] = useState([]);
   // NEXT 30 DAYS starts open — it is the row the athlete is meant to act
   // on now, and the mockup shows it expanded by default.
-  const [expandedSection, setExpandedSection] = useState("30");
 
   useEffect(() => {
     if (!sb) { setLoaded(true); return; }
@@ -9754,15 +9722,6 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate }) {
     { key: "film", done: filmAdded, label: t("plan_next30_film") },
     { key: "benchmark", done: benchmarkCount > 0, label: t("plan_next30_benchmark") },
   ];
-  const next30Done = next30.filter((i) => i.done).length;
-  const next90Done = devItems.filter((i) => i.status === "done").length;
-  const seasonMilestones = pathwayState.milestones || [];
-  const seasonDone = seasonMilestones.filter((m) => m.done).length;
-  // Real season label ("2026 / 27 SEASON") from the current date rather than
-  // a hardcoded year — northern-hemisphere seasons roll over mid-year, so
-  // anything from July onward belongs to the season starting this year.
-  const seasonStart = new Date().getMonth() >= 6 ? new Date().getFullYear() : new Date().getFullYear() - 1;
-  const seasonLabel = t("plan_season_title").replace("{a}", seasonStart).replace("{b}", String((seasonStart + 1) % 100).padStart(2, "0"));
 
   return (
     <div style={{ padding: "8px 12px 20px" }}>
@@ -9784,41 +9743,37 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate }) {
           destination now (brief §14's nav concept) rather than buried on
           Passport — pathway_plan and targets share the same Pro+ minimum
           plan, so the page-level gate above already covers both. */}
-      <PathwayPlan key={goalVersion} viewUserId={null} onChange={setPathwayState} onNavigate={onNavigate} plan={plan} />
+      <PathwayPlan key={goalVersion} viewUserId={null} onChange={setPathwayState} onNavigate={onNavigate} plan={plan} next30={next30} devItems={devItems} />
 
-      {/* GROUPED. These four were four more top-level cards with the same
-          radius, border and padding as the goal and the pathway above them, so
-          the page read as eight equal things rather than a subject with detail
-          under it. They are the detail: a derived 30-day checklist, the
-          development plan, this season's milestones, and the target list.
-          One quiet heading is enough to say so. */}
-      <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", color: C.slate, margin: "22px 2px 10px" }}>
-        {t("plan_steps_group")}
-      </div>
-      <CollapsibleRow title={t("plan_next_30_title")} count={next30Done} total={next30.length} expanded={expandedSection === "30"} onToggle={() => setExpandedSection(expandedSection === "30" ? null : "30")}>
-        {next30.map((i, idx) => (
-          <StatusRow key={i.key} dot={i.done} done={i.done} label={i.label} last={idx === next30.length - 1} />
-        ))}
-      </CollapsibleRow>
+      {/* THE THREE TIME SECTIONS ARE GONE, NOT MOVED ASIDE.
+          NEXT 30 DAYS, NEXT 90 DAYS and the season card were three horizons
+          asserted by three headings over data that already carries real
+          dates. They now live on one rail inside the Timeline card above,
+          banded by the date on each step. The season card in particular was a
+          read-only second copy of the milestone list — checking a box in one
+          place and watching the other copy sit unchanged was the clearest
+          symptom that they were one thing wearing four hats.
 
-      <CollapsibleRow title={t("plan_next_90_title")} emptyLabel={t("plan_empty_90")} count={next90Done} total={devItems.length} expanded={expandedSection === "90"} onToggle={() => setExpandedSection(expandedSection === "90" ? null : "90")}>
-        {devItems.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55 }}>{t("dev_plan_empty")}</div>}
-        {devItems.map((i, idx) => (
-          <StatusRow key={i.id} dot={i.status === "done"} done={i.status === "done"} label={i.goal} last={idx === devItems.length - 1} />
-        ))}
-      </CollapsibleRow>
-
-      <CollapsibleRow title={seasonLabel} emptyLabel={t("plan_empty_season")} count={seasonDone} total={seasonMilestones.length} expanded={expandedSection === "season"} onToggle={() => setExpandedSection(expandedSection === "season" ? null : "season")}>
-        {seasonMilestones.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55 }}>{t("pathway_milestones_empty")}</div>}
-        {seasonMilestones.map((m, idx) => (
-          <StatusRow key={m.id} dot={!!m.done} done={!!m.done} label={m.label} last={idx === seasonMilestones.length - 1} />
-        ))}
-      </CollapsibleRow>
-
-      <CollapsibleRow title={t("targets_title")} emptyLabel={t("plan_empty_targets")} count={null} total={items.length} expanded={expandedSection === "targets"} onToggle={() => setExpandedSection(expandedSection === "targets" ? null : "targets")}>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          Schools & clubs stays its own card because it is genuinely a
+          different kind of thing: organisations to approach, not steps with a
+          horizon. It is no longer an accordion — a target list you have to
+          open to remember you have is a list you forget. */}
+      <div style={{ ...card }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10, minHeight: 26 }}>
+          <Eyebrow>{t("targets_title")}</Eyebrow>
           {!showAddTarget && <button onClick={() => setShowAddTarget(true)} style={{ ...iconBtn(C.lime), fontSize: 12 }}><Plus size={13} /> {t("targets_add")}</button>}
         </div>
+        {items.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+            <span style={{ fontSize: 10.5, fontWeight: 900, letterSpacing: ".12em", textTransform: "uppercase", color: C.slate }}>{t("targets_roster_summary").replace("{n}", String(items.length))}</span>
+            <span style={{ flex: 1, height: 1, background: C.line, minWidth: 20 }} />
+            {(() => { const used = TARGET_STATUSES.filter((st) => items.some((it) => it.status === st)); return used.length < 2 ? [] : used; })().map((st) => (
+              <span key={st} style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".06em", textTransform: "uppercase", color: C.slate, border: `1px solid ${C.line2}`, borderRadius: 999, padding: "3px 8px" }}>
+                {items.filter((it) => it.status === st).length} {t("targets_status_" + st)}
+              </span>
+            ))}
+          </div>
+        )}
         {showAddTarget && (
           // Flattened out of its own nested card — a box inside a box reads
           // as a different kind of thing, and this is just this section's
@@ -9886,7 +9841,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate }) {
             )}
           </div>
         ))}
-      </CollapsibleRow>
+      </div>
     </div>
   );
 }
@@ -10330,7 +10285,7 @@ function milestoneDateLabel(m, lang, t) {
   if (n < 7) return { text: d.toLocaleDateString(loc, { weekday: "long" }), tone: "due" };
   return { text: short, tone: "due" };
 }
-function PathwayPlan({ viewUserId, onChange, onNavigate, plan }) {
+function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devItems = [] }) {
   const { t, lang } = useLang();
   const [uid, setUid] = useState(null);
   const [loaded, setLoaded] = useState(false);
@@ -10684,6 +10639,100 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan }) {
   const nextStep = nextMilestone(milestones);
   const nextDate = nextStep ? milestoneDateLabel(nextStep, lang, t) : null;
 
+  // ONE TIMELINE INSTEAD OF FOUR ACCORDIONS.
+  //
+  // Plan used to carry the milestone list here and then, further down, three
+  // more collapsing cards: NEXT 30 DAYS (three derived readiness tasks), NEXT
+  // 90 DAYS (the development plan) and 2026/27 SEASON — which was a READ-ONLY
+  // SECOND COPY of the very list above it. Four boxes, four counters, and a
+  // milestone due in nine days filed under "season" while an undated
+  // checklist item sat under "next 30 days". The horizon was in the heading
+  // and nowhere in the data.
+  //
+  // Now the date decides the band. Everything the athlete has committed to
+  // lands on one rail in the order it comes at them: what is late, what is
+  // inside a month, inside a quarter, later, and what has no date at all.
+  // Undated is its own band rather than being quietly filed as "later" —
+  // "we don't know when" is a real state and hiding it inside a horizon is a
+  // small lie the page would keep telling.
+  function milestoneBand(m) {
+    if (!m.due) return "undated";
+    const days = Math.round((new Date(m.due + "T00:00:00") - todayIso) / 86400000);
+    // A finished step that ran past its date is not overdue, it is finished.
+    if (days < 0) return m.done ? "d30" : "overdue";
+    if (days <= 30) return "d30";
+    if (days <= 90) return "d90";
+    return "later";
+  }
+  const bandRows = { overdue: [], d30: [], d90: [], later: [], undated: [] };
+  milestones.forEach((m) => bandRows[milestoneBand(m)].push({ kind: "milestone", key: m.id, done: !!m.done, m }));
+  // The readiness checklist and the development plan carry no dates of their
+  // own; their horizon IS their definition, so they land in the band they were
+  // always named after. They render as read-only rows because they are derived
+  // from other screens — a checkbox here would be a control that lies.
+  next30.forEach((i) => bandRows.d30.push({ kind: "derived", key: "n30-" + i.key, done: !!i.done, label: i.label }));
+  devItems.forEach((i) => bandRows.d90.push({ kind: "derived", key: "dev-" + i.id, done: i.status === "done", label: i.goal }));
+  const timelineBands = [
+    { key: "overdue", label: t("plan_band_overdue") },
+    { key: "d30", label: t("plan_next_30_title") },
+    { key: "d90", label: t("plan_next_90_title") },
+    { key: "later", label: t("plan_band_later") },
+    { key: "undated", label: t("plan_band_undated") },
+  ].map((b) => ({ ...b, rows: bandRows[b.key] })).filter((b) => b.rows.length > 0);
+
+  // Pulled out of the JSX so a row can look up its own index in the real
+  // milestones array — reorder moves an item within that array, not within
+  // whichever band it happens to be sitting in today.
+  function renderMilestoneRow(m, last) {
+    const mi = milestones.indexOf(m);
+    if (editingMilestone === m.id) {
+      return (
+        <div key={m.id} style={{ border: `1px solid ${C.limeBorder}`, background: C.limeWash, borderRadius: 12, padding: 12, margin: "6px 0 10px" }}>
+          <label style={editorLabel}>{t("pathway_milestones_title")}</label>
+          <input autoFocus value={milestoneDraft} maxLength={120} onChange={(e) => setMilestoneDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") commitEdit(m.id); if (e.key === "Escape") setEditingMilestone(null); }}
+            aria-label={m.label} style={{ ...inputStyle, width: "100%", minHeight: 46, fontSize: 14 }} />
+          <div style={{ height: 10 }} />
+          <label style={editorLabel}>{t("pathway_no_date")}</label>
+          <input type="date" value={dueDraft} onChange={(e) => setDueDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") commitEdit(m.id); if (e.key === "Escape") setEditingMilestone(null); }}
+            aria-label={t("pathway_no_date")} style={{ ...inputStyle, width: "100%", minHeight: 46, fontSize: 14, colorScheme: dateScheme }} />
+          <div style={{ display: "flex", gap: 7, marginTop: 9 }}>
+            <button onClick={() => commitEdit(m.id)} style={{ ...primaryBtn, flex: 1, minHeight: 44, fontSize: 12.5 }}>{t("goal_card_save")}</button>
+            <button onClick={() => setEditingMilestone(null)} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5 }}>{t("goal_card_cancel")}</button>
+            <button onClick={() => deleteMilestone(m.id)} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, color: C.danger, borderColor: C.danger }}>{t("action_delete")}</button>
+          </div>
+          <div style={{ display: "flex", gap: 7, marginTop: 7 }}>
+            <button onClick={() => moveMilestone(m.id, -1)} disabled={mi <= 0} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, opacity: mi <= 0 ? 0.35 : 1 }}><ChevronUp size={14} />{t("pathway_milestone_up")}</button>
+            <button onClick={() => moveMilestone(m.id, 1)} disabled={mi === milestones.length - 1} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, opacity: mi === milestones.length - 1 ? 0.35 : 1 }}><ChevronDown size={14} />{t("pathway_milestone_down")}</button>
+          </div>
+        </div>
+      );
+    }
+    const d = milestoneDateLabel(m, lang, t);
+    const tone = d.tone === "over" ? C.warnText : d.tone === "due" ? C.lime : C.slate;
+    return (
+      <div key={m.id} style={{ display: "flex", gap: 11, alignItems: "flex-start", padding: "10px 0", borderBottom: last ? "none" : `1px solid ${C.line}` }}>
+        <button onClick={() => toggleMilestone(m.id)} aria-label={m.label} style={{ width: 23, height: 23, flex: "0 0 23px", borderRadius: 7, border: `2px solid ${m.done ? C.lime : C.line2}`, background: m.done ? C.lime : "none", cursor: "pointer", display: "grid", placeItems: "center", marginTop: 1, padding: 0 }}>
+          {m.done && <Check size={12} color={C.ink} />}
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <button onClick={() => openEditor(m)} style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4, overflowWrap: "anywhere", cursor: "pointer", background: "none", border: "none", textAlign: "left", padding: 0, width: "100%", display: "block", fontFamily: "inherit", color: m.done ? C.slate : C.chalk }}>{m.label}</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginTop: 4 }}>
+            {d.tone === "flat" ? (
+              <span style={{ fontSize: 11, fontWeight: 800, color: C.slate, padding: "3px 0", minHeight: 26, display: "inline-flex", alignItems: "center" }}>{d.text}</span>
+            ) : (
+              <button onClick={() => openEditor(m)} style={{ fontSize: 11, fontWeight: 800, borderRadius: 7, padding: "3px 8px", minHeight: 26, display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer", background: "none", fontFamily: "inherit", color: tone, border: `1px ${d.tone === "none" ? "dashed" : "solid"} ${d.tone === "none" ? C.line2 : tone}` }}>
+                <Calendar size={12} />{d.text}
+              </button>
+            )}
+          </div>
+        </div>
+        <button onClick={() => openEditor(m)} aria-label={t("pathway_milestone_edit")} style={{ flex: "0 0 30px", width: 30, minHeight: 30, color: C.slate, opacity: 0.45, cursor: "pointer", background: "none", border: "none", display: "grid", placeItems: "center", padding: 0 }}><Pencil size={15} /></button>
+      </div>
+    );
+  }
+
   return (
     <>
       <PathwayMap sport={athlete && athlete.sport} athlete={athlete} pathwayType={exists ? pathwayType : null} t={t} onEditGoal={() => { setEditingStage(null); setEditingGoal((v) => !v); }} editing={editingGoal}
@@ -10744,7 +10793,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan }) {
           </div>
           <div style={{ fontSize: 20, fontWeight: 900, color: C.chalk, lineHeight: 1.24, letterSpacing: "-0.018em", margin: "9px 0 5px", overflowWrap: "anywhere" }}>{nextStep.label}</div>
           <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.5, marginBottom: 14, overflowWrap: "anywhere" }}>
-            {nextDate.tone !== "none" && <b style={{ color: nextDate.tone === "over" ? C.danger : C.lime }}>{nextDate.text}</b>}
+            {nextDate.tone !== "none" && <b style={{ color: nextDate.tone === "over" ? C.warnText : C.lime }}>{nextDate.text}</b>}
             {nextDate.tone !== "none" && nextStep.stage ? " · " : ""}
             {nextStep.stage ? t("pathway_stage_" + nextStep.stage) : (nextDate.tone === "none" ? t("pathway_no_date") : "")}
           </div>
@@ -10762,7 +10811,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan }) {
 
       <div style={{ ...card }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 4, minHeight: 26 }}>
-          <Eyebrow>{t("pathway_milestones_title")}</Eyebrow>
+          <Eyebrow>{t("plan_timeline_title")}</Eyebrow>
         </div>
 
         {milestones.length === 0 ? (
@@ -10779,10 +10828,6 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan }) {
                 </span>
               </button>
             ))}
-            <div style={{ display: "flex", gap: 6, marginTop: 9 }}>
-              <input value={newMilestone} onChange={(e) => setNewMilestone(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addMilestone(null); }} aria-label={t("pathway_milestone_ph")} placeholder={t("pathway_milestone_ph")} style={{ flex: 1, minWidth: 0, minHeight: 46, ...inputStyle }} />
-              <button onClick={() => addMilestone(null)} disabled={!newMilestone.trim()} style={{ background: "none", color: C.lime, border: `1px solid ${C.lime}`, borderRadius: 10, padding: "0 15px", minHeight: 46, fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, opacity: !newMilestone.trim() ? 0.5 : 1 }}>{t("pathway_milestone_add")}</button>
-            </div>
           </div>
         ) : (
           <div>
@@ -10791,70 +10836,42 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan }) {
               <span style={{ flex: 1, display: "block", height: 7, background: C.turf, borderRadius: 4, overflow: "hidden" }}>
                 <span style={{ display: "block", height: "100%", width: Math.round((doneCount / milestones.length) * 100) + "%", background: C.lime, borderRadius: 4 }} />
               </span>
-              <span style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: ".15em", textTransform: "uppercase", flex: "0 0 auto", color: overdueCount ? C.danger : C.slate }}>
+              <span style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: ".15em", textTransform: "uppercase", flex: "0 0 auto", color: overdueCount ? C.warnText : C.slate }}>
                 {overdueCount ? overdueCount + " " + t("pathway_overdue") : t("pathway_on_track")}
               </span>
             </div>
-            {/* ONE LIST, IN ORDER. Grouping by stage was tried and taken back
-                out: it split a short plan across four headings, and most steps
-                had no stage at all so the largest group was "Not filed under a
-                stage yet". `stage` is still carried on every milestone and
-                still normalised — nothing renders by it today, so a future
-                grouped or per-stage view finds the athlete's filing intact
-                rather than having to reconstruct it. */}
-            {milestones.map((m, mi) => (editingMilestone === m.id ? (
-              <div key={m.id} style={{ border: `1px solid ${C.limeBorder}`, background: C.limeWash, borderRadius: 12, padding: 12, margin: "6px 0 10px" }}>
-                <label style={editorLabel}>{t("pathway_milestones_title")}</label>
-                <input autoFocus value={milestoneDraft} maxLength={120} onChange={(e) => setMilestoneDraft(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") commitEdit(m.id); if (e.key === "Escape") setEditingMilestone(null); }}
-                  aria-label={m.label} style={{ ...inputStyle, width: "100%", minHeight: 46, fontSize: 14 }} />
-                <div style={{ height: 10 }} />
-                <label style={editorLabel}>{t("pathway_no_date")}</label>
-                <input type="date" value={dueDraft} onChange={(e) => setDueDraft(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") commitEdit(m.id); if (e.key === "Escape") setEditingMilestone(null); }}
-                  aria-label={t("pathway_no_date")} style={{ ...inputStyle, width: "100%", minHeight: 46, fontSize: 14, colorScheme: dateScheme }} />
-                <div style={{ display: "flex", gap: 7, marginTop: 9 }}>
-                  <button onClick={() => commitEdit(m.id)} style={{ ...primaryBtn, flex: 1, minHeight: 44, fontSize: 12.5 }}>{t("goal_card_save")}</button>
-                  <button onClick={() => setEditingMilestone(null)} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5 }}>{t("goal_card_cancel")}</button>
-                  <button onClick={() => deleteMilestone(m.id)} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, color: C.danger, borderColor: C.danger }}>{t("action_delete")}</button>
-                </div>
-                <div style={{ display: "flex", gap: 7, marginTop: 7 }}>
-                  <button onClick={() => moveMilestone(m.id, -1)} disabled={mi === 0} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, opacity: mi === 0 ? 0.35 : 1 }}><ChevronUp size={14} />{t("pathway_milestone_up")}</button>
-                  <button onClick={() => moveMilestone(m.id, 1)} disabled={mi === milestones.length - 1} style={{ ...quietBtn, flex: 1, minHeight: 44, fontSize: 12.5, opacity: mi === milestones.length - 1 ? 0.35 : 1 }}><ChevronDown size={14} />{t("pathway_milestone_down")}</button>
-                </div>
-              </div>
-            ) : (
-              <div key={m.id} style={{ display: "flex", gap: 11, alignItems: "flex-start", padding: "10px 0", borderBottom: mi === milestones.length - 1 ? "none" : `1px solid ${C.line}` }}>
-                <button onClick={() => toggleMilestone(m.id)} aria-label={m.label} style={{ width: 23, height: 23, flex: "0 0 23px", borderRadius: 7, border: `2px solid ${m.done ? C.lime : C.line2}`, background: m.done ? C.lime : "none", cursor: "pointer", display: "grid", placeItems: "center", marginTop: 1, padding: 0 }}>
-                  {m.done && <Check size={12} color={C.ink} />}
-                </button>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <button onClick={() => openEditor(m)} style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4, overflowWrap: "anywhere", cursor: "pointer", background: "none", border: "none", textAlign: "left", padding: 0, width: "100%", display: "block", fontFamily: "inherit", color: m.done ? C.slate : C.chalk, textDecoration: m.done ? "line-through" : "none" }}>{m.label}</button>
-                  <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginTop: 4 }}>
-                    {(() => {
-                      const d = milestoneDateLabel(m, lang, t);
-                      const tone = d.tone === "over" ? C.danger : d.tone === "due" ? C.lime : C.slate;
-                      if (d.tone === "flat") return <span style={{ fontSize: 11, fontWeight: 800, color: C.slate, padding: "3px 0", minHeight: 26, display: "inline-flex", alignItems: "center" }}>{d.text}</span>;
-                      return (
-                        <button onClick={() => openEditor(m)} style={{ fontSize: 11, fontWeight: 800, borderRadius: 7, padding: "3px 8px", minHeight: 26, display: "inline-flex", alignItems: "center", gap: 5, cursor: "pointer", background: "none", fontFamily: "inherit", color: tone, border: `1px ${d.tone === "none" ? "dashed" : "solid"} ${d.tone === "none" ? C.line2 : tone}` }}>
-                          <Calendar size={12} />{d.text}
-                        </button>
-                      );
-                    })()}
+          </div>
+        )}
+        {timelineBands.length > 0 && (
+          <div style={{ position: "relative", marginTop: 8 }}>
+              <span aria-hidden="true" style={{ position: "absolute", left: 10, top: 10, bottom: 14, borderLeft: `2px dashed ${C.line2}` }} />
+              {timelineBands.map((b) => {
+                const bDone = b.rows.filter((r) => r.done).length;
+                const bAll = bDone === b.rows.length;
+                const late = b.key === "overdue";
+                return (
+                  <div key={b.key} style={{ position: "relative", paddingLeft: 30, marginBottom: 14 }}>
+                    <span aria-hidden="true" style={{ position: "absolute", left: 10, top: 3, width: 12, height: 12, marginLeft: -6, borderRadius: "50%", boxSizing: "border-box", background: bAll ? C.lime : C.card, border: `2px solid ${late ? C.amber : bAll ? C.lime : C.line2}` }} />
+                    <div style={{ display: "flex", alignItems: "center", gap: 9, minHeight: 18 }}>
+                      <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: ".14em", textTransform: "uppercase", color: late ? C.warnText : C.slate }}>{b.label}</span>
+                      <span style={{ flex: 1, height: 1, background: C.line }} />
+                      <span style={{ fontSize: 10.5, fontWeight: 900, color: bAll ? C.lime : C.slate }}>{bDone}/{b.rows.length}</span>
+                    </div>
+                    {b.rows.map((r, ri) => (r.kind === "derived"
+                      ? <StatusRow key={r.key} dot={r.done} done={r.done} label={r.label} last={ri === b.rows.length - 1} />
+                      : renderMilestoneRow(r.m, ri === b.rows.length - 1)))}
                   </div>
-                </div>
-                <button onClick={() => openEditor(m)} aria-label={t("pathway_milestone_edit")} style={{ flex: "0 0 30px", width: 30, minHeight: 30, color: C.slate, opacity: 0.45, cursor: "pointer", background: "none", border: "none", display: "grid", placeItems: "center", padding: 0 }}><Pencil size={15} /></button>
-              </div>
-            )))}
-            <div style={{ display: "flex", gap: 6, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
+                );
+              })}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 6, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
               <input value={newMilestone} onChange={(e) => setNewMilestone(e.target.value)} maxLength={120}
                 onKeyDown={(e) => { if (e.key === "Enter") addMilestone(null); }}
                 aria-label={t("pathway_milestone_ph")} placeholder={t("pathway_milestone_ph")}
                 style={{ flex: 1, minWidth: 0, minHeight: 46, ...inputStyle }} />
               <button onClick={() => addMilestone(null)} disabled={!newMilestone.trim()} style={{ background: "none", color: C.lime, border: `1px solid ${C.lime}`, borderRadius: 10, padding: "0 15px", minHeight: 46, fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit", flexShrink: 0, opacity: !newMilestone.trim() ? 0.5 : 1 }}>{t("pathway_milestone_add")}</button>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {trash && (
