@@ -2007,3 +2007,160 @@ select {
   padding: 7px 11px; margin-bottom: 1.1rem; text-align: center;
 }
 .plan .btn { margin-top: auto; width: 100%; }
+
+/* ==========================================================================
+   LANDING PAGE — index.html only (2026-09-09)
+
+   The hero is a working demo: name a goal, watch the standard route to it
+   assemble. Long-form product content lives on about.html.
+
+   All prefixed .lx-, used on no other page, safe to delete wholesale.
+   Two rules held throughout:
+     - anything animated must be VISIBLE by default and animated as an
+       enhancement, never hidden-by-default and revealed by script;
+     - motion is switched off wholesale under prefers-reduced-motion.
+   ========================================================================== */
+
+.lx-hero { position: relative; overflow: hidden; padding: 4rem 0 3.5rem; }
+.lx-hero-fx {
+  position: absolute; inset: -25% -15% auto -15%; height: 130%; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(40% 46% at 18% 14%, rgba(212, 175, 55, 0.15), transparent 62%),
+    radial-gradient(34% 40% at 84% 32%, rgba(212, 175, 55, 0.09), transparent 64%);
+  animation: lx-drift 26s ease-in-out infinite alternate;
+}
+@keyframes lx-drift {
+  from { transform: translate3d(-2%, -1%, 0) scale(1); }
+  to   { transform: translate3d(3%, 2%, 0) scale(1.08); }
+}
+.lx-hero > .container { position: relative; z-index: 1; }
+.lx-hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.8rem, 3.5vw, 3.5rem); align-items: start; }
+@media (max-width: 980px) { .lx-hero-grid { grid-template-columns: 1fr; } }
+
+.lx-kicker { display: inline-flex; align-items: center; gap: 0.55rem; font-family: var(--font-mono);
+  font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin: 0 0 1rem; }
+.lx-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
+.lx-h1 { font-size: clamp(2.2rem, 4.8vw, 3.6rem); line-height: 1.04; letter-spacing: -0.035em;
+  margin: 0 0 1rem; text-wrap: balance; }
+.lx-sub { font-size: 1.02rem; color: var(--ink-muted); max-width: 50ch; margin: 0 0 1.8rem; }
+
+/* ---------------------------------------------------------------- the ask */
+.lx-ask { margin-bottom: 1.8rem; }
+.lx-ask-label { display: block; font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.5rem; }
+.lx-ask-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.lx-input {
+  flex: 1 1 260px; min-width: 0;
+  background: var(--navy-deep); color: var(--ink);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  padding: 0.85rem 1rem; font-family: var(--font-body); font-size: 1rem;
+}
+.lx-input::placeholder { color: var(--ink-faint); }
+.lx-input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-color: var(--gold); }
+.lx-ask-go { flex: 0 0 auto; }
+.lx-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.9rem; }
+.lx-chip {
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em;
+  color: var(--ink-muted); background: transparent;
+  border: 1px solid var(--border-strong); border-radius: 999px;
+  padding: 0.42rem 0.85rem; cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+.lx-chip:hover { color: var(--ink); border-color: var(--gold-border); }
+.lx-chip.is-on { color: var(--gold-ink); background: var(--gold); border-color: var(--gold); font-weight: 700; }
+.lx-chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.lx-cta { display: flex; align-items: center; gap: 1.3rem; flex-wrap: wrap; }
+.btn-lg { padding: 0.95rem 1.7rem; font-size: 1rem; }
+.lx-cta-ghost { color: var(--ink); font-weight: 600; }
+.lx-fine { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.05em;
+  color: var(--ink-faint); margin: 1.1rem 0 0; }
+
+/* ------------------------------------------------------------ the output */
+.lx-out {
+  background: linear-gradient(165deg, var(--surface-raised), var(--charcoal));
+  border: 1px solid var(--border-strong); border-radius: var(--radius-lg);
+  padding: 1.5rem 1.5rem 1.3rem; box-shadow: var(--shadow);
+}
+.lx-out-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+  padding-bottom: 0.9rem; margin-bottom: 1.1rem; border-bottom: 1px solid var(--border-strong); }
+.lx-out-tag { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--ink-faint); }
+.lx-out-goal { font-weight: 700; color: var(--gold-bright); font-size: 1.05rem; text-align: right; }
+.lx-out.is-unknown .lx-out-goal { color: var(--ink-faint); font-style: italic; }
+
+.lx-route { list-style: none; margin: 0; padding: 0; position: relative; }
+/* Connector drawn PER STOP rather than as one line down the whole list.
+   A single line needs a fixed bottom offset to avoid overshooting the last
+   dot, and that offset is only correct for one route length — routes here run
+   from four to five stages with one- and two-line descriptions, so it
+   overshot on some and fell short on others. Each stop drawing its own
+   segment, with the last one suppressed, is correct for any route. */
+.lx-rstop::before { content: ""; position: absolute; left: 9px; top: 20px; bottom: -2px;
+  width: 2px; background: var(--border-strong); }
+.lx-rstop:last-child::before { display: none; }
+.lx-rstop {
+  position: relative; display: flex; gap: 0.9rem; padding: 0 0 1.05rem 0;
+  /* Visible by default; the class below is what animates it in. A stop that
+     is never animated is simply shown, never blank. */
+  opacity: 1; transform: none;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.lx-route .lx-rstop:not(.is-in) { opacity: 0; transform: translateY(6px); }
+.lx-rdot { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; margin-top: 1px;
+  background: var(--navy-deep); border: 2px solid var(--border-strong); position: relative; z-index: 1; }
+.lx-rstop.is-goal .lx-rdot { border-color: var(--gold); background: var(--gold);
+  box-shadow: 0 0 0 5px rgba(212, 175, 55, 0.14); }
+.lx-rstop b { display: block; font-size: 0.98rem; margin-bottom: 0.15rem; }
+.lx-rstop span { color: var(--ink-muted); font-size: 0.88rem; }
+.lx-rstop.is-goal b { color: var(--gold-bright); }
+.lx-rstop-none b { color: var(--ink); }
+
+.lx-next { background: var(--navy-deep); border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--gold); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-top: 0.2rem; }
+.lx-next-tag { display: block; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 0.35rem; }
+.lx-next p { margin: 0; color: var(--ink-muted); font-size: 0.9rem; }
+.lx-out-cap { margin: 1.1rem 0 0; font-size: 0.78rem; color: var(--ink-faint); }
+
+/* ------------------------------------------------------------------ tiles */
+.lx-band { padding: clamp(2.8rem, 5vw, 4.5rem) 0; background: var(--charcoal);
+  border-top: 1px solid var(--border-strong); border-bottom: 1px solid var(--border-strong); }
+.lx-triad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+@media (max-width: 900px) { .lx-triad { grid-template-columns: 1fr; } }
+.lx-tile { display: flex; flex-direction: column; gap: 0.5rem; position: relative; overflow: hidden;
+  background: var(--navy); border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+  padding: 1.7rem 1.5rem 1.3rem; color: inherit;
+  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease; }
+.lx-tile::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+  transform: scaleX(0); transform-origin: left; transition: transform 0.3s ease; }
+.lx-tile:hover, .lx-tile:focus-visible { transform: translateY(-4px); border-color: var(--gold-border);
+  background: var(--surface);
+  /* Beats the base `a:hover { text-decoration: underline }` (0,1,1), which
+     would otherwise underline the whole card. */
+  text-decoration: none; }
+.lx-tile:hover::before, .lx-tile:focus-visible::before { transform: scaleX(1); }
+.lx-tile-n { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.18em; color: var(--gold); }
+.lx-tile h2 { font-size: 1.28rem; line-height: 1.2; letter-spacing: -0.015em; margin: 0; }
+.lx-tile p { color: var(--ink-muted); margin: 0; font-size: 0.95rem; }
+.lx-tile-go { margin-top: auto; padding-top: 0.85rem; color: var(--gold-bright); font-weight: 600; font-size: 0.9rem; }
+
+/* ------------------------------------------------------------------ truth */
+.lx-truth { padding: clamp(2.8rem, 5vw, 4.5rem) 0; }
+.lx-truth-h { font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.08; letter-spacing: -0.03em; margin: 0 0 1.9rem; }
+.lx-truth-h em { font-style: normal; color: var(--gold-bright); }
+.lx-truth-list { list-style: none; margin: 0 0 1.7rem; padding: 0;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+@media (max-width: 820px) { .lx-truth-list { grid-template-columns: 1fr; gap: 1.1rem; } }
+.lx-truth-list li { border-top: 2px solid var(--gold); padding-top: 0.85rem; }
+.lx-truth-list b { display: block; margin-bottom: 0.3rem; font-size: 1rem; }
+.lx-truth-list span { color: var(--ink-muted); font-size: 0.92rem; }
+.lx-truth-more { color: var(--gold-bright); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-hero-fx { animation: none; }
+  .lx-rstop, .lx-chip, .lx-tile { transition: none; }
+  .lx-route .lx-rstop:not(.is-in) { opacity: 1; transform: none; }
+  .lx-tile:hover, .lx-tile:focus-visible { transform: none; }
+}

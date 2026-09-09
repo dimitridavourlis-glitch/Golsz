@@ -1,16 +1,17 @@
 /* ==========================================================================
    GOLSZ — Global Script
-   Handles: mobile nav, active link state, scroll reveal, waitlist form.
+   Handles: mobile nav, active link state, scroll reveal, hero region,
+   marketing-page prices.
 
-   NOTE ON THE WAITLIST FORM
-   This is a static, front-end-only site (no backend/server). The waitlist
-   and contact forms below intercept submission with JavaScript, validate
-   the fields, and show an inline success message — but nothing is sent
-   anywhere yet. To go live, either:
-     1) Point the <form> "action" at a form endpoint (Tally, Formspree,
-        Basin, Getform, etc.) and remove the preventDefault() below, or
-     2) Wire the fetch() call (marked TODO below) to your provider's API,
-        e.g. Mailchimp's list "subscribe" endpoint or a Tally webhook.
+   THERE IS NO FORM HANDLING HERE ANY MORE.
+   initForms()/validateForm()/showSuccess() were removed on 2026-09-07 along
+   with contact.html's "Join the waitlist" form. They intercepted submission,
+   validated, and showed "You're on the list." while sending the data
+   nowhere — a fake success state on the only form the marketing site had.
+   The form was deleted rather than wired to a provider, because GOLSZ is
+   open for signups now and the real call to action is "Start free".
+   If a real form is ever added, give it a genuine backend before it ships;
+   do not restore a client-only success message.
    ========================================================================== */
 
 (function () {
@@ -21,7 +22,6 @@
     initMobileNav();
     initActiveNav();
     initScrollReveal();
-    initForms();
     initHeroRegion();
   });
 
@@ -159,60 +159,4 @@
     items.forEach(function (el) { observer.observe(el); });
   }
 
-  function initForms() {
-    var forms = document.querySelectorAll("form[data-waitlist-form]");
-    forms.forEach(function (form) {
-      form.addEventListener("submit", function (event) {
-        event.preventDefault();
-        if (!validateForm(form)) return;
-
-        // TODO: replace with a real submission, e.g.:
-        // fetch("https://YOUR-PROVIDER-ENDPOINT", {
-        //   method: "POST",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify(Object.fromEntries(new FormData(form)))
-        // });
-
-        showSuccess(form);
-      });
-    });
-  }
-
-  function validateForm(form) {
-    var valid = true;
-    var fields = form.querySelectorAll("[required]");
-
-    fields.forEach(function (field) {
-      var group = field.closest(".form-field") || field.parentElement;
-      var value = field.value.trim();
-      var ok = value.length > 0;
-
-      if (field.type === "email" && ok) {
-        ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-      }
-
-      if (!ok) {
-        valid = false;
-        if (group) group.classList.add("has-error");
-      } else if (group) {
-        group.classList.remove("has-error");
-      }
-    });
-
-    return valid;
-  }
-
-  function showSuccess(form) {
-    var successId = form.getAttribute("data-success-target");
-    var successEl = successId ? document.getElementById(successId) : null;
-
-    form.reset();
-    form.hidden = true;
-
-    if (successEl) {
-      successEl.classList.add("is-visible");
-      successEl.setAttribute("tabindex", "-1");
-      successEl.focus();
-    }
-  }
 })();

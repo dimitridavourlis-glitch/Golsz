@@ -3,11 +3,18 @@
 // pre-launch directive)
 // Deploy target: /api/create-child-account.js
 //
-// Policy: an athlete under 16 may NOT independently create or control a
-// GOLSZ account. A parent/guardian must create it. This endpoint is the
-// only way a profile for an under-16 athlete ever comes into existence —
-// there is no client-side self-signup path for age < 16 (golsz-app.html's
-// Auth blocks it and routes here instead).
+// Policy: GOLSZ contracts with, and bills, ADULTS only. An athlete under 18
+// may NOT independently create or control a GOLSZ account. A parent/guardian
+// who is 18 or over must create it, agrees to the terms, and is the paying
+// party. This endpoint is the only way a profile for an under-18 athlete ever
+// comes into existence — there is no client-side self-signup path for
+// age < 18 (golsz-app.html's Auth blocks it and routes here instead).
+//
+// Raised from 16 to 18 on 2026-09-07. THIS CHECK IS THE ENFORCEMENT: the
+// client-side gate in golsz-app.html is a routing convenience and can be
+// bypassed by anyone posting to this endpoint directly. Keep the two numbers
+// equal, and keep both equal to the is_minor expression in the
+// handle_new_user() migrations, which has always used 18.
 //
 // The already-authenticated PARENT calls this with the athlete's name and
 // date of birth. It creates a real auth.users row for the child (Admin
@@ -93,7 +100,7 @@ export default async function handler(req, res) {
 
   const age = ageFromDob(childDob);
   if (age === null) return res.status(400).json({ error: "A valid date of birth is required." });
-  if (age >= 16) return res.status(400).json({ error: "This is only for athletes under 16 — they can sign up for their own GOLSZ account directly.", code: "not_under_16" });
+  if (age >= 18) return res.status(400).json({ error: "This is only for athletes under 18 — they can sign up for their own GOLSZ account directly.", code: "not_under_18" });
 
   try {
     // Sanity cap — a parent legitimately manages a small number of kids,

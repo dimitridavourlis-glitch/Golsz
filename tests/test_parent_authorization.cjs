@@ -1,4 +1,4 @@
-// P0-4 / P1-4 / P1-5 — parent-managed under-16 athletes.
+// P0-4 / P1-4 / P1-5 — parent-managed under-18 athletes.
 //
 // The dangerous shape here is "do this for athlete X" arriving from a caller
 // whose token says Y. These tests exercise resolveActingAthlete() against a

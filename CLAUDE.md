@@ -4,8 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-GOLSZ — "the LinkedIn for sport" / AI sports-recruiting agent, pre-launch, Nicosia (Cyprus)-based. The repo is two
-things glued together, not one app:
+GOLSZ — "the LinkedIn for sport" / AI sports-recruiting agent. **Live at `golsz.com`, Montreal
+(Canada)-based.** (Corrected 2026-09-07; this line previously said "pre-launch, Nicosia (Cyprus)-based",
+which was true of an earlier incorporation plan and is not true of the shipped product — the site, the
+Stripe account, and `terms.html`'s governing-law clause all say Québec/Canada.) The repo is two things
+glued together, not one app:
 
 1. **A static marketing site** — `index.html`, `contact.html`, `terms.html`, `css/styles.css`, `js/main.js`,
    `assets/`. Plain HTML/CSS/JS, no build step, no framework, no package manager.
@@ -52,19 +55,27 @@ There is no build/lint/test tooling in this repo. Relevant commands:
 ### Static site (`index.html`, `contact.html`, `terms.html`)
 
 - One shared stylesheet, `css/styles.css`, drives every page via CSS custom properties defined once in
-  `:root` — the whole visual identity (pitch/turf/card backgrounds, lime accent, chalk/slate text, Archivo +
-  Space Mono type) is expressed as `--navy`, `--charcoal`, `--surface`, `--gold`, `--gold-bright`, `--ink`,
-  `--ink-muted`, `--font-display`, `--font-mono`, etc. The variable *names* are legacy from an earlier
-  navy/gold brand pass — only their *values* were repointed to the current pitch/lime palette to avoid a
-  464-usage rename across the stylesheet. When touching color, change the `:root` value, not individual
-  selectors.
+  `:root` — the whole visual identity (dark navy/charcoal grounds, gold accent, warm off-white text,
+  Archivo + Space Mono type) is expressed as `--navy`, `--charcoal`, `--surface`, `--gold`,
+  `--gold-bright`, `--ink`, `--ink-muted`, `--font-display`, `--font-mono`, etc. **The palette is navy
+  and gold, and the token names match their values.** (An intermediate pass had these same tokens
+  holding a pitch/lime palette while keeping the navy/gold *names*; that was reverted. The header
+  comment in `styles.css` is authoritative if this file and it ever disagree.) When touching color,
+  change the `:root` value, not individual selectors — there are ~280 `var()` call sites and only three
+  hardcoded hexes outside `:root`. Note that the contrast ratios documented throughout that `:root`
+  block were computed against a **dark** ground; a light theme invalidates all of them and they must be
+  recomputed, not eyeballed.
 - `js/main.js` is a single IIFE with no external deps: `initMobileNav()`, `initActiveNav()` (matches each
   nav link's `data-page` attribute against `location.pathname` to highlight the current page — only
   Home/Contact links carry `data-page` now, since Feed/Discover/Profile nav links point off-site into the
   app), `initScrollReveal()` (IntersectionObserver adding `.is-visible` to `.reveal` elements),
-  `initForms()` (front-end-only waitlist form validation + fake success state; nothing is actually
-  submitted anywhere — see the NOTE comment at the top of the file for the two ways to wire a real
-  endpoint).
+  `initHeroRegion()` (swaps the hero photo by region via `/api/geo`), and the marketing-page price swap
+  (currency word and amounts read from one object so they cannot disagree — see the comment above
+  `CURRENCIES`).
+  **There is no form handling in this file any more.** `initForms()` / `validateForm()` / `showSuccess()`
+  were deleted on 2026-09-07 along with contact.html's waitlist form: they validated, showed "You're on
+  the list.", and submitted nothing anywhere. Do not reintroduce a client-only success state — if a form
+  is ever added back, give it a real backend before it ships.
 - `index.html` is a single long page: How It Works, Features, and About are all sections on this one page
   (`#how-it-works`, `#features-section`, `#about-section`) rather than separate pages — an earlier
   consolidation collapsed a 5+ page site down to this plus Contact/Terms.
@@ -1190,39 +1201,65 @@ you add another place that surfaces a Message button, it doesn't need any follow
   every admin has the exact same full `is_admin` flag (no reduced-scope roles), and there's no second factor
   on login for anyone, admin or not. Deliberately deferred (not forgotten) in favor of shipping CSP, the
   admin audit log, and signup bot protection first — see those sections above.
-- **Legal review.** The parent-verification flow is mutual in-app consent, not identity-verified
-  COPPA/GDPR-K parental consent. `terms.html` also still contains a placeholder line stating real
-  moderation/content terms "will be published before real accounts go live." Both need a lawyer's pass
-  before this is genuinely launch-ready with real minors as users. `terms.html`'s governing-law clause was
-  also updated to "the laws of the Republic of Cyprus" (from Québec/Canada) to match the company's real
-  location — that's a substantive legal change made on the founder's direct instruction to update location
-  references everywhere, not something a lawyer has actually reviewed; flag this specifically when the
-  legal pass happens.
-- **Stripe is still in Sandbox/test mode.** `STRIPE_LINKS` holds real test-mode Payment Links and the webhook
-  is registered against the sandbox, so checkout works end-to-end — but no real money moves yet. Before
-  accepting real payments: create Live-mode Payment Links, register a Live webhook endpoint, and rotate
-  `STRIPE_WEBHOOK_SECRET` to that webhook's signing secret.
-- **`golsz.com`'s DNS still points at a domain-parking page, not Vercel** — the app is fully deployed and
-  working at `https://golsz.vercel.app`, but the real custom domain won't serve it until its DNS/nameserver
-  configuration (currently GoDaddy) is fixed to point at Vercel. Nothing will be reachable at the real domain
-  — including Stripe/Supabase webhooks registered against it — until this is resolved.
+- **AGE POLICY: GOLSZ contracts with and bills ADULTS ONLY (18+).** Changed 2026-09-07 on the founder's
+  instruction, from a 16+ self-signup model. Anyone under 18 is a managed profile inside a parent or
+  guardian's account and is never a contracting or paying party. The threshold lives in **four** places and
+  they must not drift: `requiresParentAccount` and `childAgeOk` in `golsz-app.html`, the `age >= 18` check in
+  `api/create-child-account.js` (this one is the actual enforcement — the client gate is only routing), and
+  the `is_minor` expression in the `handle_new_user()` migrations. Note the migrations have **always** used
+  18, so raising the gate from 16 closed a real pre-existing mismatch in which 16- and 17-year-olds
+  self-signed up and were written to the database already flagged `is_minor = true`.
+  `terms.html` (sections 1, 3, 4, 5, 11) and `privacy.html` (sections 2 and 5) were updated to match.
+- **Legal review — still open, but the docs are now honest about it.** (Corrected 2026-09-07: this entry
+  previously said the governing law was "the Republic of Cyprus" and that `terms.html` carried a
+  placeholder promising moderation terms "before real accounts go live". Neither is still true.)
+  `terms.html` now governs under **the Province of Québec and the federal laws of Canada**, carries an
+  explicit legal-review note, and marks each clause needing counsel with `[Legal review advised]`.
+  What remains genuinely unresolved: the parent-verification flow is mutual in-app consent, **not**
+  identity-verified COPPA/GDPR-K parental consent, and the site takes money from minors' families. That
+  needs a lawyer before this is defensible, not just a disclaimer.
+- **Stripe is LIVE, but has never taken a real payment.** (Corrected 2026-09-07; this entry previously said
+  sandbox/test mode and that Live-mode links still needed creating. They exist — do not create them again.)
+  Account `acct_1TqxVCRtNFWlwsi4` (Canada) holds 3 products, 9 Prices (CAD/USD/EUR × Basic/Pro/Elite),
+  9 Live Payment Links, a customer portal set to cancel-at-period-end, and webhook destination
+  `we_1UBeHtRtNFWlwsi4uWHnFphA` → `https://golsz.com/api/stripe-webhook` on 5 events. All nine
+  `STRIPE_PRICE_*` vars are set in Vercel Production and `STRIPE_WEBHOOK_SECRET` holds that destination's
+  signing secret.
+  **THE SIGNING SECRET IS UNVERIFIED AND THE TEST SUITE CANNOT VERIFY IT.** An unsigned POST to the
+  endpoint returns 400 whether the secret is right or wrong, so that smoke test cannot come out
+  differently in the good and bad cases. Only one real purchase settles it: buy Basic (~CA$9), check the
+  destination's Event deliveries for Total 1 / Failed 0, confirm `profiles.plan` flips, then cancel in the
+  portal to exercise the downgrade. Until that has run, do not describe payments as working. This project
+  already shipped once with 61/61 green and no webhook destination at all.
+- **`golsz.com` is live on Vercel.** (Corrected 2026-09-07; this entry previously said DNS still pointed at
+  a GoDaddy parking page.) The custom domain serves the real deployment — `/api/geo` returns the deployed
+  commit SHA in its `version` field, which is the quickest way to confirm what is actually in production.
+- **Adaptive Pricing cannot be turned off on Payment Links.** Per-currency Prices only set the *default*
+  presentment currency; Stripe still offers local-currency conversion, and disabling Managed Payments does
+  not change this (tested). Documented next to `STRIPE_LINKS` in `golsz-app.html`. Don't re-investigate.
 - **Email deliverability is resolved** — Resend's `golsz.com` domain verification completed and Supabase's
   SMTP sender now sends from a real `@golsz.com` address, confirmed working by the founder. (Note this is
   independent of `golsz.com`'s web-hosting DNS above — domain email records and the domain's nameserver/A
   records are separate DNS concerns; email can work while the site itself is still parked, as it is here.)
-- **`contact.html`'s waitlist form has the same problem the home page's did.** The home page's non-
-  functional waitlist section (fake "you're on the list" message, nothing ever actually saved — found
-  during a home-page rewrite) was removed at the founder's request, but "Join the waitlist" buttons
-  elsewhere on the home page (the three journey sections, the footer) still link to `contact.html`, whose
-  waitlist form uses the exact same client-only fake-success `data-waitlist-form` handling in `js/main.js`.
-  Flagged, not yet fixed — needs a decision (wire it to a real backend, or remove it there too).
-- **Pricing is $6/$14/$30 (Starter/Pro/Elite), each gated by a real AI Scout daily question limit** — 8/15/20
-  respectively, enforced in `api/scout.js` and led with as the first bullet on each plan card (not vague
-  marketing language). Stripe Payment Links were re-created in test/sandbox mode for these exact prices
-  (2026-08-05) — Starter now has its own link too, since it moved from free to paid. Still true, though:
-  secondary bullets like "full verified passport" or "priority visibility" aren't backed by any distinct
-  mechanic anywhere in the app beyond the question limit — gating those further needs a product decision
-  on what they mean first.
+- ~~`contact.html`'s waitlist form~~ **FIXED 2026-09-07.** The form, its fake "You're on the list."
+  success block, and the `initForms()`/`validateForm()`/`showSuccess()` handlers in `js/main.js` were all
+  deleted. `contact.html` is now a real contact page: a "Start free" CTA plus the two monitored addresses
+  (`hello@` / `invest@`). The "Join the waitlist" footer links on contact/terms/privacy now read
+  "Contact us". Removed rather than wired to a provider, because signups are open — the honest CTA is
+  "Start free", not "wait".
+- **Pricing is three currencies, nine Prices** (corrected 2026-09-07; this entry previously said a single
+  `$6/$14/$30` — Pro is 15, not 14, and there was never just one currency). Amounts are **fixed per
+  currency, never FX-converted at runtime**: Basic 6 EUR / 9 CAD / 7 USD, Pro 15 / 23 / 16, Elite 30 / 45 /
+  32. The one server-side definition is `PLAN_PRICING` in `api/_plan-catalog.js`; it is mirrored by
+  `PLANS` in `golsz-app.html` and `CURRENCIES` in `js/main.js`, and `tests/test_pricing.cjs` +
+  `tests/test_cad_pricing.cjs` diff all three so they cannot drift. Presentment currency is chosen by
+  `api/geo.js` from Vercel edge headers (ca / us / eu / default→USD).
+  Note the internal plan enum is `starter`, but it is displayed as **Basic** everywhere — `displayName`
+  carries that mapping; don't rename the enum.
+  Each tier is gated by a real AI Scout daily question limit (3 free / 8 / 15 / 20), enforced in
+  `api/scout.js`. **Still true:** secondary bullets like "priority visibility", "identity verification"
+  and "full Passport Strength breakdown" are not backed by any distinct mechanic beyond the question
+  limit — gating them needs a product decision on what they mean first.
 - **`coaches`/`agents` now have real RLS (migration 027)** — owner-only (`id = auth.uid()`), same simple
   shape as `push_subscriptions`. Still unused by the app today (every occupation's extra fields live in
   `athletes` — see `ProfileEditor` — so nothing actually writes to these two tables yet), but they're no

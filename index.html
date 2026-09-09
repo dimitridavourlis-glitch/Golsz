@@ -54,10 +54,10 @@
   <div class="container nav-row">
     <a href="index.html" class="logo"><svg class="logo-mark" width="20" height="20" viewBox="0 0 74.043 74.678" fill="#D4AF37" style="flex:0 0 auto;margin-right:.4em" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M71.5 26.92L65.47 26.9C64.2 23.01 61.88 19.24 59.16 16.15C56.29 12.9 52.91 10.24 49.05 8.26C44.48 5.9 38.94 5.15 33.84 5.78C13.67 8.29 1.97 29.47 8.08 48.39C11.15 57.88 20.48 65.81 30.06 68.07C33.52 68.89 37.32 68.79 40.82 68.41C44.03 68.06 47.69 67.28 50.45 65.56C51.9 64.66 53.5 64.03 54.92 63.03C61.48 58.41 66.17 51.4 67.12 43.38C67.39 41.13 67.8 38.74 67.06 36.58L25.71 36.56L25.7 10.28L32.16 8L32.17 32.89L73.31 32.91C74.48 37.09 74.09 41.49 73.24 45.69C70.26 60.23 58.08 71.68 43.39 74.17C24.91 77.3 5.68 65.59 1.04 47.27C-4.1 26.98 10.09 4.6 30.6 0.71C34.1 0.04 37.79 -0.28 41.33 0.31C52.33 2.15 62.98 8.34 68.2 18.61C69.37 20.9 71.92 24.26 71.5 26.92ZM22.11 59.56L41.3 43.23L14.99 43.22L15.06 38.21L58.83 38.24L37.92 55.6L57.73 55.61C57.81 55.97 57.97 56.41 57.83 56.78C57.44 57.82 53.39 60.93 52.3 61.05C50.25 61.29 48.08 61.06 46.01 61.07C40.57 61.1 35.13 61.07 29.68 61.06C28.31 61.06 24.14 61.49 23.08 60.89C22.64 60.64 22.35 59.96 22.11 59.56Z"/></svg>GOLSZ<span class="mark">.</span></a>
     <nav class="nav-links" aria-label="Primary">
-      <a href="index.html#product" class="nav-link">Product</a>
-      <a href="index.html#how-it-works" class="nav-link">How it works</a>
+      <a href="about.html#product" class="nav-link">Product</a>
+      <a href="about.html#how-it-works" class="nav-link">How it works</a>
       <a href="index.html#pricing" class="nav-link">Pricing</a>
-      <a href="index.html#about-section" class="nav-link">About</a>
+      <a href="about.html#about-section" class="nav-link">About</a>
     </nav>
     <!-- Sign in and Start free both open the app, which shows either form.
          Previously "Home", "App" and "Launch the app" all pointed at
@@ -70,10 +70,10 @@
   </div>
   <div class="container">
     <nav class="mobile-panel" id="mobile-panel" aria-label="Mobile">
-      <a href="index.html#product" class="nav-link">Product</a>
-      <a href="index.html#how-it-works" class="nav-link">How it works</a>
+      <a href="about.html#product" class="nav-link">Product</a>
+      <a href="about.html#how-it-works" class="nav-link">How it works</a>
       <a href="index.html#pricing" class="nav-link">Pricing</a>
-      <a href="index.html#about-section" class="nav-link">About</a>
+      <a href="about.html#about-section" class="nav-link">About</a>
       <a href="golsz-app.html" class="nav-link">Sign in</a>
       <a href="golsz-app.html" class="btn btn-primary btn-block">Start free</a>
     </nav>
@@ -82,275 +82,125 @@
 
 <main id="main">
 
-  <!-- Hero. Leads with the PRODUCT, not the price: "JOIN FOR FREE!" told a
-       visitor nothing about what GOLSZ is. Free-to-start now sits under the
-       CTA as reassurance rather than as the headline. -->
-  <!-- HERO: THE PATH.
-       The photo hero is gone, and the reason is contrast, not taste. The
-       headline, the lede and both buttons sat on top of a three-athlete
-       photograph whose brightness varies wildly across viewport widths; the
-       scrim scoped to the text column was already a patch over that, and at
-       most widths the type still lost. Nothing here sits on a photograph.
+  <!-- =========================================================
+       HERO — a working demo, not a picture of one.
 
-       What replaces it is the product's own idea: a pathway with stages,
-       drawn the same way the app draws it (same icon order as stageIcon()
-       in golsz-app.html — home, shield, shield, trophy, star). A visitor
-       understands what GOLSZ does before reading a word of body copy.
+       The visitor names a goal and the route to it assembles in front of
+       them. This is the product's actual argument ("your goal determines your
+       path") performed rather than described.
 
-       THE RAIL IS LABELLED AS AN EXAMPLE. It is not this visitor's pathway
-       and must never read as one — the caption under it says so, in the
-       same voice the app uses when it doesn't know something.
+       HONESTY RULES, which are not negotiable on this page:
+       1. The routes in js/landing.js are CURATED and DETERMINISTIC. Nothing
+          here calls Scout or any model. The panel is labelled "standard
+          route", never "your route", because GOLSZ has not met this visitor.
+       2. An unrecognised goal says so rather than inventing a route. That is
+          the same behaviour the app has when Scout lacks data, and the
+          landing page must not be the one place GOLSZ bluffs.
+       3. No timelines, no odds, no guarantees. Stages only.
+       The NCAA D1 route ships rendered in the HTML below, so the panel is
+       complete and correct with JavaScript switched off.
+       ========================================================= -->
+  <section class="lx-hero" id="hero">
+    <div class="lx-hero-fx" aria-hidden="true"></div>
+    <div class="container lx-hero-grid">
 
-       data-hero-region is deliberately dropped: initHeroRegion() in
-       js/main.js no-ops when the attribute is absent, so the region photos
-       simply stop being injected here. The images are still in assets/ and
-       the endpoint is untouched. -->
-  <section class="hero-mega hero-path" id="hero">
-    <div class="container">
-      <div class="hero-path-inner reveal">
-        <p class="eyebrow" style="justify-content:center;">Every goal has a path</p>
-        <h1><span class="line-main">Know where you stand.</span><span class="line-dim">Know where you&rsquo;re going.</span></h1>
-        <p class="lede mx-auto">Scout turns your goal into a pathway with real stages &mdash; then tells you the next step on it.</p>
+      <div class="lx-hero-copy">
+        <p class="lx-kicker"><span class="lx-dot" aria-hidden="true"></span>Every goal has a path</p>
+        <h1 class="lx-h1">Tell us where you&rsquo;re trying to get to.</h1>
+        <p class="lx-sub">Name the goal and watch the route to it. Then build a Sports Passport, and Scout works that route around your sport, your level and what you have actually done.</p>
 
-        <ol class="pathrail" aria-label="Example pathway: Academy, Club, current stage, Showcase, NCAA Division 1">
-          <li class="pathrail-node is-done">
-            <span class="pathrail-dot" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M4 11 L12 4 L20 11 V20 H4 Z"/></svg>
-            </span>
-            <span class="pathrail-label">Academy</span>
-          </li>
-          <li class="pathrail-link is-done" aria-hidden="true"></li>
-          <li class="pathrail-node is-done">
-            <span class="pathrail-dot" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M12 3 L20 6 V12 C20 17 12 21 12 21 C12 21 4 17 4 12 V6 Z"/></svg>
-            </span>
-            <span class="pathrail-label">Club</span>
-          </li>
-          <li class="pathrail-link is-done" aria-hidden="true"></li>
-          <li class="pathrail-node is-now">
-            <span class="pathrail-dot" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M12 3 L20 6 V12 C20 17 12 21 12 21 C12 21 4 17 4 12 V6 Z"/></svg>
-            </span>
-            <span class="pathrail-label">You are here</span>
-          </li>
-          <li class="pathrail-link" aria-hidden="true"></li>
-          <li class="pathrail-node">
-            <span class="pathrail-dot" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M7 4 h10 v5 a5 5 0 0 1 -10 0 z"/><path d="M12 14 v4"/><path d="M8 20 h8"/></svg>
-            </span>
-            <span class="pathrail-label">Showcase</span>
-          </li>
-          <li class="pathrail-link" aria-hidden="true"></li>
-          <li class="pathrail-node">
-            <span class="pathrail-dot" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M12 4 l2.3 5 5.2 .5 -3.9 3.6 1.1 5.4 -4.7 -2.8 -4.7 2.8 1.1 -5.4 -3.9 -3.6 5.2 -.5 z"/></svg>
-            </span>
-            <span class="pathrail-label">NCAA D1</span>
-          </li>
+        <form class="lx-ask" data-ask autocomplete="off">
+          <label class="lx-ask-label" for="goal-input">Your goal</label>
+          <div class="lx-ask-row">
+            <input class="lx-input" id="goal-input" name="goal" type="text" value="NCAA D1"
+                   placeholder="NCAA D1, a pro contract, an academy place&hellip;" data-goal-input>
+            <!-- Ghost, not primary. This button and "Build my Sports Passport"
+                 sit a few centimetres apart; two gold buttons of equal weight
+                 made the demo compete with the actual conversion CTA. -->
+            <button class="btn btn-ghost lx-ask-go" type="submit">Show the route</button>
+          </div>
+          <div class="lx-chips" data-chips>
+            <button class="lx-chip is-on" type="button" data-goal="ncaa">NCAA D1</button>
+            <button class="lx-chip" type="button" data-goal="usports">U Sports</button>
+            <button class="lx-chip" type="button" data-goal="juco">JUCO</button>
+            <button class="lx-chip" type="button" data-goal="academy">Academy place</button>
+            <button class="lx-chip" type="button" data-goal="european">European club</button>
+            <button class="lx-chip" type="button" data-goal="semipro">Semi-professional</button>
+            <button class="lx-chip" type="button" data-goal="pro">Pro contract</button>
+            <button class="lx-chip" type="button" data-goal="better">Get measurably better</button>
+          </div>
+        </form>
+
+        <div class="lx-cta">
+          <a href="golsz-app.html" class="btn btn-primary btn-lg">Build my Sports Passport <span aria-hidden="true">&rarr;</span></a>
+          <a href="about.html" class="lx-cta-ghost">See how it works <span aria-hidden="true">&rarr;</span></a>
+        </div>
+        <p class="lx-fine">Free to start &middot; No card required &middot; A parent or guardian holds the account for athletes under 18</p>
+      </div>
+
+      <div class="lx-out" data-out aria-live="polite">
+        <div class="lx-out-head">
+          <span class="lx-out-tag">Standard route</span>
+          <span class="lx-out-goal" data-out-goal>NCAA D1</span>
+        </div>
+        <ol class="lx-route" data-route>
+          <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Club or school team</b><span>Regular competitive minutes at your level.</span></div></li>
+          <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Verified benchmarks</b><span>Measured, dated, and recorded with how they were taken.</span></div></li>
+          <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Summer showcase</b><span>An event where D1 staff actually attend.</span></div></li>
+          <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Target list &amp; outreach</b><span>Programmes matched to your level, contacted directly.</span></div></li>
+          <li class="lx-rstop is-in is-goal"><span class="lx-rdot"></span><div><b>NCAA D1 roster</b><span>The goal you named.</span></div></li>
         </ol>
-        <p class="pathrail-note">An example pathway. Yours is built from your sport, your level and the goal you give Scout.</p>
-
-        <div class="hero-path-cta">
-          <a href="golsz-app.html" class="btn btn-primary">Build my Sports Passport <span aria-hidden="true">&rarr;</span></a>
-          <a href="index.html#how-it-works" class="btn btn-ghost">See how it works</a>
+        <div class="lx-next" data-next>
+          <span class="lx-next-tag">Where most athletes stall</span>
+          <p data-next-text>Getting seen. Benchmarks without a showcase on the calendar is the most common dead end.</p>
         </div>
-        <p class="field-hint" style="margin-top:1rem;">Free to start &middot; No card required</p>
+        <p class="lx-out-cap">This is the common route, not your route &mdash; GOLSZ hasn&rsquo;t met you yet. Scout builds the real one from your sport, your level and your dates, and says so when it doesn&rsquo;t have the data.</p>
       </div>
+
     </div>
   </section>
 
-  <!-- ======================= PRODUCT ======================= -->
-  <!-- Previews are static HTML built from the same tokens as the app, not
-       screenshots: they can't silently go stale, and every one carries an
-       "Illustrative preview" label. Layout and labels are real; the athlete
-       is invented. No feature is shown that doesn't exist. -->
-  <section class="section-pad" id="product">
+  <!-- ======================= WHAT IT IS =======================
+       One sentence per tile. The full panels these replaced are on
+       about.html, and each tile links to the one it summarises. The moment a
+       tile needs a second paragraph it belongs on about.html instead. -->
+  <section class="lx-band" id="product">
     <div class="container">
-      <div class="reveal text-center mx-auto" style="max-width: 640px;">
-        <p class="eyebrow" style="justify-content:center;">The product</p>
-        <h2>Two things, working together.</h2>
-        <p class="lede mx-auto">Your Sports Passport is the record. AI Scout is what reads it and tells you what to do next.</p>
-        <div class="journey" aria-label="How GOLSZ fits together">
-          <b class="is-hot">Athlete</b><i aria-hidden="true">&rarr;</i>
-          <b class="is-hot">Passport</b><i aria-hidden="true">&rarr;</i>
-          <b class="is-hot">AI Scout</b><i aria-hidden="true">&rarr;</i>
-          <b>Plan</b><i aria-hidden="true">&rarr;</i>
-          <b>Progress</b>
-        </div>
-      </div>
-
-      <!-- Sports Passport -->
-      <div class="showcase reveal">
-        <div class="showcase-copy">
-          <p class="eyebrow">Sports Passport</p>
-          <h3>Your athletic record, in one place.</h3>
-          <p class="lede">Sport, position, club, level, school year, measurements, highlights and career history — kept current, and shareable with a coach through a link they can open without an account.</p>
-        </div>
-        <div class="preview-frame">
-          <div class="preview-chrome"><i></i><i></i><i></i><span>Illustrative preview</span></div>
-          <div class="preview-body">
-            <div class="pp-head">
-              <div class="pp-avatar">AM</div>
-              <div>
-                <div class="pp-name">Alex Moreno</div>
-                <div class="pp-sub">Basketball &middot; Shooting Guard &middot; Class of 2028</div>
-              </div>
-            </div>
-            <div class="pp-grid">
-              <div class="pp-cell"><b>16</b><span>Age</span></div>
-              <div class="pp-cell"><b>188</b><span>Height cm</span></div>
-              <div class="pp-cell"><b>3.6</b><span>GPA</span></div>
-              <div class="pp-cell"><b>4</b><span>Highlights</span></div>
-            </div>
-            <div class="pp-meter">
-              <div class="pp-meter-top"><span>Passport Strength</span><b>68</b></div>
-              <div class="pp-bar"><i style="width:68%"></i></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Pathway + progress -->
-      <div class="showcase is-flipped reveal">
-        <div class="showcase-copy">
-          <p class="eyebrow">Your path &amp; your progress</p>
-          <h3>Milestones you can actually check off.</h3>
-          <p class="lede">Scout turns your goal into a pathway with real stages, then tracks the benchmarks you retest against it — recorded with how they were measured, so a hand-timed sprint is never quietly compared against an electronic one.</p>
-        </div>
-        <div class="preview-frame">
-          <div class="preview-chrome"><i></i><i></i><i></i><span>Illustrative preview</span></div>
-          <div class="preview-body">
-            <div class="path-row" aria-label="Example pathway">
-              <div class="path-node is-done"><div class="path-ring"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg></div><b>School team</b><span>Now</span></div>
-              <div class="path-link is-done"></div>
-              <div class="path-node is-done"><div class="path-ring"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg></div><b>Club</b><span>Done</span></div>
-              <div class="path-link"></div>
-              <div class="path-node"><div class="path-ring"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></div><b>Showcase</b><span>Next</span></div>
-              <div class="path-link"></div>
-              <div class="path-node is-goal"><div class="path-ring"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.6 6.6L21 10l-5 4.2L17.5 21 12 17.4 6.5 21 8 14.2 3 10l6.4-1.4z"/></svg></div><b>NCAA D1</b><span>Goal</span></div>
-            </div>
-            <div style="margin-top:1.3rem; border-top:1px solid var(--border-strong); padding-top:0.4rem;">
-              <div class="bm-row">
-                <div><div class="bm-name">Max vertical</div><div class="bm-meta">Standing vertical &middot; 12 Mar</div></div>
-                <b style="margin-left:auto;">71 cm</b><span class="bm-delta">+4</span>
-              </div>
-              <div class="bm-row">
-                <div><div class="bm-name">3/4 court sprint</div><div class="bm-meta">Electronic timing &middot; 12 Mar</div></div>
-                <b style="margin-left:auto;">3.28 s</b><span class="bm-delta">&minus;0.09</span>
-              </div>
-              <div class="bm-row">
-                <div><div class="bm-name">Free throw %</div><div class="bm-meta">Season to date</div></div>
-                <b style="margin-left:auto;">78%</b><span class="bm-delta">+5</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ======================= AI SCOUT ======================= -->
-  <section class="scout-panel">
-    <div class="container">
-      <div class="scout-panel-head reveal">
-        <p class="badge"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 5.6L19 9l-5.2 1.4L12 16l-1.8-5.6L5 9l5.2-1.4z"/></svg> AI Scout</p>
-        <h2 style="margin-top:0.6rem;">An AI Scout that actually knows the athlete.</h2>
-        <p class="lede mx-auto">Scout uses your Sports Passport, goals and progress to give answers in context &mdash; not generic search results.</p>
-      </div>
-
-      <div class="reveal">
-        <a href="golsz-app.html" class="scout-search" aria-label="Ask Scout — opens the app">
-          <div class="search-bar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-            <input type="text" placeholder="Ask Scout anything about your path…" readonly style="cursor:pointer;">
-          </div>
+      <div class="lx-triad">
+        <a class="lx-tile reveal" href="about.html#product">
+          <span class="lx-tile-n">01</span>
+          <h2>Your record, in one place.</h2>
+          <p>Sport, position, club, measurements and benchmarks &mdash; each carrying how and when it was measured.</p>
+          <span class="lx-tile-go">The Passport <span aria-hidden="true">&rarr;</span></span>
         </a>
-
-        <div class="scout-pill-row" aria-label="Things you can ask Scout">
-          <a href="golsz-app.html" class="scout-pill">Explore schools &amp; programs</a>
-          <a href="golsz-app.html" class="scout-pill">Track my progress</a>
-          <a href="golsz-app.html" class="scout-pill">Plan my next move</a>
-          <a href="golsz-app.html" class="scout-pill">Research opportunities</a>
-          <a href="golsz-app.html" class="scout-pill">Get career guidance</a>
-        </div>
-
-        <div class="preview-frame mx-auto" style="max-width:620px; margin-top:2.2rem;">
-          <div class="preview-chrome"><i></i><i></i><i></i><span>Illustrative preview</span></div>
-          <div class="preview-body">
-            <div class="sc-line is-me"><div class="sc-dot">AM</div><div class="sc-bubble">I want to play D1 basketball. Am I anywhere close?</div></div>
-            <div class="sc-line"><div class="sc-dot">S</div><div class="sc-bubble">You're a 2028 guard at 188&nbsp;cm with a 3.6 GPA and four highlights up &mdash; that's a real starting point, and the GPA keeps every division open.<br><br>The honest gap is <strong>exposure</strong>. You've got no showcase on record and no target list yet. D1 staff have to see you somewhere.</div></div>
-            <div class="sc-line is-me"><div class="sc-dot">AM</div><div class="sc-bubble">What should I do first?</div></div>
-            <div class="sc-line"><div class="sc-dot">S</div><div class="sc-bubble">Get one summer showcase on the calendar, then we'll build a target list around your level. Want me to start that list?</div></div>
-          </div>
-        </div>
+        <a class="lx-tile reveal" href="about.html#scout">
+          <span class="lx-tile-n">02</span>
+          <h2>Answers in your context.</h2>
+          <p>Scout reads your Passport, your goal and your progress, then tells you the next step &mdash; not generic search results.</p>
+          <span class="lx-tile-go">Meet Scout <span aria-hidden="true">&rarr;</span></span>
+        </a>
+        <a class="lx-tile reveal" href="about.html#how-it-works">
+          <span class="lx-tile-n">03</span>
+          <h2>Milestones you can check off.</h2>
+          <p>Your goal becomes a route with real stages, and benchmarks you retest against as you go.</p>
+          <span class="lx-tile-go">The three steps <span aria-hidden="true">&rarr;</span></span>
+        </a>
       </div>
     </div>
   </section>
 
-  <!-- ======================= HOW IT WORKS ======================= -->
-  <section class="section-pad" id="how-it-works">
+  <!-- ======================= TRUTH =======================
+       Three of six. The link says "all six" rather than implying these are
+       the whole list. Full grid: about.html#trust -->
+  <section class="lx-truth" id="trust">
     <div class="container">
-      <div class="reveal text-center mx-auto" style="max-width: 620px;">
-        <p class="eyebrow" style="justify-content:center;">How it works</p>
-        <h2>Three steps.</h2>
-      </div>
-      <div class="card-grid cols-3 mt-lg">
-        <article class="step-card reveal">
-          <div class="step-num">01</div>
-          <h3>Build your Passport</h3>
-          <p>Create the athletic record Scout uses to understand you.</p>
-        </article>
-        <article class="step-card reveal">
-          <div class="step-num">02</div>
-          <h3>Tell Scout your goal</h3>
-          <p>College, academy, semi-pro, professional, or simply getting better.</p>
-        </article>
-        <article class="step-card reveal">
-          <div class="step-num">03</div>
-          <h3>Follow your path</h3>
-          <p>Personalised next steps, benchmarks and milestones based on where you actually stand.</p>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <!-- ======================= GOALS ======================= -->
-  <section class="section-pad" style="background: var(--charcoal); border-top:1px solid var(--border-strong); border-bottom:1px solid var(--border-strong);" id="goals">
-    <div class="container">
-      <div class="reveal mx-auto" style="max-width: 720px;">
-        <p class="eyebrow">Your goal</p>
-        <h2>Your goal determines your path.</h2>
-        <p class="lede">Tell Scout what you're chasing. GOLSZ builds your milestones, benchmarks and next steps around that goal, instead of forcing every athlete through the same plan.</p>
-        <div class="goal-chips" aria-label="Example goals">
-          <span class="goal-chip">NCAA</span>
-          <span class="goal-chip">NAIA</span>
-          <span class="goal-chip">JUCO</span>
-          <span class="goal-chip">U Sports</span>
-          <span class="goal-chip">Academy</span>
-          <span class="goal-chip">European club</span>
-          <span class="goal-chip">Semi-professional</span>
-          <span class="goal-chip">Professional</span>
-          <span class="goal-chip">Get measurably better</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ======================= TRUST ======================= -->
-  <section class="section-pad" id="trust">
-    <div class="container">
-      <div class="reveal mx-auto" style="max-width: 760px;">
-        <p class="eyebrow">Why trust it</p>
-        <h2>Built to tell athletes the truth.</h2>
-        <div class="trust-grid">
-          <div class="trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>No invented benchmarks.</strong> If GOLSZ has no verified data, it shows none.</span></div>
-          <div class="trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>No guaranteed scholarships or contracts.</strong> Ever.</span></div>
-          <div class="trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Scout says when it doesn't know.</strong> Rather than filling the gap.</span></div>
-          <div class="trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Your data stays tied to its source.</strong> Measured how, when, by whom.</span></div>
-          <div class="trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>General guidance, not diagnosis.</strong> Scout points you to a professional.</span></div>
-          <div class="trust-item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><strong>Your goal, your words.</strong> Scout won't overwrite what you wrote.</span></div>
-        </div>
-      </div>
+      <h2 class="lx-truth-h reveal">When GOLSZ doesn&rsquo;t know,<br><em>it says so.</em></h2>
+      <ul class="lx-truth-list reveal">
+        <li><b>No invented benchmarks.</b><span>If there is no verified data, GOLSZ shows none.</span></li>
+        <li><b>No guaranteed scholarships.</b><span>Or contracts. Or trials. Ever.</span></li>
+        <li><b>Measurements keep their source.</b><span>A hand-timed sprint is never quietly compared against an electronic one.</span></li>
+      </ul>
+      <a class="lx-truth-more reveal" href="about.html#trust">All six commitments <span aria-hidden="true">&rarr;</span></a>
     </div>
   </section>
 
@@ -436,29 +286,6 @@
     </div>
   </section>
 
-  <!-- ======================= ABOUT ======================= -->
-  <section class="section-pad" id="about-section">
-    <div class="container">
-      <div class="reveal text-center mx-auto" style="max-width: 660px;">
-        <p class="eyebrow" style="justify-content:center;">About GOLSZ</p>
-        <h2>Every athlete deserves a real plan.</h2>
-        <p class="lede mx-auto">Good sports guidance is unevenly distributed. If you're at the right club, in the right country, with the right coach, someone tells you what matters and when. If you're not, you find out too late.</p>
-        <p class="lede mx-auto">GOLSZ gives any athlete access to structured, personalised guidance — regardless of where they live or who they know.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Company story — deliberately compact and near the bottom. -->
-  <section class="section-pad-sm" style="background: var(--charcoal); border-top:1px solid var(--border-strong); border-bottom:1px solid var(--border-strong);">
-    <div class="container">
-      <div class="reveal mx-auto" style="max-width: 660px;">
-        <p class="eyebrow">Our story</p>
-        <h3>Founded in Montreal. Built for the world.</h3>
-        <p style="margin-bottom:0;">GOLSZ is built by a small team in Montreal, Canada, working with early athletes and their families. We also welcome conversations with people who <a href="contact.html#investors">invest in early-stage sport, careers and AI</a>.</p>
-      </div>
-    </div>
-  </section>
-
   <section class="section-pad-sm">
     <div class="container">
       <div class="cta-band reveal">
@@ -483,10 +310,10 @@
       <div class="footer-col">
         <h2>Site</h2>
         <ul>
-          <li><a href="index.html#product">Product</a></li>
-          <li><a href="index.html#how-it-works">How it works</a></li>
+          <li><a href="about.html#product">Product</a></li>
+          <li><a href="about.html#how-it-works">How it works</a></li>
           <li><a href="index.html#pricing">Pricing</a></li>
-          <li><a href="index.html#about-section">About</a></li>
+          <li><a href="about.html#about-section">About</a></li>
           <li><a href="contact.html">Contact</a></li>
         </ul>
       </div>
@@ -514,6 +341,7 @@
   </div>
 </footer>
 
+<script src="js/landing.js" defer></script>
 <script src="js/main.js"></script>
 </body>
 </html>

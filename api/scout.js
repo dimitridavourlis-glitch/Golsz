@@ -50,7 +50,7 @@
 // backstop.
 export const config = { maxDuration: 60 };
 
-// P0-4: parent-managed under-16 athletes. Scout accepts an athleteId in the
+// P0-4: parent-managed under-18 athletes. Scout accepts an athleteId in the
 // request body so a parent can talk to Scout on their child's behalf — and
 // that id is verified against parent_links here, server-side, before it is
 // used for anything. See api/_acting-for.js for the full rule set. The
@@ -6041,7 +6041,7 @@ export default async function handler(req, res) {
   let cacheFingerprint = null; // athlete state the response cache must key on
   if (process.env.SUPABASE_URL) {
     // The athlete this conversation is ABOUT — normally the caller, or a
-    // linked under-16 child when a parent is managing them. body.athleteId is
+    // linked under-18 child when a parent is managing them. body.athleteId is
     // a request, never a grant: resolveActingAthlete re-derives the caller
     // from the token and requires an APPROVED parent_links row before it
     // returns anything other than the caller's own id. A rejected request is
