@@ -87,8 +87,13 @@ ck("country/position datalists stay English, with the reason recorded",
    /Deliberately NOT applied to COUNTRIES or the position datalists/.test(APP), true);
 ck("...and the position datalist really is untranslated",
    /<datalist id="position-options">\{\(SPORT_POSITIONS\[form\.sport\] \|\| POSITIONS\.filter\(\(p\) => p !== "All"\)\)\.map\(\(p\) => <option key=\{p\} value=\{p\} \/>\)\}/.test(APP), true);
+// Asserts the GUARANTEE (sport rendered through tv() on Home, position next to
+// it), not the exact contents of the array literal. The original pinned
+// `[tv(athlete.sport), athlete.position]` with a closing bracket, so adding the
+// club and current stage to that same sub-line broke a test about translation
+// without anything about translation changing. 2026-09-09.
 ck("the athlete reads their sport back translated on Home",
-   /\{\[tv\(athlete\.sport\), athlete\.position\]/.test(APP), true);
+   /\[tv\(athlete\.sport\), athlete\.position[,\]]/.test(APP), true);
 ck("...and on the Passport", (APP.match(/<PassRow k=\{t\("passport_sport"\)\} v=\{tv\(p\.sport\)\} \/>/g) || []).length, 2);
 
 console.log("\n-- P1-8: no athlete-facing action fails into the console --");
