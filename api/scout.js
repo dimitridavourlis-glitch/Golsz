@@ -2932,10 +2932,10 @@ function extractSuggestedPathway(data) {
     const parsed = parseReplyObject(clean);
     const p = parsed && parsed.suggested_pathway;
     if (!p || !PATHWAY_TYPE_SET.has(p.pathway_type)) return null;
-    const milestones = Array.isArray(p.milestones)
-      ? p.milestones.filter((m) => m && typeof m.label === "string" && m.label.trim()).slice(0, 10).map((m) => ({ label: m.label.trim().slice(0, 200), done: false }))
+    const rawMilestones = Array.isArray(p.milestones)
+      ? p.milestones.filter((m) => m && typeof m.label === "string" && m.label.trim()).slice(0, 10)
       : [];
-    if (!milestones.length) return null; // "at least one concrete milestone" per the prompt's own rule
+    if (!rawMilestones.length) return null; // "at least one concrete milestone" per the prompt's own rule
     // STAGES ARE OPTIONAL, AND REPAIRED HERE rather than at the use site.
     // THE ID IS OURS, NEVER THE MODEL'S. A stage's identity has to survive a
     // rename because milestones store it in `stage`, and the model cannot know
@@ -2954,6 +2954,23 @@ function extractSuggestedPathway(data) {
             label: x.label.trim().slice(0, 40),
           }))
       : [];
+    // FILING IS RESOLVED HERE, AGAINST THE IDS WE JUST MINTED.
+    //
+    // The model files a step by POSITION in the stages array it proposed,
+    // because it cannot know an id (see above) and must not invent one. We
+    // turn that position into the real id, and only for a position that
+    // exists — an out-of-range or missing index leaves the step unfiled
+    // rather than filed somewhere arbitrary. A step filed under the wrong
+    // section is worse than one the athlete files themselves, since the
+    // wrong heading reads as a decision GOLSZ made about their pathway.
+    //
+    // No stages in this reply means no filing at all: the indices would
+    // point into a list the model never saw.
+    const milestones = rawMilestones.map((m) => {
+      const i = m.stage_index;
+      const filed = stages.length && Number.isInteger(i) && i >= 0 && i < stages.length;
+      return { label: m.label.trim().slice(0, 200), done: false, stage: filed ? stages[i].id : null };
+    });
     return {
       pathway_type: p.pathway_type,
       target_timeline: typeof p.target_timeline === "string" ? p.target_timeline.trim().slice(0, 100) : null,
@@ -2987,6 +3004,15 @@ function extractSuggestedPathway(data) {
 const PATHWAY_APPROVAL_PATTERNS = [
   /\b(yes|yep|yeah|ok|okay|sure|please|confirmed?)\b[^.?!]{0,60}\b(build|rebuild|make|create|set\s?up)\b/i,
   /\b(go ahead|do it|build it|build my|build the|build that|rebuild it|rebuild my|rebuild the|set it up|lock it in|let'?s do it)\b/i,
+  // Plan's "draft my steps" button sends pathway_scout_seed verbatim, in the
+  // athlete's own language. The English seed already matches "build my"
+  // above; these three cover the others, so a French, Spanish or Greek
+  // athlete gets the app-assembled fallback when the model declines — the
+  // same guarantee the English one has had since 2026-08-10. No word
+  // boundaries around the Greek: JS \b is ASCII-only and would never match.
+  /(construis|construisez)\s+mon\b/i,
+  /(construye|constrúyeme)\s+mi\b/i,
+  /(φτιάξε|φτιαξε|χτίσε)\s+τη/i,
 ];
 // Anything that turns an apparent instruction back into a question, a
 // refusal or a "later". Checked FIRST so "should you build it?" and "don't
@@ -4006,7 +4032,8 @@ Output as valid JSON only:
     "milestones": [
       {
         "label": "milestone label",
-        "done": false
+        "done": false,
+        "stage_index": null
       }
     ]
   },
@@ -4027,6 +4054,20 @@ map, like "Academy", "U19 / CS Saint-Laurent", or "Trials in Portugal".
   adding to it, so say so plainly in your reply and let them decide.
 - Their steps are never lost by this: a step filed under a removed section
   becomes unfiled, not deleted. Do not warn them that they will lose work.
+
+"stage_index" files a milestone under one of the sections in THIS reply's
+"stages" array, by its 0-based position.
+- Only ever set it when this same reply proposes "stages". You cannot file a
+  step under a section you did not just name: you do not know the athlete's
+  existing sections or their positions, and a guess would put their work under
+  the wrong heading.
+- When you propose sections AND steps together, file every step you can. A
+  twelve-step plan arriving as one flat list is a worse plan than the same
+  twelve steps sitting under the four sections they belong to — the athlete
+  has to do that sorting by hand otherwise, and most will not.
+- Leave it null for a step that genuinely spans the whole pathway, or that
+  belongs to a section you are not proposing. Unfiled is honest; wrongly
+  filed is not.
 
 Only set fields that actually changed this reply. Use null for unchanged fields. memory_writes must always be present (empty array [] if nothing new). Everything else is optional and may be null or omitted.`;
 
