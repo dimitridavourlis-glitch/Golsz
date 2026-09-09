@@ -9067,22 +9067,32 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
             THIS card rather than three scrolls further down. */}
         <div style={{ display: "flex", alignItems: "center", gap: 15, marginBottom: 15 }}>
           <div style={{ position: "relative", width: 92, height: 92, flexShrink: 0 }}>
+            {/* THE RING SHOWS THE GAP IT IS ASKING YOU TO CLOSE.
+                It used to be a gradient arc drawn to the composite: a picture
+                of one number that was already printed inside it, in two
+                colours for no reason either of them could name. The ghost arc
+                is the projection this card ALREADY states one row down —
+                where the score lands after the single move named in BIGGEST
+                GAIN — so the ring now carries the argument instead of
+                decorating it. Drawn behind the solid arc and only when the
+                move genuinely moves the number, so it can never say 68 to 68.
+                The gradient is gone: one score, one colour. */}
             <svg width="92" height="92" viewBox="0 0 116 116" style={{ transform: "rotate(-90deg)", display: "block" }} aria-hidden="true" focusable="false">
-              <defs>
-                <linearGradient id="gzScoreRing" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor={C.amber} />
-                  <stop offset="100%" stopColor={C.lime} />
-                </linearGradient>
-              </defs>
               <circle cx="58" cy="58" r="50" fill="none" stroke={C.line} strokeWidth="9" />
-              <circle cx="58" cy="58" r="50" fill="none" stroke="url(#gzScoreRing)" strokeWidth="9" strokeLinecap="round"
+              {projectedWeak !== null && (
+                <circle cx="58" cy="58" r="50" fill="none" stroke={C.lime} strokeWidth="9" strokeLinecap="round" opacity="0.26"
+                  strokeDasharray={2 * Math.PI * 50}
+                  strokeDashoffset={2 * Math.PI * 50 * (1 - (ringIn ? projectedWeak : 0) / 100)}
+                  style={{ transition: "stroke-dashoffset 1400ms cubic-bezier(0.22, 1, 0.36, 1)" }} />
+              )}
+              <circle cx="58" cy="58" r="50" fill="none" stroke={C.lime} strokeWidth="9" strokeLinecap="round"
                 strokeDasharray={2 * Math.PI * 50}
                 strokeDashoffset={2 * Math.PI * 50 * (1 - (ringIn ? composite : 0) / 100)}
                 style={{ transition: "stroke-dashoffset 1100ms cubic-bezier(0.22, 1, 0.36, 1)" }} />
             </svg>
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 28, fontWeight: 900, lineHeight: 1, color: compositeColor, fontFamily: "'Space Mono', monospace", fontVariantNumeric: "tabular-nums" }}>{composite}</span>
-              <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: "0.12em", color: C.slate, fontFamily: "'Space Mono', monospace" }}>/100</span>
+              <span style={{ fontSize: 31, fontWeight: 900, lineHeight: 1, letterSpacing: "-0.03em", color: compositeColor, fontVariantNumeric: "tabular-nums" }}>{composite}</span>
+              <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.12em", color: C.slate, marginTop: 2 }}>/100</span>
             </div>
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
@@ -9133,10 +9143,10 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
               <span style={{ display: "block", fontSize: 9, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: C.slate, marginBottom: 4 }}>{t("home_lever_eyebrow")}</span>
               <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: C.chalk, lineHeight: 1.35 }}>{t(leverKey)}</span>
             </span>
-            <span style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0, fontFamily: "'Space Mono', monospace", fontVariantNumeric: "tabular-nums" }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: C.slate }}>{composite}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+              <span style={{ fontSize: 16, fontWeight: 800, color: C.slate, letterSpacing: "-0.02em" }}>{composite}</span>
               <ArrowUpRight size={14} color={C.lime} />
-              <span style={{ fontSize: 24, fontWeight: 900, color: C.lime, lineHeight: 1 }}>{projectedWeak}</span>
+              <span style={{ fontSize: 25, fontWeight: 900, color: C.lime, lineHeight: 1, letterSpacing: "-0.03em" }}>{projectedWeak}</span>
             </span>
           </button>
         )}
@@ -9187,6 +9197,14 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
               ].map((d) => {
                 const v = subScores[d.key];
                 const low = d.key === weakest;
+                // The same ghost the ring draws, on the one column the ring is
+                // drawing it FOR. computeReadiness has already worked out what
+                // this dimension becomes after the single named move; showing
+                // it here is what connects "DEVELOPMENT is your weakest" to
+                // "here is how much of that bar the move fills in". Only ever
+                // on the weakest column, and only when it genuinely rises.
+                const ghost = (low && projected && typeof projected[d.key] === "number" && projected[d.key] > v)
+                  ? projected[d.key] : null;
                 return (
                   <button key={d.key} onClick={() => onNavigate(d.go)} aria-label={`${d.label} ${v}`}
                     style={{ flex: "1 1 0", minWidth: 0, background: "none", border: "none", padding: "2px 0 0", cursor: "pointer", fontFamily: "inherit", display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
@@ -9195,6 +9213,9 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
                         bottom, so an empty dimension still occupies its place
                         in the row instead of vanishing from the picture. */}
                     <span style={{ width: 7, height: 46, borderRadius: 4, background: C.turf, display: "block", position: "relative", overflow: "hidden" }}>
+                      {ghost !== null && (
+                        <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.round(46 * (ringIn ? ghost : 0) / 100), borderRadius: 4, background: C.warnText, opacity: 0.3, transition: "height 1200ms cubic-bezier(0.22, 1, 0.36, 1)" }} />
+                      )}
                       <span style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: Math.max(3, Math.round(46 * (ringIn ? v : 0) / 100)), borderRadius: 4, background: low ? C.warnText : C.lime, transition: "height 900ms cubic-bezier(0.22, 1, 0.36, 1)" }} />
                     </span>
                     <span style={{ fontSize: "clamp(7px, 1.9vw, 8.5px)", fontWeight: 800, letterSpacing: 0, textTransform: "uppercase", color: low ? C.warnText : C.slate, textAlign: "center", lineHeight: 1.2, whiteSpace: "nowrap" }}>{d.label}</span>
