@@ -96,9 +96,23 @@ function fetchWithDeadline(url, options, ms) {
   if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) opts.signal = AbortSignal.timeout(ms);
   return fetch(url, opts);
 }
-// Comfortably inside SCOUT_BUDGET_MS (50s), which is itself inside
-// maxDuration (60s), so a hung model call leaves room for us to answer.
+// The CEILING on one model call, not the whole story. A fixed cap is not
+// enough on its own: two 40s calls in sequence still blow the 60s function
+// cap, which is exactly how a request that had already spent 36s on searches
+// could start one more call and never come back. Callers that know the
+// request's deadline pass timeoutMs = what is actually left; this is what
+// they get when nobody knows.
 const MODEL_CALL_TIMEOUT_MS = 40000;
+// Never abort a call so eagerly that it had no chance. Below this much
+// remaining budget the caller should not be starting a call at all.
+const MODEL_CALL_MIN_MS = 6000;
+// Kept back from the tool loop for the forced final answer, so "we ran out of
+// time" still ends in a written reply rather than in nothing.
+const FINAL_ANSWER_RESERVE_MS = 12000;
+function callBudget(msLeft) {
+  if (!Number.isFinite(msLeft)) return MODEL_CALL_TIMEOUT_MS;
+  return Math.max(MODEL_CALL_MIN_MS, Math.min(MODEL_CALL_TIMEOUT_MS, Math.floor(msLeft)));
+}
 
 // Total server-side wall-clock budget for one Scout request, kept safely
 // under `maxDuration` above so we finish and respond ourselves instead of
@@ -145,7 +159,7 @@ const MODEL_REGISTRY = {
 // identical in content and order. This is a billing boundary, not a context
 // one — unlike the earlier attempt that moved athlete state into `messages`,
 // which changed the interaction shape and broke JSON output entirely.
-async function callAnthropic(apiKey, { model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences }) {
+async function callAnthropic(apiKey, { model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences, timeoutMs }) {
   const systemBlocks = [{ type: "text", text: system, cache_control: { type: "ephemeral" } }];
   if (systemDynamic) systemBlocks.push({ type: "text", text: systemDynamic });
   const body = { model, max_tokens: maxTokens || 4096, system: systemBlocks, messages };
@@ -158,12 +172,12 @@ async function callAnthropic(apiKey, { model, system, systemDynamic, messages, t
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
       body: JSON.stringify(body),
-    }, MODEL_CALL_TIMEOUT_MS);
+    }, callBudget(timeoutMs));
   } catch (e) {
     // Shaped like every other failed call so callers need no new branch:
     // a timed-out model is an upstream 504, not an exception to handle here.
     const timedOut = e && (e.name === "TimeoutError" || e.name === "AbortError");
-    console.error("GOLSZ Anthropic call failed:", timedOut ? "timeout after " + MODEL_CALL_TIMEOUT_MS + "ms" : String(e && e.message || e));
+    console.error("GOLSZ Anthropic call failed:", timedOut ? "timeout after " + callBudget(timeoutMs) + "ms" : String(e && e.message || e));
     return { ok: false, status: timedOut ? 504 : 502, data: { error: { message: timedOut ? "model call timed out" : "model call failed" } } };
   }
   return { ok: r.ok, status: r.status, data: await r.json() };
@@ -472,7 +486,7 @@ async function budgetGate(tier, plan, freshInputTokens, cachedInputTokens) {
 // change, once a real key and a benchmark pass exist.
 const anthropicAdapter = {
   provider: "anthropic",
-  async generate({ apiKey, model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences }) {
+  async generate({ apiKey, model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences, timeoutMs }) {
     // systemDynamic was destructured here but never forwarded — a real bug
     // found 2026-08-09 while adding the second provider. Every caller that
     // went through the adapter (rather than calling callAnthropic directly)
@@ -481,7 +495,7 @@ const anthropicAdapter = {
     // the "live search is unavailable, don't invent results" notice through
     // this field: a degraded reply was answering with no athlete context and
     // without being told it was degraded.
-    return callAnthropic(apiKey, { model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences });
+    return callAnthropic(apiKey, { model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences, timeoutMs });
   },
 };
 
@@ -549,7 +563,7 @@ const openaiCompatibleAdapter = {
   // emergency no-tools reply, so it can never claim to have run a web or
   // database search. The caller pairs it with the same "say plainly that
   // live search is unavailable" notice used by the Haiku fallback.
-  async generate({ apiKey, model, system, systemDynamic, messages, maxTokens }) {
+  async generate({ apiKey, model, system, systemDynamic, messages, maxTokens, timeoutMs }) {
     let r;
     try {
       r = await fetchWithDeadline(openaiCompatEndpoint(), {
@@ -560,7 +574,7 @@ const openaiCompatibleAdapter = {
           max_tokens: maxTokens || 1024,
           messages: toOpenAiMessages(system, systemDynamic, messages),
         }),
-      }, MODEL_CALL_TIMEOUT_MS);
+      }, callBudget(timeoutMs));
     } catch (e) {
       // The emergency provider timing out must not take the request with it.
       // This adapter IS the fallback; there is nothing after it, so a dead
@@ -5899,6 +5913,7 @@ async function continueIfTruncated(key, cfg, systemPrompt, systemDynamic, baseMe
     if (!partial) break;
     console.log("GOLSZ continuing truncated reply, part", i + 2);
     const cont = await callAnthropic(key, {
+      timeoutMs: deadlineMs ? deadlineMs - Date.now() : undefined,
       model: cfg.model_name || MODEL_REGISTRY.DEEP_SCOUT.model,
       thinking: { type: "disabled" },
       system: systemPrompt,
@@ -5969,6 +5984,14 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, ba
       messages: conversation,
       maxTokens: deepTierConfig.max_output_tokens,
       tools: TOOLS,
+      // WHAT IS LEFT, NOT WHAT IS ALLOWED. budgetLeft() decides whether to
+      // START a turn; without this it had nothing to say about how long that
+      // turn may then run. A turn begun at 36s with 14s left could still run
+      // the full 40s ceiling and take the function past its 60s cap — which is
+      // the "that took me too long to work through" an athlete actually sees.
+      // Minus the reserve, so running out of research time still ends in a
+      // written answer instead of in nothing.
+      timeoutMs: budgetLeft() - FINAL_ANSWER_RESERVE_MS,
     });
     data = result.data;
     if (!result.ok) return { ok: false, data, toolBudgetExhausted };
@@ -5997,6 +6020,8 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, ba
       systemDynamic,
       messages: conversation,
       maxTokens: deepTierConfig.max_output_tokens,
+      // The reserve this loop has been holding back all along.
+      timeoutMs: budgetLeft(),
     });
     if (!result.ok) return { ok: false, data: result.data, toolBudgetExhausted };
     data = result.data;
@@ -6667,6 +6692,21 @@ A newer source always beats an older one at the same level. If memory says one t
     // while web_lookup falls through capped at FREE_VERIFY_TURNS.
     const FREE_VERIFY_TURNS = 1;
     let maxToolTurns = 4;
+    // A PATHWAY BUILD IS ABOUT THEIR RECORD, NOT ABOUT THE WEB.
+    //
+    // Reported 2026-09-09: tapping "Let Scout draft my steps" came back with
+    // "that took me too long to work through" — the client's 58s abort. Four
+    // research turns at 8-12s each, then a long structured reply, is most of a
+    // minute before a word is written, and this is the ONE request an athlete
+    // fires by tapping a button rather than by asking a question, so they have
+    // no idea why they are waiting.
+    //
+    // The work itself does not need four searches. The sections and steps come
+    // from the athlete's own goal, sport, stage and record, all of which are
+    // already in the prompt. One turn is left available for the case where the
+    // pathway genuinely turns on an external fact (a deadline, a rule), and
+    // the app-assembled fallback still covers a decline.
+    if (athleteApprovedPathwayBuild(incomingText)) maxToolTurns = 1;
     // Whether the answering call may carry the search tools at all. Only the
     // no-classification branch below ever drops them — see there for why.
     let searchToolsAllowed = true;
@@ -6819,6 +6859,9 @@ A newer source always beats an older one at the same level. If memory says one t
         // and Anthropic will actually run and bill it, so an unclassified
         // free request must not be handed one.
         tools: searchToolsAllowed ? SCOUT_SEARCH_TOOLS : null,
+        // Every model call is bounded by the request's own deadline, not just
+        // by the per-call ceiling. See callBudget().
+        timeoutMs: (handlerStartMs + SCOUT_BUDGET_MS) - Date.now() - FINAL_ANSWER_RESERVE_MS,
       });
       if (ok && data.stop_reason === "max_tokens") {
         data = await continueIfTruncated(key, tierConfig, systemStatic, systemDynamic, conversationForModel, data, handlerStartMs + SCOUT_BUDGET_MS);
@@ -6931,6 +6974,7 @@ A newer source always beats an older one at the same level. If memory says one t
         systemDynamic: fallbackSystem,
         messages: conversationForModel,
         maxTokens: fastCfg.max_output_tokens,
+        timeoutMs: scoutDeadline - Date.now(),
       });
       if (haikuFallback.ok) {
         const data = haikuFallback.data;
@@ -6983,6 +7027,7 @@ A newer source always beats an older one at the same level. If memory says one t
             systemDynamic: fallbackSystem,
             messages: conversationForModel,
             maxTokens: fb.maxOutputTokens,
+            timeoutMs: scoutDeadline - Date.now(),
           });
           if (crossProvider.ok) {
             const data = crossProvider.data;

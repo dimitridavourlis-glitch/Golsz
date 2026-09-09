@@ -36,13 +36,22 @@ const { PRICING } = __extractPricing();
 // hardcoded 40000 would keep passing after someone changed the real one.
 eval('const ANTHROPIC_URL = ' + JSON.stringify(
   SRC.match(/^const ANTHROPIC_URL = "([^"]+)"/m)[1]) + ';' +
-  slice("function fetchWithDeadline", "\n// Comfortably inside") +
+  slice("function fetchWithDeadline", "\n// The CEILING") +
   slice("async function callAnthropic", "\n// $ per 1M tokens"));
 // A const does not leak out of a direct eval, and BOTH adapters read this one
 // — so it goes on the global rather than being redeclared per eval. Read from
 // the source, not retyped: a hardcoded copy keeps passing after the real
 // timeout changes.
-globalThis.MODEL_CALL_TIMEOUT_MS = Number(SRC.match(/^const MODEL_CALL_TIMEOUT_MS = (\d+);/m)[1]);
+// callBudget() is a function declaration and leaks from a direct eval; the
+// three consts it reads do not, and BOTH adapters need them, so they go on the
+// global. Values read out of the source, never retyped — a hardcoded copy
+// keeps passing after the real numbers change.
+for (const n of ["MODEL_CALL_TIMEOUT_MS", "MODEL_CALL_MIN_MS", "FINAL_ANSWER_RESERVE_MS"]) {
+  const m = SRC.match(new RegExp("^const " + n + " = (\\d+);", "m"));
+  if (!m) throw new Error("api/scout.js no longer defines " + n);
+  globalThis[n] = Number(m[1]);
+}
+eval(slice("function callBudget(msLeft) {", "\n// Total server-side wall-clock budget"));
 // The adapters themselves are consts (they don't leak from a direct eval);
 // the helpers around them are function declarations (they do). Extractor
 // appended for the consts — same pattern as test_budget_gate.cjs.

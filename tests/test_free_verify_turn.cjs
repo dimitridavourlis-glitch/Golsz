@@ -38,7 +38,14 @@ if (!/maxToolTurns = FREE_VERIFY_TURNS/.test(GATE_SRC)) throw new Error("gate ex
 
 // Run the real branch with the handler's locals supplied as parameters and
 // res/release* stubbed. Returns what the handler would have done.
-const runGate = new Function("userPlan", "classification", "userIsAdmin", "userAiUnlimited", `
+// The gate now also asks whether this message IS a pathway build, so both
+// the message and the real predicate have to be supplied — a stub would let
+// the assertion below pass against a predicate production doesn't have.
+const APPROVAL_SRC = slice("const PATHWAY_APPROVAL_PATTERNS = [", "\n// The app's own Pathway", "approval patterns")
+  + "\nreturn athleteApprovedPathwayBuild;";
+const athleteApprovedPathwayBuild = new Function(APPROVAL_SRC)();
+
+const runGateRaw = new Function("userPlan", "classification", "userIsAdmin", "userAiUnlimited", "incomingText", "athleteApprovedPathwayBuild", `
   let released = false;
   const reservedQuestion = true, reservedFreeAi = true, userId = "u", questionsRemaining = 2, dailyLimit = 3;
   const releaseScoutQuestion = async () => { released = true; };
@@ -54,6 +61,11 @@ const runGate = new Function("userPlan", "classification", "userIsAdmin", "userA
   const __sent = (v) => ({ __blocked: true, v });
   return run().then((r) => (r && r.__blocked ? { blocked: true, status, body, released } : r));
 `);
+
+// Existing call sites keep their four arguments and get an ordinary question;
+// the pathway-build case passes its own text.
+const runGate = (plan, cls, admin, unlimited, text) =>
+  runGateRaw(plan, cls, admin, unlimited, text || "how do I get seen by coaches?", athleteApprovedPathwayBuild);
 
 const web = { intent: "web_lookup", needs_tool: true };
 const db = { intent: "db_lookup", needs_tool: true };
@@ -119,6 +131,28 @@ const none = { intent: "career_advice", needs_tool: false };
   ck("both runDeepReply call sites exist", calls.length, 2);
   ck("...and both pass maxToolTurns through", calls.every((c) => /maxToolTurns/.test(c)), true);
 
-  console.log(`\n${p}/${p + f} passed`);
+  
+// ---- a pathway build does not spend four research turns -----------------
+// It is the one request an athlete fires by TAPPING A BUTTON rather than by
+// asking a question, so a minute of silence has no explanation attached to
+// it. The sections and steps come from their own record, which is already in
+// the prompt; four searches at 8-12s each is most of the client's 58s abort
+// spent before a word is written.
+  {
+  const BUILD = "Build my pathway plan — the sections of my route, and the steps that go under each one.";
+  const built = await runGate("pro", none, false, false, BUILD);
+  ck("a pathway build is capped at one research turn", built.maxToolTurns, 1);
+  const asked = await runGate("pro", none, false, false, "what should I do this month?");
+  ck("...while an ordinary question keeps all four", asked.maxToolTurns, 4);
+  // The cap must come from the REAL predicate, not from matching the word
+  // "pathway" — a question about a pathway is still a question.
+  const about = await runGate("pro", none, false, false, "should you build my pathway?");
+  ck("...and asking ABOUT a build is not a build", about.maxToolTurns, 4);
+  // Free plan's own cap still wins where it is stricter.
+  const free = await runGate("free", web, false, false, BUILD);
+  ck("...and the free-plan cap is not loosened by it", free.maxToolTurns, 1);
+  }
+
+console.log(`\n${p}/${p + f} passed`);
   process.exit(f ? 1 : 0);
 })();
