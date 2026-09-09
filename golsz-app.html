@@ -7213,11 +7213,17 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   const seedSentRef = useRef(false);
   useEffect(() => {
     if (!seedPrompt) { seedSentRef.current = false; return; }
-    if (!loaded || seedSentRef.current || sendingRef.current) return;
+    // THE SAME PRECONDITIONS send() CHECKS, checked before the seed is
+    // cleared. send() returns early and silently when `pending` is set, and
+    // clearing the seed on a send that never happened is the exact failure
+    // this whole change exists to remove — a button that looks like it did
+    // something and did not. `pending` is in the deps so a seed that arrives
+    // during an in-flight message is sent when that one lands, not dropped.
+    if (!loaded || pending || seedSentRef.current || sendingRef.current) return;
     seedSentRef.current = true;
     send(seedPrompt);
     if (onSeedSent) onSeedSent();
-  }, [seedPrompt, loaded]);
+  }, [seedPrompt, loaded, pending]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
 
   // Seed Scout's working profile from the athlete's real Passport data (so
