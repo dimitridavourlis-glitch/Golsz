@@ -78,6 +78,28 @@ import { evaluateEntitlements, hasFeature, planDisplayName, FEATURE_LABEL } from
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
+// EVERY UPSTREAM CALL NEEDS A DEADLINE, because this function has one.
+//
+// Reported 2026-09-09: tapping Plan's "draft my steps" produced "Connection
+// dropped mid-play." That message is what the client shows when the response
+// body is not JSON — which is exactly what Vercel returns (an HTML gateway
+// page) when it kills a function at maxDuration. Not one of this file's
+// fetches carried a timeout, so a single slow model call could run past the
+// 60s cap and take the whole request with it, and SCOUT_BUDGET_MS below could
+// not save it: the budget is checked BETWEEN tool turns, so it never gets a
+// turn while one call is hanging.
+//
+// A bounded call fails as a status we can return as JSON, which the client
+// can then explain. An unbounded one fails as a dead request.
+function fetchWithDeadline(url, options, ms) {
+  const opts = Object.assign({}, options);
+  if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) opts.signal = AbortSignal.timeout(ms);
+  return fetch(url, opts);
+}
+// Comfortably inside SCOUT_BUDGET_MS (50s), which is itself inside
+// maxDuration (60s), so a hung model call leaves room for us to answer.
+const MODEL_CALL_TIMEOUT_MS = 40000;
+
 // Total server-side wall-clock budget for one Scout request, kept safely
 // under `maxDuration` above so we finish and respond ourselves instead of
 // being killed. runDeepReply() checks the remaining budget before starting
@@ -130,11 +152,20 @@ async function callAnthropic(apiKey, { model, system, systemDynamic, messages, t
   if (tools) body.tools = tools;
   if (thinking) body.thinking = thinking;
   if (stopSequences) body.stop_sequences = stopSequences;
-  const r = await fetch(ANTHROPIC_URL, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-    body: JSON.stringify(body),
-  });
+  let r;
+  try {
+    r = await fetchWithDeadline(ANTHROPIC_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify(body),
+    }, MODEL_CALL_TIMEOUT_MS);
+  } catch (e) {
+    // Shaped like every other failed call so callers need no new branch:
+    // a timed-out model is an upstream 504, not an exception to handle here.
+    const timedOut = e && (e.name === "TimeoutError" || e.name === "AbortError");
+    console.error("GOLSZ Anthropic call failed:", timedOut ? "timeout after " + MODEL_CALL_TIMEOUT_MS + "ms" : String(e && e.message || e));
+    return { ok: false, status: timedOut ? 504 : 502, data: { error: { message: timedOut ? "model call timed out" : "model call failed" } } };
+  }
   return { ok: r.ok, status: r.status, data: await r.json() };
 }
 
@@ -519,15 +550,25 @@ const openaiCompatibleAdapter = {
   // database search. The caller pairs it with the same "say plainly that
   // live search is unavailable" notice used by the Haiku fallback.
   async generate({ apiKey, model, system, systemDynamic, messages, maxTokens }) {
-    const r = await fetch(openaiCompatEndpoint(), {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: "Bearer " + apiKey },
-      body: JSON.stringify({
-        model,
-        max_tokens: maxTokens || 1024,
-        messages: toOpenAiMessages(system, systemDynamic, messages),
-      }),
-    });
+    let r;
+    try {
+      r = await fetchWithDeadline(openaiCompatEndpoint(), {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer " + apiKey },
+        body: JSON.stringify({
+          model,
+          max_tokens: maxTokens || 1024,
+          messages: toOpenAiMessages(system, systemDynamic, messages),
+        }),
+      }, MODEL_CALL_TIMEOUT_MS);
+    } catch (e) {
+      // The emergency provider timing out must not take the request with it.
+      // This adapter IS the fallback; there is nothing after it, so a dead
+      // request here is the athlete's whole answer.
+      const timedOut = e && (e.name === "TimeoutError" || e.name === "AbortError");
+      console.error("GOLSZ fallback provider call failed:", timedOut ? "timeout" : String(e && e.message || e));
+      return { ok: false, status: timedOut ? 504 : 502, data: { error: { message: "fallback provider unavailable" } } };
+    }
     const raw = await r.json();
     if (!r.ok) return { ok: false, status: r.status, data: raw };
     return { ok: true, status: r.status, data: normalizeOpenAiResponse(raw) };

@@ -28,9 +28,21 @@ const { PRICING } = __extractPricing();
 // anthropicAdapter delegates to callAnthropic, so that has to come along too
 // or the regression assertion at the bottom hits a ReferenceError at call
 // time rather than at eval time.
+// callAnthropic now calls fetchWithDeadline() and reads MODEL_CALL_TIMEOUT_MS,
+// so both come along or the adapter hits a ReferenceError at call time and
+// every assertion below silently tests the catch branch instead of the real
+// one. The function declaration leaks from a direct eval; the const does not,
+// so its value is read out of the source rather than retyped here — a
+// hardcoded 40000 would keep passing after someone changed the real one.
 eval('const ANTHROPIC_URL = ' + JSON.stringify(
   SRC.match(/^const ANTHROPIC_URL = "([^"]+)"/m)[1]) + ';' +
+  slice("function fetchWithDeadline", "\n// Comfortably inside") +
   slice("async function callAnthropic", "\n// $ per 1M tokens"));
+// A const does not leak out of a direct eval, and BOTH adapters read this one
+// — so it goes on the global rather than being redeclared per eval. Read from
+// the source, not retyped: a hardcoded copy keeps passing after the real
+// timeout changes.
+globalThis.MODEL_CALL_TIMEOUT_MS = Number(SRC.match(/^const MODEL_CALL_TIMEOUT_MS = (\d+);/m)[1]);
 // The adapters themselves are consts (they don't leak from a direct eval);
 // the helpers around them are function declarations (they do). Extractor
 // appended for the consts — same pattern as test_budget_gate.cjs.
