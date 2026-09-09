@@ -3950,6 +3950,10 @@ Don't end every message with a question. Ask only when their answer would actual
 
 React like a person. "Two weeks of pain and still sore, that's worth getting checked out" is warmth. Never perform sympathy or invent feelings they didn't express.
 
+Use their first name when ATHLETE STATE gives you one, the way a coach would: on the first reply of a conversation, when you're telling them something hard, and when you're backing them. Not in every message and never twice in one. If there is no first_name, don't ask for one just to have it and never invent one. "Here's the honest read, Marco" is a person talking. "Hello Marco, thank you for your question, Marco" is a form letter.
+
+You are one person across every conversation, not a fresh assistant each time. They told you things last week; act like you remember, because you do. Don't reintroduce yourself, don't restate what they already know about you, and don't thank them for messaging.
+
 MINORS AND PARENTS
 
 If someone seems to be a minor, remind them once to involve a parent or guardian.
@@ -5466,7 +5470,7 @@ async function getAthleteState(userId) {
     profileComplete = !!sport;
   } catch {}
   try {
-    const pr = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=occupation,avatar_url,identity_verified", { headers });
+    const pr = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=full_name,occupation,avatar_url,identity_verified", { headers });
     const prRows = await pr.json();
     profileRow = Array.isArray(prRows) && prRows[0] ? prRows[0] : null;
   } catch {}
@@ -5614,7 +5618,22 @@ async function getAthleteState(userId) {
       hasPendingVerification,
     });
   } catch (e) { console.error("GOLSZ readiness compute failed:", e && e.message); }
+  // FIRST NAME ONLY, and only when it looks like a name.
+  //
+  // Scout has never been told who it is talking to. It knew their sport,
+  // their goal, their stage and their score, and could not say "Dimitri" —
+  // which is most of why it reads as a service rather than as a person. A
+  // surname adds nothing here and makes it sound like a letter from a bank,
+  // so this takes the first word, and only if profiles.full_name actually
+  // holds something name-shaped rather than an email or a placeholder.
+  let firstName = null;
+  try {
+    const raw = (profileRow && typeof profileRow.full_name === "string") ? profileRow.full_name.trim() : "";
+    const first = raw.split(/\s+/)[0] || "";
+    if (first.length >= 2 && first.length <= 24 && !first.includes("@") && /^[\p{L}'’-]+$/u.test(first)) firstName = first;
+  } catch {}
   return {
+    firstName,
     profileComplete, pathwayCreated, baselineComplete, sportSupportLevel, sport, country,
     structuredSportKnowledge: hasStructuredSportKnowledge(sport),
     pathwayType, pathwayTimeline, milestoneCount, milestonesDone,
@@ -6256,7 +6275,7 @@ export default async function handler(req, res) {
       pathwayType: athleteState.pathwayType || recon.derived || null,
       readiness: athleteState.readiness,
     };
-    athleteBlock = `\n\nATHLETE STATE (app-computed from real data, not your own inference — ground your guidance in this, never contradict it or claim a different plan/stage): profile_complete=${athleteState.profileComplete}, goal_defined=${goalDefined}${goalText ? ` ("${goalText.slice(0, 200)}")` : ""}, plan=${plan}, pathway_created=${athleteState.pathwayCreated}, baseline_complete=${athleteState.baselineComplete}, sport_support_level=${athleteState.sportSupportLevel || "unknown"}, golsz_structured_sport_knowledge=${athleteState.structuredSportKnowledge ? "yes" : "no"}, goal_authored_by_athlete=${goalSource === "athlete_edited" ? "yes" : "no"}, assessment_ready=${assessmentReady.sufficient_for_preliminary_assessment}${assessmentReady.missing_critical.length ? `, still_missing=${assessmentReady.missing_critical.join("/")}` : ""}.`;
+    athleteBlock = `\n\nATHLETE STATE (app-computed from real data, not your own inference — ground your guidance in this, never contradict it or claim a different plan/stage): ${athleteState.firstName ? `first_name="${athleteState.firstName}", ` : ""}profile_complete=${athleteState.profileComplete}, goal_defined=${goalDefined}${goalText ? ` ("${goalText.slice(0, 200)}")` : ""}, plan=${plan}, pathway_created=${athleteState.pathwayCreated}, baseline_complete=${athleteState.baselineComplete}, sport_support_level=${athleteState.sportSupportLevel || "unknown"}, golsz_structured_sport_knowledge=${athleteState.structuredSportKnowledge ? "yes" : "no"}, goal_authored_by_athlete=${goalSource === "athlete_edited" ? "yes" : "no"}, assessment_ready=${assessmentReady.sufficient_for_preliminary_assessment}${assessmentReady.missing_critical.length ? `, still_missing=${assessmentReady.missing_critical.join("/")}` : ""}.`;
 
     // THEIR PLAN — the actual contents of the Plan tab. Scout used to see
     // only pathway_created=true here and was therefore unable to answer

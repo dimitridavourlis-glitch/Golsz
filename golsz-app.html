@@ -7631,6 +7631,13 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       // "took too long" is the honest description there; "connection
       // dropped" would be actively misleading since the request did reach
       // the server, it just never came back in time.
+      // LOG THE REAL ERROR. Reported 2026-09-09 as "AI Scout is not working",
+      // three failures in a row, and this catch had no console.error at all —
+      // so the browser's own account of what happened (a CSP violation, a
+      // blocked request, a DNS failure, a bad JSON body) was thrown away and
+      // every one of them arrived as the same sentence. The bubble stays
+      // plain for the athlete; the console now names the cause.
+      console.error("GOLSZ scout send failed:", e && e.name, e && e.code, e && e.message);
       const isTimeout = e && (e.name === "TimeoutError" || e.name === "AbortError");
       const msg = e && e.code === "SCOUT_HTTP_ERROR" ? e.message
         : isTimeout ? t("scout_timed_out")
