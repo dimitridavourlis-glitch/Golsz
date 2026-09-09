@@ -9065,8 +9065,14 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
             here is where you stand, here is the one thing that moves it —
             which is also why the projected-gain row lives at the bottom of
             THIS card rather than three scrolls further down. */}
-        <div style={{ display: "flex", alignItems: "center", gap: 15, marginBottom: 15 }}>
-          <div style={{ position: "relative", width: 92, height: 92, flexShrink: 0 }}>
+        {/* THE SCORE AT THE SIZE IT MATTERS.
+            At 92px beside a headline it read as an ornament next to the real
+            content. It is the one number the whole app is about, so it opens
+            the page at 132px with the gap it can close drawn around it, and
+            the next move sits UNDER it as the thing you do about it — rather
+            than beside it, competing. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 16 }}>
+          <div style={{ position: "relative", width: 132, height: 132, flexShrink: 0 }}>
             {/* THE RING SHOWS THE GAP IT IS ASKING YOU TO CLOSE.
                 It used to be a gradient arc drawn to the composite: a picture
                 of one number that was already printed inside it, in two
@@ -9077,22 +9083,37 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
                 decorating it. Drawn behind the solid arc and only when the
                 move genuinely moves the number, so it can never say 68 to 68.
                 The gradient is gone: one score, one colour. */}
-            <svg width="92" height="92" viewBox="0 0 116 116" style={{ transform: "rotate(-90deg)", display: "block" }} aria-hidden="true" focusable="false">
-              <circle cx="58" cy="58" r="50" fill="none" stroke={C.line} strokeWidth="9" />
+            {/* THE HEADROOM RIDES OUTSIDE THE SCORE, NOT THROUGH IT.
+                Drawn at the same radius the projection was indistinguishable
+                from the score itself — two gold arcs of the same weight
+                reading as one, which is worse than not drawing it. As a thin
+                outer track it is unmistakably a SECOND fact: this is where
+                you are, that is how far the one named move takes you. */}
+            <svg width="132" height="132" viewBox="0 0 140 140" style={{ transform: "rotate(-90deg)", display: "block" }} aria-hidden="true" focusable="false">
               {projectedWeak !== null && (
-                <circle cx="58" cy="58" r="50" fill="none" stroke={C.lime} strokeWidth="9" strokeLinecap="round" opacity="0.26"
-                  strokeDasharray={2 * Math.PI * 50}
-                  strokeDashoffset={2 * Math.PI * 50 * (1 - (ringIn ? projectedWeak : 0) / 100)}
-                  style={{ transition: "stroke-dashoffset 1400ms cubic-bezier(0.22, 1, 0.36, 1)" }} />
+                <>
+                  <circle cx="70" cy="70" r="62" fill="none" stroke={C.line} strokeWidth="3" />
+                  <circle cx="70" cy="70" r="62" fill="none" stroke={C.lime} strokeWidth="3" strokeLinecap="round" opacity="0.55"
+                    strokeDasharray={2 * Math.PI * 62}
+                    strokeDashoffset={2 * Math.PI * 62 * (1 - (ringIn ? projectedWeak : 0) / 100)}
+                    style={{ transition: "stroke-dashoffset 1500ms cubic-bezier(0.22, 1, 0.36, 1)" }} />
+                </>
               )}
-              <circle cx="58" cy="58" r="50" fill="none" stroke={C.lime} strokeWidth="9" strokeLinecap="round"
+              <circle cx="70" cy="70" r="50" fill="none" stroke={C.line} strokeWidth="9" />
+              <circle cx="70" cy="70" r="50" fill="none" stroke={C.lime} strokeWidth="9" strokeLinecap="round"
                 strokeDasharray={2 * Math.PI * 50}
                 strokeDashoffset={2 * Math.PI * 50 * (1 - (ringIn ? composite : 0) / 100)}
                 style={{ transition: "stroke-dashoffset 1100ms cubic-bezier(0.22, 1, 0.36, 1)" }} />
             </svg>
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 31, fontWeight: 900, lineHeight: 1, letterSpacing: "-0.03em", color: compositeColor, fontVariantNumeric: "tabular-nums" }}>{composite}</span>
-              <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.12em", color: C.slate, marginTop: 2 }}>/100</span>
+              <span style={{ fontSize: 42, fontWeight: 900, lineHeight: 1, letterSpacing: "-0.04em", color: compositeColor, fontVariantNumeric: "tabular-nums" }}>{composite}</span>
+              {projectedWeak !== null ? (
+                // The outer track says there is headroom; this says how much.
+                // Same figure the BIGGEST GAIN row states in words below.
+                <span style={{ fontSize: 11.5, fontWeight: 900, color: C.lime, marginTop: 3, letterSpacing: "-0.01em" }}>+{projectedWeak - composite}</span>
+              ) : (
+                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.14em", color: C.slate, marginTop: 3 }}>/100</span>
+              )}
             </div>
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
