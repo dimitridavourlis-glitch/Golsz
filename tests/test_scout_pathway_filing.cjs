@@ -33,13 +33,17 @@ function lift(startMarker, endMarker) {
 const src = [
   lift("const PATHWAY_TYPE_SET = new Set([", "function "),
   lift("function parseReplyObject(clean) {", "\n// "),
-  lift("function extractSuggestedPathway(data) {", "\n// "),
+  lift("function extractSuggestedPathway(data", "\n// "),
   "module.exports = { extractSuggestedPathway };",
 ].join("\n");
 
 const mod = { exports: {} };
 new Function("module", "exports", "crypto", src)(mod, mod.exports, require("crypto"));
 const { extractSuggestedPathway } = mod.exports;
+
+// The athlete's real sections, as the handler passes them in: id + label, in
+// the order the prompt numbers them for the model.
+const EXISTING = [{ id: "st-a", label: "Club season" }, { id: "st-b", label: "Trials" }];
 
 // A reply is the model's JSON inside a text block, the way the API returns it.
 const reply = (obj) => ({ content: [{ type: "text", text: JSON.stringify(obj) }] });
@@ -82,17 +86,42 @@ for (const [name, idx] of [
   ck("stage_index " + name + " leaves the step unfiled", p.milestones[0].stage, null);
 }
 
-// ---- no sections in this reply means no filing at all --------------------
-// The indices would point into a list the model never saw, so they cannot
-// mean anything. This is the case that fires on every ordinary reply.
+// ---- no NEW sections: the index means the athlete's existing ones --------
+// This is the ordinary case. The athlete already has a route and Scout is
+// adding steps to it; before existingStages was passed in, every one of those
+// steps landed unfiled, which is to say nowhere near the map it belonged to.
 {
-  const p = extractSuggestedPathway(reply({ suggested_pathway: {
+  const body = reply({ suggested_pathway: {
     pathway_type: "professional",
-    milestones: [{ label: "Trial with two clubs", stage_index: 0 }, { label: "Get an agent", stage_index: 1 }],
-  } }));
+    milestones: [{ label: "Trial with two clubs", stage_index: 1 }, { label: "Finish the season fit", stage_index: 0 }],
+  } });
+  const p = extractSuggestedPathway(body, EXISTING);
   ck("a reply with no stages still yields a pathway", !!p, true);
-  ck("...with no sections", p.stages, []);
-  ck("...and every step unfiled", p.milestones.map((m) => m.stage), [null, null]);
+  ck("...proposing no sections of its own", p.stages, []);
+  ck("...files its steps under the athlete's existing sections",
+     p.milestones.map((m) => m.stage), ["st-b", "st-a"]);
+  // Same reply, no existing sections to point at: unfiled, not guessed.
+  const q = extractSuggestedPathway(body, []);
+  ck("...and files nothing when the athlete has no sections either",
+     q.milestones.map((m) => m.stage), [null, null]);
+  const r = extractSuggestedPathway(body, EXISTING.concat([{ label: "no id" }]));
+  ck("...ignoring a section with no id rather than filing under undefined",
+     r.milestones.every((m) => m.stage === null || m.stage.startsWith("st-")), true);
+  const bad = extractSuggestedPathway(reply({ suggested_pathway: {
+    pathway_type: "professional", milestones: [{ label: "x", stage_index: 5 }],
+  } }), EXISTING);
+  ck("...and an index past the athlete's own list stays unfiled", bad.milestones[0].stage, null);
+}
+
+// ---- proposed sections WIN over existing ones ---------------------------
+// Accepting a reply that proposes sections replaces the athlete's list, so
+// those are the sections that will exist when the steps land. Indexing the
+// old list here would file every step under a section about to be deleted.
+{
+  const p = extractSuggestedPathway(pathway({ milestones: [{ label: "Film every league game", stage_index: 0 }] }), EXISTING);
+  ck("a proposed section wins over the athlete's existing one", p.milestones[0].stage, p.stages[0].id);
+  ck("...and that id is not one of the athlete's old ones",
+     ["st-a", "st-b"].includes(p.milestones[0].stage), false);
 }
 
 // ---- the rules that predate filing still hold ---------------------------

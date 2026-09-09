@@ -2966,7 +2966,7 @@ const PATHWAY_TYPE_SET = new Set([
   "ncaa", "naia", "juco", "canadian_university", "academy", "european_club",
   "professional", "development", "agent_representation", "trainer_performance", "other",
 ]);
-function extractSuggestedPathway(data) {
+function extractSuggestedPathway(data, existingStages) {
   try {
     const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
     const clean = raw.replace(/```json|```/g, "").trim();
@@ -3007,10 +3007,20 @@ function extractSuggestedPathway(data) {
     //
     // No stages in this reply means no filing at all: the indices would
     // point into a list the model never saw.
+    // WHICH LIST AN INDEX POINTS INTO.
+    //
+    // The sections proposed in THIS reply if there are any — accepting them
+    // replaces the athlete's list, so those are the sections that will exist.
+    // Otherwise the athlete's CURRENT sections, numbered for the model in the
+    // prompt's THEIR PATHWAY SECTIONS line. Before this, a step added to an
+    // existing pathway could never be filed: the model can only index what it
+    // just wrote, so everything Scout added to a route the athlete already
+    // had landed unfiled, which is to say nowhere near the map it belonged to.
+    const target = stages.length ? stages : (Array.isArray(existingStages) ? existingStages.filter((x) => x && x.id) : []);
     const milestones = rawMilestones.map((m) => {
       const i = m.stage_index;
-      const filed = stages.length && Number.isInteger(i) && i >= 0 && i < stages.length;
-      return { label: m.label.trim().slice(0, 200), done: false, stage: filed ? stages[i].id : null };
+      const filed = target.length && Number.isInteger(i) && i >= 0 && i < target.length;
+      return { label: m.label.trim().slice(0, 200), done: false, stage: filed ? target[i].id : null };
     });
     return {
       pathway_type: p.pathway_type,
@@ -3151,7 +3161,7 @@ function resolveSuggestedPathway({ modelPathway, approved, plan, goalDefined, pa
 // pre-existing behaviour rather than silently changing what an
 // unauthenticated request returns.
 function finalizeSuggestedPathway(data, ctx, incomingText, userPlan) {
-  const modelPathway = extractSuggestedPathway(data);
+  const modelPathway = extractSuggestedPathway(data, ctx && ctx.existingStages);
   if (!ctx) return { pathway: userPlan === "free" ? null : modelPathway, source: modelPathway ? "model" : "not_requested" };
   const resolved = resolveSuggestedPathway({
     modelPathway,
@@ -4102,14 +4112,16 @@ map, like "Academy", "U19 / CS Saint-Laurent", or "Trials in Portugal".
 
 "stage_index" files a milestone under one of the sections in THIS reply's
 "stages" array, by its 0-based position.
-- Only ever set it when this same reply proposes "stages". You cannot file a
-  step under a section you did not just name: you do not know the athlete's
-  existing sections or their positions, and a guess would put their work under
-  the wrong heading.
-- When you propose sections AND steps together, file every step you can. A
-  twelve-step plan arriving as one flat list is a worse plan than the same
-  twelve steps sitting under the four sections they belong to — the athlete
-  has to do that sorting by hand otherwise, and most will not.
+- If this reply proposes "stages", the index points into THAT array.
+- If it does not, the index points into the numbered sections in THEIR PATHWAY
+  SECTIONS above. That is the ordinary case: the athlete already has a route
+  and you are adding steps to it, so file each one under the section it
+  belongs to rather than leaving them all loose.
+- If neither list exists, leave it null. Never guess a position.
+- File every step you can. A twelve-step plan arriving as one flat list is a
+  worse plan than the same twelve steps sitting under the four sections they
+  belong to — the athlete has to do that sorting by hand otherwise, and most
+  will not.
 - Leave it null for a step that genuinely spans the whole pathway, or that
   belongs to a section you are not proposing. Unfiled is honest; wrongly
   filed is not.
@@ -5639,6 +5651,10 @@ async function getAthleteState(userId) {
     pathwayType, pathwayTimeline, milestoneCount, milestonesDone,
     openMilestones, openMilestonesTruncated, nextMilestone,
     stagesAreCustom, stageNames: storedStages.map((x) => x.label).filter(Boolean),
+    // The sections WITH their ids, in order, so a step can be filed under one
+    // the athlete already has. stageNames above is label-only and cannot do
+    // that: filing needs an id, and the model must never see or invent one.
+    stages: storedStages.map((x) => ({ id: x.id, label: x.label })),
     currentStageName: stageNameOf(currentStageId),
     highlightCount: highlightsArr.length, highlightTitles,
     timelineCount: timelineArr.length, timelineTitles,
@@ -6274,6 +6290,12 @@ export default async function handler(req, res) {
       goalText,
       pathwayType: athleteState.pathwayType || recon.derived || null,
       readiness: athleteState.readiness,
+      // What "stage_index" indexes when the reply proposes no sections of its
+      // own — the athlete's existing route, in the order the prompt numbered
+      // it. Without this, Scout could only ever file steps under sections it
+      // had just invented, so every step added to an EXISTING pathway landed
+      // unfiled and showed up nowhere near the map it belonged to.
+      existingStages: athleteState.stages || [],
     };
     athleteBlock = `\n\nATHLETE STATE (app-computed from real data, not your own inference — ground your guidance in this, never contradict it or claim a different plan/stage): ${athleteState.firstName ? `first_name="${athleteState.firstName}", ` : ""}profile_complete=${athleteState.profileComplete}, goal_defined=${goalDefined}${goalText ? ` ("${goalText.slice(0, 200)}")` : ""}, plan=${plan}, pathway_created=${athleteState.pathwayCreated}, baseline_complete=${athleteState.baselineComplete}, sport_support_level=${athleteState.sportSupportLevel || "unknown"}, golsz_structured_sport_knowledge=${athleteState.structuredSportKnowledge ? "yes" : "no"}, goal_authored_by_athlete=${goalSource === "athlete_edited" ? "yes" : "no"}, assessment_ready=${assessmentReady.sufficient_for_preliminary_assessment}${assessmentReady.missing_critical.length ? `, still_missing=${assessmentReady.missing_critical.join("/")}` : ""}.`;
 
@@ -6303,7 +6325,7 @@ export default async function handler(req, res) {
     // section as something they chose is the inferred-as-stated failure this
     // product spent a week removing.
     if (athleteState.stagesAreCustom && athleteState.stageNames && athleteState.stageNames.length) {
-      athleteBlock += `\n\nTHEIR PATHWAY SECTIONS (they wrote these themselves — use their words): ${athleteState.stageNames.join(" -> ")}.`;
+      athleteBlock += `\n\nTHEIR PATHWAY SECTIONS (they wrote these themselves — use their words), numbered so you can file steps under them with "stage_index": ${athleteState.stageNames.map((n, i) => `${i}=${n}`).join(", ")}.`;
     } else {
       athleteBlock += `\n\nPATHWAY SECTIONS: they are still on the DEFAULT sequence for their sport — they have not named or customised any section. Never describe a default section as one they set up or chose.`;
     }
