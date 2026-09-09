@@ -168,8 +168,16 @@ ck("PathwayPlan normalises what it reads from the database",
 // ---- suggestions are never auto-filed -----------------------------------
 // Same rule as the migration case: guessing on the athlete's behalf and
 // rendering the guess as fact is the failure this app spent the week removing.
-ck("first-step suggestions are added with stage: null",
-   /normalizeMilestone\(\{ label: t\(s\.labelKey\), stage: null \}\)/.test(APP), true);
+// The three suggested first steps were deleted on 2026-09-09 (the Passport
+// already owns "add film" / "record a benchmark", and Targets owns "email one
+// coach", so this was a second front door to the same three tasks). The rule
+// they were the test case for is not gone, so it moves to the writer that
+// remains: the athlete's own new step is filed where they filed it, or
+// nowhere, and never at a stage this app picked for them.
+ck("the suggestion buttons that guessed a stage are gone",
+   /SUGGESTED_FIRST_STEPS/.test(APP), false);
+ck("a hand-written step is filed by the athlete or not at all",
+   /normalizeMilestone\(\{ label: newMilestone\.trim\(\), stage: stageKey \|\| null \}\)/.test(APP), true);
 
 // ---- ONE PATHWAY, ONE READER --------------------------------------------
 // Home and Plan must draw the same pathway. That held for free while stages
@@ -353,9 +361,16 @@ for (const l of ["en", "fr", "es", "el"]) {
   ck(`${l} declares no key twice`, dup, []);
 }
 console.log("   dictionary size: " + en.size + " unique keys per language");
+// pathway_sugg_film and pathway_sugg_benchmark dropped from this list on
+// 2026-09-09: the three suggested first steps they labelled were deleted
+// ("add film", "email one coach", "record one benchmark" are all actions the
+// Passport already owns, so offering them here was a second front door to the
+// same three tasks). The keys are gone from all four dictionaries, and an
+// assertion that a deleted feature's copy is still translated would only ever
+// fail for being right.
 const NEW = ["pathway_next_title", "pathway_all_done", "pathway_no_date", "pathway_overdue",
              "pathway_on_track", "pathway_unfiled", "pathway_draft_with_scout",
-             "pathway_step_deleted", "action_undo", "pathway_sugg_film", "pathway_sugg_benchmark"];
+             "pathway_step_deleted", "action_undo"];
 ck("every new pathway key landed in all four dictionaries",
    NEW.filter((k) => !["en", "fr", "es", "el"].every((l) => sets[l].includes(k))), []);
 // pathway_stage_* is what the spine's group headers read.
