@@ -8601,24 +8601,22 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
 // share a palette. Each zone is a node on it. Inside a zone the content
 // keeps its own structure; what it loses is its border, its radius and its
 // shadow, because a box inside a zone is a box inside a box.
-function HomeZone({ label, children, last, node }) {
+// A GRID, NOT A COLUMN.
+//
+// The spine was still one thing after another, top to bottom — the same
+// reading order as the stack it replaced, with a line drawn beside it. A
+// dashboard is not a list: things that are true at the same time should sit
+// beside each other, and a screen you can take in at a glance is shorter than
+// one you scroll whether or not it has fewer pixels.
+//
+// Two columns at every width. `span` decides how much of the row a tile
+// takes: the score takes the whole thing, everything else pairs up. Nothing
+// here sets a colour or a typeface — the tiles use the same card token every
+// other surface in the app uses.
+function HomeZone({ label, children, last, node, span }) {
   return (
-    <div style={{ position: "relative", paddingLeft: 28, paddingBottom: last ? 6 : 24 }}>
-      {/* THE SPINE GROWS. The stem draws itself downward and each node lands
-          on it as it arrives — the same gesture the Plan pathway makes, which
-          is the whole reason Home borrowed the stem.
-          CSS-ONLY AND FAILING TO VISIBLE: the dashed line and the node are
-          painted by the base element and are never hidden. The animation runs
-          on a SEPARATE overlay that scales from nothing; if it never runs, or
-          runs half-way, the spine is still fully there. A reveal that hides
-          by default turns one stalled frame into a missing page. */}
-      {!last && (
-        <span aria-hidden="true" style={{ position: "absolute", left: 5, top: 18, bottom: -6, borderLeft: `2px dashed ${C.line2}` }}>
-          <span className="gz-spine" style={{ position: "absolute", left: -2, top: 0, bottom: 0, width: 2, background: C.lime, opacity: 0.55 }} />
-        </span>
-      )}
-      <span className="gz-node" aria-hidden="true" style={{ position: "absolute", left: 5, top: 3, width: 12, height: 12, marginLeft: -6, borderRadius: "50%", boxSizing: "border-box", background: node === "filled" ? C.lime : C.pitch, border: `2px solid ${node === "filled" ? C.lime : C.line2}` }} />
-      {label && <div style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: "0.16em", textTransform: "uppercase", color: C.slate, lineHeight: 1, marginBottom: 13, paddingTop: 2 }}>{label}</div>}
+    <div className={span === 1 ? "gz-span1" : undefined} style={{ ...card, margin: 0, position: "relative", display: "flex", flexDirection: "column" }}>
+      {label && <Eyebrow>{label}</Eyebrow>}
       {children}
     </div>
   );
@@ -9090,7 +9088,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
       {/* The sheet. It overlaps the light above it (negative margin) so the
           frost has something to blur — a translucent panel over a flat
           background is just a lighter box. */}
-      <HomeZone label={t("home_zone_now")} node="filled">
+      <HomeZone label={t("home_zone_now")} span={2}>
       <div style={{ position: "relative", paddingBottom: 2 }}>
         {/* SCORE AND ACTION AS ONE UNIT.
             These were two stacked blocks: a large composite score in the
@@ -9297,7 +9295,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           still belong to the Passport — this is the single completion
           gesture, not a second editor. */}
       {!actingFor && devList.length > 0 && (
-        <HomeZone label={t("home_zone_week")}>
+        <HomeZone label={t("home_zone_week")} span={1}>
           <div>
           {devList.filter((d) => d.status !== "done").length === 0 ? (
             <div style={{ fontSize: 13, color: C.chalk, lineHeight: 1.6, padding: "6px 0 2px" }}>{t("home_focus_all_done")}</div>
@@ -9325,42 +9323,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
         </HomeZone>
       )}
 
-      {/* Scout sits here, not at the bottom of the page. It used to be
-          the last element on Home, under the benchmark rows, so the most
-          valuable action on the screen was the one you had to scroll past
-          everything to reach. Moved 2026-09-09. The two quick links travel
-          with it: they are navigation, and navigation belongs near the top.
-          Comments in this file go ABOVE a guard, never between its opening
-          paren and its element, and must not contain a block-comment
-          terminator. Either mistake throws BABEL_PARSE_ERROR and the app
-          never leaves the splash. Nothing in tests/ compiles this file, so
-          npm run check will still pass. Load the app before pushing. */}
-      {/* Scout entry (§5: "[ Ask Scout anything... ]") — a tappable field-
-          styled row, not another square tile, so it reads as "type here"
-          the way the real composer on Scout itself does. A real <button>
-          rather than a bare clickable div, so it is reachable by keyboard
-          and announces itself. */}
-      <AfterSection>
-        <button onClick={() => onNavigate("scout")}
-          style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: 48, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-          <Radar size={16} color={C.lime} style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 13, color: C.slate }}>{t("home_scout_ask_ph")}</span>
-        </button>
-
-        <div style={{ display: "flex", gap: 20, padding: "0 2px", marginTop: 6 }}>
-          <button onClick={() => onNavigate("profile")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: "12px 0", minHeight: 44, display: "flex", alignItems: "center", gap: 6 }}><User size={14} color={C.lime} />{t("nav_passport")}</button>
-          <button onClick={() => onNavigate("targets")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: "12px 0", minHeight: 44, display: "flex", alignItems: "center", gap: 6 }}><Target size={14} color={C.lime} />{t("nav_plan")}</button>
-        </div>
-      </AfterSection>
-
-      {/* THE TAB STRIP IS GONE.
-          Two tabs over content the athlete never asked to choose between:
-          "Plan" and "Progress" were not two modes of one thing, they were
-          the back half of Home wearing a switch. Half of it was hidden at
-          any moment, and which half depended on a control nobody had a
-          reason to touch. Both are zones on the spine now — visible, in
-          order, each still a way into the page that owns it. */}
-      <HomeZone label={t("home_zone_ahead")}>
+      <HomeZone label={t("home_zone_ahead")} span={1}>
       {/* THE GOAL CARD STAYS, AND A TEST IS THE REASON.
           I removed it, on the grounds that the identity block above could say
           the same sentence in one line. test_launch_p0 failed: Home must
@@ -9443,7 +9406,42 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
       </div>
 
       </HomeZone>
-      <HomeZone label={t("home_zone_recent")} last>
+      {/* Scout sits here, not at the bottom of the page. It used to be
+          the last element on Home, under the benchmark rows, so the most
+          valuable action on the screen was the one you had to scroll past
+          everything to reach. Moved 2026-09-09. The two quick links travel
+          with it: they are navigation, and navigation belongs near the top.
+          Comments in this file go ABOVE a guard, never between its opening
+          paren and its element, and must not contain a block-comment
+          terminator. Either mistake throws BABEL_PARSE_ERROR and the app
+          never leaves the splash. Nothing in tests/ compiles this file, so
+          npm run check will still pass. Load the app before pushing. */}
+      {/* Scout entry (§5: "[ Ask Scout anything... ]") — a tappable field-
+          styled row, not another square tile, so it reads as "type here"
+          the way the real composer on Scout itself does. A real <button>
+          rather than a bare clickable div, so it is reachable by keyboard
+          and announces itself. */}
+      <AfterSection>
+        <button onClick={() => onNavigate("scout")}
+          style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", minHeight: 48, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
+          <Radar size={16} color={C.lime} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: C.slate }}>{t("home_scout_ask_ph")}</span>
+        </button>
+
+        <div style={{ display: "flex", gap: 20, padding: "0 2px", marginTop: 6 }}>
+          <button onClick={() => onNavigate("profile")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: "12px 0", minHeight: 44, display: "flex", alignItems: "center", gap: 6 }}><User size={14} color={C.lime} />{t("nav_passport")}</button>
+          <button onClick={() => onNavigate("targets")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: "12px 0", minHeight: 44, display: "flex", alignItems: "center", gap: 6 }}><Target size={14} color={C.lime} />{t("nav_plan")}</button>
+        </div>
+      </AfterSection>
+
+      {/* THE TAB STRIP IS GONE.
+          Two tabs over content the athlete never asked to choose between:
+          "Plan" and "Progress" were not two modes of one thing, they were
+          the back half of Home wearing a switch. Half of it was hidden at
+          any moment, and which half depended on a control nobody had a
+          reason to touch. Both are zones on the spine now — visible, in
+          order, each still a way into the page that owns it. */}
+      <HomeZone label={t("home_zone_recent")} span={2}>
       {/* Home is a dashboard: every card is a way INTO the page that owns the
           thing it is describing. Passport Strength is computed from Passport
           content, so the card opens Passport. Without this the score was a
@@ -11949,18 +11947,22 @@ const CSS = `
      state is held and nothing can be left mid-flight if a frame is
      dropped. No backticks in here: this whole block is a JS template
      literal, and one would close it and break the file. */
-  /* The gold overlay runs down the dashed stem once, then stays out of the
-     way at full height — it is an arrival, not a loop. transform-origin top
-     so it grows downward, the direction the page reads. */
-  .gz-spine { transform-origin: top; animation: gzGrow 900ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both, gzFadeSpine 700ms ease 1000ms both; }
-  @keyframes gzGrow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-  @keyframes gzFadeSpine { from { opacity: 0.55; } to { opacity: 0; } }
-  .gz-node { animation: gzNode 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-  @keyframes gzNode { from { transform: scale(0.2); } to { transform: scale(1); } }
-  .gz-home > *:nth-child(2) .gz-node { animation-delay: 240ms; }
-  .gz-home > *:nth-child(3) .gz-node { animation-delay: 400ms; }
-  .gz-home > *:nth-child(n+4) .gz-node { animation-delay: 540ms; }
-  .gz-home > * { animation: gzRise 460ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  /* ONE COLUMN ON A PHONE, TWO WHERE THE CONTAINER IS ACTUALLY WIDE.
+     A viewport query is the wrong instrument here: the phone shell renders
+     inside a narrow column even on a wide window, so a 560px breakpoint
+     paired two tiles into 213px each and one of them collapsed to 34px.
+     The desktop shell is the only place the container is genuinely wide, and
+     it starts at 1024px. */
+  .gz-home { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
+  @media (min-width: 1024px) { .gz-home { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  /* FULL WIDTH IS THE DEFAULT, PAIRING IS THE EXCEPTION. Written as 1 / -1
+     rather than span 2, so that in the one-column layout nothing asks for a
+     second track that does not exist — a span of 2 there does not clamp, it
+     creates an implicit column the explicit track then starves to 0px, which
+     is how one tile ended up 34px wide. Only the two-column layout grants a
+     half. (No backticks in this block: it is inside a template literal.) */
+  .gz-home > * { grid-column: 1 / -1; animation: gzRise 460ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  @media (min-width: 1024px) { .gz-home > .gz-span1 { grid-column: span 1; } }
   .gz-home > *:nth-child(1) { animation-delay: 20ms; }
   .gz-home > *:nth-child(2) { animation-delay: 70ms; }
   .gz-home > *:nth-child(3) { animation-delay: 120ms; }
@@ -11970,7 +11972,7 @@ const CSS = `
   .gz-home > *:nth-child(n+7) { animation-delay: 290ms; }
   @keyframes gzRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) {
-    .gz-home > *, .gz-spine, .gz-node { animation: none; }
+    .gz-home > * { animation: none; }
   }
   /* iOS Safari's address bar collapses/expands as you scroll, but 100vh
      is locked to the tallest (address-bar-hidden) case — the shell would
