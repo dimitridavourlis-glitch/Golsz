@@ -557,7 +557,7 @@ const I18N = {
     passport_photo_err: "Couldn't upload your photo — try again.",
     passport_passport_no: "PASSPORT NO.", passport_height: "HEIGHT", passport_grad: "GRAD", passport_gpa: "GPA",
     passport_weight: "WEIGHT", passport_status: "STATUS", passport_bio_title: "SCOUTING BIO",
-    passport_export_pdf: "Export PDF", passport_export_generated: "Generated {date} · golsz.com",
+    passport_export_pdf: "Export PDF", passport_export_generated: "Generated {date} · golsz.com", passport_export_ref: "Ref {ref}",
     passport_license: "LICENSE", passport_looking_for: "LOOKING FOR PLAYERS",
     passport_unverified_prefix: "UNVERIFIED ", passport_verified_tooltip: "Verified Pro member",
     passport_verified_elite_tooltip: "Verified Elite member",
@@ -904,7 +904,7 @@ const I18N = {
     passport_photo_err: "Impossible d'envoyer votre photo — réessayez.",
     passport_passport_no: "N° PASSEPORT", passport_height: "TAILLE", passport_grad: "DIPLÔME", passport_gpa: "GPA",
     passport_weight: "POIDS", passport_status: "STATUT", passport_bio_title: "BIO DE RECRUTEMENT",
-    passport_export_pdf: "Exporter en PDF", passport_export_generated: "Généré le {date} · golsz.com",
+    passport_export_pdf: "Exporter en PDF", passport_export_generated: "Généré le {date} · golsz.com", passport_export_ref: "Réf. {ref}",
     passport_license: "LICENCE", passport_looking_for: "RECHERCHE DE JOUEURS",
     passport_unverified_prefix: "NON VÉRIFIÉ ", passport_verified_tooltip: "Membre Pro vérifié",
     passport_verified_elite_tooltip: "Membre Elite vérifié",
@@ -1251,7 +1251,7 @@ const I18N = {
     passport_photo_err: "No se pudo subir tu foto — inténtalo de nuevo.",
     passport_passport_no: "N.º DE PASAPORTE", passport_height: "ALTURA", passport_grad: "GRADUACIÓN", passport_gpa: "GPA",
     passport_weight: "PESO", passport_status: "ESTADO", passport_bio_title: "BIOGRAFÍA DEPORTIVA",
-    passport_export_pdf: "Exportar PDF", passport_export_generated: "Generado el {date} · golsz.com",
+    passport_export_pdf: "Exportar PDF", passport_export_generated: "Generado el {date} · golsz.com", passport_export_ref: "Ref. {ref}",
     passport_license: "LICENCIA", passport_looking_for: "BUSCANDO JUGADORES",
     passport_unverified_prefix: "NO VERIFICADO ", passport_verified_tooltip: "Miembro Pro verificado",
     passport_verified_elite_tooltip: "Miembro Elite verificado",
@@ -1598,7 +1598,7 @@ const I18N = {
     passport_photo_err: "Δεν ήταν δυνατή η μεταφόρτωση της φωτογραφίας — δοκιμάστε ξανά.",
     passport_passport_no: "ΑΡ. ΔΙΑΒΑΤΗΡΙΟΥ", passport_height: "ΥΨΟΣ", passport_grad: "ΑΠΟΦΟΙΤΗΣΗ", passport_gpa: "GPA",
     passport_weight: "ΒΑΡΟΣ", passport_status: "ΚΑΤΑΣΤΑΣΗ", passport_bio_title: "ΒΙΟΓΡΑΦΙΚΟ ΣΚΑΟΥΤΙΝΓΚ",
-    passport_export_pdf: "Εξαγωγή PDF", passport_export_generated: "Δημιουργήθηκε στις {date} · golsz.com",
+    passport_export_pdf: "Εξαγωγή PDF", passport_export_generated: "Δημιουργήθηκε στις {date} · golsz.com", passport_export_ref: "Κωδ. {ref}",
     passport_license: "ΑΔΕΙΑ", passport_looking_for: "ΑΝΑΖΗΤΗΣΗ ΠΑΙΚΤΩΝ",
     passport_unverified_prefix: "ΜΗ ΕΠΑΛΗΘΕΥΜΕΝΟ ", passport_verified_tooltip: "Επαληθευμένο μέλος Pro",
     passport_verified_elite_tooltip: "Επαληθευμένο μέλος Elite",
@@ -5824,25 +5824,49 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           benchmarks live in separate components with their own state and
           aren't threaded in here for v1. */}
       <div className="passport-print-view">
-        <div style={{ fontWeight: 900, fontSize: 20, marginBottom: 4 }}>GOLSZ<span style={{ color: "#6B9C1F" }}>.</span> {t("passport_title_self")}</div>
-        <div style={{ fontSize: 11, color: "#555", marginBottom: 16 }}>{p.id}</div>
-        <div style={{ fontSize: 22, fontWeight: 800 }}>{p.name}</div>
-        {p.occupation && <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>{p.occupation.toUpperCase()}</div>}
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 10 }}>
+        {/* A DOCUMENT, NOT A SCREENSHOT OF A FORM.
+            This is the one thing in GOLSZ an athlete hands to a stranger, so
+            it is laid out like a record: a letterhead rule, the name as the
+            document's title, facts in a ruled two-column grid with small-caps
+            labels, and a footer that carries the provenance.
+            The internal row id used to be printed as a naked UUID directly
+            under the title — an internal database key, at the top of a page
+            going to a coach. It moves to the footer as a short reference,
+            which is what a reference on a document is for. */}
+        <header className="pp-head">
+          <span className="pp-mark">GOLSZ<span className="pp-dot">.</span></span>
+          <span className="pp-kicker">{t("passport_title_self")}</span>
+        </header>
+
+        <div className="pp-title">{p.name}</div>
+        <div className="pp-sub">
+          {[p.sport, p.position, p.club].filter(Boolean).join("  \u00B7  ")}
+          {p.verifiedTier ? <span className="pp-verified">{t("passport_verified_label")}</span> : null}
+        </div>
+
+        <table className="pp-table">
           <tbody>
-            <tr><td style={{ padding: "4px 12px 4px 0", color: "#555" }}>{t("passport_sport")}</td><td>{p.sport}</td><td style={{ padding: "4px 12px 4px 24px", color: "#555" }}>{p.positionLabel}</td><td>{p.position}</td></tr>
-            <tr><td style={{ padding: "4px 12px 4px 0", color: "#555" }}>{t("passport_club")}</td><td>{p.club}</td><td style={{ padding: "4px 12px 4px 24px", color: "#555" }}>{t("passport_grad")}</td><td>{p.grad}</td></tr>
-            <tr><td style={{ padding: "4px 12px 4px 0", color: "#555" }}>{t("passport_status")}</td><td>{p.status}</td><td style={{ padding: "4px 12px 4px 24px", color: "#555" }}>{p.prefLabel}</td><td>{p.foot}</td></tr>
-            <tr><td style={{ padding: "4px 12px 4px 0", color: "#555" }}>{t("passport_height")}</td><td>{p.height}</td><td style={{ padding: "4px 12px 4px 24px", color: "#555" }}>{t("passport_weight")}</td><td>{p.weight}</td></tr>
+            <tr><th>{t("passport_sport")}</th><td>{p.sport}</td><th>{p.positionLabel}</th><td>{p.position}</td></tr>
+            <tr><th>{t("passport_club")}</th><td>{p.club}</td><th>{t("passport_grad")}</th><td>{p.grad}</td></tr>
+            <tr><th>{t("passport_status")}</th><td>{p.status}</td><th>{p.prefLabel}</th><td>{p.foot}</td></tr>
+            <tr><th>{t("passport_height")}</th><td>{p.height}</td><th>{t("passport_weight")}</th><td>{p.weight}</td></tr>
+            {p.gpa && (
+              <tr><th>{t("passport_gpa")}</th><td>{p.gpa}</td><th /><td /></tr>
+            )}
           </tbody>
         </table>
+
         {p.bio && p.bio !== t("passport_no_bio") && (
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 10, letterSpacing: "0.1em", color: "#555", marginBottom: 4 }}>{t("passport_bio_title")}</div>
-            <div style={{ fontSize: 13, lineHeight: 1.5 }}>{p.bio}</div>
-          </div>
+          <section className="pp-block">
+            <h2 className="pp-h2">{t("passport_bio_title")}</h2>
+            <p className="pp-body">{p.bio}</p>
+          </section>
         )}
-        <div style={{ marginTop: 24, fontSize: 10, color: "#888" }}>{t("passport_export_generated").replace("{date}", new Date().toLocaleDateString())}</div>
+
+        <footer className="pp-foot">
+          <span>{t("passport_export_generated").replace("{date}", new Date().toLocaleDateString())}</span>
+          <span>{t("passport_export_ref").replace("{ref}", String(p.id || "").slice(0, 8).toUpperCase())}</span>
+        </footer>
       </div>
     </div>
   );
@@ -11597,7 +11621,6 @@ function GolszApp({ onSignOut, startOnboarding }) {
             </a>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <SettingsButton openSignal={accountOpenSignal} />
-              <NotificationBell />
             </div>
           </div>
           <nav style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
@@ -11674,7 +11697,6 @@ function GolszApp({ onSignOut, startOnboarding }) {
         </a>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <SettingsButton openSignal={accountOpenSignal} />
-        <NotificationBell />
         {/* Messages header shortcut is launch-scoped off along with the
             Messages nav tab — the button itself is untouched, just not
             rendered here. */}
@@ -12115,9 +12137,52 @@ const CSS = `
      could miss something and bleed UI chrome into the PDF. */
   .passport-print-view { display: none; }
   @media print {
+    /* A4 with real margins. Without an @page rule the browser applies its
+       own default and the document floats at whatever the print dialog was
+       last set to, which is how the old export came out looking like a
+       screenshot of a form rather than a record. */
+    @page { size: A4; margin: 18mm 16mm; }
     body * { visibility: hidden; }
     .passport-print-view, .passport-print-view * { visibility: visible; }
-    .passport-print-view { display: block; position: absolute; top: 0; left: 0; width: 100%; padding: 24px; color: #000; background: #fff; }
+    .passport-print-view {
+      display: block; position: absolute; top: 0; left: 0; width: 100%;
+      padding: 0; color: #111; background: #fff;
+      font-family: Archivo, ui-sans-serif, system-ui, sans-serif;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    /* Letterhead. The dot was #6B9C1F, a green from a palette this app
+       stopped using; the accent is the same amber the rest of GOLSZ uses,
+       which is also the one brand colour that stays legible on white. */
+    .pp-head { display: flex; align-items: baseline; justify-content: space-between;
+      border-bottom: 2px solid #111; padding-bottom: 7px; margin-bottom: 22px; }
+    .pp-mark { font-size: 17px; font-weight: 900; letter-spacing: 0.04em; }
+    .pp-dot { color: #B58A1A; }
+    .pp-kicker { font-size: 8.5px; font-weight: 800; letter-spacing: 0.2em;
+      text-transform: uppercase; color: #6B7280; }
+    /* The name is the document's title, at the size a title gets. */
+    .pp-title { font-size: 30px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.1; }
+    .pp-sub { font-size: 12px; color: #4B5563; margin-top: 5px; }
+    .pp-verified { display: inline-block; margin-left: 9px; padding: 1.5px 7px;
+      border: 1px solid #B58A1A; border-radius: 3px; font-size: 8px; font-weight: 800;
+      letter-spacing: 0.12em; text-transform: uppercase; color: #8A6A12; vertical-align: 1.5px; }
+    /* Ruled rows, small-caps labels. The old table had no rules at all, so
+       four facts per line ran together as one grey sentence. */
+    .pp-table { width: 100%; border-collapse: collapse; margin-top: 22px;
+      page-break-inside: avoid; break-inside: avoid; }
+    .pp-table th { width: 88px; text-align: left; vertical-align: baseline;
+      font-size: 8px; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase;
+      color: #6B7280; padding: 9px 10px 9px 0; border-top: 1px solid #E5E7EB; }
+    .pp-table td { font-size: 12.5px; font-weight: 600; vertical-align: baseline;
+      padding: 9px 26px 9px 0; border-top: 1px solid #E5E7EB; }
+    .pp-table tr:first-child th, .pp-table tr:first-child td { border-top: none; }
+    .pp-block { margin-top: 26px; page-break-inside: avoid; break-inside: avoid; }
+    .pp-h2 { font-size: 8px; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase;
+      color: #6B7280; margin: 0 0 7px; }
+    .pp-body { font-size: 12.5px; line-height: 1.62; margin: 0; }
+    /* Provenance belongs at the foot of a document, not under its title. */
+    .pp-foot { display: flex; justify-content: space-between; gap: 16px;
+      margin-top: 34px; padding-top: 9px; border-top: 1px solid #E5E7EB;
+      font-size: 8.5px; letter-spacing: 0.06em; color: #9CA3AF; }
   }
 `;
 
