@@ -6140,3 +6140,13 @@ drop policy if exists follows_delete on follows;
 --   post_likes       post_likes_read       SELECT
 --   posts            posts_read            SELECT
 --   posts            posts_admin_delete    DELETE
+
+-- ============================================================
+-- 134) ADDITIVE — an athlete can read their own daily activity
+-- See supabase-migration-134-daily-activity-self-read.sql for full context.
+-- ============================================================
+
+drop policy if exists daily_activity_own_read on daily_activity;
+create policy daily_activity_own_read on daily_activity for select using (
+  user_id = auth.uid()
+);
