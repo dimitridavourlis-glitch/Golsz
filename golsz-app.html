@@ -9030,19 +9030,6 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
     const best = days.reduce((acc, d) => (d.minutes > acc ? d.minutes : acc), 0);
     return { days, active, streak, best };
   })();
-  const milestonesDone = allMilestones.filter((m) => m.done).length;
-
-  // Bars are built here, not in the JSX, so the "is there anything to show"
-  // question is answered once. An empty array renders no rule and no gap.
-  const homeBars = [];
-  if (quality && quality.total > 0) {
-    homeBars.push({ key: "passport", label: t("nav_passport"), value: `${quality.filled}/${quality.total}`,
-      pct: Math.round((quality.filled / quality.total) * 100) });
-  }
-  if (canTargets && allMilestones.length > 0) {
-    homeBars.push({ key: "milestones", label: t("pathway_milestones_title"), value: `${milestonesDone}/${allMilestones.length}`,
-      pct: Math.round((milestonesDone / allMilestones.length) * 100) });
-  }
 
   return (
     <div className="gz-home" style={{ padding: "8px 12px 20px" }}>
@@ -9179,7 +9166,6 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
             </div>
           </div>
         </div>
-        <div style={{ fontSize: 13, color: C.slate, lineHeight: 1.55, marginTop: 9 }}>{nextMove.whyText || t(nextMove.why)}</div>
         <button onClick={() => onNavigate(nextMove.go)} style={{ ...primaryBtn, marginTop: 15 }}>
           {t("next_move_act")}
         </button>
@@ -9190,19 +9176,12 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
             renders where canTargets already lets the athlete have milestones
             at all. No sub-score is shown here — those stay behind
             featureUnlocked(plan, "readiness") in the card below. */}
-        {(homeBars.length > 0) && (
-          <div style={{ marginTop: 15, paddingTop: 13, borderTop: `1px solid ${C.line}` }}>
-            {homeBars.map((b, i) => (
-              <div key={b.key} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: i === homeBars.length - 1 ? 0 : 10 }}>
-                <span style={{ flex: "0 0 82px", fontSize: 9, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: C.slate }}>{b.label}</span>
-                <span style={{ flex: 1, height: 4, borderRadius: 99, background: C.turf, overflow: "hidden" }}>
-                  <span style={{ display: "block", height: "100%", width: `${b.pct}%`, borderRadius: 99, background: C.lime }} />
-                </span>
-                <span style={{ flex: "0 0 auto", fontSize: 11.5, fontWeight: 900, color: C.lime, fontFamily: "'Space Mono', monospace" }}>{b.value}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* THE PASSPORT AND MILESTONE BARS ARE GONE. Both said something the
+            five columns twelve pixels below already say — PROFILE is the
+            Passport fraction as a score, PATHWAY is the milestone fraction as
+            a score — so this was the same two facts drawn twice, in two
+            different shapes, in one card. Kept: the columns, because they
+            cover all five dimensions rather than two. */}
 
         {/* THE LEVER. This used to live inside the collapsed "why this score"
             panel at the bottom of Home, which meant the one number on this
@@ -9295,10 +9274,6 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
                   </button>
                 );
               })}
-            </div>
-            <div style={{ marginTop: 16, paddingTop: 15, borderTop: `1px solid ${C.line}` }}>
-              <div style={{ fontSize: 13, color: C.chalk, lineHeight: 1.6 }}>{t("home_readiness_weakest_" + weakest)}</div>
-              <button onClick={() => onNavigate(weakest === "pathway" ? "targets" : "profile")} style={{ ...quietBtn, marginTop: 13 }}>{t("home_readiness_improve")}</button>
             </div>
           </div>
         </div>
@@ -9421,7 +9396,6 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           any moment, and which half depended on a control nobody had a
           reason to touch. Both are zones on the spine now — visible, in
           order, each still a way into the page that owns it. */}
-      <HomeZone label={t("home_zone_recent")} span={2}>
       {/* Home is a dashboard: every card is a way INTO the page that owns the
           thing it is describing. Passport Strength is computed from Passport
           content, so the card opens Passport. Without this the score was a
@@ -9474,31 +9448,12 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           exists for. Unchanged from before; only the presentation moved. */}
       {!planKnown(plan) ? null : featureUnlocked(plan, "readiness") ? (
         <>
-          {/* Command-center enrichment (brief §14: "pathway progress",
-              "recent benchmark progress", "monthly actions" on Home) —
-              the deeper interpretation layer, stays Pro+. A rule and some
-              air, not two more boxes: these are the same kind of thing as
-              the cards above, further down the page. */}
-          {monthly && (monthly.activeDevItems > 0 || monthly.staleTargets > 0) && (
-            <AfterSection>
-              {monthly.activeDevItems > 0 && (
-                <StatusRow label={t("home_this_month_dev").replace("{n}", monthly.activeDevItems)} last={!(monthly.staleTargets > 0)} />
-              )}
-              {monthly.staleTargets > 0 && (
-                <StatusRow last onClick={() => onNavigate("targets")} valueColor={C.amber}
-                  label={t("home_this_month_targets").replace("{n}", monthly.staleTargets)}
-                  value={t("home_this_month_review")} ariaLabel={t("home_this_month_review")} />
-              )}
-            </AfterSection>
-          )}
-          {recentBenchmarks.length > 0 && (
-            <AfterSection>
-              {recentBenchmarks.map((b, i) => (
-                <StatusRow key={b.metric} label={b.metric} mono valueColor={C.lime}
-                  value={`${b.value}${b.unit ? ` ${b.unit}` : ""}`} last={i === recentBenchmarks.length - 1} />
-              ))}
-            </AfterSection>
-          )}
+          {/* Nothing here for an entitled athlete any more. "3 development
+              focus areas in progress" repeated THIS WEEK's own list, and two
+              benchmark readings with no retest behind them are numbers with
+              nothing to compare against — a row that reports without telling
+              you anything. Deleted 2026-09-10. The branch stays because the
+              Free side of this ternary is a real screen. */}
         </>
       ) : (
         // Value-first, not a blank lock box (§14): names the SPECIFIC
@@ -9519,8 +9474,6 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           <button onClick={() => onNavigate("profile")} style={{ ...quietBtn, marginTop: 13 }}>{t("home_finish_profile")}</button>
         </AfterSection>
       )}
-
-      </HomeZone>
     </div>
   );
 }
