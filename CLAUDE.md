@@ -1269,3 +1269,35 @@ you add another place that surfaces a Message button, it doesn't need any follow
   `VAPID_SUBJECT`, and `SUPABASE_WEBHOOK_SECRET` are set as Vercel env vars, and the two triggers that call
   `api/send-push.js` (see above) are created directly in SQL rather than the Dashboard Webhooks wizard, since
   not every Supabase project's dashboard still shows that wizard.
+
+## THE DEPLOY GATE (vercel.json buildCommand)
+
+`vercel.json` sets `buildCommand: "npm run check"`. That is not a build —
+this repo has no build step — it is the gate.
+
+WHY: pushing to main deploys production through Vercel's git integration,
+which does NOT go through `npm run deploy`. `.github/workflows/check.yml`
+runs the same suite on every push, but ALONGSIDE the deploy rather than
+before it, so a red build shipped anyway and the workflow only made the
+failure visible afterwards. Verified in the dashboard on 2026-09-11: no
+framework preset, no build command, no overrides — Vercel ran no build at
+all, and nothing could stop a broken commit reaching golsz.com.
+
+OUTPUT IS UNAFFECTED. Output Directory stays unset; Vercel's own field
+documents the rule as "`public` if it exists, or `.`", and that does not
+change when a build command is set. There is no public/ here, so the root
+is served exactly as before.
+
+IN vercel.json, NOT THE DASHBOARD: versioned with the code it gates,
+visible in a diff, applies to preview deploys too, and cannot be switched
+off silently in project settings. vercel.json takes precedence over the
+dashboard, so the two cannot disagree.
+
+DO NOT ADD JSON COMMENTS HERE. Vercel validates vercel.json against a
+strict schema and rejects unknown keys — a `"//buildCommand"` comment key
+failed the deploy on 2026-09-11 with "should NOT have additional
+property". Rationale goes in this file instead.
+
+COST: a failing test blocks the deploy. That is the point. The suite is
+deterministic and needs no network and no secrets (check.yml proved that
+under `env -i`), so a failure means the code is broken.

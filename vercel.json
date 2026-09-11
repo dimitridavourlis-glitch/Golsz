@@ -1,26 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "//buildCommand": [
-    "THE TEST SUITE IS THE DEPLOY GATE.",
-    "",
-    "Pushing to main deploys production through Vercel's git integration,",
-    "which does NOT go through `npm run deploy`. .github/workflows/check.yml",
-    "runs the same suite on every push, but it runs ALONGSIDE the deploy, not",
-    "before it — so a red build shipped anyway and the workflow only made the",
-    "failure visible afterwards. check.yml's own header names that problem;",
-    "running on push does not close it.",
-    "",
-    "Setting buildCommand makes the deploy itself fail when the suite fails,",
-    "so production keeps serving the last good deployment instead of taking",
-    "the broken one. Output is unaffected: outputDirectory stays unset, and",
-    "Vercel's own placeholder documents the behaviour as 'public if it exists,",
-    "or .' — this repo has no public/, so the root is served exactly as before.",
-    "",
-    "COST: a genuinely failing test now blocks a deploy. That is the point,",
-    "and it is the honest trade — the suite is deterministic and runs with no",
-    "network and no secrets (check.yml verified that under `env -i`), so a",
-    "failure here means the code is broken, not that the runner had a bad day."
-  ],
   "buildCommand": "npm run check",
   "crons": [
     {
