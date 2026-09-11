@@ -76,6 +76,26 @@ import { resolveActingAthlete } from "./_acting-for.js";
 import { computeReadiness, DIMENSION_LABEL, SPORTS_WITHOUT_POSITION, READINESS_DIMENSIONS as PASSPORT_STRENGTH_DIMENSIONS } from "./_readiness.js";
 import { evaluateEntitlements, hasFeature, planDisplayName, FEATURE_LABEL } from "./_entitlements.js";
 
+// THE EFFECTIVE PLAN RULE, in one place.
+//
+// A managed athlete's entitlements are the higher of their own plan and the
+// plan of the approved parent currently driving. Written as a rank comparison
+// rather than an override so it cannot accidentally DEMOTE a child who is on
+// a higher tier than their parent.
+//
+// PLAN_RANK is duplicated from api/_entitlements.js deliberately: importing it
+// would be cleaner, but that module's evaluateEntitlements() carries a
+// different contract and tests/test_entitlement_parity.cjs already pins the
+// two tables together, so the ordering here cannot drift silently.
+const EFFECTIVE_PLAN_RANK = { free: 0, starter: 1, pro: 2, elite: 3 };
+function effectivePlan(athletePlan, payerPlan) {
+  if (!payerPlan || payerPlan === athletePlan) return athletePlan;
+  const a = EFFECTIVE_PLAN_RANK[athletePlan];
+  const b = EFFECTIVE_PLAN_RANK[payerPlan];
+  if (a === undefined || b === undefined) return athletePlan;  // unknown tier: never guess upward
+  return b > a ? payerPlan : athletePlan;
+}
+
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
 // EVERY UPSTREAM CALL NEEDS A DEADLINE, because this function has one.
@@ -6163,6 +6183,11 @@ export default async function handler(req, res) {
   // paths. Stays null when there is no athlete state to reason about.
   let pathwayBuildCtx = null;
   let requestId = null; // hoisted so logRouting() below can persist the same id already used for isDuplicateRequest() idempotency
+  // Hoisted for the effective-plan resolution below: which link this request
+  // arrived on, and who the caller was. Both only ever set by
+  // resolveActingAthlete, never read from the request body.
+  let actingReason = "self";
+  let callerId = null;
   let userIsAdmin = false; // hoisted so the free-plan tool-block below can exempt admins, same reason userPlan is hoisted
   let userAiUnlimited = false;
   let dailyLimit = null;
@@ -6247,6 +6272,8 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: "You don't have access to that athlete." });
     }
     userId = acting.athleteId;
+    actingReason = acting.reason;
+    callerId = acting.callerId;
     // Metering, burst protection and duplicate detection stay keyed to the
     // ATHLETE, not the parent: a child's daily Scout allowance is the child's,
     // and a parent managing two athletes should get each one's full allowance
@@ -6295,13 +6322,37 @@ export default async function handler(req, res) {
     // getCapabilityKnowledge is global and cached. The GOLSZ Core lookup
     // can't run here because it needs athleteState.sport, so it runs
     // alongside the classifier below instead.
-    const [{ plan, isAdmin, aiUnlimited, goalDefined, goalText, goalSource }, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
+    // THE PAYER'S PLAN FOLLOWS THE PARENT INTO THE CHILD'S ACCOUNT.
+    //
+    // The client gates every managed surface on the PARENT's plan — it passes
+    // plan={userPlan} alongside actingFor= — while this handler resolved the
+    // CHILD's. Children are created by api/create-child-account.js, which
+    // never sets a plan, so handle_new_user() leaves them on the 'free'
+    // default; and the Stripe webhook patches by stripe_customer_id, i.e. the
+    // PARENT's row, so a purchase never reaches the child either.
+    //
+    // A Pro parent therefore opened their child's account, saw Pathway,
+    // targets and benchmarks unlocked, tapped "draft with Scout" — and this
+    // handler refused, because the child is on free. The paywall and the
+    // product disagreed about who had paid.
+    //
+    // Resolved in favour of the payer: while a parent is driving, the plan is
+    // the higher of the two. resolveActingAthlete has already proved the link
+    // exists and is APPROVED, so this cannot be claimed by asking; and the
+    // ATHLETE still owns the metering above, so a parent on Pro does not get
+    // to spend their child's daily allowance twice.
+    const [{ plan: ownPlan, isAdmin, aiUnlimited, goalDefined, goalText, goalSource }, parentMeta, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
       getProfileMeta(userId),
+      (actingReason === "parent_managed" && callerId) ? getProfileMeta(callerId) : Promise.resolve(null),
       getAthleteState(userId),
       getPlanKnowledge(),
       buildAuthoritativeContext(userId),
       getCapabilityKnowledge(),
     ]);
+    const plan = effectivePlan(ownPlan, parentMeta && parentMeta.plan);
+    if (parentMeta && plan !== ownPlan) {
+      console.log("GOLSZ effective plan raised by payer:", JSON.stringify({ athlete: ownPlan, parent: parentMeta.plan, effective: plan }));
+    }
     // Rendered once, here, and reused verbatim by every downstream path so no
     // model can receive a materially different version of the athlete's facts.
     authoritativeBlock = renderAuthoritativeContext(authContext, goalText);
