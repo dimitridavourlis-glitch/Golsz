@@ -5499,21 +5499,43 @@ async function getAthleteState(userId) {
   let hasPendingVerification = false;
   let pathwayRow = null;
   let questionsUsedToday = 0;
+  // A FAILED READ IS NOT AN EMPTY TABLE.
+  //
+  // These eight reads each sat in `try { ... } catch {}` with a completely
+  // empty handler — no log, no flag — and none of them checked r.ok. A
+  // PostgREST error body is an OBJECT, so every `Array.isArray(rows)` guard
+  // below turned a 500 into precisely the same result as a legitimately
+  // empty table.
+  //
+  // The consequence was not a missing sentence. With the athletes read
+  // failing, sport stays null and profileComplete is false, so ATHLETE STATE
+  // tells the model the passport is empty — and Scout then tells an athlete
+  // with a complete passport to go and fill it in, and answers sport
+  // questions with no idea what sport they play. It advised confidently on
+  // data it had failed to read, which is the one thing this prompt's own
+  // EPISTEMIC RULES forbid.
+  //
+  // Now: a non-2xx throws, every catch names its table in the log, and the
+  // failure is carried in loadFailed so the prompt can say "could not be
+  // loaded" instead of rendering an outage as a fact about the athlete.
+  const loadFailed = [];
   try {
     // Selects every field computeProfileQuality() checks — the same list
     // HomeTab fetches, so the two cannot score different things.
     const a = await fetch(url + "/rest/v1/athletes?id=eq." + userId + "&select=sport,country,position,club_name,grad_year,recruiting_status,bio,highlights,timeline", { headers });
+    if (!a.ok) throw new Error("athletes " + a.status);
     const aRows = await a.json();
     athleteRow = Array.isArray(aRows) && aRows[0] ? aRows[0] : null;
     sport = athleteRow ? athleteRow.sport : null;
     country = athleteRow ? athleteRow.country : null;
     profileComplete = !!sport;
-  } catch {}
+  } catch (e) { loadFailed.push("athletes"); console.error("GOLSZ scout context read failed:", "athletes", e && e.message); }
   try {
     const pr = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=full_name,occupation,avatar_url,identity_verified", { headers });
+    if (!pr.ok) throw new Error("profiles " + pr.status);
     const prRows = await pr.json();
     profileRow = Array.isArray(prRows) && prRows[0] ? prRows[0] : null;
-  } catch {}
+  } catch (e) { loadFailed.push("profiles"); console.error("GOLSZ scout context read failed:", "profiles", e && e.message); }
   // Newest request only, matching HomeTab: a previously denied request must
   // not keep scoring 50 forever.
   // Today's Scout usage. The ONLY thing that genuinely separates Elite from
@@ -5524,17 +5546,20 @@ async function getAthleteState(userId) {
   try {
     const today = new Date().toISOString().slice(0, 10);
     const u = await fetch(url + "/rest/v1/scout_daily_usage?user_id=eq." + userId + "&usage_date=eq." + today + "&select=questions_used", { headers });
+    if (!u.ok) throw new Error("scout_daily_usage " + u.status);
     const uRows = await u.json();
     questionsUsedToday = (Array.isArray(uRows) && uRows[0] && Number(uRows[0].questions_used)) || 0;
-  } catch {}
+  } catch (e) { loadFailed.push("scout_daily_usage"); console.error("GOLSZ scout context read failed:", "scout_daily_usage", e && e.message); }
   try {
     const v = await fetch(url + "/rest/v1/verification_requests?user_id=eq." + userId + "&select=status&order=created_at.desc&limit=1", { headers });
+    if (!v.ok) throw new Error("verification_requests " + v.status);
     const vRows = await v.json();
     hasPendingVerification = !!(Array.isArray(vRows) && vRows[0] && vRows[0].status === "pending");
-  } catch {}
+  } catch (e) { loadFailed.push("verification_requests"); console.error("GOLSZ scout context read failed:", "verification_requests", e && e.message); }
   // The Plan, in full. milestones is jsonb; each entry is {label, done}.
   try {
     const p = await fetch(url + "/rest/v1/pathway_plan?user_id=eq." + userId + "&select=pathway_type,target_timeline,milestones,baseline_complete,stages,current_stage_id", { headers });
+    if (!p.ok) throw new Error("pathway_plan " + p.status);
     const pRows = await p.json();
     if (Array.isArray(pRows) && pRows[0]) {
       pathwayRow = pRows[0];
@@ -5544,7 +5569,7 @@ async function getAthleteState(userId) {
       pathwayTimeline = pRows[0].target_timeline || null;
       milestones = Array.isArray(pRows[0].milestones) ? pRows[0].milestones : [];
     }
-  } catch {}
+  } catch (e) { loadFailed.push("pathway_plan"); console.error("GOLSZ scout context read failed:", "pathway_plan", e && e.message); }
   // Development plan, target list and Passport benchmarks. Capped hard —
   // these feed a prompt, not a report, and an athlete with 200 benchmarks
   // must not blow the context budget.
@@ -5556,19 +5581,22 @@ async function getAthleteState(userId) {
   // 500 is a ceiling against a pathological account, not a page size.
   try {
     const d = await fetch(url + "/rest/v1/development_plan_items?user_id=eq." + userId + "&select=focus_area,goal,status&order=created_at.desc&limit=500", { headers });
+    if (!d.ok) throw new Error("development_plan_items " + d.status);
     const dRows = await d.json();
     if (Array.isArray(dRows)) { allDevItems = dRows; devItems = dRows.slice(0, 8); }
-  } catch {}
+  } catch (e) { loadFailed.push("development_plan_items"); console.error("GOLSZ scout context read failed:", "development_plan_items", e && e.message); }
   try {
     const t = await fetch(url + "/rest/v1/outreach_targets?user_id=eq." + userId + "&select=name,status&order=created_at.desc&limit=500", { headers });
+    if (!t.ok) throw new Error("outreach_targets " + t.status);
     const tRows = await t.json();
     if (Array.isArray(tRows)) { targetsCount = tRows.length; targets = tRows.slice(0, 10); }
-  } catch {}
+  } catch (e) { loadFailed.push("outreach_targets"); console.error("GOLSZ scout context read failed:", "outreach_targets", e && e.message); }
   // Passport performance data. Newest first, then de-duplicated per metric
   // below so Scout sees each metric's CURRENT value rather than a history —
   // "your 10m is 2.0s" must reflect the latest retest, not the first entry.
   try {
     const b = await fetch(url + "/rest/v1/athlete_benchmarks?user_id=eq." + userId + "&select=metric,value,unit,recorded_date&order=recorded_date.desc&limit=500", { headers });
+    if (!b.ok) throw new Error("athlete_benchmarks " + b.status);
     const bRows = await b.json();
     if (Array.isArray(bRows)) {
       // Full history feeds the performance sub-score, which counts metrics
@@ -5582,7 +5610,7 @@ async function getAthleteState(userId) {
         if (benchmarks.length >= 12) break;
       }
     }
-  } catch {}
+  } catch (e) { loadFailed.push("athlete_benchmarks"); console.error("GOLSZ scout context read failed:", "athlete_benchmarks", e && e.message); }
   // Soft name lookup (not a foreign key — see migration 094) so an
   // athlete's free-text sport that doesn't match a seeded row just comes
   // back null, read as "secondary" by Scout, never an error.
@@ -5690,6 +5718,8 @@ async function getAthleteState(userId) {
     // computed once here, so Home, Plan and Scout cannot disagree about it.
     pathwayComplete: pathwayCreated && milestoneCount > 0,
     devItems, targets, benchmarks, targetsCount, readiness, questionsUsedToday,
+    // Which tables could not be read this request. Empty on the happy path.
+    loadFailed,
   };
 }
 
@@ -6337,6 +6367,18 @@ export default async function handler(req, res) {
       existingStages: athleteState.stages || [],
     };
     athleteBlock = `\n\nATHLETE STATE (app-computed from real data, not your own inference — ground your guidance in this, never contradict it or claim a different plan/stage): ${athleteState.firstName ? `first_name="${athleteState.firstName}", ` : ""}profile_complete=${athleteState.profileComplete}, goal_defined=${goalDefined}${goalText ? ` ("${goalText.slice(0, 200)}")` : ""}, plan=${plan}, pathway_created=${athleteState.pathwayCreated}, baseline_complete=${athleteState.baselineComplete}, sport_support_level=${athleteState.sportSupportLevel || "unknown"}, golsz_structured_sport_knowledge=${athleteState.structuredSportKnowledge ? "yes" : "no"}, goal_authored_by_athlete=${goalSource === "athlete_edited" ? "yes" : "no"}, assessment_ready=${assessmentReady.sufficient_for_preliminary_assessment}${assessmentReady.missing_critical.length ? `, still_missing=${assessmentReady.missing_critical.join("/")}` : ""}.`;
+    // SAY IT COULD NOT BE READ, rather than reporting the default.
+    // Appended AFTER the assignment above, never before it: that line is an
+    // `=`, so anything written first is silently thrown away.
+    //
+    // Every field below has a fallback — sport null, profileComplete false,
+    // milestoneCount 0 — and the model has no way to tell a fallback from a
+    // measurement. Without this line, a failed athletes read made Scout tell
+    // an athlete with a full passport that it was empty, in the same
+    // confident register it uses for facts it actually has.
+    if (athleteState.loadFailed && athleteState.loadFailed.length) {
+      athleteBlock += `\n\nDATA NOT LOADED THIS REQUEST: ${athleteState.loadFailed.join(", ")}. Anything in ATHLETE STATE that depends on those tables is a DEFAULT, not a measurement — do not tell them their profile, plan or record is empty on the strength of it, and do not advise as though you have read it. Say plainly that you could not load part of their record and answer what you can.`;
+    }
 
     // THEIR PLAN — the actual contents of the Plan tab. Scout used to see
     // only pathway_created=true here and was therefore unable to answer
