@@ -71,9 +71,27 @@ console.log("\n-- P0-6: the prompt tells the model what 'no' actually means --")
 // new home. The old anchor returned -1 and silently sliced garbage.
 const PROMPT_SPORT = SRC.slice(SRC.indexOf("SPORTS KNOWLEDGE"), SRC.indexOf("SPORTS KNOWLEDGE") + 1600);
 ck("it names the flag as load-bearing", /None of it, not partial/i.test(PROMPT_SPORT), true);
-ck("it states there is NO position structure when absent", /no position structure, no competition ladder/.test(PROMPT_SPORT), true);
-ck("...no competition ladder", /no competition ladder, no pathway list/.test(PROMPT_SPORT), true);
+ck("it states there is NO position structure when absent", /no position structure, no benchmark vocabulary/.test(PROMPT_SPORT), true);
+ck("...no benchmark vocabulary", /no benchmark vocabulary, no eligibility data/.test(PROMPT_SPORT), true);
 ck("...no eligibility data", /no eligibility data\. None of it, not partial/.test(PROMPT_SPORT), true);
+// THE COMPETITION LADDER LEFT THIS LIST ON 2026-09-12, DELIBERATELY.
+// It used to read "no position structure, no competition ladder, no pathway
+// list, no benchmark vocabulary, no eligibility data" — and that was true
+// when golsz-app.html had ladders for ten sports. It now has one for all
+// forty, api/_sport-pathways.js carries a parity-tested copy, and scout.js
+// renders the athlete's own ladder into ATHLETE STATE. Leaving the claim in
+// would have Scout telling an archer it has no pathway data for their sport
+// while the Plan screen draws them that exact four-stage route — the app
+// contradicting itself in front of the athlete.
+// The guarantee these assertions exist for is unchanged and still pinned
+// above: what GOLSZ does not have, it must not invent, and "no schema" means
+// none rather than partial. Only the list of what is missing got shorter.
+ck("the route is no longer claimed to be missing",
+   /no competition ladder|no pathway list/.test(PROMPT_SPORT), false);
+ck("...and the model is told never to deny having one",
+   /never tell an athlete you have no pathway data for their sport/.test(SRC), true);
+ck("...because every sport in the picker now has a ladder",
+   /GOLSZ has a standard pathway ladder for all forty sports/.test(SRC), true);
 ck("it forbids inventing requirements outright", /Never invent a position structure, competition level, or eligibility rule/.test(PROMPT_SPORT), true);
 ck("it separates general knowledge from GOLSZ authority",
    /be clear about what's GOLSZ guidance vs\. what isn't/.test(PROMPT_SPORT), true);

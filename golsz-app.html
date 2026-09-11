@@ -530,7 +530,7 @@ const I18N = {
     pathway_stage_club_hs: "Club / HS", pathway_stage_ncaa_lacrosse: "NCAA", pathway_stage_professional_lacrosse: "Pro",
     pathway_stage_youth_club: "Youth Club", pathway_stage_senior_club: "Senior Club", pathway_stage_professional_handball: "Pro",
     pathway_stage_ncaa_volleyball: "NCAA", pathway_stage_professional_volleyball: "Pro",
-    pathway_stage_developing: "Developing", pathway_stage_competing: "Competing", pathway_stage_advancing: "Advancing",
+    pathway_stage_developing: "Developing", pathway_stage_school_club: "School or club team", pathway_stage_regional: "Regional level", pathway_stage_ncaa_college: "College (NCAA / NAIA / JUCO)", pathway_stage_national: "National level", pathway_stage_national_team: "National team", pathway_stage_international: "International competition", pathway_stage_pro_league: "Professional league", pathway_stage_pro_circuit: "Professional circuit", pathway_stage_junior_league: "Junior league", pathway_stage_competing: "Competing", pathway_stage_advancing: "Advancing",
     highlights_add_err: "Couldn't add that link.", highlights_watch: "Watch highlight",
     editor_title: "Build your profile", editor_name_label: "FULL NAME", editor_name_ph: "Your name",
     editor_sport_label: "SPORT", editor_select: "Select…", editor_position_label: "POSITION",
@@ -877,7 +877,7 @@ const I18N = {
     pathway_stage_club_hs: "Club / Lycée", pathway_stage_ncaa_lacrosse: "NCAA", pathway_stage_professional_lacrosse: "Pro",
     pathway_stage_youth_club: "Club Jeunes", pathway_stage_senior_club: "Club Senior", pathway_stage_professional_handball: "Pro",
     pathway_stage_ncaa_volleyball: "NCAA", pathway_stage_professional_volleyball: "Pro",
-    pathway_stage_developing: "En développement", pathway_stage_competing: "En compétition", pathway_stage_advancing: "En progression",
+    pathway_stage_developing: "En développement", pathway_stage_school_club: "Équipe scolaire ou de club", pathway_stage_regional: "Niveau régional", pathway_stage_ncaa_college: "Université (NCAA / NAIA / JUCO)", pathway_stage_national: "Niveau national", pathway_stage_national_team: "Équipe nationale", pathway_stage_international: "Compétition internationale", pathway_stage_pro_league: "Ligue professionnelle", pathway_stage_pro_circuit: "Circuit professionnel", pathway_stage_junior_league: "Ligue junior", pathway_stage_competing: "En compétition", pathway_stage_advancing: "En progression",
     highlights_add_err: "Impossible d'ajouter ce lien.", highlights_watch: "Voir le temps fort",
     editor_title: "Créez votre profil", editor_name_label: "NOM COMPLET", editor_name_ph: "Votre nom",
     editor_sport_label: "SPORT", editor_select: "Sélectionner…", editor_position_label: "POSTE",
@@ -1224,7 +1224,7 @@ const I18N = {
     pathway_stage_club_hs: "Club / Instituto", pathway_stage_ncaa_lacrosse: "NCAA", pathway_stage_professional_lacrosse: "Pro",
     pathway_stage_youth_club: "Club Juvenil", pathway_stage_senior_club: "Club Sénior", pathway_stage_professional_handball: "Pro",
     pathway_stage_ncaa_volleyball: "NCAA", pathway_stage_professional_volleyball: "Pro",
-    pathway_stage_developing: "En desarrollo", pathway_stage_competing: "Compitiendo", pathway_stage_advancing: "Avanzando",
+    pathway_stage_developing: "En desarrollo", pathway_stage_school_club: "Equipo escolar o de club", pathway_stage_regional: "Nivel regional", pathway_stage_ncaa_college: "Universidad (NCAA / NAIA / JUCO)", pathway_stage_national: "Nivel nacional", pathway_stage_national_team: "Selección nacional", pathway_stage_international: "Competición internacional", pathway_stage_pro_league: "Liga profesional", pathway_stage_pro_circuit: "Circuito profesional", pathway_stage_junior_league: "Liga júnior", pathway_stage_competing: "Compitiendo", pathway_stage_advancing: "Avanzando",
     highlights_add_err: "No se pudo añadir ese enlace.", highlights_watch: "Ver la jugada",
     editor_title: "Crea tu perfil", editor_name_label: "NOMBRE COMPLETO", editor_name_ph: "Tu nombre",
     editor_sport_label: "DEPORTE", editor_select: "Seleccionar…", editor_position_label: "POSICIÓN",
@@ -1571,7 +1571,7 @@ const I18N = {
     pathway_stage_club_hs: "Σύλλογος / Λύκειο", pathway_stage_ncaa_lacrosse: "NCAA", pathway_stage_professional_lacrosse: "Επαγγελματικό",
     pathway_stage_youth_club: "Σύλλογος Νέων", pathway_stage_senior_club: "Σύλλογος Ανδρών/Γυναικών", pathway_stage_professional_handball: "Επαγγελματικό",
     pathway_stage_ncaa_volleyball: "NCAA", pathway_stage_professional_volleyball: "Επαγγελματικό",
-    pathway_stage_developing: "Σε ανάπτυξη", pathway_stage_competing: "Σε αγώνες", pathway_stage_advancing: "Σε πρόοδο",
+    pathway_stage_developing: "Σε ανάπτυξη", pathway_stage_school_club: "Σχολική ή συλλογική ομάδα", pathway_stage_regional: "Περιφερειακό επίπεδο", pathway_stage_ncaa_college: "Πανεπιστήμιο (NCAA / NAIA / JUCO)", pathway_stage_national: "Εθνικό επίπεδο", pathway_stage_national_team: "Εθνική ομάδα", pathway_stage_international: "Διεθνής διοργάνωση", pathway_stage_pro_league: "Επαγγελματικό πρωτάθλημα", pathway_stage_pro_circuit: "Επαγγελματικό κύκλωμα", pathway_stage_junior_league: "Πρωτάθλημα νέων", pathway_stage_competing: "Σε αγώνες", pathway_stage_advancing: "Σε πρόοδο",
     highlights_add_err: "Δεν ήταν δυνατή η προσθήκη αυτού του συνδέσμου.", highlights_watch: "Δείτε το highlight",
     editor_title: "Δημιουργήστε το προφίλ σας", editor_name_label: "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", editor_name_ph: "Το όνομά σας",
     editor_sport_label: "ΑΘΛΗΜΑ", editor_select: "Επιλέξτε…", editor_position_label: "ΘΕΣΗ",
@@ -10276,6 +10276,66 @@ const SPORT_PATHWAY_STAGES = {
   "Lacrosse": { stages: ["club_hs", "ncaa_lacrosse", "professional_lacrosse"], altBranch: null },
   "Handball": { stages: ["youth_club", "senior_club", "professional_handball"], altBranch: null },
   "Volleyball": { stages: ["club_hs", "ncaa_volleyball", "professional_volleyball"], altBranch: null },
+
+  // THE OTHER THIRTY-ONE SPORTS.
+  //
+  // SPORTS[] lets an athlete choose from 41 sports. Ten had a real ladder and
+  // the rest fell to __default — "Developing / Competing / Advancing" — three
+  // words that describe no sport in particular and give an archer, a rower
+  // and a cricketer the identical route. For a product whose entire promise
+  // is "every goal has a path", three quarters of the paths were a shrug.
+  //
+  // These ladders are GOLSZ's model of how progression actually works in each
+  // sport, not a claim of authority: the athlete can rename or reorder every
+  // stage (migration 128), and the prompt still tells Scout to say when it is
+  // working from general knowledge rather than structured data.
+  //
+  // Two deliberate restraints:
+  //  - No invented professional tier. Where a sport has no meaningful
+  //    professional league — archery, most Olympic disciplines — the ladder
+  //    ends at international competition rather than dangling a pro rung that
+  //    would quietly mislead a fourteen-year-old about what exists.
+  //  - College appears ONLY where the US college system is genuinely a route
+  //    in that sport. Cricket and rugby do not get an NCAA rung.
+
+  // US college is a real and central rung in these.
+  "Softball": { stages: ["school_club", "ncaa_college", "pro_league"], altBranch: null },
+  "Field Hockey": { stages: ["school_club", "ncaa_college", "national_team"], altBranch: null },
+  "Water Polo": { stages: ["school_club", "ncaa_college", "national_team"], altBranch: null },
+  "Swimming": { stages: ["school_club", "ncaa_college", "national", "international"], altBranch: null },
+  "Diving": { stages: ["school_club", "ncaa_college", "national", "international"], altBranch: null },
+  "Track": { stages: ["school_club", "ncaa_college", "national", "international"], altBranch: null },
+  "Cross Country": { stages: ["school_club", "ncaa_college", "national", "international"], altBranch: null },
+  "Wrestling": { stages: ["school_club", "ncaa_college", "national", "international"], altBranch: null },
+  "Gymnastics": { stages: ["school_club", "ncaa_college", "national", "international"], altBranch: null },
+  "Fencing": { stages: ["school_club", "ncaa_college", "national", "international"], altBranch: null },
+  "Rowing": { stages: ["school_club", "ncaa_college", "national", "international"], altBranch: null },
+  "Bowling": { stages: ["school_club", "ncaa_college", "pro_circuit"], altBranch: null },
+  "Cheerleading": { stages: ["school_club", "regional", "ncaa_college", "national"], altBranch: null },
+
+  // Club and league sports where college is not the route.
+  "Hockey": { stages: ["school_club", "junior_league", "ncaa_college", "pro_league"], altBranch: null },
+  "Rugby": { stages: ["school_club", "senior_club", "pro_league", "national_team"], altBranch: null },
+  "Cricket": { stages: ["school_club", "regional", "national", "international"], altBranch: null },
+
+  // Individual and Olympic disciplines: club, then the selection ladder.
+  "Archery": { stages: ["school_club", "regional", "national", "international"], altBranch: null },
+  "Badminton": { stages: ["school_club", "regional", "national", "international"], altBranch: null },
+  "Table Tennis": { stages: ["school_club", "regional", "national", "international"], altBranch: null },
+  "Squash": { stages: ["school_club", "regional", "national", "pro_circuit"], altBranch: null },
+  "Racquetball": { stages: ["school_club", "regional", "national", "pro_circuit"], altBranch: null },
+  "Boxing": { stages: ["school_club", "regional", "national", "professional"], altBranch: null },
+  "Martial Arts": { stages: ["school_club", "regional", "national", "international"], altBranch: null },
+  "Weightlifting": { stages: ["school_club", "regional", "national", "international"], altBranch: null },
+  "Cycling": { stages: ["school_club", "regional", "national", "pro_circuit"], altBranch: null },
+  "Triathlon": { stages: ["school_club", "regional", "national", "pro_circuit"], altBranch: null },
+  "Skiing": { stages: ["school_club", "regional", "national", "international"], altBranch: null },
+  "Snowboarding": { stages: ["school_club", "regional", "national", "international"], altBranch: null },
+  "Sailing": { stages: ["school_club", "regional", "national", "international"], altBranch: null },
+  "Equestrian": { stages: ["school_club", "regional", "national", "international"], altBranch: null },
+
+  // Kept as the last resort for a sport not in SPORTS[] at all — a custom
+  // entry, or one added to the picker before it is added here.
   "__default": { stages: ["developing", "competing", "advancing"], altBranch: null },
 };
 // Heuristic current-stage index — real signals already on the athlete

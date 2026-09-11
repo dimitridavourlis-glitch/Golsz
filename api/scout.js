@@ -75,6 +75,11 @@ import { resolveActingAthlete } from "./_acting-for.js";
 // this file that pins the two together.
 import { computeReadiness, DIMENSION_LABEL, SPORTS_WITHOUT_POSITION, READINESS_DIMENSIONS as PASSPORT_STRENGTH_DIMENSIONS } from "./_readiness.js";
 import { evaluateEntitlements, hasFeature, planDisplayName, FEATURE_LABEL } from "./_entitlements.js";
+// The pathway ladder the CLIENT draws for this athlete's sport, for all 40
+// sports the picker offers — not the two SPORT_SCHEMAS covers. Without it
+// Scout told an archer it had no route data for their sport while the Plan
+// screen was drawing them a four-stage route in the same app.
+import { SPORT_PATHWAY_STAGES } from "./_sport-pathways.js";
 
 // THE EFFECTIVE PLAN RULE, in one place.
 //
@@ -3982,7 +3987,9 @@ GOLSZ SPORT SCHEMAS
 
 When GOLSZ has built structured data for a sport (positions, competition ladder, benchmarks, pathways), use it as the record.
 
-When GOLSZ has not built that yet, there is no schema, it means: no position structure, no competition ladder, no pathway list, no benchmark vocabulary, no eligibility data. None of it, not partial. A sport's support_level never overrides this. In those sports, use general knowledge and web search, and be clear about what's GOLSZ guidance vs. what isn't.
+When GOLSZ has not built that yet, there is no schema, it means: no position structure, no benchmark vocabulary, no eligibility data. None of it, not partial. A sport's support_level never overrides this. In those sports, use general knowledge and web search, and be clear about what's GOLSZ guidance vs. what isn't.
+
+THE ROUTE IS THE EXCEPTION, AND IT COVERS EVERY SPORT. GOLSZ has a standard pathway ladder for all forty sports in its picker, and when the athlete has one it is given to you above as GOLSZ'S STANDARD ROUTE. So never tell an athlete you have no pathway data for their sport — their Plan screen is drawing them that exact ladder, and saying otherwise makes the app contradict itself in front of them. What you may still lack for a less-covered sport is positions, benchmarks and eligibility detail; say that specifically rather than disclaiming the sport as a whole.
 
 GOLSZ PLATFORM LIMITS
 
@@ -6456,6 +6463,16 @@ export default async function handler(req, res) {
     // SECTIONS: theirs, or the sport's. Never conflated. Describing a default
     // section as something they chose is the inferred-as-stated failure this
     // product spent a week removing.
+    // THE ROUTE GOLSZ ITSELF SHOWS THEM. Rendered whether or not the athlete
+    // has edited it, so Scout can never advise a path that contradicts the
+    // ladder on their own Plan screen — the failure where the app says one
+    // thing and the AI inside it says another.
+    if (athleteState.sport && SPORT_PATHWAY_STAGES[athleteState.sport]) {
+      const ladder = SPORT_PATHWAY_STAGES[athleteState.sport].stages || [];
+      if (ladder.length) {
+        athleteBlock += `\n\nGOLSZ'S STANDARD ROUTE FOR ${athleteState.sport.toUpperCase()} (what the Plan screen draws for this athlete by default, in order): ${ladder.join(" -> ")}. This is GOLSZ's model of how progression works in their sport, not a rule — they can rename, reorder, add or remove any stage. Use it as the shared frame when you talk about where they are and what comes next, and say plainly when you are going beyond it.`;
+      }
+    }
     if (athleteState.stagesAreCustom && athleteState.stageNames && athleteState.stageNames.length) {
       athleteBlock += `\n\nTHEIR PATHWAY SECTIONS (they wrote these themselves — use their words), numbered so you can file steps under them with "stage_index": ${athleteState.stageNames.map((n, i) => `${i}=${n}`).join(", ")}.`;
     } else {

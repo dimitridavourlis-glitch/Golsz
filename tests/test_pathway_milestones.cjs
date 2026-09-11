@@ -442,6 +442,29 @@ ck("...and that condition is derived from milestones that really are filed",
   const setFrom = (re, src) => [...new Set([...src.matchAll(re)].map((m) => m[1]))];
   const stageBlock = APP.slice(APP.indexOf("const SPORT_PATHWAY_STAGES = {"),
                                APP.indexOf("\n};", APP.indexOf("const SPORT_PATHWAY_STAGES = {")));
+// ---- EVERY SPORT THE APP OFFERS HAS A REAL PATHWAY ----------------------
+// SPORTS[] lets an athlete pick from 40 sports. Ten had a ladder; the other
+// thirty fell through to __default — "Developing / Competing / Advancing" —
+// which is three words that describe no sport in particular and handed an
+// archer, a rower and a cricketer the identical route. For a product whose
+// promise is "every goal has a path", three quarters of the paths were a
+// shrug, and nothing failed when a sport was added to the picker without one.
+{
+  const tbl = APP.slice(APP.indexOf("const SPORT_PATHWAY_STAGES = {"),
+                        APP.indexOf("\n};", APP.indexOf("const SPORT_PATHWAY_STAGES = {")));
+  const withPathway = new Set([...tbl.matchAll(/^  "([^"]+)":/gm)].map((m) => m[1]));
+  const picker = APP.slice(APP.indexOf("const SPORTS = ["), APP.indexOf("];", APP.indexOf("const SPORTS = [")));
+  const offered = [...picker.matchAll(/"([^"]+)"/g)].map((m) => m[1]).filter((x) => x !== "All");
+  ck("the sport picker is not empty (this check is reading the right thing)", offered.length > 20, true);
+  ck("every sport an athlete can choose has its own pathway",
+     offered.filter((x) => !withPathway.has(x)), []);
+  // The reverse, so a rename in SPORTS[] cannot orphan a ladder silently.
+  ck("...and no pathway exists for a sport the picker does not offer",
+     [...withPathway].filter((x) => x !== "__default" && !offered.includes(x)), []);
+  // __default stays as the last resort for a sport not in the picker at all.
+  ck("__default survives as the fallback", withPathway.has("__default"), true);
+}
+
   const stageIds = new Set();
   for (const m of stageBlock.matchAll(/stages:\s*\[([^\]]*)\]/g))
     for (const q of m[1].matchAll(/"([a-z0-9_]+)"/g)) stageIds.add(q[1]);
