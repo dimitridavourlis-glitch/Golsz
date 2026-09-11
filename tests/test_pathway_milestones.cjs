@@ -176,8 +176,23 @@ ck("PathwayPlan normalises what it reads from the database",
 // nowhere, and never at a stage this app picked for them.
 ck("the suggestion buttons that guessed a stage are gone",
    /SUGGESTED_FIRST_STEPS/.test(APP), false);
+// The call gained a `due` on 2026-09-12 — the add flow now takes a day, which
+// is the whole point of that change. The rule this pins is the STAGE half:
+// a hand-written step is filed where the athlete filed it or nowhere, never
+// at a stage the app chose for them. Matched across the object rather than as
+// one line, so adding a further field cannot silently drop the guarantee.
 ck("a hand-written step is filed by the athlete or not at all",
-   /normalizeMilestone\(\{ label: newMilestone\.trim\(\), stage: stageKey \|\| null \}\)/.test(APP), true);
+   /normalizeMilestone\(\{[\s\S]{0,400}?label: newMilestone\.trim\(\),[\s\S]{0,400}?stage: stageKey \|\| null,/.test(APP), true);
+// And the day it is given is a real one the athlete chose, not a default the
+// app invented: every chip passes an explicit date into addMilestone.
+ck("...and the day comes from the athlete's own tap",
+   /function addMilestone\(stageKey, due\)/.test(APP), true);
+ck("...with no-day left as a deliberate choice, not the default",
+   /addMilestone\(null, null\)/.test(APP), true);
+// toISOString() would convert to UTC first, so an athlete adding a step at
+// 10pm in Nicosia would get tomorrow — "due" on a day they had not reached.
+ck("...and dates are built from LOCAL parts, never toISOString()",
+   /const isoDay = \(d\) => `\$\{d\.getFullYear\(\)\}/.test(APP), true);
 
 // ---- ONE PATHWAY, ONE READER --------------------------------------------
 // Home and Plan must draw the same pathway. That held for free while stages
