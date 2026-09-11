@@ -697,14 +697,28 @@ async function getPlatformSpend() {
     const monthStr = todayStr.slice(0, 7) + "-01";
     const headers = { apikey: key, Authorization: "Bearer " + key };
     const [todayRows, monthRows] = await Promise.all([
-      fetch(`${url}/rest/v1/scout_daily_usage?usage_date=eq.${todayStr}&select=total_cost`, { headers }).then((r) => r.json()),
-      fetch(`${url}/rest/v1/scout_daily_usage?usage_date=gte.${monthStr}&select=total_cost`, { headers }).then((r) => r.json()),
+      // THROW ON A FAILED READ rather than parsing an error body. PostgREST
+      // answers a failure with a JSON OBJECT, not an array — so .json()
+      // succeeded, Array.isArray() was false, sum() returned 0, and the
+      // platform looked like it had spent nothing today. Zero spend is the
+      // one value that disables every cap below it, so the guard against
+      // runaway AI cost switched itself off precisely when the database was
+      // unhealthy. The catch below already falls back to the last cached
+      // value, which is a real measurement rather than an invented one.
+      fetch(`${url}/rest/v1/scout_daily_usage?usage_date=eq.${todayStr}&select=total_cost`, { headers })
+        .then((r) => { if (!r.ok) throw new Error("spend read failed: " + r.status); return r.json(); }),
+      fetch(`${url}/rest/v1/scout_daily_usage?usage_date=gte.${monthStr}&select=total_cost`, { headers })
+        .then((r) => { if (!r.ok) throw new Error("spend read failed: " + r.status); return r.json(); }),
     ]);
-    const sum = (rows) => (Array.isArray(rows) ? rows.reduce((s, row) => s + (Number(row.total_cost) || 0), 0) : 0);
+    if (!Array.isArray(todayRows) || !Array.isArray(monthRows)) throw new Error("spend read returned a non-array");
+    const sum = (rows) => rows.reduce((s, row) => s + (Number(row.total_cost) || 0), 0);
     const value = { today: sum(todayRows), month: sum(monthRows) };
     platformSpendCache = { at: now, value };
     return value;
-  } catch {
+  } catch (e) {
+    // Logged, not silent. A spend guard that cannot read its own meter is
+    // worth a line in the log even though falling back is the right move.
+    console.error("GOLSZ platform spend read failed:", e && e.message);
     return platformSpendCache.value || { today: 0, month: 0 };
   }
 }

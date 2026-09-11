@@ -130,9 +130,20 @@ async function supaCount(supaUrl, serviceKey, path) {
       Range: "0-0",
     },
   });
+  // A FAILED COUNT IS NOT A COUNT OF ZERO.
+  //
+  // This returned 0 for any non-2xx, and 0 is a legitimate value — so a
+  // database outage rendered as "0 signups, 0 scout calls", which is exactly
+  // what a quiet-but-healthy platform looks like. The monitor got QUIETER as
+  // the outage got worse. null means "could not measure", and the caller has
+  // to decide what to do with that rather than being handed a plausible lie.
+  if (!res.ok) {
+    console.error("GOLSZ health-alert count failed:", path, res.status);
+    return null;
+  }
   const range = res.headers.get("content-range") || "";
   const n = Number(range.split("/")[1]);
-  return Number.isFinite(n) ? n : 0;
+  return Number.isFinite(n) ? n : null;
 }
 
 async function pushAdmins(supaUrl, serviceKey, title, body) {
@@ -198,6 +209,28 @@ export default async function handler(req, res) {
       failRate: Number(process.env.HEALTH_FAIL_RATE || 0.5),
       maxErrors: Number(process.env.HEALTH_MAX_ERRORS || 3),
     };
+    // A COUNT THAT COULD NOT BE TAKEN IS ITS OWN ALERT.
+    //
+    // supaCount now returns null when the read failed rather than 0. Feeding
+    // null into shouldAlert() would coerce to 0 and land back in the bug this
+    // is fixing, so the unmeasurable case is handled here and explicitly:
+    // the monitor cannot see the platform, and that is worth waking someone
+    // for on its own.
+    const unmeasured = [
+      totalCalls === null ? "scout_routing_log" : null,
+      failedCalls === null ? "scout_routing_log(failed)" : null,
+      errorCount === null ? "error_log" : null,
+    ].filter(Boolean);
+    if (unmeasured.length) {
+      const reasons = [`health counts unreadable: ${unmeasured.join(", ")}`];
+      console.error("GOLSZ health check BLIND:", JSON.stringify({ windowMinutes, unmeasured }));
+      const pushed = await pushAdmins(
+        supaUrl, serviceKey,
+        "GOLSZ: health monitor is blind",
+        `Could not read ${unmeasured.join(", ")}. The platform may be fine; the monitor cannot tell.`
+      );
+      return res.status(200).json({ ok: true, windowMinutes, alert: true, blind: true, reasons, pushed });
+    }
     const { alert, reasons } = shouldAlert({ totalCalls, failedCalls, errorCount }, cfg);
 
     // Always logged, alert or not, so the cron itself is visibly alive in

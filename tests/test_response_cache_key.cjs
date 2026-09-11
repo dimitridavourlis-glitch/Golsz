@@ -71,5 +71,55 @@ ck("the summary digest is untouched (memory architecture)",
    /function athleteStateDigest\(state, plan, goalDefined\) \{/.test(SCOUT), true);
 ck("cache eligibility is still intent-limited", /CACHE_ELIGIBLE_INTENTS = new Set\(\["simple_knowledge"\]\)/.test(SCOUT), true);
 
+// ---- THE ATHLETE IS IN THE KEY, AND IT IS RUN, NOT GREPPED ---------------
+//
+// scopeFingerprintToAthlete() had ZERO executing assertions. Proven by
+// mutation on 2026-09-11: `sed '6285d' api/scout.js` — deleting the single
+// line that applies it — left all 62 suites and 2768 assertions green, and
+// `node --check` passes too, so CI was blind to it as well.
+//
+// What that one line prevents: responseCacheFingerprint carries only plan,
+// 60 characters of goal, four booleans and a composite score (see its own
+// comment at api/scout.js:789). Two athletes on the same tier who have not
+// written a goal produce a BYTE-IDENTICAL fingerprint — while the cached
+// reply was generated from the full authoritative context: club, city,
+// country, citizenship, age, GPA, height, weight, position, bio and up to
+// twenty Scout Memory rows. Without scoping, athlete B's answer opens with
+// athlete A's club and city. These are minors.
+//
+// So: exercise the real function, and separately pin the call site, because
+// the helper being correct is worthless if nothing calls it.
+{
+  const fpA = responseCacheFingerprint("free", "", STATE);
+  const fpB = responseCacheFingerprint("free", "", STATE);
+  ck("two athletes with no goal DO collide on the raw fingerprint", fpA === fpB, true);
+
+  const a = scopeFingerprintToAthlete(fpA, "11111111-1111-1111-1111-111111111111");
+  const b = scopeFingerprintToAthlete(fpB, "22222222-2222-2222-2222-222222222222");
+  ck("...and are separated once the athlete is folded in", a === b, false);
+
+  const keyA = cacheKeyFor("simple_knowledge", "What is NCAA eligibility?", "en", "economy", a);
+  const keyB = cacheKeyFor("simple_knowledge", "What is NCAA eligibility?", "en", "economy", b);
+  ck("the same question from two athletes yields two cache keys", keyA === keyB, false);
+
+  ck("the same athlete asking twice still hits their own entry",
+     cacheKeyFor("simple_knowledge", "What is NCAA eligibility?", "en", "economy",
+       scopeFingerprintToAthlete(responseCacheFingerprint("free", "", STATE), "11111111-1111-1111-1111-111111111111")) === keyA, true);
+
+  // A missing userId must not silently become a shared bucket that any
+  // caller with a null id lands in alongside a real athlete.
+  ck("an absent athlete id is its own bucket, not everyone's",
+     scopeFingerprintToAthlete(fpA, null) === a, false);
+  ck("the athlete id leads the key, so a fingerprint cannot forge one",
+     /^u:11111111-1111-1111-1111-111111111111\|/.test(a), true);
+}
+// THE WIRING, not just the helper. This is the assertion that would have
+// failed the mutation above.
+ck("the handler actually scopes the fingerprint before building the key",
+   /cacheFingerprint = scopeFingerprintToAthlete\(cacheFingerprint, userId\)/.test(SCOUT), true);
+ck("...and does it BEFORE cacheKeyFor is called",
+   SCOUT.indexOf("cacheFingerprint = scopeFingerprintToAthlete(cacheFingerprint, userId)")
+     < SCOUT.indexOf("cacheKeyFor(classification.intent, latestText, faqLang, modelTier, cacheFingerprint)"), true);
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
