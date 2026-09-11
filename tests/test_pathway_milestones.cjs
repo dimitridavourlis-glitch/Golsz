@@ -318,8 +318,19 @@ ck("...and persisted on save", /stages: customStages, current_stage_id: currentS
 // states, not two. A plan that has not loaded must behave like the safe case:
 // rendering a paywall during a fetch is the bug that once showed "Upgrade to
 // unlock" to paying athletes on every gated page.
-const note = /\{planKnown\(plan\) && \([\s\S]{0,1400}?pathway_scout_help_locked[\s\S]{0,200}?\)\}/.exec(APP);
+// The guard gained a second clause on 2026-09-12 — the note now renders ONLY
+// for an athlete without the feature, because everyone who has it also has a
+// button six pixels above saying the same thing. planKnown is still the FIRST
+// condition, which is the guarantee this assertion exists for: featureUnlocked
+// returns false for a plan that has not loaded, so without the short-circuit a
+// paying athlete would be shown the locked copy for the two seconds their
+// subscription takes to resolve. The regex matches the ordering rather than
+// the exact clause list, so adding a third condition later cannot silently
+// move planKnown out of first place.
+const note = /\{planKnown\(plan\) &&[\s\S]{0,120}?\([\s\S]{0,1400}?pathway_scout_help_locked[\s\S]{0,200}?\)\}/.exec(APP);
 ck("the Scout note is gated on planKnown, not on the plan value", !!note, true);
+ck("...and planKnown is the FIRST condition, so a loading plan shows nothing",
+   /\{planKnown\(plan\) &&/.test(APP), true);
 ck("...and only then asks whether the feature is unlocked",
    note[0].indexOf("planKnown(plan)") < note[0].indexOf('featureUnlocked(plan, "pathway_plan")'), true);
 // FeatureLock REPLACES content. Here the manual controls must stay usable —

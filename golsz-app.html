@@ -9957,6 +9957,15 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate }) {
           sentence, and carries the category underneath as metadata. The
           secondary-goal card below is unchanged: it is genuinely about the
           alternate pathway branch, not about the athlete's stated aim. */}
+      {/* TRIED AND REVERTED 2026-09-12: dropping `hero` to demote the goal
+          here, on the argument that Home now leads with the same sentence.
+          The argument was right and the change was wrong — without `hero`
+          the card gets its chrome back, and the goal went from a flush
+          headline to a bordered callout with a trophy icon sitting on top of
+          the backup-plan line. Worse in exchange for less duplication.
+          The goal stays a headline on Plan because this is where it is
+          EDITED, and the thing you can change should be the thing you can
+          see. */}
       <GoalCard actingFor={actingFor} onSaved={() => setGoalVersion((v) => v + 1)} compact hero />
       {/* Same card shape as MY GOAL above, one step down the hierarchy —
           a backup plan that looked structurally different would read as a
@@ -10996,16 +11005,16 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
           FeatureLock is wrong here — it replaces content, and the content is
           the point. planKnown() first: a plan that has not loaded must behave
           like the safe case and never render a paywall. */}
-      {planKnown(plan) && (
+      {/* THE LINE IS GONE FOR ANYONE WHO HAS THE BUTTON. It read "Scout can
+          help you build this" and sat directly under a gold button reading
+          "Let Scout draft my steps" — the same offer, twice, a few pixels
+          apart, the second time as a sentence that does nothing when tapped.
+          It survives only for a Free athlete, who has no button: for them it
+          is the only thing on the screen saying the door exists. */}
+      {planKnown(plan) && !featureUnlocked(plan, "pathway_plan") && (
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 11.5, color: C.slate, lineHeight: 1.5, margin: "-4px 2px 12px" }}>
           <Radar size={13} color={C.lime} style={{ flexShrink: 0, marginTop: 1 }} />
-          {/* The unlocked half of this used to be a text link saying "Scout
-              can help you build this" that only navigated to Scout. The card
-              above now carries a real button that sends the request, so the
-              link was a second door to a worse version of the same thing.
-              The LOCKED copy stays: a Free athlete has no button, and telling
-              them the door exists is the whole point of the line. */}
-          <span>{featureUnlocked(plan, "pathway_plan") ? t("pathway_scout_can_help") : t("pathway_scout_help_locked")}</span>
+          <span>{t("pathway_scout_help_locked")}</span>
         </div>
       )}
 
