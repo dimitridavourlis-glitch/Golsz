@@ -1283,10 +1283,15 @@ failure visible afterwards. Verified in the dashboard on 2026-09-11: no
 framework preset, no build command, no overrides — Vercel ran no build at
 all, and nothing could stop a broken commit reaching golsz.com.
 
-OUTPUT IS UNAFFECTED. Output Directory stays unset; Vercel's own field
-documents the rule as "`public` if it exists, or `.`", and that does not
-change when a build command is set. There is no public/ here, so the root
-is served exactly as before.
+OUTPUT DIRECTORY MUST BE SET TO "." — and this was learned the hard way on
+2026-09-11. The dashboard's Output Directory placeholder reads "`public` if
+it exists, or `.`", and I assumed that fallback held once a build command
+was added. It does not. With a buildCommand set, Vercel REQUIRES an output
+directory and defaults to `public`, which does not exist here, so the
+deploy failed with "No Output Directory named public found after the Build
+completed" even though the suite had passed. `outputDirectory: "."` restores
+the previous behaviour explicitly. Serverless functions are built from
+api/ regardless and are unaffected.
 
 IN vercel.json, NOT THE DASHBOARD: versioned with the code it gates,
 visible in a diff, applies to preview deploys too, and cannot be switched
