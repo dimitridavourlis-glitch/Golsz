@@ -5597,15 +5597,21 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         {/* header strip */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: `1px dashed ${C.line2}`, background: C.passportStrip }}>
           <span style={{ fontSize: 10, letterSpacing: "0.22em", fontWeight: 800, color: C.lime }}>DIGITAL SPORTS PASSPORT</span>
-          {/* Blue = real identity verification (profiles.identity_verified),
-              deliberately NOT the gold subscription badge — see the
-              Verification-mix note in the admin Analytics tab for why those
-              two must never be conflated. Falls back to the nationality
-              line when the athlete isn't verified, so the row is never
-              empty and never implies verification that doesn't exist. */}
+          {/* IDENTITY VERIFICATION MUST NEVER READ AS A SUBSCRIPTION BADGE.
+              That rule predates this edit and still holds — see the
+              Verification-mix note in the admin Analytics tab. It used to be
+              enforced with blue, which made this the one blue object in a
+              gold app, on the card that is meant to be the trophy.
+              CHALK, NOT GOLD, is the resolution: gold is spoken for by the
+              paid tiers, so making this gold would conflate exactly what the
+              rule forbids. White reads as official rather than premium,
+              which is what an identity check is.
+              Falls back to the nationality line when the athlete isn't
+              verified, so the row is never empty and never implies
+              verification that doesn't exist. */}
           {identityVerified ? (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9.5, fontWeight: 800, color: C.info }}>
-              <BadgeCheck size={13} color={C.pitch} fill={C.info} strokeWidth={2.5} /> {t("passport_verified_label")}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 9.5, fontWeight: 800, color: C.chalk }}>
+              <BadgeCheck size={13} color={C.pitch} fill={C.chalk} strokeWidth={2.5} /> {t("passport_verified_label")}
             </span>
           ) : (
             <span style={{ fontSize: 9.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{p.nat}</span>
@@ -7132,7 +7138,7 @@ function AdminPanel({ onBack }) {
                       check, so the source is shown, not summarized. */}
                   <div style={{ fontSize: 11, color: C.slate, marginBottom: 8, wordBreak: "break-all" }}>
                     {t("admin_knowledge_source")}: {k.source_url
-                      ? <a href={k.source_url} target="_blank" rel="noopener noreferrer" style={{ color: C.info }}>{k.source_url}</a>
+                      ? <a href={k.source_url} target="_blank" rel="noopener noreferrer" style={{ color: C.lime }}>{k.source_url}</a>
                       : t("admin_knowledge_no_source")}
                     {" · "}{t("admin_knowledge_confidence")} {Math.round((Number(k.confidence) || 0) * 100)}%
                     {k.recheck_after && <> · {t("admin_knowledge_recheck")} {new Date(k.recheck_after).toLocaleDateString()}</>}
@@ -11288,10 +11294,13 @@ function ManagingBanner({ name, onExit, t }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
-      background: C.infoWash, border: `1px solid ${C.info}`, borderRadius: 12,
+      // Amber, not blue. "You are acting on someone else's account" is a
+      // caution — the state where a mistaken edit lands on a child's record
+      // — and the app already says caution in amber everywhere else.
+      background: C.amberWash, border: `1px solid ${C.amber}`, borderRadius: 12,
       padding: "9px 12px", marginBottom: 12,
     }}>
-      <User size={15} color={C.info} style={{ flexShrink: 0 }} />
+      <User size={15} color={C.warnText} style={{ flexShrink: 0 }} />
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ fontSize: 12.5, fontWeight: 800, color: C.chalk }}>
           {t("managing_banner").replace("{name}", name || t("home_my_athletes_unnamed"))}
@@ -11299,7 +11308,7 @@ function ManagingBanner({ name, onExit, t }) {
         <div style={{ fontSize: 10.5, color: C.slate, lineHeight: 1.4, marginTop: 2 }}>{t("managing_hint")}</div>
       </div>
       <button onClick={onExit} style={{
-        background: "transparent", border: `1px solid ${C.info}`, color: C.info, borderRadius: 8,
+        background: "transparent", border: `1px solid ${C.amber}`, color: C.warnText, borderRadius: 8,
         padding: "5px 10px", fontSize: 11, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", flexShrink: 0,
       }}>{t("managing_exit")}</button>
     </div>
