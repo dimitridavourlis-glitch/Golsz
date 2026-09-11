@@ -111,6 +111,7 @@ const Flame = svg('<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-
 const Trophy = svg('<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>');
 const Users = svg('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>');
 const ArrowUpRight = svg('<path d="M7 7h10v10"/><path d="M7 17 17 7"/>');
+const ArrowRight = svg('<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>');
 const Video = svg('<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>');
 const X = svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
 const Pencil = svg('<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>');
@@ -626,7 +627,7 @@ const I18N = {
     appeal_start: "Appeal this suspension", appeal_placeholder: "Explain why you think this suspension is a mistake…", appeal_submit: "Submit appeal", appeal_submitted: "Your appeal has been submitted. A moderator will review it.",
     verify_title: "Get verified", verify_desc: "Request identity verification for your role. Optionally include a link to supporting proof (e.g. a club or federation profile).", verify_proof_placeholder: "Proof URL (optional)", verify_submit: "Request verification", verify_pending: "Your verification request is pending review.", verify_submitted: "Verification request submitted.",
     scout_header: "AI SCOUT", scout_live_agent: "LIVE AGENT", scout_questions_left: "QUESTIONS LEFT TODAY",
-    scout_history_title: "History", scout_new_chat: "New chat", scout_no_past: "No past conversations yet.",
+    scout_history_title: "History", scout_new_chat: "New chat", scout_file_stage: "STAGE {n} OF {total}", scout_file_no_route: "NO ROUTE SET", scout_no_past: "No past conversations yet.",
     scout_new_conversation: "New conversation", scout_ago_messages: " messages", scout_delete_conv: "Delete conversation",
     scout_input_ph: "Talk to your scout…",
     scout_build_target_list: "Add {n} to my Targets", scout_build_target_list_locked: "Add to my Targets — Basic", scout_targets_added: "Added to your Targets.",
@@ -973,7 +974,7 @@ const I18N = {
     
     
     scout_header: "AI SCOUT", scout_live_agent: "AGENT EN DIRECT", scout_questions_left: "QUESTIONS RESTANTES AUJOURD'HUI",
-    scout_history_title: "Historique", scout_new_chat: "Nouvelle discussion", scout_no_past: "Aucune conversation passée.",
+    scout_history_title: "Historique", scout_new_chat: "Nouvelle discussion", scout_file_stage: "ÉTAPE {n} SUR {total}", scout_file_no_route: "AUCUN PARCOURS", scout_no_past: "Aucune conversation passée.",
     scout_new_conversation: "Nouvelle conversation", scout_ago_messages: " messages", scout_delete_conv: "Supprimer la conversation",
     scout_input_ph: "Parlez à votre agent…",
     scout_build_target_list: "Ajouter {n} à mes Cibles", scout_build_target_list_locked: "Ajouter à mes Cibles — Basic", scout_targets_added: "Ajouté à vos Cibles.",
@@ -1320,7 +1321,7 @@ const I18N = {
     
     
     scout_header: "AI SCOUT", scout_live_agent: "AGENTE EN VIVO", scout_questions_left: "PREGUNTAS RESTANTES HOY",
-    scout_history_title: "Historial", scout_new_chat: "Nuevo chat", scout_no_past: "Aún no hay conversaciones pasadas.",
+    scout_history_title: "Historial", scout_new_chat: "Nuevo chat", scout_file_stage: "ETAPA {n} DE {total}", scout_file_no_route: "SIN RUTA", scout_no_past: "Aún no hay conversaciones pasadas.",
     scout_new_conversation: "Nueva conversación", scout_ago_messages: " mensajes", scout_delete_conv: "Eliminar conversación",
     scout_input_ph: "Habla con tu agente…",
     scout_build_target_list: "Añadir {n} a mis Objetivos", scout_build_target_list_locked: "Añadir a mis Objetivos — Basic", scout_targets_added: "Añadido a tus Objetivos.",
@@ -1667,7 +1668,7 @@ const I18N = {
     
     
     scout_header: "AI SCOUT", scout_live_agent: "ΖΩΝΤΑΝΟΣ ΠΡΑΚΤΟΡΑΣ", scout_questions_left: "ΕΡΩΤΗΣΕΙΣ ΠΟΥ ΑΠΟΜΕΝΟΥΝ ΣΗΜΕΡΑ",
-    scout_history_title: "Ιστορικό", scout_new_chat: "Νέα συνομιλία", scout_no_past: "Δεν υπάρχουν προηγούμενες συνομιλίες ακόμα.",
+    scout_history_title: "Ιστορικό", scout_new_chat: "Νέα συνομιλία", scout_file_stage: "ΣΤΑΔΙΟ {n} ΑΠΟ {total}", scout_file_no_route: "ΧΩΡΙΣ ΔΙΑΔΡΟΜΗ", scout_no_past: "Δεν υπάρχουν προηγούμενες συνομιλίες ακόμα.",
     scout_new_conversation: "Νέα συνομιλία", scout_ago_messages: " μηνύματα", scout_delete_conv: "Διαγραφή συνομιλίας",
     scout_input_ph: "Μιλήστε στον σκάουτ σας…",
     scout_build_target_list: "Προσθήκη {n} στους Στόχους μου", scout_build_target_list_locked: "Προσθήκη στους Στόχους μου — Basic", scout_targets_added: "Προστέθηκε στους Στόχους σου.",
@@ -7222,6 +7223,8 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   const [msgs, setMsgs] = useState(sb ? null : [{ role: "assistant", text: t("scout_greeting") }]);
   const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo greeting immediately
   const [profile, setProfile] = useState({});
+  const [athleteRow, setAthleteRow] = useState(null);
+  const uidForNumberRef = useRef(null);
   // Flattened {field: value} view of athletes.scout_context (migration 050,
   // Phase 2a) — the "softer" qualification facts (goal, gap, urgency, etc.)
   // Scout has picked up, as opposed to `profile`'s hard Passport facts.
@@ -7339,6 +7342,12 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
           sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, stages, current_stage_id").eq("user_id", who).maybeSingle(),
         ]);
         setCurrentPathway(pathwayNow || null);
+        // The raw rows, kept alongside the flattened `profile` map. The open
+        // file header needs country + grad_year to build the passport number,
+        // and `seeded` deliberately flattens and relabels — it feeds the
+        // prompt, not the UI.
+        setAthleteRow(ath || null);
+        uidForNumberRef.current = who;
         if (Array.isArray(benchmarks) && benchmarks.length) {
           // First row per metric (already newest-first) wins — latest
           // reading only, not the whole retest history, to keep the
@@ -7927,6 +7936,50 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
           ))}
         </div>
       ) : (
+        <>
+        {/* THE OPEN FILE.
+            This is the idea, and it is the only element on this screen that
+            could not exist in any other product. Scout is not a chat window,
+            it is the desk where your passport is already open — your number
+            and your route sit above every answer, so the thing replying to
+            you is visibly holding your document.
+            Costs no new query: country, grad_year, sport, position and
+            club_name are already in Scout's own mount select, and the number
+            is built with the identical expression the Passport screen uses.
+            Sticky, so the file never closes as you scroll. */}
+        {athleteRow && (
+          <div style={{ position: "sticky", top: 0, zIndex: 5, background: C.pitch,
+            borderBottom: `1px solid ${C.line}`, padding: "9px 12px 10px", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0 }}>
+              <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: "0.16em", color: C.slate, flexShrink: 0 }}>{t("passport_passport_no")}</span>
+              <span style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: "0.06em", color: C.lime, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {`GLS·${(athleteRow.country ? String(athleteRow.country).slice(0, 2) : "XX").toUpperCase()}·${athleteRow.grad_year || "\u2014"}·${String(uidForNumberRef.current || "").replace(/-/g, "").slice(0, 5).toUpperCase()}`}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4, minWidth: 0, fontSize: 11.5, fontWeight: 700 }}>
+              <span style={{ color: C.chalk, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {[athleteRow.sport, athleteRow.position, athleteRow.club_name].filter(Boolean).join(" \u00B7 ")}
+              </span>
+              <ArrowRight size={12} color={C.slate} style={{ flexShrink: 0 }} />
+              {/* ONLY WHAT THE ATHLETE HAS STATED. No derived stage index: if
+                  current_stage_id is null the app does not know where they
+                  are, and the screen whose whole claim is "I hold your
+                  record" is the worst place in the product to guess. */}
+              {currentPathway && currentPathway.pathway_type ? (
+                <span style={{ color: C.slate, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {t("pathway_type_" + currentPathway.pathway_type)}
+                  {(() => {
+                    const stages = Array.isArray(currentPathway.stages) ? currentPathway.stages : [];
+                    const idx = currentPathway.current_stage_id ? stages.findIndex((x) => x && x.id === currentPathway.current_stage_id) : -1;
+                    return idx >= 0 ? ` \u00B7 ${t("scout_file_stage").replace("{n}", idx + 1).replace("{total}", stages.length)}` : "";
+                  })()}
+                </span>
+              ) : (
+                <span style={{ color: C.warnText, flexShrink: 0 }}>{t("scout_file_no_route")}</span>
+              )}
+            </div>
+          </div>
+        )}
         <div style={{ flex: 1, overflowY: "auto", padding: "14px 12px 6px" }}>
           {!loaded && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
           {msgs && msgs.map((m, i) => (
@@ -8123,6 +8176,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
           {busy && <div style={bubbleAgent}><div className="running"><span /><span /><span /></div></div>}
           <div ref={endRef} />
         </div>
+        </>
       )}
 
       {!showHistory && (
@@ -8190,8 +8244,22 @@ const iconBtn = (color) => ({ display: "inline-flex", alignItems: "center", gap:
 // Assistant bubbles sit on the near-black card surface, not the navy one —
 // the mockup keeps the transcript quiet so only the athlete's own gold
 // bubbles carry colour. Timestamps live inside the bubble, bottom-right.
-const bubbleAgent = { background: C.card, border: `1px solid ${C.line}`, borderRadius: "4px 16px 16px 16px", padding: "11px 14px 8px", margin: "0 34px 10px 0", fontSize: 14, lineHeight: 1.55 };
-const bubbleUser = { background: C.lime, color: C.ink, borderRadius: "16px 4px 16px 16px", padding: "11px 14px 8px", margin: "0 0 10px 34px", fontSize: 14, lineHeight: 1.55, fontWeight: 500 };
+// A TRANSCRIPT, NOT A CHAT.
+//
+// These were a gold blob and a dark blob, alternating left and right. That
+// pair IS the generic chat app: it is the first thing the eye reads and it
+// says nothing about GOLSZ. Scout is the screen where something that holds
+// your passport answers you, and an answer from the thing holding your file
+// is an ENTRY IN THE FILE, not a message you received.
+//
+// So: one column, no fills, no alignment ping-pong. Your question carries a
+// 3px gold bar — gold now means "you, now", and the same bar marks the open
+// conversation in History. Scout's answer is text on the page at full
+// reading width, closed by a hairline. The rhythm that replaces the bubbles
+// (gold-barred question, hairline, answer, hairline) is the Passport's own
+// row rhythm, which is why the two screens now look like one product.
+const bubbleAgent = { background: "none", border: "none", borderBottom: `1px solid ${C.line}`, borderRadius: 0, padding: "2px 0 18px", margin: "0 0 18px", fontSize: 14, lineHeight: 1.62, color: C.chalk };
+const bubbleUser = { background: "none", color: C.chalk, borderLeft: `3px solid ${C.lime}`, borderRadius: 0, padding: "1px 0 1px 12px", margin: "0 0 16px", fontSize: 14.5, lineHeight: 1.5, fontWeight: 600 };
 // Local-time HH:MM for a message. Scout messages are ephemeral in state
 // (only role/text are persisted to scout_history), so a restored history
 // has no per-message timestamp to show — this returns "" there rather
