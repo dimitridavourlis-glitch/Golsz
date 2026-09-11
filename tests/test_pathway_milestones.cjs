@@ -191,8 +191,10 @@ ck("...with no-day left as a deliberate choice, not the default",
    /addMilestone\(null, null\)/.test(APP), true);
 // toISOString() would convert to UTC first, so an athlete adding a step at
 // 10pm in Nicosia would get tomorrow — "due" on a day they had not reached.
+// Hoisted to a module-level function on 2026-09-12 so Home, Plan and the add
+// flow share one date rule instead of three copies of it.
 ck("...and dates are built from LOCAL parts, never toISOString()",
-   /const isoDay = \(d\) => `\$\{d\.getFullYear\(\)\}/.test(APP), true);
+   /function isoDay\(d\) \{[\s\S]{0,140}?d\.getFullYear\(\)/.test(APP), true);
 
 // ---- ONE PATHWAY, ONE READER --------------------------------------------
 // Home and Plan must draw the same pathway. That held for free while stages

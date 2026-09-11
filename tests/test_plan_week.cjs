@@ -24,10 +24,22 @@ const ck = (l, a, e) => {
 
 // The real week-start expression, lifted so a retyped copy cannot pass while
 // production differs.
-const startSrc = APP.slice(APP.indexOf("const weekStart = (() => {"), APP.indexOf("const isoOf =", APP.indexOf("const weekStart = (() => {")));
-ck("the week-start expression was found", startSrc.length > 60, true);
+// Re-anchored 2026-09-12: the week maths was hoisted to ONE module-level
+// definition after test_anchor_integrity caught "const isoOf =" matching
+// twice — Home and Plan had each grown their own copy, which is three chances
+// for two screens to disagree about what day it is.
+const startSrc = APP.slice(APP.indexOf("function weekStartFrom(date) {"), APP.indexOf("\n}", APP.indexOf("function weekStartFrom(date) {")));
+ck("the shared week-start function was found", startSrc.length > 60, true);
 ck("it steps back Monday-first, not Sunday-first",
    /d\.setDate\(d\.getDate\(\) - \(\(d\.getDay\(\) \+ 6\) % 7\)\)/.test(startSrc), true);
+// The point of hoisting: both screens must call the SAME thing, or "this
+// week" can mean two different sets of days in one app.
+ck("Plan derives its week from the shared function",
+   /const weekStart = weekStartFrom\(todayIso\);/.test(APP), true);
+ck("Home derives its week from the same shared function",
+   /const start = weekStartFrom\(new Date\(\)\);/.test(APP), true);
+ck("no component keeps a private copy of the date rule",
+   /const isoOf = \(d\) =>/.test(APP), false);
 
 const isoOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const weekStartFor = (today) => {
