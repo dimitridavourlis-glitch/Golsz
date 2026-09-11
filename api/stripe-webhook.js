@@ -158,18 +158,75 @@ async function claimStripeEvent(supaUrl, serviceKey, eventId, eventType) {
       body: JSON.stringify({ id: eventId, type: eventType || null }),
     });
     if (res.ok) return "claimed";
+    // A DUPLICATE IS NOT NECESSARILY A REPLAY.
+    //
+    // The INSERT records "I have SEEN this event". Applying it is a separate
+    // fact, recorded by completed_at (migration 135). Before that column
+    // existed, a delivery that claimed the row and then died mid-handler was
+    // indistinguishable from one that finished — so Stripe's retry was
+    // dismissed as a replay, the upgrade was never applied, and the athlete
+    // stayed on free forever with "replay ignored" as the only trace.
+    //
+    // So on a conflict, look at what the existing row says.
     // The SQLSTATE is read as well as the status because 409 is a general
     // conflict code. Treating some future unrelated conflict as "already
     // processed" would silently DROP a real event, and drop it invisibly:
     // Stripe would have its 200 and never retry.
     let code = null;
     try { const body = await res.json(); code = body && body.code; } catch { /* empty or non-JSON body */ }
-    if (res.status === 409 || code === "23505") return "duplicate";
+    if (res.status === 409 || code === "23505") {
+      try {
+        const look = await fetch(`${supaUrl}/rest/v1/stripe_events?id=eq.${encodeURIComponent(eventId)}&select=completed_at`, {
+          headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+        });
+        if (look.ok) {
+          const rows = await look.json();
+          const row = Array.isArray(rows) ? rows[0] : null;
+          // completed_at null => the previous attempt never finished. Re-run.
+          if (row && !row.completed_at) return "incomplete";
+          if (row && row.completed_at) return "duplicate";
+        }
+        // Could not read it back. Treating an unreadable claim as a finished
+        // one risks losing a paid upgrade; treating it as unfinished risks
+        // applying an idempotent profile PATCH twice. The second is harmless
+        // — every branch below is a PATCH to a fixed value, not an increment.
+        console.error("GOLSZ stripe claim read-back failed, re-processing to be safe:", eventId);
+        return "incomplete";
+      } catch (e) {
+        console.error("GOLSZ stripe claim read-back unreachable, re-processing to be safe:", e);
+        return "incomplete";
+      }
+    }
     console.error("GOLSZ stripe replay-guard write failed:", res.status, code || "");
     return "unknown";
   } catch (e) {
     console.error("GOLSZ stripe replay-guard unreachable:", e);
     return "unknown";
+  }
+}
+
+// Phase two of the claim. Called ONLY once a branch has actually applied its
+// change, so a row with completed_at set is a delivery that reached the end.
+// Its own failure is logged and swallowed: the work is already done, and
+// turning a bookkeeping failure into a 500 would make Stripe retry an event
+// that has been applied. The cost of that failure is one extra idempotent
+// re-run on a future retry, which is the cheap direction.
+async function completeStripeEvent(supaUrl, serviceKey, eventId) {
+  if (!eventId) return;
+  try {
+    const res = await fetch(`${supaUrl}/rest/v1/stripe_events?id=eq.${encodeURIComponent(eventId)}`, {
+      method: "PATCH",
+      headers: {
+        apikey: serviceKey,
+        Authorization: "Bearer " + serviceKey,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({ completed_at: new Date().toISOString() }),
+    });
+    if (!res.ok) console.error("GOLSZ stripe completion stamp failed:", eventId, res.status);
+  } catch (e) {
+    console.error("GOLSZ stripe completion stamp unreachable:", eventId, e);
   }
 }
 
@@ -313,6 +370,13 @@ export default async function handler(req, res) {
     console.warn("GOLSZ stripe replay-guard SKIPPED: event carries no usable id", JSON.stringify({ eventType: event.type || null }));
   } else {
     const claim = await claimStripeEvent(supaUrl, serviceKey, eventId, event.type);
+    if (claim === "incomplete") {
+      // A previous delivery claimed this event and never finished applying
+      // it. Stripe is retrying, which is correct, and the retry must do the
+      // work rather than be dismissed. Falls through to the branches below.
+      console.warn("GOLSZ stripe event re-processing an interrupted delivery:",
+        JSON.stringify({ eventId, eventType: event.type || null }));
+    }
     if (claim === "duplicate") {
       // 200, never 4xx/5xx. A non-2xx makes Stripe retry, and a retry is the
       // one response an already-handled event must not provoke.
@@ -474,6 +538,11 @@ export default async function handler(req, res) {
       }
     }
     // other event types are ignored — Stripe expects a 200 regardless
+    //
+    // STAMPED HERE, at the one exit every successful branch passes through,
+    // and never in the catch. An event is complete when the work is done, not
+    // when the handler stops running.
+    await completeStripeEvent(supaUrl, serviceKey, eventId);
     return res.status(200).json({ received: true });
   } catch (e) {
     await logError("api/stripe-webhook.js", "Webhook handling failed", { detail: String(e), eventType: event && event.type });

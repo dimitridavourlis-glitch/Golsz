@@ -118,6 +118,29 @@ global.fetch = async (url, opts = {}) => {
     for (const row of matched) Object.assign(row, body || {});
     return { ok: true, json: async () => matched };
   }
+  // stripe_events — the replay guard, modelled as a real table because the
+  // whole point of the two-phase claim is WHAT THE ROW SAYS on a retry.
+  if (u.includes("/rest/v1/stripe_events")) {
+    const idm = /[?&]id=eq\.([^&]+)/.exec(u);
+    if (method === "POST") {
+      const id = body && body.id;
+      if (stripeEvents[id]) {
+        // PostgREST's duplicate-key shape, which claimStripeEvent reads.
+        return { ok: false, status: 409, json: async () => ({ code: "23505" }) };
+      }
+      stripeEvents[id] = { id, type: body && body.type, completed_at: null };
+      return { ok: true, json: async () => [] };
+    }
+    if (method === "GET" && idm) {
+      const row = stripeEvents[decodeURIComponent(idm[1])];
+      return { ok: true, json: async () => (row ? [{ completed_at: row.completed_at }] : []) };
+    }
+    if (method === "PATCH" && idm) {
+      const row = stripeEvents[decodeURIComponent(idm[1])];
+      if (row) row.completed_at = (body && body.completed_at) || "stamped";
+      return { ok: true, status: 204, json: async () => [] };
+    }
+  }
   return { ok: true, json: async () => [] };
 };
 
@@ -143,6 +166,11 @@ const signWith = (raw, secrets, ts) =>
 
 async function post(event, opts = {}) {
   calls = [];
+  // Every post() is an independent scenario unless it says otherwise: the
+  // replay-guard table is cleared so a reused event id in one test cannot
+  // make an unrelated test look like a duplicate delivery. The retry
+  // scenarios below opt in with keepEvents to get the continuity they need.
+  if (!opts.keepEvents) stripeEvents = {};
   const raw = JSON.stringify(event);
   const ts = opts.ts !== undefined ? opts.ts : Math.floor(Date.now() / 1000);
   const sig = opts.sig !== undefined ? opts.sig : signWith(raw, opts.secrets || [SECRET], ts);
@@ -159,6 +187,8 @@ async function post(event, opts = {}) {
     lookups: calls.filter((c) => c.method === "GET" && c.url.includes("/rest/v1/profiles")),
   };
 }
+
+let stripeEvents = {};
 
 const CUSTOMER = "cus_paying_customer";
 const ATTACKER = "cus_attacker";
@@ -400,6 +430,50 @@ const BASIC_PRICE = { id: process.env.STRIPE_PRICE_BASIC_EUR, currency: "eur", u
     // failing, which is the same shape as the bug being tested.
     r = await post(subEvent("active", PRO_PRICE));
     ck("...and a 200 returns once the failure is removed", r.status, 200);
+  }
+
+  console.log("\n-- the replay guard is two-phase: a claim is not an application --");
+  // THE BUG, END TO END. An athlete pays; the claim row is written; the
+  // profile write then fails and the handler 500s; Stripe retries. Before
+  // migration 135 the retry saw a claimed row, answered 200 duplicate, and
+  // applied NOTHING — the athlete stayed on free permanently and the only
+  // trace was a log line identical to a genuine replay.
+  {
+    const EVT = "evt_interrupted_upgrade";
+    const paid = { id: EVT, type: "customer.subscription.updated",
+      data: { object: { customer: CUSTOMER, status: "active", items: { data: [{ price: PRO_PRICE }] } } } };
+
+    // Attempt 1: the profile write fails.
+    profiles[OWNER_ID].plan = "free";
+    const realFetch = global.fetch;
+    global.fetch = async (url, opts = {}) => {
+      const m = String(opts.method || "GET").toUpperCase();
+      if (m === "PATCH" && String(url).includes("/rest/v1/profiles")) {
+        calls.push({ url: String(url), method: m, body: null });
+        return { ok: false, status: 500, json: async () => ({ message: "boom" }), text: async () => "boom" };
+      }
+      return realFetch(url, opts);
+    };
+    const first = await post(paid);
+    global.fetch = realFetch;
+    ck("an interrupted delivery answers 500 so Stripe will retry", first.status, 500);
+    ck("...and the athlete is NOT upgraded", profiles[OWNER_ID].plan, "free");
+    ck("...and the claim row exists but is not marked complete",
+       !!stripeEvents[EVT] && stripeEvents[EVT].completed_at === null, true);
+
+    // Attempt 2: Stripe retries the SAME event id.
+    const retry = await post(paid, { keepEvents: true });
+    ck("the retry is not dismissed as a replay", retry.payload && retry.payload.duplicate, undefined);
+    ck("...it re-processes and the athlete finally gets their plan", profiles[OWNER_ID].plan, "pro");
+    ck("...and the event is now stamped complete",
+       !!stripeEvents[EVT] && stripeEvents[EVT].completed_at !== null, true);
+
+    // Attempt 3: a genuine replay of a COMPLETED event changes nothing.
+    profiles[OWNER_ID].plan = "starter";
+    const replay = await post(paid, { keepEvents: true });
+    ck("a completed event is still ignored on redelivery", replay.payload && replay.payload.duplicate, true);
+    ck("...and applies nothing", profiles[OWNER_ID].plan, "starter");
+    ck("...answering 200, because a 4xx/5xx would make Stripe retry forever", replay.status, 200);
   }
 
   console.log("\n-- this suite tests the shipping handler, not a copy --");

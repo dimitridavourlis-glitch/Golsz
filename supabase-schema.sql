@@ -6150,3 +6150,13 @@ drop policy if exists daily_activity_own_read on daily_activity;
 create policy daily_activity_own_read on daily_activity for select using (
   user_id = auth.uid()
 );
+
+-- ============================================================
+-- 135) ADDITIVE — two-phase Stripe replay guard
+-- See supabase-migration-135-stripe-events-completed-at.sql for full context.
+-- ============================================================
+
+alter table stripe_events add column if not exists completed_at timestamptz;
+update stripe_events set completed_at = received_at where completed_at is null;
+create index if not exists stripe_events_incomplete_idx
+  on stripe_events (received_at) where completed_at is null;
