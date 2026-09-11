@@ -95,8 +95,36 @@ ck("exportMyData was found", fn.length > 100, true);
 ck("a per-table error is captured", /_errors\.push\(/.test(fn), true);
 ck("...and the caller is TOLD the file is partial",
    /settings_export_partial/.test(fn), true);
+// The message is now three-valued, so the regex matches the BRANCH rather
+// than one exact line. "Downloaded." on a file with eleven empty sections is
+// technically true and practically misleading, so an empty-section count now
+// sits between "partial" and "done".
 ck("...rather than the file silently claiming to be complete",
-   /_errors\.length \? t\("settings_export_partial"\)/.test(fn), true);
+   /_errors\.length\s*\?\s*t\("settings_export_partial"\)/.test(fn), true);
+
+// ---- AN EMPTY ARRAY IS NOT PROOF OF AN EMPTY TABLE ------------------------
+// PostgREST answers an RLS-filtered read with 200 and [] — a denied read is
+// not an `error`, so the only failure detector here could not see it. This
+// was live: daily_activity had an is_admin()-only select policy, so every
+// non-admin athlete's export silently omitted their whole activity history
+// and reported success. The client cannot tell denial from emptiness; what it
+// can do is stop implying completeness.
+ck("every section reports how many rows it returned", /_sections\[label\] = \{ table, rows:/.test(fn), true);
+ck("...and empty sections are named in the file", /_zero_row_sections\.push\(label\)/.test(fn), true);
+ck("...and the athlete is told when any came back empty",
+   /settings_export_empty_note/.test(fn), true);
+// The canary: a signed-in athlete provably owns exactly one profiles row on
+// their own id. Zero means the export is not reading under the access it
+// assumes, and every other empty section becomes suspect rather than
+// informative.
+ck("a canary proves the export can read a row the athlete provably owns",
+   /_profile_canary/.test(fn), true);
+ck("...and a failed canary is escalated into _errors, not just noted",
+   /Own profile row not readable/.test(fn), true);
+ck("the file explains that empty and denied are indistinguishable from the browser",
+   /indistinguishable from here/.test(APP), true);
+ck("settings_export_empty_note exists in all four dictionaries",
+   (APP.match(/settings_export_empty_note:/g) || []).length, 4);
 // It must not throw the whole export away on one bad table either.
 ck("one failed table does not abandon the rest", /continue;/.test(fn), true);
 

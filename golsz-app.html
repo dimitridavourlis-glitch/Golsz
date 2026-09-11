@@ -423,7 +423,7 @@ const I18N = {
     settings_email_same: "That's already your current email.",
     settings_danger_zone: "DANGER ZONE", settings_delete_account: "Delete account",
     settings_your_data: "YOUR DATA", settings_export_data: "Download my data", settings_export_sub: "Everything GOLSZ holds about you, as a JSON file.",
-    settings_export_busy: "Preparing your file…", settings_export_done: "Downloaded.", settings_export_partial: "Downloaded — but part of it could not be read. The file lists what was missed under _errors.", settings_export_err: "Couldn't prepare your file — try again.",
+    settings_export_busy: "Preparing your file…", settings_export_done: "Downloaded.", settings_export_partial: "Downloaded — but part of it could not be read. The file lists what was missed under _errors.", settings_export_empty_note: "Downloaded. {n} sections came back empty — the file lists them under _zero_row_sections.", settings_export_err: "Couldn't prepare your file — try again.",
     settings_delete_warning: "This permanently deletes your account, profile, and uploaded photos. This cannot be undone. Type DELETE to confirm.",
     settings_delete_confirm_ph: "Type DELETE to confirm", settings_delete_confirm_btn: "Permanently delete",
     settings_email_sent: "Check {email} for a confirmation link to finish the change.",
@@ -770,7 +770,7 @@ const I18N = {
     settings_email_same: "C'est déjà votre e-mail actuel.",
     settings_danger_zone: "ZONE DE DANGER", settings_delete_account: "Supprimer le compte",
     settings_your_data: "VOS DONNÉES", settings_export_data: "Télécharger mes données", settings_export_sub: "Tout ce que GOLSZ détient sur vous, en fichier JSON.",
-    settings_export_busy: "Préparation du fichier…", settings_export_done: "Téléchargé.", settings_export_partial: "Téléchargé — mais une partie n'a pas pu être lue. Le fichier liste les manques sous _errors.", settings_export_err: "Impossible de préparer le fichier — réessayez.",
+    settings_export_busy: "Préparation du fichier…", settings_export_done: "Téléchargé.", settings_export_partial: "Téléchargé — mais une partie n'a pas pu être lue. Le fichier liste les manques sous _errors.", settings_export_empty_note: "Téléchargé. {n} sections sont vides — le fichier les liste sous _zero_row_sections.", settings_export_err: "Impossible de préparer le fichier — réessayez.",
     settings_delete_warning: "Cela supprime définitivement votre compte, votre profil et vos photos. Cette action est irréversible. Tapez DELETE pour confirmer.",
     settings_delete_confirm_ph: "Tapez DELETE pour confirmer", settings_delete_confirm_btn: "Supprimer définitivement",
     settings_email_sent: "Consultez {email} pour un lien de confirmation afin de finaliser le changement.",
@@ -1117,7 +1117,7 @@ const I18N = {
     settings_email_same: "Ese ya es tu correo actual.",
     settings_danger_zone: "ZONA DE PELIGRO", settings_delete_account: "Eliminar cuenta",
     settings_your_data: "TUS DATOS", settings_export_data: "Descargar mis datos", settings_export_sub: "Todo lo que GOLSZ tiene sobre ti, en un archivo JSON.",
-    settings_export_busy: "Preparando tu archivo…", settings_export_done: "Descargado.", settings_export_partial: "Descargado — pero parte no se pudo leer. El archivo indica lo que falta en _errors.", settings_export_err: "No se pudo preparar el archivo — inténtalo de nuevo.",
+    settings_export_busy: "Preparando tu archivo…", settings_export_done: "Descargado.", settings_export_partial: "Descargado — pero parte no se pudo leer. El archivo indica lo que falta en _errors.", settings_export_empty_note: "Descargado. {n} secciones están vacías — el archivo las lista en _zero_row_sections.", settings_export_err: "No se pudo preparar el archivo — inténtalo de nuevo.",
     settings_delete_warning: "Esto elimina permanentemente tu cuenta, perfil y fotos subidas. No se puede deshacer. Escribe DELETE para confirmar.",
     settings_delete_confirm_ph: "Escribe DELETE para confirmar", settings_delete_confirm_btn: "Eliminar permanentemente",
     settings_email_sent: "Revisa {email} para un enlace de confirmación y completar el cambio.",
@@ -1464,7 +1464,7 @@ const I18N = {
     settings_email_same: "Αυτό είναι ήδη το τρέχον email σας.",
     settings_danger_zone: "ΕΠΙΚΙΝΔΥΝΗ ΖΩΝΗ", settings_delete_account: "Διαγραφή λογαριασμού",
     settings_your_data: "ΤΑ ΔΕΔΟΜΕΝΑ ΣΟΥ", settings_export_data: "Λήψη των δεδομένων μου", settings_export_sub: "Ό,τι κρατά το GOLSZ για σένα, σε αρχείο JSON.",
-    settings_export_busy: "Ετοιμάζεται το αρχείο…", settings_export_done: "Έγινε λήψη.", settings_export_partial: "Έγινε λήψη — αλλά ένα μέρος δεν διαβάστηκε. Το αρχείο τα αναφέρει στο _errors.", settings_export_err: "Δεν ήταν δυνατή η προετοιμασία — δοκίμασε ξανά.",
+    settings_export_busy: "Ετοιμάζεται το αρχείο…", settings_export_done: "Έγινε λήψη.", settings_export_partial: "Έγινε λήψη — αλλά ένα μέρος δεν διαβάστηκε. Το αρχείο τα αναφέρει στο _errors.", settings_export_empty_note: "Έγινε λήψη. {n} ενότητες ήταν κενές — το αρχείο τις αναφέρει στο _zero_row_sections.", settings_export_err: "Δεν ήταν δυνατή η προετοιμασία — δοκίμασε ξανά.",
     settings_delete_warning: "Αυτό διαγράφει οριστικά τον λογαριασμό, το προφίλ και τις φωτογραφίες σας. Δεν αναιρείται. Πληκτρολογήστε DELETE για επιβεβαίωση.",
     settings_delete_confirm_ph: "Πληκτρολογήστε DELETE για επιβεβαίωση", settings_delete_confirm_btn: "Οριστική διαγραφή",
     settings_email_sent: "Ελέγξτε το {email} για σύνδεσμο επιβεβαίωσης για να ολοκληρώσετε την αλλαγή.",
@@ -2054,12 +2054,49 @@ function SettingsButton({ openSignal }) {
   async function exportMyData() {
     if (!sb || !uid || exportBusy) return;
     setExportBusy(true); setExportMsg("");
-    const out = { exported_at: new Date().toISOString(), user_id: uid, _errors: [] };
+    // AN EMPTY ARRAY IS NOT PROOF OF AN EMPTY TABLE.
+    //
+    // PostgREST answers a read that RLS filtered to nothing with HTTP 200 and
+    // [] — a denied read is not an `error`. The only failure detector here was
+    // `if (error)`, so any table whose policy stopped matching exported as an
+    // empty array, _errors stayed empty, and the athlete was told the file was
+    // complete. This is a GDPR export: wrong in exactly the way the code was
+    // written to prevent, and it would never have said so.
+    //
+    // It was not hypothetical. daily_activity had only an is_admin() select
+    // policy (fixed in migration 134), so every non-admin athlete's export
+    // silently omitted their entire activity history and reported success.
+    //
+    // The client CANNOT tell those two cases apart — that is the honest
+    // finding, and the file now says so rather than implying completeness.
+    // What it can do is report row counts per section, name the sections that
+    // came back empty, and run a canary on a row the athlete provably owns.
+    const out = {
+      exported_at: new Date().toISOString(),
+      user_id: uid,
+      _errors: [],
+      _sections: {},
+      _zero_row_sections: [],
+      _note: "Each section lists the rows VISIBLE TO YOU at export time. A section with zero rows means either you have no data there or a permission rule filtered it — this file is produced in your browser under your own access, and those two cases are indistinguishable from here. _zero_row_sections lists every empty section so you can check any you did not expect. If _profile_canary is not \"ok\", treat the whole file as incomplete and contact support.",
+      _profile_canary: "unchecked",
+    };
     try {
       for (const [label, table, col] of EXPORT_TABLES) {
         const { data, error } = await sb.from(table).select("*").eq(col, uid);
         if (error) { out._errors.push({ section: label, table, message: error.message }); continue; }
         out[label] = data || [];
+        out._sections[label] = { table, rows: out[label].length };
+        if (out[label].length === 0) out._zero_row_sections.push(label);
+      }
+      // THE CANARY. A signed-in athlete provably owns exactly one profiles row
+      // keyed on their own id. If that comes back empty, the export is not
+      // reading under the access it assumes, and every other empty section in
+      // this file is suspect rather than informative.
+      const ownProfileRows = Array.isArray(out.profile) ? out.profile.length : 0;
+      out._profile_canary = ownProfileRows === 1 ? "ok" : `FAILED: expected 1 own profile row, read ${ownProfileRows}`;
+      if (ownProfileRows !== 1) {
+        out._errors.push({ section: "profile", table: "profiles",
+          message: "Own profile row not readable — this export is incomplete and its empty sections cannot be trusted." });
       }
       const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -2070,7 +2107,13 @@ function SettingsButton({ openSignal }) {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       // Say so when part of it could not be read, rather than handing over a
       // file that looks complete.
-      setExportMsg(out._errors.length ? t("settings_export_partial") : t("settings_export_done"));
+      // Three outcomes, not two. "Downloaded." on a file with eleven empty
+      // sections is technically true and practically misleading.
+      setExportMsg(out._errors.length
+        ? t("settings_export_partial")
+        : out._zero_row_sections.length
+          ? t("settings_export_empty_note").replace("{n}", out._zero_row_sections.length)
+          : t("settings_export_done"));
     } catch (e) {
       console.error("GOLSZ data export failed:", e);
       setExportMsg(t("settings_export_err"));
