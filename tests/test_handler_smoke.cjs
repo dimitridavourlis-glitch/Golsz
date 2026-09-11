@@ -36,6 +36,11 @@ const ck = (l, a, e) => {
 
 // ---- the athlete under test, controllable per scenario ----
 let PROFILE = {};
+// What the two reserve RPCs answer, and every RPC the handler called. Reset
+// per run() so one scenario cannot leak into the next.
+let RESERVE_SCOUT = { allowed: true, used: 1 };
+let RESERVE_FREE_AI = { allowed: true };
+let rpcCalls = [];
 let ATHLETE = {};
 let PATHWAY = [];        // rows from pathway_plan -> feeds ATHLETE STATE's pathway_created/baseline_complete
 let UID = "u1";          // distinct per scenario: the rate limiter keys on it
@@ -83,6 +88,8 @@ global.fetch = async (url, opts) => {
   // reaches any of the code under test.
   if (u.includes("/auth/v1/user")) return { ok: true, status: 200, json: async () => ({ id: UID }), text: async () => "" };
 
+  if (u.includes("/rest/v1/rpc/")) rpcCalls.push(u.slice(u.indexOf("/rest/v1/rpc/") + 13).split("?")[0]);
+
   // ---- Supabase REST ----
   if (u.includes("/rest/v1/profiles")) return { ok: true, status: 200, json: async () => [PROFILE], text: async () => "" };
   if (u.includes("/rest/v1/pathway_plan")) return { ok: true, status: 200, json: async () => PATHWAY, text: async () => "" };
@@ -91,8 +98,12 @@ global.fetch = async (url, opts) => {
     { key: "faq", label: "Answer questions", available: true, plan_min: null, notes: null },
     { key: "targets", label: "Build a target school list", available: true, plan_min: "pro", notes: null },
   ]), text: async () => "" };
-  if (u.includes("/rest/v1/rpc/reserve_scout_question")) return { ok: true, status: 200, json: async () => ({ allowed: true, used: 1 }), text: async () => "" };
-  if (u.includes("/rest/v1/rpc/reserve_free_ai_question")) return { ok: true, status: 200, json: async () => ({ allowed: true }), text: async () => "" };
+  // STEERABLE, because pinning these to allowed:true is what made the entire
+  // quota and refund path untestable: the 402 and the 403 were never reached
+  // by any assertion, and six separate mutations to this code survived the
+  // whole suite.
+  if (u.includes("/rest/v1/rpc/reserve_scout_question")) return { ok: true, status: 200, json: async () => RESERVE_SCOUT, text: async () => "" };
+  if (u.includes("/rest/v1/rpc/reserve_free_ai_question")) return { ok: true, status: 200, json: async () => RESERVE_FREE_AI, text: async () => "" };
   if (u.includes("/rest/v1/rpc/")) return { ok: true, status: 200, json: async () => ({}), text: async () => "" };
   return { ok: true, status: 200, json: async () => [], text: async () => "" };
 };
@@ -112,8 +123,11 @@ function mkRes() {
 }
 
 let uidSeq = 0;
-async function run(label, profile, athlete, pathway) {
+async function run(label, profile, athlete, pathway, quota) {
   PROFILE = profile; ATHLETE = athlete; PATHWAY = pathway || [];
+  rpcCalls = [];
+  RESERVE_SCOUT = (quota && quota.scout) || { allowed: true, used: 1 };
+  RESERVE_FREE_AI = (quota && quota.freeAi) || { allowed: true };
   UID = "u" + (++uidSeq);
   const req = {
     method: "POST",
@@ -123,7 +137,7 @@ async function run(label, profile, athlete, pathway) {
   const res = mkRes();
   let threw = null;
   try { await fn(req, res); } catch (e) { threw = e; }
-  return { res, threw, label };
+  return { res, threw, label, rpcs: rpcCalls.slice() };
 }
 
 (async () => {
@@ -149,6 +163,60 @@ async function run(label, profile, athlete, pathway) {
   ck("did not 502", r2.res.statusCode === 502, false);
   ck("returned a real reply", !!(r2.res.body && r2.res.body.reply_text), true);
   if (r2.res.statusCode === 502) console.log("   detail:", r2.res.body && r2.res.body.detail);
+
+  // ---- THE QUOTA PATH: WHO GETS BILLED, AND WHO GETS REFUNDED ------------
+  //
+  // Until now both reserve RPCs were pinned to {allowed:true}, so the 402 and
+  // the 403 below were never reached by any assertion and the refund was
+  // never observed. Six separate mutations to this code survived the full
+  // suite: typoing either RPC name, inverting `if (!r.ok)` in either release
+  // function, and deleting either allowed-check outright. The code that
+  // decides whether an athlete is charged for an answer had no executing
+  // test at all.
+  console.log("\n-- the daily limit actually refuses --");
+  {
+    const r = await run("daily-limit", { id: "u1", plan: "pro", is_admin: false, ai_unlimited: false,
+      goal_defined: true, goal_text: "NCAA D1" }, BASE_ATHLETE, [{ baseline_complete: true }],
+      { scout: { allowed: false, used: 15 } });
+    ck("a refused reservation answers 402, not a reply", r.res.statusCode, 402);
+    ck("...and says the limit was reached", /Daily Scout limit reached/.test((r.res.body && r.res.body.error) || ""), true);
+    ck("...and reports zero remaining so the header stops promising messages",
+       r.res.body && r.res.body.scout_usage && r.res.body.scout_usage.remaining, 0);
+    ck("...and never calls the model", !!(r.res.body && r.res.body.reply_text), false);
+    // A refusal must not also consume the lifetime allowance.
+    ck("...and does not touch the free lifetime budget", r.rpcs.includes("reserve_free_ai_question"), false);
+    // EXACT NAME, not a substring. The mock routes on includes(), so a typo
+    // like reserve_scout_questionX still matched it and the mutation survived
+    // — while in production PostgREST would 404 and reserveScoutQuestion
+    // fails OPEN, so the daily limit would silently stop existing.
+    ck("...and the RPC it called is named exactly right",
+       r.rpcs.filter((n) => n.startsWith("reserve_scout_question")), ["reserve_scout_question"]);
+  }
+
+  console.log("\n-- the free lifetime budget refuses, and REFUNDS the day --");
+  {
+    const r = await run("lifetime", { id: "u1", plan: "free", is_admin: false, ai_unlimited: false,
+      goal_defined: true, goal_text: "NCAA D2" }, BASE_ATHLETE, [],
+      { scout: { allowed: true, used: 1 }, freeAi: { allowed: false } });
+    ck("an exhausted lifetime budget answers 403", r.res.statusCode, 403);
+    ck("...with the code the client branches on", r.res.body && r.res.body.code, "free_ai_exhausted");
+    // THE REFUND. The daily question was already reserved when the lifetime
+    // check refused. Without the release, an athlete who got no answer has
+    // still spent one of that day's messages — and free_ai_lifetime_used never
+    // resets, so the loss is permanent.
+    ck("...and the daily reservation is given back", r.rpcs.includes("release_scout_question"), true);
+    ck("...and no reply was generated", !!(r.res.body && r.res.body.reply_text), false);
+  }
+
+  console.log("\n-- a paying athlete is not charged against the free budget --");
+  {
+    const r = await run("paid-no-lifetime", { id: "u1", plan: "starter", is_admin: false, ai_unlimited: false,
+      goal_defined: true, goal_text: "NCAA D2" }, BASE_ATHLETE, [],
+      { scout: { allowed: true, used: 1 }, freeAi: { allowed: false } });
+    // freeAi is refusing, but a starter athlete must never reach that gate.
+    ck("the lifetime gate is free-plan only", r.res.statusCode === 403, false);
+    ck("...so a paying athlete still gets their answer", !!(r.res.body && r.res.body.reply_text), true);
+  }
 
   console.log("\n-- a brand-new free athlete --");
   const r3 = await run("free", { id: "u1", plan: "free", is_admin: false, ai_unlimited: false,
