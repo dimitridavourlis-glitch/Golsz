@@ -1843,81 +1843,6 @@ async function disablePushNotifications(uid) {
     await sub.unsubscribe();
   }
 }
-function NotificationBell() {
-  const { t } = useLang();
-  const [uid, setUid] = useState(null);
-  const [enabled, setEnabled] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState(null);
-  const toastTimer = useRef(null);
-
-  useEffect(() => {
-    if (!sb || !pushSupported()) return;
-    (async () => {
-      try {
-        const { data: { user } } = await sb.auth.getUser();
-        if (!user) return;
-        setUid(user.id);
-        if (Notification.permission === "granted") {
-          const reg = await navigator.serviceWorker.getRegistration("/sw.js");
-          const sub = reg && await reg.pushManager.getSubscription();
-          setEnabled(!!sub);
-        }
-      } catch (e) { console.error("GOLSZ push status check error:", e); }
-    })();
-    return () => { if (toastTimer.current) clearTimeout(toastTimer.current); };
-  }, []);
-
-  function showToast(msg) {
-    setToast(msg);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 4500);
-  }
-
-  async function toggle() {
-    if (!uid || busy) return;
-    setBusy(true);
-    try {
-      if (enabled) {
-        await disablePushNotifications(uid);
-        setEnabled(false);
-        showToast(t("notif_off"));
-      } else {
-        const ok = await enablePushNotifications(uid);
-        setEnabled(ok);
-        showToast(ok ? t("notif_on") : t("notif_blocked"));
-      }
-    } catch (e) {
-      console.error("GOLSZ push toggle error:", e);
-      showToast(e && e.code === "IOS_NEEDS_HOMESCREEN" ? t("notif_ios_homescreen") : t("notif_error"));
-    } finally { setBusy(false); }
-  }
-
-  if (!sb || !pushSupported()) return null;
-  return (
-    <span style={{ position: "relative", display: "inline-flex" }}>
-      <button onClick={toggle} disabled={busy} title={enabled ? t("notif_title_on") : t("notif_title_off")}
-        style={{ position: "relative", background: "none", border: "none", color: enabled ? C.lime : C.chalk, cursor: "pointer", padding: 4, opacity: busy ? 0.6 : 1 }}>
-        <Bell size={22} />
-        {enabled && <span style={{ position: "absolute", top: 3, right: 3, width: 7, height: 7, borderRadius: 99, background: C.lime, border: `2px solid ${C.pitch}` }} />}
-      </button>
-      {toast && (
-        <div onClick={() => setToast(null)} style={{
-          position: "absolute", top: "calc(100% + 10px)", right: 0, zIndex: 70, cursor: "pointer",
-          background: C.card, border: `1px solid ${C.line2}`, borderRadius: 12, padding: "11px 13px",
-          width: 230, fontSize: 12.5, lineHeight: 1.4, color: C.chalk,
-          boxShadow: "0 14px 32px -14px rgba(0,0,0,0.75)",
-        }} className="msg">
-          <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-            <Bell size={14} color={enabled ? C.lime : C.slate} style={{ flexShrink: 0, marginTop: 1 }} />
-            <span>{toast}</span>
-          </div>
-        </div>
-      )}
-    </span>
-  );
-}
-
 /* ============ SETTINGS ============
    Currently just the Background (theme) toggle, but it's its own modal
    rather than inlining a toggle into the header so there's an obvious
@@ -8519,7 +8444,7 @@ function PathNode({ Icon, label, sub, filled, current, onClick, size, color }) {
 // goal and hands you to Plan to change it. Plan is the workspace: it owns
 // editing. Same component, one prop, so the two can never drift out of sync
 // the way two copies would.
-function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan, flush, hero, onGoalText }) {
+function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan, flush, hero, onGoalText, children }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
   const [goalText, setGoalText] = useState("");
@@ -8661,6 +8586,11 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan, flush, he
             <button onClick={save} disabled={busy} style={btn(C.lime, C.ink)}>{busy ? t("goal_card_saving") : t("goal_card_save")}</button>
             <button onClick={() => { setEditing(false); setErr(""); }} disabled={busy} style={btn("transparent", C.slate)}>{t("goal_card_cancel")}</button>
           </div>
+          {/* The backup plan, which used to hold its own row on the Plan page
+              directly under the goal. Same kind of answer, same editor — the
+              athlete is deciding what they are chasing, and the fallback is
+              part of that decision rather than a second card about it. */}
+          {children && <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>{children}</div>}
         </div>
       ) : hasGoal ? (
         <div>
@@ -10269,11 +10199,16 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
           The goal stays a headline on Plan because this is where it is
           EDITED, and the thing you can change should be the thing you can
           see. */}
-      <GoalCard actingFor={actingFor} onSaved={() => setGoalVersion((v) => v + 1)} compact hero onGoalText={setGoalHeading} />
-      {/* Same card shape as MY GOAL above, one step down the hierarchy —
-          a backup plan that looked structurally different would read as a
-          different KIND of thing, when it is the same kind with less weight. */}
-      <BackupPlanCard athlete={pathwayState.athlete} loaded={pathwayState.loaded} actingFor={actingFor} onSaved={() => setGoalVersion((v) => v + 1)} quiet />
+      {/* THE BACKUP PLAN MOVED INSIDE THE GOAL EDITOR.
+          It held its own row directly under the goal — a second destination
+          stated on the page that opens with "Scholarship", for a field an
+          athlete changes maybe twice a year. It is the same KIND of answer as
+          the goal, so it belongs in the same editor rather than beside it.
+          It is not deleted: a stored, editable field with no visible editor is
+          a worse failure than a line nobody reads. */}
+      <GoalCard actingFor={actingFor} onSaved={() => setGoalVersion((v) => v + 1)} compact hero onGoalText={setGoalHeading}>
+        <BackupPlanCard athlete={pathwayState.athlete} loaded={pathwayState.loaded} actingFor={actingFor} onSaved={() => setGoalVersion((v) => v + 1)} quiet />
+      </GoalCard>
 
       {/* Pathway plan (migration 076) lives on this same "Pathway/Plan" nav
           destination now (brief §14's nav concept) rather than buried on
@@ -11302,11 +11237,6 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
 
   function toggleMilestone(id) {
     const next = milestones.map((m) => (m.id === id ? touchedMilestone({ ...m, done: !m.done }) : m));
-    save({ milestones: next });
-  }
-
-  function removeMilestone(id) {
-    const next = milestones.filter((m) => m.id !== id);
     save({ milestones: next });
   }
 

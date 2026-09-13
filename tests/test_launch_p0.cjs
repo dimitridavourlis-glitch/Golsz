@@ -247,7 +247,20 @@ ck("Home does not render its own copy of the goal",
 // the prop list never grows. The original pinned the exact props, so adding a
 // presentation-only `hero` flag failed a test about editability. Now it
 // requires the compact Plan call site and asserts readOnly is absent from it.
-ck("Plan renders it editable", /<GoalCard actingFor=\{actingFor\} onSaved=\{[^}]+\} compact(?![^/>]*readOnly)[^/>]*\/>/.test(APP), true);
+// 2026-09-13: the tag stopped being self-closing when the backup plan moved
+// inside the goal EDITOR (it used to hold its own row on the Plan page, a
+// second destination stated under "Scholarship"). The regex required `/>`,
+// which froze the tag's SHAPE — again a presentational detail rather than the
+// guarantee. Both forms are accepted now; readOnly is still what is asserted.
+ck("Plan renders it editable",
+   /<GoalCard actingFor=\{actingFor\} onSaved=\{[^}]+\} compact(?![^>]*readOnly)[^>]*>/.test(APP), true);
+// And the backup plan is still reachable — moved, not deleted. A stored,
+// editable field with no visible editor is a worse failure than a line nobody
+// reads.
+ck("...and the backup plan still has an editor to live in",
+   /<GoalCard[\s\S]{0,240}?>\s*<BackupPlanCard/.test(APP), true);
+ck("...which the goal editor actually renders",
+   /\{children && <div style=\{\{ marginTop: 14/.test(APP), true);
 ck("exactly one render site — Plan owns the goal", (APP.match(/<GoalCard /g) || []).length, 1);
 ck("Plan renders it", /<GoalCard actingFor=\{actingFor\} onSaved=\{\(\) => setGoalVersion/.test(APP), true);
 ck("the Plan card no longer substitutes the pathway category for the goal",
