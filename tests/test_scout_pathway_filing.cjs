@@ -180,5 +180,76 @@ for (const [name, idx] of [
   ck("a deferral is still not approval", athleteApprovedPathwayBuild("build my pathway later, not yet"), false);
 }
 
+// ---- dates arrive as an offset, and the server owns the arithmetic -------
+// The model is never told today's date. It sends a whole number of days and
+// extractSuggestedPathway resolves it, which is what makes a past date
+// UNREPRESENTABLE rather than merely discouraged — an athlete must never be
+// handed a plan that is already late the moment they accept it.
+{
+  const dayOf = (n) => { const d = new Date(); d.setUTCHours(0,0,0,0); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); };
+  const one = (over) => extractSuggestedPathway(pathway({ milestones: [Object.assign({ label: "A step", stage_index: 0 }, over)] })).milestones[0];
+
+  ck("an offset of 1 resolves to tomorrow", one({ due_in_days: 1 }).due, dayOf(1));
+  ck("an offset of 30 resolves to thirty days out", one({ due_in_days: 30 }).due, dayOf(30));
+  ck("the two-year ceiling is inclusive", one({ due_in_days: 730 }).due, dayOf(730));
+  // Beyond two years a date stops being a plan and becomes a prediction about
+  // a teenager's life.
+  ck("past the ceiling the step is undated, not clamped", one({ due_in_days: 731 }).due, null);
+
+  // The three shapes that would put a date in the past if the server trusted
+  // the model's arithmetic instead of doing its own.
+  ck("zero is not today, it is no date", one({ due_in_days: 0 }).due, null);
+  ck("a negative offset cannot produce a past date", one({ due_in_days: -5 }).due, null);
+  ck("an absolute date in the field is refused outright", one({ due_in_days: "2020-01-01" }).due, null);
+
+  ck("a fractional offset is refused", one({ due_in_days: 3.5 }).due, null);
+  ck("a numeric string is refused", one({ due_in_days: "7" }).due, null);
+  ck("null means undated, which is the default", one({ due_in_days: null }).due, null);
+  ck("an absent field means undated", one({}).due, null);
+
+  // Provenance travels with the date from the moment it is minted. Without it
+  // the client cannot tell an AI's guess from the athlete's own commitment on
+  // the next page load, and a guess would be free to call them late.
+  ck("a resolved date is marked as Scout's suggestion", one({ due_in_days: 7 }).due_src, "scout");
+  ck("an undated step carries no provenance", one({ due_in_days: null }).due_src, null);
+  ck("a refused offset carries no provenance either", one({ due_in_days: -5 }).due_src, null);
+
+  // A date must never cost a step its filing, or its label, or its done-state.
+  const full = one({ due_in_days: 14 });
+  ck("dating a step leaves its label and done-state intact",
+     [full.label, full.done], ["A step", false]);
+  // Filing is resolved against stages this reply mints fresh each call, so the
+  // two must be compared inside ONE extraction: what matters is that carrying
+  // a date did not change WHICH section the step landed under.
+  const pair = extractSuggestedPathway(pathway({ milestones: [
+    { label: "Dated", stage_index: 1, due_in_days: 14 },
+    { label: "Undated", stage_index: 1 },
+  ] })).milestones;
+  ck("...and files it under exactly the section it would have had anyway",
+     pair[0].stage === pair[1].stage && typeof pair[0].stage === "string", true);
+  ck("the undated twin really is undated", [pair[1].due, pair[1].due_src], [null, null]);
+}
+
+// ---- the prompt has to ask for the offset, and rule out the guesses ------
+{
+  const P = SRC.slice(SRC.indexOf('"due_in_days" puts a step'), SRC.indexOf("Only set fields that actually changed"));
+  ck("the milestone shape declares the field", /"due_in_days": null/.test(SRC), true);
+  ck("the prompt found its own rules block", P.length > 400, true);
+  ck("it is stated as days from today, never a date", /WHOLE NUMBER OF\n?DAYS FROM TODAY/.test(P), true);
+  ck("the model is told it does not know today's date", /You are not told today's date/.test(P), true);
+  ck("the range is stated", /Range 1 to 730/.test(P), true);
+  // The failure mode that matters most: a date on a step whose timing belongs
+  // to somebody else is a deadline the athlete cannot meet by working harder.
+  ck("steps gated on another person must not be dated", /NEVER date a step that needs someone else to act first/.test(P), true);
+  ck("...and the examples name the real ones",
+     /trial invitation[\s\S]*coach replying[\s\S]*offer[\s\S]*signing[\s\S]*call-up[\s\S]*selection/.test(P), true);
+  ck("fixtures whose date the model does not know are excluded", /NEVER date a step tied to a real fixture/.test(P), true);
+  ck("dates must be spread rather than piled", /SPREAD THEM/.test(P), true);
+  ck("route order is preserved", /must never fall before one in an earlier section/.test(P), true);
+  // Approval is not a licence to guess: most fifteen-year-olds will not audit
+  // twelve dates on a confirm card.
+  ck("the prompt says approval is not licence to guess", /not licence to\s+guess/.test(P), true);
+}
+
 console.log("\n" + pass + "/" + (pass + fail) + " passed");
 process.exit(fail ? 1 : 0);

@@ -7995,8 +7995,27 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
                     <div style={{ fontSize: 11.5, color: C.chalk, marginTop: 3 }}>
                       {t("pathway_type_" + (m.suggestedPathway.pathway_type || "other"))}{m.suggestedPathway.target_timeline ? ` · ${m.suggestedPathway.target_timeline}` : ""}
                     </div>
+                    {/* THE DATES ARE PART OF THE PROPOSAL, SO THEY ARE SHOWN.
+                        Scout now picks a day for the steps whose timing the
+                        athlete controls, and this list is the only place those
+                        days are seen before they are accepted. A preview that
+                        showed twelve labels and silently carried twelve dates
+                        would make the confirm tap meaningless — the athlete
+                        would be approving something the screen never told them
+                        about, which is the exact failure this card exists to
+                        prevent. Undated steps simply show no date; that is a
+                        real and honest state, not a gap. */}
                     {next.map((ms, k) => (
-                      <div key={k} style={{ fontSize: 11.5, color: C.chalk, marginTop: 2 }}>{"\u00b7 "}{ms && ms.label}</div>
+                      <div key={k} style={{ fontSize: 11.5, color: C.chalk, marginTop: 2, display: "flex", gap: 8 }}>
+                        <span style={{ flex: 1, minWidth: 0 }}>{"\u00b7 "}{ms && ms.label}</span>
+                        {ms && ms.due && (
+                          <span style={{ color: C.slate, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                            {new Date(ms.due + "T00:00:00").toLocaleDateString(
+                              lang === "el" ? "el-GR" : lang === "fr" ? "fr-FR" : lang === "es" ? "es-ES" : "en-GB",
+                              { day: "numeric", month: "short" })}
+                          </span>
+                        )}
+                      </div>
                     ))}
                     <div style={{ fontSize: 11.5, fontWeight: 700, color: cur.length ? C.amber : C.slate, marginTop: 8 }}>
                       {cur.length
@@ -9163,7 +9182,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
     const count = days.reduce((n, d) => n + d.rows.length, 0);
     // Late is its own state, not a day: an overdue step has already missed
     // its day and belongs at the front of the week, not buried on a past one.
-    const late = allMilestones.filter((m) => !m.done && m.due && m.due < todayK).length;
+    const late = allMilestones.filter((m) => !m.done && m.due && !suggestedDate(m) && m.due < todayK).length;
     // The one day the footer names: today if today still has work on it,
     // otherwise the next day this week that does. Seven boxes that never say
     // what is inside them are a picture of a week, not a week — and the whole
@@ -9220,8 +9239,15 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
         : { text: t("home_door_passport_empty"), live: false };
 
   const stepsDone = allMilestones.filter((m) => m.done).length;
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const stepsLate = allMilestones.filter((m) => !m.done && m.due && m.due < todayIso).length;
+  // ONE ANSWER TO "WHAT IS TODAY", AND IT IS THE LOCAL ONE.
+  // This was `new Date().toISOString().slice(0, 10)` — a UTC day — while the
+  // week calendar eleven lines up derives its days from isoDay(), which is
+  // local. East of UTC the two disagree every evening: for a Greek athlete
+  // after 21:00 (one of the four languages GOLSZ ships), a step due today was
+  // already being counted late by this line while the calendar still drew it
+  // on today. Steps live on local calendar days, so the comparison must too.
+  const homeTodayKey = isoDay(new Date());
+  const stepsLate = allMilestones.filter((m) => !m.done && m.due && !suggestedDate(m) && m.due < homeTodayKey).length;
   const planFact = !canTargets
     ? { text: t("nav_plan"), live: false }
     : allMilestones.length > 0
@@ -10671,7 +10697,41 @@ function normalizeMilestone(m) {
     done: !!(m && m.done),
     due: (m && typeof m.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(m.due)) ? m.due : null,
     stage: (m && typeof m.stage === "string" && m.stage) ? m.stage : null,
+    // WHERE THE DATE CAME FROM, and the only value that means anything is
+    // "scout": a day Scout picked that the athlete has not touched since.
+    // Absence means the date is the athlete's own, which is why the athlete's
+    // own steps need no migration — every row already on file reads as theirs,
+    // because it is.
+    //
+    // This exists because a due date is not decoration. It drives
+    // nextMilestone (and therefore Home's one "what do I do now" card), the
+    // late counters on Home and the Plan door, and the OVERDUE band, whose
+    // copy is unhedged in all four languages. One tap on Scout's confirm card
+    // can accept a dozen dates at once, so without this field an AI guess
+    // could outrank every step the athlete wrote themselves and start calling
+    // a fifteen-year-old late on deadlines nobody chose.
+    //
+    // Cleared by any edit to the step — see touched() below. Touching it is
+    // what makes the date theirs.
+    due_src: (m && m.due_src === "scout" && m.due) ? "scout" : null,
   };
+}
+// A step stops being Scout's suggestion the moment the athlete acts on it:
+// ticking, renaming, re-dating or moving it are all a person saying "yes, this
+// one is mine". From then on the date behaves like any date they set.
+// Re-dating goes through setMilestoneDue, which clears due_src by writing the
+// whole field itself; everything else routes through here.
+function touchedMilestone(m) {
+  return m.due_src ? { ...m, due_src: null } : m;
+}
+// THE ONE QUESTION EVERY PUNITIVE SURFACE MUST ASK FIRST.
+// True only while a date is Scout's suggestion AND the athlete has not acted
+// on that step. Such a date is shown — it is on the calendar, it is on the row,
+// it is real information — but it cannot call anyone late, because nobody
+// agreed to it. One tap on a confirm card is consent to a plan, not consent to
+// twelve individual deadlines.
+function suggestedDate(m) {
+  return !!(m && m.due_src === "scout" && m.due);
 }
 // THE RULE behind "what do I do now" — stated, never inferred:
 // the earliest-dated step that is not done; if nothing carries a date, the first
@@ -10681,9 +10741,17 @@ function normalizeMilestone(m) {
 function nextMilestone(milestones) {
   const undone = (milestones || []).filter((m) => !m.done);
   if (!undone.length) return null;
+  // A DATE THE ATHLETE CHOSE OUTRANKS EVERY DATE SCOUT GUESSED.
+  // Both are sorted earliest-first, but the athlete's own commitments are
+  // exhausted before a suggestion is offered — otherwise a twelve-step drafted
+  // plan takes over the app's one "what do I do now" card and the athlete's own
+  // steps never surface again until all twelve are done.
+  const soonest = (rows) => rows.slice().sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0))[0];
   const dated = undone.filter((m) => m.due);
   if (!dated.length) return undone[0];
-  return dated.slice().sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0))[0];
+  const chosen = dated.filter((m) => !suggestedDate(m));
+  if (chosen.length) return soonest(chosen);
+  return soonest(dated);
 }
 // Locale follows the app language; "3d overdue" beats "2026-07-29" for a
 // 15-year-old deciding what to do this week.
@@ -10695,6 +10763,10 @@ function milestoneDateLabel(m, lang, t) {
   const short = d.toLocaleDateString(loc, { day: "numeric", month: "short" });
   if (m.done) return { text: t("pathway_done") + " · " + short, tone: "flat" };
   const n = Math.round((d - today) / 864e5);
+  // The suggestion Scout made has come and gone, and the athlete never took it
+  // up. That is not a missed deadline — it is a day that was never theirs. It
+  // still shows, plainly and in the flat tone, so nothing is hidden from them.
+  if (n < 0 && suggestedDate(m)) return { text: short, tone: "flat" };
   if (n < 0) { const a = -n; return { text: (a < 14 ? a + "d " : Math.round(a / 7) + "w ") + t("pathway_overdue"), tone: "over" }; }
   if (n === 0) return { text: t("pathway_today"), tone: "due" };
   if (n === 1) return { text: t("pathway_tomorrow"), tone: "due" };
@@ -10993,7 +11065,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
 
 
   function toggleMilestone(id) {
-    const next = milestones.map((m) => (m.id === id ? { ...m, done: !m.done } : m));
+    const next = milestones.map((m) => (m.id === id ? touchedMilestone({ ...m, done: !m.done }) : m));
     save({ milestones: next });
   }
 
@@ -11008,7 +11080,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
   function renameMilestone(id, label) {
     const clean = label.trim().slice(0, 120);
     if (!clean) return;                       // empty is a no-op, not a delete
-    save({ milestones: milestones.map((m) => (m.id === id ? { ...m, label: clean } : m)) });
+    save({ milestones: milestones.map((m) => (m.id === id ? touchedMilestone({ ...m, label: clean }) : m)) });
   }
 
   // Order is meaning here — these are steps toward a goal, not a set. Up/down
@@ -11028,7 +11100,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
     const j = i + dir;
     if (i < 0 || j < 0 || j >= milestones.length) return;
     const next = milestones.slice();
-    next[i] = milestones[j]; next[j] = milestones[i];
+    next[i] = touchedMilestone(milestones[j]); next[j] = touchedMilestone(milestones[i]);
     save({ milestones: next });
   }
 
@@ -11044,7 +11116,10 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
     const due = /^\d{4}-\d{2}-\d{2}$/.test(dueDraft) ? dueDraft : null;
     setEditingMilestone(null);
     if (!clean) return;
-    save({ milestones: milestones.map((m) => (m.id === id ? { ...m, label: clean, due } : m)) });
+    // Committing the editor is the athlete reading the date and keeping it,
+    // so the date becomes theirs whether they changed it or not — due_src goes
+    // whatever else happened here.
+    save({ milestones: milestones.map((m) => (m.id === id ? { ...m, label: clean, due, due_src: null } : m)) });
   }
   // Delete keeps the item AND its index, so undo is a real restore rather than
   // a re-add at the end — position is meaning in an ordered plan.
@@ -11079,7 +11154,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
   const dateScheme = (typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "light") ? "light" : "dark";
   const doneCount = milestones.filter((m) => m.done).length;
   const todayIso = new Date(); todayIso.setHours(0, 0, 0, 0);
-  const overdueCount = milestones.filter((m) => !m.done && m.due && new Date(m.due + "T00:00:00") < todayIso).length;
+  const overdueCount = milestones.filter((m) => !m.done && m.due && !suggestedDate(m) && new Date(m.due + "T00:00:00") < todayIso).length;
   const nextStep = nextMilestone(milestones);
   const nextDate = nextStep ? milestoneDateLabel(nextStep, lang, t) : null;
 
@@ -11116,7 +11191,13 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
     if (!m.due) return "undated";
     const days = Math.round((new Date(m.due + "T00:00:00") - todayIso) / 86400000);
     // A finished step that ran past its date is not overdue, it is finished.
-    if (days < 0) return m.done ? "d30" : "overdue";
+    if (days < 0 && m.done) return "d30";
+    // Nor is a day Scout suggested and the athlete never took up. It needs a
+    // date FROM THEM, which is exactly what the undated band is for — and if
+    // the suggestion falls inside this week the calendar above is already
+    // drawing it, so it must not also appear below.
+    if (days < 0 && suggestedDate(m)) return weekKeys.has(m.due) ? "inweek" : "undated";
+    if (days < 0) return "overdue";
     // Anything inside the current Monday-Sunday week belongs to the calendar
     // above and must not also appear in a band below it.
     if (weekKeys.has(m.due)) return "inweek";

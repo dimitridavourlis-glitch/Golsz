@@ -81,7 +81,16 @@ for (const name of suites) {
   // Scope the search to the files this suite actually reads. Falling back to
   // every source would let a suite "pass" on an anchor that exists in some
   // unrelated file — the same class of false negative this file is about.
-  const reads = [...t.matchAll(/readFileSync\([^)]*?["']([^"']+)["']/g)].map((m) => path.basename(m[1]));
+  // EVERY quoted segment of the path, not the first one. This read
+  // `/readFileSync\([^)]*?["']([^"']+)["']/` and stopped at the first string
+  // inside the call — which for the house idiom
+  // `readFileSync(path.join(__dirname, "..", "api", "scout.js"))` is "..",
+  // basename "..", a SOURCES miss and an empty pool. Every suite written that
+  // way was being checked against no source at all: nothing could be found, so
+  // nothing was ever reported dead, and the suite passed by checking nothing.
+  const reads = [...t.matchAll(/readFileSync\(([^)]*(?:\)[^)]*)??)\)/g)]
+    .flatMap((m) => [...m[1].matchAll(/["']([^"']+)["']/g)].map((q) => path.basename(q[1])))
+    .filter((b) => b !== ".." && b !== ".");
   const pool = reads.length ? reads.map((b) => SOURCES[b] || "").join("\n") : ALL_SOURCE;
 
   const literals = new Set();

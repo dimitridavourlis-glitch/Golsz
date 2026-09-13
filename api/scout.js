@@ -3070,10 +3070,41 @@ function extractSuggestedPathway(data, existingStages) {
     // just wrote, so everything Scout added to a route the athlete already
     // had landed unfiled, which is to say nowhere near the map it belonged to.
     const target = stages.length ? stages : (Array.isArray(existingStages) ? existingStages.filter((x) => x && x.id) : []);
+    // DATES ARRIVE AS AN OFFSET, NEVER AS A DATE.
+    //
+    // The model is not told today's date — nothing in SYSTEM_PROMPT states it,
+    // and telling it would only move the arithmetic somewhere we cannot check.
+    // It sends a whole number of days from now and the server resolves it
+    // here, which buys three things that prompt rules alone cannot:
+    //   - a date in the PAST is unrepresentable, not merely discouraged. An
+    //     athlete cannot be handed a plan that is late the moment they accept
+    //     it, which is the single worst thing this feature could do.
+    //   - the resolved day always agrees with the server's clock rather than
+    //     with whatever the model believed the date was.
+    //   - a malformed offset degrades to an undated step, which the Plan
+    //     screen already handles as a real state, instead of a bad date.
+    //
+    // 730 days is the ceiling. Beyond two years a date stops being a plan and
+    // becomes a prediction about a fifteen-year-old's life.
+    //
+    // due_src marks the date as SUGGESTED rather than chosen. It travels with
+    // the milestone through the athlete's approval and into storage, because
+    // the client must be able to tell the two apart forever after: a date the
+    // athlete set can call them late, and a date Scout guessed must not until
+    // they have touched that step themselves.
+    const dueFromOffset = (n) => {
+      if (!Number.isInteger(n) || n < 1 || n > 730) return null;
+      const d = new Date();
+      d.setUTCHours(0, 0, 0, 0);
+      d.setUTCDate(d.getUTCDate() + n);
+      return d.toISOString().slice(0, 10);
+    };
     const milestones = rawMilestones.map((m) => {
       const i = m.stage_index;
       const filed = target.length && Number.isInteger(i) && i >= 0 && i < target.length;
-      return { label: m.label.trim().slice(0, 200), done: false, stage: filed ? target[i].id : null };
+      const due = dueFromOffset(m.due_in_days);
+      return { label: m.label.trim().slice(0, 200), done: false, stage: filed ? target[i].id : null,
+               due, due_src: due ? "scout" : null };
     });
     return {
       pathway_type: p.pathway_type,
@@ -4143,7 +4174,8 @@ Output as valid JSON only:
       {
         "label": "milestone label",
         "done": false,
-        "stage_index": null
+        "stage_index": null,
+        "due_in_days": null
       }
     ]
   },
@@ -4180,6 +4212,30 @@ map, like "Academy", "U19 / CS Saint-Laurent", or "Trials in Portugal".
 - Leave it null for a step that genuinely spans the whole pathway, or that
   belongs to a section you are not proposing. Unfiled is honest; wrongly
   filed is not.
+
+"due_in_days" puts a step on the athlete's calendar. It is a WHOLE NUMBER OF
+DAYS FROM TODAY (1 = tomorrow, 7 = a week from today, 30 = a month), never a
+date. You are not told today's date and must never write one — the server
+turns your offset into a real day.
+- Range 1 to 730. Null is the default, and null is honest.
+- Date ONLY a step the athlete can finish ALONE, on their own schedule: film a
+  session, retest a benchmark, send an email, fill in a Passport section, book
+  a session. These are the steps where a day is a decision they control.
+- NEVER date a step that needs someone else to act first — a trial invitation,
+  a coach replying, an offer, a signing, a call-up, a selection, a scout
+  watching. The athlete cannot make those happen on a Tuesday, and a date on
+  one is a deadline they are guaranteed to miss through no fault of their own.
+  Leave it null and say in your reply what it is waiting on.
+- NEVER date a step tied to a real fixture whose date you do not know — a
+  season opener, a showcase, an ID camp, a combine, trials. If you know the
+  event but not its date, leave it null and ask them when it is.
+- SPREAD THEM. Six steps all landing on day 7 is not a plan, it is a pile. Give
+  each one the time the work actually takes, in the order the route runs: a
+  step in a later section must never fall before one in an earlier section.
+- These dates go in front of the athlete for approval before anything is saved,
+  and they can change or delete any of them afterwards. That is not licence to
+  guess. A date you invented is one a fifteen-year-old has to notice and undo,
+  and most will not — they will just feel behind.
 
 Only set fields that actually changed this reply. Use null for unchanged fields. memory_writes must always be present (empty array [] if nothing new). Everything else is optional and may be null or omitted.`;
 

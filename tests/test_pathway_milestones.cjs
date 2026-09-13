@@ -43,6 +43,11 @@ function grab(sig) {
 }
 // Direct eval leaks `function` declarations into this scope; `const` would not.
 eval(grab("function normalizeMilestone(m) {"));
+// Lifted too, not retyped: nextMilestone and milestoneDateLabel both call it,
+// and a hand-written stub here would let the real predicate rot while every
+// assertion below stayed green.
+eval(grab("function suggestedDate(m) {"));
+eval(grab("function touchedMilestone(m) {"));
 eval(grab("function nextMilestone(milestones) {"));
 
 // ---- normalizeMilestone: additive, never destructive ---------------------
@@ -110,12 +115,15 @@ const MS = [
   { id: "c", label: "c", done: false, due: null, stage: "senior" },
   { id: "d", label: "d", done: false, due: null, stage: null },
 ];
-// The extracted body closes over `milestones` and `save` — supply both.
-const run = new Function("milestones", "save", mvFn + "; return _mv;");
+// The extracted body closes over `milestones`, `save` and `touchedMilestone` —
+// supply all three. new Function() sees only globals, so the eval'd helper
+// above is NOT in its scope; passing the real one keeps this running the
+// production function rather than a stub that cannot rot.
+const run = new Function("milestones", "save", "touchedMilestone", mvFn + "; return _mv;");
 const stageOf = (list) => list.map((m) => m.id + ":" + m.stage).join(",");
 for (const [id, dir] of [["a", 1], ["b", -1], ["b", 1], ["c", -1], ["c", 1], ["d", -1], ["d", 1], ["a", -1]]) {
   SAVED = null;
-  run(MS, (o) => { SAVED = o.milestones; })(id, dir);
+  run(MS, (o) => { SAVED = o.milestones; }, touchedMilestone)(id, dir);
   if (SAVED) {
     const before = MS.slice().sort((x, y) => (x.id < y.id ? -1 : 1));
     const after = SAVED.slice().sort((x, y) => (x.id < y.id ? -1 : 1));
@@ -504,6 +512,76 @@ ck("...and that condition is derived from milestones that really are filed",
        defined.filter((k) => !values.map((v) => prefix + v).includes(k)), []);
   }
 }
+
+console.log("\n-- a date Scout guessed is not a date the athlete agreed to --");
+// The whole safety property of Scout-drafted plans lives in one predicate, so
+// run it, and run the real consumers against it rather than asserting on the
+// source text.
+eval(grab("function milestoneDateLabel(m, lang, t) {"));
+const tid = (k) => k;
+const SUG = { id: "s", label: "s", done: false, due: "2020-01-01", stage: null, due_src: "scout" };
+const MINE = { id: "m", label: "m", done: false, due: "2020-01-01", stage: null, due_src: null };
+
+ck("a scout date with no due is not a suggestion", suggestedDate({ due_src: "scout", due: null }), false);
+ck("a due with no source is the athlete's own", suggestedDate({ due: "2026-09-01" }), false);
+ck("scout + a real date is a suggestion", suggestedDate(SUG), true);
+// normalizeMilestone is the gate: a row claiming any other provenance, or
+// claiming scout with no date, must not be able to dodge the late counters.
+ck("normalizeMilestone keeps a genuine scout marker", normalizeMilestone(SUG).due_src, "scout");
+ck("...rejects an invented provenance value", normalizeMilestone({ due: "2026-09-01", due_src: "athlete" }).due_src, null);
+ck("...and rejects scout provenance with no date", normalizeMilestone({ due_src: "scout" }).due_src, null);
+ck("an ordinary athlete step reads as their own", normalizeMilestone({ due: "2026-09-01" }).due_src, null);
+
+// The harm this prevents: an unhedged "3w overdue" on a day nobody chose.
+ck("an untouched suggestion that has passed never reads as overdue",
+   milestoneDateLabel(SUG, "en", tid).tone, "flat");
+ck("...while the athlete's own passed date still does",
+   milestoneDateLabel(MINE, "en", tid).tone, "over");
+// Touching it is consent. From then on it behaves like any date they set.
+ck("touching a step makes the date theirs",
+   milestoneDateLabel(touchedMilestone(SUG), "en", tid).tone, "over");
+ck("touching a step the athlete already owns changes nothing",
+   touchedMilestone(MINE), MINE);
+
+console.log("\n-- a suggestion never seizes 'what do I do now' --");
+const MINE_LATER = { id: "ml", label: "ml", done: false, due: "2026-12-01", stage: null };
+const SUG_SOONER = { id: "ss", label: "ss", done: false, due: "2026-06-01", stage: null, due_src: "scout" };
+ck("the athlete's own later step outranks Scout's earlier one",
+   nextMilestone([SUG_SOONER, MINE_LATER]).id, "ml");
+// Scout is not silenced — it is second in line, not absent. A drafted plan on
+// an empty Pathway is still the best answer the app has.
+ck("with no athlete-dated steps, Scout's earliest is still offered",
+   nextMilestone([SUG_SOONER, { id: "u", label: "u", done: false, due: null, stage: null }]).id, "ss");
+ck("among several suggestions the earliest still wins",
+   nextMilestone([{ ...SUG_SOONER, id: "late", due: "2026-09-01" }, SUG_SOONER]).id, "ss");
+ck("a done suggestion is never next", nextMilestone([{ ...SUG_SOONER, done: true }, MINE_LATER]).id, "ml");
+
+console.log("\n-- every late counter asks the same question --");
+// Three separate counters across two screens. One of them forgetting the
+// predicate is how a fifteen-year-old gets told they are behind on a plan an
+// AI wrote and they never agreed to.
+ck("Plan's overdue count excludes suggestions",
+   /const overdueCount = milestones\.filter\(\(m\) => !m\.done && m\.due && !suggestedDate\(m\)/.test(APP), true);
+ck("Home's plan-door late count excludes suggestions",
+   /const stepsLate = allMilestones\.filter\(\(m\) => !m\.done && m\.due && !suggestedDate\(m\)/.test(APP), true);
+ck("Home's week late count excludes suggestions",
+   /const late = allMilestones\.filter\(\(m\) => !m\.done && m\.due && !suggestedDate\(m\)/.test(APP), true);
+ck("the OVERDUE band excludes suggestions",
+   /if \(days < 0 && suggestedDate\(m\)\) return weekKeys\.has\(m\.due\) \? "inweek" : "undated";/.test(APP), true);
+// Every athlete edit is consent; each mutator must say so.
+ck("ticking a step clears the suggestion", /touchedMilestone\(\{ \.\.\.m, done: !m\.done \}\)/.test(APP), true);
+ck("renaming a step clears it", /touchedMilestone\(\{ \.\.\.m, label: clean \}\)/.test(APP), true);
+ck("reordering clears it", /next\[i\] = touchedMilestone\(milestones\[j\]\)/.test(APP), true);
+ck("committing the row editor clears it", /label: clean, due, due_src: null/.test(APP), true);
+
+console.log("\n-- Home has one answer to 'what is today' --");
+// This line was a UTC day while the calendar eleven lines up was local. East
+// of UTC they disagreed every evening, and Greek is one of the four shipped
+// languages.
+ck("Home's late comparison uses the same local day as its calendar",
+   /const homeTodayKey = isoDay\(new Date\(\)\);/.test(APP), true);
+ck("...and no longer truncates a UTC timestamp for it",
+   /const todayIso = new Date\(\)\.toISOString\(\)\.slice\(0, 10\);\n  const stepsLate/.test(APP), false);
 
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
