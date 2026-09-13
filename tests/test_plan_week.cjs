@@ -34,8 +34,12 @@ ck("it steps back Monday-first, not Sunday-first",
    /d\.setDate\(d\.getDate\(\) - \(\(d\.getDay\(\) \+ 6\) % 7\)\)/.test(startSrc), true);
 // The point of hoisting: both screens must call the SAME thing, or "this
 // week" can mean two different sets of days in one app.
-ck("Plan derives its week from the shared function",
-   /const weekStart = weekStartFrom\(todayIso\);/.test(APP), true);
+// Plan's week is no longer hand-written at all: it comes from calendarGrid,
+// the one derivation Home and Plan share across all three scales. That is the
+// whole point — two screens each hand-rolling a week, a month and a year is
+// six chances to disagree about what days those are.
+ck("Plan derives its calendar from the shared derivation",
+   /const calView = calendarGrid\(calScale, calCursor, milestones\);/.test(APP), true);
 ck("Home derives its week from the same shared function",
    /const start = weekStartFrom\(new Date\(\)\);/.test(APP), true);
 ck("no component keeps a private copy of the date rule",
@@ -73,13 +77,38 @@ console.log("\n-- the calendar is built from days, not from rows --");
 ck("seven cells are generated regardless of content",
    /Array\.from\(\{ length: 7 \}/.test(APP), true);
 ck("a day's rows come from an exact date match on the athlete's own steps",
-   /rows: milestones\.filter\(\(m\) => m\.due === key\)/.test(APP), true);
+   /rows: byDay\.get\(key\) \|\| \[\]/.test(APP), true);
 // Derived readiness/development items carry no date; putting them on a day
 // would place work on a day the athlete never chose.
 ck("only real steps land on a day", /next30\.forEach\(\(i\) => bandRows\.d30/.test(APP), true);
 
 console.log("\n-- a step in this week is drawn once, not twice --");
 ck("in-week steps are excluded from the bands below", /if \(weekKeys\.has\(m\.due\)\) return "inweek";/.test(APP), true);
+// ORDER MATTERS, and it was wrong until 2026-09-13. With the overdue test
+// first, a step due Monday and still undone was drawn on Monday in the grid
+// AND again under OVERDUE — survivable while the grid was read-only dots, not
+// survivable once tapping a day opens that same step in an editor directly
+// above the duplicate. Run the real function rather than trusting the reading.
+{
+  const src = APP.slice(APP.indexOf("function milestoneBand(m) {"));
+  const body = src.slice(0, src.indexOf("\n  }") + 4);
+  const band = new Function("todayIso", "weekKeys", "suggestedDate", body + " return milestoneBand;");
+  const today = new Date("2026-09-13T00:00:00");
+  const thisWeek = new Set(["2026-09-07", "2026-09-08", "2026-09-09", "2026-09-10", "2026-09-11", "2026-09-12", "2026-09-13"]);
+  const f = band(today, thisWeek, (m) => !!(m && m.due_src === "scout" && m.due));
+  ck("an overdue step inside the drawn window is the calendar's, not the band's",
+     f({ due: "2026-09-10", done: false }), "inweek");
+  ck("...while one outside it is still overdue",
+     f({ due: "2026-08-10", done: false }), "overdue");
+  ck("a done step past its date is finished, not late", f({ due: "2026-08-10", done: true }), "d30");
+  ck("an untouched Scout suggestion that passed asks for a real day",
+     f({ due: "2026-08-10", done: false, due_src: "scout" }), "undated");
+  ck("...but inside the drawn window the calendar owns it",
+     f({ due: "2026-09-10", done: false, due_src: "scout" }), "inweek");
+  ck("a step with no date at all is undated", f({ due: null, done: false }), "undated");
+  ck("a future step outside the window still bands by horizon",
+     f({ due: "2026-10-01", done: false }), "d30");
+}
 ck("...and 'inweek' has no band of its own to render it again",
    /\{ key: "inweek", label:/.test(APP), false);
 
@@ -155,6 +184,93 @@ ck("home_week_today exists in all four dictionaries",
    (APP.match(/home_week_today:/g) || []).length, 4);
 ck("home_week_clear exists in all four dictionaries",
    (APP.match(/home_week_clear:/g) || []).length, 4);
+
+console.log("\n-- the calendar at three scales, RUN --");
+// One derivation now serves Home and Plan at week, month and year. A regex can
+// confirm it is called; only running it can confirm that a month pads to whole
+// weeks, that a year rolls from the cursor instead of starting in January, and
+// that paging lands where it should across a DST boundary and a leap day.
+const grab2 = (sig) => {
+  const start = APP.indexOf(sig);
+  if (start < 0) throw new Error(sig + " not found");
+  let d = 0, j = APP.indexOf("{", start);
+  for (; j < APP.length; j++) { if (APP[j] === "{") d++; else if (APP[j] === "}") { d--; if (!d) break; } }
+  return APP.slice(start, j + 1);
+};
+eval(grab2("function isoDay(d) {"));
+eval(grab2("function weekStartFrom(date) {"));
+eval(grab2("function calendarGrid(scale, cursor, rows) {"));
+eval(grab2("function calendarStep(scale, cursor, dir) {"));
+eval(grab2("function calendarReach(rows) {"));
+const D2 = (iso) => new Date(iso + "T12:00:00");
+const step = (due) => ({ id: due, label: due, done: false, due });
+
+{
+  const g = calendarGrid("week", D2("2026-09-09"), [step("2026-09-10"), step("2026-09-10")]);
+  ck("a week is seven days", g.days.length, 7);
+  ck("...Monday first", g.days[0].key, "2026-09-07");
+  ck("...Sunday last", g.days[6].key, "2026-09-13");
+  ck("a day collects every step that matches it", g.days[3].rows.length, 2);
+  ck("a day with nothing on it is still a cell", g.days[0].rows.length, 0);
+  ck("year mode is not populated at week scale", g.months, null);
+}
+{
+  // September 2026 starts on a Tuesday and ends on a Wednesday, so a month
+  // padded to whole Monday-Sunday weeks must reach back into August and
+  // forward into October — otherwise the columns do not line up under one row
+  // of weekday letters and the grid silently lies about which day is which.
+  const g = calendarGrid("month", D2("2026-09-15"), [step("2026-09-01"), step("2026-10-04")]);
+  ck("a month is padded to whole weeks", g.days.length % 7, 0);
+  ck("...starting on a Monday", g.days[0].date.getDay(), 1);
+  ck("...reaching back before the 1st", g.days[0].key, "2026-08-31");
+  ck("...and forward past the last", g.days[g.days.length - 1].key, "2026-10-04");
+  ck("padding days are marked as outside the month", g.days[0].out, true);
+  ck("...and days in the month are not", g.days.find((d) => d.key === "2026-09-15").out, false);
+  // A step in the padding is genuinely visible in this window, so it must
+  // carry its rows — a cell drawn but left empty would hide real work.
+  ck("a step in the padding still shows", g.days[g.days.length - 1].rows.length, 1);
+}
+{
+  // An athlete in September is asking about the next twelve months. A year
+  // view that stops at 31 December answers a question nobody has — their goal
+  // is fourteen months out.
+  const g = calendarGrid("year", D2("2026-09-15"), [step("2026-09-20"), step("2027-03-02"), step("2027-03-09")]);
+  ck("a year is twelve months", g.months.length, 12);
+  ck("...rolling from the cursor, not from January", g.months[0].key, "2026-09");
+  ck("...and ending twelve months out", g.months[11].key, "2027-08");
+  ck("a month carries its own steps", g.months.find((m) => m.key === "2027-03").rows.length, 2);
+  ck("months with nothing are still listed", g.months.find((m) => m.key === "2026-12").rows.length, 0);
+  ck("year mode draws no day grid", g.days, null);
+}
+console.log("\n-- paging moves by one unit of the scale shown --");
+ck("a week steps seven days", isoDay(calendarStep("week", D2("2026-09-09"), 1)), "2026-09-16");
+ck("...and backwards too", isoDay(calendarStep("week", D2("2026-09-09"), -1)), "2026-09-02");
+ck("a month steps one month", isoDay(calendarStep("month", D2("2026-09-15"), 1)), "2026-10-15");
+ck("a year steps one year", isoDay(calendarStep("year", D2("2026-09-15"), 1)), "2027-09-15");
+// 29 Feb 2028 exists; 29 Feb 2029 does not. Date rolls it to 1 March rather
+// than throwing, which is fine — what matters is that it never lands on an
+// invalid day or silently skips a month.
+ck("a leap day pages forward without inventing a date",
+   /^\d{4}-\d{2}-\d{2}$/.test(isoDay(calendarStep("year", D2("2028-02-29"), 1))), true);
+
+console.log("\n-- the pager stops where the work stops --");
+{
+  const reach = calendarReach([step("2026-11-20")]);
+  ck("it reaches the END of the month after the furthest dated step", isoDay(reach.to), "2026-12-31");
+  // Bounding on the FIRST of that month excluded almost all of it: one step on
+  // 10 September made `to` 1 October, and paging a month from 13 September
+  // lands on 13 October — past the bound — so the arrow was dead while October
+  // still plainly had reach.
+  ck("...so paging into that month is allowed, not refused",
+     calendarStep("month", D2("2026-11-13"), 1) <= reach.to, true);
+  // Hitting a disabled arrow IS the statement "there is nothing out there".
+  // Infinite paging invites an athlete to scroll through empty months hunting
+  // for work that was never filed.
+  ck("...but paging beyond it is refused", calendarStep("month", D2("2026-12-15"), 1) <= reach.to, false);
+  const empty = calendarReach([]);
+  ck("with no dated steps at all the range is still valid", empty.to >= empty.from, true);
+  ck("undated steps do not extend the reach", isoDay(calendarReach([{ id: "u", due: null }]).to).length, 10);
+}
 
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);

@@ -566,8 +566,11 @@ ck("Home's plan-door late count excludes suggestions",
    /const stepsLate = allMilestones\.filter\(\(m\) => !m\.done && m\.due && !suggestedDate\(m\)/.test(APP), true);
 ck("Home's week late count excludes suggestions",
    /const late = allMilestones\.filter\(\(m\) => !m\.done && m\.due && !suggestedDate\(m\)/.test(APP), true);
+// The band itself is RUN across every branch in test_plan_week; this only
+// confirms the predicate is still what routes an untouched suggestion away
+// from OVERDUE.
 ck("the OVERDUE band excludes suggestions",
-   /if \(days < 0 && suggestedDate\(m\)\) return weekKeys\.has\(m\.due\) \? "inweek" : "undated";/.test(APP), true);
+   /if \(days < 0 && suggestedDate\(m\)\) return "undated";/.test(APP), true);
 // Every athlete edit is consent; each mutator must say so.
 ck("ticking a step clears the suggestion", /touchedMilestone\(\{ \.\.\.m, done: !m\.done \}\)/.test(APP), true);
 ck("renaming a step clears it", /touchedMilestone\(\{ \.\.\.m, label: clean \}\)/.test(APP), true);
