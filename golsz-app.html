@@ -10750,9 +10750,20 @@ function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing, stage
                     style={{ position: "absolute", left: 0, right: 0, top: yOf(i) - 18, minHeight: 36,
                       display: "flex", flexDirection: "column", justifyContent: "center",
                       cursor: tappable ? "pointer" : "default" }}>
+                    {/* A NODE HAS ALWAYS BEEN TAPPABLE — onNodeTap opens the
+                        stage editor, which can rename, reorder, insert and
+                        DELETE. Nothing on screen said so. Four readers of this
+                        page concluded the junk stage an athlete had typed by
+                        mistake was permanent, and stopped trusting the rest of
+                        the picture because of it. The control existed; the
+                        affordance did not. One pencil, shown only on nodes
+                        that actually respond. */}
                     <span style={{ display: "flex", alignItems: "baseline", gap: 7, flexWrap: "wrap" }}>
                       <span style={{ fontSize: 15, fontWeight: cur ? 700 : 500, letterSpacing: "-0.01em",
                         color: cur ? C.lime : done ? C.chalk : C.slate, overflowWrap: "anywhere" }}>{label}</span>
+                      {tappable && (
+                        <Pencil size={11} style={{ color: C.slate, opacity: 0.55, flexShrink: 0, alignSelf: "center" }} />
+                      )}
                       {cur && !st.goal && (
                         <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase",
                           color: C.pitch, background: C.lime, borderRadius: 5, padding: "2px 5px", whiteSpace: "nowrap" }}>

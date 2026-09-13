@@ -3019,6 +3019,22 @@ const PATHWAY_TYPE_SET = new Set([
   "ncaa", "naia", "juco", "canadian_university", "academy", "european_club",
   "professional", "development", "agent_representation", "trainer_performance", "other",
 ]);
+// A WHOLE NUMBER OF DAYS FROM NOW, RESOLVED HERE.
+//
+// Shared by the model path (extractSuggestedPathway) and the app-assembled
+// fallback (synthesizePathwayFromState) so there is exactly one answer to
+// "what date is N days from today". Offsets rather than dates make a past date
+// UNREPRESENTABLE rather than merely discouraged: an athlete can never be
+// handed a plan that is already late the moment they accept it. 730 is the
+// ceiling — beyond two years a date stops being a plan and becomes a
+// prediction about a fifteen-year-old's life.
+function dueFromOffset(n) {
+  if (!Number.isInteger(n) || n < 1 || n > 730) return null;
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
 function extractSuggestedPathway(data, existingStages) {
   try {
     const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
@@ -3092,13 +3108,6 @@ function extractSuggestedPathway(data, existingStages) {
     // the client must be able to tell the two apart forever after: a date the
     // athlete set can call them late, and a date Scout guessed must not until
     // they have touched that step themselves.
-    const dueFromOffset = (n) => {
-      if (!Number.isInteger(n) || n < 1 || n > 730) return null;
-      const d = new Date();
-      d.setUTCHours(0, 0, 0, 0);
-      d.setUTCDate(d.getUTCDate() + n);
-      return d.toISOString().slice(0, 10);
-    };
     const milestones = rawMilestones.map((m) => {
       const i = m.stage_index;
       const filed = target.length && Number.isInteger(i) && i >= 0 && i < target.length;
@@ -3179,24 +3188,52 @@ function athleteApprovedPathwayBuild(message) {
 function synthesizePathwayFromState({ pathwayType, readiness }) {
   if (!pathwayType || !PATHWAY_TYPE_SET.has(pathwayType)) return null;
   const rd = readiness;
+  // THESE CARRY DATES, and until now they did not — which meant the path the
+  // comment above says actually fires in production could only ever produce
+  // undated steps. An undated step cannot be late, cannot be next, and cannot
+  // appear in any week or month or year of the calendar. The whole scheduling
+  // feature was inert on the path most athletes take.
+  //
+  // Every step here is one the athlete can finish ALONE, on their own
+  // schedule — fill in a profile, record a benchmark, write a list. That is
+  // exactly the class the system prompt permits dating, and the reason none of
+  // them is gated on a coach replying or a trial being offered.
+  //
+  // The offsets are how long the WORK takes, not a pace chosen to look busy: a
+  // retest needs real training days between it and the first test, a target
+  // list is an evening, a Passport is twenty minutes. They are spread on
+  // purpose — six steps landing on one day is a pile, not a plan.
+  //
+  // due_src: "scout" on every one. GOLSZ picked these days, not the athlete,
+  // so until they touch a step its date cannot mark them overdue, cannot count
+  // as late, and cannot outrank a date they set themselves.
   const milestones = [];
+  const step = (label, days) => milestones.push({ label, done: false, due: dueFromOffset(days), due_src: "scout" });
   if (rd && rd.quality && Array.isArray(rd.quality.missing) && rd.quality.missing.length) {
-    milestones.push({ label: `Complete your Passport: add ${rd.quality.missing.slice(0, 3).join(", ")}`, done: false });
+    step(`Complete your Passport: add ${rd.quality.missing.slice(0, 3).join(", ")}`, 3);
   }
   if (rd && rd.performance) {
-    if (rd.performance.metricsTracked === 0) milestones.push({ label: "Record your first set of benchmark results", done: false });
-    else if (rd.performance.metricsRetested === 0) milestones.push({ label: "Retest your benchmarks so progression is on record", done: false });
+    if (rd.performance.metricsTracked === 0) step("Record your first set of benchmark results", 7);
+    // A retest needs training days between it and the first test, or it
+    // measures the same session twice. Still conditional on never having
+    // retested — an athlete who already has progression on record does not
+    // need telling to put it there.
+    else if (rd.performance.metricsRetested === 0) step("Retest your benchmarks so progression is on record", 21);
   }
   if (rd && rd.pathway && !rd.pathway.targetsCount) {
-    milestones.push({ label: "Build a target list of clubs or programmes to approach", done: false });
+    step("Build a target list of clubs or programmes to approach", 10);
   }
   if (rd && rd.development && rd.development.total === 0) {
-    milestones.push({ label: "Set up a development plan for your weakest area", done: false });
+    step("Set up a development plan for your weakest area", 14);
   }
   if (rd && rd.verification && rd.verification.status === "none") {
-    milestones.push({ label: "Request identity verification on your Passport", done: false });
+    step("Request identity verification on your Passport", 5);
   }
   if (!milestones.length) return null;
+  // Date order, not the order the checks happen to run in. A generated plan
+  // that reads 3rd, 7th, 21st, 10th, 14th, 5th down the page is a list of
+  // conditions, not a route.
+  milestones.sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0));
   return { pathway_type: pathwayType, target_timeline: null, milestones: milestones.slice(0, 6) };
 }
 

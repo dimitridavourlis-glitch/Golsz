@@ -101,6 +101,11 @@ const { hasFeature } = require("../api/_entitlements.js");
 // the real one rather than a stub so the goal-contradiction guard is tested
 // against the same classifier that ships.
 eval(slice("const GOAL_TEXT_PATTERNS", "// Applies ONLY the derived pathway_type", "goal classifier"));
+// dueFromOffset was hoisted to module scope in api/scout.js so the model path
+// and the app-assembled fallback share ONE answer to "what date is N days from
+// now". synthesizePathwayFromState calls it, so it has to be in scope here —
+// lifted, not stubbed, or the dates this suite exercises would be a copy.
+eval(slice("function dueFromOffset(n) {", "function extractSuggestedPathway", "offset resolver"));
 eval(slice("const PATHWAY_APPROVAL_PATTERNS = [", "// Same extraction shape again, pulling drafted_email", "handoff"));
 
 // Approval is read from the ATHLETE's words. These are the real messages

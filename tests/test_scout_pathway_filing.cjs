@@ -33,13 +33,21 @@ function lift(startMarker, endMarker) {
 const src = [
   lift("const PATHWAY_TYPE_SET = new Set([", "function "),
   lift("function parseReplyObject(clean) {", "\n// "),
+  // dueFromOffset was hoisted out of extractSuggestedPathway so the fallback
+  // could share it — one answer to "what date is N days from now" instead of
+  // two. It has to come along, or extraction throws inside its own try/catch
+  // and every dated assertion below silently reads as "the model sent nothing".
+  lift("function dueFromOffset(n) {", "\nfunction extract"),
   lift("function extractSuggestedPathway(data", "\n// "),
-  "module.exports = { extractSuggestedPathway };",
+  "module.exports = { extractSuggestedPathway, dueFromOffset };",
 ].join("\n");
 
 const mod = { exports: {} };
 new Function("module", "exports", "crypto", src)(mod, mod.exports, require("crypto"));
 const { extractSuggestedPathway } = mod.exports;
+// The fallback's two dependencies — the real ones, not stubs.
+const PATHWAY_TYPE_SET_FOR_SYNTH = new Function(lift("const PATHWAY_TYPE_SET", "function ") + " return PATHWAY_TYPE_SET;")();
+const dueFromOffsetLive = mod.exports.dueFromOffset;
 
 // The athlete's real sections, as the handler passes them in: id + label, in
 // the order the prompt numbers them for the model.
@@ -249,6 +257,55 @@ for (const [name, idx] of [
   // Approval is not a licence to guess: most fifteen-year-olds will not audit
   // twelve dates on a confirm card.
   ck("the prompt says approval is not licence to guess", /not licence to\s+guess/.test(P), true);
+}
+
+// ---- the fallback dates its steps too -----------------------------------
+// extractSuggestedPathway only ever returns what the MODEL emitted, and this
+// file's own comment records that in production it declined four times out of
+// four — which is why synthesizePathwayFromState exists and why the comment
+// says it is the path that actually fires. It built {label, done} and nothing
+// else, so on the commonest path every step arrived undated: unable to be
+// late, unable to be next, unable to appear in any week, month or year of the
+// calendar. The whole scheduling feature was inert exactly where it mattered.
+{
+  const synth = new Function("PATHWAY_TYPE_SET", "dueFromOffset",
+    lift("function synthesizePathwayFromState", "\n\n") + " return synthesizePathwayFromState;"
+  )(PATHWAY_TYPE_SET_FOR_SYNTH, dueFromOffsetLive);
+  const full = {
+    quality: { missing: ["height", "bio", "club"] },
+    performance: { metricsTracked: 0, metricsRetested: 0 },
+    pathway: { targetsCount: 0 }, development: { total: 0 }, verification: { status: "none" },
+  };
+  const r = synth({ pathwayType: "ncaa", readiness: full });
+  ck("the fallback produces steps at all", r.milestones.length > 0, true);
+  ck("...and every one of them carries a date",
+     r.milestones.every((m) => /^\d{4}-\d{2}-\d{2}$/.test(m.due)), true);
+  // GOLSZ picked these days, not the athlete. Without the marker they could
+  // mark a fifteen-year-old overdue on a plan nobody agreed to.
+  ck("...marked as GOLSZ's suggestion, not the athlete's choice",
+     r.milestones.every((m) => m.due_src === "scout"), true);
+  const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+  const todayIso = today.toISOString().slice(0, 10);
+  ck("no step is dated in the past or today", r.milestones.every((m) => m.due > todayIso), true);
+  // Six steps landing on one day is a pile, not a plan.
+  ck("the dates are spread, not piled on one day",
+     new Set(r.milestones.map((m) => m.due)).size, r.milestones.length);
+  // A generated plan that reads 3rd, 7th, 21st, 10th down the page is a list
+  // of conditions in the order the checks happened to run, not a route.
+  ck("...and run in date order",
+     r.milestones.map((m) => m.due).join() === r.milestones.map((m) => m.due).slice().sort().join(), true);
+  ck("a retest is allowed the training days it needs",
+     r.milestones.length && r.milestones.every((m) => m.due <= dueFromOffsetLive(30)), true);
+
+  // An athlete who has already retested must not be told to retest.
+  const retested = synth({ pathwayType: "ncaa", readiness: {
+    ...full, performance: { metricsTracked: 3, metricsRetested: 2 } } });
+  ck("an athlete with progression on record is not told to record it",
+     (retested.milestones || []).some((m) => /Retest/.test(m.label)), false);
+  ck("nothing to do returns nothing rather than filler",
+     synth({ pathwayType: "ncaa", readiness: {
+       quality: { missing: [] }, performance: { metricsTracked: 3, metricsRetested: 2 },
+       pathway: { targetsCount: 4 }, development: { total: 2 }, verification: { status: "verified" } } }), null);
 }
 
 console.log("\n" + pass + "/" + (pass + fail) + " passed");
