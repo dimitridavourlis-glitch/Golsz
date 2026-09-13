@@ -80,7 +80,14 @@ ck("a day's rows come from an exact date match on the athlete's own steps",
    /rows: byDay\.get\(key\) \|\| \[\]/.test(APP), true);
 // Derived readiness/development items carry no date; putting them on a day
 // would place work on a day the athlete never chose.
-ck("only real steps land on a day", /next30\.forEach\(\(i\) => bandRows\.d30/.test(APP), true);
+// They are filed as UNDATED rather than into a horizon band: a readiness task
+// and a development goal carry no date until the athlete gives them one, and
+// d30/d90 merge into a heading that says LATER — a horizon assertion, which is
+// exactly what NEXT 30 DAYS / NEXT 90 DAYS were deleted for.
+ck("only real steps land on a day", /next30\.forEach\(\(i\) => bandRows\.undated/.test(APP), true);
+ck("...and development goals file the same way", /devItems\.forEach\(\(i\) => bandRows\.undated/.test(APP), true);
+ck("no derived row is filed into a horizon band",
+   /bandRows\.d(30|90)\.push/.test(APP), false);
 
 console.log("\n-- a step in this week is drawn once, not twice --");
 ck("in-week steps are excluded from the bands below", /if \(weekKeys\.has\(m\.due\)\) return "inweek";/.test(APP), true);

@@ -11406,8 +11406,15 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
   // own; their horizon IS their definition, so they land in the band they were
   // always named after. They render as read-only rows because they are derived
   // from other screens — a checkbox here would be a control that lies.
-  next30.forEach((i) => bandRows.d30.push({ kind: "derived", key: "n30-" + i.key, done: !!i.done, label: i.label }));
-  devItems.forEach((i) => bandRows.d90.push({ kind: "derived", key: "dev-" + i.id, done: i.status === "done", label: i.goal }));
+  // FILED AS UNDATED, WHICH IS WHAT THEY ARE.
+  // These went into d30 and d90, which merge into the band labelled LATER —
+  // so six items that carry no date at all sat under a heading asserting a
+  // horizon, which is the precise thing NEXT 30 DAYS / NEXT 90 DAYS were
+  // deleted for. A readiness task and a development goal have no day until
+  // the athlete gives them one, and "no date yet" is a real state worth
+  // naming rather than a gap worth papering over.
+  next30.forEach((i) => bandRows.undated.push({ kind: "derived", key: "n30-" + i.key, done: !!i.done, label: i.label }));
+  devItems.forEach((i) => bandRows.undated.push({ kind: "derived", key: "dev-" + i.id, done: i.status === "done", label: i.goal }));
   // NEXT 30 DAYS and NEXT 90 DAYS are gone. They were horizons the app
   // asserted, not units a person lives in — and they are what the calendar
   // above replaces. What survives is everything the week cannot hold: work
@@ -11566,26 +11573,16 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
       ))}
 
       <div style={{ ...card }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 4, minHeight: 26 }}>
-          <Eyebrow>{t("plan_timeline_title")}</Eyebrow>
-        </div>
-
-        {milestones.length === 0 ? (
-          <div>
-            <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55, margin: "8px 0 13px" }}>{t("pathway_route_blurb")}</div>
-          </div>
-        ) : (
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 11, margin: "10px 0 14px" }}>
-              <span style={{ fontSize: 12, fontWeight: 900, color: C.chalk, flex: "0 0 auto" }}>{doneCount} / {milestones.length}</span>
-              <span style={{ flex: 1, display: "block", height: 7, background: C.turf, borderRadius: 4, overflow: "hidden" }}>
-                <span style={{ display: "block", height: "100%", width: Math.round((doneCount / milestones.length) * 100) + "%", background: C.lime, borderRadius: 4 }} />
-              </span>
-              <span style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: ".15em", textTransform: "uppercase", flex: "0 0 auto", color: overdueCount ? C.warnText : C.slate }}>
-                {overdueCount ? overdueCount + " " + t("pathway_overdue") : t("pathway_on_track")}
-              </span>
-            </div>
-          </div>
+        {/* THE HEADING, THE PROGRESS BAR AND THE STATUS WORD ALL WENT.
+            This card carried a TIMELINE eyebrow, then a blurb, then a bar with
+            a fraction and an ON TRACK / N OVERDUE word, and only THEN the
+            calendar with its own THIS WEEK eyebrow and its own counters — two
+            headings and three separate progress readouts for one list of
+            steps. The calendar is the section; it does not need announcing,
+            and the athlete does not need told three times how they are doing.
+            The one number worth keeping rides on the calendar's own row. */}
+        {milestones.length === 0 && (
+          <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55, margin: "2px 0 13px" }}>{t("pathway_route_blurb")}</div>
         )}
         {/* THE WEEK, AS DAYS.
             This replaced NEXT 30 DAYS / NEXT 90 DAYS. Those were horizons the
@@ -11608,7 +11605,14 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
               infinite paging invites an athlete to scroll through empty months
               hunting for work that was never filed. */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-            <Eyebrow noMargin>{t("plan_week_title")}</Eyebrow>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0 }}>
+              <Eyebrow noMargin>{t("plan_week_title")}</Eyebrow>
+              {milestones.length > 0 && (
+                <span style={{ fontSize: 10.5, fontWeight: 900, color: overdueCount ? C.warnText : C.slate, whiteSpace: "nowrap" }}>
+                  {doneCount}/{milestones.length}
+                </span>
+              )}
+            </div>
             <div style={{ display: "flex", gap: 3 }}>
               {CALENDAR_SCALES.map((sc) => (
                 <button key={sc} onClick={() => { setCalScale(sc); setCalDay(null); }}
@@ -11755,16 +11759,22 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
             </div>
           )}
         </div>
+        {/* A DASHED RAIL WITH A CIRCLE PER BAND USED TO RUN DOWN THIS LIST.
+            It drew a journey between three headings that are not a journey —
+            "later" and "no day yet" are not consecutive stops, and the rail
+            implied an order the data does not have. It cost 30px of indent on
+            a 390px screen and said nothing. Plain headings now.
+            NOTE the comment sits ABOVE the guard. A JSX comment placed
+            between `&& (` and its element parses as an object literal — a
+            syntax error this file has now produced five separate times. */}
         {timelineBands.length > 0 && (
-          <div style={{ position: "relative", marginTop: 8 }}>
-              <span aria-hidden="true" style={{ position: "absolute", left: 10, top: 10, bottom: 14, borderLeft: `2px dashed ${C.line2}` }} />
+          <div style={{ marginTop: 8 }}>
               {timelineBands.map((b) => {
                 const bDone = b.rows.filter((r) => r.done).length;
                 const bAll = bDone === b.rows.length;
                 const late = b.key === "overdue";
                 return (
-                  <div key={b.key} style={{ position: "relative", paddingLeft: 30, marginBottom: 14 }}>
-                    <span aria-hidden="true" style={{ position: "absolute", left: 10, top: 3, width: 12, height: 12, marginLeft: -6, borderRadius: "50%", boxSizing: "border-box", background: bAll ? C.lime : C.card, border: `2px solid ${late ? C.amber : bAll ? C.lime : C.line2}` }} />
+                  <div key={b.key} style={{ marginBottom: 14 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 9, minHeight: 18 }}>
                       <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: ".14em", textTransform: "uppercase", color: late ? C.warnText : C.slate }}>{b.label}</span>
                       <span style={{ flex: 1, height: 1, background: C.line }} />
