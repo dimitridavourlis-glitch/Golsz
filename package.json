@@ -8,10 +8,12 @@
   "scripts": {
     "test": "node tests/run-all.cjs",
     "check": "for f in api/*.js js/*.js sw.js; do node --check \"$f\" || exit 1; done && node tests/run-all.cjs",
-    "deploy": "npm run check && npx vercel --prod --yes"
+    "deploy": "npm run check && npx vercel --prod --yes",
+    "compile": "node tools/precompile.cjs"
   },
   "devDependencies": {
     "@babel/parser": "^7.29.8",
+    "@babel/standalone": "7.23.2",
     "@babel/traverse": "^8.0.4"
   },
   "engines": {

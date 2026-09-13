@@ -16,7 +16,8 @@
 // re-deriving an opinion from raw rows.
 //
 // WHY IT IS A COPY AND NOT AN IMPORT
-// golsz-app.html is a single-file, no-build-step app: Babel-in-browser over
+// golsz-app.html is a single file with no deploy build: its JSX is compiled
+// ahead of time by tools/precompile.cjs into the committed js/app.js, over
 // a <script type="text/babel"> block. It cannot `import` from api/. The
 // repo's existing answer to exactly this problem is api/_plan-catalog.js
 // ("Mirrors PLANS in golsz-app.html; tests/test_cad_pricing.cjs diffs the
