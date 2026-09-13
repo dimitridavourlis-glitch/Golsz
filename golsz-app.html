@@ -9474,13 +9474,57 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
         </div>
       </HomeZone>
 
+      {/* THE ONE PLACE HOME ACTS, DIRECTLY UNDER THE WEEK.
+          The calendar says what is on which day. These say what is true every
+          day — standing commitments that carry no date, which is exactly why
+          they cannot sit on the calendar and exactly why they belong against
+          it. Sleep, conditioning and strength are the work between the dated
+          things, and an athlete reads them in the same breath as the week.
+          Ticking here re-runs computeDevelopmentScore over the real rows, so
+          the strength figure below moves for the same reason the projection
+          said it would. Naming an action, pricing it, and then sending the
+          athlete somewhere else to perform it is the part that made Home feel
+          like a report.
+          Read-only for a parent in manage mode (actingFor), same as every
+          other surface. Adding, editing, pausing and deleting focus areas
+          still belong to the Passport — this is the single completion
+          gesture, not a second editor. */}
+      {!actingFor && devList.length > 0 && (
+        <HomeZone label={t("home_dim_focus")} span={1}>
+          <div>
+          {devList.filter((d) => d.status !== "done").length === 0 ? (
+            <div style={{ fontSize: 13, color: C.chalk, lineHeight: 1.6, padding: "6px 0 2px" }}>{t("home_focus_all_done")}</div>
+          ) : (
+            devList.filter((d) => d.status !== "done").map((d, i, arr) => (
+              <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 0", borderBottom: i === arr.length - 1 ? "none" : `1px solid ${C.line}` }}>
+                <button onClick={() => markFocusDone(d)} disabled={devBusy === d.id}
+                  aria-label={`${t("home_focus_done")}: ${d.goal}`}
+                  style={{ width: 24, height: 24, flex: "0 0 24px", borderRadius: 8, background: "none",
+                    border: `2px solid ${devBusy === d.id ? C.slate : C.lime}`, cursor: devBusy === d.id ? "wait" : "pointer",
+                    opacity: devBusy === d.id ? 0.5 : 1 }} />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: C.chalk, lineHeight: 1.35, overflowWrap: "anywhere" }}>{d.goal}</div>
+                  {d.focus_area && (
+                    <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: C.slate, marginTop: 3 }}>{d.focus_area}</div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+          {devError && (
+            <div style={{ fontSize: 12.5, color: C.warnText, lineHeight: 1.5, marginTop: 10 }}>{devError}</div>
+          )}
+          </div>
+        </HomeZone>
+      )}
+
       {/* THE NEXT MOVE, REFORMATTED AND MOVED BELOW THE WEEK.
           It used to open the screen as a headline, a paragraph and a
           full-width gold button — which made it compete with the calendar
-          for the same job. It reads better as the answer to the week rather
-          than as a rival to it: you look at your seven days, then at the one
-          thing to do about them. Same ladder, same reason line, smaller
-          frame. */}
+          for the same job. It reads better as the answer to what is above it
+          than as a rival to it: the week and the standing commitments say
+          where the athlete is, and this says the one thing to do next. Same
+          ladder, same reason line, smaller frame. */}
       <HomeZone span={2}>
         <div>
           <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
@@ -9522,46 +9566,6 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           )}
         </div>
       </HomeZone>
-
-      {/* THE ONE PLACE HOME ACTS.
-          Sits directly under the card whose projected-gain row names this
-          exact action, because naming an action, pricing it, and then sending
-          the athlete somewhere else to perform it is the part that made Home
-          feel like a report. Ticking here re-runs computeDevelopmentScore over
-          the real rows, so the ring above moves for the same reason the
-          projection said it would.
-          Read-only for a parent in manage mode (actingFor), same as every
-          other surface. Adding, editing, pausing and deleting focus areas
-          still belong to the Passport — this is the single completion
-          gesture, not a second editor. */}
-      {!actingFor && devList.length > 0 && (
-        <HomeZone label={t("home_dim_focus")} span={1}>
-          <div>
-          {devList.filter((d) => d.status !== "done").length === 0 ? (
-            <div style={{ fontSize: 13, color: C.chalk, lineHeight: 1.6, padding: "6px 0 2px" }}>{t("home_focus_all_done")}</div>
-          ) : (
-            devList.filter((d) => d.status !== "done").map((d, i, arr) => (
-              <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 0", borderBottom: i === arr.length - 1 ? "none" : `1px solid ${C.line}` }}>
-                <button onClick={() => markFocusDone(d)} disabled={devBusy === d.id}
-                  aria-label={`${t("home_focus_done")}: ${d.goal}`}
-                  style={{ width: 24, height: 24, flex: "0 0 24px", borderRadius: 8, background: "none",
-                    border: `2px solid ${devBusy === d.id ? C.slate : C.lime}`, cursor: devBusy === d.id ? "wait" : "pointer",
-                    opacity: devBusy === d.id ? 0.5 : 1 }} />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: C.chalk, lineHeight: 1.35, overflowWrap: "anywhere" }}>{d.goal}</div>
-                  {d.focus_area && (
-                    <div style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: C.slate, marginTop: 3 }}>{d.focus_area}</div>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-          {devError && (
-            <div style={{ fontSize: 12.5, color: C.warnText, lineHeight: 1.5, marginTop: 10 }}>{devError}</div>
-          )}
-          </div>
-        </HomeZone>
-      )}
 
       {/* FOUR DOORS, EACH CARRYING A LIVE FACT.
           A row that reads "PASSPORT >" is a menu, and this app already has a
