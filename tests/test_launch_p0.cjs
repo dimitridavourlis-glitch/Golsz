@@ -196,13 +196,30 @@ ck("GoalCard exists", /function GoalCard\(/.test(APP), true);
 // is asserted now, plus the fact that the category can only ever appear as
 // labelled metadata underneath.
 ck("it renders goal_text itself, not a category", /color: C\.chalk, lineHeight: 1\.35, overflowWrap: "anywhere" \}\}>\{goalText\}<\/div>/.test(APP), true);
-// The guarantee is that the category renders as LABELLED METADATA under the
-// goal — "Pathway: <category>" — not that it is any particular colour. The
-// original pinned `color: C.info`, so recolouring the one cold blue on an
-// otherwise gold-and-cream page failed a test about labelling. The structure
-// is still asserted; only the token is now free. 2026-09-09.
-ck("...and the pathway category stays labelled metadata under it",
-   /\{t\("goal_card_pathway"\)\}: <span style=\{\{ color: C\.\w+ \}\}>\{t\("pathway_type_" \+ pathwayType\)\}<\/span>/.test(APP), true);
+// THE GUARANTEE IS THAT THE CATEGORY NEVER STANDS IN FOR THE GOAL, and that
+// it remains visible somewhere the athlete can find it. It used to be pinned
+// to one rendering — "Pathway: <category>" in the goal card — and that is a
+// presentational detail, not the guarantee.
+//
+// 2026-09-13: that row was deleted. Four independent readers of the Plan page
+// reported the same thing — the goal card said "Scholarship" and then, forty
+// pixels below, "Pathway: Professional pathway", while the route rail under it
+// rendered "Professional pathway" AGAIN as its top node. Two destinations and
+// a duplicate, and no reader could say which one the steps were steps toward.
+// The category now appears exactly once on the page, on the rail, which is the
+// thing it actually describes.
+ck("the category never replaces the goal in the goal card",
+   /lineHeight: 1\.35, overflowWrap: "anywhere" \}\}>\{t\("pathway_type_/.test(APP), false);
+ck("...and it is not restated as metadata beneath the goal either",
+   /\{t\("goal_card_pathway"\)\}:/.test(APP), false);
+// Still rendered, once, where it belongs: the top node of the route rail.
+ck("the category is still shown to the athlete, on the rail",
+   /label: hasGoal \? t\("pathway_type_" \+ pathwayType\)/.test(APP), true);
+// And the rail now names the goal itself, so the two are never confused again.
+ck("the rail names the goal it points at",
+   /\{t\("pathway_rail_goal"\)\}: <span style=\{\{ color: C\.chalk \}\}>\{goalText\}<\/span>/.test(APP), true);
+ck("...and marks where the athlete actually is",
+   /\{t\("pathway_rail_now"\)\}/.test(APP), true);
 ck("it writes goal_text", /goal_text: clean,/.test(APP), true);
 ck("...and derives goal_defined in the same write", /goal_defined: true,/.test(APP), true);
 ck("...and marks it athlete-authored", /goal_source: "athlete_edited",/.test(APP), true);
