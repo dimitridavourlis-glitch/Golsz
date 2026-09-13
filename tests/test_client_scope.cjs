@@ -63,12 +63,38 @@ const GLOBALS = new Set([
   "React", "ReactDOM", "Babel", "supabase", "process", "module", "require", "exports",
 ]);
 
+// A SYNTAX ERROR HERE USED TO PRINT A BABEL STACK AND A LINE NUMBER INTO THE
+// STRIPPED SCRIPT, which is not a line number in any file anyone can open. The
+// app was down, the gate said "Unexpected token, expected \",\" (11685:15)",
+// and locating it meant hand-writing a script to re-extract the block and
+// index into it. That happened repeatedly. The parse now reports the offending
+// line with its neighbours, and names the one mistake this file keeps making.
+function explainSyntaxError(code, e) {
+  if (!e || !e.loc) throw e;
+  const lines = code.split("\n");
+  const n = e.loc.line;
+  const win = [];
+  for (let i = Math.max(0, n - 4); i < Math.min(lines.length, n + 2); i++) {
+    win.push(`${String(i + 1).padStart(6)} ${i + 1 === n ? ">" : "|"} ${lines[i]}`);
+  }
+  // THE RECURRING ONE. A JSX comment placed between a guard's `(` and its
+  // element parses as an object literal, because `{` after `(` opens an
+  // expression, not JSX. Five separate outages in this file have been this.
+  const before = lines.slice(Math.max(0, n - 6), n - 1).join("\n");
+  const guardComment = /(\?|&&)\s*\(\s*(?:\/\/[^\n]*\n\s*)*\{\s*\/\*/.test(before + "\n" + lines[n - 1]);
+  const hint = guardComment
+    ? "\n\n   LIKELY CAUSE: a JSX comment sits between a guard's `(` and its element.\n" +
+      "   `cond && ( {/* note */} <div/> )` parses the comment as an object literal.\n" +
+      "   Move the comment ABOVE the guard line."
+    : "";
+  throw new Error(`the client does not parse — ${e.message}\n\n` + win.join("\n") + hint);
+}
+
 function undeclaredIn(code, label) {
-  const ast = parser.parse(code, {
-    sourceType: "script",
-    errorRecovery: false,
-    plugins: ["jsx"],
-  });
+  let ast;
+  try {
+    ast = parser.parse(code, { sourceType: "script", errorRecovery: false, plugins: ["jsx"] });
+  } catch (e) { explainSyntaxError(code, e); }
   const bad = [];
   traverse(ast, {
     ReferencedIdentifier(pathNode) {

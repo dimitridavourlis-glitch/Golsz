@@ -40,8 +40,13 @@ ck("it steps back Monday-first, not Sunday-first",
 // six chances to disagree about what days those are.
 ck("Plan derives its calendar from the shared derivation",
    /const calView = calendarGrid\(calScale, calCursor, milestones\);/.test(APP), true);
-ck("Home derives its week from the same shared function",
-   /const start = weekStartFrom\(new Date\(\)\);/.test(APP), true);
+ck("Home derives its calendar from the same shared derivation",
+   /const days = calendarGrid\(homeScale, homeCursor, allMilestones\)\.days \|\| \[\];/.test(APP), true);
+// The whole reason calendarGrid exists. Home and Plan had already drifted on
+// the one scale they shared; two more scales each would have made six
+// hand-written windows and six chances to disagree about what a month is.
+ck("neither screen hand-rolls a window any more",
+   /Array\.from\(\{ length: 7 \}, \(_, i\) => \{\n      const d = new Date\(start\);/.test(APP), false);
 ck("no component keeps a private copy of the date rule",
    /const isoOf = \(d\) =>/.test(APP), false);
 
@@ -131,7 +136,10 @@ console.log("\n-- Home's calendar says what is in it --");
 // Seven boxes that never name their contents are a picture of a week. The
 // footer line is what makes the grid worth looking at, and the day it picks
 // is the part that can be quietly wrong, so run the real expression.
-const upSrc = (APP.match(/const upcoming = days\.find\([^;]*;/) || [""])[0];
+// Both lines: the predicate and the pick. Lifting only the pick left undoneOn
+// undefined at run time, which is the eval'd-in-isolation trap this file keeps
+// having to respect.
+const upSrc = (APP.match(/const undoneOn = [^;]*;\s*const upcoming = days\.find\([^;]*;/) || [""])[0];
 ck("the upcoming-day expression was found", upSrc.length > 40, true);
 const pickUpcoming = new Function("days", "todayK", upSrc + " return upcoming;");
 const wk = (spec) => Object.keys(spec).map((k) => ({ key: k, rows: spec[k].map((done) => ({ done })) }));
@@ -146,12 +154,25 @@ ck("a today with nothing left open hands off to the next day that has work",
 // Late is its own state and belongs at the front of the week as a count, not
 // as "your next day" — pointing an athlete at Tuesday when Tuesday has gone
 // is worse than saying nothing.
-ck("a past day's open step is never offered as the next day",
-   pickUpcoming(wk(on("2026-09-08", [false])), "2026-09-10"), null);
+// Superseded by the window rule below: a past day INSIDE the drawn window is
+// still on screen, so naming it is right. What must never happen is the
+// all-clear line appearing while undone work sits in view.
+ck("a past day's open step is offered once nothing forward has work",
+   (pickUpcoming(wk(on("2026-09-08", [false])), "2026-09-10") || {}).key, "2026-09-08");
 ck("a fully done week offers no day", pickUpcoming(wk(on("2026-09-11", [true, true])), "2026-09-10"), null);
 ck("the EARLIEST qualifying day wins, not the last",
    (pickUpcoming(wk({ ...blank(), "2026-09-11": [false], "2026-09-13": [false] }), "2026-09-10") || {}).key, "2026-09-11");
 ck("an empty week offers no day", pickUpcoming(wk(blank()), "2026-09-10"), null);
+// THE CONTRADICTION THIS PREVENTS. Looking only forward, a week whose one
+// undone step sat on Monday found nothing and fell through to the all-clear
+// line — so Home printed "Everything on this week is done." beside a "1 LATE"
+// badge counting that exact step.
+ck("an undone step earlier in the window is named rather than ignored",
+   (pickUpcoming(wk(on("2026-09-08", [false])), "2026-09-10") || {}).key, "2026-09-08");
+ck("...but a forward day still wins when there is one",
+   (pickUpcoming(wk({ ...blank(), "2026-09-08": [false], "2026-09-11": [false] }), "2026-09-10") || {}).key, "2026-09-11");
+ck("a window that really is all done offers nothing",
+   pickUpcoming(wk(on("2026-09-08", [true, true])), "2026-09-10"), null);
 ck("the footer prints the step's own label, not a count",
    /homeWeek\.upcoming\.rows\.find\(\(m\) => !m\.done\)\.label/.test(APP), true);
 ck("a week with work all done says so rather than falling silent",
@@ -163,13 +184,25 @@ console.log("\n-- the week states its own dates --");
 const rangeStart = APP.indexOf("const weekRangeLabel = (() => {");
 const rangeSrc = APP.slice(rangeStart, APP.indexOf("})();", rangeStart) + 5);
 ck("the range expression was found", rangeSrc.length > 120, true);
-const rangeOf = new Function("homeWeek", "lang", rangeSrc + " return weekRangeLabel;");
+// It now reads homeScale and homeCursor too, because Home carries all three
+// scales; supply them rather than stubbing the label, so this keeps running
+// the real expression.
+const rangeOf = new Function("homeWeek", "lang", "homeScale", "homeCursor", rangeSrc + " return weekRangeLabel;");
 const daysFrom = (iso) => ({ days: Array.from({ length: 7 }, (_, i) => {
   const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + i); return { date: d };
-}) });
-ck("one month prints one month name", rangeOf(daysFrom("2026-09-07"), "en"), "Sep 7 — 13");
-ck("a week across two months prints both", rangeOf(daysFrom("2026-09-28"), "en"), "Sep 28 — Oct 4");
-ck("no week, no label", rangeOf(null, "en"), "");
+}), months: null });
+const cur = (iso) => new Date(iso + "T12:00:00");
+ck("one month prints one month name",
+   rangeOf(daysFrom("2026-09-07"), "en", "week", cur("2026-09-07")), "Sep 7 — 13");
+ck("a week across two months prints both",
+   rangeOf(daysFrom("2026-09-28"), "en", "week", cur("2026-09-28")), "Sep 28 — Oct 4");
+ck("no week, no label", rangeOf(null, "en", "week", cur("2026-09-07")), "");
+// The other two scales name themselves rather than printing a day range.
+ck("a month names the month and year",
+   rangeOf(daysFrom("2026-09-07"), "en", "month", cur("2026-09-15")), "September 2026");
+ck("a year names the span it actually draws",
+   rangeOf({ days: [], months: Array.from({ length: 12 }, (_, i) => ({ date: new Date(2026, 8 + i, 1) })) },
+     "en", "year", cur("2026-09-15")), "September 2026 — August 2027");
 
 console.log("\n-- today is a mark, not a form field --");
 // An outline is how a text input says "focused". A calendar marks today by

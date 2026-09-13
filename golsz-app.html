@@ -8835,6 +8835,11 @@ function HomeZone({ label, children, last, node, span }) {
 
 function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
   const { t, tv, lang } = useLang();
+  // Home's calendar scale and cursor. Read-only on this screen by contract —
+  // there is no selected day and no editor here, because Plan is the only
+  // place a step gets a date. Tapping a day hands that day to Plan.
+  const [homeScale, setHomeScale] = useState("week");
+  const [homeCursor, setHomeCursor] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; });
   const [loaded, setLoaded] = useState(!sb);
   const [athlete, setAthlete] = useState(null);
   const [quality, setQuality] = useState(null);
@@ -9258,16 +9263,18 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
   // the off-by-one that looks right six days out of seven.
   const homeWeek = (() => {
     if (!canTargets) return null;
-    const isoOf = isoDay;
-    const start = weekStartFrom(new Date());
     const todayK = isoDay(new Date());
-    const days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(start);
-      d.setDate(d.getDate() + i);
-      const key = isoOf(d);
-      return { key, date: d, isToday: key === todayK, rows: allMilestones.filter((m) => m.due === key) };
-    });
-    const count = days.reduce((n, d) => n + d.rows.length, 0);
+    // THE SAME DERIVATION PLAN USES, at whatever scale Home is showing.
+    // Home hand-rolled its own seven days while Plan hand-rolled its own, and
+    // the two had already drifted — different day-row filters, different
+    // answers to "what is today" on different clocks. Adding two more scales
+    // to each would have made that six hand-written windows. calendarGrid is
+    // the single one, and Home now differs from Plan in exactly one way: it
+    // cannot write.
+    const days = calendarGrid(homeScale, homeCursor, allMilestones).days || [];
+    const months = calendarGrid(homeScale, homeCursor, allMilestones).months;
+    const count = days.reduce((n, d) => n + d.rows.length, 0)
+      + (months || []).reduce((n, mo) => n + mo.rows.length, 0);
     // Late is its own state, not a day: an overdue step has already missed
     // its day and belongs at the front of the week, not buried on a past one.
     const late = allMilestones.filter((m) => !m.done && m.due && !suggestedDate(m) && m.due < todayK).length;
@@ -9276,8 +9283,15 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
     // what is inside them are a picture of a week, not a week — and the whole
     // reason the calendar sits at the top of Home is that it is supposed to
     // be readable at a glance, which a grid of counts is not.
-    const upcoming = days.find((d) => d.key >= todayK && d.rows.some((m) => !m.done)) || null;
-    return { days, count, late, todayK, upcoming, done: days.reduce((n, d) => n + d.rows.filter((m) => m.done).length, 0) };
+    // Forward first, then BACKWARD INTO THE WINDOW. Looking only forward meant
+    // a week whose single undone step sat on Monday found nothing, fell
+    // through to the all-clear line, and printed "Everything on this week is
+    // done." directly beside a "1 LATE" badge counting that very step. The
+    // window is what is on screen; if there is undone work anywhere in it,
+    // naming it beats congratulating the athlete for work they have not done.
+    const undoneOn = (d) => d.rows.some((m) => !m.done);
+    const upcoming = days.find((d) => d.key >= todayK && undoneOn(d)) || days.find(undoneOn) || null;
+    return { days, months, count, late, todayK, upcoming, done: days.reduce((n, d) => n + d.rows.filter((m) => m.done).length, 0) };
   })();
 
   // The week's own dates, stated. "THIS WEEK" over bare numerals 7 to 13 tells
@@ -9286,12 +9300,25 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
   // month name; a week that straddles two prints both.
   const weekRangeLabel = (() => {
     if (!homeWeek) return "";
-    const a = homeWeek.days[0].date, b = homeWeek.days[6].date;
-    const mon = (d) => d.toLocaleDateString(lang, { month: "short" }).replace(".", "");
+    const mon = (d, withYear) => d.toLocaleDateString(lang, withYear ? { month: "long", year: "numeric" } : { month: "short" }).replace(".", "");
+    if (homeScale === "year") {
+      const last = (homeWeek.months && homeWeek.months[11] && homeWeek.months[11].date) || homeCursor;
+      // Long at both ends. Short at one and long at the other read as two
+      // different kinds of label ("Sep 2026 — August 2027").
+      return `${homeCursor.toLocaleDateString(lang, { month: "long" })} ${homeCursor.getFullYear()} — ${mon(last, true)}`;
+    }
+    if (homeScale === "month") return homeCursor.toLocaleDateString(lang, { month: "long", year: "numeric" });
+    if (!homeWeek.days.length) return "";
+    const a = homeWeek.days[0].date, b = homeWeek.days[homeWeek.days.length - 1].date;
     return a.getMonth() === b.getMonth()
       ? `${mon(a)} ${a.getDate()} — ${b.getDate()}`
       : `${mon(a)} ${a.getDate()} — ${mon(b)} ${b.getDate()}`;
   })();
+  const homeArrow = { display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30,
+    borderRadius: 8, background: "none", border: `1px solid ${C.line}`, color: C.chalk, fontFamily: "inherit" };
+  const homeReach = calendarReach(allMilestones);
+  const homeCanBack = calendarStep(homeScale, homeCursor, -1) >= homeReach.from;
+  const homeCanFwd = calendarStep(homeScale, homeCursor, 1) <= homeReach.to;
 
   // ---- THE DOORS ---------------------------------------------------------
   // Home is the overview of the app, and until now it overviewed exactly one
@@ -9503,66 +9530,108 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
               stops it becoming a second Plan. */}
           {homeWeek && (
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-                <Eyebrow noMargin>{t("home_week_title")}</Eyebrow>
-                <span style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: "0.09em", textTransform: "uppercase", color: C.slate, whiteSpace: "nowrap" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0 }}>
+                  <Eyebrow noMargin>{t("home_week_title")}</Eyebrow>
                   {homeWeek.late > 0 && (
-                    <span style={{ color: C.warnText }}>{t("home_week_late").replace("{n}", homeWeek.late)} · </span>
+                    <span style={{ fontSize: 9.5, fontWeight: 900, letterSpacing: "0.09em", textTransform: "uppercase", color: C.warnText, whiteSpace: "nowrap" }}>
+                      {t("home_week_late").replace("{n}", homeWeek.late)}
+                    </span>
                   )}
-                  {weekRangeLabel}
-                </span>
+                </div>
+                <div style={{ display: "flex", gap: 3 }}>
+                  {CALENDAR_SCALES.map((sc) => (
+                    <button key={sc} onClick={() => setHomeScale(sc)}
+                      style={{ fontFamily: "inherit", fontSize: 9, fontWeight: 900, letterSpacing: "0.08em",
+                        textTransform: "uppercase", padding: "4px 8px", minHeight: 26, borderRadius: 7, cursor: "pointer",
+                        background: homeScale === sc ? C.lime : "none", color: homeScale === sc ? C.pitch : C.slate,
+                        border: `1px solid ${homeScale === sc ? C.lime : C.line}` }}>
+                      {t("calendar_scale_" + sc)}
+                    </button>
+                  ))}
+                </div>
               </div>
-              {/* One cell per day, letter and numeral stacked inside it, rather
-                  than a row of letters above a row of boxes. Two grids stacked
-                  read as two things; one grid of seven objects reads as a week.
-                  Today is FILLED, not outlined — an outline is how a form field
-                  says "selected", a solid mark is how a calendar says "you are
-                  here". Days already gone recede instead of disappearing: the
-                  week you are in has a front and a back, and a flat row of
-                  seven identical boxes hides which end you are standing at. */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginTop: 13 }}>
-                {homeWeek.days.map((d) => {
-                  const all = d.rows.length > 0 && d.rows.every((m) => m.done);
-                  const past = d.key < homeWeek.todayK;
-                  const ink = d.isToday ? C.pitch : all ? C.lime : d.rows.length ? C.chalk : C.slate;
-                  return (
-                    <div key={d.key} style={{ textAlign: "center", minWidth: 0, padding: "7px 0 6px", borderRadius: 12,
-                      background: d.isToday ? C.lime : all ? C.limeWash : d.rows.length ? C.turf : "transparent",
-                      border: `1px solid ${d.isToday ? C.lime : all ? "transparent" : d.rows.length ? C.line2 : C.line}`}}>
-                      {/* A day already gone recedes by ink, not by opacity on
-                          the whole cell: the border is 8% alpha to begin with,
-                          so fading the cell erased it and the row stopped
-                          reading as seven days at all. The frame holds, the
-                          date steps back. */}
-                      <div style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase",
-                        color: d.isToday ? C.pitch : C.slate, opacity: d.isToday ? 0.72 : past && !d.rows.length ? 0.5 : 1 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 10 }}>
+                <button onClick={() => setHomeCursor(calendarStep(homeScale, homeCursor, -1))} disabled={!homeCanBack}
+                  aria-label={t("calendar_prev")}
+                  style={{ ...homeArrow, opacity: homeCanBack ? 1 : 0.25, cursor: homeCanBack ? "pointer" : "default" }}>
+                  <ChevronLeft size={14} />
+                </button>
+                <div style={{ flex: 1, minWidth: 0, textAlign: "center", fontSize: 11.5, fontWeight: 800, color: C.chalk }}>
+                  {weekRangeLabel}
+                </div>
+                <button onClick={() => setHomeCursor(calendarStep(homeScale, homeCursor, 1))} disabled={!homeCanFwd}
+                  aria-label={t("calendar_next")}
+                  style={{ ...homeArrow, opacity: homeCanFwd ? 1 : 0.25, cursor: homeCanFwd ? "pointer" : "default" }}>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+              {homeWeek.months ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 5, marginTop: 12 }}>
+                  {homeWeek.months.map((mo) => (
+                    <button key={mo.key} onClick={() => { setHomeScale("month"); setHomeCursor(new Date(mo.date)); }}
+                      style={{ fontFamily: "inherit", textAlign: "left", cursor: "pointer", padding: "8px 9px", borderRadius: 10,
+                        background: mo.rows.length ? C.turf : "transparent",
+                        border: `1px solid ${mo.isNow ? C.lime : mo.rows.length ? C.line2 : C.line}` }}>
+                      <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase",
+                        color: mo.isNow ? C.lime : C.slate }}>
+                        {mo.date.toLocaleDateString(lang, { month: "short" }).replace(".", "")}
+                        {mo.date.getMonth() === 0 ? " " + String(mo.date.getFullYear()).slice(2) : ""}
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 800, marginTop: 2, lineHeight: 1,
+                        color: mo.rows.length ? C.chalk : C.slate, opacity: mo.rows.length ? 1 : 0.45 }}>
+                        {mo.rows.length || "\u2014"}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginTop: 12 }}>
+                    {homeWeek.days.slice(0, 7).map((d) => (
+                      <div key={"h" + d.key} style={{ textAlign: "center", fontSize: 8.5, fontWeight: 900,
+                        letterSpacing: "0.1em", textTransform: "uppercase", color: C.slate }}>
                         {d.date.toLocaleDateString(lang, { weekday: "narrow" })}
                       </div>
-                      <div style={{ marginTop: 3, fontSize: 15, lineHeight: 1, fontWeight: d.isToday ? 900 : 800, color: ink,
-                        opacity: past && !d.rows.length ? 0.5 : 1 }}>
-                        {d.date.getDate()}
-                      </div>
-                      {/* Up to three dots, then the count instead. Capping at
-                          three and saying nothing would quietly lose the busiest
-                          days, which are the ones worth seeing. */}
-                      <div style={{ height: 5, marginTop: 6, display: "flex", gap: 2.5, alignItems: "center", justifyContent: "center" }}>
-                        {d.rows.length > 3 ? (
-                          <span style={{ fontSize: 8, lineHeight: 1, fontWeight: 900, color: d.isToday ? C.pitch : C.lime }}>{d.rows.length}</span>
-                        ) : d.rows.map((m) => (
-                          <span key={m.id} style={{ width: 4, height: 4, borderRadius: "50%",
-                            background: m.done ? (d.isToday ? "rgba(10,10,10,0.4)" : C.slate) : (d.isToday ? C.pitch : C.lime) }} />
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {/* The line that makes the grid worth looking at: it names the day
-                  and the actual step waiting on it. Home still does not edit —
-                  the row hands the athlete to Plan, which is the only screen
-                  where a step gets its day. An empty week is not a failure
-                  state and is not scored; it names the missing thing and points
-                  at the same place. */}
+                    ))}
+                  </div>
+                  {/* EVERY DAY IS A DOOR INTO PLAN, AND NOTHING MORE.
+                      Home draws the identical calendar and cannot write to it:
+                      no editor, no add field, no tick. A day tap hands that
+                      exact day to Plan, which opens it ready to edit. Keeping
+                      Home read-only is not a restriction the component checks
+                      at runtime — it is that no writer exists on this screen,
+                      which is a contract that cannot be broken by accident. */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginTop: 5 }}>
+                    {homeWeek.days.map((d) => {
+                      const all = d.rows.length > 0 && d.rows.every((m) => m.done);
+                      const past = d.key < homeWeek.todayK;
+                      const ink = d.isToday ? C.pitch : all ? C.lime : d.rows.length ? C.chalk : C.slate;
+                      return (
+                        <button key={d.key} onClick={() => onNavigate("targets", null, null, d.key)}
+                          aria-label={d.date.toLocaleDateString(lang, { weekday: "long", day: "numeric", month: "long" })}
+                          style={{ fontFamily: "inherit", cursor: "pointer", textAlign: "center", minWidth: 0,
+                            padding: "7px 0 6px", borderRadius: 12, opacity: d.out ? 0.4 : 1,
+                            background: d.isToday ? C.lime : all ? C.limeWash : d.rows.length ? C.turf : "transparent",
+                            border: `1px solid ${d.isToday ? C.lime : all ? "transparent" : d.rows.length ? C.line2 : C.line}`}}>
+                          <div style={{ fontSize: 15, lineHeight: 1, fontWeight: d.isToday ? 900 : 800, color: ink,
+                            opacity: past && !d.rows.length ? 0.5 : 1 }}>
+                            {d.date.getDate()}
+                          </div>
+                          <div style={{ height: 5, marginTop: 6, display: "flex", gap: 2.5, alignItems: "center", justifyContent: "center" }}>
+                            {d.rows.length > 3 ? (
+                              <span style={{ fontSize: 8, lineHeight: 1, fontWeight: 900, color: d.isToday ? C.pitch : C.lime }}>{d.rows.length}</span>
+                            ) : d.rows.map((m) => (
+                              <span key={m.id} style={{ width: 4, height: 4, borderRadius: "50%",
+                                background: m.done ? (d.isToday ? "rgba(10,10,10,0.4)" : C.slate) : (d.isToday ? C.pitch : C.lime) }} />
+                            ))}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
               <button onClick={() => onNavigate("targets")}
                 style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", textAlign: "left",
                   background: "none", border: "none", borderTop: `1px solid ${C.line}`,
@@ -10042,7 +10111,7 @@ function BackupPlanCard({ athlete, loaded, actingFor, onSaved, quiet }) {
   );
 }
 
-function Targets({ plan, onUpgrade, actingFor, onNavigate }) {
+function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
   // Bumped by GoalCard on a successful save so PathwayPlan below re-reads
@@ -10207,7 +10276,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate }) {
           destination now (brief §14's nav concept) rather than buried on
           Passport — pathway_plan and targets share the same Pro+ minimum
           plan, so the page-level gate above already covers both. */}
-      <PathwayPlan key={goalVersion} viewUserId={null} onChange={setPathwayState} onNavigate={onNavigate} plan={plan} next30={next30} devItems={devItems} />
+      <PathwayPlan key={goalVersion} viewUserId={null} onChange={setPathwayState} onNavigate={onNavigate} plan={plan} next30={next30} devItems={devItems} openDay={openDay} onDayOpened={onDayOpened} />
 
       {/* THE THREE TIME SECTIONS ARE GONE, NOT MOVED ASIDE.
           NEXT 30 DAYS, NEXT 90 DAYS and the season card were three horizons
@@ -10861,7 +10930,7 @@ function milestoneDateLabel(m, lang, t) {
   if (n < 7) return { text: d.toLocaleDateString(loc, { weekday: "long" }), tone: "due" };
   return { text: short, tone: "due" };
 }
-function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devItems = [] }) {
+function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devItems = [], openDay, onDayOpened }) {
   const { t, lang } = useLang();
   const [uid, setUid] = useState(null);
   const [loaded, setLoaded] = useState(false);
@@ -10913,6 +10982,22 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
   // athlete points at a day.
   const [calDay, setCalDay] = useState(null);
   const [dayDraft, setDayDraft] = useState("");
+  // ARRIVING FROM HOME WITH A DAY IN HAND.
+  // Home draws the same calendar and cannot edit it, so a tap there sends the
+  // athlete here with that day. Opening it means both putting the cursor on
+  // the week containing it AND opening its editor, or they would land on the
+  // right screen looking at the wrong seven days.
+  // Cleared through onDayOpened so a later visit to Plan does not silently
+  // reopen a day the athlete tapped yesterday.
+  useEffect(() => {
+    if (!openDay || !/^\d{4}-\d{2}-\d{2}$/.test(openDay)) return;
+    const d = new Date(openDay + "T00:00:00");
+    setCalScale("week");
+    setCalCursor(d);
+    setCalDay(openDay);
+    setDayDraft("");
+    if (onDayOpened) onDayOpened();
+  }, [openDay]);
   const [exists, setExists] = useState(false);
   const [busy, setBusy] = useState(false);
   // Mirrors this component's own state up to Targets (the "Pathway/Plan"
@@ -12036,6 +12121,13 @@ function GolszApp({ onSignOut, startOnboarding }) {
   const [onboarding, setOnboarding] = useState(!!startOnboarding);
   const [viewProfileId, setViewProfileId] = useState(null);
   const [scoutSeed, setScoutSeed] = useState(null);
+  // THE DAY HOME IS HANDING TO PLAN.
+  // Home shows the calendar and never edits it; tapping a day there has to
+  // land on the one screen that does. Carried through App rather than through
+  // a URL because this app has no router, and held here rather than inside
+  // PathwayPlan because that component is mounted key={goalVersion} and is
+  // destroyed whenever a goal is saved.
+  const [planDay, setPlanDay] = useState(null);
   // Stack of { page, viewProfileId } snapshots to restore on "back" out of a
   // viewed profile — e.g. opening a passport from a chat thread's header and
   // pressing back should land back in that same thread, not on your own
@@ -12263,11 +12355,12 @@ function GolszApp({ onSignOut, startOnboarding }) {
   // athlete on an empty chat and leave them to phrase the request, which is
   // the part they came here to avoid. Cleared as soon as Scout has sent it,
   // so leaving and returning to Scout does not fire it a second time.
-  const go = (id, from, seed) => {
+  const go = (id, from, seed, day) => {
     if (mustFinishProfile && id !== "profile") return;
     if (id === "account") { setAccountOpenSignal((s) => s + 1); return; }
     setCameFrom(from || null);
     setScoutSeed(id === "scout" && typeof seed === "string" && seed.trim() ? seed.trim() : null);
+    setPlanDay(id === "targets" && typeof day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null);
     setPage(id); if (id !== "messages") setThread(null); setViewProfileId(null); setProfileStack([]);
   };
   // Messages is retired. Its only callers were Feed and Discover, both
@@ -12383,7 +12476,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
             {page === "home" && !actingFor && isParentAccount && linkedChildren && linkedChildren.length === 0 && <FamilyAccess />}
             {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} />}
             {page === "scout" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} seedPrompt={scoutSeed} onSeedSent={() => setScoutSeed(null)} onNavigate={go} /></div>}
-            {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} onNavigate={go} /></>}
+            {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} onNavigate={go} openDay={planDay} onDayOpened={() => setPlanDay(null)} /></>}
             {page === "events" && <Events />}
             {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
             {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
@@ -12430,7 +12523,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         )}
         {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} />}
         {page === "scout" && <Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} seedPrompt={scoutSeed} onSeedSent={() => setScoutSeed(null)} onNavigate={go} />}
-        {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} onNavigate={go} /></>}
+        {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} onNavigate={go} openDay={planDay} onDayOpened={() => setPlanDay(null)} /></>}
         {page === "events" && <Events />}
         {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
         {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
