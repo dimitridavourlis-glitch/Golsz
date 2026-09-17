@@ -1,5 +1,5 @@
--- 138 — GOLSZ is for athletes and the people who pay for them. Scout, Coach
--- and Physio are gone.
+-- 138 — GOLSZ is for athletes and the people who pay for them. Scout, Coach,
+-- Physio, Agent and Other are gone. Two values remain: Player and Parent.
 --
 -- These were never separate versions of the app: occupation only ever branched
 -- Player / Parent / everything-else, and the three removed values shared the
@@ -7,11 +7,13 @@
 -- dropdown, in the verification flow, and in every allowlist here — surface
 -- area for user types the product does not serve.
 --
--- ORDER MATTERS. Existing rows are migrated to 'Other' BEFORE the constraint
--- tightens, because a CHECK is validated against rows already in the table and
--- would otherwise refuse to be added at all. 'Other' rather than null: null
--- means "never answered", and someone who told us they were a coach did
--- answer. Their row is preserved; only the label they no longer have is not.
+-- ORDER MATTERS. Existing rows are cleared BEFORE the constraint tightens,
+-- because a CHECK is validated against rows already in the table and would
+-- otherwise refuse to be added at all. null, not a substitute label: with
+-- 'Other' itself removed there is no honest value left to move them to, and
+-- null is what every unanswered profile already carries. The row is preserved;
+-- only a label the app no longer has is not, and the app treats an unset
+-- occupation as Player everywhere already.
 --
 -- THE TRIGGER'S ALLOWLIST MOVES IN THE SAME MIGRATION. It nulls an unknown
 -- occupation rather than rejecting it, so leaving it wider than the constraint
@@ -22,15 +24,15 @@
 --
 -- Idempotent. Safe to re-run.
 
-update public.profiles set occupation = 'Other'
- where occupation in ('Scout', 'Coach', 'Physio');
+update public.profiles set occupation = null
+ where occupation in ('Scout', 'Coach', 'Physio', 'Agent', 'Other');
 
 alter table public.profiles
   drop constraint if exists profiles_occupation_check;
 
 alter table public.profiles
   add constraint profiles_occupation_check
-  check (occupation is null or occupation in ('Player', 'Parent', 'Agent', 'Other'));
+  check (occupation is null or occupation in ('Player', 'Parent'));
 
 create or replace function handle_new_user()
 returns trigger language plpgsql security definer set search_path to 'public' as $$
@@ -56,7 +58,7 @@ begin
   -- api/stripe-webhook.js may change profiles.plan.
 
   v_occupation := nullif(new.raw_user_meta_data->>'occupation', '');
-  if v_occupation is not null and v_occupation not in ('Player', 'Parent', 'Agent', 'Other') then
+  if v_occupation is not null and v_occupation not in ('Player', 'Parent') then
     v_occupation := null;
   end if;
 
