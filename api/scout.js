@@ -3242,8 +3242,10 @@ function synthesizePathwayFromState({ pathwayType, readiness }) {
 //
 // Plan gating is unchanged and is checked FIRST: Pathway is not part of
 // Free, and nothing here may hand a Free athlete a paid object.
-function resolveSuggestedPathway({ modelPathway, approved, plan, goalDefined, pathwayType, readiness, goalText }) {
-  if (!hasFeature(plan, "pathway_plan")) return { pathway: null, source: "gated" };
+function resolveSuggestedPathway({ modelPathway, approved, plan, fullAccess, goalDefined, pathwayType, readiness, goalText }) {
+  // Third argument, same as the client's own featureUnlocked call: a comped
+  // account is not gated.
+  if (!hasFeature(plan, "pathway_plan", fullAccess)) return { pathway: null, source: "gated" };
   // A model-built Pathway must agree with the goal the athlete WROTE.
   //
   // The prompt already says "never send one that contradicts their written
@@ -3288,6 +3290,7 @@ function finalizeSuggestedPathway(data, ctx, incomingText, userPlan) {
     modelPathway,
     approved: athleteApprovedPathwayBuild(incomingText),
     plan: ctx.plan,
+    fullAccess: ctx.fullAccess,
     goalDefined: ctx.goalDefined,
     pathwayType: ctx.pathwayType,
     readiness: ctx.readiness,
@@ -5544,6 +5547,13 @@ async function getProfileMeta(userId) {
   let plan = "free";
   let isAdmin = false;
   let aiUnlimited = false;
+  // THE SERVER COULD NOT SEE A COMPED ACCOUNT. full_access is what an admin
+  // sets to open every feature for someone — a beta athlete, a partner club —
+  // and the client honours it in featureUnlocked(). This file never read it,
+  // so the two disagreed: the UI showed the Pathway builder unlocked and
+  // api/scout.js refused to build one, with source "gated" and no explanation
+  // an athlete could act on.
+  let fullAccess = false;
   let goalDefined = false;
   let goalText = null;
   let goalSource = null;
@@ -5553,10 +5563,10 @@ async function getProfileMeta(userId) {
     // rejects the ENTIRE select for one unknown column, which would drop
     // `plan` too and silently meter an Elite athlete as Starter. Retry
     // without it rather than losing the whole row.
-    let p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text,goal_source", { headers });
+    let p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,full_access,goal_defined,goal_text,goal_source", { headers });
     if (!p.ok) {
       console.warn("GOLSZ profile select failed (migration 113 not applied?) — retrying without goal_source.");
-      p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text", { headers });
+      p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,full_access,goal_defined,goal_text", { headers });
     }
     // The retry can fail too, and until now nothing looked: a non-ok response
     // fell through to rows[0] being undefined and the default standing, with
@@ -5567,12 +5577,13 @@ async function getProfileMeta(userId) {
       plan = rows[0].plan || "free";
       isAdmin = !!rows[0].is_admin;
       aiUnlimited = !!rows[0].ai_unlimited;
+      fullAccess = !!rows[0].full_access;
       goalDefined = !!rows[0].goal_defined;
       goalText = rows[0].goal_text || null;
       goalSource = rows[0].goal_source || null;
     }
   } catch {}
-  return { plan, isAdmin, aiUnlimited, goalDefined, goalText, goalSource };
+  return { plan, isAdmin, aiUnlimited, fullAccess, goalDefined, goalText, goalSource };
 }
 
 // GOLSZ Final Product / AI Scout / Pathway / Elite Architecture directive
@@ -6456,7 +6467,7 @@ export default async function handler(req, res) {
     // exists and is APPROVED, so this cannot be claimed by asking; and the
     // ATHLETE still owns the metering above, so a parent on Pro does not get
     // to spend their child's daily allowance twice.
-    const [{ plan: ownPlan, isAdmin, aiUnlimited, goalDefined, goalText, goalSource }, parentMeta, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
+    const [{ plan: ownPlan, isAdmin, aiUnlimited, fullAccess, goalDefined, goalText, goalSource }, parentMeta, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
       getProfileMeta(userId),
       (actingReason === "parent_managed" && callerId) ? getProfileMeta(callerId) : Promise.resolve(null),
       getAthleteState(userId),
@@ -6521,6 +6532,9 @@ export default async function handler(req, res) {
     // they have now said "yes, rebuild it".
     pathwayBuildCtx = {
       plan,
+      // An admin-comped account is not gated. Without this the client showed
+      // the Pathway builder unlocked and this file refused to build one.
+      fullAccess,
       goalDefined,
       goalText,
       pathwayType: athleteState.pathwayType || recon.derived || null,

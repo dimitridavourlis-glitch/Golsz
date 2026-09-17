@@ -215,7 +215,16 @@ ck("a contradiction is an allowed trigger for suggested_pathway",
 ck("...and a suggestion may never contradict the written goal",
    /rejected a suggested Plan that contradicted the athlete's written goal/.test(SCOUT), true);
 // Free stays free: correcting a Pathway must not become a Free feature.
-ck("suggested_pathway is still Free-gated", /if \(!hasFeature\(plan, "pathway_plan"\)\) return \{ pathway: null, source: "gated" \}/.test(SCOUT), true);
+// The third argument is full_access — an ADMIN-GRANTED comp, never anything
+// the athlete or the request can set. Free is still gated; a comped account is
+// not, which is what the client's own featureUnlocked has always done. Before
+// this the two disagreed: the UI showed the Pathway builder unlocked and the
+// server refused to build one, reporting source "gated" with no explanation.
+ck("suggested_pathway is still Free-gated",
+   /if \(!hasFeature\(plan, "pathway_plan", fullAccess\)\) return \{ pathway: null, source: "gated" \}/.test(SCOUT), true);
+ck("...and full_access is read from the profile, not from the request",
+   /select=plan,is_admin,ai_unlimited,full_access,/.test(SCOUT), true);
+ck("...and carried into the build context", /^\s*fullAccess,$/m.test(SCOUT), true);
 // The server-side Free gate used to be the literal expression
 // `userPlan === "free" ? null : extractSuggestedPathway(data)` at each of
 // the four response paths. Those were replaced by finalizeSuggestedPathway()

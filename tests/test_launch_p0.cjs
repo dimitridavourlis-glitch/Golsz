@@ -175,7 +175,11 @@ console.log("\n-- P0-5: code may land before its migration without losing data -
 // read (metering an Elite athlete as Starter) and thrown away captured
 // goals. Both paths retry without the authorship columns.
 ck("the profile read retries without goal_source",
-   /retrying without goal_source[\s\S]{0,400}select=plan,is_admin,ai_unlimited,goal_defined,goal_text", \{ headers \}\)/.test(SRC), true);
+   /retrying without goal_source[\s\S]{0,400}select=plan,is_admin,ai_unlimited,full_access,goal_defined,goal_text", \{ headers \}\)/.test(SRC), true);
+// full_access predates migration 113, so the retry must keep it — dropping it
+// would silently gate a comped account the moment 113 was missing.
+ck("...and the retry keeps full_access",
+   /select=plan,is_admin,ai_unlimited,full_access,goal_defined,goal_text"/.test(SRC), true);
 ck("...and says why in the log", /migration 113 not applied\?/.test(SRC), true);
 ck("the goal write retries with authorship stripped",
    /const \{ goal_source, goal_updated_at, \.\.\.withoutAuthorship \} = patches\.profiles;/.test(SRC), true);
