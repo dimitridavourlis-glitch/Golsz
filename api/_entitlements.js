@@ -17,7 +17,8 @@
 // entitlement answers are COMPUTED, never narrated from prose the model read.
 //
 // WHY THE CLIENT STILL HAS A COPY
-// golsz-app.html is a no-build-step, Babel-in-browser single file and cannot
+// golsz-app.html is a single file whose JSX is precompiled to the committed
+// js/app.js rather than compiled in the browser, and it cannot
 // import from api/. The repo already solved this exact problem for money in
 // api/_plan-catalog.js ("Mirrors PLANS in golsz-app.html;
 // tests/test_cad_pricing.cjs diffs the two so they cannot drift"). Same

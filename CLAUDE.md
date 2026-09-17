@@ -965,7 +965,10 @@ complexity scoring, per-plan tier caps, atomic daily-limit enforcement, a generi
 database-first event search, rate limiting/idempotency, emergency kill switches, and an admin cost/margin
 dashboard — written in generic TypeScript/Next.js SaaS vocabulary (`PLAN_MODEL_ACCESS`, `AiProviderAdapter`,
 `ai_daily_usage`, a Jest-style test list) that doesn't match this repo's real stack (single-file JSX,
-Babel-standalone, no build step, no TypeScript, no test framework). The plan translating the spec onto the
+Babel, no TypeScript, no test framework). The JSX is no longer compiled in the browser: tools/precompile.cjs
+compiles it once into js/app.js, which is COMMITTED. There is still no build step on deploy — the file git holds
+is the file Vercel serves — but after editing the JSX in golsz-app.html you must run `npm run compile`, and
+test_compiled_artifact.cjs fails the gate if you forget. The plan translating the spec onto the
 real stack lives at `/Users/dimitriosdavourlis/.claude/plans/rosy-doodling-toast.md` (overwritten from the
 Phase 2 plan above — not part of the repo). Extends the Phase 2 MVP's real infrastructure rather than
 building a parallel `ai_*` schema next to it.
