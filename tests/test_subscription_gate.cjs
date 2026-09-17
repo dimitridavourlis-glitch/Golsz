@@ -58,13 +58,22 @@ console.log("\n-- cancelling must be possible, and downgrading must not fake it 
      isLivePortalLink("https://billing.stripe.com.evil.tld/p/login/abc"), false);
   ck("http is refused", isLivePortalLink("http://billing.stripe.com/p/login/abc"), false);
   ck("empty is refused rather than treated as a link", isLivePortalLink(""), false);
-  // Configured since 2026-09-03. This previously asserted the gate returned
-  // null because no live account existed; now the fact worth holding is that
-  // a real portal exists, because the downgrade path below refuses to run
-  // without one — an empty portal link would silently block every cancellation.
-  ck("a portal link is configured", isLivePortalLink(stripePortalLink()), true);
-  ck("...and it is the login-link form, not a Payment Link",
-     /^https:\/\/billing\.stripe\.com\/p\/login\/[A-Za-z0-9]+$/.test(stripePortalLink() || ""), true);
+  // THESE TWO USED TO ASSERT "a portal link is configured", AND THAT WAS
+  // FALSE. STRIPE_PORTAL_LINK held the CAD Basic Payment Link's id on the
+  // billing host — it had the right shape and pointed nowhere, so both
+  // assertions passed while every subscriber who tried to cancel hit a dead
+  // URL. A test that confirms a string's shape cannot tell you the string is
+  // correct.
+  //
+  // What is asserted now is the property that holds in BOTH states and is the
+  // one that actually protects an athlete: whatever stripePortalLink() returns
+  // is either a genuine portal link or null — never a payment link wearing a
+  // portal's prefix. Null is handled everywhere by telling them how to cancel.
+  const portalNow = stripePortalLink();
+  ck("the portal gate never hands back a payment link dressed as a portal",
+     portalNow === null || /^https:\/\/billing\.stripe\.com\/p\/login\/[A-Za-z0-9]+$/.test(portalNow), true);
+  ck("...and a payment-link id on the billing host is refused",
+     isLivePortalLink("https://billing.stripe.com/p/login/" + (STRIPE_LINKS.cad && STRIPE_LINKS.cad.starter || "").split("/").pop()), false);
 
   // Ordering, not adjacency: the guard must stand BETWEEN entering the "free"
   // branch and the write. Asserting the two strings merely exist would pass
@@ -222,6 +231,42 @@ ck("it binds the Stripe customer on a completed checkout",
    /patchProfile\(supaUrl, serviceKey, `id=eq\.\$\{profileId\}`, patch\)/.test(WEBHOOK), true);
 ck("...and sets the plan only when one resolved", /if \(plan\) patch\.plan = plan;/.test(WEBHOOK), true);
 ck("it drops back to free on cancellation", /\{ plan: "free", payment_past_due: false \}/.test(WEBHOOK), true);
+
+console.log("\n-- the portal link is a portal, not a payment link --");
+// STRIPE_PORTAL_LINK has been the CAD Basic PAYMENT LINK id pasted onto
+// billing.stripe.com. The same 24-character base62 id appears in both, which
+// across two independent Stripe object namespaces is not coincidence. It is
+// the ONLY cancel path — Settings' "Manage billing" and choosePlan("free")
+// both redirect to it, and index.html promises "Cancel any time" — so every
+// subscriber who tried to cancel hit a dead URL.
+//
+// isLivePortalLink only checks the billing.stripe.com prefix and the absence
+// of /test_, so it passes a payment link id happily. This is the check that
+// would have caught it.
+{
+  const portal = (APP.match(/const STRIPE_PORTAL_LINK = "([^"]*)"/) || [])[1] || "";
+  ck("the portal link was found", portal.length > 20, true);
+  const portalId = portal.split("/").filter(Boolean).pop() || "";
+  ck("...and it has an id segment", portalId.length > 8, true);
+  // Every buy.stripe.com id in the catalogue, across all currencies.
+  const payIds = [...APP.matchAll(/https:\/\/buy\.stripe\.com\/([A-Za-z0-9_]+)/g)].map((m) => m[1]);
+  ck("the payment-link catalogue was found", payIds.length >= 3, true);
+  // THE LINK IS STILL WRONG — only the Stripe Dashboard can fix that. What is
+  // asserted here is that the app REFUSES it rather than sending an athlete to
+  // a dead URL: isLivePortalLink now rejects any id that also appears in
+  // STRIPE_LINKS, so stripePortalLink() returns null and every caller falls
+  // back to telling them how to cancel. A wrong URL is worse than an absent
+  // one. When the real portal link is pasted in, this flips on its own.
+  ck("a payment-link id is refused as a portal link",
+     /Object\.values\(STRIPE_LINKS \|\| \{\}\)\.some/.test(APP), true);
+  if (payIds.includes(portalId)) {
+    console.log("   NOTE: STRIPE_PORTAL_LINK is still a payment-link id (" + portalId + ").");
+    console.log("         The app refuses it and tells athletes how to cancel, but nobody can");
+    console.log("         cancel IN the app until the real portal link is pasted at STRIPE_PORTAL_LINK.");
+  }
+  ck("...and every payment link id is distinct",
+     new Set(payIds).size, payIds.length);
+}
 
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
