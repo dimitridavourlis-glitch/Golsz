@@ -7700,9 +7700,18 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
         updates = parsed.profile_updates || null;
         contextUpdates = parsed.scout_context_updates || null;
       } catch { /* server already gave us reply_text */ }
-      // Last line of defence: never render the envelope. If we somehow have
-      // no clean text, show honest copy rather than braces.
-      if (!reply || reply.includes('"reply"') || /^\s*[\{\[]/.test(reply)) {
+      // THE SERVER'S NULL IS A DECISION, NOT AN ACCIDENT. deriveReplyText
+      // returns nothing on purpose when the model ran out of budget
+      // mid-tool-loop and the only text available is its own scratchpad —
+      // "Now let me write the reply." — which is prose, so the raw fallback
+      // below cheerfully rendered it. In production on 2026-08-11 an athlete
+      // was shown Scout discussing him in the third person. reply_unavailable
+      // says so in a way prose cannot imitate, and it is checked FIRST.
+      if (data.reply_unavailable) {
+        reply = t("scout_connection_dropped");
+      } else if (!reply || reply.includes('"reply"') || /^\s*[\{\[]/.test(reply)) {
+        // Last line of defence: never render the envelope. If we somehow have
+        // no clean text, show honest copy rather than braces.
         reply = (raw && !raw.includes('"reply"') && !/^\s*[\{\[]/.test(raw.trim())) ? raw : t("scout_connection_dropped");
       }
       if (updates && typeof updates === "object") setProfile((p) => ({ ...p, ...updates }));
@@ -10894,6 +10903,14 @@ function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing, stage
                     tabIndex={tappable ? 0 : undefined}
                     onKeyDown={tappable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNodeTap(st.id); } } : undefined}
                     style={{ position: "absolute", left: 0, right: 0, top: yOf(i) - 18, minHeight: 36,
+                      // CAPPED AT THE PITCH. The nodes sit on a fixed 64px
+                      // rhythm but the labels had no height limit, so a long
+                      // stage name — or a short one plus the YOU ARE HERE badge
+                      // wrapping to its own row — grew past its slot and
+                      // overlapped the node below it on a narrow phone. The
+                      // rail is the one picture on this page; two names on top
+                      // of each other is the fastest way to make it unreadable.
+                      maxHeight: GAP - 6, overflow: "hidden",
                       display: "flex", flexDirection: "column", justifyContent: "center",
                       cursor: tappable ? "pointer" : "default" }}>
                     {/* A NODE HAS ALWAYS BEEN TAPPABLE — onNodeTap opens the
@@ -10906,7 +10923,11 @@ function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing, stage
                         that actually respond. */}
                     <span style={{ display: "flex", alignItems: "baseline", gap: 7, flexWrap: "wrap" }}>
                       <span style={{ fontSize: 15, fontWeight: cur ? 700 : 500, letterSpacing: "-0.01em",
-                        color: cur ? C.lime : done ? C.chalk : C.slate, overflowWrap: "anywhere" }}>{label}</span>
+                        color: cur ? C.lime : done ? C.chalk : C.slate, overflowWrap: "anywhere",
+                        // Two lines, then an ellipsis — a hard overflow cut
+                        // slices a line of text in half, which reads as a
+                        // rendering fault rather than as truncation.
+                        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{label}</span>
                       {tappable && (
                         <Pencil size={11} style={{ color: C.slate, opacity: 0.55, flexShrink: 0, alignSelf: "center" }} />
                       )}
@@ -14053,7 +14074,11 @@ function Auth({ onDone, paidReturn }) {
           <input value={pw} onChange={(e) => setPw(e.target.value)} aria-label={t("auth_password")} placeholder={t("auth_password")} type="password" style={{ ...field, marginBottom: isSignupLike ? 12 : 4 }} />
           {!isSignupLike && (
             <div style={{ textAlign: "right", marginBottom: 10 }}>
-              <span onClick={() => { setForgotMode(true); setErr(""); setResetSent(false); }} style={{ color: C.slate, fontSize: 12, cursor: "pointer" }}>{t("auth_forgot")}</span>
+              {/* A button, not a span: a span is unreachable by keyboard and
+                  12px of text is not a touch target. The parent-signup link
+                  below gets the same treatment — it is the ONLY route an
+                  under-18 has to the flow that can actually pay. */}
+              <button type="button" onClick={() => { setForgotMode(true); setErr(""); setResetSent(false); }} style={{ background: "none", border: "none", color: C.slate, fontSize: 13, cursor: "pointer", fontFamily: "inherit", padding: "12px 8px", minHeight: 44 }}>{t("auth_forgot")}</button>
             </div>
           )}
 
@@ -14072,7 +14097,7 @@ function Auth({ onDone, paidReturn }) {
               {requiresParentAccount && (
                 <div style={{ marginTop: 10, background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 10, padding: "10px 12px" }}>
                   <div style={{ fontSize: 12, color: C.warnText, marginBottom: 8, lineHeight: 1.4 }}>{t("auth_under18_notice")}</div>
-                  <button onClick={() => { setMode("parent-signup"); setErr(""); setChildName(name); setChildDobDay(dobDay); setChildDobMonth(dobMonth); setChildDobYear(dobYear); setName(""); }} style={{ background: "none", border: "none", color: C.lime, fontWeight: 700, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", padding: 0 }}>{t("auth_switch_to_parent")}</button>
+                  <button onClick={() => { setMode("parent-signup"); setErr(""); setChildName(name); setChildDobDay(dobDay); setChildDobMonth(dobMonth); setChildDobYear(dobYear); setName(""); }} style={{ background: "none", border: "none", color: C.lime, fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", padding: "12px 8px", minHeight: 44 }}>{t("auth_switch_to_parent")}</button>
                 </div>
               )}
               {!requiresParentAccount && (

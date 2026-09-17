@@ -7127,6 +7127,14 @@ A newer source always beats an older one at the same level. If memory says one t
         await persistScoutContext(userId, scoutContextUpdates);
         await persistMemoryWrites(userId, withForcedCorrection(extractMemoryWrites(data), classification, latestText));
         data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
+        // SAY SO, do not just send nothing. deriveReplyText returns null on
+        // purpose when the model ran out of budget mid-tool-loop and the only
+        // text is its own scratchpad — but the client's last-ditch fallback
+        // renders `raw` whenever it does not LOOK like JSON, and a scratchpad
+        // is prose. So the server's deliberate null was being overridden by
+        // the client and an athlete was shown Scout talking about him in the
+        // third person. An explicit flag cannot be mistaken for prose.
+        data.reply_unavailable = !data.reply_text;
         data.scout_summary = updatedSummary;
         // next_move is THIS request's own classification result, not a fact
         // about the shared cached answer — attached only after
@@ -7236,6 +7244,14 @@ A newer source always beats an older one at the same level. If memory says one t
         await persistScoutContext(userId, extractScoutContextUpdates(data));
         await persistMemoryWrites(userId, withForcedCorrection(extractMemoryWrites(data), classification, latestText));
         data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
+        // SAY SO, do not just send nothing. deriveReplyText returns null on
+        // purpose when the model ran out of budget mid-tool-loop and the only
+        // text is its own scratchpad — but the client's last-ditch fallback
+        // renders `raw` whenever it does not LOOK like JSON, and a scratchpad
+        // is prose. So the server's deliberate null was being overridden by
+        // the client and an athlete was shown Scout talking about him in the
+        // third person. An explicit flag cannot be mistaken for prose.
+        data.reply_unavailable = !data.reply_text;
         data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         data.next_move = extractNextBestAction(classification);
@@ -7294,6 +7310,14 @@ A newer source always beats an older one at the same level. If memory says one t
             await persistScoutContext(userId, extractScoutContextUpdates(data));
             await persistMemoryWrites(userId, withForcedCorrection(extractMemoryWrites(data), classification, latestText));
             data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
+        // SAY SO, do not just send nothing. deriveReplyText returns null on
+        // purpose when the model ran out of budget mid-tool-loop and the only
+        // text is its own scratchpad — but the client's last-ditch fallback
+        // renders `raw` whenever it does not LOOK like JSON, and a scratchpad
+        // is prose. So the server's deliberate null was being overridden by
+        // the client and an athlete was shown Scout talking about him in the
+        // third person. An explicit flag cannot be mistaken for prose.
+        data.reply_unavailable = !data.reply_text;
             data.scout_summary = updatedSummary;
             if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
             data.next_move = extractNextBestAction(classification);
@@ -7354,6 +7378,7 @@ A newer source always beats an older one at the same level. If memory says one t
       await persistKnowledgeCandidate(topicKey, note, searchSources, athleteSport, athleteCountry);
     }
     data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
+    data.reply_unavailable = !data.reply_text;
     data.scout_summary = updatedSummary;
     if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
     data.next_move = extractNextBestAction(classification);
