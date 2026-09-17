@@ -431,7 +431,7 @@ const I18N = {
     settings_your_data: "YOUR DATA", settings_export_data: "Download my data", settings_export_sub: "Everything GOLSZ holds about you, as a JSON file.",
     settings_export_busy: "Preparing your file…", settings_export_done: "Downloaded.", settings_export_partial: "Downloaded — but part of it could not be read. The file lists what was missed under _errors.", settings_export_empty_note: "Downloaded. {n} sections came back empty — the file lists them under _zero_row_sections.", settings_export_err: "Couldn't prepare your file — try again.",
     settings_delete_warning: "This permanently deletes your account, profile, and uploaded photos. This cannot be undone. Type DELETE to confirm.",
-    settings_delete_confirm_ph: "Type DELETE to confirm", settings_delete_confirm_btn: "Permanently delete",
+    settings_delete_confirm_ph: "Type DELETE to confirm", settings_delete_confirm_btn: "Permanently delete", settings_delete_cancel_first: "You have an active subscription. Cancel it first in Manage billing above — deleting your account here would not stop Stripe charging you, and you would lose the only screen that can.",
     settings_email_sent: "Check {email} for a confirmation link to finish the change.",
     settings_email_err: "Couldn't update email.",
     settings_plan: "PLAN", settings_plan_current: "Current", settings_plan_switch: "Choose",
@@ -633,7 +633,7 @@ const I18N = {
     verify_title: "Get verified", verify_desc: "Request identity verification for your role. Optionally include a link to supporting proof (e.g. a club or federation profile).", verify_proof_placeholder: "Proof URL (optional)", verify_submit: "Request verification", verify_pending: "Your verification request is pending review.", verify_submitted: "Verification request submitted.",
     scout_header: "AI SCOUT", scout_live_agent: "LIVE AGENT", scout_questions_left: "QUESTIONS LEFT TODAY",
     scout_history_title: "History", scout_new_chat: "New chat", scout_no_past: "No past conversations yet.",
-    scout_new_conversation: "New conversation", scout_ago_messages: " messages", scout_delete_conv: "Delete conversation",
+    scout_new_conversation: "New conversation", scout_ago_messages: " messages", scout_delete_conv: "Delete conversation", scout_delete_conv_confirm: "Sure?",
     scout_input_ph: "Talk to your scout…",
     scout_build_target_list: "Add {n} to my Targets", scout_build_target_list_locked: "Add to my Targets — Basic", scout_targets_added: "Added to your Targets.",
     scout_add_dev_items: "Add {n} to my Development Plan", scout_add_dev_items_locked: "Add to my Development Plan — Pro", scout_dev_items_added: "Added to your Development Plan.",
@@ -778,7 +778,7 @@ const I18N = {
     settings_your_data: "VOS DONNÉES", settings_export_data: "Télécharger mes données", settings_export_sub: "Tout ce que GOLSZ détient sur vous, en fichier JSON.",
     settings_export_busy: "Préparation du fichier…", settings_export_done: "Téléchargé.", settings_export_partial: "Téléchargé — mais une partie n'a pas pu être lue. Le fichier liste les manques sous _errors.", settings_export_empty_note: "Téléchargé. {n} sections sont vides — le fichier les liste sous _zero_row_sections.", settings_export_err: "Impossible de préparer le fichier — réessayez.",
     settings_delete_warning: "Cela supprime définitivement votre compte, votre profil et vos photos. Cette action est irréversible. Tapez DELETE pour confirmer.",
-    settings_delete_confirm_ph: "Tapez DELETE pour confirmer", settings_delete_confirm_btn: "Supprimer définitivement",
+    settings_delete_confirm_ph: "Tapez DELETE pour confirmer", settings_delete_confirm_btn: "Supprimer définitivement", settings_delete_cancel_first: "Vous avez un abonnement actif. Annulez-le d’abord dans Gérer la facturation ci-dessus — supprimer votre compte ici n’arrêterait pas les prélèvements Stripe, et vous perdriez le seul écran qui le peut.",
     settings_email_sent: "Consultez {email} pour un lien de confirmation afin de finaliser le changement.",
     settings_email_err: "Impossible de mettre à jour l'e-mail.",
     settings_plan: "FORMULE", settings_plan_current: "Actuelle", settings_plan_switch: "Choisir",
@@ -980,7 +980,7 @@ const I18N = {
     
     scout_header: "AI SCOUT", scout_live_agent: "AGENT EN DIRECT", scout_questions_left: "QUESTIONS RESTANTES AUJOURD'HUI",
     scout_history_title: "Historique", scout_new_chat: "Nouvelle discussion", scout_no_past: "Aucune conversation passée.",
-    scout_new_conversation: "Nouvelle conversation", scout_ago_messages: " messages", scout_delete_conv: "Supprimer la conversation",
+    scout_new_conversation: "Nouvelle conversation", scout_ago_messages: " messages", scout_delete_conv: "Supprimer la conversation", scout_delete_conv_confirm: "Sûr ?",
     scout_input_ph: "Parlez à votre agent…",
     scout_build_target_list: "Ajouter {n} à mes Cibles", scout_build_target_list_locked: "Ajouter à mes Cibles — Basic", scout_targets_added: "Ajouté à vos Cibles.",
     scout_add_dev_items: "Ajouter {n} à mon Plan de Développement", scout_add_dev_items_locked: "Ajouter à mon Plan de Développement — Pro", scout_dev_items_added: "Ajouté à votre Plan de Développement.",
@@ -1125,7 +1125,7 @@ const I18N = {
     settings_your_data: "TUS DATOS", settings_export_data: "Descargar mis datos", settings_export_sub: "Todo lo que GOLSZ tiene sobre ti, en un archivo JSON.",
     settings_export_busy: "Preparando tu archivo…", settings_export_done: "Descargado.", settings_export_partial: "Descargado — pero parte no se pudo leer. El archivo indica lo que falta en _errors.", settings_export_empty_note: "Descargado. {n} secciones están vacías — el archivo las lista en _zero_row_sections.", settings_export_err: "No se pudo preparar el archivo — inténtalo de nuevo.",
     settings_delete_warning: "Esto elimina permanentemente tu cuenta, perfil y fotos subidas. No se puede deshacer. Escribe DELETE para confirmar.",
-    settings_delete_confirm_ph: "Escribe DELETE para confirmar", settings_delete_confirm_btn: "Eliminar permanentemente",
+    settings_delete_confirm_ph: "Escribe DELETE para confirmar", settings_delete_confirm_btn: "Eliminar permanentemente", settings_delete_cancel_first: "Tienes una suscripción activa. Cancélala primero en Gestionar facturación — eliminar tu cuenta aquí no detendría los cobros de Stripe, y perderías la única pantalla que puede hacerlo.",
     settings_email_sent: "Revisa {email} para un enlace de confirmación y completar el cambio.",
     settings_email_err: "No se pudo actualizar el correo.",
     settings_plan: "PLAN", settings_plan_current: "Actual", settings_plan_switch: "Elegir",
@@ -1327,7 +1327,7 @@ const I18N = {
     
     scout_header: "AI SCOUT", scout_live_agent: "AGENTE EN VIVO", scout_questions_left: "PREGUNTAS RESTANTES HOY",
     scout_history_title: "Historial", scout_new_chat: "Nuevo chat", scout_no_past: "Aún no hay conversaciones pasadas.",
-    scout_new_conversation: "Nueva conversación", scout_ago_messages: " mensajes", scout_delete_conv: "Eliminar conversación",
+    scout_new_conversation: "Nueva conversación", scout_ago_messages: " mensajes", scout_delete_conv: "Eliminar conversación", scout_delete_conv_confirm: "¿Seguro?",
     scout_input_ph: "Habla con tu agente…",
     scout_build_target_list: "Añadir {n} a mis Objetivos", scout_build_target_list_locked: "Añadir a mis Objetivos — Basic", scout_targets_added: "Añadido a tus Objetivos.",
     scout_add_dev_items: "Añadir {n} a mi Plan de Desarrollo", scout_add_dev_items_locked: "Añadir a mi Plan de Desarrollo — Pro", scout_dev_items_added: "Añadido a tu Plan de Desarrollo.",
@@ -1472,7 +1472,7 @@ const I18N = {
     settings_your_data: "ΤΑ ΔΕΔΟΜΕΝΑ ΣΟΥ", settings_export_data: "Λήψη των δεδομένων μου", settings_export_sub: "Ό,τι κρατά το GOLSZ για σένα, σε αρχείο JSON.",
     settings_export_busy: "Ετοιμάζεται το αρχείο…", settings_export_done: "Έγινε λήψη.", settings_export_partial: "Έγινε λήψη — αλλά ένα μέρος δεν διαβάστηκε. Το αρχείο τα αναφέρει στο _errors.", settings_export_empty_note: "Έγινε λήψη. {n} ενότητες ήταν κενές — το αρχείο τις αναφέρει στο _zero_row_sections.", settings_export_err: "Δεν ήταν δυνατή η προετοιμασία — δοκίμασε ξανά.",
     settings_delete_warning: "Αυτό διαγράφει οριστικά τον λογαριασμό, το προφίλ και τις φωτογραφίες σας. Δεν αναιρείται. Πληκτρολογήστε DELETE για επιβεβαίωση.",
-    settings_delete_confirm_ph: "Πληκτρολογήστε DELETE για επιβεβαίωση", settings_delete_confirm_btn: "Οριστική διαγραφή",
+    settings_delete_confirm_ph: "Πληκτρολογήστε DELETE για επιβεβαίωση", settings_delete_confirm_btn: "Οριστική διαγραφή", settings_delete_cancel_first: "Έχεις ενεργή συνδρομή. Ακύρωσέ την πρώτα στη Διαχείριση χρεώσεων — η διαγραφή του λογαριασμού εδώ δεν σταματά τις χρεώσεις Stripe, και θα χάσεις τη μόνη οθόνη που μπορεί.",
     settings_email_sent: "Ελέγξτε το {email} για σύνδεσμο επιβεβαίωσης για να ολοκληρώσετε την αλλαγή.",
     settings_email_err: "Δεν ήταν δυνατή η ενημέρωση του email.",
     settings_plan: "ΠΑΚΕΤΟ", settings_plan_current: "Τρέχον", settings_plan_switch: "Επιλογή",
@@ -1674,7 +1674,7 @@ const I18N = {
     
     scout_header: "AI SCOUT", scout_live_agent: "ΖΩΝΤΑΝΟΣ ΠΡΑΚΤΟΡΑΣ", scout_questions_left: "ΕΡΩΤΗΣΕΙΣ ΠΟΥ ΑΠΟΜΕΝΟΥΝ ΣΗΜΕΡΑ",
     scout_history_title: "Ιστορικό", scout_new_chat: "Νέα συνομιλία", scout_no_past: "Δεν υπάρχουν προηγούμενες συνομιλίες ακόμα.",
-    scout_new_conversation: "Νέα συνομιλία", scout_ago_messages: " μηνύματα", scout_delete_conv: "Διαγραφή συνομιλίας",
+    scout_new_conversation: "Νέα συνομιλία", scout_ago_messages: " μηνύματα", scout_delete_conv: "Διαγραφή συνομιλίας", scout_delete_conv_confirm: "Σίγουρα;",
     scout_input_ph: "Μιλήστε στον σκάουτ σας…",
     scout_build_target_list: "Προσθήκη {n} στους Στόχους μου", scout_build_target_list_locked: "Προσθήκη στους Στόχους μου — Basic", scout_targets_added: "Προστέθηκε στους Στόχους σου.",
     scout_add_dev_items: "Προσθήκη {n} στο Πλάνο Ανάπτυξής μου", scout_add_dev_items_locked: "Προσθήκη στο Πλάνο Ανάπτυξής μου — Pro", scout_dev_items_added: "Προστέθηκε στο Πλάνο Ανάπτυξής σου.",
@@ -2152,6 +2152,17 @@ function SettingsButton({ openSignal }) {
   // client can quietly set.
   async function deleteAccount(alsoChildren) {
     if (!sb || deleteBusy || deleteConfirmText.trim().toUpperCase() !== "DELETE") return;
+    // DELETING THE ACCOUNT DOES NOT CANCEL THE SUBSCRIPTION. Stripe knows
+    // nothing about this button — the row goes, the customer keeps being
+    // charged every month, and the one screen that could have stopped it has
+    // just been destroyed along with their login. Refuse, exactly as
+    // choosePlan("free") already refuses above for the same reason: a warning
+    // shown after an irreversible click is not a substitute for not taking the
+    // harmful action.
+    if (stripeCustomerId) {
+      setDeleteErr(t("settings_delete_cancel_first"));
+      return;
+    }
     setDeleteBusy(true); setDeleteErr("");
     try {
       const { data: sessionData } = await sb.auth.getSession();
@@ -7279,6 +7290,8 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   // unlimited account (server omits scout_usage in that case).
   const [scoutUsage, setScoutUsage] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
+  // Which history row's delete is armed. One tap arms, the next deletes.
+  const [armedDelete, setArmedDelete] = useState(null);
   const [history, setHistory] = useState(null);
   const [photo, setPhoto] = useState(null); // { dataUrl, mediaType, data } — one pending attachment
   const [photoErr, setPhotoErr] = useState("");
@@ -7936,8 +7949,24 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
                 <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3, color: C.chalk }}>{h.preview || t("scout_new_conversation")}</div>
                 <div style={{ fontSize: 10.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{timeAgo(h.lastAt)} ago ·{t("scout_ago_messages")} {h.turns}</div>
               </button>
-              <button onClick={() => deleteConversation(h.id)} title={t("scout_delete_conv")} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 4, flexShrink: 0, display: "flex" }}>
-                <Trash2 size={15} />
+              {/* TWO TAPS, AND A REAL TARGET. This was a 15px icon sitting
+                  directly beside the button that OPENS the conversation, and
+                  one tap hard-deleted it — no confirm, no undo, and the row is
+                  gone from the database. A mis-tap on a phone destroyed an
+                  athlete's entire chat history with Scout. The first tap now
+                  arms it and says so; the second deletes; it disarms itself
+                  after four seconds so an armed row cannot sit waiting for a
+                  scroll. 44px so the mis-tap stops happening in the first
+                  place. */}
+              <button onClick={() => { if (armedDelete === h.id) { setArmedDelete(null); deleteConversation(h.id); } else { setArmedDelete(h.id); setTimeout(() => setArmedDelete((cur) => (cur === h.id ? null : cur)), 4000); } }}
+                title={t("scout_delete_conv")}
+                aria-label={armedDelete === h.id ? t("scout_delete_conv_confirm") : t("scout_delete_conv")}
+                style={{ background: "none", border: armedDelete === h.id ? `1px solid ${C.amber}` : "none", borderRadius: 9,
+                  color: armedDelete === h.id ? C.warnText : C.slate, cursor: "pointer", width: 44, height: 44, flexShrink: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit", fontSize: 10, fontWeight: 900 }}>
+                {/* The word replaces the icon when armed — showing both in a
+                    44px box crushes each. */}
+                {armedDelete === h.id ? t("scout_delete_conv_confirm") : <Trash2 size={15} />}
               </button>
             </div>
           ))}
@@ -9701,11 +9730,15 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           ) : (
             devList.filter((d) => d.status !== "done").map((d, i, arr) => (
               <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 0", borderBottom: i === arr.length - 1 ? "none" : `1px solid ${C.line}` }}>
+                {/* 44px target, 24px box — same reason as Plan's step row. */}
                 <button onClick={() => markFocusDone(d)} disabled={devBusy === d.id}
                   aria-label={`${t("home_focus_done")}: ${d.goal}`}
-                  style={{ width: 24, height: 24, flex: "0 0 24px", borderRadius: 8, background: "none",
-                    border: `2px solid ${devBusy === d.id ? C.slate : C.lime}`, cursor: devBusy === d.id ? "wait" : "pointer",
-                    opacity: devBusy === d.id ? 0.5 : 1 }} />
+                  style={{ width: 44, height: 44, flex: "0 0 44px", background: "none", border: "none", padding: 0,
+                    display: "grid", placeItems: "center", cursor: devBusy === d.id ? "wait" : "pointer",
+                    opacity: devBusy === d.id ? 0.5 : 1 }}>
+                  <span style={{ width: 24, height: 24, borderRadius: 8, boxSizing: "border-box",
+                    border: `2px solid ${devBusy === d.id ? C.slate : C.lime}` }} />
+                </button>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: C.chalk, lineHeight: 1.35, overflowWrap: "anywhere" }}>{d.goal}</div>
                   {d.focus_area && (
@@ -11678,8 +11711,14 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], devI
     const tone = d.tone === "over" ? C.warnText : d.tone === "due" ? C.lime : C.slate;
     return (
       <div key={m.id} style={{ display: "flex", gap: 11, alignItems: "flex-start", padding: "10px 0", borderBottom: last ? "none" : `1px solid ${C.line}` }}>
-        <button onClick={() => toggleMilestone(m.id)} aria-label={m.label} style={{ width: 23, height: 23, flex: "0 0 23px", borderRadius: 7, border: `2px solid ${m.done ? C.lime : C.line2}`, background: m.done ? C.lime : "none", cursor: "pointer", display: "grid", placeItems: "center", marginTop: 1, padding: 0 }}>
-          {m.done && <Check size={12} color={C.ink} />}
+        {/* 44px of TARGET around a 23px BOX. This was 23x23 — well under the
+            44px minimum — sitting next to a pencil that opens a full editor,
+            so a thumb aiming at "done" opened an edit form instead. The box
+            looks identical; only the hit area changed. */}
+        <button onClick={() => toggleMilestone(m.id)} aria-label={m.label} style={{ width: 44, height: 44, flex: "0 0 44px", background: "none", border: "none", cursor: "pointer", display: "grid", placeItems: "center", padding: 0 }}>
+          <span style={{ width: 23, height: 23, borderRadius: 7, border: `2px solid ${m.done ? C.lime : C.line2}`, background: m.done ? C.lime : "none", display: "grid", placeItems: "center", boxSizing: "border-box" }}>
+            {m.done && <Check size={12} color={C.ink} />}
+          </span>
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <button onClick={() => openEditor(m)} style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4, overflowWrap: "anywhere", cursor: "pointer", background: "none", border: "none", textAlign: "left", padding: 0, width: "100%", display: "block", fontFamily: "inherit", color: m.done ? C.slate : C.chalk }}>{m.label}</button>
@@ -12644,8 +12683,15 @@ function GolszApp({ onSignOut, startOnboarding }) {
       <style>{CSS}</style>
       {showUpdateBar && <UpdateBar onDismiss={() => setUpdateDismissed(true)} />}
 
-      {/* top bar */}
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "calc(12px + env(safe-area-inset-top, 0px)) 16px 10px", borderBottom: `1px solid ${C.line}`, flexShrink: 0 }}>
+      {/* top bar
+          THE UPDATE BAR IS position:fixed AND SITS OVER THIS HEADER, which put
+          a gold band across the logo and the Settings gear — the gear being
+          the only route to language, plan, billing and account deletion. The
+          bar cannot simply become in-flow: it is rendered through a portal, so
+          it is not this element's sibling in the DOM. Making room for it here
+          is what actually uncovers the gear. 42px is the bar's own height at
+          its 12.5px/9px padding; the safe-area inset is already in both. */}
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: `calc(12px + env(safe-area-inset-top, 0px) + ${showUpdateBar ? 42 : 0}px) 16px 10px`, borderBottom: `1px solid ${C.line}`, flexShrink: 0 }}>
         <a href="index.html" style={{ display: "flex", alignItems: "center", gap: 7, fontWeight: 900, fontSize: 24, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none" }}>
           <LogoMark size={26} />
           GOLSZ<span style={{ color: C.lime }}>.</span>
