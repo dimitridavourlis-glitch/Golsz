@@ -175,5 +175,35 @@ ck("no classified rpc has stopped being called", phantom, []);
 const stale = SELF_CORRECTING.filter((t) => !found.some((w) => isAccepted(w.text) && w.text.includes(t)));
 ck("no accepted entry has become stale", stale, []);
 
+console.log("\n-- a helper must not swallow the error its caller is watching for --");
+// A SECOND, QUIETER SHAPE OF THE SAME BUG. The scan above catches a write
+// whose error is never BOUND. These bound it, then caught it into
+// console.error and resolved successfully anyway — so the caller's own
+// try/catch could never fire. addHighlight cleared its inputs and addEntry
+// showed the new row, both on a write that had been rejected. The athlete
+// closes the app believing their clip is on file.
+ck("the highlights helper propagates instead of logging and returning",
+   /const \{ error \} = await sb\.from\("athletes"\)\.update\(\{ highlights: list \}\)[\s\S]{0,120}?throw error;/.test(APP), true);
+ck("the timeline helper does the same",
+   /const \{ error \} = await sb\.from\("athletes"\)\.update\(\{ timeline: list \}\)[\s\S]{0,120}?throw error;/.test(APP), true);
+ck("neither one still swallows into a bare console.error",
+   /catch \(e\) \{ console\.error\("GOLSZ (highlights|timeline) save error:", e\); \}/.test(APP), false);
+
+console.log("\n-- an optimistic delete is put back when the write fails --");
+// Deleting on screen and never checking left the row gone from the UI and
+// still on the server. It returns on the next load, which reads as the app
+// undoing the athlete's own deletion.
+// Matched whole, not sliced from a concatenated anchor: "  async function "
+// on its own occurs 107 times in this file, and an anchor that ambiguous is
+// exactly what test_anchor_integrity refuses — correctly, because it would
+// silently start reading some other function after any refactor.
+for (const fn of ["removeHighlight", "removeEntry"]) {
+  const m = APP.match(new RegExp("async function " + fn + "\\(id\\) \\{[\\s\\S]*?\\n  \\}"));
+  ck(fn + " was found", !!m, true);
+  const body = m ? m[0] : "";
+  ck(fn + " snapshots before it removes", /const before = items;/.test(body), true);
+  ck("..." + fn + " restores that snapshot on failure", /setItems\(before\); setErr\(/.test(body), true);
+}
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);

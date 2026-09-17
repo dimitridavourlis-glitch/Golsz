@@ -4016,10 +4016,16 @@ function Highlights({ viewUserId, manageMode }) {
     })();
   }, [viewUserId]);
 
+  // THE CALLER'S ERROR PATH WAS UNREACHABLE. This swallowed its own failure
+  // into console.error, so it always resolved successfully — addHighlight's
+  // and addEntry's `catch` around it could never run, the input cleared, and
+  // the row sat on screen looking saved. The athlete closes the app believing
+  // their highlights is on file; it is not.
+  // It throws now, and the callers already know what to do with that.
   async function saveList(list) {
     if (!sb || !uid || !isOwner) return;
-    try { const { error } = await sb.from("athletes").update({ highlights: list }).eq("id", targetId); if (error) throw error; }
-    catch (e) { console.error("GOLSZ highlights save error:", e); }
+    const { error } = await sb.from("athletes").update({ highlights: list }).eq("id", targetId);
+    if (error) { console.error("GOLSZ highlights save error:", error); throw error; }
   }
 
   async function addHighlight() {
@@ -4058,9 +4064,15 @@ function Highlights({ viewUserId, manageMode }) {
 
   async function removeHighlight(id) {
     if (!sb || !uid || !isOwner) return;
+    // Snapshot first. Deleting optimistically and never checking meant a
+    // failed write left the row gone from the screen and still on the server —
+    // it came back on the next load, which reads as the app undoing the
+    // athlete's deletion by itself.
+    const before = items;
     const next = items.filter((m) => m.id !== id);
     setItems(next);
-    await saveList(next);
+    try { await saveList(next); setErr(""); }
+    catch (e) { setItems(before); setErr(t("highlights_add_err")); }
   }
 
   return (
@@ -4140,10 +4152,16 @@ function Timeline({ viewUserId, manageMode }) {
     })();
   }, [viewUserId]);
 
+  // THE CALLER'S ERROR PATH WAS UNREACHABLE. This swallowed its own failure
+  // into console.error, so it always resolved successfully — addHighlight's
+  // and addEntry's `catch` around it could never run, the input cleared, and
+  // the row sat on screen looking saved. The athlete closes the app believing
+  // their timeline is on file; it is not.
+  // It throws now, and the callers already know what to do with that.
   async function saveList(list) {
     if (!sb || !uid || !isOwner) return;
-    try { const { error } = await sb.from("athletes").update({ timeline: list }).eq("id", targetId); if (error) throw error; }
-    catch (e) { console.error("GOLSZ timeline save error:", e); }
+    const { error } = await sb.from("athletes").update({ timeline: list }).eq("id", targetId);
+    if (error) { console.error("GOLSZ timeline save error:", error); throw error; }
   }
 
   async function addEntry() {
@@ -4168,9 +4186,15 @@ function Timeline({ viewUserId, manageMode }) {
 
   async function removeEntry(id) {
     if (!sb || !uid || !isOwner) return;
+    // Snapshot first. Deleting optimistically and never checking meant a
+    // failed write left the row gone from the screen and still on the server —
+    // it came back on the next load, which reads as the app undoing the
+    // athlete's deletion by itself.
+    const before = items;
     const next = items.filter((m) => m.id !== id);
     setItems(next);
-    await saveList(next);
+    try { await saveList(next); setErr(""); }
+    catch (e) { setItems(before); setErr(t("timeline_add_err")); }
   }
 
   return (
@@ -4899,12 +4923,28 @@ function PublicPassport({ userId, token }) {
             {Array.isArray(p.highlights) && p.highlights.length > 0 && (
               <div style={{ padding: "0 16px 16px" }}>
                 <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8, borderTop: `1px dashed ${C.line2}`, paddingTop: 14 }}>{p.identity_verified ? t("highlights_title") : t("highlights_title_unverified")}</div>
-                {p.highlights.map((m, i) => (
-                  <a key={m.id || i} href={m.url} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", color: C.chalk, textDecoration: "none", borderBottom: i < p.highlights.length - 1 ? `1px solid ${C.line}` : "none" }}>
-                    <Video size={13} color={C.lime} style={{ flexShrink: 0 }} />
-                    <span style={{ fontSize: 12.5 }}>{m.title}</span>
-                  </a>
-                ))}
+                {/* safeHref, the same as the signed-in list does at :4078.
+                    This is the PUBLIC passport — the one an athlete sends to a
+                    coach — and it rendered an athlete-supplied URL straight
+                    into href with no scheme check, so a javascript: or data:
+                    URL typed into a highlight would run on whoever opened the
+                    link. The title is a React child and is already escaped;
+                    the href was not. */}
+                {p.highlights.map((m, i) => {
+                  const row = { display: "flex", alignItems: "center", gap: 8, padding: "7px 0", color: C.chalk, textDecoration: "none", borderBottom: i < p.highlights.length - 1 ? `1px solid ${C.line}` : "none" };
+                  const href = m.url && safeHref(m.url);
+                  return href ? (
+                    <a key={m.id || i} href={href} target="_blank" rel="noopener noreferrer" style={row}>
+                      <Video size={13} color={C.lime} style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 12.5 }}>{m.title}</span>
+                    </a>
+                  ) : (
+                    <div key={m.id || i} style={row}>
+                      <Video size={13} color={C.lime} style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 12.5 }}>{m.title}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -12891,6 +12931,19 @@ const CSS = `
      (document.body children, not its descendants — see .fixed-sheet
      usages) don't inherit. Setting it here too covers those directly. */
   body { margin: 0; background: ${C.pitch}; font-family: 'Archivo', system-ui, sans-serif; color: ${C.chalk}; }
+  /* 16px IS THE iOS THRESHOLD, not a design choice.
+     Safari zooms the whole page in when a focused input's font-size is under
+     16px, and it does not zoom back out when the field blurs — so on an
+     iPhone, typing one thing left the athlete in a zoomed viewport with the
+     bottom nav off-screen, and the only way back was pinching. Every input in
+     this app was 12.5-14px.
+     The rule is global and deliberately !important: sizes are set inline all
+     over this file and an inline style would otherwise win. Nothing here
+     touches height, padding or line-height, so the controls keep their shape.
+     Do NOT "fix" this with maximum-scale on the viewport instead — that
+     disables pinch-zoom for everyone, which breaks the page for anyone who
+     needs to magnify it. */
+  input, textarea, select { font-size: 16px !important; }
 
   /* Home's lead card sits ON the identity light rather than beside it, so it
      is a frosted sheet rather than another opaque box. Written as a class,
