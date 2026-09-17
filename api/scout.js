@@ -6675,7 +6675,7 @@ A newer source always beats an older one at the same level. If memory says one t
     // plan — lowestPlanUnlocking() returns the cheapest tier that covers the
     // identified gaps, and the prompt is told that ceiling explicitly.
     const entNeeds = deriveEntitlementNeeds(athleteState);
-    const ent = evaluateEntitlements(plan, entNeeds);
+    const ent = evaluateEntitlements(plan, entNeeds, fullAccess);
     const volume = deriveVolumeNeed(plan, athleteState.questionsUsedToday, planDailyLimit(plan));
     // SAFEGUARD: they have already said no. Nothing about plans reaches the
     // model for the rest of this conversation.

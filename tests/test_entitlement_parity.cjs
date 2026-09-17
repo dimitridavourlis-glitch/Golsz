@@ -20,6 +20,7 @@ const REPO = require("path").join(__dirname, "..");
 const fs = require("fs");
 const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
 const SCOUT = fs.readFileSync(REPO + "/api/scout.js", "utf8");
+const ENT = fs.readFileSync(REPO + "/api/_entitlements.js", "utf8");
 const ent = require("../api/_entitlements.js");
 
 let p = 0, f = 0;
@@ -140,7 +141,15 @@ ck("no combination of real features ever resolves to Elite",
 
 // ---- Scout consumes the module, not a prose list -------------------------
 ck("scout.js imports the shared entitlement module", /from "\.\/_entitlements\.js"/.test(SCOUT), true);
-ck("scout.js computes plan fit rather than narrating it", /evaluateEntitlements\(plan, entNeeds\)/.test(SCOUT), true);
+ck("scout.js computes plan fit rather than narrating it", /evaluateEntitlements\(plan, entNeeds, fullAccess\)/.test(SCOUT), true);
+// The third argument is the admin comp. Without it a comped athlete was told
+// the features they already have are LOCKED and offered an upgrade to buy
+// them — Scout selling someone something an admin had already given them.
+// hasFeature has always accepted it; this caller simply never passed it.
+ck("...and a comped account is not sold what it already has",
+   /function evaluateEntitlements\(plan, needs, fullAccess\)/.test(ENT), true);
+ck("...both branches of the split honour it",
+   (ENT.match(/hasFeature\(current, f, fullAccess\)/g) || []).length, 2);
 ck("the prompt is told the computed tier is the only one it may name",
    /is the ONLY plan you may name/.test(SCOUT), true);
 ck("the prompt forbids reaching for a more expensive tier",

@@ -108,11 +108,16 @@ function lowestPlanUnlocking(features) {
 // schedule or a conversation counter. If nothing is locked this returns
 // upgradeTo: null and Scout has nothing to raise, which is the common case
 // and must stay the common case.
-function evaluateEntitlements(plan, needs) {
+// fullAccess is the admin comp (profiles.full_access, migration 131). Without
+// it here, a comped athlete was told the features they already have are LOCKED
+// and offered an upgrade to buy them — Scout trying to sell someone something
+// an admin had already given them. hasFeature has always taken the third
+// argument; this caller simply never passed it.
+function evaluateEntitlements(plan, needs, fullAccess) {
   const current = plan || "free";
   const list = Array.isArray(needs) ? needs.filter((f) => Object.hasOwn(FEATURE_MIN_PLAN, f)) : [];
-  const covered = list.filter((f) => hasFeature(current, f));
-  const locked = list.filter((f) => !hasFeature(current, f));
+  const covered = list.filter((f) => hasFeature(current, f, fullAccess));
+  const locked = list.filter((f) => !hasFeature(current, f, fullAccess));
   const upgradeTo = locked.length ? lowestPlanUnlocking(locked) : null;
   return {
     currentPlan: current,
