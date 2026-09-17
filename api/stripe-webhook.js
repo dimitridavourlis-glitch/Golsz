@@ -8,9 +8,18 @@
 // -free like api/scout.js. Register this endpoint's URL in the Stripe
 // Dashboard (Developers -> Webhooks) once deployed, subscribed to:
 //   checkout.session.completed
+//   customer.subscription.created      <- WAS MISSING FROM THIS LIST
 //   customer.subscription.deleted
 //   customer.subscription.updated
 //   invoice.payment_failed
+//
+// customer.subscription.created is handled at the `else if` below alongside
+// .updated, and it is the event that carries the plan when a Payment Link
+// checkout does not (see the comment at checkout.session.completed). Anyone
+// who registered the endpoint from this list subscribed to four of the five
+// events the code handles, so that fallback never fired. If the Dashboard
+// subscription was built from this comment, ADD IT THERE TOO — correcting the
+// comment does not change what Stripe sends.
 //
 // Required env vars:
 //   STRIPE_WEBHOOK_SECRET     from the Stripe Dashboard webhook you register

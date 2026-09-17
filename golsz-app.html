@@ -181,7 +181,13 @@ function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" && window.innerWidth >= 900);
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
-    const mq = window.matchMedia("(min-width: 900px)");
+    // 1024 AND A REAL POINTER, not 900px alone. A 15 Pro Max in landscape is
+    // 932 CSS px wide, so every large iPhone turned sideways got the DESKTOP
+    // layout — a 232px sticky sidebar and no bottom nav — on a touch screen.
+    // 1024 matches .gz-home's own breakpoint; (pointer: fine) is what actually
+    // distinguishes a mouse from a thumb, and a tablet with a trackpad
+    // legitimately wants the desktop layout.
+    const mq = window.matchMedia("(min-width: 1024px) and (pointer: fine)");
     const handler = (e) => setIsDesktop(e.matches);
     if (mq.addEventListener) mq.addEventListener("change", handler); else mq.addListener(handler);
     setIsDesktop(mq.matches);
@@ -569,7 +575,7 @@ const I18N = {
     
     passport_admin_panel: "Admin panel", passport_terms: "Terms & Conditions", passport_athlete_fallback: "GOLSZ Athlete",
     passport_foot: "FOOT", passport_share: "Share", passport_share_copied: "Link copied — anyone can view it, no account needed.", passport_share_title: "My GOLSZ Passport", passport_share_text: "Check out my GOLSZ Sports Passport",
-    passport_share_err: "Couldn't create a share link. Try again.", passport_manage_links: "Manage share links", passport_no_links: "No active share links yet.", passport_revoke_link: "Revoke",
+    passport_share_err: "Couldn't create a share link. Try again.", passport_manage_links: "Manage share links", passport_no_links: "No active share links yet.", passport_revoke_link: "Revoke", passport_revoke_failed: "That link was NOT revoked — it is still live. Check your connection and try again.",
     public_passport_not_found: "This passport doesn't exist or the link is broken.", public_passport_private: "This passport isn't public yet.", public_passport_cta: "Get your own GOLSZ Passport →",
     blocked_title: "Blocked accounts", blocked_empty: "You haven't blocked anyone.", blocked_unblock: "Unblock",
     admin_checking: "Checking access…", admin_only: "Admins only.", admin_title: "Admin panel",
@@ -916,7 +922,7 @@ const I18N = {
     
     passport_admin_panel: "Panneau d'administration", passport_terms: "Conditions d'utilisation", passport_athlete_fallback: "Athlète GOLSZ",
     passport_foot: "PIED", passport_share: "Partager", passport_share_copied: "Lien copié — visible par tous, sans compte.", passport_share_title: "Mon Passeport GOLSZ", passport_share_text: "Découvrez mon Passeport Sportif GOLSZ",
-    passport_share_err: "Impossible de créer un lien de partage. Réessayez.", passport_manage_links: "Gérer les liens de partage", passport_no_links: "Aucun lien de partage actif pour l'instant.", passport_revoke_link: "Révoquer",
+    passport_share_err: "Impossible de créer un lien de partage. Réessayez.", passport_manage_links: "Gérer les liens de partage", passport_no_links: "Aucun lien de partage actif pour l'instant.", passport_revoke_link: "Révoquer", passport_revoke_failed: "Ce lien n’a PAS été révoqué — il est toujours actif. Vérifiez votre connexion et réessayez.",
     public_passport_not_found: "Ce passeport n'existe pas ou le lien est cassé.", public_passport_private: "Ce passeport n'est pas encore public.", public_passport_cta: "Obtenez votre propre Passeport GOLSZ →",
     blocked_title: "Comptes bloqués", blocked_empty: "Vous n'avez bloqué personne.", blocked_unblock: "Débloquer",
     admin_checking: "Vérification de l'accès…", admin_only: "Réservé aux administrateurs.", admin_title: "Panneau d'administration",
@@ -1263,7 +1269,7 @@ const I18N = {
     
     passport_admin_panel: "Panel de administración", passport_terms: "Términos y condiciones", passport_athlete_fallback: "Atleta de GOLSZ",
     passport_foot: "PIE", passport_share: "Compartir", passport_share_copied: "Enlace copiado — cualquiera puede verlo, sin necesidad de cuenta.", passport_share_title: "Mi Pasaporte GOLSZ", passport_share_text: "Mira mi Pasaporte Deportivo GOLSZ",
-    passport_share_err: "No se pudo crear el enlace para compartir. Inténtalo de nuevo.", passport_manage_links: "Gestionar enlaces para compartir", passport_no_links: "Aún no hay enlaces activos.", passport_revoke_link: "Revocar",
+    passport_share_err: "No se pudo crear el enlace para compartir. Inténtalo de nuevo.", passport_manage_links: "Gestionar enlaces para compartir", passport_no_links: "Aún no hay enlaces activos.", passport_revoke_link: "Revocar", passport_revoke_failed: "Ese enlace NO se revocó — sigue activo. Revisa tu conexión e inténtalo de nuevo.",
     public_passport_not_found: "Este pasaporte no existe o el enlace está roto.", public_passport_private: "Este pasaporte aún no es público.", public_passport_cta: "Consigue tu propio Pasaporte GOLSZ →",
     blocked_title: "Cuentas bloqueadas", blocked_empty: "No has bloqueado a nadie.", blocked_unblock: "Desbloquear",
     admin_checking: "Comprobando acceso…", admin_only: "Solo administradores.", admin_title: "Panel de administración",
@@ -1610,7 +1616,7 @@ const I18N = {
     
     passport_admin_panel: "Πίνακας διαχείρισης", passport_terms: "Όροι & Προϋποθέσεις", passport_athlete_fallback: "Αθλητής GOLSZ",
     passport_foot: "ΠΟΔΙ", passport_share: "Κοινοποίηση", passport_share_copied: "Ο σύνδεσμος αντιγράφηκε — τον βλέπει οποιοσδήποτε, χωρίς λογαριασμό.", passport_share_title: "Το Διαβατήριό μου GOLSZ", passport_share_text: "Δείτε το Αθλητικό μου Διαβατήριο GOLSZ",
-    passport_share_err: "Δεν ήταν δυνατή η δημιουργία συνδέσμου κοινοποίησης. Δοκιμάστε ξανά.", passport_manage_links: "Διαχείριση συνδέσμων κοινοποίησης", passport_no_links: "Δεν υπάρχουν ενεργοί σύνδεσμοι ακόμα.", passport_revoke_link: "Ανάκληση",
+    passport_share_err: "Δεν ήταν δυνατή η δημιουργία συνδέσμου κοινοποίησης. Δοκιμάστε ξανά.", passport_manage_links: "Διαχείριση συνδέσμων κοινοποίησης", passport_no_links: "Δεν υπάρχουν ενεργοί σύνδεσμοι ακόμα.", passport_revoke_link: "Ανάκληση", passport_revoke_failed: "Ο σύνδεσμος ΔΕΝ ανακλήθηκε — παραμένει ενεργός. Έλεγξε τη σύνδεση και δοκίμασε ξανά.",
     public_passport_not_found: "Αυτό το διαβατήριο δεν υπάρχει ή ο σύνδεσμος είναι κατεστραμμένος.", public_passport_private: "Αυτό το διαβατήριο δεν είναι ακόμα δημόσιο.", public_passport_cta: "Αποκτήστε το δικό σας Διαβατήριο GOLSZ →",
     blocked_title: "Αποκλεισμένοι λογαριασμοί", blocked_empty: "Δεν έχετε αποκλείσει κανέναν.", blocked_unblock: "Άρση αποκλεισμού",
     admin_checking: "Έλεγχος πρόσβασης…", admin_only: "Μόνο για διαχειριστές.", admin_title: "Πίνακας διαχείρισης",
@@ -5220,6 +5226,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   // single link can be individually revoked. Loaded lazily (only once the
   // athlete opens the manager) since most Passport views never need it.
   const [shareLinks, setShareLinks] = useState(null);
+  const [shareErr, setShareErr] = useState("");
   const [shareLinksOpen, setShareLinksOpen] = useState(false);
   const real = !!uid;
   // P0-4. manageMode means an approved parent is managing this under-18
@@ -5261,7 +5268,11 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
 
   async function loadShareLinks() {
     setShareLinksOpen((open) => !open);
-    if (shareLinks !== null || !sb || !uid) return;
+    // Deliberately NOT short-circuiting on a cached list. It used to return
+    // early whenever shareLinks was already loaded, so reopening the panel
+    // after a failed revoke re-showed the stale in-memory copy instead of
+    // asking the server what is actually still live.
+    if (!sb || !uid) return;
     try {
       const { data, error } = await sb.from("passport_share_tokens").select("id, token, label, revoked, created_at, last_accessed_at").eq("user_id", uid).eq("revoked", false).order("created_at", { ascending: false });
       if (error) throw error;
@@ -5269,11 +5280,22 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     } catch (e) { console.error("GOLSZ load share links error:", e); setShareLinks([]); }
   }
 
+  // A FAILED REVOKE THAT LOOKS LIKE A SUCCESSFUL ONE IS THE WORST BUG ON THIS
+  // SCREEN. The row vanished from the list whether or not the RPC succeeded,
+  // and the list is cached for the session — so an athlete who revoked a link
+  // they had sent to the wrong person saw it disappear, closed the panel
+  // believing it was dead, and the link kept working. This is their Passport:
+  // name, photograph, club, school, date of birth.
   async function revokeShareLink(id) {
     if (!sb || !uid) return;
+    const before = shareLinks;
     setShareLinks((prev) => (prev || []).filter((l) => l.id !== id));
-    try { const { error } = await sb.rpc("revoke_passport_share_token", { p_id: id }); if (error) throw error; }
-    catch (e) { console.error("GOLSZ revoke share link error:", e); }
+    const { error } = await sb.rpc("revoke_passport_share_token", { p_id: id });
+    if (error) {
+      console.error("GOLSZ revoke share link error:", error);
+      setShareLinks(before);
+      setShareErr(t("passport_revoke_failed"));
+    } else setShareErr("");
   }
 
   // Same validate-then-upload-as-ArrayBuffer pattern Feed's post-image
@@ -5502,6 +5524,13 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           </button>
           {shareLinksOpen && (
             <div style={{ marginTop: 8 }}>
+              {/* A revoke that failed must say so. Silence here meant the
+                  athlete believed a link to their Passport was dead when it
+                  was still live. */}
+              {shareErr && (
+                <div role="alert" style={{ fontSize: 12, color: C.warnText, lineHeight: 1.45, marginBottom: 8,
+                  border: `1px solid ${C.amber}`, borderRadius: 9, padding: "8px 10px" }}>{shareErr}</div>
+              )}
               {shareLinks === null && <div style={{ fontSize: 12, color: C.slate }}>{t("loading")}</div>}
               {shareLinks && shareLinks.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("passport_no_links")}</div>}
               {shareLinks && shareLinks.map((l) => (
@@ -10150,12 +10179,20 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
         const { data: { user } } = await sb.auth.getUser();
         if (!user) { setLoaded(true); return; }
         setUid(user.id);
+        // WHOSE PLAN THIS IS. Every other surface in the app honours
+        // actingFor — the athlete a parent is managing — and this one did not:
+        // all five queries read the SIGNED-IN user, so a parent opening Plan
+        // saw their own empty rows instead of their child's, and addTarget
+        // wrote a school onto the parent's account where the athlete would
+        // never find it. The product is sold to parents; this is the tab they
+        // were most likely to open first.
+        const who = actingFor || user.id;
         const [{ data: targetsData, error }, { data: prof }, { data: ath }, { data: benchmarks }, { data: devItemsData }] = await Promise.all([
-          sb.from("outreach_targets").select("id, name, contact_name, contact_email, status, notes, draft_email, fit_reasoning, created_at").eq("user_id", user.id).order("created_at", { ascending: false }),
-          sb.from("profiles").select("full_name, occupation, avatar_url").eq("id", user.id).single(),
-          sb.from("athletes").select("sport, position, club_name, grad_year, country, recruiting_status, bio, highlights, timeline, scout_context").eq("id", user.id).single(),
-          sb.from("athlete_benchmarks").select("id").eq("user_id", user.id),
-          sb.from("development_plan_items").select("id, focus_area, goal, status").eq("user_id", user.id),
+          sb.from("outreach_targets").select("id, name, contact_name, contact_email, status, notes, draft_email, fit_reasoning, created_at").eq("user_id", who).order("created_at", { ascending: false }),
+          sb.from("profiles").select("full_name, occupation, avatar_url").eq("id", who).single(),
+          sb.from("athletes").select("sport, position, club_name, grad_year, country, recruiting_status, bio, highlights, timeline, scout_context").eq("id", who).single(),
+          sb.from("athlete_benchmarks").select("id").eq("user_id", who),
+          sb.from("development_plan_items").select("id, focus_area, goal, status").eq("user_id", who),
         ]);
         if (error) throw error;
         setItems(targetsData || []);
@@ -10166,14 +10203,18 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
       } catch (e) { console.error("GOLSZ targets load error:", e); }
       setLoaded(true);
     })();
-  }, []);
+    // Re-runs when the parent switches athlete. An empty dep array meant the
+    // first athlete loaded stayed on screen for the whole session.
+  }, [actingFor]);
 
   async function addTarget() {
     if (!sb || !uid || !name.trim() || busy) return;
     setBusy(true); setErr("");
     try {
       const { data, error } = await sb.from("outreach_targets").insert({
-        user_id: uid, name: name.trim().slice(0, 120),
+        // The managed athlete, not the signed-in parent — otherwise the school
+        // lands on the parent's account and the athlete never sees it.
+        user_id: actingFor || uid, name: name.trim().slice(0, 120),
         contact_name: contactName.trim().slice(0, 120) || null,
         contact_email: contactEmail.trim().slice(0, 200) || null,
       }).select("id, name, contact_name, contact_email, status, notes, draft_email, fit_reasoning, created_at").single();
@@ -10186,16 +10227,26 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
     } finally { setBusy(false); }
   }
 
+  // SNAPSHOT, THEN RESTORE. Both of these updated the screen and then dropped
+  // the write's failure into console.error — so a rejected edit to a coach's
+  // email draft, a note or a fit reasoning stayed on screen as though it had
+  // saved, and came back to the old text on the next load. That is the shape
+  // that loses an athlete's actual outreach: they write to a coach, it does
+  // not save, and nothing tells them.
   async function updateTarget(id, updates) {
+    const before = items;
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...updates } : it)));
-    try { const { error } = await sb.from("outreach_targets").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id).eq("user_id", uid); if (error) throw error; }
-    catch (e) { console.error("GOLSZ target update error:", e); }
+    const { error } = await sb.from("outreach_targets").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id).eq("user_id", actingFor || uid);
+    if (error) { console.error("GOLSZ target update error:", error); setItems(before); setErr(t("targets_add_err")); }
+    else setErr("");
   }
 
   async function removeTarget(id) {
+    const before = items;
     setItems((prev) => prev.filter((it) => it.id !== id));
-    try { const { error } = await sb.from("outreach_targets").delete().eq("id", id).eq("user_id", uid); if (error) throw error; }
-    catch (e) { console.error("GOLSZ target delete error:", e); }
+    const { error } = await sb.from("outreach_targets").delete().eq("id", id).eq("user_id", actingFor || uid);
+    if (error) { console.error("GOLSZ target delete error:", error); setItems(before); setErr(t("targets_add_err")); }
+    else setErr("");
   }
 
   // Loading is a skeleton here too, for the same reason it is on Home: a
@@ -12512,12 +12563,12 @@ function GolszApp({ onSignOut, startOnboarding }) {
   if (isDesktop) {
     return (
       <>
-      <div style={{ display: "flex", minHeight: "100vh", background: C.pitch, color: C.chalk, fontFamily: "'Archivo', system-ui, sans-serif" }}>
+      <div style={{ display: "flex", minHeight: "100dvh", background: C.pitch, color: C.chalk, fontFamily: "'Archivo', system-ui, sans-serif" }}>
         <style>{CSS}</style>
         {showUpdateBar && <UpdateBar onDismiss={() => setUpdateDismissed(true)} />}
 
         {/* sidebar */}
-        <aside style={{ width: 232, flexShrink: 0, borderRight: `1px solid ${C.line}`, display: "flex", flexDirection: "column", padding: "22px 14px", position: "sticky", top: 0, height: "100vh" }}>
+        <aside style={{ width: 232, flexShrink: 0, borderRight: `1px solid ${C.line}`, display: "flex", flexDirection: "column", padding: "22px 14px", position: "sticky", top: 0, height: "100dvh" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 10px", marginBottom: 26 }}>
             <a href="index.html" style={{ display: "flex", alignItems: "center", gap: 7, fontWeight: 900, fontSize: 22, letterSpacing: "0.03em", fontStretch: "expanded", color: "inherit", textDecoration: "none" }}>
               <LogoMark size={24} />
@@ -12572,7 +12623,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
             )}
             {page === "home" && !actingFor && isParentAccount && linkedChildren && linkedChildren.length === 0 && <FamilyAccess />}
             {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} />}
-            {page === "scout" && <div style={{ height: "calc(100vh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} seedPrompt={scoutSeed} onSeedSent={() => setScoutSeed(null)} onNavigate={go} /></div>}
+            {page === "scout" && <div style={{ height: "calc(100dvh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} seedPrompt={scoutSeed} onSeedSent={() => setScoutSeed(null)} onNavigate={go} /></div>}
             {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} onNavigate={go} openDay={planDay} onDayOpened={() => setPlanDay(null)} /></>}
             {page === "events" && <Events />}
             {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}

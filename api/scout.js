@@ -4298,7 +4298,13 @@ function buildSystemPrompt(basePrompt, specialist) {
   const framing = SPECIALIST_FRAMING[specialist];
   if (!framing) return basePrompt;
   const handoffNote = `SPECIALIST FOCUS: ${framing} If this is the first reply since the focus shifted, acknowledge it naturally in one short clause (e.g. "Since you're asking about school fit, let's look at that properly") — never a jarring "Connecting you to our College Specialist" announcement, and never restart discovery on facts already known.\n`;
-  return basePrompt.replace("Everything in PROFILE SO FAR is already known", handoffNote + "Everything in PROFILE SO FAR is already known");
+  // PREPENDED, NOT ANCHORED. This used to replace("Everything in PROFILE SO
+  // FAR is already known", ...) — a string that does not appear in
+  // SYSTEM_PROMPT. String.replace returns the subject unchanged when the
+  // needle is missing, so every specialist framing built here was discarded
+  // in silence while scout_routing_log recorded a specialist that never
+  // reached the model. Prepending cannot miss.
+  return handoffNote + basePrompt;
 }
 
 // A custom (client-side, from Anthropic's perspective) tool — unlike
@@ -5530,7 +5536,12 @@ async function getProfileMeta(userId) {
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!url || !key || !userId) return { plan: "unknown", isAdmin: false, aiUnlimited: false, goalDefined: false, goalText: null, goalSource: null };
   const headers = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
-  let plan = "starter";
+  // "free", not "starter". This defaulted to starter — which is BASIC, a paid
+  // tier — so every path that failed to read the row handed the athlete a paid
+  // plan's metering and features. 'free' is the column default in the database
+  // and the only safe answer when we do not know: under-granting is a support
+  // ticket, over-granting is revenue and an entitlement the server cannot see.
+  let plan = "free";
   let isAdmin = false;
   let aiUnlimited = false;
   let goalDefined = false;
@@ -5547,9 +5558,13 @@ async function getProfileMeta(userId) {
       console.warn("GOLSZ profile select failed (migration 113 not applied?) — retrying without goal_source.");
       p = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=plan,is_admin,ai_unlimited,goal_defined,goal_text", { headers });
     }
+    // The retry can fail too, and until now nothing looked: a non-ok response
+    // fell through to rows[0] being undefined and the default standing, with
+    // no log to say the read had failed at all.
+    if (!p.ok) console.error("GOLSZ profile select failed after retry:", p.status);
     const rows = await p.json();
     if (Array.isArray(rows) && rows[0]) {
-      plan = rows[0].plan || "starter";
+      plan = rows[0].plan || "free";
       isAdmin = !!rows[0].is_admin;
       aiUnlimited = !!rows[0].ai_unlimited;
       goalDefined = !!rows[0].goal_defined;
@@ -6756,7 +6771,11 @@ A newer source always beats an older one at the same level. If memory says one t
       if (plan === "free") {
         const freeLifetimeLimit = Number(process.env.FREE_LIFETIME_LIMIT || 40);
         const freeReservation = await reserveFreeAiQuestion(userId, freeLifetimeLimit);
-        reservedFreeAi = true;
+        // Only true if the reservation ACTUALLY counted. Set unconditionally,
+        // a reservation that never incremented still got "released" on every
+        // error path — refunding a lifetime question the athlete never spent,
+        // which over time hands out more than FREE_LIFETIME_LIMIT.
+        reservedFreeAi = freeReservation.reserved === true;
         if (!freeReservation.allowed) {
           await releaseScoutQuestion(userId);
           reservedQuestion = false;
