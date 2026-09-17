@@ -5340,10 +5340,17 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   // with the real, live state of this athlete's own profile — fires once
   // on initial load and again after every save, so the rest of the app
   // unlocks the moment a sport gets saved, without needing a full reload.
+  //
+  // A PARENT IS COMPLETE WITHOUT A SPORT. This read athletes.sport alone, and
+  // a parent has no sport — the product is sold to them, they do not play.
+  // The consequence was not a missing badge: mustFinishProfile in GolszApp
+  // turns a false here into setPage("profile") on every render and go()
+  // refuses every other destination, so the buyer was pinned on the Passport
+  // screen forever with no way to reach the athlete they had just paid for.
   useEffect(() => {
     if (!loaded || viewingOther || !onProfileStatus) return;
-    onProfileStatus(!!(athlete && athlete.sport));
-  }, [loaded, athlete, viewingOther]);
+    onProfileStatus(!!(athlete && athlete.sport) || !!(profile && profile.occupation === "Parent"));
+  }, [loaded, athlete, profile, viewingOther]);
 
   async function toggleFollowThis() {
     if (!sb || !uid || !viewUserId || viewUserId === uid) return;
@@ -12237,8 +12244,15 @@ function GolszApp({ onSignOut, startOnboarding }) {
       try {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) { setProfileComplete(true); return; }
-        const { data } = await sb.from("athletes").select("sport").eq("id", user.id).single();
-        setProfileComplete(!!(data && data.sport));
+        // Both halves, because a parent row has no sport and never will.
+        // This check runs before any screen renders, so without the occupation
+        // read the lock armed on a parent's very first login — before they had
+        // even opened the dropdown that the database was going to reject.
+        const [{ data }, { data: prof }] = await Promise.all([
+          sb.from("athletes").select("sport").eq("id", user.id).single(),
+          sb.from("profiles").select("occupation").eq("id", user.id).maybeSingle(),
+        ]);
+        setProfileComplete(!!(data && data.sport) || !!(prof && prof.occupation === "Parent"));
       } catch (e) {
         console.error("GOLSZ profile-complete check error:", e);
         setProfileComplete(true); // fail open — a fetch hiccup shouldn't lock someone out of their own app
@@ -13504,7 +13518,10 @@ function Auth({ onDone, paidReturn }) {
     // looks: migration 116 makes every new account start on 'free', so
     // without this an athlete would pick Pro, pay nothing, be given Free,
     // and never be told why. Say so before anything is created.
-    if (isSignup && selected.price > 0 && !stripeLinkFor(plan, currency)) {
+    // isSignupLike, not isSignup: the parent is the buyer, and telling them
+    // after their account exists that checkout is unavailable is the failure
+    // this guard was written to prevent.
+    if (isSignupLike && selected.price > 0 && !stripeLinkFor(plan, currency)) {
       setErr(t("settings_plan_checkout_unavailable"));
       return;
     }
@@ -13536,7 +13553,9 @@ function Auth({ onDone, paidReturn }) {
     // separate tab (instead of navigating this one away) is what lets this
     // tab stay alive and keep polling for email confirmation the whole time.
     let checkoutTab = null;
-    if (isSignup && selected.price > 0 && stripeLinkFor(plan, currency)) {
+    // Opened on the user's own click for BOTH signup flows — a tab opened
+    // later, after the await, is a popup blocker's definition of a popup.
+    if (isSignupLike && selected.price > 0 && stripeLinkFor(plan, currency)) {
       checkoutTab = window.open("", "_blank");
     }
     setBusy(true);
@@ -13642,9 +13661,46 @@ function Auth({ onDone, paidReturn }) {
         const parentEmail = email.trim();
         const parentPw = pw;
         const { data, error } = await sb.auth.signUp({ email: parentEmail, password: parentPw, options: { data: {
-          full_name: name.trim(), hp: website.trim(),
+          // The plan rides on the PARENT's metadata because the parent is the
+          // account that pays. Without it handle_new_user defaults them to
+          // free and the plan they just chose is silently thrown away.
+          full_name: name.trim(), plan: selected.id, hp: website.trim(),
         } } });
         if (error) throw error;
+        // CHECKOUT, WHICH THIS BRANCH NEVER REACHED.
+        // Under-18s are routed here by design and the parent buys on their
+        // behalf, so this was the only path the target market could take and
+        // it had no payment step at all. Same handoff as the adult branch,
+        // attributed to the PARENT's user id — they are the payer, and
+        // effectivePlan() resolves the child's access from the payer.
+        if (selected.price > 0 && stripeLinkFor(plan, currency) && data.user) {
+          const checkoutUrl = new URL(stripeLinkFor(plan, currency));
+          checkoutUrl.searchParams.set("client_reference_id", data.user.id);
+          checkoutUrl.searchParams.set("prefilled_email", parentEmail);
+          if (checkoutTab) {
+            try { checkoutTab.location.href = checkoutUrl.toString(); }
+            catch (e) { checkoutTab = null; }
+          }
+          // The athlete still has to be created either way — do it before
+          // handing the tab over, so a parent who pays and closes everything
+          // still has a child account waiting.
+          if (data.session) {
+            try { await createChildAccount(childName.trim(), childDobIso); }
+            catch (childErr) { setChildCreateErr((childErr && childErr.message) || "Couldn't add your athlete — you can try again from Account."); }
+          } else {
+            try { sessionStorage.setItem("golsz_pending_child", JSON.stringify({ childName: childName.trim(), childDobIso })); } catch (e) {}
+          }
+          if (!checkoutTab) {
+            window.location.href = checkoutUrl.toString();
+            return;
+          }
+          if (data.session) { onDone(true); }
+          else {
+            setNotice("Complete your payment in the new tab. This page will sign you in automatically the moment your email is confirmed.");
+            startConfirmPolling(parentEmail, parentPw);
+          }
+          return;
+        }
         if (data.session) {
           try {
             await createChildAccount(childName.trim(), childDobIso);
@@ -13749,7 +13805,14 @@ function Auth({ onDone, paidReturn }) {
             )
           ) : (
           <>
-          {isSignup && (
+          {/* THE PARENT IS THE BUYER, so the parent sees the plans.
+              This gated on `isSignup` alone while under-18s are deliberately
+              routed into parent-signup at :13474 — which meant the entire
+              target market reached an account and never reached a price. The
+              shared-mode helper was already sitting one line from here and
+              being used for the honeypot, the name field and Turnstile; it
+              just was not applied to the thing that takes the money. */}
+          {isSignupLike && (
             <div style={{ marginBottom: 16 }}>
               {/* The currency control belongs HERE, not only in Settings.
                   Settings needs a login, and a Stripe subscription is locked

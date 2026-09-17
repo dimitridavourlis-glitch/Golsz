@@ -171,7 +171,21 @@ ck("every checkout entry point goes through the gate",
 ck("no entry point reads STRIPE_LINKS directly any more",
    APP.split("\n").filter((l) => /STRIPE_LINKS\[/.test(l) && !/const url = \(STRIPE_LINKS\[cur\]/.test(l)).length, 0);
 ck("signup refuses a paid plan while checkout is dark",
-   /if \(isSignup && selected\.price > 0 && !stripeLinkFor\(plan, currency\)\) \{\s*\n\s*setErr\(t\("settings_plan_checkout_unavailable"\)\);/.test(APP), true);
+   /if \(isSignupLike && selected\.price > 0 && !stripeLinkFor\(plan, currency\)\) \{\s*\n\s*setErr\(t\("settings_plan_checkout_unavailable"\)\);/.test(APP), true);
+// isSignupLike covers BOTH flows, and the parent one is the load-bearing case:
+// under-18s are routed to parent-signup by design, so the parent is the buyer.
+// That branch had no plan grid and no checkout at all, which is the whole
+// reason nobody has ever completed a purchase.
+ck("the parent buys too — the plan grid renders in parent-signup",
+   /\{isSignupLike && \(/.test(APP), true);
+ck("...and the parent branch actually reaches Stripe",
+   /prefilled_email", parentEmail\)/.test(APP), true);
+ck("...attributed to the parent, who is the payer",
+   /client_reference_id", data\.user\.id\);\n\s*checkoutUrl\.searchParams\.set\("prefilled_email", parentEmail\)/.test(APP), true);
+// Without this the plan they just picked is thrown away by handle_new_user's
+// free default the moment the account is created.
+ck("the chosen plan rides on the parent's signup metadata",
+   /full_name: name\.trim\(\), plan: selected\.id, hp: website\.trim\(\)/.test(APP), true);
 
 console.log("\n-- migration 116: a signup cannot grant itself a plan --");
 // Scoped to executable SQL only. Both the header and an in-body comment

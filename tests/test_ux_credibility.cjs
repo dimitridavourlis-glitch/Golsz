@@ -235,7 +235,12 @@ console.log("\n-- currency is choosable BEFORE the choice becomes permanent --")
       if (!n || typeof n !== "object") return;
       if (Array.isArray(n)) return n.forEach(walk);
       if (n.type === "LogicalExpression" && n.operator === "&&" &&
-          n.left.type === "Identifier" && n.left.name === "isSignup" &&
+          // isSignupLike === isSignup || isParentSignup, and the parent is the
+          // BUYER — under-18s are routed to parent-signup by design, so the
+          // currency control has to render there or the only people who can
+          // pay never see a price. Neither name is ever true on the login
+          // branch, which is what this assertion actually guarantees.
+          n.left.type === "Identifier" && (n.left.name === "isSignup" || n.left.name === "isSignupLike") &&
           CODE.slice(n.start, n.end).includes("setCurrency(cur)")) gated++;
       for (const k of Object.keys(n)) if (k !== "loc" && k !== "start" && k !== "end") walk(n[k]);
     })(ast.program.body);
