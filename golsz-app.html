@@ -9367,19 +9367,32 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
   //
   // A parent in manage mode gets the same read-only treatment as everywhere
   // else: actingFor means these are somebody else's focus areas.
+  // OPTIMISTIC, LIKE EVERY OTHER WRITE ON THIS SCREEN NOW.
+  // This awaited the round trip before the tick moved, so on a phone the
+  // checkbox sat unchanged for a beat after every tap and the athlete tapped
+  // again. The failure path already surfaced properly; only the ordering was
+  // wrong. Rollback restores the whole derived set — the list, the development
+  // score and the projection all move together, so putting back one without
+  // the others would leave the ring disagreeing with the rows it summarises.
   async function markFocusDone(item) {
     if (!sb || actingFor || devBusy) return;
+    const beforeList = devList, beforeDev = development, beforeProj = projected;
     setDevBusy(item.id);
     setDevError("");
+    applyFocusDone(item);
     const { error } = await sb.from("development_plan_items")
       .update({ status: "done", updated_at: new Date().toISOString() })
       .eq("id", item.id);
     setDevBusy(null);
     if (error) {
+      setDevList(beforeList); setDevelopment(beforeDev); setProjected(beforeProj);
       // Surfaced to the athlete, never only to the console.
       setDevError(t("home_focus_failed"));
       return;
     }
+  }
+
+  function applyFocusDone(item) {
     const updated = devList.map((d) => (d.id === item.id ? { ...d, status: "done" } : d));
     setDevList(updated);
     setDevelopment(computeDevelopmentScore(updated));
@@ -14726,7 +14739,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=b9d7586d0666a84a";
+    s.src = "js/app.js?v=a010584ffdfd9188";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
