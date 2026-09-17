@@ -277,15 +277,21 @@ async function getUserId(authHeader, supaUrl, serviceKey) {
   }
 }
 
-// GOLSZ's real occupation values (Player/Coach/Scout/Agent/Physio/Other,
-// see ProfileEditor/AdminPanel) don't line up 1:1 with the classifier's
-// closed role enum — Physio and Other have no honest equivalent, so
-// they're left as null (the prompt's own stated behavior is to resolve
-// unknowns toward the stricter outcome, which is exactly right here:
-// better to under-trust an unmapped role than guess wrong). Unset
-// occupation defaults to "athlete", matching the "unset -> Player"
-// convention already used elsewhere in this codebase (see loadAnalytics
-// in golsz-app.html).
+// GOLSZ's occupation values are Player/Parent/Agent/Other since migration 138
+// removed Scout, Coach and Physio. They don't line up 1:1 with the
+// classifier's closed role enum — Parent and Other have no honest equivalent,
+// so they're left as null (the prompt's own stated behavior is to resolve
+// unknowns toward the stricter outcome, which is exactly right here: better to
+// under-trust an unmapped role than guess wrong). Unset occupation defaults to
+// "athlete", matching the "unset -> Player" convention already used elsewhere
+// in this codebase (see loadAnalytics in golsz-app.html).
+//
+// Coach and Scout stay in the map deliberately. 138 migrates existing rows to
+// 'Other', but a mapping that silently returned null for a row written before
+// that ran would move a real person into the stricter bucket without anyone
+// noticing — and this function decides how a minor-safety classifier judges
+// them. Tolerating a retired value costs nothing; dropping it is a behaviour
+// change disguised as a cleanup.
 function mapRole(occupation) {
   const map = { Player: "athlete", Coach: "coach", Scout: "scout", Agent: "agent" };
   if (!occupation) return "athlete";

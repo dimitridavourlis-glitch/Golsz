@@ -3006,7 +3006,13 @@ const SPORTS = [
 const NON_PLAYER_SPORTS = [...SPORTS.filter((s) => s !== "All"), "Other"];
 const GENDERS = [["All", "All"], ["M", "Male"], ["F", "Female"]];
 const SCHOOL_LEVELS = ["High School", "University", "Other"];
-const OCCUPATIONS = ["Player", "Parent", "Scout", "Agent", "Coach", "Physio", "Other"];
+// Scout, Coach and Physio removed 2026-09-17 (migration 138). They were never
+// separate versions of the app — occupation only branches Player / Parent /
+// everything-else — so they were three extra options on a dropdown for user
+// types GOLSZ does not serve. Existing rows were migrated to "Other".
+// NOTE: "Scout" here meant a talent scout using the app. It has nothing to do
+// with AI Scout, which is a feature of the athlete's own account.
+const OCCUPATIONS = ["Player", "Parent", "Agent", "Other"];
 const COUNTRIES = ["All", "Canada", "USA", "England", "Spain", "Germany", "Jamaica", "Japan", "Brazil", "Sweden", "Morocco"];
 const POSITIONS = ["All", "Left Back", "Striker", "Midfielder", "Guard", "Forward", "Center", "Goalie", "Sprinter", "Distance", "Singles"];
 
@@ -6015,7 +6021,10 @@ function BlockedAccounts() {
 // (migration 058, verification_requests). Revives the design drafted once
 // around migration 024 and dropped before shipping. Scoped to the
 // occupations that already exist as real profile roles.
-const VERIFIABLE_OCCUPATIONS = ["Player", "Scout", "Agent", "Coach", "Physio"];
+// Only the two user types that still exist and are worth verifying. A parent
+// is verified by the child link, not by a credential, and "Other" has nothing
+// to check against.
+const VERIFIABLE_OCCUPATIONS = ["Player", "Agent"];
 function VerificationRequest({ occupation }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
