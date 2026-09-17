@@ -380,7 +380,7 @@ const I18N = {
     home_readiness_weakest_profile_quality: "Your Passport is the biggest thing holding your score back — fill in the missing fields below.", home_readiness_weakest_verification: "Getting identity-verified would raise your score the most right now.", home_readiness_weakest_performance: "Recording and retesting a few performance benchmarks would raise your score the most right now.", home_readiness_weakest_development: "Adding focus areas to your development plan — and making progress on them — would raise your score the most right now.", home_readiness_weakest_pathway: "Setting a pathway and adding targets would raise your score the most right now.",
     home_this_month_title: "THIS MONTH", home_this_month_dev: "{n} development focus areas in progress.", home_this_month_targets: "{n} targets haven't been touched in a week.", home_this_month_review: "Review",
     home_benchmark_progress_title: "RECENT BENCHMARK PROGRESS",
-    home_my_athletes_title: "MY ATHLETES", home_my_athletes_unnamed: "Unnamed athlete",
+    home_my_athletes_title: "MY ATHLETES", home_my_athletes_unnamed: "Unnamed athlete", home_add_athlete: "Add an athlete", home_add_athlete_name: "Athlete's full name",
     managing_banner: "Managing {name}", managing_exit: "Back to my account", managing_manage: "Manage",
     delete_children_title: "These athlete profiles would be left with no owner",
     delete_children_body: "Nobody else can sign in to them, so deleting your account alone would leave their data unreachable. Deleting yours will delete theirs too — permanently.",
@@ -638,7 +638,7 @@ const I18N = {
     scout_build_target_list: "Add {n} to my Targets", scout_build_target_list_locked: "Add to my Targets — Basic", scout_targets_added: "Added to your Targets.",
     scout_add_dev_items: "Add {n} to my Development Plan", scout_add_dev_items_locked: "Add to my Development Plan — Pro", scout_dev_items_added: "Added to your Development Plan.",
     scout_build_pathway: "Build my Pathway", scout_build_pathway_locked: "Build my Pathway — Basic", scout_pathway_added: "Your Pathway is built.", scout_pathway_open: "Open your plan",
-    scout_save_email: "Save this email to a Target", scout_save_email_locked: "Save to a Target — Basic", scout_save_email_pick: "Choose a target…", scout_save_email_confirm: "Save", scout_save_email_cancel: "Cancel", scout_save_email_no_targets: "You don't have any targets yet — add one first.", scout_email_saved: "Saved to your target.",
+    scout_save_email: "Save this email to a Target", scout_save_email_locked: "Save to a Target — Basic", scout_save_email_pick: "Choose a target…", scout_save_email_confirm: "Save", scout_save_email_has_draft: "has a draft", scout_save_email_replace: "Replace it", scout_save_email_overwrite_warn: "That target already has an email you wrote. Saving Scout's version replaces it, and there is no undo.", scout_save_email_cancel: "Cancel", scout_save_email_no_targets: "You don't have any targets yet — add one first.", scout_email_saved: "Saved to your target.",
     scout_attach_photo: "Attach a photo", scout_send: "Send", scout_photo_attached: "Photo attached — Scout will take a look.",
     scout_connection_dropped: "Connection dropped mid-play. Send that again and I'm on it.", scout_server_error: "Scout's server didn't finish that one (error {s}). Send it again — it usually goes through.",
     scout_timed_out: "That one took me too long to work through. Send it again — or try asking it a bit more specifically.",
@@ -727,7 +727,7 @@ const I18N = {
     home_readiness_weakest_profile_quality: "Votre Passeport est ce qui freine le plus votre score — complétez les champs manquants ci-dessous.", home_readiness_weakest_verification: "Obtenir une vérification d'identité augmenterait le plus votre score en ce moment.", home_readiness_weakest_performance: "Enregistrer et retester quelques repères de performance augmenterait le plus votre score en ce moment.", home_readiness_weakest_development: "Ajouter des axes de travail à votre plan de développement — et progresser dessus — augmenterait le plus votre score en ce moment.", home_readiness_weakest_pathway: "Définir un parcours et ajouter des cibles augmenterait le plus votre score en ce moment.",
     home_this_month_title: "CE MOIS-CI", home_this_month_dev: "{n} axes de développement en cours.", home_this_month_targets: "{n} cibles n'ont pas été touchées depuis une semaine.", home_this_month_review: "Revoir",
     home_benchmark_progress_title: "PROGRESSION RÉCENTE DES REPÈRES",
-    home_my_athletes_title: "MES ATHLÈTES", home_my_athletes_unnamed: "Athlète sans nom",
+    home_my_athletes_title: "MES ATHLÈTES", home_my_athletes_unnamed: "Athlète sans nom", home_add_athlete: "Ajouter un athlète", home_add_athlete_name: "Nom complet de l'athlète",
     managing_banner: "Gestion de {name}", managing_exit: "Revenir à mon compte", managing_manage: "Gérer",
     delete_children_title: "Ces profils d'athlètes se retrouveraient sans propriétaire",
     delete_children_body: "Personne d'autre ne peut s'y connecter : supprimer uniquement votre compte rendrait leurs données inaccessibles. Supprimer le vôtre supprimera aussi les leurs — définitivement.",
@@ -985,7 +985,7 @@ const I18N = {
     scout_build_target_list: "Ajouter {n} à mes Cibles", scout_build_target_list_locked: "Ajouter à mes Cibles — Basic", scout_targets_added: "Ajouté à vos Cibles.",
     scout_add_dev_items: "Ajouter {n} à mon Plan de Développement", scout_add_dev_items_locked: "Ajouter à mon Plan de Développement — Pro", scout_dev_items_added: "Ajouté à votre Plan de Développement.",
     scout_build_pathway: "Construire mon Parcours", scout_build_pathway_locked: "Construire mon Parcours — Basic", scout_pathway_added: "Votre Parcours est construit.", scout_pathway_open: "Ouvrir mon plan",
-    scout_save_email: "Enregistrer cet e-mail sur une Cible", scout_save_email_locked: "Enregistrer sur une Cible — Basic", scout_save_email_pick: "Choisissez une cible…", scout_save_email_confirm: "Enregistrer", scout_save_email_cancel: "Annuler", scout_save_email_no_targets: "Vous n'avez pas encore de cibles — ajoutez-en une d'abord.", scout_email_saved: "Enregistré sur votre cible.",
+    scout_save_email: "Enregistrer cet e-mail sur une Cible", scout_save_email_locked: "Enregistrer sur une Cible — Basic", scout_save_email_pick: "Choisissez une cible…", scout_save_email_confirm: "Enregistrer", scout_save_email_has_draft: "brouillon existant", scout_save_email_replace: "Remplacer", scout_save_email_overwrite_warn: "Cette cible a déjà un e-mail que vous avez écrit. Enregistrer la version de Scout le remplacera, sans retour possible.", scout_save_email_cancel: "Annuler", scout_save_email_no_targets: "Vous n'avez pas encore de cibles — ajoutez-en une d'abord.", scout_email_saved: "Enregistré sur votre cible.",
     scout_attach_photo: "Joindre une photo", scout_send: "Envoyer", scout_photo_attached: "Photo jointe — votre agent va y jeter un œil.",
     scout_connection_dropped: "Connexion interrompue en plein jeu. Renvoyez ça et je m'en occupe.", scout_server_error: "Le serveur de Scout n'a pas pu terminer (erreur {s}). Renvoyez-le — ça passe généralement.",
     scout_timed_out: "Celle-là m'a pris trop de temps à traiter. Renvoyez-la — ou essayez de la poser un peu plus précisément.",
@@ -1074,7 +1074,7 @@ const I18N = {
     home_readiness_weakest_profile_quality: "Tu Pasaporte es lo que más frena tu puntuación — completa los campos que faltan abajo.", home_readiness_weakest_verification: "Verificar tu identidad es lo que más aumentaría tu puntuación ahora mismo.", home_readiness_weakest_performance: "Registrar y volver a probar algunas marcas de rendimiento es lo que más aumentaría tu puntuación ahora mismo.", home_readiness_weakest_development: "Añadir áreas de enfoque a tu plan de desarrollo — y avanzar en ellas — es lo que más aumentaría tu puntuación ahora mismo.", home_readiness_weakest_pathway: "Definir una trayectoria y añadir objetivos es lo que más aumentaría tu puntuación ahora mismo.",
     home_this_month_title: "ESTE MES", home_this_month_dev: "{n} áreas de desarrollo en curso.", home_this_month_targets: "{n} objetivos no se han tocado en una semana.", home_this_month_review: "Revisar",
     home_benchmark_progress_title: "PROGRESO RECIENTE DE MARCAS",
-    home_my_athletes_title: "MIS DEPORTISTAS", home_my_athletes_unnamed: "Deportista sin nombre",
+    home_my_athletes_title: "MIS DEPORTISTAS", home_my_athletes_unnamed: "Deportista sin nombre", home_add_athlete: "Añadir deportista", home_add_athlete_name: "Nombre completo del deportista",
     managing_banner: "Gestionando a {name}", managing_exit: "Volver a mi cuenta", managing_manage: "Gestionar",
     delete_children_title: "Estos perfiles de deportistas quedarían sin titular",
     delete_children_body: "Nadie más puede iniciar sesión en ellos, así que borrar solo tu cuenta dejaría sus datos inaccesibles. Borrar la tuya borrará también las suyas — de forma permanente.",
@@ -1332,7 +1332,7 @@ const I18N = {
     scout_build_target_list: "Añadir {n} a mis Objetivos", scout_build_target_list_locked: "Añadir a mis Objetivos — Basic", scout_targets_added: "Añadido a tus Objetivos.",
     scout_add_dev_items: "Añadir {n} a mi Plan de Desarrollo", scout_add_dev_items_locked: "Añadir a mi Plan de Desarrollo — Pro", scout_dev_items_added: "Añadido a tu Plan de Desarrollo.",
     scout_build_pathway: "Construir mi Trayectoria", scout_build_pathway_locked: "Construir mi Trayectoria — Basic", scout_pathway_added: "Tu Trayectoria está construida.", scout_pathway_open: "Abrir mi plan",
-    scout_save_email: "Guardar este correo en un Objetivo", scout_save_email_locked: "Guardar en un Objetivo — Basic", scout_save_email_pick: "Elige un objetivo…", scout_save_email_confirm: "Guardar", scout_save_email_cancel: "Cancelar", scout_save_email_no_targets: "Aún no tienes objetivos — añade uno primero.", scout_email_saved: "Guardado en tu objetivo.",
+    scout_save_email: "Guardar este correo en un Objetivo", scout_save_email_locked: "Guardar en un Objetivo — Basic", scout_save_email_pick: "Elige un objetivo…", scout_save_email_confirm: "Guardar", scout_save_email_has_draft: "ya tiene borrador", scout_save_email_replace: "Reemplazar", scout_save_email_overwrite_warn: "Ese destino ya tiene un correo que escribiste. Guardar la versión de Scout lo reemplazará, y no se puede deshacer.", scout_save_email_cancel: "Cancelar", scout_save_email_no_targets: "Aún no tienes objetivos — añade uno primero.", scout_email_saved: "Guardado en tu objetivo.",
     scout_attach_photo: "Adjuntar una foto", scout_send: "Enviar", scout_photo_attached: "Foto adjunta — tu agente le echará un vistazo.",
     scout_connection_dropped: "Se perdió la conexión a mitad de la jugada. Envíalo de nuevo y me encargo.", scout_server_error: "El servidor de Scout no pudo terminar (error {s}). Envíalo de nuevo — suele funcionar.",
     scout_timed_out: "Esa me llevó demasiado tiempo procesarla. Envíala de nuevo — o intenta plantearla de forma algo más concreta.",
@@ -1421,7 +1421,7 @@ const I18N = {
     home_readiness_weakest_profile_quality: "Το Διαβατήριό σου είναι αυτό που περιορίζει περισσότερο τη βαθμολογία σου — συμπλήρωσε τα πεδία που λείπουν παρακάτω.", home_readiness_weakest_verification: "Η επαλήθευση ταυτότητας θα αύξανε περισσότερο τη βαθμολογία σου αυτή τη στιγμή.", home_readiness_weakest_performance: "Η καταγραφή και επανεξέταση μερικών δεικτών απόδοσης θα αύξανε περισσότερο τη βαθμολογία σου αυτή τη στιγμή.", home_readiness_weakest_development: "Η προσθήκη τομέων εστίασης στο πλάνο ανάπτυξής σου — και η πρόοδος σε αυτούς — θα αύξανε περισσότερο τη βαθμολογία σου αυτή τη στιγμή.", home_readiness_weakest_pathway: "Ο καθορισμός πορείας και η προσθήκη στόχων θα αύξανε περισσότερο τη βαθμολογία σου αυτή τη στιγμή.",
     home_this_month_title: "ΑΥΤΟΝ ΤΟΝ ΜΗΝΑ", home_this_month_dev: "{n} τομείς ανάπτυξης σε εξέλιξη.", home_this_month_targets: "{n} στόχοι δεν έχουν αγγιχτεί εδώ και μια εβδομάδα.", home_this_month_review: "Έλεγχος",
     home_benchmark_progress_title: "ΠΡΟΣΦΑΤΗ ΠΡΟΟΔΟΣ ΔΕΙΚΤΩΝ",
-    home_my_athletes_title: "ΟΙ ΑΘΛΗΤΕΣ ΜΟΥ", home_my_athletes_unnamed: "Αθλητής χωρίς όνομα",
+    home_my_athletes_title: "ΟΙ ΑΘΛΗΤΕΣ ΜΟΥ", home_my_athletes_unnamed: "Αθλητής χωρίς όνομα", home_add_athlete: "Πρόσθεσε αθλητή", home_add_athlete_name: "Ονοματεπώνυμο αθλητή",
     managing_banner: "Διαχείριση: {name}", managing_exit: "Επιστροφή στον λογαριασμό μου", managing_manage: "Διαχείριση",
     delete_children_title: "Αυτά τα προφίλ αθλητών θα έμεναν χωρίς κάτοχο",
     delete_children_body: "Κανείς άλλος δεν μπορεί να συνδεθεί σε αυτά, οπότε η διαγραφή μόνο του δικού σου λογαριασμού θα άφηνε τα δεδομένα τους απρόσιτα. Διαγράφοντας τον δικό σου, διαγράφονται και τα δικά τους — οριστικά.",
@@ -1679,7 +1679,7 @@ const I18N = {
     scout_build_target_list: "Προσθήκη {n} στους Στόχους μου", scout_build_target_list_locked: "Προσθήκη στους Στόχους μου — Basic", scout_targets_added: "Προστέθηκε στους Στόχους σου.",
     scout_add_dev_items: "Προσθήκη {n} στο Πλάνο Ανάπτυξής μου", scout_add_dev_items_locked: "Προσθήκη στο Πλάνο Ανάπτυξής μου — Pro", scout_dev_items_added: "Προστέθηκε στο Πλάνο Ανάπτυξής σου.",
     scout_build_pathway: "Δημιουργία της Πορείας μου", scout_build_pathway_locked: "Δημιουργία Πορείας — Basic", scout_pathway_added: "Η Πορεία σου δημιουργήθηκε.", scout_pathway_open: "Άνοιγμα του σχεδίου",
-    scout_save_email: "Αποθήκευση αυτού του email σε Στόχο", scout_save_email_locked: "Αποθήκευση σε Στόχο — Basic", scout_save_email_pick: "Επίλεξε έναν στόχο…", scout_save_email_confirm: "Αποθήκευση", scout_save_email_cancel: "Ακύρωση", scout_save_email_no_targets: "Δεν έχεις ακόμα στόχους — πρόσθεσε έναν πρώτα.", scout_email_saved: "Αποθηκεύτηκε στον στόχο σου.",
+    scout_save_email: "Αποθήκευση αυτού του email σε Στόχο", scout_save_email_locked: "Αποθήκευση σε Στόχο — Basic", scout_save_email_pick: "Επίλεξε έναν στόχο…", scout_save_email_confirm: "Αποθήκευση", scout_save_email_has_draft: "έχει προσχέδιο", scout_save_email_replace: "Αντικατάσταση", scout_save_email_overwrite_warn: "Αυτός ο στόχος έχει ήδη email που έγραψες. Η αποθήκευση της έκδοσης του Scout θα το αντικαταστήσει, χωρίς αναίρεση.", scout_save_email_cancel: "Ακύρωση", scout_save_email_no_targets: "Δεν έχεις ακόμα στόχους — πρόσθεσε έναν πρώτα.", scout_email_saved: "Αποθηκεύτηκε στον στόχο σου.",
     scout_attach_photo: "Επισύναψη φωτογραφίας", scout_send: "Αποστολή", scout_photo_attached: "Η φωτογραφία επισυνάφθηκε — ο σκάουτ θα τη δει.",
     scout_connection_dropped: "Η σύνδεση διακόπηκε στη μέση. Στείλτε το ξανά και θα το αναλάβω.", scout_server_error: "Ο διακομιστής του Scout δεν πρόλαβε (σφάλμα {s}). Στείλτε το ξανά — συνήθως περνάει.",
     scout_timed_out: "Αυτό μου πήρε πολλή ώρα να το επεξεργαστώ. Στείλ' το ξανά — ή δοκίμασε να το ρωτήσεις πιο συγκεκριμένα.",
@@ -5453,10 +5453,17 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   // turns a false here into setPage("profile") on every render and go()
   // refuses every other destination, so the buyer was pinned on the Passport
   // screen forever with no way to reach the athlete they had just paid for.
+  //
+  // MANAGE MODE REPORTS NOTHING. viewingOther is deliberately false while a
+  // parent manages a child (see its definition: `&& !manageMode`), so this
+  // effect fired with the CHILD's row and wrote the child's completeness into
+  // GolszApp's app-wide lock. A parent whose kid had not picked a sport was
+  // pinned on the Passport screen by a profile that is not theirs and that
+  // they may not be able to complete. The lock is about the SIGNED-IN user.
   useEffect(() => {
-    if (!loaded || viewingOther || !onProfileStatus) return;
+    if (!loaded || viewingOther || manageMode || !onProfileStatus) return;
     onProfileStatus(!!(athlete && athlete.sport) || !!(profile && profile.occupation === "Parent"));
-  }, [loaded, athlete, profile, viewingOther]);
+  }, [loaded, athlete, profile, viewingOther, manageMode]);
 
   async function toggleFollowThis() {
     if (!sb || !uid || !viewUserId || viewUserId === uid) return;
@@ -7900,18 +7907,34 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   const [emailTargets, setEmailTargets] = useState(null);
   const [savingEmailFor, setSavingEmailFor] = useState(null);
   const [selectedEmailTarget, setSelectedEmailTarget] = useState("");
+  // Which message is waiting on "yes, replace what is already there".
+  const [replaceDraftFor, setReplaceDraftFor] = useState(null);
   async function openSaveEmailPicker(msgIndex) {
     setSavingEmailFor(msgIndex);
     setSelectedEmailTarget("");
     if (emailTargets !== null || !sb || !uidRef.current) return;
     try {
-      const { data, error } = await sb.from("outreach_targets").select("id, name").eq("user_id", uidRef.current).order("created_at", { ascending: false });
+      // draft_email comes back so the picker can WARN before it overwrites.
+      // Saving used to replace whatever the athlete had written with no
+      // warning and no undo — and that column holds a real email to a real
+      // coach, sometimes the only copy of it.
+      const { data, error } = await sb.from("outreach_targets").select("id, name, draft_email").eq("user_id", uidRef.current).order("created_at", { ascending: false });
       if (error) throw error;
       setEmailTargets(data || []);
     } catch (e) { console.error("GOLSZ load targets for email save error:", e); setEmailTargets([]); }
   }
-  async function saveDraftedEmail(msgIndex, emailText) {
+  async function saveDraftedEmail(msgIndex, emailText, confirmedReplace) {
     if (!sb || !selectedEmailTarget) return;
+    // REPLACING SOMETHING TAKES A SECOND, SPECIFIC TAP — the same rule
+    // addSuggestedPathway uses, and for the same reason: an overwrite the
+    // athlete did not ask for is indistinguishable from data loss. Filling an
+    // empty draft is unchanged and still one tap.
+    const chosen = (emailTargets || []).find((x) => String(x.id) === String(selectedEmailTarget));
+    if (chosen && chosen.draft_email && String(chosen.draft_email).trim() && !confirmedReplace) {
+      setReplaceDraftFor(msgIndex);
+      return;
+    }
+    setReplaceDraftFor(null);
     try {
       const { error } = await sb.from("outreach_targets").update({ draft_email: emailText, updated_at: new Date().toISOString() }).eq("id", selectedEmailTarget).eq("user_id", uidRef.current);
       if (error) throw error;
@@ -8185,10 +8208,22 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
                 <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
                   <select value={selectedEmailTarget} onChange={(e) => setSelectedEmailTarget(e.target.value)} aria-label={t("scout_save_email_pick")} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "7px 8px", fontSize: 12, fontFamily: "inherit", flex: "1 1 140px" }}>
                     <option value="">{t("scout_save_email_pick")}</option>
-                    {(emailTargets || []).map((tg) => <option key={tg.id} value={tg.id}>{tg.name}</option>)}
+                    {/* A target that already holds a draft says so in the
+                        list, so the athlete knows before choosing, not after
+                        the overwrite. */}
+                    {(emailTargets || []).map((tg) => <option key={tg.id} value={tg.id}>{tg.name}{tg.draft_email && String(tg.draft_email).trim() ? " \u2022 " + t("scout_save_email_has_draft") : ""}</option>)}
                   </select>
-                  <button onClick={() => saveDraftedEmail(i, m.draftedEmail)} disabled={!selectedEmailTarget} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 8, padding: "7px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", opacity: !selectedEmailTarget ? 0.5 : 1 }}>{t("scout_save_email_confirm")}</button>
-                  <button onClick={() => setSavingEmailFor(null)} style={{ background: "none", border: "none", color: C.slate, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>{t("scout_save_email_cancel")}</button>
+                  {/* The second, specific tap. It only ever appears when
+                      there is something to lose. */}
+                  {replaceDraftFor === i ? (
+                    <button onClick={() => saveDraftedEmail(i, m.draftedEmail, true)} style={{ background: C.amber, color: C.ink, border: "none", borderRadius: 8, padding: "7px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>{t("scout_save_email_replace")}</button>
+                  ) : (
+                    <button onClick={() => saveDraftedEmail(i, m.draftedEmail)} disabled={!selectedEmailTarget} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 8, padding: "7px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", opacity: !selectedEmailTarget ? 0.5 : 1 }}>{t("scout_save_email_confirm")}</button>
+                  )}
+                  <button onClick={() => { setSavingEmailFor(null); setReplaceDraftFor(null); }} style={{ background: "none", border: "none", color: C.slate, fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>{t("scout_save_email_cancel")}</button>
+                  {replaceDraftFor === i && (
+                    <div style={{ fontSize: 11.5, color: C.warnText, width: "100%", lineHeight: 1.45 }}>{t("scout_save_email_overwrite_warn")}</div>
+                  )}
                   {emailTargets && emailTargets.length === 0 && <div style={{ fontSize: 11.5, color: C.slate, width: "100%" }}>{t("scout_save_email_no_targets")}</div>}
                 </div>
               )}
@@ -12289,7 +12324,71 @@ function ManagingBanner({ name, onExit, t }) {
 // The "MY ATHLETES" list. Every row now has a real Manage action — before
 // this it only opened a read-only Passport, which is why a parent-created
 // under-18 account could be created and then never used by anyone.
-function MyAthletes({ children, onManage, onView, t }) {
+// THE FORM THE ERROR MESSAGE HAS ALWAYS PROMISED.
+// When child creation failed at signup — a network blip, a 502 after the auth
+// user was made — the copy said "you can try again from Account". There was no
+// such form anywhere in the app. A parent who hit that error had paid, had an
+// account, and had no way to add the athlete they signed up for; the only
+// record of the child's name and date of birth lived in sessionStorage and was
+// deleted on the next mount whether the retry worked or not.
+//
+// DELIBERATELY MANUAL. The automatic retry on mount stays exactly as it is,
+// including clearing the stash in `finally` — the failure modes that leave an
+// auth user already created would make a blind automatic retry mint a second
+// orphan account. A parent pressing a button is a person deciding, once,
+// visibly, and seeing the error if the email is already registered.
+function AddAthleteForm({ t, onAdded }) {
+  const [name, setName] = useState("");
+  const [d, setD] = useState(""); const [m, setM] = useState(""); const [y, setY] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [open, setOpen] = useState(false);
+  const iso = () => {
+    const dd = parseInt(d, 10), mm = parseInt(m, 10), yy = parseInt(y, 10);
+    if (!(dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12 && yy >= 1900 && yy <= 2100)) return null;
+    return `${yy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+  };
+  const ready = name.trim().length > 1 && !!iso();
+  async function submit() {
+    if (!ready || busy) return;
+    setBusy(true); setErr("");
+    try {
+      await createChildAccount(name.trim(), iso());
+      setName(""); setD(""); setM(""); setY(""); setOpen(false);
+      if (onAdded) onAdded();
+    } catch (e) {
+      // The server's own text — it already distinguishes "already registered"
+      // from a real failure, and that difference is what a parent needs.
+      setErr((e && e.message) || t("family_couldnt_send"));
+    } finally { setBusy(false); }
+  }
+  const box = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 10px", fontFamily: "inherit", boxSizing: "border-box" };
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} style={{ ...quietBtn, marginTop: 10, minHeight: 44 }}>+ {t("home_add_athlete")}</button>
+    );
+  }
+  return (
+    <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
+      <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("home_add_athlete_name")}
+        aria-label={t("home_add_athlete_name")} maxLength={120} style={{ ...box, width: "100%", minHeight: 44 }} />
+      <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
+        <input value={d} onChange={(e) => setD(e.target.value)} inputMode="numeric" placeholder="DD" aria-label="DD" maxLength={2} style={{ ...box, flex: 1, minWidth: 0, minHeight: 44 }} />
+        <input value={m} onChange={(e) => setM(e.target.value)} inputMode="numeric" placeholder="MM" aria-label="MM" maxLength={2} style={{ ...box, flex: 1, minWidth: 0, minHeight: 44 }} />
+        <input value={y} onChange={(e) => setY(e.target.value)} inputMode="numeric" placeholder="YYYY" aria-label="YYYY" maxLength={4} style={{ ...box, flex: 1.4, minWidth: 0, minHeight: 44 }} />
+      </div>
+      {err && <div role="alert" style={{ fontSize: 12, color: C.warnText, lineHeight: 1.45, marginTop: 8 }}>{err}</div>}
+      <div style={{ display: "flex", gap: 7, marginTop: 8 }}>
+        <button onClick={submit} disabled={!ready || busy} style={{ ...primaryBtn, minHeight: 44, opacity: ready && !busy ? 1 : 0.45 }}>
+          {busy ? t("goal_card_saving") : t("home_add_athlete")}
+        </button>
+        <button onClick={() => { setOpen(false); setErr(""); }} style={{ ...quietBtn, width: "auto", padding: "0 15px", minHeight: 44 }}>{t("goal_card_cancel")}</button>
+      </div>
+    </div>
+  );
+}
+
+function MyAthletes({ children, onManage, onView, t, onAdded }) {
   return (
     <div style={{ ...card, marginBottom: 16 }}>
       <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("home_my_athletes_title")}</div>
@@ -12305,6 +12404,7 @@ function MyAthletes({ children, onManage, onView, t }) {
           }}>{t("managing_manage")}</button>
         </div>
       ))}
+      <AddAthleteForm t={t} onAdded={onAdded} />
     </div>
   );
 }
@@ -12373,6 +12473,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
   // loads any already-linked children (from this or an earlier session)
   // so the "My Athletes" entry point below always reflects real state.
   const [linkedChildren, setLinkedChildren] = useState(null);
+  const [childrenVersion, setChildrenVersion] = useState(0);
   const [isParentAccount, setIsParentAccount] = useState(false);
   // P0-4. Which linked athlete the parent is currently managing: { id, name },
   // or null when they are on their own account. Nothing about this is trusted
@@ -12425,7 +12526,9 @@ function GolszApp({ onSignOut, startOnboarding }) {
         }
       } catch (e) { console.error("GOLSZ linked-children load error:", e); }
     })();
-  }, []);
+    // childrenVersion, so adding an athlete from the form below refreshes the
+    // list without a page reload.
+  }, [childrenVersion]);
 
   useEffect(() => {
     if (!sb) { setProfileComplete(true); return; } // preview mode, nothing to gate
@@ -12702,9 +12805,22 @@ function GolszApp({ onSignOut, startOnboarding }) {
           <div style={{ maxWidth: page === "scout" ? 860 : 1040, margin: "0 auto", padding: "28px 32px 60px" }}>
             {actingFor && <ManagingBanner name={actingFor.name} onExit={exitManaging} t={t} />}
             {page === "home" && !actingFor && linkedChildren && linkedChildren.length > 0 && (
-              <MyAthletes children={linkedChildren} onManage={manageAthlete} onView={viewProfile} t={t} />
+              <MyAthletes children={linkedChildren} onManage={manageAthlete} onView={viewProfile} t={t} onAdded={() => setChildrenVersion((v) => v + 1)} />
             )}
-            {page === "home" && !actingFor && isParentAccount && linkedChildren && linkedChildren.length === 0 && <FamilyAccess />}
+            {/* A parent whose child creation FAILED lands here with zero
+                children, which is precisely the case the "try again from
+                Account" message was written for. FamilyAccess links an
+                EXISTING athlete account by email; the form creates a new one.
+                Both belong here. */}
+            {page === "home" && !actingFor && isParentAccount && linkedChildren && linkedChildren.length === 0 && (
+              <>
+                <div style={{ ...card, marginBottom: 16 }}>
+                  <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 4 }}>{t("home_my_athletes_title")}</div>
+                  <AddAthleteForm t={t} onAdded={() => setChildrenVersion((v) => v + 1)} />
+                </div>
+                <FamilyAccess />
+              </>
+            )}
             {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} />}
             {page === "scout" && <div style={{ height: "calc(100dvh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} seedPrompt={scoutSeed} onSeedSent={() => setScoutSeed(null)} onNavigate={go} /></div>}
             {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} onNavigate={go} openDay={planDay} onDayOpened={() => setPlanDay(null)} /></>}
@@ -12753,7 +12869,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         {actingFor && <div style={{ padding: "8px 12px 0" }}><ManagingBanner name={actingFor.name} onExit={exitManaging} t={t} /></div>}
         {page === "home" && !actingFor && linkedChildren && linkedChildren.length > 0 && (
           <div style={{ padding: "8px 12px 0" }}>
-            <MyAthletes children={linkedChildren} onManage={manageAthlete} onView={viewProfile} t={t} />
+            <MyAthletes children={linkedChildren} onManage={manageAthlete} onView={viewProfile} t={t} onAdded={() => setChildrenVersion((v) => v + 1)} />
           </div>
         )}
         {page === "home" && !actingFor && isParentAccount && linkedChildren && linkedChildren.length === 0 && (
