@@ -2411,6 +2411,27 @@ function SettingsButton({ openSignal }) {
                 While occupation is still loading it renders nothing rather
                 than an empty-looking section — the same reason plan-unknown
                 shows a skeleton instead of a lock elsewhere. */}
+            {/* WHAT scout_visible ACTUALLY GATES, since the move left this
+                recorded nowhere. Verified 2026-09-18 against the code, not
+                against the label:
+
+                Scout's search_golsz_players tool (api/scout.js, in
+                SCOUT_SEARCH_TOOLS) calls the security-definer search_players()
+                RPC, whose predicate includes `and a.scout_visible`
+                (migration 126). That is the ONE live path by which one
+                athlete's row reaches another user — Discover, Feed and
+                Messages are defined but mounted nowhere, and migration 139
+                closed the athletes table to direct reads. So the sub-label
+                "Lets Scout surface you when someone searches for players" is
+                literally true, and this toggle is the only thing that stops
+                it. show_club and show_country blank those two columns in the
+                same function's SELECT.
+
+                Worth knowing: migration 138 removed Scout/Coach/Agent as
+                occupations, so the "someone" running that search today is
+                another Player or Parent on a paid plan. The column is
+                `not null default true`, so every athlete with a sport set is
+                findable until they come here and turn it off. */}
             {sb && uid && occupation === "Player" && privacy && (
               <div style={{ marginBottom: 18 }}>
                 <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("privacy_section")}</div>
@@ -9824,8 +9845,14 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           like a report.
           Read-only for a parent in manage mode (actingFor), same as every
           other surface. Adding, editing, pausing and deleting focus areas
-          still belong to the Passport — this is the single completion
-          gesture, not a second editor. */}
+          belong to the Training card on Plan (2026-09-18, they were on
+          Passport before) — this is the single completion gesture, not a
+          second editor.
+
+          The tick is permanent, not daily: development_plan_items stores one
+          status per item and nothing per day, so this list is "what is still
+          open", not "today". Daily habits need storage that does not exist
+          yet — do not relabel this as today's habits until it does. */}
       {!actingFor && devList.length > 0 && (
         <HomeZone label={t("home_dim_focus")} span={1}>
           <div>
@@ -10457,7 +10484,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
       {!planKnown(plan) ? null : featureUnlocked(plan, "development_plan") ? (
         <DevelopmentPlan viewUserId={null} manageId={actingFor || null} />
       ) : (
-        <FeatureLock label={t("dev_plan_title")} teaser={t("dev_plan_locked_teaser")} onUpgrade={onUpgrade} />
+        <div style={{ marginBottom: 12 }}><FeatureLock label={t("dev_plan_title")} teaser={t("dev_plan_locked_teaser")} onUpgrade={onUpgrade} /></div>
       )}
 
       {/* THE THREE TIME SECTIONS ARE GONE, NOT MOVED ASIDE.
@@ -14697,7 +14724,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=14e6657efb508ea1";
+    s.src = "js/app.js?v=9d16bd56dd6080f9";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

@@ -152,6 +152,15 @@ function installFetch({ tokenUser = PARENT, authOk = true, linkThrows = false, l
      (APP.match(/<Targets plan=\{userPlan\} onUpgrade=\{openUpgrade\} actingFor=/g) || []).length, 2);
   ck("Passport enters manage mode in both layouts",
      (APP.match(/manageMode=\{!!actingFor\}/g) || []).length, 2);
+  // The training editor moved from Passport to Plan (2026-09-18). Passport
+  // handed it the managed athlete as manageId={manageMode ? viewUserId : null};
+  // on Plan the equivalent is actingFor, which Targets already resolves as
+  // `who = actingFor || user.id`. Passing nothing would show a parent their
+  // OWN empty training list on the child's Plan and write new items to the
+  // parent's account — silent, and exactly the bug the load effect's own
+  // comment describes. One mount, so one occurrence.
+  ck("the training editor is handed the managed athlete",
+     (APP.match(/<DevelopmentPlan viewUserId=\{null\} manageId=\{actingFor \|\| null\} \/>/g) || []).length, 1);
 
   console.log("\n-- manage mode is EDIT access, not view access --");
   ck("Passport distinguishes manage mode from viewing a stranger",

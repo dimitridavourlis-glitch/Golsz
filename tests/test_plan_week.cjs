@@ -101,7 +101,23 @@ ck("only real steps land on a day", /next30\.forEach\(\(i\) => bandRows\.undated
 // the page draws elsewhere must not also be drawn here — is the same rule
 // that keeps in-week steps out of the bands.
 ck("development goals are not mirrored onto the rail", /devItems\.forEach\(\(i\) => bandRows\.undated/.test(APP), false);
-ck("...and PathwayPlan no longer takes the prop that fed the mirror", /devItems = \[\]/.test(APP), false);
+// Scoped to PathwayPlan's own signature. An unanchored /devItems = \[\]/ over
+// the whole 15,000-line file would pass for the wrong reason the moment any
+// other component declared a variable by that name, and could never say which
+// component it was talking about.
+const PATHWAY_SIG = /function PathwayPlan\(\{([^}]*)\}\)/.exec(APP);
+ck("PathwayPlan's signature is findable", !!PATHWAY_SIG, true);
+ck("...and it no longer takes the prop that fed the mirror",
+   !!PATHWAY_SIG && /\bdevItems\b/.test(PATHWAY_SIG[1]), false);
+// The mirror is gone; the editor itself must still be ON the Plan page, or
+// this move deleted the feature rather than relocating it. Both negatives
+// above are satisfied by absence — this is the one that is not.
+ck("the development plan is mounted on Plan, behind its own Pro gate",
+   /featureUnlocked\(plan, "development_plan"\)[\s\S]{0,200}<DevelopmentPlan /.test(APP), true);
+ck("...and that mount hands the managed athlete through",
+   /<DevelopmentPlan viewUserId=\{null\} manageId=\{actingFor \|\| null\} \/>/.test(APP), true);
+ck("...and Passport no longer mounts it at all",
+   (APP.match(/<DevelopmentPlan /g) || []).length, 1);
 ck("no derived row is filed into a horizon band",
    /bandRows\.d(30|90)\.push/.test(APP), false);
 
