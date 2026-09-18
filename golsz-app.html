@@ -1880,6 +1880,86 @@ function SettingsButton({ openSignal }) {
   const [notifEnabled, setNotifEnabled] = useState(false);
   const [notifBusy, setNotifBusy] = useState(false);
   const [notifMsg, setNotifMsg] = useState("");
+  // PRIVACY AND SHARE LINKS, MOVED HERE FROM PASSPORT (2026-09-18).
+  // Passport is the thing a coach looks at; who may look at it is a setting,
+  // and settings live behind the gear. Both blocks moved whole — the toggles
+  // and the revoke list. The Share button itself stays on Passport, because
+  // sharing is an act you perform on the page you are sharing; managing the
+  // links you already sent is housekeeping.
+  //
+  // These load only when the modal opens. Most sessions never open Settings,
+  // and an athletes read plus a tokens read on every mount would be two
+  // queries bought for nothing.
+  const [privacy, setPrivacy] = useState(null);
+  const [privacyBusy, setPrivacyBusy] = useState(null);
+  const [privacyErr, setPrivacyErr] = useState("");
+  const [occupation, setOccupation] = useState(null);
+  const [shareLinks, setShareLinks] = useState(null);
+  const [shareLinksOpen, setShareLinksOpen] = useState(false);
+  const [shareErr, setShareErr] = useState("");
+
+  useEffect(() => {
+    if (!sb || !open || !uid) return;
+    (async () => {
+      try {
+        const [{ data: ath }, { data: prof }] = await Promise.all([
+          sb.from("athletes").select("scout_visible, show_club, show_country").eq("id", uid).single(),
+          sb.from("profiles").select("occupation").eq("id", uid).single(),
+        ]);
+        if (ath) setPrivacy(ath);
+        if (prof) setOccupation(prof.occupation || null);
+      } catch (e) { console.error("GOLSZ settings privacy load error:", e); }
+    })();
+  }, [open, uid]);
+
+  // Optimistic, and put back on failure — the rule every write in this app
+  // follows, and the one that matters most here. supabase-js RESOLVES with
+  // { error } rather than throwing, so a toggle that only caught exceptions
+  // would leave an athlete believing they are hidden when they are not.
+  async function togglePrivacy(col, next) {
+    if (!sb || !uid || privacyBusy) return;
+    const before = privacy;
+    setPrivacyBusy(col); setPrivacyErr("");
+    setPrivacy((a) => ({ ...(a || {}), [col]: next }));
+    const { error } = await sb.from("athletes").update({ [col]: next }).eq("id", uid);
+    if (error) {
+      console.error("GOLSZ privacy toggle error:", error);
+      setPrivacy(before);
+      setPrivacyErr(t("privacy_save_failed"));
+    }
+    setPrivacyBusy(null);
+  }
+
+  async function loadShareLinks() {
+    setShareLinksOpen((o) => !o);
+    // Deliberately NOT short-circuiting on a cached list: reopening the panel
+    // after a failed revoke must ask the server what is actually still live,
+    // not re-show the stale in-memory copy.
+    if (!sb || !uid) return;
+    try {
+      const { data, error } = await sb.from("passport_share_tokens").select("id, token, label, revoked, created_at, last_accessed_at").eq("user_id", uid).eq("revoked", false).order("created_at", { ascending: false });
+      if (error) throw error;
+      setShareLinks(data || []);
+    } catch (e) { console.error("GOLSZ load share links error:", e); setShareLinks([]); }
+  }
+
+  // A FAILED REVOKE THAT LOOKS LIKE A SUCCESSFUL ONE IS THE WORST BUG HERE.
+  // The row used to vanish from the list whether or not the RPC succeeded, so
+  // an athlete who revoked a link sent to the wrong person watched it
+  // disappear, closed the panel believing it was dead, and the link kept
+  // working. This is their Passport: name, photograph, club, school, DOB.
+  async function revokeShareLink(id) {
+    if (!sb || !uid) return;
+    const before = shareLinks;
+    setShareLinks((prev) => (prev || []).filter((l) => l.id !== id));
+    const { error } = await sb.rpc("revoke_passport_share_token", { p_id: id });
+    if (error) {
+      console.error("GOLSZ revoke share link error:", error);
+      setShareLinks(before);
+      setShareErr(t("passport_revoke_failed"));
+    } else setShareErr("");
+  }
+
   const [pwOpen, setPwOpen] = useState(false);
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
@@ -2318,6 +2398,74 @@ function SettingsButton({ openSignal }) {
                   }}>{t("settings_notif_off")}</button>
                 </div>
                 {notifMsg && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 8, lineHeight: 1.4 }}>{notifMsg}</div>}
+              </div>
+            )}
+
+            {/* PRIVACY — the three flags on the athletes row, and the links
+                already handed out. Gated on occupation === "Player" because
+                these describe an athlete's own Passport: a parent's account
+                has an athletes row too, and showing them toggles for a
+                Passport nobody looks at would be three controls that do
+                nothing visible.
+
+                While occupation is still loading it renders nothing rather
+                than an empty-looking section — the same reason plan-unknown
+                shows a skeleton instead of a lock elsewhere. */}
+            {sb && uid && occupation === "Player" && privacy && (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("privacy_section")}</div>
+                {[
+                  ["scout_visible", "privacy_scout_visible", "privacy_scout_visible_sub"],
+                  ["show_club", "privacy_show_club", "privacy_show_club_sub"],
+                  ["show_country", "privacy_show_country", "privacy_show_country_sub"],
+                ].map(([col, label, sub]) => {
+                  // Default TRUE: the column is `not null default true`, so an
+                  // undefined value here means "on", not "off".
+                  const on = privacy[col] !== false;
+                  return (
+                    <div key={col} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${C.line}` }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.chalk }}>{t(label)}</div>
+                        <div style={{ fontSize: 11.5, color: C.slate, lineHeight: 1.4, marginTop: 2 }}>{t(sub)}</div>
+                      </div>
+                      <button onClick={() => togglePrivacy(col, !on)} disabled={privacyBusy === col}
+                        aria-pressed={on} aria-label={t(label)}
+                        style={{ width: 52, height: 30, flexShrink: 0, borderRadius: 999, cursor: privacyBusy === col ? "wait" : "pointer",
+                          background: on ? C.lime : C.turf, border: `1px solid ${on ? C.lime : C.line2}`,
+                          display: "flex", alignItems: "center", justifyContent: on ? "flex-end" : "flex-start",
+                          padding: 3, boxSizing: "border-box", opacity: privacyBusy === col ? 0.6 : 1 }}>
+                        <span style={{ width: 22, height: 22, borderRadius: "50%", background: on ? C.pitch : C.slate, display: "block" }} />
+                      </button>
+                    </div>
+                  );
+                })}
+                {privacyErr && (
+                  <div role="alert" style={{ fontSize: 12, color: C.warnText, lineHeight: 1.45, marginTop: 8 }}>{privacyErr}</div>
+                )}
+                <div style={{ marginTop: 10 }}>
+                  <button onClick={loadShareLinks} style={{ background: "none", border: "none", color: C.slate, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                    {shareLinksOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />} {t("passport_manage_links")}
+                  </button>
+                  {shareLinksOpen && (
+                    <div style={{ marginTop: 8 }}>
+                      {/* A revoke that failed must say so. Silence here meant
+                          the athlete believed a link to their Passport was
+                          dead when it was still live. */}
+                      {shareErr && (
+                        <div role="alert" style={{ fontSize: 12, color: C.warnText, lineHeight: 1.45, marginBottom: 8,
+                          border: `1px solid ${C.amber}`, borderRadius: 9, padding: "8px 10px" }}>{shareErr}</div>
+                      )}
+                      {shareLinks === null && <div style={{ fontSize: 12, color: C.slate }}>{t("loading")}</div>}
+                      {shareLinks && shareLinks.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("passport_no_links")}</div>}
+                      {shareLinks && shareLinks.map((l) => (
+                        <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.line}` }}>
+                          <span style={{ fontSize: 11.5, color: C.chalk, flex: 1, fontFamily: "'Space Mono', monospace" }}>{l.token.slice(0, 8)}… — {new Date(l.created_at).toLocaleDateString()}</span>
+                          <button onClick={() => revokeShareLink(l.id)} style={{ ...iconBtn(C.amber), fontSize: 11, flexShrink: 0 }}>{t("passport_revoke_link")}</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             {sb && uid && (
@@ -5239,9 +5387,10 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const [followers, setFollowers] = useState(null);
   const [followingList, setFollowingList] = useState(null);
   // Icon+count summary strip (Master UX/UI redesign) — Highlights/Timeline
-  // come straight off the athletes.* row already fetched below; Benchmarks/
-  // Development are separate tables, so this pair of count-only queries
-  // (own profile only, never for a viewed passport) is the only addition.
+  // come straight off the athletes.* row already fetched below; Benchmarks is
+  // a separate table, so this one count-only query (own profile only, never
+  // for a viewed passport) is the only addition. The Development count went
+  // with its section, to Plan (2026-09-18).
   const [benchmarkCount, setBenchmarkCount] = useState(0);
   // Real identity verification (profiles.identity_verified, migration 058) —
   // fetched for the owner only; a viewed-other Passport reads from
@@ -5256,27 +5405,6 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   // token instead of flipping one global public/private boolean, so any
   // single link can be individually revoked. Loaded lazily (only once the
   // athlete opens the manager) since most Passport views never need it.
-  const [shareLinks, setShareLinks] = useState(null);
-  const [shareErr, setShareErr] = useState("");
-  const [privacyBusy, setPrivacyBusy] = useState(null);
-  const [privacyErr, setPrivacyErr] = useState("");
-  // Optimistic, and put back on failure — the same rule every other write on
-  // this screen now follows. A privacy toggle that silently did not save is
-  // the worst kind: the athlete believes they are hidden and they are not.
-  async function togglePrivacy(col, next) {
-    if (!sb || !uid || privacyBusy) return;
-    const before = athlete;
-    setPrivacyBusy(col); setPrivacyErr("");
-    setAthlete((a) => ({ ...(a || {}), [col]: next }));
-    const { error } = await sb.from("athletes").update({ [col]: next }).eq("id", uid);
-    if (error) {
-      console.error("GOLSZ privacy toggle error:", error);
-      setAthlete(before);
-      setPrivacyErr(t("privacy_save_failed"));
-    }
-    setPrivacyBusy(null);
-  }
-  const [shareLinksOpen, setShareLinksOpen] = useState(false);
   const real = !!uid;
   // P0-4. manageMode means an approved parent is managing this under-18
   // athlete's account (verified in api/_acting-for.js server-side, and by
@@ -5303,7 +5431,11 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       if (error) throw error;
       token = data && data.token;
       if (!token) throw new Error("no token returned");
-      setShareLinks((prev) => (prev ? [{ id: data.id, token: data.token, label: data.label, created_at: data.created_at }, ...prev] : prev));
+      // The new token used to be prepended to an in-memory list here. That
+      // list lives in Settings now, and it deliberately re-queries the server
+      // every time the panel opens rather than trusting a cached copy — so
+      // there is nothing local to keep in step, and a stale optimistic row
+      // would be the one thing that could make a revoked link look live.
     } catch (e) { console.error("GOLSZ create share token error:", e); setShareMsg(t("passport_share_err")); setTimeout(() => setShareMsg(""), 4000); return; }
     const url = `${window.location.origin}${window.location.pathname}?share=${token}`;
     if (navigator.share) {
@@ -5313,38 +5445,6 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     try { await navigator.clipboard.writeText(url); setShareMsg(t("passport_share_copied")); }
     catch (e) { setShareMsg(url); }
     setTimeout(() => setShareMsg(""), 4000);
-  }
-
-  async function loadShareLinks() {
-    setShareLinksOpen((open) => !open);
-    // Deliberately NOT short-circuiting on a cached list. It used to return
-    // early whenever shareLinks was already loaded, so reopening the panel
-    // after a failed revoke re-showed the stale in-memory copy instead of
-    // asking the server what is actually still live.
-    if (!sb || !uid) return;
-    try {
-      const { data, error } = await sb.from("passport_share_tokens").select("id, token, label, revoked, created_at, last_accessed_at").eq("user_id", uid).eq("revoked", false).order("created_at", { ascending: false });
-      if (error) throw error;
-      setShareLinks(data || []);
-    } catch (e) { console.error("GOLSZ load share links error:", e); setShareLinks([]); }
-  }
-
-  // A FAILED REVOKE THAT LOOKS LIKE A SUCCESSFUL ONE IS THE WORST BUG ON THIS
-  // SCREEN. The row vanished from the list whether or not the RPC succeeded,
-  // and the list is cached for the session — so an athlete who revoked a link
-  // they had sent to the wrong person saw it disappear, closed the panel
-  // believing it was dead, and the link kept working. This is their Passport:
-  // name, photograph, club, school, date of birth.
-  async function revokeShareLink(id) {
-    if (!sb || !uid) return;
-    const before = shareLinks;
-    setShareLinks((prev) => (prev || []).filter((l) => l.id !== id));
-    const { error } = await sb.rpc("revoke_passport_share_token", { p_id: id });
-    if (error) {
-      console.error("GOLSZ revoke share link error:", error);
-      setShareLinks(before);
-      setShareErr(t("passport_revoke_failed"));
-    } else setShareErr("");
   }
 
   // Same validate-then-upload-as-ArrayBuffer pattern Feed's post-image
@@ -5567,79 +5667,17 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       {shareMsg && (
         <div style={{ background: C.limeWash, border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: C.chalk, wordBreak: "break-all" }}>{shareMsg}</div>
       )}
-      {/* THREE FLAGS THE ATHLETE COULD NOT REACH.
-          scout_visible, show_club and show_country have existed on the
-          athletes row since migration 078 and are honoured everywhere —
-          get_public_passport hides the club and country when they are off,
-          and scout_visible governs discovery — but nothing in the app could
-          turn any of them on or off. A privacy control that only an admin can
-          operate is not a privacy control.
-          scout_visible does less than it did now that migration 139 closed the
-          directory read, but it still governs whether Scout's player search
-          can surface them, which is exactly the thing a fifteen-year-old might
-          want off. */}
-      {!viewingOther && !manageMode && real && (
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("privacy_section")}</div>
-          {[
-            ["scout_visible", "privacy_scout_visible", "privacy_scout_visible_sub"],
-            ["show_club", "privacy_show_club", "privacy_show_club_sub"],
-            ["show_country", "privacy_show_country", "privacy_show_country_sub"],
-          ].map(([col, label, sub]) => {
-            // Default TRUE: the column is `not null default true`, so an
-            // undefined value here means "on", not "off".
-            const on = athlete ? athlete[col] !== false : true;
-            return (
-              <div key={col} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${C.line}` }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: C.chalk }}>{t(label)}</div>
-                  <div style={{ fontSize: 11.5, color: C.slate, lineHeight: 1.4, marginTop: 2 }}>{t(sub)}</div>
-                </div>
-                <button onClick={() => togglePrivacy(col, !on)} disabled={privacyBusy === col}
-                  aria-pressed={on} aria-label={t(label)}
-                  style={{ width: 52, height: 30, flexShrink: 0, borderRadius: 999, cursor: privacyBusy === col ? "wait" : "pointer",
-                    background: on ? C.lime : C.turf, border: `1px solid ${on ? C.lime : C.line2}`,
-                    display: "flex", alignItems: "center", justifyContent: on ? "flex-end" : "flex-start",
-                    padding: 3, boxSizing: "border-box", opacity: privacyBusy === col ? 0.6 : 1 }}>
-                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: on ? C.pitch : C.slate, display: "block" }} />
-                </button>
-              </div>
-            );
-          })}
-          {privacyErr && (
-            <div role="alert" style={{ fontSize: 12, color: C.warnText, lineHeight: 1.45, marginTop: 8 }}>{privacyErr}</div>
-          )}
-        </div>
-      )}
-      {/* Revocable share links (migration 078) — each row is its own
-          ?share=<token> link the athlete has actually sent out; "Revoke"
-          kills just that one without touching any others. */}
-      {!viewingOther && !manageMode && real && (
-        <div style={{ marginBottom: 10 }}>
-          <button onClick={loadShareLinks} style={{ background: "none", border: "none", color: C.slate, fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
-            {shareLinksOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />} {t("passport_manage_links")}
-          </button>
-          {shareLinksOpen && (
-            <div style={{ marginTop: 8 }}>
-              {/* A revoke that failed must say so. Silence here meant the
-                  athlete believed a link to their Passport was dead when it
-                  was still live. */}
-              {shareErr && (
-                <div role="alert" style={{ fontSize: 12, color: C.warnText, lineHeight: 1.45, marginBottom: 8,
-                  border: `1px solid ${C.amber}`, borderRadius: 9, padding: "8px 10px" }}>{shareErr}</div>
-              )}
-              {shareLinks === null && <div style={{ fontSize: 12, color: C.slate }}>{t("loading")}</div>}
-              {shareLinks && shareLinks.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("passport_no_links")}</div>}
-              {shareLinks && shareLinks.map((l) => (
-                <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.line}` }}>
-                  <span style={{ fontSize: 11.5, color: C.chalk, flex: 1, fontFamily: "'Space Mono', monospace" }}>{l.token.slice(0, 8)}… — {new Date(l.created_at).toLocaleDateString()}</span>
-                  <button onClick={() => revokeShareLink(l.id)} style={{ ...iconBtn(C.amber), fontSize: 11, flexShrink: 0 }}>{t("passport_revoke_link")}</button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* PRIVACY AND SHARE-LINK MANAGEMENT MOVED TO SETTINGS (2026-09-18).
+          Who may look at this Passport is a setting, not part of the Passport,
+          and it now sits behind the gear with the rest of them. The three
+          athletes flags (scout_visible, show_club, show_country) and the
+          revoke list went whole; the Share button above stays, because sharing
+          is an act you perform on the page you are sharing.
+
+          Both blocks were gated `!viewingOther && !manageMode && real`, which
+          Settings gets for free: the modal is always the signed-in account's
+          own, never a viewed or managed one. The occupation === "Player" gate
+          there replaces what `real` was doing here. */}
 
       {/* Follow and Message are gone. GOLSZ is one-to-one — an athlete, their
           parent, and Scout — with no communication between accounts. Feed,
@@ -10229,9 +10267,9 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
   const [pathwayState, setPathwayState] = useState({ pathwayType: null, milestones: [], athlete: null, loaded: false });
   // "NEXT 30 DAYS" is deliberately the SAME readiness-gap signals Home
   // already computes (missing Passport fields, no highlights, no
-  // benchmarks) — real data, not an invented task list. "NEXT 90 DAYS"
-  // reuses development_plan_items. Own fetch here since Targets mounts
-  // independently of Home.
+  // benchmarks) — real data, not an invented task list. There is no
+  // "NEXT 90 DAYS" any more, and this component no longer reads
+  // development_plan_items at all: the Training card owns that table now.
   const [quality, setQuality] = useState(null);
   const [filmAdded, setFilmAdded] = useState(false);
   const [benchmarkCount, setBenchmarkCount] = useState(0);
@@ -11721,10 +11759,11 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
   const bandRows = { overdue: [], inweek: [], d30: [], d90: [], later: [], undated: [] };
   milestones.forEach((m) => bandRows[milestoneBand(m)].push({ kind: "milestone", key: m.id, done: !!m.done, m }));
 
-  // The readiness checklist and the development plan carry no dates of their
-  // own; their horizon IS their definition, so they land in the band they were
-  // always named after. They render as read-only rows because they are derived
-  // from other screens — a checkbox here would be a control that lies.
+  // The readiness checklist carries no dates of its own; its horizon IS its
+  // definition, so it lands in the band it was always named after. The rows
+  // render read-only because they are derived from another screen — a
+  // checkbox here would be a control that lies. (The development plan used to
+  // file here too; see the note below for why it no longer does.)
   // FILED AS UNDATED, WHICH IS WHAT THEY ARE.
   // These went into d30 and d90, which merge into the band labelled LATER —
   // so six items that carry no date at all sat under a heading asserting a
@@ -14658,7 +14697,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=7b7178eb2fd302fb";
+    s.src = "js/app.js?v=14e6657efb508ea1";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
