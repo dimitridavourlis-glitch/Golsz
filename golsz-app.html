@@ -4513,26 +4513,26 @@ const PROTOCOL_OPTIONS = {
   jump_protocol: [["standing_vertical", "bench_jump_standing"], ["max_vertical", "bench_jump_max"]],
 };
 
-// WHO TOOK THE MEASUREMENT IS NOT RECORDED YET, AND MUST NOT BE FAKED HERE.
-// The brief for this card asks for hand-vs-electronic AND who measured it.
-// The first half exists (migration 114). The second does not, and the two
-// obvious shortcuts are both wrong:
+// WHO TOOK THE MEASUREMENT — ITS OWN COLUMN, AND DELIBERATELY NOT A PROTOCOL.
+// measured_by lives on athlete_benchmarks (migration 142), not inside the
+// protocol jsonb, and its options live here rather than in PROTOCOL_OPTIONS
+// above. Both separations are load-bearing:
 //
-//   • Adding measured_by to PROTOCOL_OPTIONS above. test_benchmark_input
-//     lifts PROTOCOL_DIMENSIONS straight out of api/scout.js and asserts the
-//     client asks about nothing the engine does not know. That guard is
-//     right: the engine decides what is comparable, and a client that invents
-//     a dimension would be asserting comparability the server never agreed to.
+//   • test_benchmark_input lifts PROTOCOL_DIMENSIONS straight out of
+//     api/scout.js and asserts this client asks about nothing the engine does
+//     not know. The engine decides what is comparable; a client inventing a
+//     dimension would assert a comparability the server never agreed to. That
+//     guard caught the first attempt at this and was right to.
 //
-//   • Writing it into the protocol jsonb anyway. Migration 114 documents that
-//     column as holding "only the PROTOCOL_DIMENSIONS the athlete actually
-//     reported". Smuggling a non-engine key in would break a contract written
-//     down precisely so nobody would.
+//   • Migration 114 documents the protocol column as holding "only the
+//     PROTOCOL_DIMENSIONS the athlete actually reported". A non-engine key
+//     smuggled in there would break a contract written down to prevent it.
 //
-// So it needs a column of its own — see supabase-migration-142-benchmark-
-// measured-by.sql, written and awaiting approval. Until it is applied this
-// card records HOW a measurement was taken and not BY WHOM, and says exactly
-// that rather than implying the provenance is complete.
+// It is provenance, not a unit: two hand-timed sprints are the same
+// measurement whoever held the watch. It is shown on every reading and never
+// enters a protocol signature, so it can never make the Passport refuse to
+// compare two readings that genuinely are comparable.
+const MEASURED_BY_OPTIONS = [["self", "bench_by_self"], ["coach", "bench_by_coach"], ["official", "bench_by_official"]];
 
 // The dimensions that decide whether two numbers are the same measurement at
 // all — exactly METRIC_PROTOCOL_FIELDS, which is itself drawn from the
@@ -4573,6 +4573,11 @@ function describeProtocol(entry, t) {
     const opt = (PROTOCOL_OPTIONS[dim] || []).find(([v]) => v === val);
     parts.push(`${t("bench_dim_" + dim)}: ${opt ? t(opt[1]) : val}`);
   }
+  // From the column, not the jsonb — see MEASURED_BY_OPTIONS above.
+  if (entry && entry.measured_by) {
+    const who = MEASURED_BY_OPTIONS.find(([v]) => v === entry.measured_by);
+    parts.push(`${t("bench_dim_measured_by")}: ${who ? t(who[1]) : entry.measured_by}`);
+  }
   return parts.length ? parts.join(" · ") : null;
 }
 
@@ -4589,6 +4594,7 @@ function Benchmarks({ viewUserId, manageId }) {
   // on the Passport yet) also falls through to free text.
   const [sport, setSport] = useState(null);
   const [metricKey, setMetricKey] = useState("");
+  const [measuredBy, setMeasuredBy] = useState("");
   const [retestBusy, setRetestBusy] = useState(null);
   const [retestMsg, setRetestMsg] = useState("");
   // Only the protocol dimensions the athlete actually answered. A dimension
@@ -4610,7 +4616,7 @@ function Benchmarks({ viewUserId, manageId }) {
         // (athlete_benchmarks' own is_parent_of policy) authorises it.
         setUid(manageId || user.id);
         const [{ data, error }, { data: ath }] = await Promise.all([
-          sb.from("athlete_benchmarks").select("id, metric, metric_key, protocol, value, unit, recorded_date").eq("user_id", manageId || user.id).order("recorded_date", { ascending: false })
+          sb.from("athlete_benchmarks").select("id, metric, metric_key, protocol, measured_by, value, unit, recorded_date").eq("user_id", manageId || user.id).order("recorded_date", { ascending: false })
             .then((r) => (r.error ? sb.from("athlete_benchmarks").select("id, metric, value, unit, recorded_date").eq("user_id", manageId || user.id).order("recorded_date", { ascending: false }) : r)),
           sb.from("athletes").select("sport").eq("id", manageId || user.id).maybeSingle(),
         ]);
@@ -4654,20 +4660,23 @@ function Benchmarks({ viewUserId, manageId }) {
         // A free-text metric stays NULL rather than being guessed into a key.
         metric_key: metricKey || null,
         protocol: Object.keys(cleanProtocol).length ? cleanProtocol : null,
-      }).select("id, metric, metric_key, protocol, value, unit, recorded_date").single();
+        // Its own column (142), never folded into protocol. "" is the honest
+        // "I did not say" and stores NULL rather than a value.
+        measured_by: measuredBy || null,
+      }).select("id, metric, metric_key, protocol, measured_by, value, unit, recorded_date").single();
       // Same hand-applied-migration tolerance as GoalCard above (114). The
       // measurement is recorded either way; only its protocol is lost, and
       // an unrecorded protocol is already treated everywhere as unknown, so
       // this degrades to exactly the pre-P1-2 behaviour rather than to a
       // wrong value.
-      if (error && (error.code === "PGRST204" || /metric_key|protocol/.test(error.message || ""))) {
-        console.warn("GOLSZ benchmark protocol columns missing (migration 114 not applied) — saving without them.");
+      if (error && (error.code === "PGRST204" || /metric_key|protocol|measured_by/.test(error.message || ""))) {
+        console.warn("GOLSZ benchmark protocol/provenance columns missing (migration 114 or 142 not applied) — saving without them.");
         ({ data, error } = await sb.from("athlete_benchmarks").insert(base)
           .select("id, metric, value, unit, recorded_date").single());
       }
       if (error) throw error;
       setItems((prev) => [data, ...prev]);
-      setMetric(""); setValue(""); setUnit(""); setMetricKey(""); setProtocol({});
+      setMetric(""); setValue(""); setUnit(""); setMetricKey(""); setProtocol({}); setMeasuredBy("");
     } catch (e) {
       setErr((e && e.message) || t("benchmarks_add_err"));
     } finally { setBusy(false); }
@@ -4826,9 +4835,23 @@ function Benchmarks({ viewUserId, manageId }) {
               electronic timing, standing vs approach vertical). Every one
               defaults to "not recorded" and stays that way unless answered —
               GOLSZ never guesses how a measurement was taken. */}
+          {/* Comparability questions appear only where the answer changes
+              whether two numbers mean the same thing; WHO measured it is asked
+              for every metric, because it is meaningful on a goals tally as
+              much as on a sprint. Both default to not-recorded and stay that
+              way unless answered — GOLSZ never guesses how, or by whom, a
+              measurement was taken. */}
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 10, color: C.slate, fontWeight: 700, marginBottom: 5 }}>{t("bench_protocol_title")}</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <select value={measuredBy} onChange={(e) => setMeasuredBy(e.target.value)} aria-label={t("bench_dim_measured_by")} style={{ flex: "1 1 140px", ...inputStyle }}>
+                <option value="">{t("bench_protocol_unknown")} — {t("bench_dim_measured_by")}</option>
+                {MEASURED_BY_OPTIONS.map(([val, key]) => <option key={val} value={val}>{t(key)}</option>)}
+              </select>
+            </div>
+          </div>
           {protocolFields.length > 0 && (
             <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 10, color: C.slate, fontWeight: 700, marginBottom: 5 }}>{t("bench_protocol_title")}</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {protocolFields.map((dim) => (
                   <select key={dim} value={protocol[dim] || ""} onChange={(e) => setProtocol((prev) => ({ ...prev, [dim]: e.target.value }))} aria-label={t("bench_dim_" + dim)} style={{ flex: "1 1 140px", ...inputStyle }}>
@@ -14944,7 +14967,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=d9246e75efb23b6a";
+    s.src = "js/app.js?v=80fffcb38837701c";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

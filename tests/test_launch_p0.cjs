@@ -186,7 +186,7 @@ ck("the goal write retries with authorship stripped",
 ck("...only for the profiles table, only when authorship was set",
    /if \(!r\.ok && table === "profiles" && patches\.profiles\.goal_source\)/.test(SRC), true);
 ck("the client goal save has the same tolerance", /migration 113 not applied\) — saving without them/.test(APP), true);
-ck("the benchmark insert has it for 114", /migration 114 not applied\) — saving without them/.test(APP), true);
+ck("the benchmark insert has it for 114 and 142", /migration 114 or 142 not applied\) — saving without them/.test(APP), true);
 
 console.log("\n-- P0-5: the client actually shows and edits the goal --");
 ck("GoalCard exists", /function GoalCard\(/.test(APP), true);

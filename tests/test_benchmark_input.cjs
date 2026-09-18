@@ -117,7 +117,29 @@ ck("adds protocol jsonb", /add column if not exists protocol jsonb/.test(MIG), t
 ck("neither new column is NOT NULL — existing history is not rewritten",
    /add column if not exists (metric_key text|protocol jsonb) not null/i.test(MIG), false);
 ck("it says explicitly that old rows are NOT backfilled", /Backfilling a guess would/.test(MIG), true);
-ck("the client reads the new columns back", /select\("id, metric, metric_key, protocol, value, unit, recorded_date"\)/.test(APP), true);
+ck("the client reads the new columns back", /select\("id, metric, metric_key, protocol, measured_by, value, unit, recorded_date"\)/.test(APP), true);
+
+console.log("\n-- provenance is recorded, and is not a protocol dimension --");
+// WHO measured it (migration 142) is deliberately NOT in PROTOCOL_OPTIONS, and
+// this is the assertion that keeps it out. The engine owns PROTOCOL_DIMENSIONS;
+// a client that offered measured_by as one would be claiming a comparability
+// api/scout.js never agreed to. The guard above ("...and a real
+// PROTOCOL_DIMENSION") is what caught the first attempt at this.
+ck("measured_by is not offered as a protocol dimension",
+   /PROTOCOL_OPTIONS = \{[\s\S]*?\n\};/.exec(APP)[0].includes("measured_by"), false);
+ck("...it has its own option list instead",
+   /const MEASURED_BY_OPTIONS = \[\["self", "bench_by_self"\], \["coach", "bench_by_coach"\], \["official", "bench_by_official"\]\];/.test(APP), true);
+// The column's check constraint allows exactly these three or NULL, so an
+// option the constraint rejects would be a save that fails at the database.
+ck("...whose values match the 142 check constraint",
+   ["self", "coach", "official"].filter((v) => !new RegExp(`\\["${v}", "bench_by_`).test(APP)), []);
+ck("the insert writes it as its own column, null when unanswered",
+   /measured_by: measuredBy \|\| null,/.test(APP), true);
+// A protocol signature decides what may be compared. Provenance must never
+// enter it, or the Passport would refuse to compare two genuinely comparable
+// readings because different people held the watch.
+ck("comparability never consults provenance",
+   /function protocolSignature\([\s\S]*?\n\}/.exec(APP)[0].includes("measured_by"), false);
 
 console.log("\n-- scoring stays OFF --");
 ck("no reference bands were added", BENCHMARK_BANDS.length, 0);
