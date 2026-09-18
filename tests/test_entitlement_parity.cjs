@@ -226,5 +226,53 @@ ck("...and undefined too", client.featureUnlocked(undefined, "pathway_plan", tru
   ck("...and so does featureLocked", lk >= 0 && lk < lf, true);
 }
 
+console.log("\n-- a locked feature is never advertised as a place to go --");
+// THE DEAD END THIS CLOSES.
+// Home's focus-area block is not plan-gated, so any athlete holding items
+// reaches it — someone who was Pro and downgraded, or whose items Scout added.
+// When every item was ticked it said "Every focus area is done. Add the next
+// one in your Plan." But development_plan is Pro: Free cannot open the Plan
+// page at all (featureLocked(plan, "targets")) and Starter meets a FeatureLock
+// on the card. The sentence promised an action a third of the plan tiers
+// cannot take, and no test objected because the string was merely a string.
+{
+  const CLIENT = fs.readFileSync(require("path").join(REPO, "golsz-app.html"), "utf8");
+  for (const [lang, value] of [
+    ["en", /home_focus_all_done: "([^"]*)"/g],
+  ]) {
+    const all = [...CLIENT.matchAll(value)].map((m) => m[1]);
+    ck(`${lang} all-done line exists in all four languages`, all.length, 4);
+    // It must state a fact, not a destination — the destination is now a
+    // control that knows whether it is reachable.
+    ck("...and none of them names a destination",
+       all.filter((v) => /Plan|Passport|Passeport|Pasaporte|Πλάνο|Διαβατήρι/.test(v)), []);
+  }
+  // The affordance under it is gated on the feature it leads to, and shows
+  // nothing at all while the plan is unknown.
+  const block = CLIENT.slice(CLIENT.indexOf('t("home_focus_all_done")'));
+  const near = block.slice(0, 5000);
+  ck("the affordance is gated on development_plan",
+     /!planKnown\(plan\) \? null : featureUnlocked\(plan, "development_plan"\) \?/.test(near), true);
+  // Split the ternary and check each branch on its own, rather than trusting
+  // a character-distance window: a window wide enough to pass is a window wide
+  // enough to match the other branch, which would assert nothing.
+  const tern = near.indexOf('featureUnlocked(plan, "development_plan") ?');
+  const elseAt = near.indexOf(") : (", tern);
+  const endAt = near.indexOf(")}", elseAt);
+  ck("the affordance's two branches are both findable", tern >= 0 && elseAt > tern && endAt > elseAt, true);
+  const unlocked = near.slice(tern, elseAt);
+  const locked = near.slice(elseAt, endAt);
+  ck("...unlocked sends the athlete to Plan and nowhere else",
+     /onNavigate\("targets"\)/.test(unlocked) && /home_focus_add_next/.test(unlocked), true);
+  ck("...and does not offer an upgrade to someone who already has the feature",
+     /onUpgrade/.test(unlocked), false);
+  ck("...locked offers the upgrade instead of a dead link",
+     /onUpgrade/.test(locked) && /feature_lock_cta/.test(locked), true);
+  ck("...and never navigates a locked athlete to the page they cannot open",
+     /onNavigate/.test(locked), false);
+  ck("home_focus_add_next is defined in all four languages",
+     (CLIENT.match(/home_focus_add_next:/g) || []).length, 4);
+}
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
