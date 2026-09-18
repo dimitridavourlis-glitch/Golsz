@@ -40,8 +40,11 @@ ck("it steps back Monday-first, not Sunday-first",
 // six chances to disagree about what days those are.
 ck("Plan derives its calendar from the shared derivation",
    /const calView = calendarGrid\(calScale, calCursor, milestones\);/.test(APP), true);
-ck("Home derives its calendar from the same shared derivation",
-   /const days = calendarGrid\(homeScale, homeCursor, allMilestones\)\.days \|\| \[\];/.test(APP), true);
+// Home no longer derives one at all — its read-only week was removed in the
+// reorganisation and Plan is the only screen with a calendar. That is a
+// stronger guarantee than "both use the shared function": there is only one.
+ck("Home derives no calendar of its own",
+   /calendarGrid\(homeScale, homeCursor/.test(APP), false);
 // The whole reason calendarGrid exists. Home and Plan had already drifted on
 // the one scale they shared; two more scales each would have made six
 // hand-written windows and six chances to disagree about what a month is.
@@ -132,91 +135,83 @@ ck("plan_week_title exists in all four dictionaries",
 ck("plan_week_empty exists in all four dictionaries",
    (APP.match(/plan_week_empty:/g) || []).length, 4);
 
-console.log("\n-- Home's calendar says what is in it --");
-// Seven boxes that never name their contents are a picture of a week. The
-// footer line is what makes the grid worth looking at, and the day it picks
-// is the part that can be quietly wrong, so run the real expression.
-// Both lines: the predicate and the pick. Lifting only the pick left undoneOn
-// undefined at run time, which is the eval'd-in-isolation trap this file keeps
-// having to respect.
-const upSrc = (APP.match(/const undoneOn = [^;]*;\s*const upcoming = days\.find\([^;]*;/) || [""])[0];
-ck("the upcoming-day expression was found", upSrc.length > 40, true);
-const pickUpcoming = new Function("days", "todayK", upSrc + " return upcoming;");
-const wk = (spec) => Object.keys(spec).map((k) => ({ key: k, rows: spec[k].map((done) => ({ done })) }));
-const D = ["2026-09-07","2026-09-08","2026-09-09","2026-09-10","2026-09-11","2026-09-12","2026-09-13"];
-const blank = () => { const o = {}; D.forEach((d) => { o[d] = []; }); return o; };
-const on = (day, rows) => { const o = blank(); o[day] = rows; return o; };
+console.log("\n-- Home no longer draws a calendar --");
+// EVERYTHING THAT WAS ASSERTED HERE WAS ABOUT HOME'S READ-ONLY WEEK, and that
+// week was removed in the Home/Plan/Passport reorganisation: a step gets its
+// day on Plan, so Plan is where the calendar lives, at three scales with a day
+// editor behind every cell. Home's copy existed to hand the athlete to Plan,
+// which the status row now does in one row instead of thirty-five cells.
+//
+// The six assertions that stood here — the upcoming-day footer, the all-clear
+// line, today's fill, the inverted numerals, the receding past day and the
+// per-cell frame — all named Home's own markup. Keeping them repointed at
+// Plan would have been a lie: Plan's cells have different states (a day can be
+// OPEN there) and are covered by the calendarGrid run-tests above and the
+// milestoneBand branches below.
+//
+// What is worth pinning is the REMOVAL, so putting a second calendar back on
+// Home is a deliberate act and not an accident.
+ck("Home does not derive a week of its own", /const homeWeek = \(\(\) => \{/.test(APP), false);
+ck("...and holds no calendar scale or cursor state",
+   /const \[homeScale, setHomeScale\]|const \[homeCursor, setHomeCursor\]/.test(APP), false);
+// calendarGrid stays shared and still serves Plan — removing Home's copy must
+// not have taken the derivation with it.
+ck("the shared derivation survives for Plan",
+   /const calView = calendarGrid\(calScale, calCursor, milestones\);/.test(APP), true);
 
-ck("today is picked when today still has open work",
-   (pickUpcoming(wk(on("2026-09-10", [false])), "2026-09-10") || {}).key, "2026-09-10");
-ck("a today with nothing left open hands off to the next day that has work",
-   (pickUpcoming(wk({ ...blank(), "2026-09-10": [true, true], "2026-09-12": [false] }), "2026-09-10") || {}).key, "2026-09-12");
-// Late is its own state and belongs at the front of the week as a count, not
-// as "your next day" — pointing an athlete at Tuesday when Tuesday has gone
-// is worse than saying nothing.
-// Superseded by the window rule below: a past day INSIDE the drawn window is
-// still on screen, so naming it is right. What must never happen is the
-// all-clear line appearing while undone work sits in view.
-ck("a past day's open step is offered once nothing forward has work",
-   (pickUpcoming(wk(on("2026-09-08", [false])), "2026-09-10") || {}).key, "2026-09-08");
-ck("a fully done week offers no day", pickUpcoming(wk(on("2026-09-11", [true, true])), "2026-09-10"), null);
-ck("the EARLIEST qualifying day wins, not the last",
-   (pickUpcoming(wk({ ...blank(), "2026-09-11": [false], "2026-09-13": [false] }), "2026-09-10") || {}).key, "2026-09-11");
-ck("an empty week offers no day", pickUpcoming(wk(blank()), "2026-09-10"), null);
-// THE CONTRADICTION THIS PREVENTS. Looking only forward, a week whose one
-// undone step sat on Monday found nothing and fell through to the all-clear
-// line — so Home printed "Everything on this week is done." beside a "1 LATE"
-// badge counting that exact step.
-ck("an undone step earlier in the window is named rather than ignored",
-   (pickUpcoming(wk(on("2026-09-08", [false])), "2026-09-10") || {}).key, "2026-09-08");
-ck("...but a forward day still wins when there is one",
-   (pickUpcoming(wk({ ...blank(), "2026-09-08": [false], "2026-09-11": [false] }), "2026-09-10") || {}).key, "2026-09-11");
-ck("a window that really is all done offers nothing",
-   pickUpcoming(wk(on("2026-09-08", [true, true])), "2026-09-10"), null);
-ck("the footer prints the step's own label, not a count",
-   /homeWeek\.upcoming\.rows\.find\(\(m\) => !m\.done\)\.label/.test(APP), true);
-ck("a week with work all done says so rather than falling silent",
-   /homeWeek\.count === 0 \? t\("home_week_empty"\) : t\("home_week_clear"\)/.test(APP), true);
+console.log("\n-- the week states its own dates --");
+// weekRangeLabel was HOME's, and Home's calendar is gone. Plan states its own
+// range through calTitle, which the pager assertions above already exercise at
+// all three scales (a week range, a month name, a rolling twelve months).
+ck("Plan still names the range it is showing", /const calTitle = calScale === "year"/.test(APP), true);
+ck("...and Home's copy went with Home's calendar",
+   /const weekRangeLabel = \(\(\) => \{/.test(APP), false);
+
+console.log("\n-- Home no longer draws a calendar --");
+// EVERYTHING THAT WAS ASSERTED HERE WAS ABOUT HOME'S READ-ONLY WEEK, and that
+// week was removed in the Home/Plan/Passport reorganisation: a step gets its
+// day on Plan, so Plan is where the calendar lives, at three scales with a day
+// editor behind every cell. Home's copy existed to hand the athlete to Plan,
+// which the status row now does in one row instead of thirty-five cells.
+//
+// The six assertions that stood here — the upcoming-day footer, the all-clear
+// line, today's fill, the inverted numerals, the receding past day and the
+// per-cell frame — all named Home's own markup. Keeping them repointed at
+// Plan would have been a lie: Plan's cells have different states (a day can be
+// OPEN there) and are covered by the calendarGrid run-tests above and the
+// milestoneBand branches below.
+//
+// What is worth pinning is the REMOVAL, so putting a second calendar back on
+// Home is a deliberate act and not an accident.
+ck("Home does not derive a week of its own", /const homeWeek = \(\(\) => \{/.test(APP), false);
+ck("...and holds no calendar scale or cursor state",
+   /const \[homeScale, setHomeScale\]|const \[homeCursor, setHomeCursor\]/.test(APP), false);
+// calendarGrid stays shared and still serves Plan — removing Home's copy must
+// not have taken the derivation with it.
+ck("the shared derivation survives for Plan",
+   /const calView = calendarGrid\(calScale, calCursor, milestones\);/.test(APP), true);
 
 console.log("\n-- the week states its own dates --");
 // "THIS WEEK" over bare numerals 7 to 13 does not say which seven days those
 // are. A week that straddles two months has to print both.
-const rangeStart = APP.indexOf("const weekRangeLabel = (() => {");
-const rangeSrc = APP.slice(rangeStart, APP.indexOf("})();", rangeStart) + 5);
-ck("the range expression was found", rangeSrc.length > 120, true);
-// It now reads homeScale and homeCursor too, because Home carries all three
-// scales; supply them rather than stubbing the label, so this keeps running
-// the real expression.
-const rangeOf = new Function("homeWeek", "lang", "homeScale", "homeCursor", rangeSrc + " return weekRangeLabel;");
-const daysFrom = (iso) => ({ days: Array.from({ length: 7 }, (_, i) => {
-  const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + i); return { date: d };
-}), months: null });
-const cur = (iso) => new Date(iso + "T12:00:00");
-ck("one month prints one month name",
-   rangeOf(daysFrom("2026-09-07"), "en", "week", cur("2026-09-07")), "Sep 7 — 13");
-ck("a week across two months prints both",
-   rangeOf(daysFrom("2026-09-28"), "en", "week", cur("2026-09-28")), "Sep 28 — Oct 4");
-ck("no week, no label", rangeOf(null, "en", "week", cur("2026-09-07")), "");
-// The other two scales name themselves rather than printing a day range.
-ck("a month names the month and year",
-   rangeOf(daysFrom("2026-09-07"), "en", "month", cur("2026-09-15")), "September 2026");
-ck("a year names the span it actually draws",
-   rangeOf({ days: [], months: Array.from({ length: 12 }, (_, i) => ({ date: new Date(2026, 8 + i, 1) })) },
-     "en", "year", cur("2026-09-15")), "September 2026 — August 2027");
 
 console.log("\n-- today is a mark, not a form field --");
 // An outline is how a text input says "focused". A calendar marks today by
-// filling it, and an athlete should be able to find today without reading.
-ck("today's cell is filled", /background: d\.isToday \? C\.lime/.test(APP), true);
-ck("...and its numerals invert onto the fill", /const ink = d\.isToday \? C\.pitch/.test(APP), true);
-ck("the day numeral of a day already gone recedes",
-   /opacity: past && !d\.rows\.length \? 0\.5 : 1/.test(APP), true);
-// Fading the whole cell erased its border — C.line is 8% alpha, and
-// 8% of 42% is nothing — so the row stopped reading as seven days.
-ck("...but the cell itself is never faded", /opacity: past && !d\.rows\.length \? 0\.42/.test(APP), false);
-ck("every day keeps a visible frame",
-   /border: `1px solid \$\{d\.isToday \? C\.lime : all \? "transparent" : d\.rows\.length \? C\.line2 : C\.line\}`\}\}>/.test(APP), true);
-// Capping the dots and saying nothing loses exactly the days worth seeing.
+// filling it, and an athlete should find today without reading.
+//
+// These assertions named HOME's cell markup, and Home's calendar is gone. Plan
+// marks today differently and deliberately: gold FILL is reserved for the day
+// whose editor is OPEN, because on Plan a cell is a control, and today gets a
+// gold ring instead. Asserting Home's spelling against Plan would have passed
+// for the wrong reason or failed for no reason.
+ck("Plan rings today and fills only the open day",
+   /background: open \? C\.lime : d\.isToday \? C\.limeWash/.test(APP), true);
+ck("...and every cell keeps a frame at every scale",
+   /border: `1px solid \$\{open \|\| d\.isToday \? C\.lime : d\.rows\.length \? C\.line2 : C\.line\}`/.test(APP), true);
+// Padding days from the neighbouring month recede without vanishing — the
+// month must still read as whole weeks.
+ck("month padding recedes rather than disappearing",
+   /opacity: d\.out \? 0\.4 : 1/.test(APP), true);
 ck("a day with more than three steps shows the count instead of three dots",
    /d\.rows\.length > 3 \? \(/.test(APP), true);
 ck("the old full-width empty-state button is gone", /home_week_open/.test(APP), false);

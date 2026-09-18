@@ -564,8 +564,15 @@ ck("Plan's overdue count excludes suggestions",
    /const overdueCount = milestones\.filter\(\(m\) => !m\.done && m\.due && !suggestedDate\(m\)/.test(APP), true);
 ck("Home's plan-door late count excludes suggestions",
    /const stepsLate = allMilestones\.filter\(\(m\) => !m\.done && m\.due && !suggestedDate\(m\)/.test(APP), true);
-ck("Home's week late count excludes suggestions",
-   /const late = allMilestones\.filter\(\(m\) => !m\.done && m\.due && !suggestedDate\(m\)/.test(APP), true);
+// Home's WEEK late count went with Home's week calendar — the read-only
+// calendar was removed in the reorganisation and Plan owns dates now. The
+// door-level late count below still runs on Home's status row and still has to
+// exclude suggestions, which is the guarantee that matters: an AI's guess must
+// never make a fifteen-year-old read as behind.
+ck("Home's week late count went with Home's week calendar",
+   /const late = allMilestones\.filter/.test(APP), false);
+ck("...and the count Home still shows excludes suggestions",
+   /const stepsLate = allMilestones\.filter\(\(m\) => !m\.done && m\.due && !suggestedDate\(m\)/.test(APP), true);
 // The band itself is RUN across every branch in test_plan_week; this only
 // confirms the predicate is still what routes an untouched suggestion away
 // from OVERDUE.
