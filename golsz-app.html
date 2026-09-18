@@ -660,7 +660,7 @@ const I18N = {
     reset_pw_choose: "Choose a new password for your GOLSZ account.", reset_pw_new_ph: "New password",
     reset_pw_confirm_ph: "Confirm new password", reset_pw_update_btn: "Update password",
     reset_pw_min_len: "Password must be at least 6 characters.", reset_pw_mismatch: "Passwords don't match.",
-    reset_pw_err: "Couldn't update password.", home_focus_add_next: "Add the next one in Plan",
+    reset_pw_err: "Couldn't update password.", home_focus_add_next: "Add the next one in Plan", bench_dim_measured_by: "measured by", bench_by_self: "Self", bench_by_coach: "Coach", bench_by_official: "Official / combine", bench_method_none: "Method not recorded", bench_trend_change: "{delta} since {date}", bench_trend_incomparable: "Not compared — measured differently, or the method was not recorded.", bench_retest: "Retest", bench_retest_done: "Retest added to your Plan for {date}.", bench_retest_err: "Could not add that to your Plan. Try again.",
   },
   fr: {
     loading: "Chargement…", yes: "Oui", no: "Non",
@@ -1007,7 +1007,7 @@ const I18N = {
     reset_pw_choose: "Choisissez un nouveau mot de passe pour votre compte GOLSZ.", reset_pw_new_ph: "Nouveau mot de passe",
     reset_pw_confirm_ph: "Confirmer le nouveau mot de passe", reset_pw_update_btn: "Mettre à jour le mot de passe",
     reset_pw_min_len: "Le mot de passe doit contenir au moins 6 caractères.", reset_pw_mismatch: "Les mots de passe ne correspondent pas.",
-    reset_pw_err: "Impossible de mettre à jour le mot de passe.", home_focus_add_next: "Ajouter le suivant dans Plan",
+    reset_pw_err: "Impossible de mettre à jour le mot de passe.", home_focus_add_next: "Ajouter le suivant dans Plan", bench_dim_measured_by: "mesuré par", bench_by_self: "Soi-même", bench_by_coach: "Entraîneur", bench_by_official: "Officiel / combine", bench_method_none: "Méthode non renseignée", bench_trend_change: "{delta} depuis le {date}", bench_trend_incomparable: "Non comparé — mesures différentes, ou méthode non renseignée.", bench_retest: "Retester", bench_retest_done: "Retest ajouté à votre Plan pour le {date}.", bench_retest_err: "Impossible d'ajouter cela à votre Plan. Réessayez.",
   },
   es: {
     loading: "Cargando…", yes: "Sí", no: "No",
@@ -1354,7 +1354,7 @@ const I18N = {
     reset_pw_choose: "Elige una nueva contraseña para tu cuenta de GOLSZ.", reset_pw_new_ph: "Nueva contraseña",
     reset_pw_confirm_ph: "Confirmar nueva contraseña", reset_pw_update_btn: "Actualizar contraseña",
     reset_pw_min_len: "La contraseña debe tener al menos 6 caracteres.", reset_pw_mismatch: "Las contraseñas no coinciden.",
-    reset_pw_err: "No se pudo actualizar la contraseña.", home_focus_add_next: "Añade la siguiente en Plan",
+    reset_pw_err: "No se pudo actualizar la contraseña.", home_focus_add_next: "Añade la siguiente en Plan", bench_dim_measured_by: "medido por", bench_by_self: "Yo mismo", bench_by_coach: "Entrenador", bench_by_official: "Oficial / combine", bench_method_none: "Método sin registrar", bench_trend_change: "{delta} desde el {date}", bench_trend_incomparable: "Sin comparar — se midieron de forma distinta, o no se registró el método.", bench_retest: "Volver a medir", bench_retest_done: "Nueva medición añadida a tu Plan para el {date}.", bench_retest_err: "No se pudo añadir a tu Plan. Inténtalo de nuevo.",
   },
   el: {
     loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
@@ -1701,7 +1701,7 @@ const I18N = {
     reset_pw_choose: "Επιλέξτε νέο κωδικό για τον λογαριασμό σας στο GOLSZ.", reset_pw_new_ph: "Νέος κωδικός",
     reset_pw_confirm_ph: "Επιβεβαίωση νέου κωδικού", reset_pw_update_btn: "Ενημέρωση κωδικού",
     reset_pw_min_len: "Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες.", reset_pw_mismatch: "Οι κωδικοί δεν ταιριάζουν.",
-    reset_pw_err: "Δεν ήταν δυνατή η ενημέρωση του κωδικού.", home_focus_add_next: "Πρόσθεσε τον επόμενο στο Πλάνο",
+    reset_pw_err: "Δεν ήταν δυνατή η ενημέρωση του κωδικού.", home_focus_add_next: "Πρόσθεσε τον επόμενο στο Πλάνο", bench_dim_measured_by: "μετρήθηκε από", bench_by_self: "Ο ίδιος", bench_by_coach: "Προπονητής", bench_by_official: "Επίσημος / combine", bench_method_none: "Δεν καταγράφηκε μέθοδος", bench_trend_change: "{delta} από {date}", bench_trend_incomparable: "Χωρίς σύγκριση — μετρήθηκαν διαφορετικά, ή δεν καταγράφηκε η μέθοδος.", bench_retest: "Ξαναμέτρηση", bench_retest_done: "Η ξαναμέτρηση προστέθηκε στο Πλάνο σου για {date}.", bench_retest_err: "Δεν προστέθηκε στο Πλάνο σου. Δοκίμασε ξανά.",
   },
 };
 const LANGS = [["en", "English"], ["fr", "Français"], ["es", "Español"], ["el", "Ελληνικά"]];
@@ -4513,6 +4513,69 @@ const PROTOCOL_OPTIONS = {
   jump_protocol: [["standing_vertical", "bench_jump_standing"], ["max_vertical", "bench_jump_max"]],
 };
 
+// WHO TOOK THE MEASUREMENT IS NOT RECORDED YET, AND MUST NOT BE FAKED HERE.
+// The brief for this card asks for hand-vs-electronic AND who measured it.
+// The first half exists (migration 114). The second does not, and the two
+// obvious shortcuts are both wrong:
+//
+//   • Adding measured_by to PROTOCOL_OPTIONS above. test_benchmark_input
+//     lifts PROTOCOL_DIMENSIONS straight out of api/scout.js and asserts the
+//     client asks about nothing the engine does not know. That guard is
+//     right: the engine decides what is comparable, and a client that invents
+//     a dimension would be asserting comparability the server never agreed to.
+//
+//   • Writing it into the protocol jsonb anyway. Migration 114 documents that
+//     column as holding "only the PROTOCOL_DIMENSIONS the athlete actually
+//     reported". Smuggling a non-engine key in would break a contract written
+//     down precisely so nobody would.
+//
+// So it needs a column of its own — see supabase-migration-142-benchmark-
+// measured-by.sql, written and awaiting approval. Until it is applied this
+// card records HOW a measurement was taken and not BY WHOM, and says exactly
+// that rather than implying the provenance is complete.
+
+// The dimensions that decide whether two numbers are the same measurement at
+// all — exactly METRIC_PROTOCOL_FIELDS, which is itself drawn from the
+// server's PROTOCOL_INCOMPATIBILITIES. A metric absent from that map needs no
+// protocol: goals scored is goals scored, so its readings are comparable with
+// nothing recorded.
+function comparabilityDims(metricKey) {
+  return (metricKey && METRIC_PROTOCOL_FIELDS[metricKey]) || [];
+}
+
+// A stable key for "these were measured the same way", or NULL for "we cannot
+// say". Null is the important half. An unanswered dimension is UNKNOWN, and
+// two unknowns are not a match — nobody wrote down how either was taken, so
+// asserting they are comparable would be inventing the provenance that this
+// whole layer exists to protect. Migration 114 says the same thing about
+// backfilling: "Backfilling a guess would be fabricating measurement
+// provenance."
+//
+// Returns "none" — a real signature, not null — when the metric needs no
+// protocol at all. That is a positive statement (nothing to record, so nothing
+// is missing), and it is what lets a goals-scored history still show a trend.
+function protocolSignature(entry, dims) {
+  if (!dims.length) return "none";
+  const p = (entry && entry.protocol) || {};
+  for (const d of dims) if (!p[d]) return null;
+  return dims.map((d) => d + "=" + p[d]).join("|");
+}
+
+// Every dimension actually recorded on one reading, as readable text, or null
+// when nothing was — which is the case this exists for, since a blank line
+// reads as "nothing to report" and an absent protocol is not that.
+function describeProtocol(entry, t) {
+  const p = (entry && entry.protocol) || {};
+  const parts = [];
+  for (const dim of Object.keys(PROTOCOL_OPTIONS)) {
+    const val = p[dim];
+    if (!val) continue;
+    const opt = (PROTOCOL_OPTIONS[dim] || []).find(([v]) => v === val);
+    parts.push(`${t("bench_dim_" + dim)}: ${opt ? t(opt[1]) : val}`);
+  }
+  return parts.length ? parts.join(" · ") : null;
+}
+
 function Benchmarks({ viewUserId, manageId }) {
   const { t } = useLang();
   const [items, setItems] = useState([]);
@@ -4526,6 +4589,8 @@ function Benchmarks({ viewUserId, manageId }) {
   // on the Passport yet) also falls through to free text.
   const [sport, setSport] = useState(null);
   const [metricKey, setMetricKey] = useState("");
+  const [retestBusy, setRetestBusy] = useState(null);
+  const [retestMsg, setRetestMsg] = useState("");
   // Only the protocol dimensions the athlete actually answered. A dimension
   // left on "" is NOT stored — unknown stays unknown rather than defaulting
   // to whatever is most common, which would be inventing provenance.
@@ -4608,6 +4673,42 @@ function Benchmarks({ viewUserId, manageId }) {
     } finally { setBusy(false); }
   }
 
+  // RETEST WRITES A DATED STEP INTO THE PLAN, WHICH IS WHERE STEPS LIVE.
+  // A benchmark taken once is a number; a benchmark retested is a trend, and
+  // the trend is what this card exists for. The step is created with due_src
+  // "retest" so it shows on the calendar and in the bands but cannot call the
+  // athlete late — GOLSZ chose the fourteen days, not them.
+  //
+  // It re-reads pathway_plan.milestones immediately before writing rather than
+  // trusting anything held here: milestones is a jsonb array on one row that
+  // Plan and Home both edit, and this card sits on a third screen.
+  async function addRetest(metricLabel) {
+    if (!sb || !uid || !isOwner || retestBusy) return;
+    setRetestBusy(metricLabel); setRetestMsg(""); setErr("");
+    try {
+      const due = isoDay(new Date(Date.now() + 14 * 86400000));
+      const { data: row, error: readErr } = await sb.from("pathway_plan")
+        .select("milestones").eq("user_id", uid).maybeSingle();
+      if (readErr) throw readErr;
+      // No pathway row means there is no plan to add a step to. Saying so
+      // beats silently creating a pathway the athlete never chose.
+      if (!row) throw new Error(t("bench_retest_err"));
+      const next = (Array.isArray(row.milestones) ? row.milestones : []).concat([
+        normalizeMilestone({
+          label: `${t("bench_retest")}: ${metricLabel}`.slice(0, 120),
+          due, due_src: "retest",
+        }),
+      ]);
+      const { error } = await sb.from("pathway_plan")
+        .update({ milestones: next, updated_at: new Date().toISOString() })
+        .eq("user_id", uid);
+      if (error) throw error;
+      setRetestMsg(t("bench_retest_done").replace("{date}", due));
+    } catch (e) {
+      setErr((e && e.message) || t("bench_retest_err"));
+    } finally { setRetestBusy(null); }
+  }
+
   async function removeEntry(id) {
     if (!sb || !uid || !isOwner) return;
     setItems((prev) => prev.filter((b) => b.id !== id));
@@ -4623,24 +4724,79 @@ function Benchmarks({ viewUserId, manageId }) {
   // null for a sport GOLSZ has no schema for (39 of the 41 offered), which is
   // the free-text path this component has always had.
   const sportMetrics = sport ? (BENCHMARK_METRICS_BY_SPORT[sport] || null) : null;
+  // Comparability questions are asked only where the answer changes whether
+  // two numbers mean the same thing. Provenance is asked always: who took the
+  // measurement is meaningful on a goals tally as much as on a sprint, and it
+  // is the half of "how was it measured" this card did not record before.
   const protocolFields = (metricKey && metricKey !== "__other" && METRIC_PROTOCOL_FIELDS[metricKey]) || [];
 
   return (
     <div style={{ ...card }}>
       <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("benchmarks_title")}</div>
       {loaded && items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate }}>{t("benchmarks_empty")}</div>}
-      {Object.entries(grouped).map(([m, entries]) => (
-        <div key={m} style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: C.chalk, marginBottom: 4 }}>{m}</div>
-          {entries.map((e, i) => (
+      {Object.entries(grouped).map(([m, entries]) => {
+        // THE TREND IS COMPUTED ONLY ACROSS READINGS TAKEN THE SAME WAY.
+        // entries arrives newest-first (the query orders by recorded_date
+        // desc). The comparability dimensions come from whichever reading in
+        // this group carries a canonical metric_key — a free-text metric has
+        // none, so its readings need no protocol and compare with each other.
+        const dims = comparabilityDims((entries.find((e) => e.metric_key) || {}).metric_key);
+        const latest = entries[0];
+        const sig = protocolSignature(latest, dims);
+        // Same measurement as the newest one, oldest last. A null signature
+        // matches nothing — not even another null — because two unrecorded
+        // methods are two unknowns, not a pair.
+        const comparable = sig === null ? [] : entries.filter((e) => protocolSignature(e, dims) === sig);
+        const previous = comparable.length > 1 ? comparable[comparable.length - 1] : null;
+        // Signed, and never called an improvement: the client's metric schema
+        // carries no direction, and for a sprint time down is better while for
+        // a jump it is worse. Stating the change and the date it is measured
+        // from is the whole honest claim.
+        const delta = previous ? Number(latest.value) - Number(previous.value) : null;
+        const deltaText = delta === null ? null
+          : `${delta > 0 ? "+" : delta < 0 ? "\u2212" : "\u00B1"}${Math.abs(delta).toFixed(2).replace(/\.?0+$/, "")}${latest.unit ? ` ${latest.unit}` : ""}`;
+        return (
+        <div key={m} style={{ marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: C.chalk, minWidth: 0, overflowWrap: "anywhere" }}>{m}</div>
+            {isOwner && sb && (
+              <button onClick={() => addRetest(m)} disabled={retestBusy === m}
+                style={{ marginLeft: "auto", flexShrink: 0, background: "none", border: `1px solid ${C.line2}`, borderRadius: 8,
+                  color: C.lime, fontSize: 10.5, fontWeight: 800, fontFamily: "inherit", padding: "5px 9px", minHeight: 30,
+                  cursor: retestBusy === m ? "wait" : "pointer", opacity: retestBusy === m ? 0.6 : 1 }}>
+                {t("bench_retest")}
+              </button>
+            )}
+          </div>
+          {deltaText && previous && (
+            <div style={{ fontSize: 11, color: C.slate, marginBottom: 4 }}>
+              {t("bench_trend_change").replace("{delta}", deltaText).replace("{date}", previous.recorded_date)}
+            </div>
+          )}
+          {!deltaText && entries.length > 1 && (
+            <div style={{ fontSize: 11, color: C.slate, marginBottom: 4, lineHeight: 1.4 }}>{t("bench_trend_incomparable")}</div>
+          )}
+          {entries.map((e, i) => {
+            const how = describeProtocol(e, t);
+            return (
             <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 0", borderBottom: i < entries.length - 1 ? `1px solid ${C.line}` : "none" }}>
-              <div style={{ fontFamily: "'Space Mono', monospace", fontWeight: 800, color: C.lime, fontSize: 13 }}>{e.value}{e.unit ? ` ${e.unit}` : ""}</div>
-              <div style={{ fontSize: 11, color: C.slate, marginLeft: "auto" }}>{e.recorded_date}</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: "'Space Mono', monospace", fontWeight: 800, color: C.lime, fontSize: 13 }}>{e.value}{e.unit ? ` ${e.unit}` : ""}</div>
+                {/* Never guessed. An absent protocol says so in words rather
+                    than rendering a blank line that reads as "nothing to
+                    report" — migration 114's whole point is that unknown
+                    provenance stays unknown and visible. */}
+                <div style={{ fontSize: 10, color: C.slate, marginTop: 2, lineHeight: 1.35 }}>{how || t("bench_method_none")}</div>
+              </div>
+              <div style={{ fontSize: 11, color: C.slate, marginLeft: "auto", flexShrink: 0 }}>{e.recorded_date}</div>
               <button onClick={() => removeEntry(e.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><X size={13} /></button>
             </div>
-          ))}
+            );
+          })}
         </div>
-      ))}
+        );
+      })}
+      {retestMsg && <div style={{ fontSize: 11.5, color: C.lime, marginBottom: 8 }}>{retestMsg}</div>}
       {sb && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -11173,7 +11329,7 @@ function normalizeMilestone(m) {
     //
     // Cleared by any edit to the step — see touched() below. Touching it is
     // what makes the date theirs.
-    due_src: (m && m.due_src === "scout" && m.due) ? "scout" : null,
+    due_src: (m && (m.due_src === "scout" || m.due_src === "retest") && m.due) ? m.due_src : null,
   };
 }
 // A step stops being Scout's suggestion the moment the athlete acts on it:
@@ -11191,7 +11347,13 @@ function touchedMilestone(m) {
 // agreed to it. One tap on a confirm card is consent to a plan, not consent to
 // twelve individual deadlines.
 function suggestedDate(m) {
-  return !!(m && m.due_src === "scout" && m.due);
+  // "retest" joins "scout" here because the question this asks is not WHO
+  // proposed the date but WHETHER THE ATHLETE AGREED TO IT. Tapping Retest on
+  // a benchmark is consent to retest, not consent to a specific Tuesday
+  // fourteen days out — GOLSZ picked that day, so it may sit on the calendar
+  // and it may not call anyone late. touchedMilestone clears either value the
+  // moment the athlete acts on the step, which is what makes the date theirs.
+  return !!(m && (m.due_src === "scout" || m.due_src === "retest") && m.due);
 }
 // THE RULE behind "what do I do now" — stated, never inferred:
 // the earliest-dated step that is not done; if nothing carries a date, the first
@@ -14782,7 +14944,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=3f1826a10c4af533";
+    s.src = "js/app.js?v=d9246e75efb23b6a";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
