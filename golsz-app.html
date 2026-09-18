@@ -9051,6 +9051,12 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
   const [lastAsk, setLastAsk] = useState(null);
   const [devBusy, setDevBusy] = useState(null);
   const [devError, setDevError] = useState("");
+  // Home returns a skeleton while the fetch is in flight, so every hook has to
+  // be declared above that return — a useState further down runs on the loaded
+  // render only, and React throws "rendered more hooks than during the previous
+  // render". These two belong to the next-step card far below.
+  const [stepBusy, setStepBusy] = useState(false);
+  const [stepErr, setStepErr] = useState("");
   // Home used to stack six cards below the hero and ask the athlete to scroll
   // past all of them. They answer two different questions — what am I
   // building, and how am I doing — so they are two panels switched in place
@@ -9354,8 +9360,6 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
   // canTargets gates it, so Free — and plan-not-yet-known — never lands here.
   const pathwayNext = canTargets && pathwayRow ? nextMilestone(pathwayRow.milestones) : null;
   const stepOverdue = !!(pathwayNext && pathwayNext.due && !suggestedDate(pathwayNext) && pathwayNext.due < isoDay(new Date()));
-  const [stepBusy, setStepBusy] = useState(false);
-  const [stepErr, setStepErr] = useState("");
   // TICKING IS THE ONE WRITE HOME DOES TO A STEP.
   // Plan owns milestones — it is a jsonb array on one row, so two screens
   // editing it is a read-modify-write race. Done is safe because it is
@@ -14613,7 +14617,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=48b9412e621fbbbe";
+    s.src = "js/app.js?v=0835b0ac868c5fca";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
