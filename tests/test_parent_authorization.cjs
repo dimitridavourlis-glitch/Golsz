@@ -162,6 +162,25 @@ function installFetch({ tokenUser = PARENT, authOk = true, linkThrows = false, l
   ck("the training editor is handed the managed athlete",
      (APP.match(/<DevelopmentPlan viewUserId=\{null\} manageId=\{actingFor \|\| null\} \/>/g) || []).length, 1);
 
+  // PathwayPlan was the last card on the Plan page reading the SIGNED-IN user
+  // instead of the managed athlete: a parent saw their own pathway on their
+  // child's Plan, and a milestone edit wrote to the parent's row. It also fed
+  // the wrong athlete to BackupPlanCard, which writes to `actingFor ||
+  // user.id` — so the parent read their own backup plan and saved it over the
+  // child's. Both symptoms, one wrong id.
+  ck("the pathway card receives actingFor",
+     /<PathwayPlan [^>]*actingFor=\{actingFor\}/.test(APP), true);
+  ck("...and resolves the managed athlete before any query",
+     /const who = actingFor \|\| user\.id;\s*\n\s*setUid\(who\);/.test(APP), true);
+  ck("...and neither of its reads is scoped to the signed-in user any more",
+     /sb\.from\("pathway_plan"\)[^\n]*\.eq\("user_id", user\.id\)/.test(APP), false);
+  ck("...including the athletes row it hands to BackupPlanCard",
+     /sb\.from\("athletes"\)\.select\("sport, club_name, recruiting_status, scout_context"\)\.eq\("id", who\)/.test(APP), true);
+  // An empty dep array here kept the first child's pathway on screen for the
+  // whole session when a parent switched athlete.
+  ck("...and it re-fetches when the parent switches athlete",
+     /\}, \[viewUserId, actingFor\]\);/.test(APP), true);
+
   console.log("\n-- manage mode is EDIT access, not view access --");
   ck("Passport distinguishes manage mode from viewing a stranger",
      /const viewingOther = !!\(viewUserId && uid && viewUserId !== uid && !manageMode\)/.test(APP), true);

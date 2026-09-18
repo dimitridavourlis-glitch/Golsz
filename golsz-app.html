@@ -10126,6 +10126,14 @@ function SkeletonLine({ height, width, radius, style }) {
 // exists and is already translated — not an invented per-sport route list.
 const BACKUP_ROUTE_SUGGESTIONS = ["ncaa", "naia", "juco", "canadian_university", "european_club", "professional"];
 
+// THIS CARD READS ONE ATHLETE AND WRITES ANOTHER UNLESS ITS CALLER IS CAREFUL.
+// `athlete` is not fetched here — it arrives from PathwayPlan via Targets'
+// pathwayState, while write() saves to `actingFor || user.id`. Those are the
+// same person only while PathwayPlan fetches with actingFor too. It did not
+// until 2026-09-18, so a parent read their own backup plan and saved it over
+// the child's, silently and with no error: the RPC succeeded, just against the
+// wrong row. If you ever mount this card from somewhere else, the caller owes
+// it an `athlete` belonging to `actingFor`.
 function BackupPlanCard({ athlete, loaded, actingFor, onSaved, quiet }) {
   const { t } = useLang();
   const [editing, setEditing] = React.useState(false);
@@ -10462,7 +10470,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
           destination now (brief §14's nav concept) rather than buried on
           Passport — pathway_plan and targets share the same Pro+ minimum
           plan, so the page-level gate above already covers both. */}
-      <PathwayPlan key={goalVersion} viewUserId={null} onChange={setPathwayState} onNavigate={onNavigate} plan={plan} next30={next30} openDay={openDay} onDayOpened={onDayOpened} goalText={goalHeading} />
+      <PathwayPlan key={goalVersion} viewUserId={null} actingFor={actingFor} onChange={setPathwayState} onNavigate={onNavigate} plan={plan} next30={next30} openDay={openDay} onDayOpened={onDayOpened} goalText={goalHeading} />
 
       {/* TRAINING — "things to work on", moved here from Passport.
           It sits under the pathway because that is what it serves: the
@@ -11192,7 +11200,7 @@ function milestoneDateLabel(m, lang, t) {
   if (n < 7) return { text: d.toLocaleDateString(loc, { weekday: "long" }), tone: "due" };
   return { text: short, tone: "due" };
 }
-function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], openDay, onDayOpened, goalText }) {
+function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], openDay, onDayOpened, goalText, actingFor }) {
   const { t, lang } = useLang();
   const [uid, setUid] = useState(null);
   const [loaded, setLoaded] = useState(false);
@@ -11287,10 +11295,27 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
       try {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
-        setUid(user.id);
+        // WHOSE PATHWAY THIS IS. Every other card on this page honours
+        // actingFor — the athlete a parent is managing — and this one did
+        // not: both reads and, through uid, the upsert all targeted the
+        // SIGNED-IN user. A parent opening their child's Plan saw their own
+        // pathway, and editing a milestone wrote it to the parent's row where
+        // the athlete would never find it. Home has always ticked the CHILD's
+        // steps (whoId = actingFor || user.id), so the two screens disagreed
+        // about whose plan was on display.
+        //
+        // It also fed the wrong athlete to BackupPlanCard, which takes its
+        // `athlete` from this component's onChange but writes to
+        // `actingFor || user.id` — so a parent read their own backup plan and
+        // saved it over the child's. One wrong id, two screens.
+        //
+        // RLS was never the obstacle: pathway_plan's four policies and
+        // athletes_read both allow `is_parent_of`.
+        const who = actingFor || user.id;
+        setUid(who);
         const [{ data }, { data: ath }] = await Promise.all([
-          sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, notes, stages, current_stage_id").eq("user_id", user.id).maybeSingle(),
-          sb.from("athletes").select("sport, club_name, recruiting_status, scout_context").eq("id", user.id).single(),
+          sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, notes, stages, current_stage_id").eq("user_id", who).maybeSingle(),
+          sb.from("athletes").select("sport, club_name, recruiting_status, scout_context").eq("id", who).single(),
         ]);
         setAthlete(ath || null);
         if (data) {
@@ -11307,7 +11332,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
       } catch (e) { console.error("GOLSZ pathway plan load error:", e); }
       setLoaded(true);
     })();
-  }, [viewUserId]);
+  }, [viewUserId, actingFor]);
 
   // THE ONLY WRITER ON THIS SCREEN, AND IT HAD THREE PROBLEMS.
   //
@@ -14724,7 +14749,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=9d16bd56dd6080f9";
+    s.src = "js/app.js?v=5b0dd11c59718b1b";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
