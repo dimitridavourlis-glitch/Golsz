@@ -10430,7 +10430,6 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
   }
 
   const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
-  const sport = pathwayState.athlete && pathwayState.athlete.sport;
   const next30 = [
     { key: "profile", done: !!(quality && quality.score >= 70), label: t("plan_next30_profile") },
     { key: "film", done: filmAdded, label: t("plan_next30_film") },
@@ -14749,7 +14748,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=5b0dd11c59718b1b";
+    s.src = "js/app.js?v=87d81c3e1cd24123";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
