@@ -93,7 +93,15 @@ ck("a day's rows come from an exact date match on the athlete's own steps",
 // d30/d90 merge into a heading that says LATER — a horizon assertion, which is
 // exactly what NEXT 30 DAYS / NEXT 90 DAYS were deleted for.
 ck("only real steps land on a day", /next30\.forEach\(\(i\) => bandRows\.undated/.test(APP), true);
-ck("...and development goals file the same way", /devItems\.forEach\(\(i\) => bandRows\.undated/.test(APP), true);
+// Development goals USED to file here too, and this asserted that they did.
+// They no longer appear on the rail at all: the editor moved from Passport to
+// this page (2026-09-18), so a derived read-only copy of every goal sat a few
+// hundred pixels above the card that owns them, fed by a second fetch that
+// went stale the moment anything was edited. The rule one line down — a row
+// the page draws elsewhere must not also be drawn here — is the same rule
+// that keeps in-week steps out of the bands.
+ck("development goals are not mirrored onto the rail", /devItems\.forEach\(\(i\) => bandRows\.undated/.test(APP), false);
+ck("...and PathwayPlan no longer takes the prop that fed the mirror", /devItems = \[\]/.test(APP), false);
 ck("no derived row is filed into a horizon band",
    /bandRows\.d(30|90)\.push/.test(APP), false);
 
