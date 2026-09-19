@@ -1118,6 +1118,14 @@ alter table athletes add column if not exists looking_for_players boolean;
 -- See supabase-migration-022-search-players.sql for full context.
 -- ============================================================
 
+-- READ THIS BEFORE BELIEVING THE DEFINITION BELOW.
+-- This copy predates migration 100 and has NO `and a.scout_visible` clause.
+-- It is not what is running. The live definition is migration 126 (which
+-- keeps the scout_visible gate verbatim), and migration 143 then revoked
+-- execute from public, anon and authenticated, so DISCOVERY IS OFF and only
+-- the service role can reach this function at all. No caller does.
+-- An audit that reads this file alone would conclude the privacy toggle is
+-- ignored; the opposite is true, and then the whole path was closed.
 create or replace function search_players(
   p_sport text default null,
   p_position text default null,

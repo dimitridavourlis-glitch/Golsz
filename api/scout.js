@@ -4410,7 +4410,19 @@ async function searchEvents(input) {
 // own web_search plus the two GOLSZ database tools; the block is part of the
 // cache_control'd prefix, which is why it stays a single shared array rather
 // than being rebuilt per request.
-const SCOUT_SEARCH_TOOLS = [{ type: "web_search_20250305", name: "web_search" }, SEARCH_PLAYERS_TOOL, SEARCH_EVENTS_TOOL];
+// DISCOVERY IS OFF (migration 143, 2026-09-19). SEARCH_PLAYERS_TOOL is
+// deliberately absent from this list: GOLSZ is a growth app right now, and
+// athlete search belongs to the product it becomes later, not this one.
+//
+// The tool definition and searchPlayers() are kept directly above so switching
+// it back on is adding one name to this array, not rebuilding the feature.
+// The database half is the load-bearing half — 143 revoked execute on
+// search_players() from authenticated and anon, so the RPC is unreachable with
+// the public key whatever this file says.
+//
+// Events search stays: a listing is not a person, and nothing about it exposes
+// one athlete to another.
+const SCOUT_SEARCH_TOOLS = [{ type: "web_search_20250305", name: "web_search" }, SEARCH_EVENTS_TOOL];
 
 // ---- Intent classifier / router ----
 // Classifies every message into the taxonomy below using a cheap Haiku
