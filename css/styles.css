@@ -2168,3 +2168,124 @@ select {
   .lx-route .lx-rstop:not(.is-in) { opacity: 1; transform: none; }
   .lx-tile:hover, .lx-tile:focus-visible { transform: none; }
 }
+
+/* ============================================================
+   THE PASSPORT SHOWCASE (landing #product)
+   A faithful static replica of the card golsz-app.html renders, so the
+   marketing page shows the artefact instead of describing it in three
+   equal tiles. Same field grid, same Space Mono figures, same credential
+   strip. The data is invented and the card says so twice — the SAMPLE
+   chip and the caption — because a fake passport that does not admit it
+   is exactly the kind of thing this product exists not to do.
+
+   Deliberately NOT a symmetrical two-up: 1.05fr / 0.95fr with the card
+   allowed to be taller than its column partner. The page reads as
+   machine-made partly because every row of it was a perfect 3x1.
+   ============================================================ */
+.lx-showcase {
+  display: grid; grid-template-columns: 1fr; gap: 2.2rem; align-items: start;
+}
+@media (min-width: 900px) {
+  .lx-showcase { grid-template-columns: 1.05fr 0.95fr; gap: 3.4rem; }
+  /* Optical, not arithmetic: the card's own top padding makes it sit low
+     against the heading beside it unless it is nudged up. */
+  .lx-showcase-copy { padding-top: 0.6rem; }
+}
+
+.lx-passport-wrap { margin: 0; }
+.lx-passport-wrap figcaption {
+  margin-top: 0.75rem; font-size: 0.78rem; color: var(--ink-faint);
+  font-family: var(--font-mono); letter-spacing: 0.02em;
+}
+.lx-passport {
+  background: var(--navy); border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow);
+}
+.lx-pp-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.85rem 1rem; border-bottom: 1px solid var(--border);
+}
+.lx-pp-kicker {
+  font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+  font-weight: 800; color: var(--gold);
+}
+.lx-pp-sample {
+  font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-faint);
+  border: 1px solid var(--border-strong); border-radius: 999px; padding: 0.2rem 0.5rem;
+}
+.lx-pp-id { display: flex; gap: 0.9rem; padding: 1rem; }
+.lx-pp-avatar {
+  width: 58px; height: 58px; flex: 0 0 58px; border-radius: 10px;
+  background: linear-gradient(145deg, var(--surface-raised), var(--charcoal));
+  border: 1px solid var(--border-strong);
+  display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 1rem; color: var(--gold); letter-spacing: 0.06em;
+}
+.lx-pp-idtext { min-width: 0; }
+.lx-pp-name { margin: 0; font-size: 1.05rem; font-weight: 800; line-height: 1.15; }
+.lx-pp-sub { margin: 0.15rem 0 0.55rem; font-size: 0.78rem; color: var(--ink-muted); }
+.lx-pp-meta { display: flex; flex-wrap: wrap; gap: 0.35rem 1.4rem; margin: 0; }
+.lx-pp-meta div { min-width: 0; }
+.lx-pp-meta dt {
+  font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-faint); font-weight: 700;
+}
+.lx-pp-meta dd {
+  margin: 0.1rem 0 0; font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink);
+}
+/* 1px gaps showing the border colour through, exactly as the app builds it. */
+.lx-pp-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+  background: var(--border); border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.lx-pp-grid div { background: var(--navy); padding: 0.55rem 0.75rem; }
+.lx-pp-grid dt {
+  font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-faint); font-weight: 700;
+}
+.lx-pp-grid dd {
+  margin: 0.15rem 0 0; font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700;
+}
+.lx-pp-method {
+  margin: 0; padding: 0.7rem 1rem; font-size: 0.72rem; line-height: 1.5;
+  color: var(--ink-muted); border-bottom: 1px solid var(--border);
+}
+.lx-pp-strip { background: var(--navy-deep); padding: 0.7rem 1rem 0.85rem; }
+.lx-pp-strip-label {
+  font-size: 0.55rem; letter-spacing: 0.16em; text-transform: uppercase;
+  font-weight: 800; color: var(--ink-faint);
+}
+/* The bar pattern is decorative and says so via aria-hidden. Drawn with a
+   repeating gradient rather than 68 elements — the app derives its bars from
+   the passport id, which a static sample has no reason to reproduce. */
+.lx-pp-bars {
+  height: 22px; margin: 0.5rem 0 0.55rem;
+  background-image: repeating-linear-gradient(90deg,
+    var(--ink) 0 1px, transparent 1px 3px,
+    var(--ink) 3px 5px, transparent 5px 6px,
+    var(--ink-faint) 6px 7px, transparent 7px 10px);
+  opacity: 0.75;
+}
+.lx-pp-mrz {
+  margin: 0; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em;
+  color: var(--ink-faint); word-break: break-all; line-height: 1.7;
+}
+
+.lx-showcase-copy h2 { margin: 0 0 1rem; }
+.lx-showcase-copy p { margin: 0 0 1rem; }
+/* One paragraph set apart rather than a third identical one — the page had no
+   moment anywhere that was not a full-width block of body copy. */
+.lx-showcase-aside {
+  border-left: 2px solid var(--gold-border); padding-left: 0.9rem;
+  color: var(--ink-muted); font-size: 0.92rem;
+}
+.lx-showcase-links { list-style: none; margin: 1.6rem 0 0; padding: 0; }
+.lx-showcase-links li + li { margin-top: 0.15rem; }
+.lx-showcase-links a {
+  display: inline-flex; align-items: center; gap: 0.4rem; min-height: 44px;
+  font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.03em;
+  color: var(--gold); text-decoration: none;
+}
+.lx-showcase-links a:hover { color: var(--gold-bright); text-decoration: underline; }

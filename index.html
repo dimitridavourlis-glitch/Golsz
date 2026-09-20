@@ -164,27 +164,73 @@
        One sentence per tile. The full panels these replaced are on
        about.html, and each tile links to the one it summarises. The moment a
        tile needs a second paragraph it belongs on about.html instead. -->
+  <!-- ======================= THE ARTEFACT =======================
+       This section used to be three numbered tiles (01/02/03), each an
+       abstract title over two lines of body over an arrow. Three cells of
+       identical weight describing a product nobody could see.
+
+       It shows the Passport instead. The markup below is a faithful static
+       replica of the card golsz-app.html renders — same field grid, same
+       Space Mono figures, same credential strip with the deterministic bar
+       pattern and the MRZ line. The data is invented and the card says so
+       out loud, twice: the SAMPLE chip and the caption underneath.
+
+       Deliberately asymmetric: the card takes the wider column and the words
+       take the narrower one. The three destinations survive as a plain list
+       of links rather than as three equal cards. -->
   <section class="lx-band" id="product">
     <div class="container">
-      <div class="lx-triad">
-        <a class="lx-tile reveal" href="about.html#product">
-          <span class="lx-tile-n">01</span>
-          <h2>Your record, in one place.</h2>
-          <p>Sport, position, club, measurements and benchmarks &mdash; each carrying how and when it was measured.</p>
-          <span class="lx-tile-go">The Passport <span aria-hidden="true">&rarr;</span></span>
-        </a>
-        <a class="lx-tile reveal" href="about.html#scout">
-          <span class="lx-tile-n">02</span>
-          <h2>Answers in your context.</h2>
-          <p>Scout reads your Passport, your goal and your progress, then tells you the next step &mdash; not generic search results.</p>
-          <span class="lx-tile-go">Meet Scout <span aria-hidden="true">&rarr;</span></span>
-        </a>
-        <a class="lx-tile reveal" href="about.html#how-it-works">
-          <span class="lx-tile-n">03</span>
-          <h2>Milestones you can check off.</h2>
-          <p>Your goal becomes a route with real stages, and benchmarks you retest against as you go.</p>
-          <span class="lx-tile-go">The three steps <span aria-hidden="true">&rarr;</span></span>
-        </a>
+      <div class="lx-showcase">
+
+        <figure class="lx-passport-wrap reveal">
+          <div class="lx-passport" aria-label="Sample GOLSZ Sports Passport">
+            <div class="lx-pp-head">
+              <span class="lx-pp-kicker">Digital Sports Passport</span>
+              <span class="lx-pp-sample">Sample</span>
+            </div>
+            <div class="lx-pp-id">
+              <div class="lx-pp-avatar" aria-hidden="true">RM</div>
+              <div class="lx-pp-idtext">
+                <p class="lx-pp-name">Rosa Milanovi&#263;</p>
+                <p class="lx-pp-sub">Soccer &middot; Centre Back</p>
+                <dl class="lx-pp-meta">
+                  <div><dt>Club</dt><dd>CS Saint-Laurent</dd></div>
+                  <div><dt>Passport no.</dt><dd>GLS&middot;CA&middot;2027&middot;4B1D9</dd></div>
+                </dl>
+              </div>
+            </div>
+            <div class="lx-pp-grid">
+              <div><dt>Foot</dt><dd>Left</dd></div>
+              <div><dt>Height</dt><dd>171 cm</dd></div>
+              <div><dt>Grad</dt><dd>2027</dd></div>
+              <div><dt>10 m sprint</dt><dd>1.79 s</dd></div>
+              <div><dt>Vertical</dt><dd>54 cm</dd></div>
+              <div><dt>Status</dt><dd>Open to offers</dd></div>
+            </div>
+            <p class="lx-pp-method">Sprint hand-timed by a coach, 11 Apr. Vertical electronic, 2 May. Both dated, both kept apart.</p>
+            <div class="lx-pp-strip">
+              <span class="lx-pp-strip-label">GOLSZ member &middot; not identity-verified</span>
+              <div class="lx-pp-bars" aria-hidden="true"></div>
+              <p class="lx-pp-mrz">GLS&lt;CA&lt;2027&lt;4B1D9&lt;ROSAMILANOVIC&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</p>
+            </div>
+          </div>
+          <figcaption>A sample Passport. Rosa is invented; the card is the real one.</figcaption>
+        </figure>
+
+        <div class="lx-showcase-copy reveal">
+          <h2>This is the thing you are building.</h2>
+          <p>Not a profile. A record with dates on it &mdash; what you did, when, and how it was
+             measured. The hand-timed sprint and the electronic one never end up on the same line,
+             because they are not the same measurement.</p>
+          <p class="lx-showcase-aside">Most of what an athlete gets asked for at a trial is
+             already on this card. That is the whole idea.</p>
+          <ul class="lx-showcase-links">
+            <li><a href="about.html#product">What the Passport holds <span aria-hidden="true">&rarr;</span></a></li>
+            <li><a href="about.html#scout">How Scout reads it <span aria-hidden="true">&rarr;</span></a></li>
+            <li><a href="about.html#how-it-works">Goal, route, retest <span aria-hidden="true">&rarr;</span></a></li>
+          </ul>
+        </div>
+
       </div>
     </div>
   </section>
