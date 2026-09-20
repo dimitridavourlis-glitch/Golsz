@@ -14733,7 +14733,16 @@ function Auth({ onDone, paidReturn }) {
           )}
           {isSignupLike && <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" aria-label={isParentSignup ? t("auth_your_name") : t("auth_full_name")} placeholder={isParentSignup ? t("auth_your_name") : t("auth_full_name")} style={field} />}
           <input value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" aria-label={isParentSignup ? t("auth_your_email") : t("auth_email")} placeholder={isParentSignup ? t("auth_your_email") : t("auth_email")} type="email" style={field} />
-          <input value={pw} onChange={(e) => setPw(e.target.value)} autoComplete={isSignupLike ? "new-password" : "current-password"} aria-label={t("auth_password")} placeholder={t("auth_password")} type="password" style={{ ...field, marginBottom: isSignupLike ? 12 : 4 }} />
+          <input value={pw} onChange={(e) => setPw(e.target.value)} autoComplete={isSignupLike ? "new-password" : "current-password"} aria-label={t("auth_password")} placeholder={t("auth_password")} type="password" minLength={isSignupLike ? 6 : undefined} style={{ ...field, marginBottom: isSignupLike ? 4 : 4 }} />
+          {/* THE RULE, BEFORE IT IS BROKEN. Six characters was enforced only
+              on submit, so the first a new athlete heard of it was their
+              signup being rejected — after they had typed a name, an email
+              and a date of birth. Stated here it costs one line and no
+              rejections. It reuses the existing message rather than inventing
+              a second wording of the same rule, which is how the two drift. */}
+          {isSignupLike && (
+            <div style={{ fontSize: 10.5, color: C.slate, marginBottom: 12, lineHeight: 1.35 }}>{t("reset_pw_min_len")}</div>
+          )}
           {!isSignupLike && (
             <div style={{ textAlign: "right", marginBottom: 10 }}>
               {/* A button, not a span: a span is unreachable by keyboard and
@@ -14806,8 +14815,11 @@ function Auth({ onDone, paidReturn }) {
             </div>
           )}
 
+          {/* role="alert" so a screen reader hears the failure. Without it the
+              only signal that a signup was rejected is a colour change the
+              user may not be looking at. */}
           {err && (
-            <div style={{ background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
+            <div role="alert" style={{ background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
               <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignupLike ? t("auth_couldnt_signup") : t("auth_couldnt_login")}</div>
               <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
               {unconfirmedEmail && !resendSent && (
@@ -14857,7 +14869,7 @@ function Auth({ onDone, paidReturn }) {
 
           <div style={{ textAlign: "center", marginTop: 14, fontSize: 13, color: C.slate }}>
             {isSignup ? t("auth_already_have") : t("auth_new_to_golsz")}
-            <span onClick={() => { setMode(isSignup ? "login" : "signup"); setErr(""); }} style={{ color: C.lime, fontWeight: 700, cursor: "pointer" }}>{isSignup ? t("auth_login") : t("auth_signup")}</span>
+            <button type="button" onClick={() => { setMode(isSignup ? "login" : "signup"); setErr(""); }} style={{ background: "none", border: "none", color: C.lime, fontWeight: 700, fontSize: "inherit", fontFamily: "inherit", cursor: "pointer", padding: "10px 4px", minHeight: 44 }}>{isSignup ? t("auth_login") : t("auth_signup")}</button>
           </div>
           </>
           )}
@@ -15122,7 +15134,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=f255e79c84e68431";
+    s.src = "js/app.js?v=05fe769b9892266c";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

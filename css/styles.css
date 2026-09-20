@@ -2064,6 +2064,10 @@ select {
   color: var(--ink-muted); background: transparent;
   border: 1px solid var(--border-strong); border-radius: 999px;
   padding: 0.42rem 0.85rem; cursor: pointer;
+  /* 44px is the tap target the app holds itself to everywhere else; these
+     were 32px, and they are the first thing a phone visitor is invited to
+     touch. Centring keeps the pill looking the same size it did. */
+  min-height: 44px; display: inline-flex; align-items: center;
   transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 .lx-chip:hover { color: var(--ink); border-color: var(--gold-border); }
