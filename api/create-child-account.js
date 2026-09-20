@@ -82,8 +82,30 @@ function ageFromDob(dobIso) {
   return age;
 }
 
+// PARENT ACCOUNTS ARE OFF, AND THAT HAS TO BE TRUE ON THE SERVER TOO.
+//
+// This endpoint's entire purpose is creating an UNDER-18 record — it rejects
+// age >= 18 below with code "not_under_18". Parent accounts were switched off
+// in the client on 2026-09-19 (PARENT_ACCOUNTS_ENABLED in golsz-app.html) and
+// the site now tells every visitor "For athletes aged 18 and over", but this
+// function stayed deployed and callable with any valid session token.
+//
+// It runs on the SERVICE ROLE key, which bypasses RLS entirely, so a UI flag
+// was never the right place for this to be enforced. A switched-off feature
+// that is off only in the interface is not off.
+//
+// Flip both this and the client flag together to bring parent accounts back;
+// nothing else about this file needs to change.
+const PARENT_ACCOUNTS_ENABLED = false;
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (!PARENT_ACCOUNTS_ENABLED) {
+    return res.status(403).json({
+      error: "GOLSZ is for athletes aged 18 and over right now. Accounts managed by a parent or guardian are not being created.",
+      code: "parent_accounts_disabled",
+    });
+  }
 
   const supaUrl = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;

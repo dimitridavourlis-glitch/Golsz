@@ -101,6 +101,24 @@ ck("the landing page promises no parent path", /parent/i.test(LANDING), false);
 ck("...and states the age limit instead",
    (LANDING.match(/aged 18 and over/g) || []).length >= 2, true);
 
+// THE SERVER HALF. api/create-child-account.js exists to create an UNDER-18
+// record — it rejects age >= 18 with code "not_under_18" — and it runs on the
+// SERVICE ROLE key, which bypasses RLS entirely. Turning parent accounts off
+// in the client left it deployed and callable with any valid session token,
+// which is not "off"; it is off in the interface only.
+const CHILD_API = fs.readFileSync(path.join(REPO, "api", "create-child-account.js"), "utf8");
+ck("the child-account endpoint has its own flag", /const PARENT_ACCOUNTS_ENABLED = false;/.test(CHILD_API), true);
+ck("...checked before anything else the handler does",
+   /if \(!PARENT_ACCOUNTS_ENABLED\) \{[\s\S]{0,260}parent_accounts_disabled/.test(CHILD_API), true);
+// Ordering matters: a refusal placed after the Supabase lookups would still do
+// the work and still leak whether a session is valid.
+{
+  const handlerAt = CHILD_API.indexOf("export default async function handler");
+  const refusalAt = CHILD_API.indexOf("parent_accounts_disabled");
+  const firstFetchAt = CHILD_API.indexOf("fetch(", handlerAt);
+  ck("...and before the first outbound call", refusalAt > handlerAt && refusalAt < firstFetchAt, true);
+}
+
 ck("the parent-view plumbing is kept", /manageMode=\{!!actingFor\}/.test(APP), true);
 ck("...including the server-side verifier", fs.existsSync(path.join(REPO, "api", "_acting-for.js")), true);
 
