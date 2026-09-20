@@ -22,8 +22,35 @@
     initMobileNav();
     initActiveNav();
     initScrollReveal();
-    initHeroRegion();
+    initRegion();
   });
+
+  // ONE GEO CALL, TWO CONSUMERS, AND NEITHER ONE GATES THE OTHER.
+  //
+  // The fetch used to live inside initHeroRegion(), after `if (!hero) return;`.
+  // index.html has no [data-hero-region] element — only about.html does — so on
+  // the landing page that function returned before the fetch, applyCurrency()
+  // never ran, and EVERY VISITOR ON EARTH read the hard-coded euro figures in
+  // the HTML. One click later the app resolved their real currency, so a
+  // Canadian was quoted EUR 6 on the pricing table and CA$9 at signup.
+  //
+  // Nothing caught it because the currency table itself was correct and
+  // tests/test_pricing.cjs diffs it against the catalog — it verified the
+  // numbers were right without ever asking whether they reached a page.
+  //
+  // Prices are the reason this runs; the hero photograph is the optional part,
+  // so the hero is now what hangs off the fetch rather than the other way
+  // round.
+  function initRegion() {
+    fetch("/api/geo")
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        var region = data && data.region;
+        applyCurrency(region);
+        applyHeroImage(region);
+      })
+      .catch(function () { /* static EUR stands, gradient fallback stays */ });
+  }
 
   // Swaps the homepage hero's background photo based on the visitor's
   // region (Canada / US / Europe / default), resolved server-side via
@@ -32,7 +59,7 @@
   // CSS gradient fallback already on .hero-mega covers the time between
   // page load and this resolving (or if it fails/no image exists yet for
   // that region), so the hero never shows a broken background.
-  function initHeroRegion() {
+  function applyHeroImage(region) {
     var hero = document.querySelector("[data-hero-region]");
     if (!hero) return;
 
@@ -42,26 +69,17 @@
       eu: "assets/hero-eu.jpg",
     };
 
-    fetch("/api/geo")
-      .then(function (res) { return res.ok ? res.json() : null; })
-      .then(function (data) {
-        // One /api/geo call serves both the hero image and the prices —
-        // a second fetch for the same answer would be a second chance to
-        // disagree with the first.
-        applyCurrency(data && data.region);
-        var path = data && IMAGE_BY_REGION[data.region];
-        if (!path) return;
-        var img = new Image();
-        img.onload = function () {
-          hero.style.backgroundImage = "linear-gradient(100deg, rgba(9,12,10,0.94) 0%, rgba(9,12,10,0.72) 42%, rgba(9,12,10,0.25) 68%, rgba(9,12,10,0.55) 100%), linear-gradient(0deg, rgba(9,12,10,0.9) 0%, transparent 22%), url(" + path + ")";
-        };
-        // Only swap once the image is actually decoded/loaded — never
-        // point background-image at a path that doesn't exist yet, which
-        // would just leave the CSS fallback gradients showing anyway, but
-        // silently, instead of erroring loudly during development.
-        img.src = path;
-      })
-      .catch(function () { /* fallback gradient stays — see .hero-mega */ });
+    var path = IMAGE_BY_REGION[region];
+    if (!path) return;
+    var img = new Image();
+    img.onload = function () {
+      hero.style.backgroundImage = "linear-gradient(100deg, rgba(9,12,10,0.94) 0%, rgba(9,12,10,0.72) 42%, rgba(9,12,10,0.25) 68%, rgba(9,12,10,0.55) 100%), linear-gradient(0deg, rgba(9,12,10,0.9) 0%, transparent 22%), url(" + path + ")";
+    };
+    // Only swap once the image is actually decoded/loaded — never point
+    // background-image at a path that doesn't exist yet, which would just
+    // leave the CSS fallback gradients showing anyway, but silently,
+    // instead of erroring loudly during development.
+    img.src = path;
   }
 
   // PRICES ON THE MARKETING PAGE

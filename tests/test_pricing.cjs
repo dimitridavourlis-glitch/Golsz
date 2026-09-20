@@ -141,6 +141,34 @@ ck("...one per plan", ["free", "starter", "pro", "elite"].filter((p) => !HOME.in
 // THE STRUCTURAL GUARANTEE: label and amount live in one row.
 const MAIN = fs.readFileSync(REPO + "/js/main.js", "utf8");
 ck("js/main.js carries a currency table", /var CURRENCIES = \{/.test(MAIN), true);
+
+// A CORRECT TABLE THAT NEVER REACHES A PAGE.
+// Every assertion below this point checked that the numbers in that table
+// match the catalog. They did. applyCurrency() was nonetheless dead on the
+// landing page for as long as it existed: the /api/geo fetch that calls it
+// lived inside initHeroRegion(), which opens `if (!hero) return;`, and
+// index.html has no [data-hero-region] element — only about.html does. So
+// every visitor on earth read the hard-coded euro figures in the HTML and
+// then met their real currency one click later in the app.
+//
+// Verifying a value without verifying that anything READS it is the gap this
+// closes.
+const LANDING_HTML = fs.readFileSync(REPO + "/index.html", "utf8");
+ck("the landing page has no hero-region element (so nothing may be gated on one)",
+   /data-hero-region/.test(LANDING_HTML), false);
+ck("region resolution is its own entry point", /function initRegion\(\)/.test(MAIN), true);
+ck("...and runs on DOMContentLoaded", /initRegion\(\);/.test(MAIN), true);
+// The decisive one: the call that localises prices must sit in the function
+// that owns the fetch, not behind a DOM lookup that can fail.
+const REGION_FN = /function initRegion\(\)[\s\S]*?\n  \}/.exec(MAIN);
+ck("initRegion is findable", !!REGION_FN, true);
+ck("...it performs the geo fetch", !!REGION_FN && /fetch\("\/api\/geo"\)/.test(REGION_FN[0]), true);
+ck("...it applies the currency", !!REGION_FN && /applyCurrency\(/.test(REGION_FN[0]), true);
+ck("...and is not gated on any element being present",
+   !!REGION_FN && /querySelector/.test(REGION_FN[0]), false);
+// The hero image may still be gated — it is decoration, and its absence costs
+// nobody a correct price.
+ck("the hero image is the part allowed to no-op", /function applyHeroImage\(region\)/.test(MAIN), true);
 {
   const block = MAIN.slice(MAIN.indexOf("var CURRENCIES = {"), MAIN.indexOf("var REGION_CURRENCY"));
   const rows = {};
