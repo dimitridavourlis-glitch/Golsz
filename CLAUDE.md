@@ -17,8 +17,21 @@ glued together, not one app:
    to the Anthropic API) and `supabase-schema.sql` (Postgres schema + RLS for Supabase).
 
 The marketing site links into the app via query param instead of sharing any code — see "Integration point"
-below. There is no repo-level `package.json`, linter, or test suite; there is nothing to `npm install` or
-build.
+below.
+
+**Tooling — this paragraph used to say the opposite, and it was the first thing anyone read.** There IS a
+`package.json`, and the repo's best asset is behind it:
+
+```
+npm ci            # required — 8 suites need @babel/parser and @babel/traverse
+npm run check     # syntax-checks every api/*.js and js/*.js, then runs the suite
+npm run compile   # re-compiles the JSX in golsz-app.html into js/app.js
+```
+
+`npm run check` is the gate before any push. It currently runs **74 plain-Node `.cjs` suites, ~3,150
+assertions**, no framework — `tests/run-all.cjs` discovers anything matching `test_*.cjs`. Many suites lift
+real expressions out of the source and `eval` them, so they fail when the source changes rather than when a
+mock does. There is no linter.
 
 **⚠️ `supabase-schema.sql` describes the live database, not a design intent.** The live Supabase project
 (ref `wachjqfhlbchcuovyewg`) was built up across several undocumented sessions before this file existed, and
@@ -1000,7 +1013,7 @@ building a parallel `ai_*` schema next to it.
   Sonnet. Tool-requiring questions (db_lookup/web_lookup) are never capped by plan — search correctness isn't
   a discretionary luxury. Verified against the spec's own worked examples (Elite simple question → economy;
   Elite 3-year-strategy question → premium; Pro/Starter complex question → advanced, never premium) in a
-  one-off Node test harness (no test framework exists to hang a permanent suite off of).
+  one-off Node test harness (there is no test *framework*; permanent suites are plain .cjs files in tests/).
 - **Cost budget gate (`budgetGate()`, `TARGET_COSTS`/`HARD_MAX_COST_PER_REQUEST`)**: downgrades (never
   upgrades) a tier if its own worst-case cost — using that tier's `max_output_tokens` as the ceiling —
   would exceed an env-overridable per-plan hard limit.

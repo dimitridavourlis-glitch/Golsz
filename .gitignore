@@ -17,3 +17,4 @@ node_modules/
 
 # Installed plugin copies — source of truth is golsz-guard/
 .claude/plugins/
+_csp-test.html

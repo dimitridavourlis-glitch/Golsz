@@ -13,7 +13,17 @@ The app still runs **as a preview with the config blank** — it only goes live 
 
 1. Create a project at supabase.com.
 2. Open **SQL Editor**, paste all of `supabase-schema.sql`, run it once.
-3. In **Authentication → Providers**, keep Email enabled. For a smoother demo you can turn *off* "Confirm email" (turn it back on before real launch).
+
+   > **Only ever against a BRAND NEW project.** That file is an append-only
+   > ledger of everything ever applied, not a clean DDL dump: it contains
+   > `drop policy` / `create policy` pairs and data statements such as
+   > migration 138's `update public.profiles set occupation = null where
+   > occupation not in ('Player','Parent')`. Running the whole file against
+   > the LIVE project would re-execute those against real rows. To change the
+   > live database, write and run a single numbered
+   > `supabase-migration-NNN-*.sql` instead — that is how every change since
+   > migration 002 has been made.
+3. In **Authentication → Providers**, keep Email enabled. Leave **"Confirm email" ON** — production has it on, the signup flow polls for confirmation, and an unconfirmed-email signup path is a spam and account-takeover surface. (This step used to suggest turning it off "for a smoother demo".)
 4. In **Project Settings → API**, copy the **Project URL** and the **anon public** key.
 5. In `golsz-app.html`, set:
    ```js
@@ -45,10 +55,25 @@ The app automatically attaches the signed-in user's token to Scout calls, so the
 
 ## 3) Payments (from earlier)
 
-GOLSZ is a Nicosia (Cyprus) business and prices in **EUR**. Create the three
-recurring Prices — €6 / €15 / €30 per month — and a Payment Link for each, set
-each link's post-payment redirect to your app URL + `?checkout=success`, then
-paste the links into `STRIPE_LINKS` in `golsz-app.html`.
+> **⚠️ This section described a setup that no longer matches production, and
+> the entity line below it is unresolved — see "Open question" at the end of
+> this file. Treat the live Stripe account as the source of truth, not this.**
+
+What is actually live: **nine** Prices and **nine** Payment Links — three tiers
+(Basic / Pro / Elite) x three currencies (EUR / CAD / USD), because a Stripe
+subscription is locked to the currency it is created in and so cannot be shared
+across them. The nine links live in `STRIPE_LINKS` in `golsz-app.html`; the
+matching `STRIPE_PRICE_*` values are Vercel Production env vars. Each link's
+post-payment redirect is the app URL + `?checkout=success`.
+
+Amounts are EUR 6 / 15 / 30, CAD 9 / 23 / 45, USD 7 / 16 / 32, held in minor
+units in `api/_plan-catalog.js`, which is the server-side source of truth.
+`tests/test_pricing.cjs` diffs that file against `golsz-app.html` and
+`js/main.js` so the three copies cannot drift.
+
+Note that Stripe Adaptive Pricing cannot be disabled on Payment Links: the
+per-currency Prices set the DEFAULT currency only, and Stripe may still offer
+local-currency conversion at checkout.
 
 Per-charge fees depend on the card's origin (EEA / UK / international) and are
 not quoted here on purpose — a rate written into a README goes stale silently.
@@ -124,3 +149,15 @@ register — a parent creates and manages the account
 (`api/create-child-account.js`, `parent_links`, `profiles.parent_managed`).
 Adult-to-minor direct messaging is closed at the database, not merely hidden:
 no account can write to `messages` at all.
+
+
+---
+
+## Open question for whoever owns the business side
+
+This file says GOLSZ is a **Nicosia (Cyprus)** business. The live site's footer
+says **Montreal, Canada**, and the Stripe account is Canadian. One of those is
+out of date, and the discrepancy is the kind of thing a diligence process asks
+about early. Nobody working from this repo can resolve it — it needs an answer
+from the owner, and then this file, `index.html`'s footer and the Stripe
+account should all say the same thing.
