@@ -90,6 +90,17 @@ ck("...naming no parent path in any of them",
      .filter((v) => /parent|guardian|tuteur|padre|tutor|γονέα|κηδεμόνα/i.test(v)), []);
 // The plumbing is kept on purpose. If these go, re-enabling parents is a
 // rewrite rather than a flag flip.
+// THE LANDING PAGE IS PART OF THE SHUTDOWN, and it was missed the first
+// time. index.html told every visitor "A parent or guardian holds the account
+// for athletes under 18" in the hero and again under the pricing table, so a
+// sixteen-year-old read that, tapped Start free, and met "GOLSZ is for
+// athletes aged 18 and over". A promise on the first page a visitor sees is
+// the worst place to leave one.
+const LANDING = fs.readFileSync(path.join(REPO, "index.html"), "utf8");
+ck("the landing page promises no parent path", /parent/i.test(LANDING), false);
+ck("...and states the age limit instead",
+   (LANDING.match(/aged 18 and over/g) || []).length >= 2, true);
+
 ck("the parent-view plumbing is kept", /manageMode=\{!!actingFor\}/.test(APP), true);
 ck("...including the server-side verifier", fs.existsSync(path.join(REPO, "api", "_acting-for.js")), true);
 
