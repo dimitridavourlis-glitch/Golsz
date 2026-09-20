@@ -205,7 +205,16 @@ ck("feature gates unchanged", FEATURE_MIN_PLAN, {
 ck("plan ids unchanged (the DB enum depends on these)",
    PLANS.map((x) => x.id), ["free", "starter", "pro", "elite"]);
 ck("display names unchanged", PLANS.map((x) => x.name), ["Free", "Basic", "Pro", "Elite"]);
-ck("feature-key lists unchanged in length", PLANS.map((x) => x.featKeys.length), [4, 4, 6, 2]);
+// Pro dropped from 6 to 5 on 2026-09-20: plan_pro_feat6 was "Identity
+// verification", which FEATURE_MIN_PLAN does not gate and <VerificationRequest>
+// does not check, so every Free athlete already had it. Selling it as a Pro
+// unlock was the claim, not the feature. The i18n key is deliberately kept.
+ck("feature-key lists unchanged in length", PLANS.map((x) => x.featKeys.length), [4, 4, 5, 2]);
+// No plan may advertise something FEATURE_MIN_PLAN does not gate. This is the
+// assertion that would have caught it, and it is the reason the count above
+// is allowed to change when a claim is withdrawn.
+ck("no plan advertises identity verification while it is ungated",
+   PLANS.some((x) => x.featKeys.includes("plan_pro_feat6")) && !("identity_verification" in FEATURE_MIN_PLAN), false);
 // Daily Scout allowances live in api/scout.js env defaults.
 const SCOUT = fs.readFileSync(REPO + "/api/scout.js", "utf8");
 ck("Scout daily allowances unchanged (3/8/15/20)",

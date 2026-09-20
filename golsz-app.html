@@ -14023,7 +14023,13 @@ const PLANS = [
   // plan_config and the margin SQL, which are euro surfaces.
   { id: "free",    name: "Free",    price: 0,  featKeys: ["plan_free_feat1", "plan_free_feat2", "plan_free_feat3", "plan_free_feat4"] },
   { id: "starter", name: "Basic",   price: 6,  featKeys: ["plan_starter_feat1", "plan_starter_feat2", "plan_starter_feat3", "plan_starter_feat4"] },
-  { id: "pro",   name: "Pro",     price: 15, featKeys: ["plan_pro_feat1", "plan_pro_feat2", "plan_pro_feat3", "plan_pro_feat4", "plan_pro_feat5", "plan_pro_feat6"] },
+  // plan_pro_feat6 ("Identity verification") is NOT listed. It is not in
+  // FEATURE_MIN_PLAN and <VerificationRequest> carries no plan check, so every
+  // Free athlete can already request it — and because it feeds Passport
+  // Strength they watch the score move and learn the Pro card was wrong. The
+  // string stays in all four dictionaries (unused keys are kept here) so the
+  // day it is genuinely gated it goes back with no re-translation.
+  { id: "pro",   name: "Pro",     price: 15, featKeys: ["plan_pro_feat1", "plan_pro_feat2", "plan_pro_feat3", "plan_pro_feat4", "plan_pro_feat5"] },
   { id: "elite", name: "Elite",   price: 30, featKeys: ["plan_elite_feat1", "plan_elite_feat2"] },
 ];
 
@@ -14327,7 +14333,15 @@ function Auth({ onDone, paidReturn }) {
   const turnstileOk = !TURNSTILE_SITE_KEY || !isSignupLike || !!turnstileToken;
   const ok = isParentSignup
     ? (email.trim() && pw.trim() && turnstileOk && name.trim() && childName.trim() && childDobOk && childAgeOk)
-    : (email.trim() && pw.trim() && turnstileOk && (!isSignup || (name.trim() && dobOk && !requiresParentAccount)));
+    // pw.trim() is truthy at ONE character. The six-character rule lived only
+    // in submit()'s own guard on the reset screen and nowhere here, so a
+    // one-character password passed every gate on signup: it burned an
+    // /api/signup-guard IP slot and a Turnstile verification, opened and
+    // closed a blank checkout tab on a paid plan, and came back as Supabase's
+    // raw message. Stating the rule under the field (added earlier today) was
+    // only half of it — this is the half that enforces it. minLength on the
+    // input does nothing without a form ancestor.
+    : (email.trim() && (isSignupLike ? pw.length >= 6 : pw.trim()) && turnstileOk && (!isSignup || (name.trim() && dobOk && !requiresParentAccount)));
   const selected = PLANS.find((p) => p.id === plan) || PLANS[0];
   const field = { width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 12, color: C.chalk, padding: "13px 14px", fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 12, boxSizing: "border-box" };
   const dobField = { ...field, marginBottom: 0, textAlign: "center" };
@@ -14601,7 +14615,7 @@ function Auth({ onDone, paidReturn }) {
 
         <div style={{ display: "flex", background: C.card, border: "1px solid " + C.line, borderRadius: 12, padding: 4, marginBottom: 16 }}>
           {[["signup", t("auth_signup")], ["login", t("auth_login")]].map(([m, l]) => (
-            <button key={m} onClick={() => { setMode(m); setErr(""); setNotice(""); }} style={{ flex: 1, padding: "10px", minHeight: 44, borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14, background: mode === m ? C.lime : "transparent", color: mode === m ? C.ink : C.slate }}>{l}</button>
+            <button type="button" key={m} onClick={() => { setMode(m); setErr(""); setNotice(""); }} style={{ flex: 1, padding: "10px", minHeight: 44, borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14, background: mode === m ? C.lime : "transparent", color: mode === m ? C.ink : C.slate }}>{l}</button>
           ))}
         </div>
 
@@ -14613,7 +14627,7 @@ function Auth({ onDone, paidReturn }) {
                   <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
                   <div style={{ color: C.chalk, fontSize: 12.5, lineHeight: 1.4 }}>{t("auth_reset_sent_pre")}{email.trim()}{t("auth_reset_sent_post")}</div>
                 </div>
-                <button onClick={() => { setForgotMode(false); setResetSent(false); setErr(""); }} style={{ width: "100%", background: "transparent", border: `1px solid ${C.line2}`, color: C.chalk, borderRadius: 12, padding: "13px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>{t("auth_back_to_login")}</button>
+                <button type="button" onClick={() => { setForgotMode(false); setResetSent(false); setErr(""); }} style={{ width: "100%", background: "transparent", border: `1px solid ${C.line2}`, color: C.chalk, borderRadius: 12, padding: "13px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>{t("auth_back_to_login")}</button>
               </>
             ) : (
               <>
@@ -14625,7 +14639,7 @@ function Auth({ onDone, paidReturn }) {
                     <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
                   </div>
                 )}
-                <button disabled={!email.trim() || busy} onClick={sendReset} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!email.trim() || busy) ? "default" : "pointer", opacity: (!email.trim() || busy) ? 0.45 : 1, fontFamily: "inherit" }}>{busy ? t("auth_sending") : t("auth_send_reset")}</button>
+                <button type="button" disabled={!email.trim() || busy} onClick={sendReset} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!email.trim() || busy) ? "default" : "pointer", opacity: (!email.trim() || busy) ? 0.45 : 1, fontFamily: "inherit" }}>{busy ? t("auth_sending") : t("auth_send_reset")}</button>
                 <div style={{ textAlign: "center", marginTop: 14, fontSize: 13, color: C.slate }}>
                   <span onClick={() => { setForgotMode(false); setErr(""); }} style={{ color: C.lime, fontWeight: 700, cursor: "pointer" }}>{t("auth_back_to_login")}</span>
                 </div>
@@ -14688,7 +14702,7 @@ function Auth({ onDone, paidReturn }) {
                 {PLANS.map((pl) => {
                   const on = plan === pl.id;
                   return (
-                    <button key={pl.id} onClick={() => setPlan(pl.id)} style={{
+                    <button type="button" key={pl.id} onClick={() => setPlan(pl.id)} style={{
                       textAlign: "left", cursor: "pointer", fontFamily: "inherit", position: "relative",
                       background: on ? C.limeWash : C.turf, border: `1.5px solid ${on ? C.lime : C.line2}`,
                       borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 10,
@@ -14724,6 +14738,16 @@ function Auth({ onDone, paidReturn }) {
             </div>
           )}
 
+          {/* A REAL FORM, SO RETURN SUBMITS.
+              There was no <form> anywhere in this file — the fields were bare
+              inputs and the CTA a bare button — so typing a password and
+              pressing Return did nothing, and a phone keyboard offered Return
+              instead of Go. index.html's own goal box is a real form, so the
+              convention existed and signup was the screen that broke it.
+              Every button inside carries an explicit type, checked before this
+              wrapper went on: inside a form an untyped button submits, which
+              would have turned "choose a plan" into "create the account". */}
+          <form onSubmit={(e) => { e.preventDefault(); submit(); }}>
           {isSignupLike && (
             <input
               value={website} onChange={(e) => setWebsite(e.target.value)}
@@ -14823,7 +14847,7 @@ function Auth({ onDone, paidReturn }) {
               <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignupLike ? t("auth_couldnt_signup") : t("auth_couldnt_login")}</div>
               <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
               {unconfirmedEmail && !resendSent && (
-                <button onClick={resendConfirmation} disabled={resendBusy} style={{
+                <button type="button" onClick={resendConfirmation} disabled={resendBusy} style={{
                   marginTop: 10, width: "100%", background: "transparent", border: `1px solid ${C.amber}`, color: C.warnText,
                   borderRadius: 9, padding: "9px", fontWeight: 700, fontSize: 12.5, cursor: resendBusy ? "default" : "pointer",
                   fontFamily: "inherit", opacity: resendBusy ? 0.6 : 1,
@@ -14837,7 +14861,8 @@ function Auth({ onDone, paidReturn }) {
             </div>
           )}
 
-          <button disabled={!ok || busy || confirmPolling} onClick={submit} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!ok || busy || confirmPolling) ? "default" : "pointer", opacity: (!ok || busy || confirmPolling) ? 0.45 : 1, fontFamily: "inherit" }}>{cta}</button>
+          <button type="submit" disabled={!ok || busy || confirmPolling} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!ok || busy || confirmPolling) ? "default" : "pointer", opacity: (!ok || busy || confirmPolling) ? 0.45 : 1, fontFamily: "inherit" }}>{cta}</button>
+          </form>
 
           {isSignup && selected.price > 0 && (
             <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: C.slate }}>{t("auth_secure_checkout")}</div>
@@ -15134,7 +15159,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=05fe769b9892266c";
+    s.src = "js/app.js?v=b8d171fc6c6ef235";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

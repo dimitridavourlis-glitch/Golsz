@@ -296,7 +296,14 @@ ck("quota reservation still skipped only for admin/unlimited",
 ck("cost is still recorded every reply", /record_scout_usage_cost/.test(SCOUT), true);
 ck("routing telemetry still written", /scout_routing_log/.test(SCOUT), true);
 ck("CORS allowlist untouched", /ALLOWED_ORIGIN \|\| "https:\/\/golsz\.com,https:\/\/golsz\.vercel\.app"/.test(SCOUT), true);
-ck("EUR prices untouched in the client", /price: 6,[\s\S]{0,400}price: 15,[\s\S]{0,400}price: 30,/.test(APP), true);
+// Read the prices out of PLANS rather than asserting the three literals sit
+// within 400 characters of one another: a comment added between two entries
+// broke this while every price was untouched, which is a test reporting on
+// whitespace instead of on money.
+const PLAN_PRICES_IN_APP = [...APP.matchAll(/\{ id: "(free|starter|pro|elite)",[\s\S]{0,80}?price: (\d+),/g)]
+  .map((m) => [m[1], Number(m[2])]);
+ck("EUR prices untouched in the client", PLAN_PRICES_IN_APP,
+   [["free", 0], ["starter", 6], ["pro", 15], ["elite", 30]]);
 ck("plan ids untouched",
    (APP.slice(APP.indexOf("const PLANS = ["), APP.indexOf("const PLANS = [") + 1200)
       .match(/id: "(free|starter|pro|elite)"/g) || []),
