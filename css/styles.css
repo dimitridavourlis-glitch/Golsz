@@ -11,11 +11,28 @@
    ========================================================================== */
 
 :root {
+  /* NO BLUE — the landing page was the last place it survived.
+     --charcoal/--surface were #1B263B and --border-strong #496686: a slate
+     navy behind every card, every pricing tier, the CTA band and the body
+     copy, with one warm gold accent on top. Navy surfaces plus a single gold
+     accent is the most common generated dark landing page there is, which is
+     why the page read as machine-made even though the words were fine.
+
+     golsz-app.html made this exact change and wrote down why: "--turf was
+     #1B263B, a navy left over from the original navy/gold brand ... on a
+     near-black + cream + gold app it put a cold blue-grey under [everything],
+     reading as another product's component set dropped into this one." The
+     app moved to #1C1E22. The marketing page never followed, so the two
+     halves of the same product were different brands.
+
+     These now track the app: --surface = its --card, --surface-raised = its
+     --turf, --ink-muted = its --slate exactly. Only the seven definitions
+     changed; all 175 call sites were already going through the variables. */
   --navy: #0D1210;
   --navy-deep: #090C0A;
-  --charcoal: #1B263B;
-  --surface: #1B263B;
-  --surface-raised: #263349;
+  --charcoal: #131519;
+  --surface: #131519;
+  --surface-raised: #1C1E22;
   --gold: #D4AF37;
   --gold-bright: #E6C76A;
   --gold-ink: #0D1210;
@@ -28,8 +45,13 @@
      both. Used by p, .lede, .field-hint
      and every muted label across all pages, so this lifts contrast site-
      wide, not just on the homepage. */
-  --ink-muted: #8096B2;
-  --ink-faint: #7A90AD;
+  /* De-blued 2026-09-20. --ink-muted was #8096B2 (6.23:1 on --navy) and is
+     now #8B96A8 at 6.32:1 — warmer and very slightly better. --ink-faint was
+     #7A90AD (5.78:1); the first warm value tried (#6E7684) measured 4.13:1,
+     under the 4.5:1 body-text minimum this token is held to, so it is
+     #8A8680 at 5.22:1 instead. Both re-measured, not eyeballed. */
+  --ink-muted: #8B96A8;
+  --ink-faint: #8A8680;
   /* Re-audited against --surface-raised (#263349), which was added after the
      note above and is not covered by it: --ink-muted measures 4.19:1 there
      and --ink-faint 3.89:1, both under the 4.5:1 body-text minimum. NEITHER
@@ -40,7 +62,7 @@
      --ink-muted. So no value change was needed here. Recorded because the
      margin is thin and the next rule that pairs muted or faint text with a
      raised surface WILL fail — check this before adding one. */
-  --border: #1B263B;
+  --border: #1E2024;
   /* --border-strong was #415A77: 2.66:1 against the --navy page background
      and 2.76:1 against the --navy-deep field fill, both under the 3:1 that
      WCAG 2.1 AA (1.4.11 Non-text Contrast) requires for the visual boundary
@@ -49,12 +71,18 @@
      indistinguishable from the page it sits on, so this border is the ONLY
      thing marking where the field is. On the waitlist form, the site's only
      conversion surface, it meant a control a low-vision visitor could not
-     locate at all. #496686 holds the same blue-grey hue and clears the bar
-     against BOTH adjacent colours: 3.18:1 on --navy, 3.30:1 on --navy-deep.
+     locate at all. #496686 held the same blue-grey hue and cleared the bar
+     at 3.18:1 on --navy and 3.30:1 on --navy-deep.
+
+     DE-BLUED 2026-09-20 and RE-MEASURED, because the first warm value tried
+     here (#363941) dropped this to 1.64:1 and would have re-broken the exact
+     thing this note exists to protect. #656360 is warm and lands at 3.16:1 on
+     --navy and 3.28:1 on --navy-deep — within 0.02 of the navy it replaces,
+     so the visual weight of every border on the site is unchanged.
      (Ornamental card rules drawn in this token against --surface land at
      2.54:1, which is fine: 1.4.11 governs component boundaries and
      meaningful graphics, not decoration.) */
-  --border-strong: #496686;
+  --border-strong: #656360;
   --gold-border: rgba(212, 175, 55, 0.4);
   --amber: #B58A1A;
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -2130,25 +2158,11 @@ select {
 /* ------------------------------------------------------------------ tiles */
 .lx-band { padding: clamp(2.8rem, 5vw, 4.5rem) 0; background: var(--charcoal);
   border-top: 1px solid var(--border-strong); border-bottom: 1px solid var(--border-strong); }
-.lx-triad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-@media (max-width: 900px) { .lx-triad { grid-template-columns: 1fr; } }
-.lx-tile { display: flex; flex-direction: column; gap: 0.5rem; position: relative; overflow: hidden;
-  background: var(--navy); border: 1px solid var(--border-strong); border-radius: var(--radius-md);
-  padding: 1.7rem 1.5rem 1.3rem; color: inherit;
-  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease; }
-.lx-tile::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
-  background: linear-gradient(90deg, var(--gold), var(--gold-bright));
-  transform: scaleX(0); transform-origin: left; transition: transform 0.3s ease; }
-.lx-tile:hover, .lx-tile:focus-visible { transform: translateY(-4px); border-color: var(--gold-border);
-  background: var(--surface);
-  /* Beats the base `a:hover { text-decoration: underline }` (0,1,1), which
-     would otherwise underline the whole card. */
-  text-decoration: none; }
-.lx-tile:hover::before, .lx-tile:focus-visible::before { transform: scaleX(1); }
-.lx-tile-n { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.18em; color: var(--gold); }
-.lx-tile h2 { font-size: 1.28rem; line-height: 1.2; letter-spacing: -0.015em; margin: 0; }
-.lx-tile p { color: var(--ink-muted); margin: 0; font-size: 0.95rem; }
-.lx-tile-go { margin-top: auto; padding-top: 0.85rem; color: var(--gold-bright); font-weight: 600; font-size: 0.9rem; }
+/* .lx-triad / .lx-tile were the three numbered 01/02/03 product tiles.
+   The Passport showcase replaced them on 2026-09-20 and no HTML file in
+   this repo references either class any more, so the rules are gone with
+   them — dead CSS that still reads as a component is how a page grows a
+   second way of doing the same thing. */
 
 /* ------------------------------------------------------------------ truth */
 .lx-truth { padding: clamp(2.8rem, 5vw, 4.5rem) 0; }
@@ -2164,9 +2178,8 @@ select {
 
 @media (prefers-reduced-motion: reduce) {
   .lx-hero-fx { animation: none; }
-  .lx-rstop, .lx-chip, .lx-tile { transition: none; }
+  .lx-rstop, .lx-chip { transition: none; }
   .lx-route .lx-rstop:not(.is-in) { opacity: 1; transform: none; }
-  .lx-tile:hover, .lx-tile:focus-visible { transform: none; }
 }
 
 /* ============================================================
