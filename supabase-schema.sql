@@ -6168,3 +6168,115 @@ alter table stripe_events add column if not exists completed_at timestamptz;
 update stripe_events set completed_at = received_at where completed_at is null;
 create index if not exists stripe_events_incomplete_idx
   on stripe_events (received_at) where completed_at is null;
+
+-- ============================================================
+-- 136–143) THE WEEK OF 2026-09-18..20
+--
+-- This file calls itself "current live state" at the top, and for eight
+-- migrations it was not. An audit reads this file as the answer to "what is
+-- deployed"; a reference that is behind is worse than no reference, because
+-- the reader has no way to know which half to trust.
+--
+-- Each block below is the load-bearing DDL only. The numbered migration file
+-- named in each header carries the reasoning, and remains the source of truth
+-- for WHY.
+-- ============================================================
+
+-- ---- 136) Parent joins the occupation constraint -----------------------
+-- supabase-migration-136-occupation-parent.sql
+-- The client offered "Parent" while the CHECK rejected it, so every parent's
+-- profile save failed and left them locked on the Passport screen.
+alter table public.profiles drop constraint if exists profiles_occupation_check;
+alter table public.profiles add constraint profiles_occupation_check
+  check (occupation is null or occupation in ('Player','Parent'));
+
+-- ---- 137) Storage reads are for authenticated roles --------------------
+-- supabase-migration-137-storage-read-role.sql
+drop policy if exists avatars_read on storage.objects;
+create policy avatars_read on storage.objects for select to authenticated using (
+  bucket_id = 'avatars'
+);
+drop policy if exists post_images_read on storage.objects;
+create policy post_images_read on storage.objects for select to authenticated using (
+  bucket_id = 'post-images'
+);
+
+-- ---- 138) Scout / Coach / Physio / Agent / Other removed ---------------
+-- supabase-migration-138-remove-scout-coach-physio.sql
+-- GOLSZ sells to one kind of account. The constraint narrowed to the two that
+-- remained, and handle_new_user()'s in-memory allowlist with it.
+update public.profiles set occupation = null
+  where occupation is not null and occupation not in ('Player','Parent');
+
+-- ---- 139) athletes is NOT a directory ----------------------------------
+-- supabase-migration-139-athletes-not-a-directory.sql
+-- This row holds dob, home city, citizenship and scout_context. Any signed-in
+-- account could read every visible athlete's before this.
+drop policy if exists athletes_read on athletes;
+create policy athletes_read on athletes for select to authenticated using (
+  (id = auth.uid() or is_parent_of(id) or is_admin())
+  and (not is_banned(id) or id = auth.uid() or is_admin())
+);
+
+-- ---- 140) request_parent_link stops being an email oracle --------------
+-- supabase-migration-140-parent-link-no-oracle.sql
+-- Its distinct error messages let anyone test whether an email had a GOLSZ
+-- account. Same answer now either way; execute is authenticated-only.
+revoke all on function request_parent_link(text, text) from public;
+grant execute on function request_parent_link(text, text) to authenticated;
+
+-- ---- 141) A tick per habit per day -------------------------------------
+-- supabase-migration-141-development-plan-ticks.sql
+-- Presence IS the tick; un-ticking is a delete. development_plan_items.status
+-- stays the habit LIFECYCLE (active/paused/done) and is not a daily state.
+-- Self-only RLS, no admin read: personal health-adjacent data, matching 075.
+create table if not exists development_plan_ticks (
+  item_id uuid not null references development_plan_items(id) on delete cascade,
+  user_id uuid not null references profiles(id) on delete cascade,
+  tick_date date not null default current_date,
+  created_at timestamptz not null default now(),
+  primary key (item_id, tick_date)
+);
+create index if not exists development_plan_ticks_user_date_idx
+  on development_plan_ticks (user_id, tick_date desc);
+alter table development_plan_ticks enable row level security;
+drop policy if exists development_plan_ticks_own on development_plan_ticks;
+create policy development_plan_ticks_own on development_plan_ticks
+  for select to authenticated using (user_id = auth.uid());
+drop policy if exists development_plan_ticks_insert on development_plan_ticks;
+create policy development_plan_ticks_insert on development_plan_ticks
+  for insert to authenticated with check (
+    user_id = auth.uid()
+    and exists (select 1 from development_plan_items d
+                 where d.id = item_id and d.user_id = auth.uid())
+  );
+drop policy if exists development_plan_ticks_delete on development_plan_ticks;
+create policy development_plan_ticks_delete on development_plan_ticks
+  for delete to authenticated using (user_id = auth.uid());
+
+-- ---- 142) Who took the measurement -------------------------------------
+-- supabase-migration-142-benchmark-measured-by.sql
+-- Provenance, NOT a comparability dimension: it must never gate whether two
+-- readings can be compared. NULL means not recorded and is never backfilled.
+alter table athlete_benchmarks add column if not exists measured_by text;
+alter table athlete_benchmarks drop constraint if exists athlete_benchmarks_measured_by_check;
+alter table athlete_benchmarks add constraint athlete_benchmarks_measured_by_check
+  check (measured_by is null or measured_by in ('self', 'coach', 'official'));
+
+-- ---- 143) Discovery off -------------------------------------------------
+-- supabase-migration-143-discovery-off.sql
+-- Migration 022 granted execute on search_players() to `authenticated` and
+-- nothing ever revoked it, so any signed-in account could call the RPC with
+-- the public anon key, bypassing Scout, the plan gate and the 402.
+-- The function and athletes.scout_visible are KEPT so discovery returns by
+-- decision rather than by rebuild.
+do $$
+declare f record;
+begin
+  for f in select oid::regprocedure as sig from pg_proc where proname = 'search_players'
+  loop
+    execute format('revoke all on function %s from public', f.sig);
+    execute format('revoke all on function %s from anon', f.sig);
+    execute format('revoke all on function %s from authenticated', f.sig);
+  end loop;
+end $$;
