@@ -75,10 +75,10 @@ Note that Stripe Adaptive Pricing cannot be disabled on Payment Links: the
 per-currency Prices set the DEFAULT currency only, and Stripe may still offer
 local-currency conversion at checkout.
 
-Per-charge fees depend on the card's origin (EEA / UK / international) and are
+Per-charge fees depend on the card's origin (domestic / international) and are
 not quoted here on purpose — a rate written into a README goes stale silently.
-See [Stripe's pricing page](https://stripe.com/en-cy/pricing) for the current
-Cyprus figures.
+See [Stripe's Canadian pricing page](https://stripe.com/en-ca/pricing) for the
+current figures. The Stripe account (`acct_1TqxVCRtNFWlwsi4`) is Canadian.
 
 Three things that are easy to get wrong, each of which fails **silently**:
 
@@ -153,11 +153,10 @@ no account can write to `messages` at all.
 
 ---
 
-## Open question for whoever owns the business side
+## Business entity
 
-This file says GOLSZ is a **Nicosia (Cyprus)** business. The live site's footer
-says **Montreal, Canada**, and the Stripe account is Canadian. One of those is
-out of date, and the discrepancy is the kind of thing a diligence process asks
-about early. Nobody working from this repo can resolve it — it needs an answer
-from the owner, and then this file, `index.html`'s footer and the Stripe
-account should all say the same thing.
+GOLSZ is a **Montreal, Canada** company. Confirmed by the owner 2026-09-20,
+after this file had described a Nicosia (Cyprus) business — a leftover from an
+earlier plan. The site footer, `privacy.html`, `terms.html` (governed by the
+Province of Quebec and the federal laws of Canada) and the Stripe account all
+say Canada; this file was the last one that did not.

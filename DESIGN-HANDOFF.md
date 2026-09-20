@@ -9,7 +9,7 @@ from memory — generated 2026-08-12.
 ## 1. What this is and who uses it
 
 GOLSZ is an AI-powered athlete development and recruiting platform, based in
-Nicosia, Cyprus. An athlete builds a verified profile ("Sports Passport"),
+Montreal, Canada. An athlete builds a verified profile ("Sports Passport"),
 talks to an AI advisor ("Scout") about their pathway, and works a plan of
 targets, benchmarks and development goals toward a specific goal — a university
 programme, a club, a professional contract.
