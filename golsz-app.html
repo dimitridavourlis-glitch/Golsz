@@ -317,9 +317,12 @@ function LogoMark({ size = 24, style }) {
 const I18N = {
   en: {
     loading: "Loading…", yes: "Yes", no: "No",
+    load_failed: "Couldn't load this. Check your connection and try again.", load_retry: "Retry",
+    err_network: "Couldn't reach GOLSZ. Check your connection and try again.", err_generic: "Something went wrong. Please try again.",
     alt_post_image: "Photo in this post", alt_scout_photo: "Photo attached to this message",
     a11y_close: "Close", a11y_send: "Send message", a11y_status: "Status", a11y_focus_area: "Focus area",
     a11y_day: "Day", a11y_month: "Month", a11y_year: "Year",
+    a11y_delete_named: "Delete {name}",
     moderation_blocked: "That doesn't look appropriate for GOLSZ — please keep things sports-related.",
     VALUE_LABELS: { "American Football": "American Football", "Archery": "Archery", "Badminton": "Badminton", "Baseball": "Baseball", "Basketball": "Basketball", "Bowling": "Bowling", "Boxing": "Boxing", "Cheerleading": "Cheerleading", "Cricket": "Cricket", "Cross Country": "Cross Country", "Cycling": "Cycling", "Diving": "Diving", "Equestrian": "Equestrian", "Fencing": "Fencing", "Field Hockey": "Field Hockey", "Futsal": "Futsal", "Golf": "Golf", "Gymnastics": "Gymnastics", "Handball": "Handball", "Hockey": "Hockey", "Lacrosse": "Lacrosse", "Martial Arts": "Martial Arts", "Racquetball": "Racquetball", "Rowing": "Rowing", "Rugby": "Rugby", "Sailing": "Sailing", "Skiing": "Skiing", "Snowboarding": "Snowboarding", "Soccer": "Soccer", "Softball": "Softball", "Squash": "Squash", "Swimming": "Swimming", "Table Tennis": "Table Tennis", "Tennis": "Tennis", "Track": "Track", "Triathlon": "Triathlon", "Volleyball": "Volleyball", "Water Polo": "Water Polo", "Weightlifting": "Weightlifting", "Wrestling": "Wrestling", "Other": "Other", "Player": "Player", "Parent": "Parent", "Scout": "Scout", "Agent": "Agent", "Coach": "Coach", "Physio": "Physio" },
     nav_home: "Home", nav_scout: "Scout", nav_ai_scout: "AI Scout",
@@ -351,6 +354,7 @@ const I18N = {
     auth_reset_sent_post: ", a reset link is on its way. Open it to set a new password.",
     auth_paid_notice: "Payment received! If this is the only tab open, log in below once you've confirmed your email. Otherwise close this tab and go back to where you signed up — it'll sign you in automatically the moment your email is confirmed, from whatever device you use to confirm it.",
     auth_reset_failed: "Couldn't send reset email.",
+    auth_err_invalid_login: "That email and password don't match. Check them and try again.", auth_err_unconfirmed: "Your email address hasn't been confirmed yet, so we can't sign you in. This usually means the confirmation email never reached your inbox — resend it below.",
     auth_resend_failed: "Couldn't resend the confirmation email. Try again in a minute.",
     auth_working: "Working…", auth_create_free: "Create free account",
     auth_continue_payment: "Continue to payment — ", auth_per_month: "/month", prices_currency_note: "All prices in {currency}.",
@@ -398,6 +402,7 @@ const I18N = {
     plan_crumb_goal: "From Home · your goal", nav_targets: "Pathway/Plan", nav_plan: "Plan", plan_page_title: "MY PATHWAY", targets_title: "SCHOOLS & CLUBS", targets_edit_hint: "Tap to edit", targets_name_ph: "School or club name", targets_contact_name_ph: "Contact name", targets_contact_email_ph: "Contact email",
     targets_locked_teaser: "Upgrade to build your visual Pathway, set targets and track outreach — GOLSZ Scout will help you build the first list.",
     targets_add: "Add", targets_add_err: "Couldn't add that. Try again.", targets_empty: "No targets yet — add the first school or club you're pursuing.",
+    targets_delete_confirm: "Delete?", targets_delete_confirm_aria: "Tap again to delete {name} and its drafted email",
     targets_notes_ph: "Notes", targets_draft_ph: "Draft outreach email",
     targets_status_researching: "Researching", targets_status_preparing: "Preparing", targets_status_contacted: "Contacted", targets_status_responded: "Responded", targets_status_follow_up: "Follow up", targets_status_opportunity: "Opportunity", targets_fit_reasoning_ph: "Why this is a good fit (optional)",
     plan_starter_feat1: "8 AI Scout questions/day — no lifetime limit", plan_starter_feat2: "Everything in Free", plan_starter_feat3: "Personalized Pathway, My Next Move & baseline assessment", plan_starter_feat4: "Target lists, basic outreach & PDF Passport export",
@@ -664,9 +669,12 @@ const I18N = {
   },
   fr: {
     loading: "Chargement…", yes: "Oui", no: "Non",
+    load_failed: "Impossible de charger ceci. Vérifiez votre connexion et réessayez.", load_retry: "Réessayer",
+    err_network: "Impossible de joindre GOLSZ. Vérifiez votre connexion et réessayez.", err_generic: "Une erreur est survenue. Veuillez réessayer.",
     alt_post_image: "Photo de cette publication", alt_scout_photo: "Photo jointe à ce message",
     a11y_close: "Fermer", a11y_send: "Envoyer le message", a11y_status: "Statut", a11y_focus_area: "Domaine de travail",
     a11y_day: "Jour", a11y_month: "Mois", a11y_year: "Année",
+    a11y_delete_named: "Supprimer {name}",
     moderation_blocked: "Cela ne semble pas approprié pour GOLSZ — merci de rester sur des sujets sportifs.",
     VALUE_LABELS: { "American Football": "Football américain", "Archery": "Tir à l'arc", "Badminton": "Badminton", "Baseball": "Baseball", "Basketball": "Basketball", "Bowling": "Bowling", "Boxing": "Boxe", "Cheerleading": "Cheerleading", "Cricket": "Cricket", "Cross Country": "Cross-country", "Cycling": "Cyclisme", "Diving": "Plongeon", "Equestrian": "Équitation", "Fencing": "Escrime", "Field Hockey": "Hockey sur gazon", "Futsal": "Futsal", "Golf": "Golf", "Gymnastics": "Gymnastique", "Handball": "Handball", "Hockey": "Hockey sur glace", "Lacrosse": "Crosse", "Martial Arts": "Arts martiaux", "Racquetball": "Racquetball", "Rowing": "Aviron", "Rugby": "Rugby", "Sailing": "Voile", "Skiing": "Ski", "Snowboarding": "Snowboard", "Soccer": "Football", "Softball": "Softball", "Squash": "Squash", "Swimming": "Natation", "Table Tennis": "Tennis de table", "Tennis": "Tennis", "Track": "Athlétisme", "Triathlon": "Triathlon", "Volleyball": "Volleyball", "Water Polo": "Water-polo", "Weightlifting": "Haltérophilie", "Wrestling": "Lutte", "Other": "Autre", "Player": "Athlète", "Parent": "Parent", "Scout": "Recruteur", "Agent": "Agent", "Coach": "Entraîneur", "Physio": "Physiothérapeute" },
     nav_home: "Accueil", nav_scout: "Agent", nav_ai_scout: "Agent IA",
@@ -698,6 +706,7 @@ const I18N = {
     auth_reset_sent_post: ", un lien de réinitialisation est en route. Ouvrez-le pour définir un nouveau mot de passe.",
     auth_paid_notice: "Paiement reçu ! Si cet onglet est le seul ouvert, connectez-vous ci-dessous une fois votre e-mail confirmé. Sinon, fermez cet onglet et retournez là où vous vous êtes inscrit — la connexion se fera automatiquement dès que votre e-mail sera confirmé, quel que soit l'appareil utilisé pour le confirmer.",
     auth_reset_failed: "Impossible d'envoyer l'e-mail de réinitialisation.",
+    auth_err_invalid_login: "Cet e-mail et ce mot de passe ne correspondent pas. Vérifiez-les et réessayez.", auth_err_unconfirmed: "Votre adresse e-mail n'a pas encore été confirmée, nous ne pouvons donc pas vous connecter. Cela signifie généralement que l'e-mail de confirmation n'est jamais arrivé — renvoyez-le ci-dessous.",
     auth_resend_failed: "Impossible de renvoyer l'e-mail de confirmation. Réessayez dans une minute.",
     auth_working: "Chargement…", auth_create_free: "Créer un compte gratuit",
     auth_continue_payment: "Continuer vers le paiement — ", auth_per_month: "/mois", prices_currency_note: "Tous les prix sont en {currency}.",
@@ -745,6 +754,7 @@ const I18N = {
     plan_crumb_goal: "Depuis l'Accueil · votre objectif", nav_targets: "Parcours/Plan", nav_plan: "Plan", plan_page_title: "MON PARCOURS", targets_title: "ÉCOLES & CLUBS", targets_edit_hint: "Toucher pour modifier", targets_name_ph: "Nom de l'école ou du club", targets_contact_name_ph: "Nom du contact", targets_contact_email_ph: "Email du contact",
     targets_locked_teaser: "Passez à un forfait supérieur pour construire votre Parcours visuel, définir des cibles et suivre vos démarches — GOLSZ Scout vous aide à créer la première liste.",
     targets_add: "Ajouter", targets_add_err: "Impossible d'ajouter. Réessayez.", targets_empty: "Aucune cible pour l'instant — ajoutez la première école ou le premier club visé.",
+    targets_delete_confirm: "Supprimer ?", targets_delete_confirm_aria: "Touchez à nouveau pour supprimer {name} et son e-mail préparé",
     targets_notes_ph: "Notes", targets_draft_ph: "Brouillon d'email de contact",
     targets_status_researching: "Recherche", targets_status_preparing: "Préparation", targets_status_contacted: "Contacté", targets_status_responded: "Répondu", targets_status_follow_up: "Relance", targets_status_opportunity: "Opportunité", targets_fit_reasoning_ph: "Pourquoi c'est un bon choix (facultatif)",
     plan_starter_feat1: "8 questions/jour avec Scout — sans limite à vie", plan_starter_feat2: "Tout ce qui est dans Free", plan_starter_feat3: "Parcours personnalisé, Ma Prochaine Étape & bilan de départ", plan_starter_feat4: "Listes de cibles, approche de base & export PDF du Passeport",
@@ -1011,9 +1021,12 @@ const I18N = {
   },
   es: {
     loading: "Cargando…", yes: "Sí", no: "No",
+    load_failed: "No se pudo cargar. Revisa tu conexión e inténtalo de nuevo.", load_retry: "Reintentar",
+    err_network: "No se pudo conectar con GOLSZ. Revisa tu conexión e inténtalo de nuevo.", err_generic: "Algo salió mal. Inténtalo de nuevo.",
     alt_post_image: "Foto de esta publicación", alt_scout_photo: "Foto adjunta a este mensaje",
     a11y_close: "Cerrar", a11y_send: "Enviar mensaje", a11y_status: "Estado", a11y_focus_area: "Área de enfoque",
     a11y_day: "Día", a11y_month: "Mes", a11y_year: "Año",
+    a11y_delete_named: "Eliminar {name}",
     moderation_blocked: "Eso no parece apropiado para GOLSZ — por favor, mantén el contenido relacionado con el deporte.",
     VALUE_LABELS: { "American Football": "Fútbol americano", "Archery": "Tiro con arco", "Badminton": "Bádminton", "Baseball": "Béisbol", "Basketball": "Baloncesto", "Bowling": "Bolos", "Boxing": "Boxeo", "Cheerleading": "Animación", "Cricket": "Críquet", "Cross Country": "Campo a través", "Cycling": "Ciclismo", "Diving": "Salto de trampolín", "Equestrian": "Hípica", "Fencing": "Esgrima", "Field Hockey": "Hockey sobre hierba", "Futsal": "Fútbol sala", "Golf": "Golf", "Gymnastics": "Gimnasia", "Handball": "Balonmano", "Hockey": "Hockey sobre hielo", "Lacrosse": "Lacrosse", "Martial Arts": "Artes marciales", "Racquetball": "Racquetball", "Rowing": "Remo", "Rugby": "Rugby", "Sailing": "Vela", "Skiing": "Esquí", "Snowboarding": "Snowboard", "Soccer": "Fútbol", "Softball": "Sóftbol", "Squash": "Squash", "Swimming": "Natación", "Table Tennis": "Tenis de mesa", "Tennis": "Tenis", "Track": "Atletismo", "Triathlon": "Triatlón", "Volleyball": "Voleibol", "Water Polo": "Waterpolo", "Weightlifting": "Halterofilia", "Wrestling": "Lucha", "Other": "Otro", "Player": "Deportista", "Parent": "Madre/Padre", "Scout": "Ojeador", "Agent": "Agente", "Coach": "Entrenador", "Physio": "Fisioterapeuta" },
     nav_home: "Inicio", nav_scout: "Agente", nav_ai_scout: "Agente IA",
@@ -1045,6 +1058,7 @@ const I18N = {
     auth_reset_sent_post: ", un enlace de restablecimiento está en camino. Ábrelo para establecer una nueva contraseña.",
     auth_paid_notice: "¡Pago recibido! Si esta es la única pestaña abierta, inicia sesión abajo en cuanto confirmes tu correo. Si no, cierra esta pestaña y vuelve a donde te registraste — se iniciará sesión automáticamente en el momento en que confirmes tu correo, desde el dispositivo que uses para confirmarlo.",
     auth_reset_failed: "No se pudo enviar el correo de restablecimiento.",
+    auth_err_invalid_login: "Ese correo y esa contraseña no coinciden. Revísalos e inténtalo de nuevo.", auth_err_unconfirmed: "Tu correo electrónico aún no está confirmado, así que no podemos iniciar tu sesión. Normalmente significa que el correo de confirmación nunca llegó a tu bandeja — reenvíalo abajo.",
     auth_resend_failed: "No se pudo reenviar el correo de confirmación. Inténtalo de nuevo en un minuto.",
     auth_working: "Procesando…", auth_create_free: "Crear cuenta gratuita",
     auth_continue_payment: "Continuar al pago — ", auth_per_month: "/mes", prices_currency_note: "Todos los precios en {currency}.",
@@ -1092,6 +1106,7 @@ const I18N = {
     plan_crumb_goal: "Desde Inicio · tu objetivo", nav_targets: "Trayectoria/Plan", nav_plan: "Plan", plan_page_title: "MI TRAYECTORIA", targets_title: "ESCUELAS Y CLUBES", targets_edit_hint: "Toca para editar", targets_name_ph: "Nombre de la escuela o club", targets_contact_name_ph: "Nombre del contacto", targets_contact_email_ph: "Email del contacto",
     targets_locked_teaser: "Mejora tu plan para construir tu Camino visual, definir objetivos y hacer seguimiento — GOLSZ Scout te ayuda a crear la primera lista.",
     targets_add: "Añadir", targets_add_err: "No se pudo añadir. Inténtalo de nuevo.", targets_empty: "Aún no hay objetivos — añade la primera escuela o club que te interese.",
+    targets_delete_confirm: "¿Eliminar?", targets_delete_confirm_aria: "Toca de nuevo para eliminar {name} y su correo redactado",
     targets_notes_ph: "Notas", targets_draft_ph: "Borrador de email de contacto",
     targets_status_researching: "Investigando", targets_status_preparing: "Preparando", targets_status_contacted: "Contactado", targets_status_responded: "Respondido", targets_status_follow_up: "Seguimiento", targets_status_opportunity: "Oportunidad", targets_fit_reasoning_ph: "Por qué encaja bien (opcional)",
     plan_starter_feat1: "8 preguntas/día con Scout — sin límite de por vida", plan_starter_feat2: "Todo lo de Free", plan_starter_feat3: "Camino personalizado, Tu Próximo Paso y evaluación inicial", plan_starter_feat4: "Listas de objetivos, contacto básico y exportación PDF del Pasaporte",
@@ -1358,9 +1373,12 @@ const I18N = {
   },
   el: {
     loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
+    load_failed: "Δεν ήταν δυνατή η φόρτωση. Έλεγξε τη σύνδεσή σου και δοκίμασε ξανά.", load_retry: "Δοκίμασε ξανά",
+    err_network: "Δεν ήταν δυνατή η σύνδεση με το GOLSZ. Έλεγξε τη σύνδεσή σου και δοκίμασε ξανά.", err_generic: "Κάτι πήγε στραβά. Δοκίμασε ξανά.",
     alt_post_image: "Φωτογραφία αυτής της δημοσίευσης", alt_scout_photo: "Φωτογραφία συνημμένη σε αυτό το μήνυμα",
     a11y_close: "Κλείσιμο", a11y_send: "Αποστολή μηνύματος", a11y_status: "Κατάσταση", a11y_focus_area: "Τομέας εστίασης",
     a11y_day: "Ημέρα", a11y_month: "Μήνας", a11y_year: "Έτος",
+    a11y_delete_named: "Διαγραφή {name}",
     moderation_blocked: "Αυτό δεν φαίνεται κατάλληλο για το GOLSZ — παρακαλούμε μείνετε σε θέματα σχετικά με τον αθλητισμό.",
     VALUE_LABELS: { "American Football": "Αμερικανικό ποδόσφαιρο", "Archery": "Τοξοβολία", "Badminton": "Μπάντμιντον", "Baseball": "Μπέιζμπολ", "Basketball": "Μπάσκετ", "Bowling": "Μπόουλινγκ", "Boxing": "Πυγμαχία", "Cheerleading": "Τσιρλίντινγκ", "Cricket": "Κρίκετ", "Cross Country": "Ανώμαλος δρόμος", "Cycling": "Ποδηλασία", "Diving": "Καταδύσεις", "Equestrian": "Ιππασία", "Fencing": "Ξιφασκία", "Field Hockey": "Χόκεϊ επί χόρτου", "Futsal": "Φούτσαλ", "Golf": "Γκολφ", "Gymnastics": "Γυμναστική", "Handball": "Χάντμπολ", "Hockey": "Χόκεϊ επί πάγου", "Lacrosse": "Λακρός", "Martial Arts": "Πολεμικές τέχνες", "Racquetball": "Ρακετμπόλ", "Rowing": "Κωπηλασία", "Rugby": "Ράγκμπι", "Sailing": "Ιστιοπλοΐα", "Skiing": "Σκι", "Snowboarding": "Σνόουμπορντ", "Soccer": "Ποδόσφαιρο", "Softball": "Σόφτμπολ", "Squash": "Σκουός", "Swimming": "Κολύμβηση", "Table Tennis": "Επιτραπέζια αντισφαίριση", "Tennis": "Τένις", "Track": "Στίβος", "Triathlon": "Τρίαθλο", "Volleyball": "Βόλεϊ", "Water Polo": "Πόλο", "Weightlifting": "Άρση βαρών", "Wrestling": "Πάλη", "Other": "Άλλο", "Player": "Αθλητής", "Parent": "Γονέας", "Scout": "Σκάουτερ", "Agent": "Ατζέντης", "Coach": "Προπονητής", "Physio": "Φυσιοθεραπευτής" },
     nav_home: "Αρχική", nav_scout: "Σκάουτ", nav_ai_scout: "AI Σκάουτ",
@@ -1392,6 +1410,7 @@ const I18N = {
     auth_reset_sent_post: ", ένας σύνδεσμος επαναφοράς είναι καθ' οδόν. Ανοίξτε τον για να ορίσετε νέο κωδικό.",
     auth_paid_notice: "Η πληρωμή ελήφθη! Αν αυτή είναι η μόνη ανοιχτή καρτέλα, συνδεθείτε παρακάτω μόλις επιβεβαιώσετε το email σας. Διαφορετικά, κλείστε αυτήν την καρτέλα και επιστρέψτε εκεί όπου κάνατε την εγγραφή — η σύνδεση θα γίνει αυτόματα τη στιγμή που θα επιβεβαιωθεί το email σας, από όποια συσκευή κι αν το επιβεβαιώσετε.",
     auth_reset_failed: "Δεν ήταν δυνατή η αποστολή του email επαναφοράς.",
+    auth_err_invalid_login: "Αυτό το email και ο κωδικός δεν ταιριάζουν. Έλεγξέ τα και δοκίμασε ξανά.", auth_err_unconfirmed: "Η διεύθυνση email σου δεν έχει επιβεβαιωθεί ακόμα, οπότε δεν μπορούμε να σε συνδέσουμε. Συνήθως αυτό σημαίνει ότι το email επιβεβαίωσης δεν έφτασε ποτέ — στείλε το ξανά παρακάτω.",
     auth_resend_failed: "Δεν ήταν δυνατή η εκ νέου αποστολή του email επιβεβαίωσης. Δοκιμάστε ξανά σε ένα λεπτό.",
     auth_working: "Επεξεργασία…", auth_create_free: "Δημιουργία δωρεάν λογαριασμού",
     auth_continue_payment: "Συνέχεια στην πληρωμή — ", auth_per_month: "/μήνα", prices_currency_note: "Όλες οι τιμές σε {currency}.",
@@ -1439,6 +1458,7 @@ const I18N = {
     plan_crumb_goal: "Από την Αρχική · ο στόχος σου", nav_targets: "Πορεία/Πλάνο", nav_plan: "Πλάνο", plan_page_title: "ΤΟ ΜΟΝΟΠΑΤΙ ΜΟΥ", targets_title: "ΣΧΟΛΕΣ & ΣΥΛΛΟΓΟΙ", targets_edit_hint: "Πάτα για επεξεργασία", targets_name_ph: "Όνομα σχολής ή συλλόγου", targets_contact_name_ph: "Όνομα επαφής", targets_contact_email_ph: "Email επαφής",
     targets_locked_teaser: "Αναβάθμισε για να χτίσεις το οπτικό σου Μονοπάτι, να ορίσεις στόχους και να παρακολουθείς την προσέγγισή σου — ο GOLSZ Scout θα σε βοηθήσει να φτιάξεις την πρώτη λίστα.",
     targets_add: "Προσθήκη", targets_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", targets_empty: "Δεν υπάρχουν στόχοι ακόμα — πρόσθεσε την πρώτη σχολή ή σύλλογο που σε ενδιαφέρει.",
+    targets_delete_confirm: "Διαγραφή;", targets_delete_confirm_aria: "Πάτησε ξανά για να διαγράψεις το {name} και το προσχέδιο email του",
     targets_notes_ph: "Σημειώσεις", targets_draft_ph: "Πρόχειρο email επικοινωνίας",
     targets_status_researching: "Έρευνα", targets_status_preparing: "Προετοιμασία", targets_status_contacted: "Επικοινώνησα", targets_status_responded: "Απάντησαν", targets_status_follow_up: "Παρακολούθηση", targets_status_opportunity: "Ευκαιρία", targets_fit_reasoning_ph: "Γιατί ταιριάζει καλά (προαιρετικό)",
     plan_starter_feat1: "8 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_starter_feat2: "Όλα όσα περιλαμβάνει το Free", plan_starter_feat3: "Προσωπικό Μονοπάτι, Η Επόμενή σου Κίνηση & αρχική αξιολόγηση", plan_starter_feat4: "Λίστες στόχων, βασική προσέγγιση & εξαγωγή PDF Διαβατηρίου",
@@ -1745,6 +1765,10 @@ function LangProvider({ children }) {
   });
   useEffect(() => {
     try { localStorage.setItem("golsz-lang", lang); } catch (e) {}
+    // <html lang> was hardcoded "en", so a screen reader read French, Spanish
+    // and Greek with English pronunciation, and the browser offered to
+    // "translate from English". It follows the chosen language now.
+    try { document.documentElement.lang = lang; } catch (e) {}
   }, [lang]);
   // Same rule as useLang()'s no-provider fallback: test key presence, not
   // truthiness, so an intentionally-empty string stays empty instead of
@@ -1846,6 +1870,25 @@ async function disablePushNotifications(uid) {
     if (sb && uid) await sb.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
     await sub.unsubscribe();
   }
+}
+// SIGNING OUT LEFT THE DEVICE SUBSCRIBED. The push_subscriptions row kept
+// pointing at this browser, so the next person to use a shared phone or family
+// laptop got the previous account's message and follower notifications on the
+// lock screen. Must run BEFORE sb.auth.signOut(): the delete is RLS-scoped to
+// auth.uid(), which no longer exists afterwards.
+// Best-effort and bounded: a failure or a slow network never blocks signing
+// out — after 3s sign-out proceeds regardless.
+async function detachPushOnSignOut() {
+  if (!sb) return;
+  try {
+    const { data } = await sb.auth.getSession();
+    const uid = data && data.session && data.session.user && data.session.user.id;
+    if (!uid) return;
+    await Promise.race([
+      disablePushNotifications(uid),
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ]);
+  } catch (e) { console.warn("GOLSZ push detach on sign-out failed:", e); }
 }
 /* ============ SETTINGS ============
    Currently just the Background (theme) toggle, but it's its own modal
@@ -4233,6 +4276,55 @@ function FamilyAccess() {
   );
 }
 
+/* ============ USER-FACING ERRORS AND FAILED LOADS ============
+   `(e && e.message) || t(...)` almost never showed the translated fallback:
+   nearly every failure HAS a message — Supabase's English, a PostgREST code,
+   "Failed to fetch" — so an athlete reading the app in Greek got raw English
+   diagnostics, on the locked onboarding editor of all places. The raw error
+   belongs in the console (callers console.error it); the athlete gets a
+   sentence in their own language. Known cases get a specific sentence and
+   everything else gets the screen's own translated fallback. */
+function isNetworkError(e) {
+  if (!e) return false;
+  const m = String(e.message || e);
+  return e.name === "AuthRetryableFetchError" || /Failed to fetch|NetworkError|Load failed|Network request failed/i.test(m);
+}
+function userErrorText(e, t, fallbackKey) {
+  return t(isNetworkError(e) ? "err_network" : (fallbackKey || "err_generic"));
+}
+// Sign-in only. Supabase's code is checked before its message text because the
+// wording has changed across supabase-js versions and the codes have not.
+function loginErrorKey(e) {
+  const code = e && e.code;
+  const m = String((e && e.message) || "");
+  if (code === "email_not_confirmed" || /email.*not.*confirmed/i.test(m)) return "auth_err_unconfirmed";
+  if (code === "invalid_credentials" || /invalid login credentials/i.test(m)) return "auth_err_invalid_login";
+  if (isNetworkError(e)) return "err_network";
+  return "err_generic";
+}
+// A read that failed is not an empty list. Shown in place of the list (and of
+// anything that would write the list back) until a retry succeeds.
+function LoadError({ onRetry }) {
+  const { t } = useLang();
+  return (
+    <div role="alert" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 12.5, color: C.warnText, lineHeight: 1.45 }}>
+      <span style={{ flex: "1 1 180px" }}>{t("load_failed")}</span>
+      <button onClick={onRetry} style={{ background: "transparent", color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 9, padding: "8px 14px", minHeight: 44, fontSize: 12.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>{t("load_retry")}</button>
+    </div>
+  );
+}
+// THE ROW DELETE BUTTONS WERE 13-14px TARGETS WITH NO NAME. A screen reader
+// announced "button", and a thumb aimed at the status select next to one
+// deleted the row instead. The icon stays the same size; the hit area grows to
+// 44px around it, and negative margins keep the row from growing with it.
+function deleteBtnStyle(extra) {
+  return Object.assign({
+    background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0,
+    minWidth: 44, minHeight: 44, margin: "-10px -15px -10px 0", borderRadius: 9,
+    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "inherit",
+  }, extra || {});
+}
+
 /* ============ VERIFIED MEDIA (highlight reels) ============
    Link-based, not hosted video — athletes paste a link to footage already
    hosted elsewhere (YouTube, Veo, Hudl...). Stored in the athletes.highlights
@@ -4242,6 +4334,12 @@ function Highlights({ viewUserId, manageMode }) {
   const { t } = useLang();
   const [items, setItems] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  // highlights is ONE jsonb array, and every add/remove writes the whole array
+  // back. uid is set before the read, so after a FAILED read `items` was [] and
+  // adding one link wrote [entry] over every highlight the athlete had. Until a
+  // read succeeds, nothing here may write.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [uid, setUid] = useState(null);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
@@ -4274,13 +4372,15 @@ function Highlights({ viewUserId, manageMode }) {
           sb.from("athletes").select("highlights").eq("id", targetId).single(),
           sb.from("profiles").select("identity_verified").eq("id", targetId).maybeSingle(),
         ]);
-        if (error) throw error;
+        // PGRST116 is .single() finding no row: genuinely empty, not a failure.
+        if (error && error.code !== "PGRST116") throw error;
         setItems(Array.isArray(data && data.highlights) ? data.highlights : []);
         setOwnerVerified(!!(prof && prof.identity_verified));
-      } catch (e) { console.error("GOLSZ highlights load error:", e); }
+      } catch (e) { console.error("GOLSZ highlights load error:", e); setLoadFailed(true); }
       finally { setLoaded(true); }
     })();
-  }, [viewUserId]);
+  }, [viewUserId, reloadKey]);
+  function retryLoad() { setLoadFailed(false); setLoaded(false); setReloadKey((k) => k + 1); }
 
   // THE CALLER'S ERROR PATH WAS UNREACHABLE. This swallowed its own failure
   // into console.error, so it always resolved successfully — addHighlight's
@@ -4290,6 +4390,8 @@ function Highlights({ viewUserId, manageMode }) {
   // It throws now, and the callers already know what to do with that.
   async function saveList(list) {
     if (!sb || !uid || !isOwner) return;
+    // Whole-array write: never from a list that was not successfully read.
+    if (!loaded || loadFailed) throw new Error(t("load_failed"));
     const { error } = await sb.from("athletes").update({ highlights: list }).eq("id", targetId);
     if (error) { console.error("GOLSZ highlights save error:", error); throw error; }
   }
@@ -4347,7 +4449,8 @@ function Highlights({ viewUserId, manageMode }) {
         {ownerVerified && <BadgeCheck size={11} color={C.lime} />}
         {ownerVerified ? t("highlights_title") : t("highlights_title_unverified")}
       </div>
-      {loaded && items.length === 0 && (
+      {loadFailed && <LoadError onRetry={retryLoad} />}
+      {loaded && !loadFailed && items.length === 0 && (
         <div style={{ fontSize: 12.5, color: C.slate }}>{t("highlights_empty")}</div>
       )}
       {items.map((m, i) => (
@@ -4359,11 +4462,11 @@ function Highlights({ viewUserId, manageMode }) {
             <span style={{ fontSize: 13, flex: 1 }}>{m.title}</span>
           )}
           {isOwner && m.id && (
-            <button onClick={() => removeHighlight(m.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, marginLeft: 4, display: "flex" }}><X size={13} /></button>
+            <button onClick={() => removeHighlight(m.id)} aria-label={t("a11y_delete_named").replace("{name}", m.title || "")} title={t("a11y_delete_named").replace("{name}", m.title || "")} style={deleteBtnStyle()}><X size={13} /></button>
           )}
         </div>
       ))}
-      {sb && isOwner && (
+      {sb && isOwner && loaded && !loadFailed && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
           <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label={t("highlights_title_ph")} placeholder={t("highlights_title_ph")}
             style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", marginBottom: 6, boxSizing: "border-box" }} />
@@ -4390,6 +4493,9 @@ function Timeline({ viewUserId, manageMode }) {
   const { t } = useLang();
   const [items, setItems] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  // Same whole-array write as Highlights, same guard: see the note there.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [uid, setUid] = useState(null);
   const [year, setYear] = useState("");
   const [text, setText] = useState("");
@@ -4407,16 +4513,17 @@ function Timeline({ viewUserId, manageMode }) {
         setUid(user.id);
         const targetId = viewUserId || user.id;
         const { data, error } = await sb.from("athletes").select("timeline").eq("id", targetId).single();
-        if (error) throw error;
+        if (error && error.code !== "PGRST116") throw error;
         const list = Array.isArray(data && data.timeline) ? data.timeline : [];
         // Newest first — a coach skimming a shared Passport should see the
         // most recent milestone (this season, a commitment) before older
         // ones, not have to scroll past years of history first.
         setItems([...list].sort((a, b) => String(b.year).localeCompare(String(a.year))));
-      } catch (e) { console.error("GOLSZ timeline load error:", e); }
+      } catch (e) { console.error("GOLSZ timeline load error:", e); setLoadFailed(true); }
       finally { setLoaded(true); }
     })();
-  }, [viewUserId]);
+  }, [viewUserId, reloadKey]);
+  function retryLoad() { setLoadFailed(false); setLoaded(false); setReloadKey((k) => k + 1); }
 
   // THE CALLER'S ERROR PATH WAS UNREACHABLE. This swallowed its own failure
   // into console.error, so it always resolved successfully — addHighlight's
@@ -4426,6 +4533,8 @@ function Timeline({ viewUserId, manageMode }) {
   // It throws now, and the callers already know what to do with that.
   async function saveList(list) {
     if (!sb || !uid || !isOwner) return;
+    // Whole-array write: never from a list that was not successfully read.
+    if (!loaded || loadFailed) throw new Error(t("load_failed"));
     const { error } = await sb.from("athletes").update({ timeline: list }).eq("id", targetId);
     if (error) { console.error("GOLSZ timeline save error:", error); throw error; }
   }
@@ -4466,7 +4575,8 @@ function Timeline({ viewUserId, manageMode }) {
   return (
     <div style={{ ...card }}>
       <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("timeline_title")}</div>
-      {loaded && items.length === 0 && (
+      {loadFailed && <LoadError onRetry={retryLoad} />}
+      {loaded && !loadFailed && items.length === 0 && (
         <div style={{ fontSize: 12.5, color: C.slate }}>{t("timeline_empty")}</div>
       )}
       {items.map((e, i) => (
@@ -4474,11 +4584,11 @@ function Timeline({ viewUserId, manageMode }) {
           <div style={{ fontFamily: "'Space Mono', monospace", fontWeight: 800, color: C.lime, fontSize: 13, width: 56, flexShrink: 0, paddingTop: 1 }}>{e.year}</div>
           <div style={{ fontSize: 13, color: C.body, flex: 1, lineHeight: 1.5 }}>{e.text}</div>
           {isOwner && e.id && (
-            <button onClick={() => removeEntry(e.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, marginLeft: 4, display: "flex", flexShrink: 0 }}><X size={13} /></button>
+            <button onClick={() => removeEntry(e.id)} aria-label={t("a11y_delete_named").replace("{name}", [e.year, e.text].filter(Boolean).join(" "))} title={t("a11y_delete_named").replace("{name}", [e.year, e.text].filter(Boolean).join(" "))} style={deleteBtnStyle()}><X size={13} /></button>
           )}
         </div>
       ))}
-      {sb && isOwner && (
+      {sb && isOwner && loaded && !loadFailed && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
           <div style={{ display: "flex", gap: 6 }}>
             <input value={year} onChange={(e) => setYear(e.target.value)} aria-label={t("timeline_year_ph")} placeholder={t("timeline_year_ph")}
@@ -4847,7 +4957,7 @@ function Benchmarks({ viewUserId, manageId }) {
                 <div style={{ fontSize: 10, color: C.slate, marginTop: 2, lineHeight: 1.35 }}>{how || t("bench_method_none")}</div>
               </div>
               <div style={{ fontSize: 11, color: C.slate, marginLeft: "auto", flexShrink: 0 }}>{e.recorded_date}</div>
-              <button onClick={() => removeEntry(e.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><X size={13} /></button>
+              <button onClick={() => removeEntry(e.id)} aria-label={t("a11y_delete_named").replace("{name}", [m, e.value != null ? String(e.value) : "", e.unit, e.recorded_date].filter(Boolean).join(" "))} title={t("a11y_delete_named").replace("{name}", [m, e.value != null ? String(e.value) : "", e.unit, e.recorded_date].filter(Boolean).join(" "))} style={deleteBtnStyle()}><X size={13} /></button>
             </div>
             );
           })}
@@ -5408,7 +5518,7 @@ function PublicPassport({ userId, token }) {
 // It comes from Passport's editId, which is itself derived from actingFor;
 // RLS is what authorises the write, so a wrong id here fails closed rather
 // than editing a stranger.
-function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
+function ProfileEditor({ initial, targetId, locked, onClose, onSaved, onSignOut }) {
   const { t, tv } = useLang();
   const panelRef = useRef(null);
   useModalFocus(panelRef, true);
@@ -5474,7 +5584,7 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
       onSaved();
     } catch (e) {
       console.error("GOLSZ profile save error:", e);
-      setErr((e && e.message) || t("editor_save_err"));
+      setErr(userErrorText(e, t, "editor_save_err"));
     } finally { setBusy(false); }
   }
 
@@ -5502,6 +5612,15 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
           </div>
         </div>
         {locked && <div style={{ fontSize: 12, color: C.lime, marginBottom: 14 }}>{t("editor_locked_notice")}</div>}
+        {/* THE LOCKED EDITOR HAD NO WAY OUT. It covers the whole app with no
+            close button by design (onboarding must be finished), which also
+            covered the only Sign out and Settings — someone on a shared
+            device, or who signed up with the wrong email, was stuck. Signing
+            out does not bypass onboarding: the editor is back, still locked,
+            the next time this account signs in. */}
+        {locked && onSignOut && (
+          <button onClick={onSignOut} style={{ display: "block", background: "none", border: "none", color: C.slate, fontSize: 12, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", padding: 0, minHeight: 44, marginTop: -10, marginBottom: 4, textDecoration: "underline" }}>{t("nav_signout")}</button>
+        )}
         {err && <div style={{ color: C.amber, fontSize: 12, marginBottom: 14 }}>{err}</div>}
 
         {group(t("editor_name_label"), <input style={field} aria-label={t("editor_name_label")} value={form.full_name || ""} onChange={set("full_name")} placeholder={t("editor_name_ph")} />)}
@@ -5972,6 +6091,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           initial={editorInitial()}
           targetId={editId}
           locked={incomplete}
+          onSignOut={onSignOut}
           onClose={() => setEditing(false)}
           onSaved={() => { setEditing(false); load(); }}
         />
@@ -6291,7 +6411,11 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         <div className="pp-title">{p.name}</div>
         <div className="pp-sub">
           {[p.sport, p.position, p.club].filter(Boolean).join("  \u00B7  ")}
-          {p.verifiedTier ? <span className="pp-verified">{t("passport_verified_label")}</span> : null}
+          {/* toPassport() defaults verifiedTier to the STRING "none", which is
+              truthy — so this printed "Verified" on every exported Passport,
+              including ones no admin ever verified. Same test as the
+              on-screen badge above. */}
+          {p.verifiedTier && p.verifiedTier !== "none" ? <span className="pp-verified">{t("passport_verified_label")}</span> : null}
         </div>
 
         <table className="pp-table">
@@ -9082,7 +9206,7 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan, flush, he
       // Never silent. A goal that looks saved but isn't is the exact failure
       // this whole item exists to fix.
       console.error("GOLSZ goal save error:", e);
-      setErr((e && e.message) ? `${t("goal_card_save_err")} (${String(e.message).slice(0, 80)})` : t("goal_card_save_err"));
+      setErr(userErrorText(e, t, "goal_card_save_err"));
     } finally { setBusy(false); }
   }
 
@@ -9771,8 +9895,12 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
       ? { label: "next_move_type_define_goal", why: "home_next_why_goal", go: "scout" }
       : pathwayNext
         ? { labelText: pathwayNext.label,
+            // A step's `stage` is a stage ID, not a translation key: custom
+            // stages and the ones api/scout.js files steps under are UUIDs,
+            // and t("pathway_stage_" + uuid) rendered the raw key. Resolve it
+            // against the same stages Plan draws; an orphaned id shows nothing.
             whyText: [milestoneDateLabel(pathwayNext, lang, t).text,
-                      pathwayNext.stage ? t("pathway_stage_" + pathwayNext.stage) : null].filter(Boolean).join(" · "),
+                      nextStepStageLabel(pathwayNext, athlete, pathwayRow, t)].filter(Boolean).join(" · "),
             go: "targets" }
       : !filmAdded
         ? { label: "plan_next30_film", why: "home_next_why_film", go: "profile" }
@@ -9873,7 +10001,11 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
 
   // A named school that answered beats any count. It is the only proper noun
   // from the outside world available anywhere on this screen.
-  const replied = targetRows.find((r) => r && r.status === "replied" && r.name);
+  // There is no "replied" status — this compared against one, so the line
+  // could never appear. TARGET_STATUSES (migration 077's check constraint)
+  // records an answer as "responded", and an "opportunity" is a school that
+  // answered with something concrete, so both count.
+  const replied = targetRows.find((r) => r && (r.status === "responded" || r.status === "opportunity") && r.name);
   const contacted = targetRows.filter((r) => r && r.status && r.status !== "researching").length;
   const schoolsFact = !canTargets || targetRows.length === 0
     ? { text: t("home_door_schools_empty"), live: false }
@@ -10586,6 +10718,14 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
   const [goalHeading, setGoalHeading] = useState("");
   const [items, setItems] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  // Targets are separate rows, so a failed read cannot overwrite anything —
+  // but it rendered as "No targets yet", which is a false statement about an
+  // athlete's outreach. The list says it failed and offers Retry instead.
+  const [targetsLoadFailed, setTargetsLoadFailed] = useState(false);
+  const [targetsReloadKey, setTargetsReloadKey] = useState(0);
+  // Which row's delete is armed — the same two-tap pattern as Scout's history:
+  // deleting a target also deletes the coach email drafted on it.
+  const [armedTarget, setArmedTarget] = useState(null);
   const [name, setName] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -10642,12 +10782,14 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
         setQuality(computeProfileQuality(ath, prof));
         setFilmAdded(!!(ath && Array.isArray(ath.highlights) && ath.highlights.length > 0));
         setBenchmarkCount((benchmarks || []).length);
-      } catch (e) { console.error("GOLSZ targets load error:", e); }
+      } catch (e) { console.error("GOLSZ targets load error:", e); setTargetsLoadFailed(true); }
       setLoaded(true);
     })();
     // Re-runs when the parent switches athlete. An empty dep array meant the
     // first athlete loaded stayed on screen for the whole session.
-  }, [actingFor]);
+  }, [actingFor, targetsReloadKey]);
+  // Retry keeps the page mounted (no skeleton) — only the list is re-read.
+  function retryTargets() { setTargetsLoadFailed(false); setTargetsReloadKey((k) => k + 1); }
 
   async function addTarget() {
     if (!sb || !uid || !name.trim() || busy) return;
@@ -10843,7 +10985,8 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
           </div>
         )}
 
-        {items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55, padding: "6px 0 2px" }}>{t("targets_empty")}</div>}
+        {targetsLoadFailed && <LoadError onRetry={retryTargets} />}
+        {!targetsLoadFailed && items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55, padding: "6px 0 2px" }}>{t("targets_empty")}</div>}
 
         {items.map((it, ti) => (
           // A target is a ROW in this section, not a card inside a card.
@@ -10878,7 +11021,16 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
                 {TARGET_STATUSES.map((s) => <option key={s} value={s}>{t("targets_status_" + s)}</option>)}
               </select>
               <button onClick={() => setExpandedId(expandedId === it.id ? null : it.id)} style={{ ...iconBtn(C.slate), flexShrink: 0 }}>{expandedId === it.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>
-              <button onClick={() => removeTarget(it.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><X size={14} /></button>
+              {/* TWO TAPS. Deleting a target also deletes the coach email
+                  drafted on it, and this sat one thumb-width from the status
+                  select. First tap arms and says so; the second deletes; it
+                  disarms itself after four seconds. */}
+              <button onClick={() => { if (armedTarget === it.id) { setArmedTarget(null); removeTarget(it.id); } else { setArmedTarget(it.id); setTimeout(() => setArmedTarget((cur) => (cur === it.id ? null : cur)), 4000); } }}
+                aria-label={armedTarget === it.id ? t("targets_delete_confirm_aria").replace("{name}", it.name || "") : t("a11y_delete_named").replace("{name}", it.name || "")}
+                title={t("a11y_delete_named").replace("{name}", it.name || "")}
+                style={deleteBtnStyle(armedTarget === it.id ? { border: `1px solid ${C.amber}`, color: C.warnText, fontSize: 10, fontWeight: 900, padding: "0 6px", margin: "0 -6px 0 0" } : null)}>
+                {armedTarget === it.id ? t("targets_delete_confirm") : <X size={14} />}
+              </button>
             </div>
             {expandedId === it.id && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
@@ -11032,7 +11184,7 @@ function DevelopmentPlan({ viewUserId, manageId }) {
               {DEV_STATUSES.map((s) => <option key={s} value={s}>{t("dev_plan_status_" + s)}</option>)}
             </select>
             <button onClick={() => setExpandedId(expandedId === it.id ? null : it.id)} style={{ ...iconBtn(C.slate), flexShrink: 0 }}>{expandedId === it.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>
-            <button onClick={() => removeItem(it.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><X size={14} /></button>
+            <button onClick={() => removeItem(it.id)} aria-label={t("a11y_delete_named").replace("{name}", it.goal || "")} title={t("a11y_delete_named").replace("{name}", it.goal || "")} style={deleteBtnStyle()}><X size={14} /></button>
           </div>
           {expandedId === it.id && (
             <>
@@ -11219,6 +11371,15 @@ function athleteStages(athlete, pathwayRow) {
 }
 function stageLabel(stage, t) {
   return stage.label === null ? t("pathway_stage_" + stage.id) : stage.label;
+}
+// The label for the stage a milestone is filed under, or null. A milestone's
+// `stage` is an ID into athleteStages(), never a translation key — so it is
+// looked up there, exactly as Plan does, and a step filed under a stage that
+// no longer exists says nothing rather than printing an internal key.
+function nextStepStageLabel(milestone, athlete, pathwayRow, t) {
+  if (!milestone || !milestone.stage) return null;
+  const st = athleteStages(athlete, pathwayRow).find((x) => x.id === milestone.stage);
+  return st ? (stageLabel(st, t) || null) : null;
 }
 function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing, stages: stagesProp, onNodeTap, onDraftWithScout, drafting, stepCounts, goalText }) {
   // Stages arrive resolved from the owner (PathwayPlan). This component does
@@ -11511,6 +11672,13 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
   const { t, lang } = useLang();
   const [uid, setUid] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  // A FAILED READ IS NOT AN EMPTY PLAN. The pathway_plan read's error used to
+  // be ignored, so a network blip looked exactly like "no plan yet": the goal
+  // editor opened, and the next save upserted empty milestones and stages
+  // over the athlete's real row. While this is true nothing is drawn and
+  // save() refuses to write; Retry re-runs the read.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [athlete, setAthlete] = useState(null);
   const [pathwayType, setPathwayType] = useState(PATHWAY_TYPES[0]);
   const [timeline, setTimeline] = useState("");
@@ -11620,11 +11788,14 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
         // athletes_read both allow `is_parent_of`.
         const who = actingFor || user.id;
         setUid(who);
-        const [{ data }, { data: ath }] = await Promise.all([
+        const [{ data, error: planErr }, { data: ath }] = await Promise.all([
           sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, notes, stages, current_stage_id").eq("user_id", who).maybeSingle(),
           sb.from("athletes").select("sport, club_name, recruiting_status, scout_context").eq("id", who).single(),
         ]);
         setAthlete(ath || null);
+        // maybeSingle() answers "no row" with data === null and NO error, so
+        // an error here is a real failure, never an athlete without a plan.
+        if (planErr) throw planErr;
         if (data) {
           setExists(true);
           setPathwayType(data.pathway_type);
@@ -11636,10 +11807,11 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
         } else {
           setEditingGoal(true);
         }
-      } catch (e) { console.error("GOLSZ pathway plan load error:", e); }
+      } catch (e) { console.error("GOLSZ pathway plan load error:", e); setLoadFailed(true); }
       setLoaded(true);
     })();
-  }, [viewUserId, actingFor]);
+  }, [viewUserId, actingFor, reloadKey]);
+  function retryLoad() { setLoadFailed(false); setLoaded(false); setReloadKey((k) => k + 1); }
 
   // THE ONLY WRITER ON THIS SCREEN, AND IT HAD THREE PROBLEMS.
   //
@@ -11666,7 +11838,10 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
   milestonesRef.current = milestones;
 
   function save(overrides) {
-    if (!sb || !uid) return;
+    // Every save is a whole-row upsert, so writing before a read has
+    // SUCCEEDED would replace the athlete's real plan with this screen's
+    // empty defaults. Refuse rather than guess.
+    if (!sb || !uid || !loaded || loadFailed) return;
     const before = milestonesRef.current;
     // Optimistic, and the ref moves with it so the next write in the burst
     // builds on this one instead of on what the server last confirmed.
@@ -11985,6 +12160,8 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
   // edit meant for THIS line silently landed there instead, because the
   // literal was not unique. Anchor by owner, not by text.
   if (!loaded) return <SkeletonCard height={232} />;
+  // PathwayPlan's own read failed: say so, offer Retry, draw no editor.
+  if (loadFailed) return <div style={{ ...card }}><LoadError onRetry={retryLoad} /></div>;
 
   const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
   const editorLabel = { fontSize: 9.5, fontWeight: 900, letterSpacing: ".14em", color: C.slate, textTransform: "uppercase", display: "block", marginBottom: 6 };
@@ -12845,7 +13022,6 @@ function GolszApp({ onSignOut, startOnboarding }) {
     } catch (e) { return "home"; }
   });
   const [thread, setThread] = useState(null);
-  const [hasUnreadMsgs, setHasUnreadMsgs] = useState(false);
   const [onboarding, setOnboarding] = useState(!!startOnboarding);
   const [viewProfileId, setViewProfileId] = useState(null);
   const [scoutSeed, setScoutSeed] = useState(null);
@@ -13138,17 +13314,9 @@ function GolszApp({ onSignOut, startOnboarding }) {
     });
   };
 
-  useEffect(() => {
-    if (!sb) return;
-    (async () => {
-      try {
-        const { data: { user } } = await sb.auth.getUser();
-        if (!user) return;
-        const { count } = await sb.from("messages").select("id", { count: "exact", head: true }).eq("recipient_id", user.id).is("read_at", null);
-        setHasUnreadMsgs((count || 0) > 0);
-      } catch (e) { console.error("GOLSZ unread check error:", e); }
-    })();
-  }, [page]);
+  // (An unread-messages count query used to run here on EVERY tab change —
+  // two round trips per tap — feeding a hasUnreadMsgs flag that nothing ever
+  // read. Messages is not one of this shell's pages today; removed, not hidden.)
 
   // Time-on-app tracking (migration 031, admin-only aggregate view under
   // Analytics → Time on app). Rather than a precise session start/stop
@@ -13732,7 +13900,14 @@ const CSS = `
   @keyframes run { 0%,100%{opacity:.25;transform:translateY(0)} 50%{opacity:1;transform:translateY(-3px)} }
   @media (prefers-reduced-motion: reduce){ .msg,.running span{ animation:none } }
   textarea::placeholder, input::placeholder { color: ${C.slate}; }
-  button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid ${C.lime}; outline-offset: 2px; }
+  /* !important on purpose (WCAG 2.4.7). ~28 inputs carry an inline
+     outline: "none" for their resting look, and an inline style beats any
+     stylesheet rule that is not !important — so keyboard users tabbing
+     through Auth, the profile editor or Plan saw no focus ring at all.
+     Only :focus-visible is forced, so mouse and touch focus stay unringed.
+     tabindex="-1" is excluded: those are dialogs focused by script. */
+  button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible,
+  [role="button"]:focus-visible, [tabindex]:not([tabindex="-1"]):focus-visible { outline: 2px solid ${C.lime} !important; outline-offset: 2px !important; }
   /* The mark is now a vector, so the light theme adjusts a FILL rather than
      pushing the whole image through brightness/saturate. Dark carries the
      authored brand gold; light reuses --lime's own light value, since
@@ -14047,12 +14222,17 @@ const sb = (SUPABASE_URL && SUPABASE_ANON_KEY && typeof window !== "undefined" &
 // Surfaces in the Admin Panel's "Errors" tab. Best-effort only — if sb
 // itself isn't configured (preview mode, no backend) there's nowhere
 // to send this, so it just no-ops rather than erroring further.
-if (typeof window !== "undefined") {
-  const reportClientError = (message, detail) => {
-    if (!sb) return;
+// Top-level (not inside the `if` below) so ErrorBoundary can call it too: React
+// 18 production does not re-throw an error a boundary caught, so a render crash
+// never reaches window "error" and was never logged anywhere but the console.
+function reportClientError(message, detail) {
+  if (!sb || typeof window === "undefined") return;
+  try {
     sb.rpc("log_client_error", { p_message: message || "Unknown error", p_detail: detail || null, p_url: window.location.href })
-      .then(({ error }) => { if (error) console.error("GOLSZ client error log failed:", error); });
-  };
+      .then(({ error }) => { if (error) console.error("GOLSZ client error log failed:", error); }, () => {});
+  } catch (e) { /* the logger must never be the second crash */ }
+}
+if (typeof window !== "undefined") {
   window.addEventListener("error", (event) => {
     reportClientError(
       (event.error && event.error.message) || event.message,
@@ -14572,7 +14752,7 @@ function Auth({ onDone, paidReturn }) {
     } catch (e) {
       if (checkoutTab) { try { checkoutTab.close(); } catch (e2) {} }
       console.error("GOLSZ auth error:", e);
-      let msg = "Something went wrong. Try again.";
+      let msg = t("err_generic");
       // The exact failure a real user hit: signed up, the confirmation
       // email never arrived, came back later to log in and got stuck with
       // no way forward. Supabase surfaces this as code "email_not_confirmed"
@@ -14582,13 +14762,18 @@ function Auth({ onDone, paidReturn }) {
       const isUnconfirmed = e && (e.code === "email_not_confirmed" || /email.*not.*confirmed/i.test(e.message || ""));
       if (isUnconfirmed) {
         setUnconfirmedEmail(email.trim());
-        msg = "Your email address hasn't been confirmed yet, so we can't sign you in. This usually means the confirmation email never reached your inbox — resend it below.";
+        msg = t("auth_err_unconfirmed");
+      } else if (!isSignupLike) {
+        // LOGIN. Supabase's own English ("Invalid login credentials",
+        // "Failed to fetch") used to be shown verbatim in every language.
+        // The raw error is in the console line above.
+        msg = t(loginErrorKey(e));
+      } else if (isNetworkError(e)) {
+        msg = t("err_network");
       } else if (e && typeof e.message === "string" && e.message.trim()) {
+        // Signup throws its own sentences (rate limit, verification), which
+        // are meant to be read as written.
         msg = e.message;
-      } else if (e instanceof TypeError) {
-        msg = "Couldn't reach Supabase — check your internet connection, that the project isn't paused, and that this page is served over http(s), not opened as a local file.";
-      } else if (e) {
-        try { msg = "Unexpected error: " + JSON.stringify(e); } catch { msg = "Unexpected error (see browser console for details)."; }
       }
       setErr(msg);
     } finally {
@@ -15095,7 +15280,13 @@ function Root() {
     })();
   }, [authed]);
 
-  async function signOut() { if (sb) { try { await sb.auth.signOut(); } catch (e) {} } setAuthed(false); setRecovering(false); setBanned(false); }
+  async function signOut() {
+    if (sb) {
+      await detachPushOnSignOut();
+      try { await sb.auth.signOut(); } catch (e) {}
+    }
+    setAuthed(false); setRecovering(false); setBanned(false);
+  }
 
   if (!ready) return React.createElement("div", { style: { minHeight: "100vh", background: C.pitch } });
   if (recovering) return React.createElement(ResetPassword, { onDone: () => setRecovering(false) });
@@ -15112,24 +15303,52 @@ function Root() {
 // React tree — the whole app goes blank with nothing on screen and no
 // way back except an actual page reload the person has to think to
 // do themselves. This catches that at the root and offers a reload
-// button instead of a silent blank screen. No error-tracking service
-// (e.g. Sentry) is wired up yet — see CLAUDE.md's known gaps — so this
-// only logs to the console, it doesn't report anywhere.
+// button instead of a silent blank screen. No third-party tracker (e.g.
+// Sentry) is wired up; componentDidCatch sends the error through the same
+// log_client_error path as the window handlers, so it lands in the Admin
+// Panel's Errors tab. React 18 production never forwards a caught render
+// error to window "error", so without this call it reached the console only.
+//
+// This boundary sits OUTSIDE LangProvider (it has to — the provider can be
+// what threw), so its copy cannot use t(). It reads the saved language itself
+// and carries its own three strings in all four languages.
+const BOUNDARY_COPY = {
+  en: { title: "Something went wrong.", body: "GOLSZ hit an unexpected error. Reloading usually fixes it.", reload: "Reload" },
+  fr: { title: "Une erreur est survenue.", body: "GOLSZ a rencontré une erreur inattendue. Recharger la page règle généralement le problème.", reload: "Recharger" },
+  es: { title: "Algo salió mal.", body: "GOLSZ encontró un error inesperado. Recargar suele solucionarlo.", reload: "Recargar" },
+  el: { title: "Κάτι πήγε στραβά.", body: "Το GOLSZ αντιμετώπισε ένα απρόσμενο σφάλμα. Η επαναφόρτωση συνήθως το διορθώνει.", reload: "Επαναφόρτωση" },
+};
+function boundaryCopy() {
+  let lang = "en";
+  try { const saved = localStorage.getItem("golsz-lang"); if (saved && Object.prototype.hasOwnProperty.call(BOUNDARY_COPY, saved)) lang = saved; } catch (e) {}
+  return BOUNDARY_COPY[lang];
+}
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
-  componentDidCatch(error, info) { console.error("GOLSZ uncaught render error:", error, info); }
+  componentDidCatch(error, info) {
+    console.error("GOLSZ uncaught render error:", error, info);
+    reportClientError(
+      (error && error.message) || String(error),
+      {
+        stack: error && error.stack ? String(error.stack).slice(0, 4000) : null,
+        componentStack: info && info.componentStack ? String(info.componentStack).slice(0, 4000) : null,
+        errorBoundary: true,
+      }
+    );
+  }
   render() {
     if (this.state.error) {
+      const copy = boundaryCopy();
       return React.createElement("div", {
         style: { minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: 24, background: "#0B0F0C", color: "#F5F7F5", fontFamily: "'Archivo', system-ui, sans-serif", textAlign: "center" },
       },
-        React.createElement("div", { style: { fontSize: 17, fontWeight: 800 } }, "Something went wrong."),
-        React.createElement("div", { style: { fontSize: 13.5, color: "#9AA39C", maxWidth: 320 } }, "GOLSZ hit an unexpected error. Reloading usually fixes it."),
+        React.createElement("div", { style: { fontSize: 17, fontWeight: 800 } }, copy.title),
+        React.createElement("div", { style: { fontSize: 13.5, color: "#9AA39C", maxWidth: 320 } }, copy.body),
         React.createElement("button", {
           onClick: () => window.location.reload(),
           style: { background: "#D4AF37", color: "#0B0F0C", border: "none", borderRadius: 12, padding: "12px 22px", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" },
-        }, "Reload"),
+        }, copy.reload),
       );
     }
     return this.props.children;
@@ -15166,7 +15385,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=384a60170fb15b29";
+    s.src = "js/app.js?v=11d423e26474e246";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
@@ -15176,13 +15395,27 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   // Nothing above can detect the script loading but THROWING. The watchdog
   // can: if React has not mounted by now, something is wrong and the athlete
   // is looking at an animation that will never end.
+  // The app (and its I18N) never loaded, so this reads the saved language
+  // itself. Plain text only: these strings go into innerHTML.
+  var BOOT_COPY = {
+    en: ["Something stopped GOLSZ loading.", "Reload"],
+    fr: ["Quelque chose a empêché GOLSZ de se charger.", "Recharger"],
+    es: ["Algo impidió que GOLSZ se cargara.", "Recargar"],
+    el: ["Κάτι εμπόδισε τη φόρτωση του GOLSZ.", "Επαναφόρτωση"]
+  };
+  function bootCopy() {
+    var lang = "en";
+    try { var saved = localStorage.getItem("golsz-lang"); if (saved && BOOT_COPY.hasOwnProperty(saved)) lang = saved; } catch (e) {}
+    return BOOT_COPY[lang];
+  }
   function bootFailed(why) {
     var boot = document.getElementById("boot");
     if (!boot || boot.getAttribute("data-failed")) return;
     boot.setAttribute("data-failed", why);
+    var copy = bootCopy();
     boot.innerHTML = '<div style="padding:28px 22px;text-align:center;font:600 14px/1.55 Archivo,system-ui,sans-serif;color:#8B96A8">'
-      + "Something stopped GOLSZ loading."
-      + '<div style="margin-top:14px"><button onclick="location.reload()" style="font:800 13px Archivo,system-ui,sans-serif;padding:11px 20px;border-radius:10px;border:1px solid #D4AF37;background:none;color:#D4AF37;cursor:pointer">Reload</button></div></div>';
+      + copy[0]
+      + '<div style="margin-top:14px"><button onclick="location.reload()" style="font:800 13px Archivo,system-ui,sans-serif;padding:11px 20px;border-radius:10px;border:1px solid #D4AF37;background:none;color:#D4AF37;cursor:pointer">' + copy[1] + '</button></div></div>';
   }
   // THE TEST IS "IS THE BOOT STATE STILL THERE", not "does #root have a child".
   // The boot animation LIVES inside #root, so root.firstChild is truthy from
