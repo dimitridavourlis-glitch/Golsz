@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  GOLSZ sitemap. Four public pages; golsz-app.html is deliberately absent
-  (see robots.txt — it is the signed-in app, not indexable content).
+  GOLSZ sitemap. Five public pages (home, about, contact, terms, privacy);
+  golsz-app.html is deliberately absent (see robots.txt — it is the signed-in
+  app, not indexable content).
 
   URLs use https://golsz.com to match the rel="canonical" tag on every page.
   A sitemap that lists a different host from the canonical tag is a
@@ -14,31 +15,31 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://golsz.com/</loc>
-    <lastmod>2026-09-09</lastmod>
+    <lastmod>2026-10-09</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://golsz.com/about.html</loc>
-    <lastmod>2026-09-09</lastmod>
+    <lastmod>2026-10-09</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://golsz.com/contact.html</loc>
-    <lastmod>2026-08-12</lastmod>
+    <lastmod>2026-10-09</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://golsz.com/terms.html</loc>
-    <lastmod>2026-08-12</lastmod>
+    <lastmod>2026-10-09</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://golsz.com/privacy.html</loc>
-    <lastmod>2026-08-12</lastmod>
+    <lastmod>2026-10-09</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
