@@ -14861,6 +14861,31 @@ function Auth({ onDone, paidReturn }) {
             </div>
           )}
 
+          {/* P0-3. Signup previously showed no Terms and no Privacy notice at
+              all, and privacy.html was linked only from the marketing site —
+              so an athlete handing over their date of birth, school, club and
+              physical measurements never saw either document. Deliberately
+              plain text with two real links rather than a pre-ticked box: a
+              checkbox that is already ticked is not consent, and one more
+              tap between an athlete and their account is not worth a dark
+              pattern. Rendered for both the athlete and parent signup flows.
+              ABOVE THE BUTTON, NOT BELOW IT. It used to sit under the submit
+              button at 11px, where it is read, if at all, after the account
+              already exists. Terms bind only if the notice is conspicuous and
+              seen before the click that accepts them — courts have refused
+              to enforce small grey text the user could scroll past, and
+              Québec voids an external clause that was not expressly brought
+              to the consumer's attention (C.c.Q. art. 1435). */}
+          {isSignupLike && (
+            <div style={{ textAlign: "center", marginBottom: 12, fontSize: 12, color: C.slate, lineHeight: 1.5 }}>
+              {t("auth_legal_pre")}
+              <a href="terms.html" target="_blank" rel="noopener noreferrer" style={{ color: C.lime, fontWeight: 700, textDecoration: "underline" }}>{t("auth_legal_terms")}</a>
+              {t("auth_legal_mid")}
+              <a href="privacy.html" target="_blank" rel="noopener noreferrer" style={{ color: C.lime, fontWeight: 700, textDecoration: "underline" }}>{t("auth_legal_privacy")}</a>
+              {t("auth_legal_post")}
+            </div>
+          )}
+
           <button type="submit" disabled={!ok || busy || confirmPolling} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!ok || busy || confirmPolling) ? "default" : "pointer", opacity: (!ok || busy || confirmPolling) ? 0.45 : 1, fontFamily: "inherit" }}>{cta}</button>
           </form>
 
@@ -14872,24 +14897,6 @@ function Auth({ onDone, paidReturn }) {
               says the account is free. */}
           {isSignup && plansOpen && (
             <div style={{ textAlign: "center", marginTop: 6, fontSize: 11, color: C.slate }}>{t("prices_currency_note").replace("{currency}", currency.toUpperCase())}</div>
-          )}
-
-          {/* P0-3. Signup previously showed no Terms and no Privacy notice at
-              all, and privacy.html was linked only from the marketing site —
-              so an athlete handing over their date of birth, school, club and
-              physical measurements never saw either document. Deliberately
-              plain text with two real links rather than a pre-ticked box: a
-              checkbox that is already ticked is not consent, and one more
-              tap between an athlete and their account is not worth a dark
-              pattern. Rendered for both the athlete and parent signup flows. */}
-          {isSignupLike && (
-            <div style={{ textAlign: "center", marginTop: 12, fontSize: 11, color: C.slate, lineHeight: 1.5 }}>
-              {t("auth_legal_pre")}
-              <a href="terms.html" target="_blank" rel="noopener noreferrer" style={{ color: C.lime, fontWeight: 700, textDecoration: "underline" }}>{t("auth_legal_terms")}</a>
-              {t("auth_legal_mid")}
-              <a href="privacy.html" target="_blank" rel="noopener noreferrer" style={{ color: C.lime, fontWeight: 700, textDecoration: "underline" }}>{t("auth_legal_privacy")}</a>
-              {t("auth_legal_post")}
-            </div>
           )}
 
           <div style={{ textAlign: "center", marginTop: 14, fontSize: 13, color: C.slate }}>
@@ -15159,7 +15166,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=8e715957b23655f0";
+    s.src = "js/app.js?v=384a60170fb15b29";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

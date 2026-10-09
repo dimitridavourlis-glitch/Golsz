@@ -157,6 +157,12 @@ h4 { font-size: 1.15rem; }
    the design wants, rather than reaching for a deeper heading again. */
 .size-h3 { font-size: clamp(1.3rem, 1.2vw + 1rem, 1.6rem); }
 .legal-body h2 { font-size: clamp(1.3rem, 1.2vw + 1rem, 1.6rem); }
+/* The global `ul` reset strips bullets and indent, which turned every list in
+   the terms into run-on lines that read as one long paragraph. Legal lists
+   need to scan as lists. */
+.legal-body ul { list-style: disc; padding-left: 1.4rem; margin: 0 0 1em; }
+.legal-body li { margin: 0 0 0.45em; }
+.legal-body li::marker { color: var(--gold); }
 
 p { margin: 0 0 1em; color: var(--ink-muted); }
 
