@@ -58,11 +58,18 @@
       <a href="about.html#how-it-works" class="nav-link">How it works</a>
       <a href="index.html#pricing" class="nav-link">Pricing</a>
       <a href="about.html#about-section" class="nav-link">About</a>
+      <a href="contact.html" class="nav-link" data-page="contact.html">Contact</a>
     </nav>
-    <!-- Sign in and Start free both open the app, which shows either form.
+    <!-- ONE HEADER, BYTE FOR BYTE, ON EVERY MARKETING PAGE (index, about,
+         contact, terms, privacy); tests/test_legal_consistency.cjs diffs
+         them. contact/terms/privacy used to carry an older header whose Feed
+         and Discover links pointed at app pages that are switched off, so
+         they silently landed on Home. Contact carries data-page so
+         initActiveNav() in js/main.js still highlights it on contact.html.
+         Sign in and Start free both open the app, which shows either form.
          Previously "Home", "App" and "Launch the app" all pointed at
          overlapping destinations and competed for the same click. -->
-    <a href="golsz-app.html" class="nav-link nav-signin">Sign in</a>
+    <a href="golsz-app.html?mode=login" class="nav-link nav-signin">Sign in</a>
     <a href="golsz-app.html" class="btn btn-primary nav-cta">Start free</a>
     <button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-panel">
       <span class="bar"></span>
@@ -74,7 +81,8 @@
       <a href="about.html#how-it-works" class="nav-link">How it works</a>
       <a href="index.html#pricing" class="nav-link">Pricing</a>
       <a href="about.html#about-section" class="nav-link">About</a>
-      <a href="golsz-app.html" class="nav-link">Sign in</a>
+      <a href="contact.html" class="nav-link" data-page="contact.html">Contact</a>
+      <a href="golsz-app.html?mode=login" class="nav-link">Sign in</a>
       <a href="golsz-app.html" class="btn btn-primary btn-block">Start free</a>
     </nav>
   </div>
@@ -147,11 +155,11 @@
               <div class="pp-avatar">AM</div>
               <div>
                 <div class="pp-name">Alex Moreno</div>
-                <div class="pp-sub">Basketball &middot; Shooting Guard &middot; Class of 2028</div>
+                <div class="pp-sub">Basketball &middot; Shooting Guard &middot; Junior college, 2nd year</div>
               </div>
             </div>
             <div class="pp-grid">
-              <div class="pp-cell"><b>16</b><span>Age</span></div>
+              <div class="pp-cell"><b>19</b><span>Age</span></div>
               <div class="pp-cell"><b>188</b><span>Height cm</span></div>
               <div class="pp-cell"><b>3.6</b><span>GPA</span></div>
               <div class="pp-cell"><b>4</b><span>Highlights</span></div>
@@ -175,9 +183,9 @@
           <div class="preview-chrome"><i></i><i></i><i></i><span>Illustrative preview</span></div>
           <div class="preview-body">
             <div class="path-row" aria-label="Example pathway">
-              <div class="path-node is-done"><div class="path-ring"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg></div><b>School team</b><span>Now</span></div>
-              <div class="path-link is-done"></div>
               <div class="path-node is-done"><div class="path-ring"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg></div><b>Club</b><span>Done</span></div>
+              <div class="path-link is-done"></div>
+              <div class="path-node is-done"><div class="path-ring"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg></div><b>JUCO team</b><span>Now</span></div>
               <div class="path-link"></div>
               <div class="path-node"><div class="path-ring"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg></div><b>Showcase</b><span>Next</span></div>
               <div class="path-link"></div>
@@ -232,7 +240,7 @@
           <div class="preview-chrome"><i></i><i></i><i></i><span>Illustrative preview</span></div>
           <div class="preview-body">
             <div class="sc-line is-me"><div class="sc-dot">AM</div><div class="sc-bubble">I want to play D1 basketball. Am I anywhere close?</div></div>
-            <div class="sc-line"><div class="sc-dot">S</div><div class="sc-bubble">You're a 2028 guard at 188&nbsp;cm with a 3.6 GPA and four highlights up &mdash; that's a real starting point, and the GPA keeps every division open.<br><br>The honest gap is <strong>exposure</strong>. You've got no showcase on record and no target list yet. D1 staff have to see you somewhere.</div></div>
+            <div class="sc-line"><div class="sc-dot">S</div><div class="sc-bubble">You're a 19-year-old JUCO guard at 188&nbsp;cm with a 3.6 GPA and four highlights up &mdash; that's a real starting point, and the GPA keeps every division open.<br><br>The honest gap is <strong>exposure</strong>. You've got no showcase on record and no target list yet. D1 staff have to see you somewhere.</div></div>
             <div class="sc-line is-me"><div class="sc-dot">AM</div><div class="sc-bubble">What should I do first?</div></div>
             <div class="sc-line"><div class="sc-dot">S</div><div class="sc-bubble">Get one summer showcase on the calendar, then we'll build a target list around your level. Want me to start that list?</div></div>
           </div>

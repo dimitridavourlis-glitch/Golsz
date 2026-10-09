@@ -33,27 +33,38 @@
 
 <header class="site-header">
   <div class="container nav-row">
-    <a href="index.html" class="logo">GOLSZ<span class="mark">.</span></a>
+    <a href="index.html" class="logo"><svg class="logo-mark" width="20" height="20" viewBox="0 0 74.043 74.678" fill="#D4AF37" style="flex:0 0 auto;margin-right:.4em" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M71.5 26.92L65.47 26.9C64.2 23.01 61.88 19.24 59.16 16.15C56.29 12.9 52.91 10.24 49.05 8.26C44.48 5.9 38.94 5.15 33.84 5.78C13.67 8.29 1.97 29.47 8.08 48.39C11.15 57.88 20.48 65.81 30.06 68.07C33.52 68.89 37.32 68.79 40.82 68.41C44.03 68.06 47.69 67.28 50.45 65.56C51.9 64.66 53.5 64.03 54.92 63.03C61.48 58.41 66.17 51.4 67.12 43.38C67.39 41.13 67.8 38.74 67.06 36.58L25.71 36.56L25.7 10.28L32.16 8L32.17 32.89L73.31 32.91C74.48 37.09 74.09 41.49 73.24 45.69C70.26 60.23 58.08 71.68 43.39 74.17C24.91 77.3 5.68 65.59 1.04 47.27C-4.1 26.98 10.09 4.6 30.6 0.71C34.1 0.04 37.79 -0.28 41.33 0.31C52.33 2.15 62.98 8.34 68.2 18.61C69.37 20.9 71.92 24.26 71.5 26.92ZM22.11 59.56L41.3 43.23L14.99 43.22L15.06 38.21L58.83 38.24L37.92 55.6L57.73 55.61C57.81 55.97 57.97 56.41 57.83 56.78C57.44 57.82 53.39 60.93 52.3 61.05C50.25 61.29 48.08 61.06 46.01 61.07C40.57 61.1 35.13 61.07 29.68 61.06C28.31 61.06 24.14 61.49 23.08 60.89C22.64 60.64 22.35 59.96 22.11 59.56Z"/></svg>GOLSZ<span class="mark">.</span></a>
     <nav class="nav-links" aria-label="Primary">
-      <a href="index.html" class="nav-link" data-page="index.html">Home</a>
-      <a href="golsz-app.html?page=feed" class="nav-link">Feed</a>
-      <a href="golsz-app.html?page=discover" class="nav-link">Discover</a>
-      <a href="golsz-app.html?page=profile" class="nav-link">Profile</a>
+      <a href="about.html#product" class="nav-link">Product</a>
+      <a href="about.html#how-it-works" class="nav-link">How it works</a>
+      <a href="index.html#pricing" class="nav-link">Pricing</a>
+      <a href="about.html#about-section" class="nav-link">About</a>
       <a href="contact.html" class="nav-link" data-page="contact.html">Contact</a>
     </nav>
-    <a href="golsz-app.html" class="btn btn-primary nav-cta">Launch the app</a>
+    <!-- ONE HEADER, BYTE FOR BYTE, ON EVERY MARKETING PAGE (index, about,
+         contact, terms, privacy); tests/test_legal_consistency.cjs diffs
+         them. contact/terms/privacy used to carry an older header whose Feed
+         and Discover links pointed at app pages that are switched off, so
+         they silently landed on Home. Contact carries data-page so
+         initActiveNav() in js/main.js still highlights it on contact.html.
+         Sign in and Start free both open the app, which shows either form.
+         Previously "Home", "App" and "Launch the app" all pointed at
+         overlapping destinations and competed for the same click. -->
+    <a href="golsz-app.html?mode=login" class="nav-link nav-signin">Sign in</a>
+    <a href="golsz-app.html" class="btn btn-primary nav-cta">Start free</a>
     <button class="nav-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-panel">
       <span class="bar"></span>
     </button>
   </div>
   <div class="container">
     <nav class="mobile-panel" id="mobile-panel" aria-label="Mobile">
-      <a href="index.html" class="nav-link" data-page="index.html">Home</a>
-      <a href="golsz-app.html?page=feed" class="nav-link">Feed</a>
-      <a href="golsz-app.html?page=discover" class="nav-link">Discover</a>
-      <a href="golsz-app.html?page=profile" class="nav-link">Profile</a>
+      <a href="about.html#product" class="nav-link">Product</a>
+      <a href="about.html#how-it-works" class="nav-link">How it works</a>
+      <a href="index.html#pricing" class="nav-link">Pricing</a>
+      <a href="about.html#about-section" class="nav-link">About</a>
       <a href="contact.html" class="nav-link" data-page="contact.html">Contact</a>
-      <a href="golsz-app.html" class="btn btn-primary btn-block">Launch the app</a>
+      <a href="golsz-app.html?mode=login" class="nav-link">Sign in</a>
+      <a href="golsz-app.html" class="btn btn-primary btn-block">Start free</a>
     </nav>
   </div>
 </header>
@@ -64,7 +75,7 @@
     <div class="container reveal">
       <p class="eyebrow">Legal</p>
       <h1>Privacy policy.</h1>
-      <p class="lede">Last updated: August 2026. This describes what GOLSZ actually collects, how it's used, and the choices you have — for the real product, not a placeholder.</p>
+      <p class="lede">Last updated: 9 October 2026. This describes the personal information GOLSZ actually collects, how it's used and shared, how long it's kept, and the choices you have &mdash; for the real product, not a placeholder.</p>
     </div>
   </section>
 
@@ -73,57 +84,112 @@
       <div class="mx-auto" style="max-width: 720px;">
 
         <div class="builder-note reveal">
-          <strong>Legal-review note.</strong> This policy describes GOLSZ's actual technical data practices as implemented in the product, written to be accurate rather than a generic SaaS template. It has not been reviewed by legal counsel in Québec/Canada or the EU. Paragraphs marked <strong>[Legal review advised]</strong> involve judgment calls (retention periods, international-transfer basis, exact GDPR-rights process) that should be confirmed by counsel before this is treated as a final, binding policy.
+          <strong>Legal-review note.</strong> This policy describes GOLSZ's actual data practices as implemented in the product, written to be accurate rather than a generic template. It has not been reviewed by legal counsel in Québec/Canada or the EU. Paragraphs marked <strong>[Legal review advised]</strong> involve judgment calls (retention periods, transfers outside Québec, the Québec <em>Act respecting the protection of personal information in the private sector</em> ("Law 25"), and the exact GDPR-rights process) that should be confirmed by counsel before this is treated as a final, binding policy.
         </div>
 
         <div class="legal-body" style="color: var(--ink-muted);">
 
           <h2>1. Who we are</h2>
-          <p>GOLSZ is operated from Montreal, Canada. This policy explains how we collect, use, store, and protect personal data when you create a GOLSZ account, build an athlete profile, use the AI assistant ("Scout"), or otherwise use the GOLSZ app at <a href="https://golsz.vercel.app">golsz.vercel.app</a> (and, once connected, golsz.com). <strong>[Legal review advised]</strong> the exact registered legal-entity name and address for the data-controller identification should be confirmed and inserted here.</p>
+          <p>GOLSZ is operated from Montreal, Québec, Canada. This policy explains how we collect, use, share, store and protect personal information when you visit golsz.com, create a GOLSZ account, build your Sports Passport, use the AI assistant ("Scout"), or open a shared Passport link. GOLSZ is for adults: you must be 18 or over to hold an account (see section 5). Our <a href="terms.html">Terms &amp; conditions</a> also apply. <strong>[Legal review advised]</strong> the exact registered legal-entity name and address for the data-controller identification should be confirmed and inserted here.</p>
 
-          <h2>2. Data we collect</h2>
-          <p><strong>Account information.</strong> When you sign up, we collect your full name, email address, date of birth, and account type (player, scout, agent, coach, or physio). Your date of birth determines whether you can create your own account (18+) or whether a parent/guardian must create it on your behalf (under 18 — see Section 5).</p>
-          <p><strong>Athlete profile data.</strong> If you build an athlete profile, we store what you choose to enter: sport, position, height, weight, graduation year, club/team name, country, playing foot, recruiting status, a short bio, and links to highlight footage you provide. All of this is optional beyond what's required to use core features, and you control what's visible on a shared Passport link.</p>
-          <p><strong>Uploaded content.</strong> Profile photos and any images you attach to a post are stored in our file storage (Supabase Storage), each user's files kept in a folder scoped to their own account.</p>
-          <p><strong>AI assistant (Scout) interactions.</strong> Questions you ask Scout and the responses you receive are stored so the conversation can continue across sessions. We also store structured signals used to personalize Scout's answers (e.g. your stated goals, sport, and profile context) and, separately for our own cost/quality monitoring, metadata about each AI request (which model handled it, token counts, estimated cost, response time) — this monitoring data is not shared externally and is not linked to what you asked beyond what's needed to debug or improve the service.</p>
-          <p><strong>Payment information.</strong> If you subscribe to a paid plan, checkout is handled entirely by Stripe — GOLSZ never receives or stores your card number. We store only your Stripe customer reference, your plan tier, and subscription/payment status (e.g. whether a recent charge failed) so we can enforce what your plan includes.</p>
-          <p><strong>Push notifications.</strong> If you opt in, your browser generates a push subscription (an endpoint URL and encryption keys) which we store so we can deliver notifications (e.g. reminders, messages). You can revoke this at any time from Settings or your browser's notification permissions.</p>
-          <p><strong>Trust &amp; safety data.</strong> If content is reported, reviewed by our automated moderation check, or you submit a verification request or an appeal, we store the relevant content, the decision, and (for admin actions) who took them, in order to keep the platform safe and to have a record if a decision is disputed.</p>
-          <p><strong>Technical data.</strong> Our infrastructure providers (Supabase, Vercel) process standard request metadata (IP address, timestamps) as part of operating the service and preventing abuse (e.g. rate-limiting signup attempts) — we don't separately collect or sell this data.</p>
+          <h2>2. Information we collect</h2>
+          <p><strong>Account information.</strong> When you sign up, we collect your full name, email address, a password, your date of birth, and the plan you chose. The app's sign-up form uses your date of birth to confirm that you are 18 or over.</p>
+          <p><strong>Your Sports Passport.</strong> Your Passport holds what you choose to enter &mdash; for example sport, position and secondary position, gender, graduation year and education level, GPA, height, weight, playing foot, recruiting status, current and previous clubs, a career timeline, home and current city, country, citizenship, a short bio, a profile photo, and links to highlight footage.</p>
+          <p><strong>Planning tools.</strong> If you use them, we store your goal, your pathway and milestones, your development plan and the days you tick off its habits, your benchmark results (with when, how and by whom each was measured), and your target list of schools and clubs &mdash; including any contact names, email addresses, notes and draft emails you add, and the status you record for each (for example, whether you have contacted them or they have replied). Contact details you add for a coach or anyone else are that person's personal information: only add what you are entitled to use.</p>
+          <p><strong>Photos.</strong> Your profile photo is stored in our file storage (Supabase Storage), in a folder belonging to your account. Uploaded images can be opened by anyone who has their web address &mdash; that is how your photo appears on a shared Passport.</p>
+          <p><strong>Shared Passport links.</strong> If you create a share link, we store the link and record when it was last opened. Anyone with the link can see the Passport fields shown on the shared page: your name, profile photo, sport, position, club, country, graduation year, recruiting status, playing foot, height, weight, bio, highlight links and any verification badge. You can revoke a link at any time.</p>
+          <p><strong>Scout, the AI assistant.</strong> When you use Scout we store:</p>
+          <ul>
+            <li>your conversations &mdash; your messages and Scout's replies, grouped by conversation so you can return to them;</li>
+            <li>a short running summary of each conversation, which Scout uses instead of re-reading the whole transcript;</li>
+            <li>Scout's notes about you ("Scout memory"): facts you have told it, its own inferences (recorded as inferences, with a confidence level), and your goals, preferences, concerns and the pathways you have considered or chosen. When something changes, the older note is kept as history and marked as replaced. Scout may also update your Passport and plan from what you tell it;</li>
+            <li>a daily count of the Scout questions you ask and their estimated AI cost, linked to your account, so we can apply your plan's limits;</li>
+            <li>for each reply, technical details &mdash; which AI model answered, the category of question, token counts, estimated cost and response time &mdash; recorded without your account identifier;</li>
+            <li>copies of recent replies, linked to your account and to the wording of your question, so that a repeated or retried question can be answered without calling the AI again. A copy stops being used 24 hours after it was made; and</li>
+            <li>when a general question doesn't match one of our prepared answers, up to 500 characters of the question and its category, saved <strong>without</strong> your account identifier so we can see which answers to write next. GOLSZ staff can read these. Because they can't be linked back to you, they are not deleted when you delete your account &mdash; so please leave your name and other identifying details out of general questions.</li>
+          </ul>
+          <p>You can delete a conversation from Scout's history. That removes its transcript, but not what Scout has already saved to your Passport, plan or memory, or the conversation's summary; all of those are deleted with your account, and you can ask us to clear Scout's memory of you at any time.</p>
+          <p><strong>Payment information.</strong> If you subscribe to a paid plan, checkout is handled entirely by Stripe &mdash; GOLSZ never receives or stores your card number. When you start checkout we pass Stripe your GOLSZ account identifier and email address, so the payment can be matched to your account. We store your Stripe customer reference, your plan, and your subscription and payment status (for example, whether a recent charge failed) so we can apply what your plan includes.</p>
+          <p><strong>Push notifications.</strong> If you turn notifications on, your browser creates a push subscription (an endpoint address and encryption keys), which we store so we can send you notifications such as follow-up reminders about your targets. You can turn them off in Settings or in your browser's notification permissions.</p>
+          <p><strong>Trust &amp; safety information.</strong> Text you write in Scout, your bio and other Passport fields, and highlight titles is checked by an automated moderation system before it is saved or sent (see sections 4 and 6). If the check flags or blocks something, we keep the text, the decision and the reasons in a moderation record that GOLSZ staff review. If you report content, ask to be verified (including any proof link you provide), or submit an appeal, we store that too, along with the outcome. Actions GOLSZ administrators take on accounts are logged, with who took them. We also keep an internal trust score for each account (section 4).</p>
+          <p><strong>Content from retired features.</strong> GOLSZ previously offered a feed, messaging and following between accounts. Posts, messages and follows created while those features were available are still stored. The app no longer shows them, they are included in your data download (section 8), and they are deleted with your account.</p>
+          <p><strong>Usage and technical information.</strong></p>
+          <ul>
+            <li><strong>Time in the app.</strong> While you are signed in and the app is open and visible on your screen, it records one minute of activity for each minute, totalled per day against your account. You and GOLSZ administrators can see these daily totals; we use them to understand how the product is used.</li>
+            <li><strong>Error reports.</strong> If the app hits an unexpected error, it sends us the error message, technical details and the address of the page you were on, linked to your account if you are signed in. Our servers record their own errors the same way. GOLSZ administrators use these reports to find and fix faults.</li>
+            <li><strong>Sign-up protection.</strong> When an account is created, we record the IP address the request came from, the date, and how many sign-up attempts came from that address that day, so we can stop mass account creation. This record is not linked to the account created, and we do not currently delete these records automatically. The sign-up form also contains a hidden field that people can't see but automated scripts tend to fill in; an account created with it filled in starts with the lowest trust score (section 4).</li>
+            <li><strong>Approximate location, for currency.</strong> To show prices in the right currency, our hosting provider works out your country (and, in Europe, your continent) from your IP address. We use only the resulting region &mdash; Canada, the United States, Europe or elsewhere &mdash; and we do not store it.</li>
+            <li><strong>Infrastructure.</strong> Our hosting and database providers (Vercel and Supabase) process standard request information, such as IP addresses and the time of each request, as part of delivering and protecting the service.</li>
+          </ul>
 
-          <h2>3. Cookies and analytics</h2>
-          <p>GOLSZ does not use cookies, and does not use any third-party advertising or analytics trackers (no Google Analytics, no ad pixels). The app stores a small amount of data in your browser's local storage: your theme (light/dark) and language preference, and — via our authentication provider's standard client library — your session sign-in token, so you stay signed in between visits. None of this is shared with third parties for advertising purposes.</p>
-          <p><strong>Bot protection.</strong> The signup form is built to support Cloudflare Turnstile, a privacy-respecting CAPTCHA alternative. It is not currently active in production. If and when it's turned on, Cloudflare will process limited technical data (such as your IP address) to assess whether a signup attempt is automated, under Cloudflare's own privacy policy.</p>
+          <h2>3. Cookies, browser storage and analytics</h2>
+          <p><strong>Cookies.</strong> GOLSZ's own pages and app do not set cookies. Third-party services we use or link to may set their own cookies under their own policies &mdash; in particular Stripe, on its checkout and billing pages.</p>
+          <p><strong>Browser storage.</strong> The app keeps a few items in your browser's local storage: your background theme (light or dark), your language, your currency if you choose one yourself, and &mdash; through our authentication provider's standard client library &mdash; your sign-in session, so you stay signed in between visits. You can clear these at any time in your browser's settings. None of them is used for advertising.</p>
+          <p><strong>Analytics.</strong> GOLSZ does not use Google Analytics, advertising pixels, or any other third-party analytics or advertising tracker. We do measure use ourselves: the time-in-app totals and error reports described in section 2, and counts in our administrator tools such as sign-ups, plans and Scout usage.</p>
 
-          <h2>4. How we use your data</h2>
-          <p>We use your data to: operate your account and athlete profile; power Scout's AI-assisted guidance; process payments and enforce plan entitlements; detect and act on abuse, spam, or unsafe content; send you notifications you've opted into; respond to support requests; and meet our legal obligations. We do not sell your personal data.</p>
+          <h2>4. How we use your information</h2>
+          <p>We use your information to: operate your account, Passport and planning tools; power Scout's guidance; process payments and apply plan limits; detect and act on abuse, spam and unsafe content; send notifications you've turned on; understand how GOLSZ is used and fix faults; respond to support requests; and meet our legal obligations. We do not sell your personal information, and we do not use it for advertising.</p>
+          <p><strong>Automated decisions and profiling.</strong></p>
+          <ul>
+            <li><strong>Moderation.</strong> The automated check described in section 2 can stop text from being saved or sent, without a person being involved at that moment. It can also send content for human review.</li>
+            <li><strong>Trust score.</strong> Every account has an internal trust score from 0 to 100, which is not shown to you. It starts at 50 and is recalculated from how long the account has existed, whether your identity has been verified, how many items of your content were flagged by moderation and then reviewed by a moderator, how many different people have reported your posts, and whether the account has been banned. We use it to send content from very-low-trust accounts for human review even when the automated check would allow it. If messaging between accounts is offered again, it will also limit how many new conversations a new or low-trust account can start each day.</li>
+          </ul>
+          <p>You can ask us at <a href="mailto:hello@golsz.com">hello@golsz.com</a> which personal information was used in such a decision and the main reasons for it, ask us to correct that information, and ask for a person at GOLSZ to review the decision. <strong>[Legal review advised]</strong> counsel should confirm that this meets section 12.1 of Law 25 and Article 22 of the GDPR, including whether a person must be told at the time a decision is made.</p>
 
-          <h2>5. Under-16 accounts (parent/guardian-controlled)</h2>
-          <p><strong>GOLSZ does not currently collect personal data about anyone under 18.</strong> As of 20 September 2026 an account requires the holder to be 18 or over, sign-up refuses a date of birth under 18, and the endpoint that formerly created parent-managed profiles for children refuses every request. No route in the product creates an under-18 profile.</p>
-          <p>Earlier versions of this policy described a parent- or guardian-managed profile in which a child's name and date of birth were collected and held inside an adult's account. That structure has been withdrawn. <strong>[Legal review advised]</strong> counsel should confirm what must be done about any under-18 data recorded while that structure was live &mdash; retention, deletion, or notification &mdash; and should review the reinstated clauses before managed profiles are ever reintroduced, rather than afterwards.</p>
+          <h2>5. Adults only (18 and over)</h2>
+          <p><strong>GOLSZ is for adults.</strong> You must be 18 or over to hold an account. The app's sign-up form refuses a date of birth under 18, and GOLSZ does not knowingly collect personal information from anyone under 18. Giving a false date of birth breaks our terms, and we will close any account we find belongs to someone under 18. If you believe someone under 18 has an account, tell us at <a href="mailto:hello@golsz.com">hello@golsz.com</a>.</p>
+          <p><strong>Legacy managed profiles.</strong> Before 20 September 2026, an adult account could create a managed profile for an athlete under 18, which held the athlete's name and date of birth inside the adult's account. That is no longer possible: the endpoint that created those profiles refuses every request. Any such profile created before then remains part of the adult account that created it, which is responsible for it (see section 3 of our <a href="terms.html">Terms</a>). That adult can have it deleted at any time by emailing <a href="mailto:hello@golsz.com">hello@golsz.com</a>, and it is deleted if they delete their account (section 7). <strong>[Legal review advised]</strong> counsel should confirm what must be done about any under-18 information recorded while that structure was live &mdash; retention, deletion or notification &mdash; and should review these clauses before managed profiles are ever reintroduced, rather than afterwards.</p>
 
-          <h2>6. AI processing and sub-processors</h2>
-          <p>Scout is currently powered by Anthropic's Claude models. When you ask Scout a question, the relevant text (your question and enough profile/conversation context to answer it usefully) is sent to Anthropic's API to generate a response. Anthropic acts as a data processor for this purpose. <strong>[Legal review advised]</strong> Anthropic's own data-retention and model-training terms for API usage should be confirmed and summarized accurately here rather than assumed — we have not independently verified whether API-submitted content is used to train Anthropic's models.</p>
-          <p>Scout also has a second AI provider, <strong>xAI (Grok)</strong>, used only as an emergency failover. If Anthropic's API is unavailable or fails to respond, the same request — your question plus the profile and conversation context needed to answer it — is sent to xAI's API instead, so Scout keeps working during an outage. It is not used for routine requests. Because a failover can happen on any message, including a message about or from a managed under-18 athlete, we name it here rather than treating it as an implementation detail. <strong>[Legal review advised]</strong> xAI's data-retention and model-training terms for API usage should be confirmed and summarized accurately here rather than assumed, on the same basis as Anthropic's above.</p>
-          <p>Our other core infrastructure sub-processors are Supabase (database, authentication, and file storage) and Vercel (application hosting) — both are necessary to any use of the product — and Stripe for payment processing. <strong>[Legal review advised]</strong> exact hosting regions for Supabase/Vercel and whether an international-transfer mechanism (e.g. Standard Contractual Clauses) is needed for any of these sub-processors, given that GOLSZ is based in Canada while serving users in the EU/EEA, should be confirmed directly with each provider rather than assumed here.</p>
+          <h2>6. AI processing, service providers and where your information is stored</h2>
+          <p>We use the following providers to run GOLSZ. Each receives the information it needs for its role.</p>
+          <ul>
+            <li><strong>Supabase</strong> &mdash; database, sign-in and file storage. It holds the information described in this policy, and sends sign-in emails (account confirmation, password reset and email-change messages) through our email delivery provider.</li>
+            <li><strong>Vercel</strong> &mdash; hosts golsz.com and runs our server functions, so it processes every request to the site and the app.</li>
+            <li><strong>Stripe</strong> &mdash; payments, if you subscribe (section 2).</li>
+            <li><strong>Anthropic</strong> &mdash; the AI models behind Scout and behind the automated moderation check. When you ask Scout something, your question and the profile, plan and conversation context needed to answer it are sent to Anthropic's API; text that is checked by moderation is sent the same way. Scout can also use Anthropic's web-search tool, which runs searches based on your question.</li>
+            <li><strong>xAI (Grok)</strong> &mdash; may be used as an emergency fallback for Scout. Where it is configured and Anthropic's models fail to respond, the same request &mdash; your question plus the context needed to answer it &mdash; is sent to xAI's API instead. It is not used for routine requests.</li>
+            <li><strong>Google Fonts</strong> &mdash; our pages and the app load their typefaces from Google (fonts.googleapis.com and fonts.gstatic.com), so your browser's IP address reaches Google when a page loads.</li>
+            <li><strong>cdnjs (Cloudflare) and jsDelivr</strong> &mdash; the app loads the code libraries it runs on (React and Supabase's client) from these content-delivery networks, so your browser's IP address reaches them when the app loads.</li>
+            <li><strong>Browser push services</strong> &mdash; if you turn notifications on, they are delivered through the push service run by your browser or device maker (for example Apple, Google or Mozilla), which receives your subscription address and the encrypted notification.</li>
+          </ul>
+          <p>The sign-up form is built to support Cloudflare Turnstile, a bot check, but it is not active. If it is turned on, Cloudflare will process technical data such as your IP address to assess whether a sign-up is automated, and we will update this policy.</p>
+          <p>We may also disclose information where the law requires it, or where we believe in good faith that it is necessary to protect someone's safety (see section 15 of our <a href="terms.html">Terms</a>).</p>
+          <p><strong>Where your information is stored.</strong> Your personal information is stored and processed outside Québec and Canada, including in the United States, by the providers listed above. <strong>[Legal review advised]</strong> the exact hosting regions for Supabase and Vercel, the privacy impact assessment Law 25 requires before personal information is communicated outside Québec, and whether a transfer mechanism (such as Standard Contractual Clauses) is needed for users in the EU/EEA or UK should be confirmed with each provider and counsel rather than assumed here.</p>
+          <p><strong>[Legal review advised]</strong> Anthropic's and xAI's own data-retention and model-training terms for API usage should be confirmed and summarised accurately here rather than assumed &mdash; we have not independently verified whether content submitted through their APIs is used to train their models.</p>
 
-          <h2>7. Data retention</h2>
-          <p>We keep your account and profile data for as long as your account is active. If you delete your account, your profile, uploaded images, and associated app data are permanently removed. If your account manages an under-18 athlete profile that nobody else can sign in to, we will not delete your account and leave theirs stranded: we tell you which profiles are affected and ask you to confirm, and confirming deletes those profiles together with yours. Some records — for example, moderation decisions, reports, or admin audit logs involving your account — may be retained for a longer period where necessary for safety, fraud-prevention, or legal record-keeping. <strong>[Legal review advised]</strong> specific retention periods for each data category (rather than "as long as necessary") should be defined with counsel to meet GDPR data-minimization requirements precisely.</p>
+          <h2>7. Retention and deleting your account</h2>
+          <p>We keep your information for as long as your account exists, unless you delete it sooner (for example, a Scout conversation).</p>
+          <p><strong>Deleting your account.</strong> You can delete your account from Settings, or by emailing <a href="mailto:hello@golsz.com">hello@golsz.com</a> from the address on your account. If you have, or have had, a paid plan, the app asks you to cancel billing first, because deleting the account does not stop Stripe's billing; if it still won't let you delete, email us and we'll delete the account for you.</p>
+          <p>When your account is deleted, we delete your sign-in account, profile and Passport; your planning data; your Scout conversations, summaries, memory and cached replies; your usage records; your push subscriptions, share links and verification requests; and any posts, messages and follows from retired features. We also delete the files in your account's photo folders; if removing a file fails, the failure is recorded so the file can be removed by hand.</p>
+          <p>If your account holds a legacy managed profile for an athlete under 18 that nobody else can sign in to, we will not delete your account and leave that profile without an owner: we tell you which profiles are affected and ask you to confirm, and confirming deletes those profiles together with your account.</p>
+          <p><strong>What we keep after deletion.</strong></p>
+          <ul>
+            <li>moderation records about content you wrote, with the link to your account removed;</li>
+            <li>reports you made and appeals you submitted, with the link to your account removed, and reports other people made about your profile or messages;</li>
+            <li>the log of actions GOLSZ administrators took on your account;</li>
+            <li>error reports, with the link to your account removed (a server-side report's technical details can still contain your former account identifier);</li>
+            <li>the unmatched Scout questions described in section 2, which were never linked to your account;</li>
+            <li>sign-up protection records (IP address, date and attempt count), which were never linked to your account; and</li>
+            <li>payment records held by Stripe, which Stripe keeps under its own legal obligations and policies.</li>
+          </ul>
+          <p>Copies may also remain for a limited time in our database provider's backups. <strong>[Legal review advised]</strong> specific retention periods for each category above (rather than "kept"), the backup period, and whether moderation records should keep the text that was flagged should be defined with counsel to meet GDPR and Law 25 data-minimisation requirements precisely.</p>
 
           <h2>8. Your rights</h2>
-          <p>Depending on your location, you may have the right to access, correct, delete, restrict, or export your personal data, and to object to certain processing. You can delete your own account data at any time from Settings in the app. For anything else, contact us at <a href="mailto:hello@golsz.com">hello@golsz.com</a>. If you're in the EU/EEA or the UK, you also have the right to lodge a complaint with the data protection authority in your own country of residence. If you're in Canada, you can complain to the Office of the Privacy Commissioner of Canada, and in Québec to the Commission d'accès à l'information. <strong>[Legal review advised]</strong> a defined response-time commitment (e.g. "within 30 days") should be added once we've confirmed our internal process can meet it, and counsel should confirm whether an EU/UK representative must be appointed under GDPR Article 27 now that GOLSZ is established outside the EU but still offers the service to people in it.</p>
+          <p>Depending on where you live, you may have the right to access, correct, delete or restrict your personal information, to receive a copy of it in a portable format, to object to certain processing, and to withdraw your consent. In the app you can correct your Passport, delete Scout conversations, turn notifications off, download a copy of your data from Settings (<em>Download my data</em>, a JSON file), and delete your account. For anything else &mdash; including information the download doesn't cover &mdash; email <a href="mailto:hello@golsz.com">hello@golsz.com</a>.</p>
+          <p>If you're in Québec, you can complain to the Commission d'accès à l'information; elsewhere in Canada, to the Office of the Privacy Commissioner of Canada; and in the EU/EEA or the UK, to the data-protection authority where you live. <strong>[Legal review advised]</strong> a response-time commitment should be stated (Law 25 sets 30 days for access and correction requests) once we've confirmed our internal process can meet it, and counsel should confirm whether an EU/UK representative must be appointed under GDPR Article 27 now that GOLSZ is established outside the EU but offers the service to people in it.</p>
 
-          <h2>9. Security</h2>
-          <p>Data is protected in transit with encryption, and access to your data within our database is enforced by row-level security policies so that, by default, only you (or, for a managed under-18 profile, the linked parent account) can read or write your own records. Administrative access is limited to authorized GOLSZ personnel and logged. No system is perfectly secure, and we can't guarantee absolute security of information transmitted to us.</p>
+          <h2>9. Security and confidentiality incidents</h2>
+          <p>Information is encrypted in transit. Within our database, row-level security rules restrict who can read and change records &mdash; generally to the account a record belongs to (and, for a legacy managed profile, the adult account that created it) and to authorised GOLSZ administrators, whose actions are logged. No system is perfectly secure, and we can't guarantee absolute security of information transmitted to us.</p>
+          <p><strong>Confidentiality incidents.</strong> If a confidentiality incident involving your personal information presents a risk of serious injury, we will notify you and the Commission d'accès à l'information, as Québec law requires. <strong>[Legal review advised]</strong> counsel should confirm the notification process and timing, and that the register of confidentiality incidents Law 25 requires is in place.</p>
 
-          <h2>10. Children's privacy (general)</h2>
-          <p>Beyond the parent-controlled account structure in Section 5, GOLSZ is not directed at, and does not knowingly collect data from, children in a manner outside that structure. If you believe a child's data has been collected outside the parent-managed flow, contact us and we'll investigate and remove it.</p>
+          <h2>10. Person in charge of the protection of personal information</h2>
+          <p>The person in charge of the protection of personal information at GOLSZ is its founder. Contact: <a href="mailto:hello@golsz.com">hello@golsz.com</a>. <strong>[Legal review advised]</strong> under Law 25 this role falls by default to the person with the highest authority in the business; the owner should confirm it, or delegate it in writing, and may add the person's name here.</p>
 
           <h2>11. Changes to this policy</h2>
           <p>We may update this policy as the product changes. Material changes will be reflected by updating the "last updated" date above, and where appropriate we'll notify account holders directly.</p>
 
           <h2>12. Contact</h2>
-          <p style="margin-bottom:0;">Questions about this policy, or requests relating to your data, can be sent to <a href="mailto:hello@golsz.com">hello@golsz.com</a>.</p>
+          <p style="margin-bottom:0;">Questions about this policy, or requests relating to your personal information, can be sent to <a href="mailto:hello@golsz.com">hello@golsz.com</a>.</p>
 
         </div>
       </div>
@@ -136,31 +202,23 @@
   <div class="container">
     <div class="footer-grid">
       <div class="footer-brand">
-        <a href="index.html" class="logo">GOLSZ<span class="mark">.</span></a>
-        <p>The AI-powered professional network for the global sports ecosystem. Every goal has a path.</p>
-        <!-- Social links removed. All three pointed at a bare "#"
-             placeholder. A link that goes nowhere is worse than no link:
-             it takes a tab stop, a screen reader announces it as a link to
-             a real destination, and activating it just jumps to the top of
-             the page. The real profile URLs are not known, and inventing
-             them would be worse still. index.html's footer has never had a
-             social row, so removing these also makes all four footers
-             consistent. Restore the block with real destinations when the
-             accounts exist. -->
+        <a href="index.html" class="logo"><svg class="logo-mark" width="20" height="20" viewBox="0 0 74.043 74.678" fill="#D4AF37" style="flex:0 0 auto;margin-right:.4em" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M71.5 26.92L65.47 26.9C64.2 23.01 61.88 19.24 59.16 16.15C56.29 12.9 52.91 10.24 49.05 8.26C44.48 5.9 38.94 5.15 33.84 5.78C13.67 8.29 1.97 29.47 8.08 48.39C11.15 57.88 20.48 65.81 30.06 68.07C33.52 68.89 37.32 68.79 40.82 68.41C44.03 68.06 47.69 67.28 50.45 65.56C51.9 64.66 53.5 64.03 54.92 63.03C61.48 58.41 66.17 51.4 67.12 43.38C67.39 41.13 67.8 38.74 67.06 36.58L25.71 36.56L25.7 10.28L32.16 8L32.17 32.89L73.31 32.91C74.48 37.09 74.09 41.49 73.24 45.69C70.26 60.23 58.08 71.68 43.39 74.17C24.91 77.3 5.68 65.59 1.04 47.27C-4.1 26.98 10.09 4.6 30.6 0.71C34.1 0.04 37.79 -0.28 41.33 0.31C52.33 2.15 62.98 8.34 68.2 18.61C69.37 20.9 71.92 24.26 71.5 26.92ZM22.11 59.56L41.3 43.23L14.99 43.22L15.06 38.21L58.83 38.24L37.92 55.6L57.73 55.61C57.81 55.97 57.97 56.41 57.83 56.78C57.44 57.82 53.39 60.93 52.3 61.05C50.25 61.29 48.08 61.06 46.01 61.07C40.57 61.1 35.13 61.07 29.68 61.06C28.31 61.06 24.14 61.49 23.08 60.89C22.64 60.64 22.35 59.96 22.11 59.56Z"/></svg>GOLSZ<span class="mark">.</span></a>
+        <p>The Sports Passport and AI Scout for athletes planning what comes next. Every goal has a path.</p>
       </div>
       <div class="footer-col">
         <h2>Site</h2>
         <ul>
-          <li><a href="index.html">Home</a></li>
-          <li><a href="golsz-app.html?page=feed">Feed</a></li>
-          <li><a href="golsz-app.html?page=discover">Discover</a></li>
-          <li><a href="golsz-app.html?page=profile">Profile</a></li>
+          <li><a href="about.html#product">Product</a></li>
+          <li><a href="about.html#how-it-works">How it works</a></li>
+          <li><a href="index.html#pricing">Pricing</a></li>
+          <li><a href="about.html#about-section">About</a></li>
           <li><a href="contact.html">Contact</a></li>
         </ul>
       </div>
       <div class="footer-col">
         <h2>Get involved</h2>
         <ul>
+          <li><a href="golsz-app.html">Start free</a></li>
           <li><a href="contact.html">Contact us</a></li>
           <li><a href="contact.html#investors">Investor inquiries</a></li>
           <li><a href="mailto:hello@golsz.com">hello@golsz.com</a></li>
@@ -176,7 +234,7 @@
     </div>
     <div class="footer-bottom">
       <span>© <span data-year></span> GOLSZ. All rights reserved. · <a href="terms.html">Terms &amp; conditions</a> · <a href="privacy.html">Privacy policy</a></span>
-      <span>Montreal, Canada.</span>
+      <span>GOLSZ is not a recruiting agency and does not guarantee scholarships, trials or contracts.</span>
     </div>
   </div>
 </footer>
