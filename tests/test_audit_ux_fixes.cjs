@@ -132,7 +132,10 @@ for (const [comp, col] of [["Highlights", "highlights"], ["Timeline", "timeline"
 // -------------------------------------------------------------------------
 console.log("\n-- 4. errors are sentences in the athlete's language --");
 {
-  const lib = new Function(fn("isNetworkError") + fn("userErrorText") + fn("loginErrorKey") +
+  const lib = new Function(
+    "const I18N = { en: { moderation_blocked: 'This was blocked.' }, fr: { moderation_blocked: 'Ceci a été bloqué.' } };" +
+    "let I18N_SENTENCES = null; const console = { warn() {}, error() {} };" +
+    fn("isAppSentence") + fn("isNetworkError") + fn("userErrorText") + fn("loginErrorKey") +
     " return { isNetworkError, userErrorText, loginErrorKey };")();
   const fetchFail = new TypeError("Failed to fetch");
   ck("wrong password → its own sentence",
@@ -152,6 +155,19 @@ console.log("\n-- 4. errors are sentences in the athlete's language --");
   ck("a PostgREST error on save → the screen's own fallback",
      lib.userErrorText({ code: "42501", message: "new row violates row-level security policy" }, tKey, "editor_save_err"), "editor_save_err");
   ck("a network failure on save → the network sentence", lib.userErrorText(fetchFail, tKey, "editor_save_err"), "err_network");
+  // The app's OWN thrown messages are already translated and specific ("blocked
+  // by moderation", "that link isn't valid"); replacing them with the generic
+  // fallback would hide the one thing the athlete needs to know.
+  ck("an app-raised translated message passes through",
+     lib.userErrorText(new Error("This was blocked."), tKey, "highlights_add_err"), "This was blocked.");
+  ck("...in any of the four languages",
+     lib.userErrorText(new Error("Ceci a été bloqué."), tKey, "highlights_add_err"), "Ceci a été bloqué.");
+  ck("an English library message is still replaced",
+     lib.userErrorText(new Error("duplicate key value violates unique constraint"), tKey, "targets_add_err"), "targets_add_err");
+  ck("the real dictionary carries the messages the app throws",
+     /moderation_blocked:/.test(APP) && /throw new Error\(t\("moderation_blocked"\)\)/.test(APP), true);
+  ck("no user-facing setter shows a raw e.message any more",
+     /set(?!ScoutDebug)[A-Z]\w*\(\(?\w+ && \w+\.message\)/.test(APP), false);
 
   const pe = block(APP, "function ProfileEditor({");
   ck("ProfileEditor no longer shows e.message", /setErr\(\(e && e\.message\)/.test(pe), false);

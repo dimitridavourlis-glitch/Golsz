@@ -2295,7 +2295,7 @@ function SettingsButton({ openSignal }) {
       setPwDone(true); setPw(""); setPw2("");
     } catch (e) {
       console.error("GOLSZ change password error:", e);
-      setPwErr((e && e.message) || t("reset_pw_err"));
+      setPwErr(userErrorText(e, t, "reset_pw_err"));
     } finally { setPwBusy(false); }
   }
 
@@ -2316,7 +2316,7 @@ function SettingsButton({ openSignal }) {
       setEmailSent(true);
     } catch (e) {
       console.error("GOLSZ change email error:", e);
-      setEmailErr((e && e.message) || t("settings_email_err"));
+      setEmailErr(userErrorText(e, t, "settings_email_err"));
     } finally { setEmailBusy(false); }
   }
 
@@ -2373,7 +2373,7 @@ function SettingsButton({ openSignal }) {
       window.location.href = window.location.pathname;
     } catch (e) {
       console.error("GOLSZ delete account error:", e);
-      setDeleteErr((e && e.message) || "Couldn't delete the account. Try again or contact support.");
+      setDeleteErr(userErrorText(e, t, "err_generic"));
       setDeleteBusy(false);
     }
   }
@@ -3067,7 +3067,7 @@ function Feed({ onMessage, onViewProfile }) {
       loadFeed();
     } catch (e) {
       console.error("GOLSZ create post error:", e);
-      setComposeErr((e && e.message) ? e.message : t("feed_post_err"));
+      setComposeErr(userErrorText(e, t, "feed_post_err"));
     } finally { setComposeBusy(false); }
   }
 
@@ -3623,7 +3623,7 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
       onSaved();
     } catch (e) {
       console.error("GOLSZ add-to-events error:", e);
-      setErr((e && e.message) || t("events_err_save"));
+      setErr(userErrorText(e, t, "events_err_save"));
     } finally { setBusy(false); }
   }
 
@@ -4251,7 +4251,7 @@ function FamilyAccess() {
       setMsg(t("family_sent_msg"));
       setEmail(""); setRelationship("");
       load();
-    } catch (e) { setMsg(e.message || t("family_couldnt_send")); }
+    } catch (e) { setMsg(userErrorText(e, t, "family_couldnt_send")); }
     finally { setBusy(false); }
   }
   async function approve(id) { try { const { error } = await sb.from("parent_links").update({ approved_at: new Date().toISOString() }).eq("id", id); if (error) throw error; load(); } catch (e) { console.error("GOLSZ approve error:", e); } }
@@ -4331,7 +4331,25 @@ function isNetworkError(e) {
   const m = String(e.message || e);
   return e.name === "AuthRetryableFetchError" || /Failed to fetch|NetworkError|Load failed|Network request failed/i.test(m);
 }
+// Messages the app raises itself are ALREADY translated — throw new Error(t(…))
+// for "that link isn't valid", "blocked by moderation", "couldn't load this" —
+// and say something the athlete needs. Everything else reaching a catch is a
+// library or server message in English. A message that is one of the
+// dictionary's own sentences can only have come from t(), so it passes through;
+// anything else is replaced, and logged so the raw text is not lost.
+let I18N_SENTENCES = null;
+function isAppSentence(msg) {
+  if (typeof msg !== "string" || !msg) return false;
+  if (!I18N_SENTENCES) {
+    I18N_SENTENCES = new Set();
+    for (const dict of Object.values(I18N)) for (const v of Object.values(dict)) if (typeof v === "string") I18N_SENTENCES.add(v);
+  }
+  return I18N_SENTENCES.has(msg);
+}
 function userErrorText(e, t, fallbackKey) {
+  const m = e && e.message;
+  if (isAppSentence(m)) return m;
+  if (m) console.warn("GOLSZ error shown as translated text:", e);
   return t(isNetworkError(e) ? "err_network" : (fallbackKey || "err_generic"));
 }
 // Sign-in only. Supabase's code is checked before its message text because the
@@ -4468,7 +4486,7 @@ function Highlights({ viewUserId, manageMode }) {
       // highlight itself is already saved by saveList() above, into
       // athletes.highlights, so nothing here affected whether it persisted.
     } catch (e) {
-      setErr((e && e.message) ? e.message : t("highlights_add_err"));
+      setErr(userErrorText(e, t, "highlights_add_err"));
     } finally { setBusy(false); }
   }
 
@@ -4597,7 +4615,7 @@ function Timeline({ viewUserId, manageMode }) {
       setItems(sorted);
       setYear(""); setText("");
     } catch (e) {
-      setErr((e && e.message) ? e.message : t("timeline_add_err"));
+      setErr(userErrorText(e, t, "timeline_add_err"));
     } finally { setBusy(false); }
   }
 
@@ -4879,7 +4897,7 @@ function Benchmarks({ viewUserId, manageId }) {
       setItems((prev) => [data, ...prev]);
       setMetric(""); setValue(""); setUnit(""); setMetricKey(""); setProtocol({}); setMeasuredBy("");
     } catch (e) {
-      setErr((e && e.message) || t("benchmarks_add_err"));
+      setErr(userErrorText(e, t, "benchmarks_add_err"));
     } finally { setBusy(false); }
   }
 
@@ -4915,7 +4933,7 @@ function Benchmarks({ viewUserId, manageId }) {
       if (error) throw error;
       setRetestMsg(t("bench_retest_done").replace("{date}", due));
     } catch (e) {
-      setErr((e && e.message) || t("bench_retest_err"));
+      setErr(userErrorText(e, t, "bench_retest_err"));
     } finally { setRetestBusy(null); }
   }
 
@@ -5882,7 +5900,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         setProfile((p) => (p ? { ...p, avatar_url: avatarUrl } : p));
       } catch (err) {
         console.error("GOLSZ avatar upload error:", err);
-        setAvatarErr((err && err.message) || t("passport_photo_err"));
+        setAvatarErr(userErrorText(err, t, "passport_photo_err"));
       } finally { setAvatarBusy(false); }
     })();
   }
@@ -5902,7 +5920,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       setProfile((p) => (p ? { ...p, avatar_url: null } : p));
     } catch (err) {
       console.error("GOLSZ avatar remove error:", err);
-      setAvatarErr((err && err.message) || t("passport_photo_err"));
+      setAvatarErr(userErrorText(err, t, "passport_photo_err"));
     } finally { setAvatarBusy(false); }
   }
 
@@ -6656,7 +6674,7 @@ function VerificationRequest({ occupation }) {
       // weeks later. `busy` above is a correct double-submit guard on an
       // insert and stays — it was the silence that was the bug, not the guard.
       console.error("GOLSZ verification submit error:", e);
-      setSubmitErr((e && e.message) || t("verify_submit_failed"));
+      setSubmitErr(userErrorText(e, t, "verify_submit_failed"));
     }
     setBusy(false);
   }
@@ -10802,7 +10820,7 @@ function BackupPlanCard({ athlete, loaded, actingFor, onSaved, quiet }) {
       setEditing(false);
       if (onSaved) onSaved();
     } catch (e) {
-      setErr((e && e.message) || t("plan_backup_err"));
+      setErr(userErrorText(e, t, "plan_backup_err"));
     } finally { setBusy(false); }
   }
 
@@ -11011,7 +11029,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
       setName(""); setContactName(""); setContactEmail("");
       setShowAddTarget(false);
     } catch (e) {
-      setErr((e && e.message) || t("targets_add_err"));
+      setErr(userErrorText(e, t, "targets_add_err"));
     } finally { setBusy(false); }
   }
 
@@ -11311,7 +11329,7 @@ function DevelopmentPlan({ viewUserId, manageId }) {
       setItems((prev) => [data, ...prev]);
       setGoal("");
     } catch (e) {
-      setErr((e && e.message) || t("dev_plan_add_err"));
+      setErr(userErrorText(e, t, "dev_plan_add_err"));
     } finally { setBusy(false); }
   }
 
@@ -11338,7 +11356,7 @@ function DevelopmentPlan({ viewUserId, manageId }) {
     } catch (e) {
       console.error("GOLSZ development plan update error:", e);
       setItems(before);
-      setItemErr((prev) => ({ ...prev, [id]: (e && e.message) || t("dev_plan_save_err") }));
+      setItemErr((prev) => ({ ...prev, [id]: userErrorText(e, t, "dev_plan_save_err") }));
     }
   }
 
@@ -11351,7 +11369,7 @@ function DevelopmentPlan({ viewUserId, manageId }) {
     } catch (e) {
       console.error("GOLSZ development plan delete error:", e);
       setItems(before);
-      setItemErr((prev) => ({ ...prev, [id]: (e && e.message) || t("dev_plan_save_err") }));
+      setItemErr((prev) => ({ ...prev, [id]: userErrorText(e, t, "dev_plan_save_err") }));
     }
   }
 
@@ -13144,7 +13162,7 @@ function AddAthleteForm({ t, onAdded }) {
     } catch (e) {
       // The server's own text — it already distinguishes "already registered"
       // from a real failure, and that difference is what a parent needs.
-      setErr((e && e.message) || t("family_couldnt_send"));
+      setErr(userErrorText(e, t, "family_couldnt_send"));
     } finally { setBusy(false); }
   }
   const box = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 10px", fontFamily: "inherit", boxSizing: "border-box" };
@@ -14689,7 +14707,7 @@ function Auth({ onDone, paidReturn }) {
       if (error) throw error;
       setResetSent(true);
     } catch (e) {
-      setErr((e && e.message) || t("auth_reset_failed"));
+      setErr(userErrorText(e, t, "auth_reset_failed"));
     } finally { setBusy(false); }
   }
 
@@ -14711,7 +14729,7 @@ function Auth({ onDone, paidReturn }) {
       setResendSent(true);
       startConfirmPolling(unconfirmedEmail, pw);
     } catch (e) {
-      setErr((e && e.message) || t("auth_resend_failed"));
+      setErr(userErrorText(e, t, "auth_resend_failed"));
     } finally { setResendBusy(false); }
   }
 
@@ -14963,7 +14981,7 @@ function Auth({ onDone, paidReturn }) {
           // still has a child account waiting.
           if (data.session) {
             try { await createChildAccount(childName.trim(), childDobIso); }
-            catch (childErr) { setChildCreateErr((childErr && childErr.message) || "Couldn't add your athlete — you can try again from Account."); }
+            catch (childErr) { setChildCreateErr(userErrorText(childErr, t, "err_generic")); }
           } else {
             // (the child now rides on the auth user's metadata above)
           }
@@ -14987,7 +15005,7 @@ function Auth({ onDone, paidReturn }) {
             // failure but still let them into the app; they can add the
             // athlete again from Account (see Settings' own "add athlete"
             // form, which calls the same createChildAccount()).
-            setChildCreateErr((childErr && childErr.message) || "Couldn't add your athlete — you can try again from Account.");
+            setChildCreateErr(userErrorText(childErr, t, "err_generic"));
             onDone(true);
           }
         } else {
@@ -15374,7 +15392,7 @@ function ResetPassword({ onDone }) {
       if (error) throw error;
       setDone(true);
     } catch (e) {
-      setErr((e && e.message) || t("reset_pw_err"));
+      setErr(userErrorText(e, t, "reset_pw_err"));
     } finally { setBusy(false); }
   }
 
@@ -15640,7 +15658,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=8d49123ae87d8e22";
+    s.src = "js/app.js?v=3dff8888e47ea93f";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
