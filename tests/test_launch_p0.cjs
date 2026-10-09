@@ -269,8 +269,11 @@ ck("exactly one render site — Plan owns the goal", (APP.match(/<GoalCard /g) |
 ck("Plan renders it", /<GoalCard actingFor=\{actingFor\} onSaved=\{\(\) => setGoalVersion/.test(APP), true);
 ck("the Plan card no longer substitutes the pathway category for the goal",
    /plan_primary_goal"\)\}<\/span>\s*<\/div>\s*<div[^>]*>\{hasPrimaryGoal/.test(APP), false);
+// Surfaced in the athlete's language: the raw Supabase message used to be
+// appended in parentheses, which put English diagnostics on every locale.
+// The raw error still goes to console.error right above this line.
 ck("a save failure is surfaced to the athlete, not just the console",
-   /setErr\(\(e && e\.message\) \? `\$\{t\("goal_card_save_err"\)\}/.test(APP), true);
+   /setErr\(userErrorText\(e, t, "goal_card_save_err"\)\)/.test(APP), true);
 ck("empty input is rejected", /if \(!clean\) \{ setErr\(t\("goal_card_required"\)\); return; \}/.test(APP), true);
 ck("a meaningless one-word goal is rejected", /clean\.length < 8/.test(APP), true);
 ck("input is length-capped before it reaches the database", /\.slice\(0, 300\)/.test(APP.slice(APP.indexOf("function GoalCard"), APP.indexOf("function PathwayStrip"))), true);

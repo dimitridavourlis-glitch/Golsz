@@ -26,7 +26,10 @@ if (start < 0) throw new Error("save() not found — this suite is not reading w
 const body = APP.slice(start, APP.indexOf("\n  }", start) + 4);
 
 // A harness that stands in for the component's state and the Supabase client.
-function harness(failOn) {
+function harness(failOn, readState) {
+  // loaded/loadFailed: the state of PathwayPlan's own read. Default is the
+  // normal case — the read succeeded.
+  const rs = Object.assign({ loaded: true, loadFailed: false }, readState || {});
   const st = { milestones: [{ id: "a", done: false }], busy: 0, error: "", exists: false, writes: [] };
   const ref = (v) => ({ current: v });
   const savesRef = ref(Promise.resolve());
@@ -42,10 +45,12 @@ function harness(failOn) {
   const save = new Function(
     "sb", "uid", "savesRef", "milestonesRef", "setMilestones", "setBusy", "setExists", "setSaveError",
     "pathwayType", "timeline", "notes", "customStages", "currentStageId", "t", "console",
+    "loaded", "loadFailed",
     body + " return save;"
   )(sb, "u1", savesRef, milestonesRef,
     (v) => { st.milestones = v; }, (b) => { st.busy += b ? 1 : -1; }, () => { st.exists = true; },
-    (e) => { st.error = e; }, "ncaa", "", "", [], null, (k) => k, { error() {} });
+    (e) => { st.error = e; }, "ncaa", "", "", [], null, (k) => k, { error() {} },
+    rs.loaded, rs.loadFailed);
   return { save, st, savesRef, milestonesRef };
 }
 
@@ -95,6 +100,31 @@ function harness(failOn) {
     ck("the write after a failed one still lands", h.st.writes, ["a:0,c:0"]);
     ck("...and clears the error", h.st.error, "");
   }
+
+  console.log("\n-- a FAILED READ never becomes a write --");
+  {
+    // THE BUG. The pathway_plan read's error was ignored, the screen came up
+    // as "no plan yet", and the next save upserted this screen's empty
+    // defaults over the athlete's real milestones and stages.
+    const h = harness(null, { loaded: true, loadFailed: true });
+    h.save({ milestones: [{ id: "x", done: false }] });
+    await h.savesRef.current;
+    ck("after a failed read, save() writes nothing", h.st.writes, []);
+    ck("...and does not even change what is on screen", h.st.milestones.map((m) => m.id), ["a"]);
+  }
+  {
+    // Same for a save fired before the read has answered at all.
+    const h = harness(null, { loaded: false, loadFailed: false });
+    h.save({ milestones: [{ id: "x", done: false }] });
+    await h.savesRef.current;
+    ck("before the read lands, save() writes nothing", h.st.writes, []);
+  }
+  ck("the pathway_plan read's error is checked, not ignored",
+     /\{ data, error: planErr \}[\s\S]{0,700}if \(planErr\) throw planErr;/.test(APP), true);
+  ck("...the failure is recorded rather than swallowed",
+     /GOLSZ pathway plan load error:", e\); setLoadFailed\(true\);/.test(APP), true);
+  ck("...and the screen offers Retry instead of the editor",
+     /if \(loadFailed\) return <div style=\{\{ \.\.\.card \}\}><LoadError onRetry=\{retryLoad\} \/><\/div>;/.test(APP), true);
 
   console.log("\n-- the guard that dropped work is gone --");
   // Scoped to the lifted body: another component further up the file still has
