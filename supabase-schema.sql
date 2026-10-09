@@ -6280,3 +6280,75 @@ begin
     execute format('revoke all on function %s from authenticated', f.sig);
   end loop;
 end $$;
+
+-- ============================================================
+-- 144) ACCESS HARDENING (written 2026-10-09)
+-- supabase-migration-144-access-hardening.sql
+--
+-- Load-bearing DDL only, same convention as 136–143 above. The migration
+-- file carries the reasoning, the review queries and the verification
+-- block, and it is the only place the four REDEFINED FUNCTION BODIES live:
+-- handle_new_user() (adults only, no parent_email auto-link),
+-- protect_parent_link_columns() (+ requested_by pin),
+-- protect_event_columns() (+ created_by pin), search_events() (admin-created
+-- public events only), get_public_passport() / get_public_passport_by_token()
+-- (honour show_club / show_country, nothing for a banned account), plus the
+-- plan_config.live_features and claude-sonnet-5 price updates.
+-- Until the owner confirms it has been run in the SQL Editor, treat this
+-- block as pending rather than live.
+-- ============================================================
+
+-- 144.1 — the names view runs as the caller, so profiles' RLS applies.
+create or replace view public_profile_names with (security_invoker = true) as
+select id, full_name, occupation, verified_tier, avatar_url
+from profiles;
+alter view public_profile_names set (security_invoker = true);
+revoke all on public_profile_names from anon;
+grant select on public_profile_names to authenticated;
+
+-- 144.3 — who initiated a parent link; the athlete approves only the parent's.
+alter table parent_links add column if not exists requested_by uuid;
+create or replace function stamp_parent_link_requester()
+returns trigger language plpgsql security definer set search_path to 'public' as $$
+begin
+  if auth.role() is null or auth.role() = 'service_role' then
+    return new;
+  end if;
+  new.requested_by := auth.uid();
+  new.approved_at  := null;
+  return new;
+end;
+$$;
+drop trigger if exists stamp_parent_link_requester_trigger on parent_links;
+create trigger stamp_parent_link_requester_trigger
+  before insert on parent_links
+  for each row execute function stamp_parent_link_requester();
+drop policy if exists parent_links_approve on parent_links;
+create policy parent_links_approve on parent_links
+  for update to authenticated
+  using (athlete_id = auth.uid() and requested_by = parent_id)
+  with check (athlete_id = auth.uid() and requested_by = parent_id);
+
+-- 144.4 — storage listing: own folder, or an admin. Public URLs unaffected.
+drop policy if exists avatars_read on storage.objects;
+create policy avatars_read on storage.objects for select to authenticated using (
+  bucket_id = 'avatars'
+  and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin())
+);
+drop policy if exists post_images_read on storage.objects;
+create policy post_images_read on storage.objects for select to authenticated using (
+  bucket_id = 'post-images'
+  and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin())
+);
+
+-- 144.5 — non-admins create and keep private events only.
+alter table events alter column visibility set default 'private';
+drop policy if exists events_write on events;
+create policy events_write on events for insert to authenticated with check (
+  created_by = auth.uid()
+  and (visibility = 'private' or is_admin())
+);
+drop policy if exists events_update on events;
+create policy events_update on events for update to authenticated
+  using (created_by = auth.uid() or is_admin())
+  with check ((created_by = auth.uid() and visibility = 'private') or is_admin());

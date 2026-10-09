@@ -317,9 +317,12 @@ function LogoMark({ size = 24, style }) {
 const I18N = {
   en: {
     loading: "Loading…", yes: "Yes", no: "No",
+    load_failed: "Couldn't load this. Check your connection and try again.", load_retry: "Retry",
+    err_network: "Couldn't reach GOLSZ. Check your connection and try again.", err_generic: "Something went wrong. Please try again.",
     alt_post_image: "Photo in this post", alt_scout_photo: "Photo attached to this message",
     a11y_close: "Close", a11y_send: "Send message", a11y_status: "Status", a11y_focus_area: "Focus area",
     a11y_day: "Day", a11y_month: "Month", a11y_year: "Year",
+    a11y_delete_named: "Delete {name}",
     moderation_blocked: "That doesn't look appropriate for GOLSZ — please keep things sports-related.",
     VALUE_LABELS: { "American Football": "American Football", "Archery": "Archery", "Badminton": "Badminton", "Baseball": "Baseball", "Basketball": "Basketball", "Bowling": "Bowling", "Boxing": "Boxing", "Cheerleading": "Cheerleading", "Cricket": "Cricket", "Cross Country": "Cross Country", "Cycling": "Cycling", "Diving": "Diving", "Equestrian": "Equestrian", "Fencing": "Fencing", "Field Hockey": "Field Hockey", "Futsal": "Futsal", "Golf": "Golf", "Gymnastics": "Gymnastics", "Handball": "Handball", "Hockey": "Hockey", "Lacrosse": "Lacrosse", "Martial Arts": "Martial Arts", "Racquetball": "Racquetball", "Rowing": "Rowing", "Rugby": "Rugby", "Sailing": "Sailing", "Skiing": "Skiing", "Snowboarding": "Snowboarding", "Soccer": "Soccer", "Softball": "Softball", "Squash": "Squash", "Swimming": "Swimming", "Table Tennis": "Table Tennis", "Tennis": "Tennis", "Track": "Track", "Triathlon": "Triathlon", "Volleyball": "Volleyball", "Water Polo": "Water Polo", "Weightlifting": "Weightlifting", "Wrestling": "Wrestling", "Other": "Other", "Player": "Player", "Parent": "Parent", "Scout": "Scout", "Agent": "Agent", "Coach": "Coach", "Physio": "Physio" },
     nav_home: "Home", nav_scout: "Scout", nav_ai_scout: "AI Scout",
@@ -351,20 +354,21 @@ const I18N = {
     auth_reset_sent_post: ", a reset link is on its way. Open it to set a new password.",
     auth_paid_notice: "Payment received! If this is the only tab open, log in below once you've confirmed your email. Otherwise close this tab and go back to where you signed up — it'll sign you in automatically the moment your email is confirmed, from whatever device you use to confirm it.",
     auth_reset_failed: "Couldn't send reset email.",
+    auth_err_invalid_login: "That email and password don't match. Check them and try again.", auth_err_unconfirmed: "Your email address hasn't been confirmed yet, so we can't sign you in. This usually means the confirmation email never reached your inbox — resend it below.",
     auth_resend_failed: "Couldn't resend the confirmation email. Try again in a minute.",
     auth_working: "Working…", auth_create_free: "Create free account",
     auth_continue_payment: "Continue to payment — ", auth_per_month: "/month", prices_currency_note: "All prices in {currency}.",
     auth_couldnt_signup: "COULDN'T COMPLETE SIGNUP", auth_couldnt_login: "COULDN'T LOG IN",
-    plan_free_tag: "No card needed", plan_starter_tag: "Get started", plan_pro_tag: "Most popular", plan_elite_tag: "It's GOLSZ Time",
+    plan_free_tag: "No card needed", plan_starter_tag: "Get started", plan_pro_tag: "For an active recruiting season", plan_elite_tag: "It's GOLSZ Time",
     plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport — profile, achievements & career history", plan_free_feat3: "AI Scout athlete intake & goal discovery", plan_free_feat4: "Passport Strength score & My Next Move",
     conversion_title: "We've learned enough about you — let's build your plan.", conversion_body: "GOLSZ Scout now knows your sport, your goals, and what you're working on. Upgrade to unlock deeper guidance built around your progression — not just more questions.", conversion_dismiss: "Not now", update_available: "A new version of GOLSZ is ready.", scout_try_again: "Try again", update_refresh: "Refresh", update_dismiss: "Dismiss", 
     feature_lock_body: "This is part of GOLSZ's guided pathway tools.", feature_lock_cta: "Upgrade to unlock",
     guided_step_goal: "Understanding your goal: {goal}", guided_step_goal_fallback: "Getting to know what you're working toward.",
     guided_step_passport: "Analyzing your Passport — {score}% complete.", guided_step_missing: "Missing: {list}.", guided_step_missing_none: "Your Passport basics are all filled in.",
     guided_step_readiness: "Initial Passport Strength: {score}/100.", guided_step_next_move: "Your next move: {label}", guided_step_next_move_generic: "Building your first recommended next move.",
-    guided_ready_title: "That's the athlete you are today.", guided_ready_body: "Now let's figure out how you become the athlete you want to be — Passport Strength, My Next Move, Targets, and Benchmarks are ready to unlock.",
+    guided_ready_title: "That's the athlete you are today.", guided_ready_body: "Now let's figure out how you become the athlete you want to be — Passport Strength, your Pathway, Targets, and Benchmarks are ready to unlock.",
     elite_welcome_eyebrow: "IT'S GOLSZ TIME", elite_welcome_title: "Welcome to GOLSZ Elite.", elite_welcome_body: "Before we build your complete program, we need to understand you — the athlete you are today, where you want to go, and what your normal week looks like. We'll build your Passport, establish your goals, create your Pathway, and organize your development around getting there.", elite_welcome_cta: "Let's build it",
-    guided_locked_readiness: "Passport Strength", guided_locked_next_move: "My Next Move", guided_locked_targets: "Targets", guided_locked_benchmarks: "Benchmarks",
+    guided_locked_readiness: "Passport Strength", guided_locked_pathway: "Pathway", guided_locked_targets: "Targets", guided_locked_benchmarks: "Benchmarks",
     guided_continue_cta: "Continue my journey",
     next_move_title: "MY NEXT STEP", next_move_act: "Do this", 
     next_move_type_complete_profile: "Finish your Passport.", next_move_type_define_goal: "Tell Scout what you're aiming for.", next_move_type_build_pathway: "Build your Pathway with Scout.", next_move_type_follow_up: "Follow up on a stale target.", next_move_type_review_progress: "Review your progress.",
@@ -398,10 +402,11 @@ const I18N = {
     plan_crumb_goal: "From Home · your goal", nav_targets: "Pathway/Plan", nav_plan: "Plan", plan_page_title: "MY PATHWAY", targets_title: "SCHOOLS & CLUBS", targets_edit_hint: "Tap to edit", targets_name_ph: "School or club name", targets_contact_name_ph: "Contact name", targets_contact_email_ph: "Contact email",
     targets_locked_teaser: "Upgrade to build your visual Pathway, set targets and track outreach — GOLSZ Scout will help you build the first list.",
     targets_add: "Add", targets_add_err: "Couldn't add that. Try again.", targets_empty: "No targets yet — add the first school or club you're pursuing.",
+    targets_delete_confirm: "Delete?", targets_delete_confirm_aria: "Tap again to delete {name} and its drafted email",
     targets_notes_ph: "Notes", targets_draft_ph: "Draft outreach email",
     targets_status_researching: "Researching", targets_status_preparing: "Preparing", targets_status_contacted: "Contacted", targets_status_responded: "Responded", targets_status_follow_up: "Follow up", targets_status_opportunity: "Opportunity", targets_fit_reasoning_ph: "Why this is a good fit (optional)",
-    plan_starter_feat1: "8 AI Scout questions/day — no lifetime limit", plan_starter_feat2: "Everything in Free", plan_starter_feat3: "Personalized Pathway, My Next Move & baseline assessment", plan_starter_feat4: "Target lists, basic outreach & PDF Passport export",
-    plan_pro_feat1: "15 AI Scout questions/day — no lifetime limit", plan_pro_feat2: "Everything in Basic", plan_pro_feat3: "Passport Strength breakdown & progress reviews", plan_pro_feat4: "Training & development plan", plan_pro_feat5: "Richer target tracking & outreach follow-ups", plan_pro_feat6: "Identity verification",
+    plan_starter_feat1: "8 AI Scout questions/day — no lifetime limit", plan_starter_feat2: "Everything in Free", plan_starter_feat3: "Personalized Pathway & benchmark tracking", plan_starter_feat4: "Target lists with outreach tracking & follow-up reminders, plus PDF Passport export",
+    plan_pro_feat1: "15 AI Scout questions/day — no lifetime limit", plan_pro_feat2: "Everything in Basic", plan_pro_feat3: "Passport Strength breakdown", plan_pro_feat4: "Training & development plan", plan_pro_feat5: "Richer target tracking & outreach follow-ups", plan_pro_feat6: "Identity verification",
     plan_elite_feat1: "20 AI Scout questions/day — no lifetime limit", plan_elite_feat2: "Everything in Pro",
     feed_title: "Your feed", feed_search: "Search your feed…", feed_share_update: "Share an update…",
     feed_new_post: "NEW POST", feed_whats_happening: "What's happening?", feed_add_details: "Add details (optional)",
@@ -441,6 +446,7 @@ const I18N = {
     settings_plan_portal_unavailable: "Billing management isn't set up yet — check back soon.",
     settings_plan_cancel_via_stripe: "Cancel your subscription first, otherwise you'd lose Pro access while Stripe kept charging you. Use the receipt email Stripe sent you to cancel — your plan moves to Free automatically once it does.",
     settings_plan_err: "Couldn't update your plan — try again.", settings_plan_switch_via_stripe: "Change your plan from the Stripe receipt email — starting a new checkout here would charge you a second time and leave you on the plan you already have.",
+    settings_plan_switch_contact: "Changing plan isn't available in the app yet. Email hello@golsz.com and we'll switch it for you — or cancel in Manage billing and choose the new plan once your current period ends.", auth_email_already_registered: "An account with this email already exists. Log in instead, or use “Forgot password?” to reset it. No payment was taken.", admin_billing_cancel_first: "This account has an active paid subscription (Stripe customer {customer}). Blocking or deleting it here does NOT stop Stripe charging them — cancel the subscription in the Stripe Dashboard first. Continue anyway?",
     notif_ios_homescreen: "On iPhone/iPad, notifications only work after you add GOLSZ to your Home Screen: tap Share, then \"Add to Home Screen\" — then open GOLSZ from that icon and turn notifications on from there.",
     restricted_title: "Restricted account.", restricted_body: "Your posts stay private and you're hidden from Discover until a parent or guardian approves access — see Family & Parent Access on your Profile.",
     back: "Back",
@@ -640,6 +646,16 @@ const I18N = {
     scout_attach_photo: "Attach a photo", scout_send: "Send", scout_photo_attached: "Photo attached — Scout will take a look.",
     scout_connection_dropped: "Connection dropped mid-play. Send that again and I'm on it.", scout_server_error: "Scout's server didn't finish that one (error {s}). Send it again — it usually goes through.",
     scout_timed_out: "That one took me too long to work through. Send it again — or try asking it a bit more specifically.",
+    scout_err_daily_limit: "You've used today's Scout messages. Upgrade for more, or pick this up again tomorrow.", scout_err_daily_limit_top: "You've used today's Scout messages. They reset tomorrow.",
+    scout_err_free_exhausted: "You've used all your free Scout questions. Upgrade to keep going.",
+    scout_err_free_tool_blocked: "That needs a deeper search, which is included from the Basic plan up. Ask it another way and I'll answer from your own record.",
+    scout_err_signin: "Sign in again to keep talking to Scout.", scout_err_no_access: "You don't have access to this athlete's Scout.",
+    scout_err_rate_limited: "One at a time — give me a second, then send that again.", scout_err_in_flight: "I'm still working on that one. Give it a moment, then try again.",
+    scout_err_photo: "That photo didn't send. Try a different one.", scout_photo_read_err: "Couldn't read that photo. Try a different one.",
+    scout_err_too_long: "That's too long for me to take in one go. Try a shorter message, or start a new chat.", scout_err_bad_request: "I couldn't read that message. Try rephrasing it.",
+    scout_err_unavailable: "Scout is taking a short break. Try again in a moment.",
+    scout_err_refused: "That's not something I can help with. Ask me about your sport, your training or your pathway and I'm on it.",
+    scout_upgrade_cta: "See plans",
     scout_greeting: "I'm your GOLSZ Scout.\n\nTell me about yourself like you'd tell a scout — age, sport, position, where you play, and where you want to end up. I'll build your path from there.",
     scout_topic_situation: "My current situation", scout_topic_situation_prompt: "Let's talk through my current situation as an athlete.",
     scout_topic_goals: "My goals & preferences", scout_topic_goals_prompt: "I want to talk about my goals and what I'm looking for.",
@@ -664,9 +680,12 @@ const I18N = {
   },
   fr: {
     loading: "Chargement…", yes: "Oui", no: "Non",
+    load_failed: "Impossible de charger ceci. Vérifiez votre connexion et réessayez.", load_retry: "Réessayer",
+    err_network: "Impossible de joindre GOLSZ. Vérifiez votre connexion et réessayez.", err_generic: "Une erreur est survenue. Veuillez réessayer.",
     alt_post_image: "Photo de cette publication", alt_scout_photo: "Photo jointe à ce message",
     a11y_close: "Fermer", a11y_send: "Envoyer le message", a11y_status: "Statut", a11y_focus_area: "Domaine de travail",
     a11y_day: "Jour", a11y_month: "Mois", a11y_year: "Année",
+    a11y_delete_named: "Supprimer {name}",
     moderation_blocked: "Cela ne semble pas approprié pour GOLSZ — merci de rester sur des sujets sportifs.",
     VALUE_LABELS: { "American Football": "Football américain", "Archery": "Tir à l'arc", "Badminton": "Badminton", "Baseball": "Baseball", "Basketball": "Basketball", "Bowling": "Bowling", "Boxing": "Boxe", "Cheerleading": "Cheerleading", "Cricket": "Cricket", "Cross Country": "Cross-country", "Cycling": "Cyclisme", "Diving": "Plongeon", "Equestrian": "Équitation", "Fencing": "Escrime", "Field Hockey": "Hockey sur gazon", "Futsal": "Futsal", "Golf": "Golf", "Gymnastics": "Gymnastique", "Handball": "Handball", "Hockey": "Hockey sur glace", "Lacrosse": "Crosse", "Martial Arts": "Arts martiaux", "Racquetball": "Racquetball", "Rowing": "Aviron", "Rugby": "Rugby", "Sailing": "Voile", "Skiing": "Ski", "Snowboarding": "Snowboard", "Soccer": "Football", "Softball": "Softball", "Squash": "Squash", "Swimming": "Natation", "Table Tennis": "Tennis de table", "Tennis": "Tennis", "Track": "Athlétisme", "Triathlon": "Triathlon", "Volleyball": "Volleyball", "Water Polo": "Water-polo", "Weightlifting": "Haltérophilie", "Wrestling": "Lutte", "Other": "Autre", "Player": "Athlète", "Parent": "Parent", "Scout": "Recruteur", "Agent": "Agent", "Coach": "Entraîneur", "Physio": "Physiothérapeute" },
     nav_home: "Accueil", nav_scout: "Agent", nav_ai_scout: "Agent IA",
@@ -698,20 +717,21 @@ const I18N = {
     auth_reset_sent_post: ", un lien de réinitialisation est en route. Ouvrez-le pour définir un nouveau mot de passe.",
     auth_paid_notice: "Paiement reçu ! Si cet onglet est le seul ouvert, connectez-vous ci-dessous une fois votre e-mail confirmé. Sinon, fermez cet onglet et retournez là où vous vous êtes inscrit — la connexion se fera automatiquement dès que votre e-mail sera confirmé, quel que soit l'appareil utilisé pour le confirmer.",
     auth_reset_failed: "Impossible d'envoyer l'e-mail de réinitialisation.",
+    auth_err_invalid_login: "Cet e-mail et ce mot de passe ne correspondent pas. Vérifiez-les et réessayez.", auth_err_unconfirmed: "Votre adresse e-mail n'a pas encore été confirmée, nous ne pouvons donc pas vous connecter. Cela signifie généralement que l'e-mail de confirmation n'est jamais arrivé — renvoyez-le ci-dessous.",
     auth_resend_failed: "Impossible de renvoyer l'e-mail de confirmation. Réessayez dans une minute.",
     auth_working: "Chargement…", auth_create_free: "Créer un compte gratuit",
     auth_continue_payment: "Continuer vers le paiement — ", auth_per_month: "/mois", prices_currency_note: "Tous les prix sont en {currency}.",
     auth_couldnt_signup: "INSCRIPTION IMPOSSIBLE", auth_couldnt_login: "CONNEXION IMPOSSIBLE",
-    plan_free_tag: "Sans carte bancaire", plan_starter_tag: "Pour commencer", plan_pro_tag: "Le plus populaire", plan_elite_tag: "C'est l'heure GOLSZ",
+    plan_free_tag: "Sans carte bancaire", plan_starter_tag: "Pour commencer", plan_pro_tag: "Pour une saison de recrutement active", plan_elite_tag: "C'est l'heure GOLSZ",
     plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique — profil, palmarès & parcours", plan_free_feat3: "Découverte de l'athlète & de vos objectifs avec Scout", plan_free_feat4: "Score Force du Passeport & Ma Prochaine Étape",
     conversion_title: "On en sait assez sur vous — construisons votre plan.", conversion_body: "GOLSZ Scout connaît maintenant votre sport, vos objectifs et ce sur quoi vous travaillez. Passez à un forfait supérieur pour un accompagnement plus poussé, centré sur votre progression — pas seulement plus de questions.", conversion_dismiss: "Pas maintenant", update_available: "Une nouvelle version de GOLSZ est prête.", scout_try_again: "Réessayer", update_refresh: "Actualiser", update_dismiss: "Ignorer", 
     feature_lock_body: "Cela fait partie des outils de parcours guidé de GOLSZ.", feature_lock_cta: "Passer à un forfait supérieur",
     guided_step_goal: "Compréhension de votre objectif : {goal}", guided_step_goal_fallback: "Nous apprenons ce vers quoi vous travaillez.",
     guided_step_passport: "Analyse de votre Passeport — {score}% complété.", guided_step_missing: "Manquant : {list}.", guided_step_missing_none: "Les bases de votre Passeport sont toutes remplies.",
     guided_step_readiness: "Force du Passeport initiale : {score}/100.", guided_step_next_move: "Votre prochaine étape : {label}", guided_step_next_move_generic: "Construction de votre première étape recommandée.",
-    guided_ready_title: "Voilà l'athlète que vous êtes aujourd'hui.", guided_ready_body: "Voyons maintenant comment devenir l'athlète que vous voulez être — la Force du Passeport, Ma Prochaine Étape, Cibles et Repères sont prêts à être débloqués.",
+    guided_ready_title: "Voilà l'athlète que vous êtes aujourd'hui.", guided_ready_body: "Voyons maintenant comment devenir l'athlète que vous voulez être — la Force du Passeport, votre Parcours, Cibles et Repères sont prêts à être débloqués.",
     elite_welcome_eyebrow: "C'EST L'HEURE GOLSZ", elite_welcome_title: "Bienvenue dans GOLSZ Elite.", elite_welcome_body: "Avant de construire votre programme complet, nous devons vous comprendre — l'athlète que vous êtes aujourd'hui, où vous voulez aller, et à quoi ressemble votre semaine normale. Nous allons construire votre Passeport, définir vos objectifs, créer votre Parcours et organiser votre développement pour y arriver.", elite_welcome_cta: "Construisons-le",
-    guided_locked_readiness: "Force du Passeport", guided_locked_next_move: "Ma Prochaine Étape", guided_locked_targets: "Cibles", guided_locked_benchmarks: "Repères",
+    guided_locked_readiness: "Force du Passeport", guided_locked_pathway: "Parcours", guided_locked_targets: "Cibles", guided_locked_benchmarks: "Repères",
     guided_continue_cta: "Continuer mon parcours",
     next_move_title: "VOTRE PROCHAINE ÉTAPE", next_move_act: "Faire ça", 
     next_move_type_complete_profile: "Terminez votre Passeport.", next_move_type_define_goal: "Dites à Scout votre objectif.", next_move_type_build_pathway: "Construisez votre Parcours avec Scout.", next_move_type_follow_up: "Relancez une cible en attente.", next_move_type_review_progress: "Consultez vos progrès.",
@@ -745,10 +765,11 @@ const I18N = {
     plan_crumb_goal: "Depuis l'Accueil · votre objectif", nav_targets: "Parcours/Plan", nav_plan: "Plan", plan_page_title: "MON PARCOURS", targets_title: "ÉCOLES & CLUBS", targets_edit_hint: "Toucher pour modifier", targets_name_ph: "Nom de l'école ou du club", targets_contact_name_ph: "Nom du contact", targets_contact_email_ph: "Email du contact",
     targets_locked_teaser: "Passez à un forfait supérieur pour construire votre Parcours visuel, définir des cibles et suivre vos démarches — GOLSZ Scout vous aide à créer la première liste.",
     targets_add: "Ajouter", targets_add_err: "Impossible d'ajouter. Réessayez.", targets_empty: "Aucune cible pour l'instant — ajoutez la première école ou le premier club visé.",
+    targets_delete_confirm: "Supprimer ?", targets_delete_confirm_aria: "Touchez à nouveau pour supprimer {name} et son e-mail préparé",
     targets_notes_ph: "Notes", targets_draft_ph: "Brouillon d'email de contact",
     targets_status_researching: "Recherche", targets_status_preparing: "Préparation", targets_status_contacted: "Contacté", targets_status_responded: "Répondu", targets_status_follow_up: "Relance", targets_status_opportunity: "Opportunité", targets_fit_reasoning_ph: "Pourquoi c'est un bon choix (facultatif)",
-    plan_starter_feat1: "8 questions/jour avec Scout — sans limite à vie", plan_starter_feat2: "Tout ce qui est dans Free", plan_starter_feat3: "Parcours personnalisé, Ma Prochaine Étape & bilan de départ", plan_starter_feat4: "Listes de cibles, approche de base & export PDF du Passeport",
-    plan_pro_feat1: "15 questions/jour avec Scout — sans limite à vie", plan_pro_feat2: "Tout ce qui est dans Basic", plan_pro_feat3: "Détail de la Force du Passeport & bilans de progression", plan_pro_feat4: "Plan d'entraînement & de développement", plan_pro_feat5: "Suivi enrichi des cibles & relances", plan_pro_feat6: "Vérification d'identité",
+    plan_starter_feat1: "8 questions/jour avec Scout — sans limite à vie", plan_starter_feat2: "Tout ce qui est dans Free", plan_starter_feat3: "Parcours personnalisé & suivi des repères", plan_starter_feat4: "Listes de cibles avec suivi des prises de contact & rappels de relance, plus export PDF du Passeport",
+    plan_pro_feat1: "15 questions/jour avec Scout — sans limite à vie", plan_pro_feat2: "Tout ce qui est dans Basic", plan_pro_feat3: "Détail de la Force du Passeport", plan_pro_feat4: "Plan d'entraînement & de développement", plan_pro_feat5: "Suivi enrichi des cibles & relances", plan_pro_feat6: "Vérification d'identité",
     plan_elite_feat1: "20 questions/jour avec Scout — sans limite à vie", plan_elite_feat2: "Tout ce qui est dans Pro",
     feed_title: "Votre fil", feed_search: "Rechercher dans votre fil…", feed_share_update: "Partager une actualité…",
     feed_new_post: "NOUVELLE PUBLICATION", feed_whats_happening: "Quoi de neuf ?", feed_add_details: "Ajouter des détails (facultatif)",
@@ -788,6 +809,7 @@ const I18N = {
     settings_plan_portal_unavailable: "La gestion de la facturation n'est pas encore configurée — revenez bientôt.",
     settings_plan_cancel_via_stripe: "Résiliez d'abord votre abonnement, sinon vous perdriez l'accès Pro alors que Stripe continuerait à vous facturer. Utilisez l'e-mail de reçu envoyé par Stripe pour résilier — votre formule passera à Free automatiquement ensuite.",
     settings_plan_err: "Impossible de mettre à jour votre formule — réessayez.", settings_plan_switch_via_stripe: "Changez de formule depuis l’e-mail de reçu Stripe — lancer un nouveau paiement ici vous facturerait une seconde fois sans changer votre formule.",
+    settings_plan_switch_contact: "Le changement de formule n'est pas encore disponible dans l'appli. Écrivez à hello@golsz.com et nous le ferons pour vous — ou résiliez dans Gérer la facturation et choisissez la nouvelle formule à la fin de votre période en cours.", auth_email_already_registered: "Un compte existe déjà avec cet e-mail. Connectez-vous, ou utilisez « Mot de passe oublié ? » pour le réinitialiser. Aucun paiement n'a été effectué.", admin_billing_cancel_first: "Ce compte a un abonnement payant actif (client Stripe {customer}). Le bloquer ou le supprimer ici n'arrête PAS les prélèvements Stripe — résiliez d'abord l'abonnement dans le tableau de bord Stripe. Continuer quand même ?",
     notif_ios_homescreen: "Sur iPhone/iPad, les notifications ne fonctionnent qu'après avoir ajouté GOLSZ à votre écran d'accueil : appuyez sur Partager, puis « Sur l'écran d'accueil » — ouvrez ensuite GOLSZ depuis cette icône et activez les notifications à partir de là.",
     restricted_title: "Compte restreint.", restricted_body: "Vos publications restent privées et vous êtes masqué de Découvrir jusqu'à ce qu'un parent ou tuteur approuve l'accès — voir Famille et accès parental sur votre profil.",
     back: "Retour",
@@ -987,6 +1009,16 @@ const I18N = {
     scout_attach_photo: "Joindre une photo", scout_send: "Envoyer", scout_photo_attached: "Photo jointe — votre agent va y jeter un œil.",
     scout_connection_dropped: "Connexion interrompue en plein jeu. Renvoyez ça et je m'en occupe.", scout_server_error: "Le serveur de Scout n'a pas pu terminer (erreur {s}). Renvoyez-le — ça passe généralement.",
     scout_timed_out: "Celle-là m'a pris trop de temps à traiter. Renvoyez-la — ou essayez de la poser un peu plus précisément.",
+    scout_err_daily_limit: "Vous avez utilisé vos messages Scout du jour. Passez à un forfait supérieur pour en avoir plus, ou reprenez demain.", scout_err_daily_limit_top: "Vous avez utilisé vos messages Scout du jour. Ils se renouvellent demain.",
+    scout_err_free_exhausted: "Vous avez utilisé toutes vos questions Scout gratuites. Passez à un forfait supérieur pour continuer.",
+    scout_err_free_tool_blocked: "Cela demande une recherche plus poussée, incluse à partir du forfait Basic. Posez la question autrement et je répondrai à partir de votre propre dossier.",
+    scout_err_signin: "Reconnectez-vous pour continuer à parler à Scout.", scout_err_no_access: "Vous n'avez pas accès au Scout de cet athlète.",
+    scout_err_rate_limited: "Une chose à la fois — laissez-moi une seconde, puis renvoyez-le.", scout_err_in_flight: "Je suis encore en train de traiter celle-là. Attendez un instant, puis réessayez.",
+    scout_err_photo: "Cette photo n'a pas pu être envoyée. Essayez-en une autre.", scout_photo_read_err: "Impossible de lire cette photo. Essayez-en une autre.",
+    scout_err_too_long: "C'est trop long pour moi d'un seul coup. Essayez un message plus court, ou commencez une nouvelle discussion.", scout_err_bad_request: "Je n'ai pas pu lire ce message. Essayez de le reformuler.",
+    scout_err_unavailable: "Scout fait une courte pause. Réessayez dans un instant.",
+    scout_err_refused: "Je ne peux pas vous aider sur ce point. Parlez-moi de votre sport, de votre entraînement ou de votre parcours et je m'y mets.",
+    scout_upgrade_cta: "Voir les forfaits",
     scout_greeting: "Je suis votre Agent GOLSZ.\n\nParlez-moi de vous comme vous le feriez à un recruteur — âge, sport, poste, où vous jouez, et où vous voulez aller. Je construirai votre parcours à partir de là.",
     scout_topic_situation: "Ma situation actuelle", scout_topic_situation_prompt: "Parlons de ma situation actuelle en tant qu'athlète.",
     scout_topic_goals: "Mes objectifs & préférences", scout_topic_goals_prompt: "Je veux parler de mes objectifs et de ce que je recherche.",
@@ -1011,9 +1043,12 @@ const I18N = {
   },
   es: {
     loading: "Cargando…", yes: "Sí", no: "No",
+    load_failed: "No se pudo cargar. Revisa tu conexión e inténtalo de nuevo.", load_retry: "Reintentar",
+    err_network: "No se pudo conectar con GOLSZ. Revisa tu conexión e inténtalo de nuevo.", err_generic: "Algo salió mal. Inténtalo de nuevo.",
     alt_post_image: "Foto de esta publicación", alt_scout_photo: "Foto adjunta a este mensaje",
     a11y_close: "Cerrar", a11y_send: "Enviar mensaje", a11y_status: "Estado", a11y_focus_area: "Área de enfoque",
     a11y_day: "Día", a11y_month: "Mes", a11y_year: "Año",
+    a11y_delete_named: "Eliminar {name}",
     moderation_blocked: "Eso no parece apropiado para GOLSZ — por favor, mantén el contenido relacionado con el deporte.",
     VALUE_LABELS: { "American Football": "Fútbol americano", "Archery": "Tiro con arco", "Badminton": "Bádminton", "Baseball": "Béisbol", "Basketball": "Baloncesto", "Bowling": "Bolos", "Boxing": "Boxeo", "Cheerleading": "Animación", "Cricket": "Críquet", "Cross Country": "Campo a través", "Cycling": "Ciclismo", "Diving": "Salto de trampolín", "Equestrian": "Hípica", "Fencing": "Esgrima", "Field Hockey": "Hockey sobre hierba", "Futsal": "Fútbol sala", "Golf": "Golf", "Gymnastics": "Gimnasia", "Handball": "Balonmano", "Hockey": "Hockey sobre hielo", "Lacrosse": "Lacrosse", "Martial Arts": "Artes marciales", "Racquetball": "Racquetball", "Rowing": "Remo", "Rugby": "Rugby", "Sailing": "Vela", "Skiing": "Esquí", "Snowboarding": "Snowboard", "Soccer": "Fútbol", "Softball": "Sóftbol", "Squash": "Squash", "Swimming": "Natación", "Table Tennis": "Tenis de mesa", "Tennis": "Tenis", "Track": "Atletismo", "Triathlon": "Triatlón", "Volleyball": "Voleibol", "Water Polo": "Waterpolo", "Weightlifting": "Halterofilia", "Wrestling": "Lucha", "Other": "Otro", "Player": "Deportista", "Parent": "Madre/Padre", "Scout": "Ojeador", "Agent": "Agente", "Coach": "Entrenador", "Physio": "Fisioterapeuta" },
     nav_home: "Inicio", nav_scout: "Agente", nav_ai_scout: "Agente IA",
@@ -1045,20 +1080,21 @@ const I18N = {
     auth_reset_sent_post: ", un enlace de restablecimiento está en camino. Ábrelo para establecer una nueva contraseña.",
     auth_paid_notice: "¡Pago recibido! Si esta es la única pestaña abierta, inicia sesión abajo en cuanto confirmes tu correo. Si no, cierra esta pestaña y vuelve a donde te registraste — se iniciará sesión automáticamente en el momento en que confirmes tu correo, desde el dispositivo que uses para confirmarlo.",
     auth_reset_failed: "No se pudo enviar el correo de restablecimiento.",
+    auth_err_invalid_login: "Ese correo y esa contraseña no coinciden. Revísalos e inténtalo de nuevo.", auth_err_unconfirmed: "Tu correo electrónico aún no está confirmado, así que no podemos iniciar tu sesión. Normalmente significa que el correo de confirmación nunca llegó a tu bandeja — reenvíalo abajo.",
     auth_resend_failed: "No se pudo reenviar el correo de confirmación. Inténtalo de nuevo en un minuto.",
     auth_working: "Procesando…", auth_create_free: "Crear cuenta gratuita",
     auth_continue_payment: "Continuar al pago — ", auth_per_month: "/mes", prices_currency_note: "Todos los precios en {currency}.",
     auth_couldnt_signup: "NO SE PUDO COMPLETAR EL REGISTRO", auth_couldnt_login: "NO SE PUDO INICIAR SESIÓN",
-    plan_free_tag: "Sin tarjeta", plan_starter_tag: "Para empezar", plan_pro_tag: "Más popular", plan_elite_tag: "Es hora de GOLSZ",
+    plan_free_tag: "Sin tarjeta", plan_starter_tag: "Para empezar", plan_pro_tag: "Para una temporada de reclutamiento activa", plan_elite_tag: "Es hora de GOLSZ",
     plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital — perfil, logros y trayectoria", plan_free_feat3: "Descubrimiento del atleta y tus objetivos con Scout", plan_free_feat4: "Puntuación Fuerza del Pasaporte y Tu Próximo Paso",
     conversion_title: "Ya sabemos suficiente sobre ti — construyamos tu plan.", conversion_body: "GOLSZ Scout ya conoce tu deporte, tus objetivos y en qué estás trabajando. Mejora tu plan para obtener una guía más profunda centrada en tu progreso, no solo más preguntas.", conversion_dismiss: "Ahora no", update_available: "Hay una nueva versión de GOLSZ.", scout_try_again: "Reintentar", update_refresh: "Actualizar", update_dismiss: "Descartar", 
     feature_lock_body: "Esto forma parte de las herramientas de trayectoria guiada de GOLSZ.", feature_lock_cta: "Mejora tu plan para desbloquear",
     guided_step_goal: "Entendiendo tu objetivo: {goal}", guided_step_goal_fallback: "Conociendo hacia qué estás trabajando.",
     guided_step_passport: "Analizando tu Pasaporte — {score}% completo.", guided_step_missing: "Falta: {list}.", guided_step_missing_none: "Los datos básicos de tu Pasaporte están completos.",
     guided_step_readiness: "Fuerza del Pasaporte inicial: {score}/100.", guided_step_next_move: "Tu próximo paso: {label}", guided_step_next_move_generic: "Preparando tu primer paso recomendado.",
-    guided_ready_title: "Ese es el atleta que eres hoy.", guided_ready_body: "Ahora veamos cómo te conviertes en el atleta que quieres ser — la Fuerza del Pasaporte, Tu Próximo Paso, Objetivos y Marcas están listos para desbloquear.",
+    guided_ready_title: "Ese es el atleta que eres hoy.", guided_ready_body: "Ahora veamos cómo te conviertes en el atleta que quieres ser — la Fuerza del Pasaporte, tu Trayectoria, Objetivos y Marcas están listos para desbloquear.",
     elite_welcome_eyebrow: "ES HORA DE GOLSZ", elite_welcome_title: "Bienvenido a GOLSZ Elite.", elite_welcome_body: "Antes de construir tu programa completo, necesitamos entenderte — el atleta que eres hoy, adónde quieres llegar y cómo es tu semana normal. Construiremos tu Pasaporte, definiremos tus objetivos, crearemos tu Camino y organizaremos tu desarrollo para llegar allí.", elite_welcome_cta: "Construyámoslo",
-    guided_locked_readiness: "Fuerza del Pasaporte", guided_locked_next_move: "Tu Próximo Paso", guided_locked_targets: "Objetivos", guided_locked_benchmarks: "Marcas",
+    guided_locked_readiness: "Fuerza del Pasaporte", guided_locked_pathway: "Trayectoria", guided_locked_targets: "Objetivos", guided_locked_benchmarks: "Marcas",
     guided_continue_cta: "Continuar mi camino",
     next_move_title: "TU PRÓXIMO PASO", next_move_act: "Hacer esto", 
     next_move_type_complete_profile: "Termina tu Pasaporte.", next_move_type_define_goal: "Dile a Scout cuál es tu meta.", next_move_type_build_pathway: "Construye tu Trayectoria con Scout.", next_move_type_follow_up: "Da seguimiento a un objetivo pendiente.", next_move_type_review_progress: "Revisa tu progreso.",
@@ -1092,10 +1128,11 @@ const I18N = {
     plan_crumb_goal: "Desde Inicio · tu objetivo", nav_targets: "Trayectoria/Plan", nav_plan: "Plan", plan_page_title: "MI TRAYECTORIA", targets_title: "ESCUELAS Y CLUBES", targets_edit_hint: "Toca para editar", targets_name_ph: "Nombre de la escuela o club", targets_contact_name_ph: "Nombre del contacto", targets_contact_email_ph: "Email del contacto",
     targets_locked_teaser: "Mejora tu plan para construir tu Camino visual, definir objetivos y hacer seguimiento — GOLSZ Scout te ayuda a crear la primera lista.",
     targets_add: "Añadir", targets_add_err: "No se pudo añadir. Inténtalo de nuevo.", targets_empty: "Aún no hay objetivos — añade la primera escuela o club que te interese.",
+    targets_delete_confirm: "¿Eliminar?", targets_delete_confirm_aria: "Toca de nuevo para eliminar {name} y su correo redactado",
     targets_notes_ph: "Notas", targets_draft_ph: "Borrador de email de contacto",
     targets_status_researching: "Investigando", targets_status_preparing: "Preparando", targets_status_contacted: "Contactado", targets_status_responded: "Respondido", targets_status_follow_up: "Seguimiento", targets_status_opportunity: "Oportunidad", targets_fit_reasoning_ph: "Por qué encaja bien (opcional)",
-    plan_starter_feat1: "8 preguntas/día con Scout — sin límite de por vida", plan_starter_feat2: "Todo lo de Free", plan_starter_feat3: "Camino personalizado, Tu Próximo Paso y evaluación inicial", plan_starter_feat4: "Listas de objetivos, contacto básico y exportación PDF del Pasaporte",
-    plan_pro_feat1: "15 preguntas/día con Scout — sin límite de por vida", plan_pro_feat2: "Todo lo de Basic", plan_pro_feat3: "Desglose de Fuerza del Pasaporte y revisiones de progreso", plan_pro_feat4: "Plan de entrenamiento y desarrollo", plan_pro_feat5: "Seguimiento avanzado de objetivos y seguimientos", plan_pro_feat6: "Verificación de identidad",
+    plan_starter_feat1: "8 preguntas/día con Scout — sin límite de por vida", plan_starter_feat2: "Todo lo de Free", plan_starter_feat3: "Camino personalizado y seguimiento de marcas", plan_starter_feat4: "Listas de objetivos con seguimiento de contactos y recordatorios, más exportación PDF del Pasaporte",
+    plan_pro_feat1: "15 preguntas/día con Scout — sin límite de por vida", plan_pro_feat2: "Todo lo de Basic", plan_pro_feat3: "Desglose de Fuerza del Pasaporte", plan_pro_feat4: "Plan de entrenamiento y desarrollo", plan_pro_feat5: "Seguimiento avanzado de objetivos y seguimientos", plan_pro_feat6: "Verificación de identidad",
     plan_elite_feat1: "20 preguntas/día con Scout — sin límite de por vida", plan_elite_feat2: "Todo lo de Pro",
     feed_title: "Tu feed", feed_search: "Buscar en tu feed…", feed_share_update: "Comparte una novedad…",
     feed_new_post: "NUEVA PUBLICACIÓN", feed_whats_happening: "¿Qué está pasando?", feed_add_details: "Añade detalles (opcional)",
@@ -1135,6 +1172,7 @@ const I18N = {
     settings_plan_portal_unavailable: "La gestión de la facturación aún no está configurada — vuelve pronto.",
     settings_plan_cancel_via_stripe: "Cancela primero tu suscripción; si no, perderías el acceso Pro mientras Stripe te sigue cobrando. Usa el correo del recibo de Stripe para cancelar — tu plan pasará a Free automáticamente después.",
     settings_plan_err: "No se pudo actualizar tu plan — inténtalo de nuevo.", settings_plan_switch_via_stripe: "Cambia de plan desde el correo del recibo de Stripe — iniciar otro pago aquí te cobraría una segunda vez y te dejaría en el plan que ya tienes.",
+    settings_plan_switch_contact: "Todavía no puedes cambiar de plan desde la app. Escribe a hello@golsz.com y lo cambiamos por ti — o cancela en Gestionar la facturación y elige el nuevo plan cuando termine tu periodo actual.", auth_email_already_registered: "Ya existe una cuenta con este correo. Inicia sesión o usa «¿Olvidaste tu contraseña?» para restablecerla. No se ha realizado ningún cobro.", admin_billing_cancel_first: "Esta cuenta tiene una suscripción de pago activa (cliente de Stripe {customer}). Bloquearla o eliminarla aquí NO detiene los cobros de Stripe — cancela primero la suscripción en el panel de Stripe. ¿Continuar de todos modos?",
     notif_ios_homescreen: "En iPhone/iPad, las notificaciones solo funcionan después de añadir GOLSZ a tu pantalla de inicio: toca Compartir y luego \"Añadir a pantalla de inicio\" — después abre GOLSZ desde ese icono y activa las notificaciones desde ahí.",
     restricted_title: "Cuenta restringida.", restricted_body: "Tus publicaciones permanecen privadas y estás oculto en Descubrir hasta que un padre, madre o tutor apruebe el acceso — consulta Familia y acceso parental en tu perfil.",
     back: "Atrás",
@@ -1334,6 +1372,16 @@ const I18N = {
     scout_attach_photo: "Adjuntar una foto", scout_send: "Enviar", scout_photo_attached: "Foto adjunta — tu agente le echará un vistazo.",
     scout_connection_dropped: "Se perdió la conexión a mitad de la jugada. Envíalo de nuevo y me encargo.", scout_server_error: "El servidor de Scout no pudo terminar (error {s}). Envíalo de nuevo — suele funcionar.",
     scout_timed_out: "Esa me llevó demasiado tiempo procesarla. Envíala de nuevo — o intenta plantearla de forma algo más concreta.",
+    scout_err_daily_limit: "Ya usaste los mensajes de Scout de hoy. Mejora tu plan para tener más, o retómalo mañana.", scout_err_daily_limit_top: "Ya usaste los mensajes de Scout de hoy. Se renuevan mañana.",
+    scout_err_free_exhausted: "Ya usaste todas tus preguntas gratis de Scout. Mejora tu plan para seguir.",
+    scout_err_free_tool_blocked: "Eso requiere una búsqueda más profunda, incluida a partir del plan Basic. Pregúntalo de otra forma y te respondo a partir de tu propio perfil.",
+    scout_err_signin: "Vuelve a iniciar sesión para seguir hablando con Scout.", scout_err_no_access: "No tienes acceso al Scout de este atleta.",
+    scout_err_rate_limited: "Una cosa a la vez — dame un segundo y envíalo de nuevo.", scout_err_in_flight: "Todavía estoy con esa. Espera un momento y vuelve a intentarlo.",
+    scout_err_photo: "Esa foto no se pudo enviar. Prueba con otra.", scout_photo_read_err: "No se pudo leer esa foto. Prueba con otra.",
+    scout_err_too_long: "Es demasiado largo para procesarlo de una vez. Prueba con un mensaje más corto o empieza un chat nuevo.", scout_err_bad_request: "No pude leer ese mensaje. Prueba a reformularlo.",
+    scout_err_unavailable: "Scout está haciendo una pausa breve. Vuelve a intentarlo en un momento.",
+    scout_err_refused: "Con eso no puedo ayudarte. Pregúntame sobre tu deporte, tu entrenamiento o tu trayectoria y me pongo con ello.",
+    scout_upgrade_cta: "Ver planes",
     scout_greeting: "Soy tu Agente GOLSZ.\n\nCuéntame sobre ti como se lo contarías a un ojeador — edad, deporte, posición, dónde juegas y a dónde quieres llegar. Construiré tu camino a partir de ahí.",
     scout_topic_situation: "Mi situación actual", scout_topic_situation_prompt: "Hablemos de mi situación actual como atleta.",
     scout_topic_goals: "Mis objetivos y preferencias", scout_topic_goals_prompt: "Quiero hablar sobre mis objetivos y lo que busco.",
@@ -1358,9 +1406,12 @@ const I18N = {
   },
   el: {
     loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
+    load_failed: "Δεν ήταν δυνατή η φόρτωση. Έλεγξε τη σύνδεσή σου και δοκίμασε ξανά.", load_retry: "Δοκίμασε ξανά",
+    err_network: "Δεν ήταν δυνατή η σύνδεση με το GOLSZ. Έλεγξε τη σύνδεσή σου και δοκίμασε ξανά.", err_generic: "Κάτι πήγε στραβά. Δοκίμασε ξανά.",
     alt_post_image: "Φωτογραφία αυτής της δημοσίευσης", alt_scout_photo: "Φωτογραφία συνημμένη σε αυτό το μήνυμα",
     a11y_close: "Κλείσιμο", a11y_send: "Αποστολή μηνύματος", a11y_status: "Κατάσταση", a11y_focus_area: "Τομέας εστίασης",
     a11y_day: "Ημέρα", a11y_month: "Μήνας", a11y_year: "Έτος",
+    a11y_delete_named: "Διαγραφή {name}",
     moderation_blocked: "Αυτό δεν φαίνεται κατάλληλο για το GOLSZ — παρακαλούμε μείνετε σε θέματα σχετικά με τον αθλητισμό.",
     VALUE_LABELS: { "American Football": "Αμερικανικό ποδόσφαιρο", "Archery": "Τοξοβολία", "Badminton": "Μπάντμιντον", "Baseball": "Μπέιζμπολ", "Basketball": "Μπάσκετ", "Bowling": "Μπόουλινγκ", "Boxing": "Πυγμαχία", "Cheerleading": "Τσιρλίντινγκ", "Cricket": "Κρίκετ", "Cross Country": "Ανώμαλος δρόμος", "Cycling": "Ποδηλασία", "Diving": "Καταδύσεις", "Equestrian": "Ιππασία", "Fencing": "Ξιφασκία", "Field Hockey": "Χόκεϊ επί χόρτου", "Futsal": "Φούτσαλ", "Golf": "Γκολφ", "Gymnastics": "Γυμναστική", "Handball": "Χάντμπολ", "Hockey": "Χόκεϊ επί πάγου", "Lacrosse": "Λακρός", "Martial Arts": "Πολεμικές τέχνες", "Racquetball": "Ρακετμπόλ", "Rowing": "Κωπηλασία", "Rugby": "Ράγκμπι", "Sailing": "Ιστιοπλοΐα", "Skiing": "Σκι", "Snowboarding": "Σνόουμπορντ", "Soccer": "Ποδόσφαιρο", "Softball": "Σόφτμπολ", "Squash": "Σκουός", "Swimming": "Κολύμβηση", "Table Tennis": "Επιτραπέζια αντισφαίριση", "Tennis": "Τένις", "Track": "Στίβος", "Triathlon": "Τρίαθλο", "Volleyball": "Βόλεϊ", "Water Polo": "Πόλο", "Weightlifting": "Άρση βαρών", "Wrestling": "Πάλη", "Other": "Άλλο", "Player": "Αθλητής", "Parent": "Γονέας", "Scout": "Σκάουτερ", "Agent": "Ατζέντης", "Coach": "Προπονητής", "Physio": "Φυσιοθεραπευτής" },
     nav_home: "Αρχική", nav_scout: "Σκάουτ", nav_ai_scout: "AI Σκάουτ",
@@ -1392,20 +1443,21 @@ const I18N = {
     auth_reset_sent_post: ", ένας σύνδεσμος επαναφοράς είναι καθ' οδόν. Ανοίξτε τον για να ορίσετε νέο κωδικό.",
     auth_paid_notice: "Η πληρωμή ελήφθη! Αν αυτή είναι η μόνη ανοιχτή καρτέλα, συνδεθείτε παρακάτω μόλις επιβεβαιώσετε το email σας. Διαφορετικά, κλείστε αυτήν την καρτέλα και επιστρέψτε εκεί όπου κάνατε την εγγραφή — η σύνδεση θα γίνει αυτόματα τη στιγμή που θα επιβεβαιωθεί το email σας, από όποια συσκευή κι αν το επιβεβαιώσετε.",
     auth_reset_failed: "Δεν ήταν δυνατή η αποστολή του email επαναφοράς.",
+    auth_err_invalid_login: "Αυτό το email και ο κωδικός δεν ταιριάζουν. Έλεγξέ τα και δοκίμασε ξανά.", auth_err_unconfirmed: "Η διεύθυνση email σου δεν έχει επιβεβαιωθεί ακόμα, οπότε δεν μπορούμε να σε συνδέσουμε. Συνήθως αυτό σημαίνει ότι το email επιβεβαίωσης δεν έφτασε ποτέ — στείλε το ξανά παρακάτω.",
     auth_resend_failed: "Δεν ήταν δυνατή η εκ νέου αποστολή του email επιβεβαίωσης. Δοκιμάστε ξανά σε ένα λεπτό.",
     auth_working: "Επεξεργασία…", auth_create_free: "Δημιουργία δωρεάν λογαριασμού",
     auth_continue_payment: "Συνέχεια στην πληρωμή — ", auth_per_month: "/μήνα", prices_currency_note: "Όλες οι τιμές σε {currency}.",
     auth_couldnt_signup: "Η ΕΓΓΡΑΦΗ ΑΠΕΤΥΧΕ", auth_couldnt_login: "Η ΣΥΝΔΕΣΗ ΑΠΕΤΥΧΕ",
-    plan_free_tag: "Χωρίς κάρτα", plan_starter_tag: "Ξεκινήστε", plan_pro_tag: "Δημοφιλέστερο", plan_elite_tag: "Είναι ώρα για GOLSZ",
+    plan_free_tag: "Χωρίς κάρτα", plan_starter_tag: "Ξεκινήστε", plan_pro_tag: "Για μια ενεργή σεζόν στρατολόγησης", plan_elite_tag: "Είναι ώρα για GOLSZ",
     plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο — προφίλ, διακρίσεις & πορεία", plan_free_feat3: "Γνωριμία με τον αθλητή & τους στόχους σου μέσω του Scout", plan_free_feat4: "Βαθμολογία Ισχύος Διαβατηρίου & Η Επόμενή σου Κίνηση",
     conversion_title: "Μάθαμε αρκετά για εσένα — ας χτίσουμε το πλάνο σου.", conversion_body: "Ο GOLSZ Scout γνωρίζει πλέον το άθλημά σου, τους στόχους σου και τι δουλεύεις. Αναβάθμισε για βαθύτερη καθοδήγηση γύρω από την εξέλιξή σου — όχι απλώς περισσότερες ερωτήσεις.", conversion_dismiss: "Όχι τώρα", update_available: "Νέα έκδοση του GOLSZ είναι έτοιμη.", scout_try_again: "Δοκίμασε ξανά", update_refresh: "Ανανέωση", update_dismiss: "Απόρριψη", 
     feature_lock_body: "Αυτό αποτελεί μέρος των εργαλείων καθοδηγούμενης πορείας του GOLSZ.", feature_lock_cta: "Αναβάθμισε για ξεκλείδωμα",
     guided_step_goal: "Κατανοώντας τον στόχο σου: {goal}", guided_step_goal_fallback: "Μαθαίνουμε προς τι δουλεύεις.",
     guided_step_passport: "Ανάλυση του Διαβατηρίου σου — {score}% ολοκληρωμένο.", guided_step_missing: "Λείπει: {list}.", guided_step_missing_none: "Τα βασικά στοιχεία του Διαβατηρίου σου είναι πλήρη.",
     guided_step_readiness: "Αρχική Ισχύς Διαβατηρίου: {score}/100.", guided_step_next_move: "Η επόμενή σου κίνηση: {label}", guided_step_next_move_generic: "Δημιουργία της πρώτης προτεινόμενης κίνησής σου.",
-    guided_ready_title: "Αυτός είναι ο αθλητής που είσαι σήμερα.", guided_ready_body: "Τώρα ας δούμε πώς θα γίνεις ο αθλητής που θέλεις να είσαι — Η Ισχύς Διαβατηρίου, Η Επόμενή σου Κίνηση, Στόχοι και Δείκτες είναι έτοιμα για ξεκλείδωμα.",
+    guided_ready_title: "Αυτός είναι ο αθλητής που είσαι σήμερα.", guided_ready_body: "Τώρα ας δούμε πώς θα γίνεις ο αθλητής που θέλεις να είσαι — Η Ισχύς Διαβατηρίου, η Πορεία σου, Στόχοι και Δείκτες είναι έτοιμα για ξεκλείδωμα.",
     elite_welcome_eyebrow: "ΕΙΝΑΙ ΩΡΑ ΓΙΑ GOLSZ", elite_welcome_title: "Καλωσόρισες στο GOLSZ Elite.", elite_welcome_body: "Πριν χτίσουμε το πλήρες πρόγραμμά σου, χρειάζεται να σε γνωρίσουμε — τον αθλητή που είσαι σήμερα, πού θέλεις να φτάσεις και πώς μοιάζει η συνηθισμένη σου εβδομάδα. Θα χτίσουμε το Διαβατήριό σου, θα καθορίσουμε τους στόχους σου, θα δημιουργήσουμε το Μονοπάτι σου και θα οργανώσουμε την ανάπτυξή σου γύρω από αυτό.", elite_welcome_cta: "Ας το χτίσουμε",
-    guided_locked_readiness: "Ισχύς Διαβατηρίου", guided_locked_next_move: "Η Επόμενή σου Κίνηση", guided_locked_targets: "Στόχοι", guided_locked_benchmarks: "Δείκτες",
+    guided_locked_readiness: "Ισχύς Διαβατηρίου", guided_locked_pathway: "Πορεία", guided_locked_targets: "Στόχοι", guided_locked_benchmarks: "Δείκτες",
     guided_continue_cta: "Συνέχισε την πορεία μου",
     next_move_title: "Η ΕΠΟΜΕΝΗ ΣΟΥ ΚΙΝΗΣΗ", next_move_act: "Κάνε το", 
     next_move_type_complete_profile: "Ολοκλήρωσε το Διαβατήριό σου.", next_move_type_define_goal: "Πες στον Scout τον στόχο σου.", next_move_type_build_pathway: "Δημιούργησε την Πορεία σου με τον Scout.", next_move_type_follow_up: "Κάνε follow-up σε έναν στόχο.", next_move_type_review_progress: "Δες την πρόοδό σου.",
@@ -1439,10 +1491,11 @@ const I18N = {
     plan_crumb_goal: "Από την Αρχική · ο στόχος σου", nav_targets: "Πορεία/Πλάνο", nav_plan: "Πλάνο", plan_page_title: "ΤΟ ΜΟΝΟΠΑΤΙ ΜΟΥ", targets_title: "ΣΧΟΛΕΣ & ΣΥΛΛΟΓΟΙ", targets_edit_hint: "Πάτα για επεξεργασία", targets_name_ph: "Όνομα σχολής ή συλλόγου", targets_contact_name_ph: "Όνομα επαφής", targets_contact_email_ph: "Email επαφής",
     targets_locked_teaser: "Αναβάθμισε για να χτίσεις το οπτικό σου Μονοπάτι, να ορίσεις στόχους και να παρακολουθείς την προσέγγισή σου — ο GOLSZ Scout θα σε βοηθήσει να φτιάξεις την πρώτη λίστα.",
     targets_add: "Προσθήκη", targets_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", targets_empty: "Δεν υπάρχουν στόχοι ακόμα — πρόσθεσε την πρώτη σχολή ή σύλλογο που σε ενδιαφέρει.",
+    targets_delete_confirm: "Διαγραφή;", targets_delete_confirm_aria: "Πάτησε ξανά για να διαγράψεις το {name} και το προσχέδιο email του",
     targets_notes_ph: "Σημειώσεις", targets_draft_ph: "Πρόχειρο email επικοινωνίας",
     targets_status_researching: "Έρευνα", targets_status_preparing: "Προετοιμασία", targets_status_contacted: "Επικοινώνησα", targets_status_responded: "Απάντησαν", targets_status_follow_up: "Παρακολούθηση", targets_status_opportunity: "Ευκαιρία", targets_fit_reasoning_ph: "Γιατί ταιριάζει καλά (προαιρετικό)",
-    plan_starter_feat1: "8 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_starter_feat2: "Όλα όσα περιλαμβάνει το Free", plan_starter_feat3: "Προσωπικό Μονοπάτι, Η Επόμενή σου Κίνηση & αρχική αξιολόγηση", plan_starter_feat4: "Λίστες στόχων, βασική προσέγγιση & εξαγωγή PDF Διαβατηρίου",
-    plan_pro_feat1: "15 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_pro_feat2: "Όλα όσα περιλαμβάνει το Basic", plan_pro_feat3: "Ανάλυση Ισχύος Διαβατηρίου & αξιολογήσεις προόδου", plan_pro_feat4: "Πλάνο προπόνησης & ανάπτυξης", plan_pro_feat5: "Εμπλουτισμένη παρακολούθηση στόχων & follow-up", plan_pro_feat6: "Επαλήθευση ταυτότητας",
+    plan_starter_feat1: "8 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_starter_feat2: "Όλα όσα περιλαμβάνει το Free", plan_starter_feat3: "Προσωπικό Μονοπάτι & παρακολούθηση δεικτών", plan_starter_feat4: "Λίστες στόχων με παρακολούθηση επαφών & υπενθυμίσεις follow-up, συν εξαγωγή PDF Διαβατηρίου",
+    plan_pro_feat1: "15 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_pro_feat2: "Όλα όσα περιλαμβάνει το Basic", plan_pro_feat3: "Ανάλυση Ισχύος Διαβατηρίου", plan_pro_feat4: "Πλάνο προπόνησης & ανάπτυξης", plan_pro_feat5: "Εμπλουτισμένη παρακολούθηση στόχων & follow-up", plan_pro_feat6: "Επαλήθευση ταυτότητας",
     plan_elite_feat1: "20 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_elite_feat2: "Όλα όσα περιλαμβάνει το Pro",
     feed_title: "Η ροή σας", feed_search: "Αναζήτηση στη ροή σας…", feed_share_update: "Μοιραστείτε μια ενημέρωση…",
     feed_new_post: "ΝΕΑ ΑΝΑΡΤΗΣΗ", feed_whats_happening: "Τι συμβαίνει;", feed_add_details: "Προσθήκη λεπτομερειών (προαιρετικό)",
@@ -1482,6 +1535,7 @@ const I18N = {
     settings_plan_portal_unavailable: "Η διαχείριση χρέωσης δεν έχει ρυθμιστεί ακόμη — ελέγξτε ξανά σύντομα.",
     settings_plan_cancel_via_stripe: "Ακυρώστε πρώτα τη συνδρομή σας, αλλιώς θα χάνατε την πρόσβαση Pro ενώ το Stripe θα συνέχιζε να σας χρεώνει. Χρησιμοποιήστε το email απόδειξης από το Stripe για ακύρωση — το πλάνο σας θα γίνει Free αυτόματα μετά.",
     settings_plan_err: "Δεν ήταν δυνατή η ενημέρωση του πακέτου σας — δοκιμάστε ξανά.", settings_plan_switch_via_stripe: "Άλλαξε πλάνο από το email απόδειξης του Stripe — μια νέα πληρωμή εδώ θα σε χρέωνε δεύτερη φορά και θα σε άφηνε στο ίδιο πλάνο.",
+    settings_plan_switch_contact: "Η αλλαγή πλάνου δεν είναι ακόμη διαθέσιμη στην εφαρμογή. Στείλτε email στο hello@golsz.com και θα την κάνουμε για εσάς — ή ακυρώστε από τη Διαχείριση χρέωσης και επιλέξτε το νέο πλάνο όταν λήξει η τρέχουσα περίοδός σας.", auth_email_already_registered: "Υπάρχει ήδη λογαριασμός με αυτό το email. Συνδεθείτε ή χρησιμοποιήστε το «Ξεχάσατε τον κωδικό;» για επαναφορά. Δεν έγινε καμία χρέωση.", admin_billing_cancel_first: "Αυτός ο λογαριασμός έχει ενεργή συνδρομή επί πληρωμή (πελάτης Stripe {customer}). Ο αποκλεισμός ή η διαγραφή του εδώ ΔΕΝ σταματά τις χρεώσεις του Stripe — ακυρώστε πρώτα τη συνδρομή στο Stripe Dashboard. Συνέχεια παρ' όλα αυτά;",
     notif_ios_homescreen: "Σε iPhone/iPad, οι ειδοποιήσεις λειτουργούν μόνο αφού προσθέσετε το GOLSZ στην Αρχική οθόνη: πατήστε Κοινή χρήση και μετά «Προσθήκη στην Αρχική οθόνη» — έπειτα ανοίξτε το GOLSZ από αυτό το εικονίδιο και ενεργοποιήστε τις ειδοποιήσεις από εκεί.",
     restricted_title: "Περιορισμένος λογαριασμός.", restricted_body: "Οι αναρτήσεις σας παραμένουν ιδιωτικές και είστε κρυφοί από την Ανακάλυψη μέχρι να εγκρίνει την πρόσβαση γονέας ή κηδεμόνας — δείτε το Οικογένεια & Γονική Πρόσβαση στο προφίλ σας.",
     back: "Πίσω",
@@ -1681,6 +1735,16 @@ const I18N = {
     scout_attach_photo: "Επισύναψη φωτογραφίας", scout_send: "Αποστολή", scout_photo_attached: "Η φωτογραφία επισυνάφθηκε — ο σκάουτ θα τη δει.",
     scout_connection_dropped: "Η σύνδεση διακόπηκε στη μέση. Στείλτε το ξανά και θα το αναλάβω.", scout_server_error: "Ο διακομιστής του Scout δεν πρόλαβε (σφάλμα {s}). Στείλτε το ξανά — συνήθως περνάει.",
     scout_timed_out: "Αυτό μου πήρε πολλή ώρα να το επεξεργαστώ. Στείλ' το ξανά — ή δοκίμασε να το ρωτήσεις πιο συγκεκριμένα.",
+    scout_err_daily_limit: "Χρησιμοποίησες τα σημερινά μηνύματα του Scout. Αναβάθμισε για περισσότερα, ή συνέχισε αύριο.", scout_err_daily_limit_top: "Χρησιμοποίησες τα σημερινά μηνύματα του Scout. Ανανεώνονται αύριο.",
+    scout_err_free_exhausted: "Χρησιμοποίησες όλες τις δωρεάν ερωτήσεις του Scout. Αναβάθμισε για να συνεχίσεις.",
+    scout_err_free_tool_blocked: "Αυτό χρειάζεται πιο βαθιά αναζήτηση, που περιλαμβάνεται από το πακέτο Basic και πάνω. Ρώτα το με άλλον τρόπο και θα σου απαντήσω από το δικό σου προφίλ.",
+    scout_err_signin: "Συνδέσου ξανά για να συνεχίσεις να μιλάς με τον Scout.", scout_err_no_access: "Δεν έχεις πρόσβαση στον Scout αυτού του αθλητή.",
+    scout_err_rate_limited: "Ένα-ένα — δώσε μου ένα δευτερόλεπτο και στείλ' το ξανά.", scout_err_in_flight: "Ακόμα το δουλεύω αυτό. Περίμενε λίγο και δοκίμασε ξανά.",
+    scout_err_photo: "Αυτή η φωτογραφία δεν στάλθηκε. Δοκίμασε μια άλλη.", scout_photo_read_err: "Δεν ήταν δυνατή η ανάγνωση αυτής της φωτογραφίας. Δοκίμασε μια άλλη.",
+    scout_err_too_long: "Είναι πολύ μεγάλο για να το επεξεργαστώ μονομιάς. Δοκίμασε ένα πιο σύντομο μήνυμα ή ξεκίνα νέα συνομιλία.", scout_err_bad_request: "Δεν μπόρεσα να διαβάσω αυτό το μήνυμα. Δοκίμασε να το διατυπώσεις αλλιώς.",
+    scout_err_unavailable: "Ο Scout κάνει ένα μικρό διάλειμμα. Δοκίμασε ξανά σε λίγο.",
+    scout_err_refused: "Σε αυτό δεν μπορώ να βοηθήσω. Ρώτα με για το άθλημά σου, την προπόνησή σου ή την πορεία σου και το αναλαμβάνω.",
+    scout_upgrade_cta: "Δες τα πακέτα",
     scout_greeting: "Είμαι ο GOLSZ Σκάουτ σας.\n\nΠείτε μου για εσάς όπως θα λέγατε σε έναν σκάουτ — ηλικία, άθλημα, θέση, πού παίζετε και πού θέλετε να καταλήξετε. Θα χτίσω τη διαδρομή σας από εκεί.",
     scout_topic_situation: "Η τρέχουσα κατάστασή μου", scout_topic_situation_prompt: "Ας μιλήσουμε για την τρέχουσα κατάστασή μου ως αθλητή.",
     scout_topic_goals: "Οι στόχοι & προτιμήσεις μου", scout_topic_goals_prompt: "Θέλω να μιλήσω για τους στόχους μου και τι ψάχνω.",
@@ -1745,6 +1809,10 @@ function LangProvider({ children }) {
   });
   useEffect(() => {
     try { localStorage.setItem("golsz-lang", lang); } catch (e) {}
+    // <html lang> was hardcoded "en", so a screen reader read French, Spanish
+    // and Greek with English pronunciation, and the browser offered to
+    // "translate from English". It follows the chosen language now.
+    try { document.documentElement.lang = lang; } catch (e) {}
   }, [lang]);
   // Same rule as useLang()'s no-provider fallback: test key presence, not
   // truthiness, so an intentionally-empty string stays empty instead of
@@ -1846,6 +1914,25 @@ async function disablePushNotifications(uid) {
     if (sb && uid) await sb.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
     await sub.unsubscribe();
   }
+}
+// SIGNING OUT LEFT THE DEVICE SUBSCRIBED. The push_subscriptions row kept
+// pointing at this browser, so the next person to use a shared phone or family
+// laptop got the previous account's message and follower notifications on the
+// lock screen. Must run BEFORE sb.auth.signOut(): the delete is RLS-scoped to
+// auth.uid(), which no longer exists afterwards.
+// Best-effort and bounded: a failure or a slow network never blocks signing
+// out — after 3s sign-out proceeds regardless.
+async function detachPushOnSignOut() {
+  if (!sb) return;
+  try {
+    const { data } = await sb.auth.getSession();
+    const uid = data && data.session && data.session.user && data.session.user.id;
+    if (!uid) return;
+    await Promise.race([
+      disablePushNotifications(uid),
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ]);
+  } catch (e) { console.warn("GOLSZ push detach on sign-out failed:", e); }
 }
 /* ============ SETTINGS ============
    Currently just the Background (theme) toggle, but it's its own modal
@@ -2139,43 +2226,32 @@ function SettingsButton({ openSignal }) {
     if (!sb || !uid || planBusy || planId === currentPlan) return;
     setPlanBusy(true); setPlanMsg("");
     try {
-      if (planId === "free") {
+      const route = planChoiceRoute(planId, currentPlan, stripeCustomerId);
+      if (route === "portal") {
         // Writing plan:"free" here removes ACCESS and does not stop Stripe
-        // charging. For anyone with real billing attached, that combination is
-        // strictly worse than doing nothing, so it is no longer reachable:
-        // send them to the portal, which cancels for real and fires
-        // customer.subscription.deleted for the webhook to act on.
-        if (stripeCustomerId) {
-          const portal = stripePortalLink();
-          if (portal) { window.location.href = portal; return; }
-          // No portal configured yet — say how to cancel, and still refuse to
-          // downgrade. A warning after an irreversible-feeling click is not a
-          // substitute for not taking the harmful action.
-          setPlanMsg(t("settings_plan_cancel_via_stripe"));
-          return;
-        }
+        // charging. For an active subscriber that is strictly worse than doing
+        // nothing, so it is not reachable: send them to the portal, which
+        // cancels for real and fires customer.subscription.deleted.
+        const portal = stripePortalLink();
+        if (portal) { window.location.href = portal; return; }
+        // No portal — say how to cancel, and still refuse to downgrade.
+        setPlanMsg(t("settings_plan_cancel_via_stripe"));
+        return;
+      }
+      if (route === "downgrade") {
         const { error } = await sb.from("profiles").update({ plan: "free" }).eq("id", uid);
         if (error) throw error;
         setCurrentPlan("free");
         setPlanMsg(t("settings_plan_downgrade_note"));
+      } else if (route === "contact") {
+        // An active subscriber switching paid tier. The portal cannot (plan
+        // switching is off) and a Payment Link would bill a second
+        // subscription alongside the first. Say so instead of doing either.
+        setPlanMsg(t("settings_plan_switch_contact"));
+        return;
       } else {
-        // AN EXISTING SUBSCRIBER MUST NOT GO THROUGH A PAYMENT LINK AGAIN.
-        // A Payment Link starts a NEW checkout, which mints a SECOND Stripe
-        // customer for the same person — and the webhook refuses to re-bind a
-        // profile that already carries a stripe_customer_id, so the upgrade is
-        // charged and never granted. The athlete pays twice and gets the old
-        // plan. The portal is where an existing subscription is changed: it
-        // keeps one customer, prorates properly, and fires
-        // customer.subscription.updated for the webhook to act on.
-        if (stripeCustomerId) {
-          const portal = stripePortalLink();
-          if (portal) { window.location.href = portal; return; }
-          // Same rule as the downgrade branch above: no portal configured
-          // means say how, and refuse. Taking money we cannot grant access
-          // for is worse than doing nothing.
-          setPlanMsg(t("settings_plan_switch_via_stripe"));
-          return;
-        }
+        // "checkout" — no active subscription. A lapsed subscriber lands here
+        // too: the webhook re-binds a free profile to the new customer.
         const link = stripeLinkFor(planId, currency);
         if (!link) { setPlanMsg(t("settings_plan_checkout_unavailable")); return; }
         const { data: { user } } = await sb.auth.getUser();
@@ -2219,7 +2295,7 @@ function SettingsButton({ openSignal }) {
       setPwDone(true); setPw(""); setPw2("");
     } catch (e) {
       console.error("GOLSZ change password error:", e);
-      setPwErr((e && e.message) || t("reset_pw_err"));
+      setPwErr(userErrorText(e, t, "reset_pw_err"));
     } finally { setPwBusy(false); }
   }
 
@@ -2240,7 +2316,7 @@ function SettingsButton({ openSignal }) {
       setEmailSent(true);
     } catch (e) {
       console.error("GOLSZ change email error:", e);
-      setEmailErr((e && e.message) || t("settings_email_err"));
+      setEmailErr(userErrorText(e, t, "settings_email_err"));
     } finally { setEmailBusy(false); }
   }
 
@@ -2258,7 +2334,10 @@ function SettingsButton({ openSignal }) {
     // choosePlan("free") already refuses above for the same reason: a warning
     // shown after an irreversible click is not a substitute for not taking the
     // harmful action.
-    if (stripeCustomerId) {
+    // ACTIVE, not "ever paid": stripe_customer_id is never cleared, so gating
+    // on the id alone stranded every lapsed subscriber with an account they
+    // could never delete. api/delete-account.js enforces the same rule.
+    if (hasActiveSubscription(currentPlan, stripeCustomerId)) {
       setDeleteErr(t("settings_delete_cancel_first"));
       return;
     }
@@ -2281,6 +2360,12 @@ function SettingsButton({ openSignal }) {
         setDeleteBusy(false);
         return;
       }
+      // The server's own billing check (state here can be stale).
+      if (res.status === 409 && data && data.code === "active_subscription") {
+        setDeleteErr(t("settings_delete_cancel_first"));
+        setDeleteBusy(false);
+        return;
+      }
       if (!res.ok) throw new Error((data && data.error) || "Couldn't delete the account.");
       // The account is gone server-side — sign out this client's own
       // stale session and reload straight to a clean signed-out state.
@@ -2288,7 +2373,7 @@ function SettingsButton({ openSignal }) {
       window.location.href = window.location.pathname;
     } catch (e) {
       console.error("GOLSZ delete account error:", e);
-      setDeleteErr((e && e.message) || "Couldn't delete the account. Try again or contact support.");
+      setDeleteErr(userErrorText(e, t, "err_generic"));
       setDeleteBusy(false);
     }
   }
@@ -2982,7 +3067,7 @@ function Feed({ onMessage, onViewProfile }) {
       loadFeed();
     } catch (e) {
       console.error("GOLSZ create post error:", e);
-      setComposeErr((e && e.message) ? e.message : t("feed_post_err"));
+      setComposeErr(userErrorText(e, t, "feed_post_err"));
     } finally { setComposeBusy(false); }
   }
 
@@ -3538,7 +3623,7 @@ function AddToEventsModal({ initialTitle, initialNotes, onClose, onSaved }) {
       onSaved();
     } catch (e) {
       console.error("GOLSZ add-to-events error:", e);
-      setErr((e && e.message) || t("events_err_save"));
+      setErr(userErrorText(e, t, "events_err_save"));
     } finally { setBusy(false); }
   }
 
@@ -4166,7 +4251,7 @@ function FamilyAccess() {
       setMsg(t("family_sent_msg"));
       setEmail(""); setRelationship("");
       load();
-    } catch (e) { setMsg(e.message || t("family_couldnt_send")); }
+    } catch (e) { setMsg(userErrorText(e, t, "family_couldnt_send")); }
     finally { setBusy(false); }
   }
   async function approve(id) { try { const { error } = await sb.from("parent_links").update({ approved_at: new Date().toISOString() }).eq("id", id); if (error) throw error; load(); } catch (e) { console.error("GOLSZ approve error:", e); } }
@@ -4233,6 +4318,73 @@ function FamilyAccess() {
   );
 }
 
+/* ============ USER-FACING ERRORS AND FAILED LOADS ============
+   `(e && e.message) || t(...)` almost never showed the translated fallback:
+   nearly every failure HAS a message — Supabase's English, a PostgREST code,
+   "Failed to fetch" — so an athlete reading the app in Greek got raw English
+   diagnostics, on the locked onboarding editor of all places. The raw error
+   belongs in the console (callers console.error it); the athlete gets a
+   sentence in their own language. Known cases get a specific sentence and
+   everything else gets the screen's own translated fallback. */
+function isNetworkError(e) {
+  if (!e) return false;
+  const m = String(e.message || e);
+  return e.name === "AuthRetryableFetchError" || /Failed to fetch|NetworkError|Load failed|Network request failed/i.test(m);
+}
+// Messages the app raises itself are ALREADY translated — throw new Error(t(…))
+// for "that link isn't valid", "blocked by moderation", "couldn't load this" —
+// and say something the athlete needs. Everything else reaching a catch is a
+// library or server message in English. A message that is one of the
+// dictionary's own sentences can only have come from t(), so it passes through;
+// anything else is replaced, and logged so the raw text is not lost.
+let I18N_SENTENCES = null;
+function isAppSentence(msg) {
+  if (typeof msg !== "string" || !msg) return false;
+  if (!I18N_SENTENCES) {
+    I18N_SENTENCES = new Set();
+    for (const dict of Object.values(I18N)) for (const v of Object.values(dict)) if (typeof v === "string") I18N_SENTENCES.add(v);
+  }
+  return I18N_SENTENCES.has(msg);
+}
+function userErrorText(e, t, fallbackKey) {
+  const m = e && e.message;
+  if (isAppSentence(m)) return m;
+  if (m) console.warn("GOLSZ error shown as translated text:", e);
+  return t(isNetworkError(e) ? "err_network" : (fallbackKey || "err_generic"));
+}
+// Sign-in only. Supabase's code is checked before its message text because the
+// wording has changed across supabase-js versions and the codes have not.
+function loginErrorKey(e) {
+  const code = e && e.code;
+  const m = String((e && e.message) || "");
+  if (code === "email_not_confirmed" || /email.*not.*confirmed/i.test(m)) return "auth_err_unconfirmed";
+  if (code === "invalid_credentials" || /invalid login credentials/i.test(m)) return "auth_err_invalid_login";
+  if (isNetworkError(e)) return "err_network";
+  return "err_generic";
+}
+// A read that failed is not an empty list. Shown in place of the list (and of
+// anything that would write the list back) until a retry succeeds.
+function LoadError({ onRetry }) {
+  const { t } = useLang();
+  return (
+    <div role="alert" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 12.5, color: C.warnText, lineHeight: 1.45 }}>
+      <span style={{ flex: "1 1 180px" }}>{t("load_failed")}</span>
+      <button onClick={onRetry} style={{ background: "transparent", color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 9, padding: "8px 14px", minHeight: 44, fontSize: 12.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>{t("load_retry")}</button>
+    </div>
+  );
+}
+// THE ROW DELETE BUTTONS WERE 13-14px TARGETS WITH NO NAME. A screen reader
+// announced "button", and a thumb aimed at the status select next to one
+// deleted the row instead. The icon stays the same size; the hit area grows to
+// 44px around it, and negative margins keep the row from growing with it.
+function deleteBtnStyle(extra) {
+  return Object.assign({
+    background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0,
+    minWidth: 44, minHeight: 44, margin: "-10px -15px -10px 0", borderRadius: 9,
+    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: "inherit",
+  }, extra || {});
+}
+
 /* ============ VERIFIED MEDIA (highlight reels) ============
    Link-based, not hosted video — athletes paste a link to footage already
    hosted elsewhere (YouTube, Veo, Hudl...). Stored in the athletes.highlights
@@ -4242,6 +4394,12 @@ function Highlights({ viewUserId, manageMode }) {
   const { t } = useLang();
   const [items, setItems] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  // highlights is ONE jsonb array, and every add/remove writes the whole array
+  // back. uid is set before the read, so after a FAILED read `items` was [] and
+  // adding one link wrote [entry] over every highlight the athlete had. Until a
+  // read succeeds, nothing here may write.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [uid, setUid] = useState(null);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
@@ -4274,13 +4432,15 @@ function Highlights({ viewUserId, manageMode }) {
           sb.from("athletes").select("highlights").eq("id", targetId).single(),
           sb.from("profiles").select("identity_verified").eq("id", targetId).maybeSingle(),
         ]);
-        if (error) throw error;
+        // PGRST116 is .single() finding no row: genuinely empty, not a failure.
+        if (error && error.code !== "PGRST116") throw error;
         setItems(Array.isArray(data && data.highlights) ? data.highlights : []);
         setOwnerVerified(!!(prof && prof.identity_verified));
-      } catch (e) { console.error("GOLSZ highlights load error:", e); }
+      } catch (e) { console.error("GOLSZ highlights load error:", e); setLoadFailed(true); }
       finally { setLoaded(true); }
     })();
-  }, [viewUserId]);
+  }, [viewUserId, reloadKey]);
+  function retryLoad() { setLoadFailed(false); setLoaded(false); setReloadKey((k) => k + 1); }
 
   // THE CALLER'S ERROR PATH WAS UNREACHABLE. This swallowed its own failure
   // into console.error, so it always resolved successfully — addHighlight's
@@ -4290,6 +4450,8 @@ function Highlights({ viewUserId, manageMode }) {
   // It throws now, and the callers already know what to do with that.
   async function saveList(list) {
     if (!sb || !uid || !isOwner) return;
+    // Whole-array write: never from a list that was not successfully read.
+    if (!loaded || loadFailed) throw new Error(t("load_failed"));
     const { error } = await sb.from("athletes").update({ highlights: list }).eq("id", targetId);
     if (error) { console.error("GOLSZ highlights save error:", error); throw error; }
   }
@@ -4324,7 +4486,7 @@ function Highlights({ viewUserId, manageMode }) {
       // highlight itself is already saved by saveList() above, into
       // athletes.highlights, so nothing here affected whether it persisted.
     } catch (e) {
-      setErr((e && e.message) ? e.message : t("highlights_add_err"));
+      setErr(userErrorText(e, t, "highlights_add_err"));
     } finally { setBusy(false); }
   }
 
@@ -4347,7 +4509,8 @@ function Highlights({ viewUserId, manageMode }) {
         {ownerVerified && <BadgeCheck size={11} color={C.lime} />}
         {ownerVerified ? t("highlights_title") : t("highlights_title_unverified")}
       </div>
-      {loaded && items.length === 0 && (
+      {loadFailed && <LoadError onRetry={retryLoad} />}
+      {loaded && !loadFailed && items.length === 0 && (
         <div style={{ fontSize: 12.5, color: C.slate }}>{t("highlights_empty")}</div>
       )}
       {items.map((m, i) => (
@@ -4359,11 +4522,11 @@ function Highlights({ viewUserId, manageMode }) {
             <span style={{ fontSize: 13, flex: 1 }}>{m.title}</span>
           )}
           {isOwner && m.id && (
-            <button onClick={() => removeHighlight(m.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, marginLeft: 4, display: "flex" }}><X size={13} /></button>
+            <button onClick={() => removeHighlight(m.id)} aria-label={t("a11y_delete_named").replace("{name}", m.title || "")} title={t("a11y_delete_named").replace("{name}", m.title || "")} style={deleteBtnStyle()}><X size={13} /></button>
           )}
         </div>
       ))}
-      {sb && isOwner && (
+      {sb && isOwner && loaded && !loadFailed && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
           <input value={title} onChange={(e) => setTitle(e.target.value)} aria-label={t("highlights_title_ph")} placeholder={t("highlights_title_ph")}
             style={{ width: "100%", background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", marginBottom: 6, boxSizing: "border-box" }} />
@@ -4390,6 +4553,9 @@ function Timeline({ viewUserId, manageMode }) {
   const { t } = useLang();
   const [items, setItems] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  // Same whole-array write as Highlights, same guard: see the note there.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [uid, setUid] = useState(null);
   const [year, setYear] = useState("");
   const [text, setText] = useState("");
@@ -4407,16 +4573,17 @@ function Timeline({ viewUserId, manageMode }) {
         setUid(user.id);
         const targetId = viewUserId || user.id;
         const { data, error } = await sb.from("athletes").select("timeline").eq("id", targetId).single();
-        if (error) throw error;
+        if (error && error.code !== "PGRST116") throw error;
         const list = Array.isArray(data && data.timeline) ? data.timeline : [];
         // Newest first — a coach skimming a shared Passport should see the
         // most recent milestone (this season, a commitment) before older
         // ones, not have to scroll past years of history first.
         setItems([...list].sort((a, b) => String(b.year).localeCompare(String(a.year))));
-      } catch (e) { console.error("GOLSZ timeline load error:", e); }
+      } catch (e) { console.error("GOLSZ timeline load error:", e); setLoadFailed(true); }
       finally { setLoaded(true); }
     })();
-  }, [viewUserId]);
+  }, [viewUserId, reloadKey]);
+  function retryLoad() { setLoadFailed(false); setLoaded(false); setReloadKey((k) => k + 1); }
 
   // THE CALLER'S ERROR PATH WAS UNREACHABLE. This swallowed its own failure
   // into console.error, so it always resolved successfully — addHighlight's
@@ -4426,6 +4593,8 @@ function Timeline({ viewUserId, manageMode }) {
   // It throws now, and the callers already know what to do with that.
   async function saveList(list) {
     if (!sb || !uid || !isOwner) return;
+    // Whole-array write: never from a list that was not successfully read.
+    if (!loaded || loadFailed) throw new Error(t("load_failed"));
     const { error } = await sb.from("athletes").update({ timeline: list }).eq("id", targetId);
     if (error) { console.error("GOLSZ timeline save error:", error); throw error; }
   }
@@ -4446,7 +4615,7 @@ function Timeline({ viewUserId, manageMode }) {
       setItems(sorted);
       setYear(""); setText("");
     } catch (e) {
-      setErr((e && e.message) ? e.message : t("timeline_add_err"));
+      setErr(userErrorText(e, t, "timeline_add_err"));
     } finally { setBusy(false); }
   }
 
@@ -4466,7 +4635,8 @@ function Timeline({ viewUserId, manageMode }) {
   return (
     <div style={{ ...card }}>
       <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("timeline_title")}</div>
-      {loaded && items.length === 0 && (
+      {loadFailed && <LoadError onRetry={retryLoad} />}
+      {loaded && !loadFailed && items.length === 0 && (
         <div style={{ fontSize: 12.5, color: C.slate }}>{t("timeline_empty")}</div>
       )}
       {items.map((e, i) => (
@@ -4474,11 +4644,11 @@ function Timeline({ viewUserId, manageMode }) {
           <div style={{ fontFamily: "'Space Mono', monospace", fontWeight: 800, color: C.lime, fontSize: 13, width: 56, flexShrink: 0, paddingTop: 1 }}>{e.year}</div>
           <div style={{ fontSize: 13, color: C.body, flex: 1, lineHeight: 1.5 }}>{e.text}</div>
           {isOwner && e.id && (
-            <button onClick={() => removeEntry(e.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, marginLeft: 4, display: "flex", flexShrink: 0 }}><X size={13} /></button>
+            <button onClick={() => removeEntry(e.id)} aria-label={t("a11y_delete_named").replace("{name}", [e.year, e.text].filter(Boolean).join(" "))} title={t("a11y_delete_named").replace("{name}", [e.year, e.text].filter(Boolean).join(" "))} style={deleteBtnStyle()}><X size={13} /></button>
           )}
         </div>
       ))}
-      {sb && isOwner && (
+      {sb && isOwner && loaded && !loadFailed && (
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
           <div style={{ display: "flex", gap: 6 }}>
             <input value={year} onChange={(e) => setYear(e.target.value)} aria-label={t("timeline_year_ph")} placeholder={t("timeline_year_ph")}
@@ -4727,7 +4897,7 @@ function Benchmarks({ viewUserId, manageId }) {
       setItems((prev) => [data, ...prev]);
       setMetric(""); setValue(""); setUnit(""); setMetricKey(""); setProtocol({}); setMeasuredBy("");
     } catch (e) {
-      setErr((e && e.message) || t("benchmarks_add_err"));
+      setErr(userErrorText(e, t, "benchmarks_add_err"));
     } finally { setBusy(false); }
   }
 
@@ -4763,7 +4933,7 @@ function Benchmarks({ viewUserId, manageId }) {
       if (error) throw error;
       setRetestMsg(t("bench_retest_done").replace("{date}", due));
     } catch (e) {
-      setErr((e && e.message) || t("bench_retest_err"));
+      setErr(userErrorText(e, t, "bench_retest_err"));
     } finally { setRetestBusy(null); }
   }
 
@@ -4847,7 +5017,7 @@ function Benchmarks({ viewUserId, manageId }) {
                 <div style={{ fontSize: 10, color: C.slate, marginTop: 2, lineHeight: 1.35 }}>{how || t("bench_method_none")}</div>
               </div>
               <div style={{ fontSize: 11, color: C.slate, marginLeft: "auto", flexShrink: 0 }}>{e.recorded_date}</div>
-              <button onClick={() => removeEntry(e.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><X size={13} /></button>
+              <button onClick={() => removeEntry(e.id)} aria-label={t("a11y_delete_named").replace("{name}", [m, e.value != null ? String(e.value) : "", e.unit, e.recorded_date].filter(Boolean).join(" "))} title={t("a11y_delete_named").replace("{name}", [m, e.value != null ? String(e.value) : "", e.unit, e.recorded_date].filter(Boolean).join(" "))} style={deleteBtnStyle()}><X size={13} /></button>
             </div>
             );
           })}
@@ -5408,7 +5578,7 @@ function PublicPassport({ userId, token }) {
 // It comes from Passport's editId, which is itself derived from actingFor;
 // RLS is what authorises the write, so a wrong id here fails closed rather
 // than editing a stranger.
-function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
+function ProfileEditor({ initial, targetId, locked, onClose, onSaved, onSignOut }) {
   const { t, tv } = useLang();
   const panelRef = useRef(null);
   useModalFocus(panelRef, true);
@@ -5474,7 +5644,7 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
       onSaved();
     } catch (e) {
       console.error("GOLSZ profile save error:", e);
-      setErr((e && e.message) || t("editor_save_err"));
+      setErr(userErrorText(e, t, "editor_save_err"));
     } finally { setBusy(false); }
   }
 
@@ -5502,6 +5672,15 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved }) {
           </div>
         </div>
         {locked && <div style={{ fontSize: 12, color: C.lime, marginBottom: 14 }}>{t("editor_locked_notice")}</div>}
+        {/* THE LOCKED EDITOR HAD NO WAY OUT. It covers the whole app with no
+            close button by design (onboarding must be finished), which also
+            covered the only Sign out and Settings — someone on a shared
+            device, or who signed up with the wrong email, was stuck. Signing
+            out does not bypass onboarding: the editor is back, still locked,
+            the next time this account signs in. */}
+        {locked && onSignOut && (
+          <button onClick={onSignOut} style={{ display: "block", background: "none", border: "none", color: C.slate, fontSize: 12, fontWeight: 700, fontFamily: "inherit", cursor: "pointer", padding: 0, minHeight: 44, marginTop: -10, marginBottom: 4, textDecoration: "underline" }}>{t("nav_signout")}</button>
+        )}
         {err && <div style={{ color: C.amber, fontSize: 12, marginBottom: 14 }}>{err}</div>}
 
         {group(t("editor_name_label"), <input style={field} aria-label={t("editor_name_label")} value={form.full_name || ""} onChange={set("full_name")} placeholder={t("editor_name_ph")} />)}
@@ -5721,7 +5900,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         setProfile((p) => (p ? { ...p, avatar_url: avatarUrl } : p));
       } catch (err) {
         console.error("GOLSZ avatar upload error:", err);
-        setAvatarErr((err && err.message) || t("passport_photo_err"));
+        setAvatarErr(userErrorText(err, t, "passport_photo_err"));
       } finally { setAvatarBusy(false); }
     })();
   }
@@ -5741,7 +5920,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       setProfile((p) => (p ? { ...p, avatar_url: null } : p));
     } catch (err) {
       console.error("GOLSZ avatar remove error:", err);
-      setAvatarErr((err && err.message) || t("passport_photo_err"));
+      setAvatarErr(userErrorText(err, t, "passport_photo_err"));
     } finally { setAvatarBusy(false); }
   }
 
@@ -5972,6 +6151,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           initial={editorInitial()}
           targetId={editId}
           locked={incomplete}
+          onSignOut={onSignOut}
           onClose={() => setEditing(false)}
           onSaved={() => { setEditing(false); load(); }}
         />
@@ -6291,7 +6471,11 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         <div className="pp-title">{p.name}</div>
         <div className="pp-sub">
           {[p.sport, p.position, p.club].filter(Boolean).join("  \u00B7  ")}
-          {p.verifiedTier ? <span className="pp-verified">{t("passport_verified_label")}</span> : null}
+          {/* toPassport() defaults verifiedTier to the STRING "none", which is
+              truthy — so this printed "Verified" on every exported Passport,
+              including ones no admin ever verified. Same test as the
+              on-screen badge above. */}
+          {p.verifiedTier && p.verifiedTier !== "none" ? <span className="pp-verified">{t("passport_verified_label")}</span> : null}
         </div>
 
         <table className="pp-table">
@@ -6490,7 +6674,7 @@ function VerificationRequest({ occupation }) {
       // weeks later. `busy` above is a correct double-submit guard on an
       // insert and stays — it was the silence that was the bug, not the guard.
       console.error("GOLSZ verification submit error:", e);
-      setSubmitErr((e && e.message) || t("verify_submit_failed"));
+      setSubmitErr(userErrorText(e, t, "verify_submit_failed"));
     }
     setBusy(false);
   }
@@ -6793,19 +6977,27 @@ function AdminPanel({ onBack }) {
   // Ban/delete need the real Supabase Admin API (service role key,
   // server-only), not just a profiles/table update — see
   // api/admin-user-action.js and migration 027.
-  async function callAdminUserAction(action, targetId) {
+  async function callAdminUserAction(action, targetId, billingAcknowledged) {
     const { data: { session } } = await sb.auth.getSession();
     const res = await fetch("/api/admin-user-action", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + (session && session.access_token) },
-      body: JSON.stringify({ action, targetId }),
+      body: JSON.stringify({ action, targetId, billingAcknowledged: billingAcknowledged === true }),
     });
     const data = await res.json().catch(() => ({}));
+    // Ban and delete never touch Stripe. The server answers 409 for a target
+    // with an active subscription until the admin confirms billing has been
+    // cancelled in the Stripe Dashboard; then it is retried once with the flag.
+    if (res.status === 409 && data && data.code === "active_subscription" && billingAcknowledged !== true) {
+      const msg = t("admin_billing_cancel_first").replace("{customer}", data.stripe_customer_id || "");
+      if (!window.confirm(msg)) return null;
+      return callAdminUserAction(action, targetId, true);
+    }
     if (!res.ok) throw new Error((data && data.error) || "Action failed");
     return data;
   }
   async function setUserBanned(id, val) {
-    try { await callAdminUserAction(val ? "ban" : "unban", id); loadUsers(userQuery); }
+    try { if (await callAdminUserAction(val ? "ban" : "unban", id)) loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin ban error:", e); alert(t("admin_ban_user_err")); }
   }
   async function setUserVerifiedTier(id, tier) {
@@ -6815,7 +7007,7 @@ function AdminPanel({ onBack }) {
   async function deleteUser(id) {
     if (!window.confirm(t("admin_delete_user_confirm"))) return;
     try {
-      await callAdminUserAction("delete", id);
+      if (!(await callAdminUserAction("delete", id))) return;
       loadUsers(userQuery); loadStats();
     } catch (e) { console.error("GOLSZ admin delete user error:", e); alert(t("admin_delete_user_err")); }
   }
@@ -7635,6 +7827,117 @@ function scoutGreetingFor(seeded, t) {
 function newScoutConvId() {
   return (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
 }
+// One id per QUESTION, not per attempt: a retry re-sends the id its failed
+// attempt carried, so the server can hand back a reply it already finished
+// (and already charged for) instead of answering — and charging — twice.
+// api/scout.js accepts [A-Za-z0-9._:-], at most 64 characters.
+function newScoutRequestId() {
+  return (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "-" + String(Math.random()).slice(2, 12);
+}
+
+// ---- Scout transcript restore -----------------------------------------
+// Both helpers take scout_history rows NEWEST FIRST. The queries used to ask
+// for created_at ascending with limit(1000), so once an athlete had ~500
+// exchanges the window held only their OLDEST rows: the "latest"
+// conversation restored on open was an old one, and History listed old
+// conversations while the recent ones were missing entirely.
+function latestScoutConversation(rowsNewestFirst) {
+  const rows = (rowsNewestFirst || []).filter((r) => r && Array.isArray(r.messages) && r.messages.length);
+  if (!rows.length) return null;
+  const id = rows[0].conversation_id;
+  // Back to chronological order for display.
+  const turns = rows.filter((r) => r.conversation_id === id).reverse().flatMap((r) => r.messages);
+  return { id, turns };
+}
+function scoutHistoryList(rowsNewestFirst) {
+  const byConv = new Map();
+  for (const r of rowsNewestFirst || []) {
+    if (!r || !Array.isArray(r.messages) || !r.messages.length) continue;
+    let entry = byConv.get(r.conversation_id);
+    // The first row seen for a conversation is its newest: that is lastAt.
+    if (!entry) { entry = { lastAt: r.created_at, turns: 0, preview: "" }; byConv.set(r.conversation_id, entry); }
+    entry.turns += r.messages.length;
+    // ...and the LAST user row seen is its oldest, i.e. the opening question.
+    const firstUser = r.messages.find((m) => m && m.role === "user" && typeof m.content === "string" && m.content);
+    if (firstUser) entry.preview = firstUser.content.slice(0, 60);
+  }
+  return [...byConv.entries()].map(([id, v]) => ({ id, ...v })).sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
+}
+
+// ---- Scout failures, in the athlete's language -------------------------
+// The bubble used to show the server's raw English `error` string, and every
+// failure got "Try again" — including the daily limit, where trying again is
+// the one thing that cannot work. Each known status/code now maps to a
+// translated message and to the action that can actually help: retry (same
+// request id), the upgrade screen, or neither.
+function scoutFailureFor(status, data, t) {
+  const code = data && typeof data.code === "string" ? data.code : "";
+  const canUpgrade = !(data && data.can_upgrade === false);
+  if (status === 402 || (status === 403 && code === "free_ai_exhausted")) {
+    const text = code === "free_tool_blocked" ? t("scout_err_free_tool_blocked")
+      : code === "free_ai_exhausted" ? t("scout_err_free_exhausted")
+      : canUpgrade ? t("scout_err_daily_limit")
+      : t("scout_err_daily_limit_top");
+    return { text, retry: false, upgrade: canUpgrade };
+  }
+  if (status === 401) return { text: t("scout_err_signin"), retry: false, upgrade: false };
+  if (status === 403) return { text: t("scout_err_no_access"), retry: false, upgrade: false };
+  if (status === 429) return { text: t("scout_err_rate_limited"), retry: true, upgrade: false };
+  if (status === 409) return { text: t("scout_err_in_flight"), retry: true, upgrade: false };
+  if (status === 400) {
+    if (code === "image_too_large" || code === "invalid_image" || code === "too_many_images") return { text: t("scout_err_photo"), retry: false, upgrade: false };
+    if (code === "conversation_too_large" || code === "request_too_expensive" || code === "message_too_long") return { text: t("scout_err_too_long"), retry: false, upgrade: false };
+    return { text: t("scout_err_bad_request"), retry: false, upgrade: false };
+  }
+  if (status === 503) return { text: t("scout_err_unavailable"), retry: true, upgrade: false };
+  return { text: t("scout_server_error").replace("{s}", String(status)), retry: true, upgrade: false };
+}
+
+// ---- Scout photos: resized before they are sent ------------------------
+// A photo used to go up as the phone's original file (up to 8MB) in base64,
+// and the server refuses a conversation over 64KB, so every real photo failed
+// with "that conversation is too long". It is now drawn onto a canvas at most
+// 1024px on its longest side and re-encoded as JPEG — a few hundred KB, and
+// past that size Anthropic downscales (and bills) the same anyway.
+// SCOUT_PHOTO_MAX_BASE64 stays under api/scout.js's MAX_IMAGE_BASE64_CHARS.
+const SCOUT_PHOTO_MAX_SIDE = 1024;
+const SCOUT_PHOTO_QUALITY = 0.7;
+const SCOUT_PHOTO_MAX_BASE64 = 1400 * 1024;
+function scoutPhotoTargetSize(width, height, maxSide) {
+  const w = Math.max(1, Math.round(Number(width) || 1));
+  const h = Math.max(1, Math.round(Number(height) || 1));
+  const longest = Math.max(w, h);
+  if (longest <= maxSide) return { width: w, height: h };
+  const scale = maxSide / longest;
+  return { width: Math.max(1, Math.round(w * scale)), height: Math.max(1, Math.round(h * scale)) };
+}
+function compressScoutPhoto(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const size = scoutPhotoTargetSize(img.naturalWidth, img.naturalHeight, SCOUT_PHOTO_MAX_SIDE);
+        const canvas = document.createElement("canvas");
+        canvas.width = size.width;
+        canvas.height = size.height;
+        const ctx = canvas.getContext("2d");
+        // JPEG has no alpha: paint a white ground first or a transparent PNG
+        // comes out black. (Pixel data, not UI colour — no theme token.)
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, size.width, size.height);
+        ctx.drawImage(img, 0, 0, size.width, size.height);
+        let dataUrl = canvas.toDataURL("image/jpeg", SCOUT_PHOTO_QUALITY);
+        if (dataUrl.length - dataUrl.indexOf(",") - 1 > SCOUT_PHOTO_MAX_BASE64) dataUrl = canvas.toDataURL("image/jpeg", 0.5);
+        const m = /^data:(image\/jpeg);base64,(.+)$/.exec(dataUrl);
+        if (!m || m[2].length > SCOUT_PHOTO_MAX_BASE64) { reject(new Error("photo still too large after resizing")); return; }
+        resolve({ dataUrl, mediaType: m[1], data: m[2] });
+      } catch (e) { reject(e); } finally { URL.revokeObjectURL(url); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("photo could not be decoded")); };
+    img.src = url;
+  });
+}
 
 
 function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSent, onNavigate }) {
@@ -7808,19 +8111,20 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
           if (Object.keys(flatContext).length) setScoutContext(flatContext);
         }
 
+        // NEWEST FIRST — see latestScoutConversation() for why ascending +
+        // limit(1000) restored the wrong conversation for long-time athletes.
         const { data, error } = await sb
           .from("scout_history")
           .select("conversation_id, messages, created_at")
           .eq("user_id", who)
-          .order("created_at", { ascending: true })
+          .order("created_at", { ascending: false })
           .limit(1000);
         if (error) throw error;
-        const rows = (data || []).filter((r) => Array.isArray(r.messages) && r.messages.length);
-        if (rows.length) {
-          const lastConvId = rows[rows.length - 1].conversation_id;
-          const restored = rows.filter((r) => r.conversation_id === lastConvId).flatMap((r) => r.messages);
+        const latest = latestScoutConversation(data);
+        if (latest) {
+          const lastConvId = latest.id;
           setConversationId(lastConvId);
-          setMsgs(restored.map((m) => ({ role: m.role, text: m.content })));
+          setMsgs(latest.turns.map((m) => ({ role: m.role, text: m.content })));
           try {
             const { data: summaryRow } = await sb.from("scout_conversation_summaries").select("summary").eq("conversation_id", lastConvId).maybeSingle();
             if (summaryRow && summaryRow.summary) setSummary(summaryRow.summary);
@@ -7855,27 +8159,16 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   async function loadHistoryList() {
     if (!sb || !uidRef.current) return;
     try {
+      // NEWEST FIRST, so the 1000-row window is the most recent 1000 rows —
+      // see scoutHistoryList().
       const { data, error } = await sb
         .from("scout_history")
         .select("conversation_id, messages, created_at")
         .eq("user_id", uidRef.current)
-        .order("created_at", { ascending: true })
+        .order("created_at", { ascending: false })
         .limit(1000);
       if (error) throw error;
-      const byConv = new Map();
-      for (const r of data || []) {
-        if (!Array.isArray(r.messages) || !r.messages.length) continue;
-        if (!byConv.has(r.conversation_id)) byConv.set(r.conversation_id, { lastAt: r.created_at, turns: 0, preview: "" });
-        const entry = byConv.get(r.conversation_id);
-        entry.lastAt = r.created_at;
-        entry.turns += r.messages.length;
-        if (!entry.preview) {
-          const firstUser = r.messages.find((m) => m.role === "user");
-          if (firstUser) entry.preview = firstUser.content.slice(0, 60);
-        }
-      }
-      const list = [...byConv.entries()].map(([id, v]) => ({ id, ...v })).sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
-      setHistory(list);
+      setHistory(scoutHistoryList(data));
     } catch (e) { console.error("GOLSZ scout history list error:", e); setHistory([]); }
   }
 
@@ -7934,17 +8227,22 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
     if (!file.type.startsWith("image/")) { setPhotoErr(t("feed_image_type_err")); return; }
     if (file.size > 8 * 1024 * 1024) { setPhotoErr(t("feed_image_size_err")); return; }
     setPhotoErr("");
-    const reader = new FileReader();
-    reader.onload = () => {
-      const m = /^data:([^;]+);base64,(.+)$/.exec(String(reader.result || ""));
-      if (m) setPhoto({ dataUrl: reader.result, mediaType: m[1], data: m[2] });
-    };
-    reader.readAsDataURL(file);
+    // Resized and re-encoded here, before it is ever attached — see
+    // compressScoutPhoto(). The original file never leaves the device.
+    compressScoutPhoto(file)
+      .then((p) => setPhoto(p))
+      .catch((err) => { console.error("GOLSZ scout photo resize failed:", err && err.message); setPhotoErr(t("scout_photo_read_err")); });
   }
   function clearPhoto() { setPhoto(null); setPhotoErr(""); }
 
-  async function send(text) {
-    const content = text.trim(); if ((!content && !photo) || pending || !loaded || sendingRef.current) return;
+  // `retryOf` is set only by retryFailed(): { requestId, photo, baseMsgs }.
+  // A retry re-sends the SAME request id (so a reply the server already
+  // finished is replayed, not re-asked and re-charged), the same photo, and
+  // the transcript as it stood before the failed attempt.
+  async function send(text, retryOf) {
+    const content = String(text || "").trim();
+    const outgoingPhoto = retryOf ? (retryOf.photo || null) : photo;
+    if ((!content && !outgoingPhoto) || pending || !loaded || sendingRef.current) return;
     // React state (pending/busy) doesn't actually block a second call until
     // a re-render lands — and moderateContent() below awaits a real network
     // round-trip before either one ever gets set, leaving a real window
@@ -7969,30 +8267,51 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
     // Check before anything else touches state — a flagged message should
     // never clear the input, appear as a sent bubble, or reach Scout's own
     // conversation history at all, same as Feed/Messages/Passport below.
-    if (content) {
+    // A retry skips it: the same text already passed on the first attempt,
+    // or there would have been no attempt to retry.
+    if (content && !retryOf) {
       // No human recipient here (recipientId omitted) — Scout is a
       // private 1:1 exchange with an AI, which "direct_message" fits
       // more honestly than any of the other content types.
       const { decision } = await moderateContent({ text: content, contentType: "scout_message", surface: "scout" });
       if (decision === "block") { setModErr(t("moderation_blocked")); return; }
     }
-    setInput("");
-    const attached = photo; setPhoto(null);
-    const next = [...(msgs || []), { role: "user", text: content, photo: attached ? attached.dataUrl : null, at: Date.now() }];
+    if (!retryOf) { setInput(""); setPhoto(null); }
+    const attached = outgoingPhoto;
+    // retryOf.baseMsgs, not `msgs`: retryFailed() has just removed the
+    // failure bubble, but this closure still holds the render-time `msgs`
+    // with it in — which used to put the failure bubble straight back and
+    // send "Connection dropped" to the model as Scout's own last word.
+    const base = retryOf && Array.isArray(retryOf.baseMsgs) ? retryOf.baseMsgs : (msgs || []);
+    const next = [...base, { role: "user", text: content, photo: attached ? attached.dataUrl : null, at: Date.now() }];
     // Set together, in the same render, so the user's own bubble and the
     // "thinking" bubble appear in the same update — never the thinking
     // bubble alone first (that was the bug: busy used to flip true back
     // where `pending` now does, before this message existed in `msgs`).
     setMsgs(next);
     setBusy(true);
-    logTurn("user", content || "[photo]");
+    // NOT logged yet. The question is written to scout_history together with
+    // its answer, below, once there IS one. Logging it up front meant a
+    // failure left either an orphaned question (restored on next open with
+    // nothing after it) or — the old fix for that — the failure text saved as
+    // if Scout had said it, which then came back as conversation history.
+    // requestId belongs to the QUESTION: a retry reuses it. See retryFailed().
+    const requestId = (retryOf && retryOf.requestId) || newScoutRequestId();
+    // A failure bubble carries what it takes to retry exactly this request
+    // (only when retrying can help), and/or an upgrade offer.
+    const showFailure = (f) => setMsgs((m) => [...m, {
+      role: "assistant", text: f.text, at: Date.now(), failed: true,
+      retryable: !!f.retry, failedInput: content, failedPhoto: f.retry ? attached : null, failedRequestId: f.retry ? requestId : null,
+      upgradeOffer: !!f.upgrade,
+    }]);
     try {
       // Only the last RECENT_TURNS messages go to the model — the running
       // `summary` (server-maintained, migration 049) covers everything
       // older instead of resending an ever-growing full transcript every
       // turn. See CLAUDE.md's AI Scout architecture note for why.
+      // Failure bubbles are app chrome, not things Scout said: never sent.
       const RECENT_TURNS = 6;
-      const api = next.slice(-RECENT_TURNS).map((m) => ({ role: m.role, content: m.text }));
+      const api = next.filter((m) => !m.failed).slice(-RECENT_TURNS).map((m) => ({ role: m.role, content: m.text }));
       const speakerLabel = profile.occupation && profile.occupation !== "Player" ? profile.occupation.toUpperCase() : "ATHLETE";
       const benchmarksLine = Object.keys(benchmarkSummary).length ? `\n\nLATEST RECORDED BENCHMARKS: ${JSON.stringify(benchmarkSummary)}` : "";
       // PROFILE SO FAR / SCOUT CONTEXT SO FAR are deliberately NOT sent any
@@ -8019,10 +8338,9 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
         : { role: "user", content: promptText };
       let _hdr = { "Content-Type": "application/json" };
       try { if (typeof sb !== "undefined" && sb) { const _s = await sb.auth.getSession(); if (_s && _s.data && _s.data.session) _hdr["Authorization"] = "Bearer " + _s.data.session.access_token; } } catch (e) {}
-      // requestId lets the server (api/scout.js) reject an exact duplicate
-      // submission (double-click, retry-storm) without double-charging —
-      // crypto.randomUUID() is available in every browser this app targets.
-      const requestId = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random();
+      // requestId (minted above, once per question) lets the server
+      // (api/scout.js) recognise a retry of this exact request and replay
+      // the finished reply instead of answering — and charging — again.
       // model/system/tools are NOT sent — api/scout.js owns the model
       // choice, the real SYSTEM_PROMPT, and tool wiring server-side; the
       // client only ever supplies the conversation itself.
@@ -8043,7 +8361,10 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
         // requires an approved parent_links row before honouring it, and
         // returns 403 otherwise (api/_acting-for.js). Sending it from here
         // grants nothing on its own.
-        body: JSON.stringify({ messages: api, lang, conversationId, summary, requestId, athleteId: actingFor ? actingFor.id : null }),
+        // retry:true asks the server to look for a finished reply under this
+        // requestId even when the retry lands on a different instance than
+        // the original did.
+        body: JSON.stringify({ messages: api, lang, conversationId, summary, requestId, retry: !!retryOf, athleteId: actingFor ? actingFor.id : null }),
       });
       // NOT res.json() BLIND.
       //
@@ -8061,6 +8382,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       } catch {
         const e = new Error(t("scout_server_error").replace("{s}", String(res.status)));
         e.code = "SCOUT_HTTP_ERROR";
+        e.failure = { text: e.message, retry: true, upgrade: false };
         throw e;
       }
       // scout_usage ({remaining, limit}) is present on both success and
@@ -8072,9 +8394,14 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       // undefined, raw ends up "", and an empty assistant bubble gets
       // added with no visible error, which looked like Scout just never
       // replied. Throwing here routes it through the catch below instead.
+      // The server's `error` is English and written for a log; the athlete
+      // gets scoutFailureFor()'s translated text and the action that fits —
+      // retry, upgrade, or neither.
       if (!res.ok) {
-        const e = new Error((data && data.error) || t("scout_connection_dropped"));
+        const failure = scoutFailureFor(res.status, data, t);
+        const e = new Error(failure.text);
         e.code = "SCOUT_HTTP_ERROR";
+        e.failure = failure;
         throw e;
       }
       // The SERVER now derives the clean reply text (deriveReplyText in
@@ -8100,12 +8427,22 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       // below cheerfully rendered it. In production on 2026-08-11 an athlete
       // was shown Scout discussing him in the third person. reply_unavailable
       // says so in a way prose cannot imitate, and it is checked FIRST.
+      // It is a FAILURE, not a reply: the server has already given the
+      // question back, so the bubble offers Retry (same requestId) and
+      // nothing is written to scout_history.
       if (data.reply_unavailable) {
-        reply = t("scout_connection_dropped");
+        showFailure({ text: t("scout_connection_dropped"), retry: true, upgrade: false });
+        return;
+      } else if (data.stop_reason === "refusal") {
+        // A decline is a real answer — shown in their language, kept in the
+        // transcript, and not offered as something to send again.
+        reply = t("scout_err_refused");
       } else if (!reply || reply.includes('"reply"') || /^\s*[\{\[]/.test(reply)) {
         // Last line of defence: never render the envelope. If we somehow have
-        // no clean text, show honest copy rather than braces.
-        reply = (raw && !raw.includes('"reply"') && !/^\s*[\{\[]/.test(raw.trim())) ? raw : t("scout_connection_dropped");
+        // no clean text, show honest copy rather than braces — as a failure
+        // the athlete can retry, never as something Scout said.
+        reply = (raw && !raw.includes('"reply"') && !/^\s*[\{\[]/.test(raw.trim())) ? raw : null;
+        if (!reply) { showFailure({ text: t("scout_connection_dropped"), retry: true, upgrade: false }); return; }
       }
       if (updates && typeof updates === "object") setProfile((p) => ({ ...p, ...updates }));
       if (contextUpdates && typeof contextUpdates === "object") {
@@ -8129,7 +8466,10 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       // to this specific message so the "add these" buttons render right
       // under the reply that generated them, not as a separate object.
       setMsgs((m) => [...m, { role: "assistant", at: Date.now(), text: reply, suggestedTargets: data.suggested_targets || null, suggestedDevItems: data.suggested_dev_items || null, suggestedPathway: data.suggested_pathway || null, draftedEmail: data.drafted_email || null }]);
-      logTurn("assistant", reply);
+      // The question and its answer are written together, in order, now that
+      // there is an answer. Chained so the user row is created first.
+      const answered = reply;
+      (async () => { await logTurn("user", content || "[photo]"); await logTurn("assistant", answered); })();
     } catch (e) {
       // TimeoutError/AbortError come from the AbortSignal.timeout above —
       // "took too long" is the honest description there; "connection
@@ -8143,37 +8483,36 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       // plain for the athlete; the console now names the cause.
       console.error("GOLSZ scout send failed:", e && e.name, e && e.code, e && e.message);
       const isTimeout = e && (e.name === "TimeoutError" || e.name === "AbortError");
-      const msg = e && e.code === "SCOUT_HTTP_ERROR" ? e.message
-        : isTimeout ? t("scout_timed_out")
-        : t("scout_connection_dropped");
-      // failedInput carries the athlete's own text so the bubble can offer a
-      // retry. Without it a failure was a dead end: three "Upstream model
-      // call failed" bubbles in a row on 2026-08-08, and the only way
-      // forward was retyping the question. A photo is deliberately not
-      // retried — it is no longer in scope by then, and silently sending
-      // the text without the image would be worse than making them redo it.
-      setMsgs((m) => [...m, { role: "assistant", text: msg, at: Date.now(), failedInput: photo ? null : content }]);
-      // Persist the fallback the same way a real reply is persisted below —
-      // without this, a failed call left the user's own message logged
-      // (logTurn above, before the request even went out) with no trace of
-      // Scout's side, so scout_history had one dangling user-only row
-      // forever. On the next load, "does scout_history have any rows?"
-      // (the greeting-vs-restore check further up) said yes, so the app
-      // restored that orphaned question instead of ever greeting properly
-      // again — the user saw their own message sitting there with total
-      // silence, permanently, no matter how many times they reloaded.
-      logTurn("assistant", msg);
+      // e.failure (from scoutFailureFor) says what the athlete can do about
+      // it; a timeout or a dropped connection is always worth one retry —
+      // with the same requestId, so if the server did finish, the retry gets
+      // that reply back instead of a second charge. The photo travels with
+      // the retry too (it is kept on the bubble), where it used to be
+      // dropped and the retry offered only for text.
+      const failure = (e && e.failure) ? e.failure
+        : { text: isTimeout ? t("scout_timed_out") : t("scout_connection_dropped"), retry: true, upgrade: false };
+      showFailure(failure);
+      // NOT written to scout_history. A failure is not something Scout said;
+      // saved as an assistant turn it came back as conversation history on
+      // the next request. Nothing is orphaned either: the question itself is
+      // only logged alongside a real answer (see above).
     }
     } finally { setBusy(false); setPending(false); sendingRef.current = false; }
   }
 
-  // Drops the failure bubble and sends the same text again. The bubble is
-  // removed first so a second failure does not stack — the athlete should
-  // see one error at a time, not a growing wall of them.
-  function retryFailed(msgIndex, text) {
-    if (!text || pending || sendingRef.current) return;
-    setMsgs((m) => m.filter((_, i) => i !== msgIndex));
-    send(text);
+  // Retries a failed question: drops the failure bubble AND the question it
+  // failed on (send() puts the question back as a fresh bubble), and passes
+  // that transcript to send() explicitly — send()'s closure still holds the
+  // pre-removal `msgs`. Same requestId and photo as the failed attempt.
+  function retryFailed(msgIndex) {
+    if (pending || sendingRef.current) return;
+    const cur = msgs || [];
+    const failed = cur[msgIndex];
+    if (!failed || !failed.retryable) return;
+    const prev = cur[msgIndex - 1];
+    const askedAt = prev && prev.role === "user" && (prev.text || "") === (failed.failedInput || "") ? msgIndex - 1 : msgIndex;
+    const baseMsgs = cur.slice(0, askedAt).concat(cur.slice(msgIndex + 1));
+    send(failed.failedInput || "", { requestId: failed.failedRequestId, photo: failed.failedPhoto || null, baseMsgs });
   }
 
   // Brief §2B "persistent actions": one tap turns Scout's suggested_targets/
@@ -8396,13 +8735,20 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
             <div key={i} className="msg" style={m.role === "user" ? bubbleUser : bubbleAgent}>
               {m.photo && <img src={m.photo} alt={t("alt_scout_photo")} style={{ display: "block", maxWidth: "100%", borderRadius: 10, marginBottom: m.text ? 6 : 0 }} />}
               {m.text && <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>}
-              {m.failedInput && (
+              {m.retryable && (
                 <button
-                  onClick={() => retryFailed(i, m.failedInput)}
+                  onClick={() => retryFailed(i)}
                   disabled={pending}
                   style={{ marginTop: 8, background: "transparent", border: `1px solid ${C.lime}`, color: C.lime, borderRadius: 9, padding: "6px 12px", fontWeight: 800, fontSize: 12, cursor: pending ? "default" : "pointer", fontFamily: "inherit", opacity: pending ? 0.5 : 1, display: "flex", alignItems: "center", gap: 6 }}
                 >
                   <RotateCcw size={13} /> {t("scout_try_again")}
+                </button>
+              )}
+              {/* A limit is not fixed by trying again; the one action that
+                  helps is the upgrade screen, when there is a plan above. */}
+              {m.upgradeOffer && onUpgrade && (
+                <button onClick={onUpgrade} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "6px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                  <Lock size={12} /> {t("scout_upgrade_cta")}
                 </button>
               )}
               {m.suggestedTargets && m.suggestedTargets.length > 0 && (
@@ -9082,7 +9428,7 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan, flush, he
       // Never silent. A goal that looks saved but isn't is the exact failure
       // this whole item exists to fix.
       console.error("GOLSZ goal save error:", e);
-      setErr((e && e.message) ? `${t("goal_card_save_err")} (${String(e.message).slice(0, 80)})` : t("goal_card_save_err"));
+      setErr(userErrorText(e, t, "goal_card_save_err"));
     } finally { setBusy(false); }
   }
 
@@ -9771,8 +10117,12 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
       ? { label: "next_move_type_define_goal", why: "home_next_why_goal", go: "scout" }
       : pathwayNext
         ? { labelText: pathwayNext.label,
+            // A step's `stage` is a stage ID, not a translation key: custom
+            // stages and the ones api/scout.js files steps under are UUIDs,
+            // and t("pathway_stage_" + uuid) rendered the raw key. Resolve it
+            // against the same stages Plan draws; an orphaned id shows nothing.
             whyText: [milestoneDateLabel(pathwayNext, lang, t).text,
-                      pathwayNext.stage ? t("pathway_stage_" + pathwayNext.stage) : null].filter(Boolean).join(" · "),
+                      nextStepStageLabel(pathwayNext, athlete, pathwayRow, t)].filter(Boolean).join(" · "),
             go: "targets" }
       : !filmAdded
         ? { label: "plan_next30_film", why: "home_next_why_film", go: "profile" }
@@ -9873,7 +10223,11 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
 
   // A named school that answered beats any count. It is the only proper noun
   // from the outside world available anywhere on this screen.
-  const replied = targetRows.find((r) => r && r.status === "replied" && r.name);
+  // There is no "replied" status — this compared against one, so the line
+  // could never appear. TARGET_STATUSES (migration 077's check constraint)
+  // records an answer as "responded", and an "opportunity" is a school that
+  // answered with something concrete, so both count.
+  const replied = targetRows.find((r) => r && (r.status === "responded" || r.status === "opportunity") && r.name);
   const contacted = targetRows.filter((r) => r && r.status && r.status !== "researching").length;
   const schoolsFact = !canTargets || targetRows.length === 0
     ? { text: t("home_door_schools_empty"), live: false }
@@ -10466,7 +10820,7 @@ function BackupPlanCard({ athlete, loaded, actingFor, onSaved, quiet }) {
       setEditing(false);
       if (onSaved) onSaved();
     } catch (e) {
-      setErr((e && e.message) || t("plan_backup_err"));
+      setErr(userErrorText(e, t, "plan_backup_err"));
     } finally { setBusy(false); }
   }
 
@@ -10586,6 +10940,14 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
   const [goalHeading, setGoalHeading] = useState("");
   const [items, setItems] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  // Targets are separate rows, so a failed read cannot overwrite anything —
+  // but it rendered as "No targets yet", which is a false statement about an
+  // athlete's outreach. The list says it failed and offers Retry instead.
+  const [targetsLoadFailed, setTargetsLoadFailed] = useState(false);
+  const [targetsReloadKey, setTargetsReloadKey] = useState(0);
+  // Which row's delete is armed — the same two-tap pattern as Scout's history:
+  // deleting a target also deletes the coach email drafted on it.
+  const [armedTarget, setArmedTarget] = useState(null);
   const [name, setName] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -10642,12 +11004,14 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
         setQuality(computeProfileQuality(ath, prof));
         setFilmAdded(!!(ath && Array.isArray(ath.highlights) && ath.highlights.length > 0));
         setBenchmarkCount((benchmarks || []).length);
-      } catch (e) { console.error("GOLSZ targets load error:", e); }
+      } catch (e) { console.error("GOLSZ targets load error:", e); setTargetsLoadFailed(true); }
       setLoaded(true);
     })();
     // Re-runs when the parent switches athlete. An empty dep array meant the
     // first athlete loaded stayed on screen for the whole session.
-  }, [actingFor]);
+  }, [actingFor, targetsReloadKey]);
+  // Retry keeps the page mounted (no skeleton) — only the list is re-read.
+  function retryTargets() { setTargetsLoadFailed(false); setTargetsReloadKey((k) => k + 1); }
 
   async function addTarget() {
     if (!sb || !uid || !name.trim() || busy) return;
@@ -10665,7 +11029,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
       setName(""); setContactName(""); setContactEmail("");
       setShowAddTarget(false);
     } catch (e) {
-      setErr((e && e.message) || t("targets_add_err"));
+      setErr(userErrorText(e, t, "targets_add_err"));
     } finally { setBusy(false); }
   }
 
@@ -10843,7 +11207,8 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
           </div>
         )}
 
-        {items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55, padding: "6px 0 2px" }}>{t("targets_empty")}</div>}
+        {targetsLoadFailed && <LoadError onRetry={retryTargets} />}
+        {!targetsLoadFailed && items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55, padding: "6px 0 2px" }}>{t("targets_empty")}</div>}
 
         {items.map((it, ti) => (
           // A target is a ROW in this section, not a card inside a card.
@@ -10878,7 +11243,16 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
                 {TARGET_STATUSES.map((s) => <option key={s} value={s}>{t("targets_status_" + s)}</option>)}
               </select>
               <button onClick={() => setExpandedId(expandedId === it.id ? null : it.id)} style={{ ...iconBtn(C.slate), flexShrink: 0 }}>{expandedId === it.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>
-              <button onClick={() => removeTarget(it.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><X size={14} /></button>
+              {/* TWO TAPS. Deleting a target also deletes the coach email
+                  drafted on it, and this sat one thumb-width from the status
+                  select. First tap arms and says so; the second deletes; it
+                  disarms itself after four seconds. */}
+              <button onClick={() => { if (armedTarget === it.id) { setArmedTarget(null); removeTarget(it.id); } else { setArmedTarget(it.id); setTimeout(() => setArmedTarget((cur) => (cur === it.id ? null : cur)), 4000); } }}
+                aria-label={armedTarget === it.id ? t("targets_delete_confirm_aria").replace("{name}", it.name || "") : t("a11y_delete_named").replace("{name}", it.name || "")}
+                title={t("a11y_delete_named").replace("{name}", it.name || "")}
+                style={deleteBtnStyle(armedTarget === it.id ? { border: `1px solid ${C.amber}`, color: C.warnText, fontSize: 10, fontWeight: 900, padding: "0 6px", margin: "0 -6px 0 0" } : null)}>
+                {armedTarget === it.id ? t("targets_delete_confirm") : <X size={14} />}
+              </button>
             </div>
             {expandedId === it.id && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
@@ -10955,7 +11329,7 @@ function DevelopmentPlan({ viewUserId, manageId }) {
       setItems((prev) => [data, ...prev]);
       setGoal("");
     } catch (e) {
-      setErr((e && e.message) || t("dev_plan_add_err"));
+      setErr(userErrorText(e, t, "dev_plan_add_err"));
     } finally { setBusy(false); }
   }
 
@@ -10982,7 +11356,7 @@ function DevelopmentPlan({ viewUserId, manageId }) {
     } catch (e) {
       console.error("GOLSZ development plan update error:", e);
       setItems(before);
-      setItemErr((prev) => ({ ...prev, [id]: (e && e.message) || t("dev_plan_save_err") }));
+      setItemErr((prev) => ({ ...prev, [id]: userErrorText(e, t, "dev_plan_save_err") }));
     }
   }
 
@@ -10995,7 +11369,7 @@ function DevelopmentPlan({ viewUserId, manageId }) {
     } catch (e) {
       console.error("GOLSZ development plan delete error:", e);
       setItems(before);
-      setItemErr((prev) => ({ ...prev, [id]: (e && e.message) || t("dev_plan_save_err") }));
+      setItemErr((prev) => ({ ...prev, [id]: userErrorText(e, t, "dev_plan_save_err") }));
     }
   }
 
@@ -11032,7 +11406,7 @@ function DevelopmentPlan({ viewUserId, manageId }) {
               {DEV_STATUSES.map((s) => <option key={s} value={s}>{t("dev_plan_status_" + s)}</option>)}
             </select>
             <button onClick={() => setExpandedId(expandedId === it.id ? null : it.id)} style={{ ...iconBtn(C.slate), flexShrink: 0 }}>{expandedId === it.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>
-            <button onClick={() => removeItem(it.id)} style={{ background: "none", border: "none", color: C.slate, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}><X size={14} /></button>
+            <button onClick={() => removeItem(it.id)} aria-label={t("a11y_delete_named").replace("{name}", it.goal || "")} title={t("a11y_delete_named").replace("{name}", it.goal || "")} style={deleteBtnStyle()}><X size={14} /></button>
           </div>
           {expandedId === it.id && (
             <>
@@ -11219,6 +11593,15 @@ function athleteStages(athlete, pathwayRow) {
 }
 function stageLabel(stage, t) {
   return stage.label === null ? t("pathway_stage_" + stage.id) : stage.label;
+}
+// The label for the stage a milestone is filed under, or null. A milestone's
+// `stage` is an ID into athleteStages(), never a translation key — so it is
+// looked up there, exactly as Plan does, and a step filed under a stage that
+// no longer exists says nothing rather than printing an internal key.
+function nextStepStageLabel(milestone, athlete, pathwayRow, t) {
+  if (!milestone || !milestone.stage) return null;
+  const st = athleteStages(athlete, pathwayRow).find((x) => x.id === milestone.stage);
+  return st ? (stageLabel(st, t) || null) : null;
 }
 function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing, stages: stagesProp, onNodeTap, onDraftWithScout, drafting, stepCounts, goalText }) {
   // Stages arrive resolved from the owner (PathwayPlan). This component does
@@ -11511,6 +11894,13 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
   const { t, lang } = useLang();
   const [uid, setUid] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  // A FAILED READ IS NOT AN EMPTY PLAN. The pathway_plan read's error used to
+  // be ignored, so a network blip looked exactly like "no plan yet": the goal
+  // editor opened, and the next save upserted empty milestones and stages
+  // over the athlete's real row. While this is true nothing is drawn and
+  // save() refuses to write; Retry re-runs the read.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [athlete, setAthlete] = useState(null);
   const [pathwayType, setPathwayType] = useState(PATHWAY_TYPES[0]);
   const [timeline, setTimeline] = useState("");
@@ -11620,11 +12010,14 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
         // athletes_read both allow `is_parent_of`.
         const who = actingFor || user.id;
         setUid(who);
-        const [{ data }, { data: ath }] = await Promise.all([
+        const [{ data, error: planErr }, { data: ath }] = await Promise.all([
           sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, notes, stages, current_stage_id").eq("user_id", who).maybeSingle(),
           sb.from("athletes").select("sport, club_name, recruiting_status, scout_context").eq("id", who).single(),
         ]);
         setAthlete(ath || null);
+        // maybeSingle() answers "no row" with data === null and NO error, so
+        // an error here is a real failure, never an athlete without a plan.
+        if (planErr) throw planErr;
         if (data) {
           setExists(true);
           setPathwayType(data.pathway_type);
@@ -11636,10 +12029,11 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
         } else {
           setEditingGoal(true);
         }
-      } catch (e) { console.error("GOLSZ pathway plan load error:", e); }
+      } catch (e) { console.error("GOLSZ pathway plan load error:", e); setLoadFailed(true); }
       setLoaded(true);
     })();
-  }, [viewUserId, actingFor]);
+  }, [viewUserId, actingFor, reloadKey]);
+  function retryLoad() { setLoadFailed(false); setLoaded(false); setReloadKey((k) => k + 1); }
 
   // THE ONLY WRITER ON THIS SCREEN, AND IT HAD THREE PROBLEMS.
   //
@@ -11666,7 +12060,10 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
   milestonesRef.current = milestones;
 
   function save(overrides) {
-    if (!sb || !uid) return;
+    // Every save is a whole-row upsert, so writing before a read has
+    // SUCCEEDED would replace the athlete's real plan with this screen's
+    // empty defaults. Refuse rather than guess.
+    if (!sb || !uid || !loaded || loadFailed) return;
     const before = milestonesRef.current;
     // Optimistic, and the ref moves with it so the next write in the burst
     // builds on this one instead of on what the server last confirmed.
@@ -11985,6 +12382,8 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
   // edit meant for THIS line silently landed there instead, because the
   // literal was not unique. Anchor by owner, not by text.
   if (!loaded) return <SkeletonCard height={232} />;
+  // PathwayPlan's own read failed: say so, offer Retry, draw no editor.
+  if (loadFailed) return <div style={{ ...card }}><LoadError onRetry={retryLoad} /></div>;
 
   const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
   const editorLabel = { fontSize: 9.5, fontWeight: 900, letterSpacing: ".14em", color: C.slate, textTransform: "uppercase", display: "block", marginBottom: 6 };
@@ -12763,7 +13162,7 @@ function AddAthleteForm({ t, onAdded }) {
     } catch (e) {
       // The server's own text — it already distinguishes "already registered"
       // from a real failure, and that difference is what a parent needs.
-      setErr((e && e.message) || t("family_couldnt_send"));
+      setErr(userErrorText(e, t, "family_couldnt_send"));
     } finally { setBusy(false); }
   }
   const box = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 10px", fontFamily: "inherit", boxSizing: "border-box" };
@@ -12845,7 +13244,6 @@ function GolszApp({ onSignOut, startOnboarding }) {
     } catch (e) { return "home"; }
   });
   const [thread, setThread] = useState(null);
-  const [hasUnreadMsgs, setHasUnreadMsgs] = useState(false);
   const [onboarding, setOnboarding] = useState(!!startOnboarding);
   const [viewProfileId, setViewProfileId] = useState(null);
   const [scoutSeed, setScoutSeed] = useState(null);
@@ -13138,17 +13536,9 @@ function GolszApp({ onSignOut, startOnboarding }) {
     });
   };
 
-  useEffect(() => {
-    if (!sb) return;
-    (async () => {
-      try {
-        const { data: { user } } = await sb.auth.getUser();
-        if (!user) return;
-        const { count } = await sb.from("messages").select("id", { count: "exact", head: true }).eq("recipient_id", user.id).is("read_at", null);
-        setHasUnreadMsgs((count || 0) > 0);
-      } catch (e) { console.error("GOLSZ unread check error:", e); }
-    })();
-  }, [page]);
+  // (An unread-messages count query used to run here on EVERY tab change —
+  // two round trips per tap — feeding a hasUnreadMsgs flag that nothing ever
+  // read. Messages is not one of this shell's pages today; removed, not hidden.)
 
   // Time-on-app tracking (migration 031, admin-only aggregate view under
   // Analytics → Time on app). Rather than a precise session start/stop
@@ -13343,6 +13733,39 @@ function GolszApp({ onSignOut, startOnboarding }) {
   );
 }
 
+// Shared by UpgradeScreen and GuidedAssessment: loads the two billing facts
+// and routes a paid-tier pick through planChoiceRoute(). A Payment Link for
+// an active subscriber would start a SECOND subscription on a second Stripe
+// customer, so unknown billing never falls through to checkout.
+// billing: null = still loading, false = lookup failed.
+function usePlanPicker(uid) {
+  const { t, currency } = useLang();
+  const [billing, setBilling] = useState(null);
+  const [msg, setMsg] = useState("");
+  useEffect(() => {
+    if (!sb || !uid) { setBilling({ plan: null, customer: null }); return; }
+    let alive = true;
+    (async () => {
+      const { data, error } = await sb.from("profiles").select("plan, stripe_customer_id").eq("id", uid).maybeSingle();
+      if (alive) setBilling(error ? false : { plan: (data && data.plan) || null, customer: (data && data.stripe_customer_id) || null });
+    })();
+    return () => { alive = false; };
+  }, [uid]);
+  function pick(planId) {
+    setMsg("");
+    if (!billing) { if (billing === false) setMsg(t("settings_plan_err")); return; }
+    const route = planChoiceRoute(planId, billing.plan, billing.customer);
+    if (route === "current") return;
+    if (route === "contact") { setMsg(t("settings_plan_switch_contact")); return; }
+    const link = stripeLinkFor(planId, currency);
+    if (!link || !uid) { setMsg(t("settings_plan_checkout_unavailable")); return; }
+    const checkoutUrl = new URL(link);
+    checkoutUrl.searchParams.set("client_reference_id", uid);
+    window.location.href = checkoutUrl.toString();
+  }
+  return { billing, msg, pick };
+}
+
 // Lightweight direct pricing screen — used for manual "Upgrade" taps from
 // locked-feature buttons throughout the app (openUpgrade in GolszApp).
 // Portaled to document.body like every other full-screen overlay in this
@@ -13359,20 +13782,8 @@ function UpgradeScreen({ uid, onDismiss, title, body }) {
   useModalFocus(panelRef, true, onDismiss);
   // AN EXISTING SUBSCRIBER REACHES THIS SCREEN TOO. It is not free-only —
   // openUpgrade() fires from any feature lock, so a Basic subscriber hitting
-  // an Elite-gated feature lands here, and a Payment Link would start a SECOND
-  // checkout and mint a SECOND Stripe customer. The webhook refuses to re-bind
-  // a profile that already carries one, so the upgrade is charged and never
-  // granted: they pay twice and keep the old plan.
-  const [hasBilling, setHasBilling] = useState(false);
-  useEffect(() => {
-    if (!sb || !uid) return;
-    let alive = true;
-    (async () => {
-      const { data } = await sb.from("profiles").select("stripe_customer_id").eq("id", uid).maybeSingle();
-      if (alive) setHasBilling(!!(data && data.stripe_customer_id));
-    })();
-    return () => { alive = false; };
-  }, [uid]);
+  // an Elite-gated feature lands here. See usePlanPicker() above.
+  const { billing, msg, pick } = usePlanPicker(uid);
   return ReactDOM.createPortal(
     <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000a6", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
       <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title || t("conversion_title")} className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 440, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 22, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
@@ -13380,30 +13791,21 @@ function UpgradeScreen({ uid, onDismiss, title, body }) {
         <div style={{ fontSize: 18, fontWeight: 900, textAlign: "center", marginBottom: 8, lineHeight: 1.3 }}>{title || t("conversion_title")}</div>
         <div style={{ fontSize: 13, color: C.slate, textAlign: "center", marginBottom: 20, lineHeight: 1.5 }}>{body || t("conversion_body")}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-          {PLANS.filter((pl) => pl.id !== "free").map((pl) => (
-            <button key={pl.id} onClick={() => {
-              // Already billing? The portal is the only safe route — it keeps
-              // one customer and prorates. See the note at the top.
-              if (hasBilling) {
-                const portal = stripePortalLink();
-                if (portal) { window.location.href = portal; }
-                return;
-              }
-              const link = stripeLinkFor(pl.id, currency);
-              if (!link || !uid) return;
-              const checkoutUrl = new URL(link);
-              checkoutUrl.searchParams.set("client_reference_id", uid);
-              window.location.href = checkoutUrl.toString();
-            }} style={{
-              textAlign: "left", cursor: "pointer", fontFamily: "inherit",
-              background: C.turf, border: `1.5px solid ${C.line2}`, borderRadius: 12,
+          {PLANS.filter((pl) => pl.id !== "free").map((pl) => {
+            const isCurrent = !!billing && billing.plan === pl.id;
+            return (
+            <button key={pl.id} onClick={() => pick(pl.id)} disabled={isCurrent || billing === null} style={{
+              textAlign: "left", cursor: isCurrent ? "default" : "pointer", fontFamily: "inherit",
+              background: C.turf, border: `1.5px solid ${isCurrent ? C.lime : C.line2}`, borderRadius: 12,
               padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
             }}>
               <div style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>{pl.name}</div>
-              <div style={{ fontSize: 12.5, color: C.lime, fontWeight: 700 }}>{planPrice(pl.id, currency)}/mo</div>
+              <div style={{ fontSize: 12.5, color: C.lime, fontWeight: 700 }}>{isCurrent ? t("settings_plan_current") : planPrice(pl.id, currency) + "/mo"}</div>
             </button>
-          ))}
+            );
+          })}
         </div>
+        {msg && <div role="alert" style={{ fontSize: 12, color: C.amber, textAlign: "center", marginBottom: 10, lineHeight: 1.45 }}>{msg}</div>}
         <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_currency_note").replace("{currency}", currency.toUpperCase())}</div>
         <button onClick={onDismiss} style={{ width: "100%", textAlign: "center", background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 8 }}>{t("conversion_dismiss")}</button>
       </div>
@@ -13456,6 +13858,9 @@ function GuidedAssessment({ uid, onDismiss }) {
   const [verified, setVerified] = useState(false);
   const [nextMove, setNextMove] = useState(null);
   const [showPlans, setShowPlans] = useState(false);
+  // Shown to free-plan accounts, which can still carry an old Stripe customer
+  // (lapsed) — the same routing as UpgradeScreen, not a bare Payment Link.
+  const { billing, msg, pick } = usePlanPicker(uid);
 
   useEffect(() => {
     if (!sb || !uid) { setLoaded(true); return; }
@@ -13497,7 +13902,8 @@ function GuidedAssessment({ uid, onDismiss }) {
   // would understate things dishonestly rather than "initial."
   const readinessScore = quality ? Math.round((quality.score + (verified ? 100 : 0)) / 2) : 0;
   const LOCKED_TILES = [
-    { icon: BadgeCheck, key: "readiness" }, { icon: Radar, key: "next_move" },
+    // My Next Move is on Home for every plan, so it is not a locked tile.
+    { icon: BadgeCheck, key: "readiness" }, { icon: Compass, key: "pathway" },
     { icon: Target, key: "targets" }, { icon: Trophy, key: "benchmarks" },
   ];
 
@@ -13548,13 +13954,7 @@ function GuidedAssessment({ uid, onDismiss }) {
             <div style={{ fontSize: 13, color: C.slate, textAlign: "center", marginBottom: 20, lineHeight: 1.5 }}>{t("conversion_body")}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
               {PLANS.filter((pl) => pl.id !== "free").map((pl) => (
-                <button key={pl.id} onClick={() => {
-                  const link = stripeLinkFor(pl.id, currency);
-                  if (!link || !uid) return;
-                  const checkoutUrl = new URL(link);
-                  checkoutUrl.searchParams.set("client_reference_id", uid);
-                  window.location.href = checkoutUrl.toString();
-                }} style={{
+                <button key={pl.id} onClick={() => pick(pl.id)} disabled={billing === null} style={{
                   textAlign: "left", cursor: "pointer", fontFamily: "inherit",
                   background: C.turf, border: `1.5px solid ${C.line2}`, borderRadius: 12,
                   padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
@@ -13564,6 +13964,7 @@ function GuidedAssessment({ uid, onDismiss }) {
                 </button>
               ))}
             </div>
+            {msg && <div role="alert" style={{ fontSize: 12, color: C.amber, textAlign: "center", marginBottom: 10, lineHeight: 1.45 }}>{msg}</div>}
             <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_currency_note").replace("{currency}", currency.toUpperCase())}</div>
         <button onClick={onDismiss} style={{ width: "100%", textAlign: "center", background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 8 }}>{t("conversion_dismiss")}</button>
           </>
@@ -13732,7 +14133,14 @@ const CSS = `
   @keyframes run { 0%,100%{opacity:.25;transform:translateY(0)} 50%{opacity:1;transform:translateY(-3px)} }
   @media (prefers-reduced-motion: reduce){ .msg,.running span{ animation:none } }
   textarea::placeholder, input::placeholder { color: ${C.slate}; }
-  button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid ${C.lime}; outline-offset: 2px; }
+  /* !important on purpose (WCAG 2.4.7). ~28 inputs carry an inline
+     outline: "none" for their resting look, and an inline style beats any
+     stylesheet rule that is not !important — so keyboard users tabbing
+     through Auth, the profile editor or Plan saw no focus ring at all.
+     Only :focus-visible is forced, so mouse and touch focus stay unringed.
+     tabindex="-1" is excluded: those are dialogs focused by script. */
+  button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible,
+  [role="button"]:focus-visible, [tabindex]:not([tabindex="-1"]):focus-visible { outline: 2px solid ${C.lime} !important; outline-offset: 2px !important; }
   /* The mark is now a vector, so the light theme adjusts a FILL rather than
      pushing the whole image through brightness/saturate. Dark carries the
      authored brand gold; light reuses --lime's own light value, since
@@ -13970,34 +14378,52 @@ function stripeLinkFor(planId, currency) {
 // already handles by setting the plan back to free — so the loop closes with
 // no new backend code.
 //
-// Live since 2026-09-03. The portal's Cancellations setting is "cancel at end
-// of billing period", so an athlete who cancels keeps the month they paid for
-// and customer.subscription.deleted arrives at period end — which is when the
-// webhook should, and does, drop them to free.
+// Live since 2026-09-03. It can cancel, update the card and show invoices; it
+// CANNOT switch plans (subscription_update is off) or start a new
+// subscription — see planChoiceRoute() below. Its Cancellations setting is
+// "cancel at end of billing period", so an athlete who cancels keeps the
+// month they paid for and customer.subscription.deleted arrives at period
+// end — which is when the webhook should, and does, drop them to free.
 const STRIPE_PORTAL_LINK = "https://billing.stripe.com/p/login/bJe5kF64dalzdgrcbMaEE00";
 function isLivePortalLink(url) {
   if (typeof url !== "string") return false;
   if (!/^https:\/\/billing\.stripe\.com\/p\/login\//.test(url)) return false;
   if (/\/test_/.test(url)) return false;
-  // A PAYMENT LINK ID PASTED ONTO THE BILLING HOST IS NOT A PORTAL.
-  // STRIPE_PORTAL_LINK carried the CAD Basic Payment Link's id — the same
-  // 24-character base62 string appears in STRIPE_LINKS — and the prefix test
-  // above happily accepted it. It is the only cancel path in the app
-  // (Settings' Manage billing and choosePlan("free") both redirect here) and
-  // index.html promises "Cancel any time", so every subscriber who tried to
-  // cancel hit a dead URL with no way to tell it was dead.
-  //
-  // Rejecting it does not fix the link — only pasting the real one from the
-  // Stripe Dashboard does that — but it makes the app fail HONESTLY: callers
-  // already handle a null portal by telling the athlete how to cancel instead
-  // of sending them nowhere. A wrong URL is worse than an absent one.
-  const id = url.split("/").filter(Boolean).pop();
-  if (id && Object.values(STRIPE_LINKS || {}).some((byPlan) =>
-    Object.values(byPlan || {}).some((link) => typeof link === "string" && link.includes(id)))) return false;
+  // No comparison against STRIPE_LINKS ids. Stripe reuses the same short code
+  // on billing.stripe.com and buy.stripe.com (verified against the live
+  // account on 2026-10-09: this portal's login_page.url and the CAD Basic
+  // Payment Link share bJe5kF64dalzdgrcbMaEE00), so a matching id is not
+  // evidence of a wrong link. Rejecting it disabled Manage billing and
+  // cancellation for every subscriber.
   return true;
 }
 function stripePortalLink() {
   return isLivePortalLink(STRIPE_PORTAL_LINK) ? STRIPE_PORTAL_LINK : null;
+}
+
+// An ACTIVE subscription is a Stripe customer AND a plan that is not free.
+// The webhook never clears stripe_customer_id, so the id alone also matches
+// everyone who ever paid and has since lapsed back to free. An unknown plan
+// with a customer id counts as active: never risk a second subscription.
+function hasActiveSubscription(plan, stripeCustomerId) {
+  return !!stripeCustomerId && plan !== "free";
+}
+
+// Where a plan choice goes. One function so Settings, UpgradeScreen and
+// GuidedAssessment cannot disagree.
+//   "current"   — already on it; nothing to do.
+//   "portal"    — an active subscriber choosing Free: cancel in the portal.
+//   "downgrade" — Free with no active subscription: a plain profile write.
+//   "contact"   — an active subscriber choosing another paid tier. The live
+//                 portal has plan switching DISABLED and a Payment Link would
+//                 start a second subscription, so neither can do it.
+//   "checkout"  — everyone else, INCLUDING a lapsed subscriber: the portal
+//                 cannot start a new subscription, a Payment Link can.
+function planChoiceRoute(targetPlan, currentPlan, stripeCustomerId) {
+  if (targetPlan === currentPlan) return "current";
+  const active = hasActiveSubscription(currentPlan, stripeCustomerId);
+  if (targetPlan === "free") return active ? "portal" : "downgrade";
+  return active ? "contact" : "checkout";
 }
 
 const VAPID_PUBLIC_KEY = "BNrfmAAoP_PL4FocIjzfw5aaxzHsuCknwUeG5pX21v7cjvMCzt3PL2d70QbBJrcz3l36bfgnJ_N4wmC9EiM11mI"; // safe to be public — pairs with the server-only VAPID_PRIVATE_KEY
@@ -14009,10 +14435,12 @@ const VAPID_PUBLIC_KEY = "BNrfmAAoP_PL4FocIjzfw5aaxzHsuCknwUeG5pX21v7cjvMCzt3PL2
 // message counts — id stays "starter" since that's the live Stripe/DB enum
 // value, only the display name changed to "Basic"): FREE = "UNDERSTAND ME"
 // (Passport + athlete intake/discovery with Scout). BASIC = "BUILD MY PATH"
-// — matches FEATURE_MIN_PLAN above: this is where Pathway/My Next Move/
-// targets/benchmarks/PDF export actually unlock. PRO = "MANAGE MY JOURNEY"
+// — matches FEATURE_MIN_PLAN above: this is where Pathway/targets/
+// benchmarks/PDF export actually unlock (My Next Move is on Home for every
+// plan, so it is a Free line, not a Basic one). PRO = "MANAGE MY JOURNEY"
 // — adds the Passport Strength breakdown + the training/development plan (also gated at
-// "pro" in FEATURE_MIN_PLAN) plus richer target/outreach tracking. ELITE =
+// "pro" in FEATURE_MIN_PLAN). Outreach tracking and follow-up reminders are
+// part of "targets", which is Basic, so they are not a Pro line. ELITE =
 // "LIVE THE PLAN" — everything in Pro at the highest Scout volume ceiling;
 // schedule/diary/GOLSZ Motion have DB space reserved (migration 095) but no
 // shipped UI yet, so per §10 ("never promise future features as live") the
@@ -14029,7 +14457,8 @@ const PLANS = [
   // Strength they watch the score move and learn the Pro card was wrong. The
   // string stays in all four dictionaries (unused keys are kept here) so the
   // day it is genuinely gated it goes back with no re-translation.
-  { id: "pro",   name: "Pro",     price: 15, featKeys: ["plan_pro_feat1", "plan_pro_feat2", "plan_pro_feat3", "plan_pro_feat4", "plan_pro_feat5"] },
+  // Nor feat5: target tracking is gated at "starter".
+  { id: "pro",   name: "Pro",     price: 15, featKeys: ["plan_pro_feat1", "plan_pro_feat2", "plan_pro_feat3", "plan_pro_feat4"] },
   { id: "elite", name: "Elite",   price: 30, featKeys: ["plan_elite_feat1", "plan_elite_feat2"] },
 ];
 
@@ -14047,12 +14476,17 @@ const sb = (SUPABASE_URL && SUPABASE_ANON_KEY && typeof window !== "undefined" &
 // Surfaces in the Admin Panel's "Errors" tab. Best-effort only — if sb
 // itself isn't configured (preview mode, no backend) there's nowhere
 // to send this, so it just no-ops rather than erroring further.
-if (typeof window !== "undefined") {
-  const reportClientError = (message, detail) => {
-    if (!sb) return;
+// Top-level (not inside the `if` below) so ErrorBoundary can call it too: React
+// 18 production does not re-throw an error a boundary caught, so a render crash
+// never reaches window "error" and was never logged anywhere but the console.
+function reportClientError(message, detail) {
+  if (!sb || typeof window === "undefined") return;
+  try {
     sb.rpc("log_client_error", { p_message: message || "Unknown error", p_detail: detail || null, p_url: window.location.href })
-      .then(({ error }) => { if (error) console.error("GOLSZ client error log failed:", error); });
-  };
+      .then(({ error }) => { if (error) console.error("GOLSZ client error log failed:", error); }, () => {});
+  } catch (e) { /* the logger must never be the second crash */ }
+}
+if (typeof window !== "undefined") {
   window.addEventListener("error", (event) => {
     reportClientError(
       (event.error && event.error.message) || event.message,
@@ -14144,6 +14578,15 @@ async function createChildAccount(childFullName, childDobIso) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data && data.error) || "Couldn't create the athlete's account.");
   return data;
+}
+
+// With email confirmation on, signUp() for an address that ALREADY has an
+// account returns no error and a user whose identities array is empty (so
+// the response cannot be used to probe which emails exist). That user id is
+// not an account: no confirmation email is sent, and a checkout attributed to
+// it would charge a card and grant nothing.
+function signupHitExistingAccount(data) {
+  return !!(data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
 }
 
 function Auth({ onDone, paidReturn }) {
@@ -14264,7 +14707,7 @@ function Auth({ onDone, paidReturn }) {
       if (error) throw error;
       setResetSent(true);
     } catch (e) {
-      setErr((e && e.message) || t("auth_reset_failed"));
+      setErr(userErrorText(e, t, "auth_reset_failed"));
     } finally { setBusy(false); }
   }
 
@@ -14286,7 +14729,7 @@ function Auth({ onDone, paidReturn }) {
       setResendSent(true);
       startConfirmPolling(unconfirmedEmail, pw);
     } catch (e) {
-      setErr((e && e.message) || t("auth_resend_failed"));
+      setErr(userErrorText(e, t, "auth_resend_failed"));
     } finally { setResendBusy(false); }
   }
 
@@ -14435,6 +14878,11 @@ function Auth({ onDone, paidReturn }) {
           hp: website.trim(),
         } } });
         if (error) throw error;
+        if (signupHitExistingAccount(data)) {
+          if (checkoutTab) { try { checkoutTab.close(); } catch (e2) {} }
+          setErr(t("auth_email_already_registered"));
+          return;
+        }
         if (selected.price > 0 && stripeLinkFor(plan, currency) && data.user) {
           // attribute the checkout back to this account for the Stripe webhook
           const checkoutUrl = new URL(stripeLinkFor(plan, currency));
@@ -14509,6 +14957,11 @@ function Auth({ onDone, paidReturn }) {
           pending_child_name: childName.trim(), pending_child_dob: childDobIso,
         } } });
         if (error) throw error;
+        if (signupHitExistingAccount(data)) {
+          if (checkoutTab) { try { checkoutTab.close(); } catch (e2) {} }
+          setErr(t("auth_email_already_registered"));
+          return;
+        }
         // CHECKOUT, WHICH THIS BRANCH NEVER REACHED.
         // Under-18s are routed here by design and the parent buys on their
         // behalf, so this was the only path the target market could take and
@@ -14528,7 +14981,7 @@ function Auth({ onDone, paidReturn }) {
           // still has a child account waiting.
           if (data.session) {
             try { await createChildAccount(childName.trim(), childDobIso); }
-            catch (childErr) { setChildCreateErr((childErr && childErr.message) || "Couldn't add your athlete — you can try again from Account."); }
+            catch (childErr) { setChildCreateErr(userErrorText(childErr, t, "err_generic")); }
           } else {
             // (the child now rides on the auth user's metadata above)
           }
@@ -14552,7 +15005,7 @@ function Auth({ onDone, paidReturn }) {
             // failure but still let them into the app; they can add the
             // athlete again from Account (see Settings' own "add athlete"
             // form, which calls the same createChildAccount()).
-            setChildCreateErr((childErr && childErr.message) || "Couldn't add your athlete — you can try again from Account.");
+            setChildCreateErr(userErrorText(childErr, t, "err_generic"));
             onDone(true);
           }
         } else {
@@ -14572,7 +15025,7 @@ function Auth({ onDone, paidReturn }) {
     } catch (e) {
       if (checkoutTab) { try { checkoutTab.close(); } catch (e2) {} }
       console.error("GOLSZ auth error:", e);
-      let msg = "Something went wrong. Try again.";
+      let msg = t("err_generic");
       // The exact failure a real user hit: signed up, the confirmation
       // email never arrived, came back later to log in and got stuck with
       // no way forward. Supabase surfaces this as code "email_not_confirmed"
@@ -14582,13 +15035,18 @@ function Auth({ onDone, paidReturn }) {
       const isUnconfirmed = e && (e.code === "email_not_confirmed" || /email.*not.*confirmed/i.test(e.message || ""));
       if (isUnconfirmed) {
         setUnconfirmedEmail(email.trim());
-        msg = "Your email address hasn't been confirmed yet, so we can't sign you in. This usually means the confirmation email never reached your inbox — resend it below.";
+        msg = t("auth_err_unconfirmed");
+      } else if (!isSignupLike) {
+        // LOGIN. Supabase's own English ("Invalid login credentials",
+        // "Failed to fetch") used to be shown verbatim in every language.
+        // The raw error is in the console line above.
+        msg = t(loginErrorKey(e));
+      } else if (isNetworkError(e)) {
+        msg = t("err_network");
       } else if (e && typeof e.message === "string" && e.message.trim()) {
+        // Signup throws its own sentences (rate limit, verification), which
+        // are meant to be read as written.
         msg = e.message;
-      } else if (e instanceof TypeError) {
-        msg = "Couldn't reach Supabase — check your internet connection, that the project isn't paused, and that this page is served over http(s), not opened as a local file.";
-      } else if (e) {
-        try { msg = "Unexpected error: " + JSON.stringify(e); } catch { msg = "Unexpected error (see browser console for details)."; }
       }
       setErr(msg);
     } finally {
@@ -14934,7 +15392,7 @@ function ResetPassword({ onDone }) {
       if (error) throw error;
       setDone(true);
     } catch (e) {
-      setErr((e && e.message) || t("reset_pw_err"));
+      setErr(userErrorText(e, t, "reset_pw_err"));
     } finally { setBusy(false); }
   }
 
@@ -15095,7 +15553,13 @@ function Root() {
     })();
   }, [authed]);
 
-  async function signOut() { if (sb) { try { await sb.auth.signOut(); } catch (e) {} } setAuthed(false); setRecovering(false); setBanned(false); }
+  async function signOut() {
+    if (sb) {
+      await detachPushOnSignOut();
+      try { await sb.auth.signOut(); } catch (e) {}
+    }
+    setAuthed(false); setRecovering(false); setBanned(false);
+  }
 
   if (!ready) return React.createElement("div", { style: { minHeight: "100vh", background: C.pitch } });
   if (recovering) return React.createElement(ResetPassword, { onDone: () => setRecovering(false) });
@@ -15112,24 +15576,52 @@ function Root() {
 // React tree — the whole app goes blank with nothing on screen and no
 // way back except an actual page reload the person has to think to
 // do themselves. This catches that at the root and offers a reload
-// button instead of a silent blank screen. No error-tracking service
-// (e.g. Sentry) is wired up yet — see CLAUDE.md's known gaps — so this
-// only logs to the console, it doesn't report anywhere.
+// button instead of a silent blank screen. No third-party tracker (e.g.
+// Sentry) is wired up; componentDidCatch sends the error through the same
+// log_client_error path as the window handlers, so it lands in the Admin
+// Panel's Errors tab. React 18 production never forwards a caught render
+// error to window "error", so without this call it reached the console only.
+//
+// This boundary sits OUTSIDE LangProvider (it has to — the provider can be
+// what threw), so its copy cannot use t(). It reads the saved language itself
+// and carries its own three strings in all four languages.
+const BOUNDARY_COPY = {
+  en: { title: "Something went wrong.", body: "GOLSZ hit an unexpected error. Reloading usually fixes it.", reload: "Reload" },
+  fr: { title: "Une erreur est survenue.", body: "GOLSZ a rencontré une erreur inattendue. Recharger la page règle généralement le problème.", reload: "Recharger" },
+  es: { title: "Algo salió mal.", body: "GOLSZ encontró un error inesperado. Recargar suele solucionarlo.", reload: "Recargar" },
+  el: { title: "Κάτι πήγε στραβά.", body: "Το GOLSZ αντιμετώπισε ένα απρόσμενο σφάλμα. Η επαναφόρτωση συνήθως το διορθώνει.", reload: "Επαναφόρτωση" },
+};
+function boundaryCopy() {
+  let lang = "en";
+  try { const saved = localStorage.getItem("golsz-lang"); if (saved && Object.prototype.hasOwnProperty.call(BOUNDARY_COPY, saved)) lang = saved; } catch (e) {}
+  return BOUNDARY_COPY[lang];
+}
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
-  componentDidCatch(error, info) { console.error("GOLSZ uncaught render error:", error, info); }
+  componentDidCatch(error, info) {
+    console.error("GOLSZ uncaught render error:", error, info);
+    reportClientError(
+      (error && error.message) || String(error),
+      {
+        stack: error && error.stack ? String(error.stack).slice(0, 4000) : null,
+        componentStack: info && info.componentStack ? String(info.componentStack).slice(0, 4000) : null,
+        errorBoundary: true,
+      }
+    );
+  }
   render() {
     if (this.state.error) {
+      const copy = boundaryCopy();
       return React.createElement("div", {
         style: { minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: 24, background: "#0B0F0C", color: "#F5F7F5", fontFamily: "'Archivo', system-ui, sans-serif", textAlign: "center" },
       },
-        React.createElement("div", { style: { fontSize: 17, fontWeight: 800 } }, "Something went wrong."),
-        React.createElement("div", { style: { fontSize: 13.5, color: "#9AA39C", maxWidth: 320 } }, "GOLSZ hit an unexpected error. Reloading usually fixes it."),
+        React.createElement("div", { style: { fontSize: 17, fontWeight: 800 } }, copy.title),
+        React.createElement("div", { style: { fontSize: 13.5, color: "#9AA39C", maxWidth: 320 } }, copy.body),
         React.createElement("button", {
           onClick: () => window.location.reload(),
           style: { background: "#D4AF37", color: "#0B0F0C", border: "none", borderRadius: 12, padding: "12px 22px", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" },
-        }, "Reload"),
+        }, copy.reload),
       );
     }
     return this.props.children;
@@ -15166,7 +15658,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=384a60170fb15b29";
+    s.src = "js/app.js?v=3dff8888e47ea93f";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
@@ -15176,13 +15668,27 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   // Nothing above can detect the script loading but THROWING. The watchdog
   // can: if React has not mounted by now, something is wrong and the athlete
   // is looking at an animation that will never end.
+  // The app (and its I18N) never loaded, so this reads the saved language
+  // itself. Plain text only: these strings go into innerHTML.
+  var BOOT_COPY = {
+    en: ["Something stopped GOLSZ loading.", "Reload"],
+    fr: ["Quelque chose a empêché GOLSZ de se charger.", "Recharger"],
+    es: ["Algo impidió que GOLSZ se cargara.", "Recargar"],
+    el: ["Κάτι εμπόδισε τη φόρτωση του GOLSZ.", "Επαναφόρτωση"]
+  };
+  function bootCopy() {
+    var lang = "en";
+    try { var saved = localStorage.getItem("golsz-lang"); if (saved && BOOT_COPY.hasOwnProperty(saved)) lang = saved; } catch (e) {}
+    return BOOT_COPY[lang];
+  }
   function bootFailed(why) {
     var boot = document.getElementById("boot");
     if (!boot || boot.getAttribute("data-failed")) return;
     boot.setAttribute("data-failed", why);
+    var copy = bootCopy();
     boot.innerHTML = '<div style="padding:28px 22px;text-align:center;font:600 14px/1.55 Archivo,system-ui,sans-serif;color:#8B96A8">'
-      + "Something stopped GOLSZ loading."
-      + '<div style="margin-top:14px"><button onclick="location.reload()" style="font:800 13px Archivo,system-ui,sans-serif;padding:11px 20px;border-radius:10px;border:1px solid #D4AF37;background:none;color:#D4AF37;cursor:pointer">Reload</button></div></div>';
+      + copy[0]
+      + '<div style="margin-top:14px"><button onclick="location.reload()" style="font:800 13px Archivo,system-ui,sans-serif;padding:11px 20px;border-radius:10px;border:1px solid #D4AF37;background:none;color:#D4AF37;cursor:pointer">' + copy[1] + '</button></div></div>';
   }
   // THE TEST IS "IS THE BOOT STATE STILL THERE", not "does #root have a child".
   // The boot animation LIVES inside #root, so root.firstChild is truthy from

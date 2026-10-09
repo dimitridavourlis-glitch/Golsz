@@ -34,6 +34,33 @@ function cors(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 }
 
+// RETENTION. signup_attempts holds raw IP addresses and nothing deleted them,
+// so every sign-up IP was kept forever. The rate limit only ever looks at
+// today's row, so anything older than SIGNUP_IP_RETENTION_DAYS has no use.
+// Swept here, on the request that writes the table, rather than by a cron:
+// it needs no scheduler, and the table only grows when this runs. Best effort
+// — a failed sweep must never block a signup — and privacy.html states the
+// period, so change both together.
+const SIGNUP_IP_RETENTION_DAYS = 30;
+function retentionCutoff(now = new Date(), days = SIGNUP_IP_RETENTION_DAYS) {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+async function purgeOldAttempts(url, key) {
+  try {
+    const r = await fetch(`${url}/rest/v1/signup_attempts?attempt_date=lt.${retentionCutoff()}`, {
+      method: "DELETE",
+      headers: { apikey: key, Authorization: "Bearer " + key, Prefer: "return=minimal" },
+    });
+    if (!r.ok) console.error("GOLSZ signup-guard: old IP records not purged:", r.status);
+  } catch (e) {
+    console.error("GOLSZ signup-guard: old IP records not purged:", e);
+  }
+}
+
+export { retentionCutoff, SIGNUP_IP_RETENTION_DAYS };
+
 export default async function handler(req, res) {
   cors(req, res);
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -58,6 +85,7 @@ export default async function handler(req, res) {
     });
     if (!r.ok) return res.status(200).json({ allowed: true }); // fail open on a Supabase-side error
     const data = await r.json();
+    await purgeOldAttempts(url, key);
     return res.status(200).json({ allowed: !!(data && data.allowed) });
   } catch (e) {
     console.error("GOLSZ signup-guard error:", e);

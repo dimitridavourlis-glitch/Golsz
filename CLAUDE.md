@@ -28,7 +28,7 @@ npm run check     # syntax-checks every api/*.js and js/*.js, then runs the suit
 npm run compile   # re-compiles the JSX in golsz-app.html into js/app.js
 ```
 
-`npm run check` is the gate before any push. It currently runs **74 plain-Node `.cjs` suites, ~3,150
+`npm run check` is the gate before any push. It currently runs **80 plain-Node `.cjs` suites, ~3,700
 assertions**, no framework — `tests/run-all.cjs` discovers anything matching `test_*.cjs`. Many suites lift
 real expressions out of the source and `eval` them, so they fail when the source changes rather than when a
 mock does. There is no linter.
@@ -331,9 +331,19 @@ There is no build/lint/test tooling in this repo. Relevant commands:
 - Verifies the Stripe signature by hand (`crypto.createHmac`, no `stripe` npm dependency — keeps this
   project dependency-free like `api/scout.js`). Needs `bodyParser: false` (exported via `config`) since
   signature verification requires the raw request bytes, not Vercel's auto-parsed JSON.
-- Handles two event types: `checkout.session.completed` (sets `profiles.plan` + `stripe_customer_id`,
-  identified via `client_reference_id` — see below) and `customer.subscription.deleted` (reverts to the real
-  `'free'` tier — matched by `stripe_customer_id`). Everything else is acknowledged with 200 and ignored.
+- Handles five event types (`checkout.session.completed`, `customer.subscription.created/updated/deleted`,
+  `invoice.payment_failed`). Checkout binds `stripe_customer_id` to the profile named by `client_reference_id`
+  (see below); subscription events are matched by `stripe_customer_id`. Everything else is acknowledged with
+  200 and ignored.
+- **A paid plan is granted only for subscription status `active` or `trialing`** (`past_due` keeps it in sync
+  while Stripe retries). `incomplete` — first payment not yet succeeded, e.g. abandoned 3-D Secure — records
+  the billing state and leaves the plan alone; it used to grant the plan. (2026-10-09 audit.)
+- **`stripe_customer_id` is never cleared on cancellation, so its presence does NOT mean "subscribed".** A
+  profile on `plan = 'free'` with an old customer id is LAPSED: checkout may re-bind it to the new customer a
+  Payment Link creates (logged with `console.warn`); a profile on a paid plan is still refused (takeover
+  guard). Client-side, `hasActiveSubscription(plan, customerId)` and `planChoiceRoute()` in `golsz-app.html`
+  are the one definition of "active" — use them, never a bare customer-id check (that is how every past
+  subscriber was locked out of deleting their account).
 - **Plan is resolved from the Stripe Price, never from the amount paid.** `api/_plan-catalog.js` matches on
   Payment Link metadata (`session.metadata.golsz_plan`), then `price.id` / `lookup_key`, and validates
   `currency` + `price.unit_amount` against the catalogue. `resolvePlanOrLog()` returns `{ plan: null, reason }`
@@ -1031,7 +1041,9 @@ building a parallel `ai_*` schema next to it.
 - **Rate limiting + idempotency**: in-memory, scoped to one warm serverless instance (`isRateLimited()`,
   `isDuplicateRequest()`) — an honest, documented limitation, not a distributed guarantee; the daily-limit
   atomicity above is the real guarantee, this is a best-effort second layer against a double-click/retry-storm
-  landing on the same instance. Client sends a `requestId` (UUID) per send.
+  landing on the same instance. The client mints one `requestId` per QUESTION and reuses it on Retry (sent
+  with `retry: true`); the server checks the replay cache BEFORE the rate limiter, so a retry after a timeout
+  is served the original answer instead of being charged twice. (2026-10-09 audit.)
 - **Emergency switches**: `SCOUT_GLOBAL_ENABLED`/`SCOUT_PREMIUM_ENABLED`/`SCOUT_DAILY_SPEND_LIMIT_USD`/
   `SCOUT_MONTHLY_SPEND_LIMIT_USD` env vars, checked before any model call or DB write; a tripped switch
   returns the same graceful message an ordinary outage would.
@@ -1213,6 +1225,18 @@ Feed/Discover/Passport's Message buttons no longer gate on `following`/`followed
 you add another place that surfaces a Message button, it doesn't need any follow-status check either.
 
 **Not yet built / known gaps:**
+- **Migration 144 (access hardening, 2026-10-09 audit) must be run in the SQL Editor** before or with the
+  code from the same audit: it makes `public_profile_names` `security_invoker` (it had become a full member
+  directory for any signed-in account), makes `handle_new_user()` refuse a missing or under-18 date of birth
+  (the 18+ rule had been client-only), stops a link's own initiator approving a `parent_links` row, limits
+  storage listing to the owner's folder, keeps non-admin events private (Scout presented user-created
+  "public" events as real GOLSZ listings), makes the shared-Passport RPCs honour `show_club`/`show_country`
+  and hide banned users, rewrites `plan_config.live_features` to what is built, and sets Sonnet pricing to
+  $2/$10. privacy.html already describes the post-144 behaviour. Its header lists the pre- and post-run checks.
+- **The push-webhook secret is still compromised.** It was committed in an earlier version of migration 026,
+  and this repository is PUBLIC on GitHub, so git history exposes it. Rotate `SUPABASE_WEBHOOK_SECRET` in
+  Vercel and re-run migration 026 with the new value. Everything else in the repo (this file, every
+  migration) is public for the same reason — write nothing here you would not publish.
 - **No 2FA/MFA and no granular admin roles.** A security audit this session identified both as real gaps —
   every admin has the exact same full `is_admin` flag (no reduced-scope roles), and there's no second factor
   on login for anyone, admin or not. Deliberately deferred (not forgotten) in favor of shipping CSP, the
@@ -1238,7 +1262,14 @@ you add another place that surfaces a Message button, it doesn't need any follow
   sandbox/test mode and that Live-mode links still needed creating. They exist — do not create them again.)
   Account `acct_1TqxVCRtNFWlwsi4` (Canada) holds 3 products, 9 Prices (CAD/USD/EUR × Basic/Pro/Elite),
   9 Live Payment Links, a customer portal set to cancel-at-period-end, and webhook destination
-  `we_1UBeHtRtNFWlwsi4uWHnFphA` → `https://golsz.com/api/stripe-webhook` on 5 events. All nine
+  `we_1UBeHtRtNFWlwsi4uWHnFphA` → `https://golsz.com/api/stripe-webhook` on 5 events.
+  **The portal login link and the CAD Basic Payment Link share a short code** (`.../p/login/bJe5kF64...` and
+  `buy.stripe.com/bJe5kF64...`). Verified against the live account on 2026-10-09: both are genuine — Stripe
+  reuses short codes across the two hosts. A previous guard rejected the portal link for that reason and
+  silently disabled Manage billing for every subscriber; do not reintroduce it. The portal allows cancel (at
+  period end), card updates and invoices, but **plan switching is disabled**, so an active subscriber is told
+  to email hello@golsz.com to change tier (`settings_plan_switch_contact`) — remove that message if plan
+  switching is ever enabled in the portal configuration (`bpc_1UBZUwRtNFWlwsi4HXthKxbz`). All nine
   `STRIPE_PRICE_*` vars are set in Vercel Production and `STRIPE_WEBHOOK_SECRET` holds that destination's
   signing secret.
   **THE SIGNING SECRET IS UNVERIFIED AND THE TEST SUITE CANNOT VERIFY IT.** An unsigned POST to the

@@ -178,8 +178,10 @@ function installFetch({ tokenUser = PARENT, authOk = true, linkThrows = false, l
      /sb\.from\("athletes"\)\.select\("sport, club_name, recruiting_status, scout_context"\)\.eq\("id", who\)/.test(APP), true);
   // An empty dep array here kept the first child's pathway on screen for the
   // whole session when a parent switched athlete.
+  // (reloadKey rides along since the load-failure Retry — it re-runs the same
+  // read; it does not replace actingFor as a dependency.)
   ck("...and it re-fetches when the parent switches athlete",
-     /\}, \[viewUserId, actingFor\]\);/.test(APP), true);
+     /\}, \[viewUserId, actingFor(?:, reloadKey)?\]\);/.test(APP), true);
 
   console.log("\n-- manage mode is EDIT access, not view access --");
   ck("Passport distinguishes manage mode from viewing a stranger",
