@@ -117,7 +117,7 @@
           <ul>
             <li><strong>Time in the app.</strong> While you are signed in and the app is open and visible on your screen, it records one minute of activity for each minute, totalled per day against your account. You and GOLSZ administrators can see these daily totals; we use them to understand how the product is used.</li>
             <li><strong>Error reports.</strong> If the app hits an unexpected error, it sends us the error message, technical details and the address of the page you were on, linked to your account if you are signed in. Our servers record their own errors the same way. GOLSZ administrators use these reports to find and fix faults.</li>
-            <li><strong>Sign-up protection.</strong> When an account is created, we record the IP address the request came from, the date, and how many sign-up attempts came from that address that day, so we can stop mass account creation. This record is not linked to the account created, and we do not currently delete these records automatically. The sign-up form also contains a hidden field that people can't see but automated scripts tend to fill in; an account created with it filled in starts with the lowest trust score (section 4).</li>
+            <li><strong>Sign-up protection.</strong> When an account is created, we record the IP address the request came from, the date, and how many sign-up attempts came from that address that day, so we can stop mass account creation. This record is not linked to the account created, and it is deleted automatically after 30 days. The sign-up form also contains a hidden field that people can't see but automated scripts tend to fill in; an account created with it filled in starts with the lowest trust score (section 4).</li>
             <li><strong>Approximate location, for currency.</strong> To show prices in the right currency, our hosting provider works out your country (and, in Europe, your continent) from your IP address. We use only the resulting region &mdash; Canada, the United States, Europe or elsewhere &mdash; and we do not store it.</li>
             <li><strong>Infrastructure.</strong> Our hosting and database providers (Vercel and Supabase) process standard request information, such as IP addresses and the time of each request, as part of delivering and protecting the service.</li>
           </ul>
@@ -169,7 +169,7 @@
             <li>the log of actions GOLSZ administrators took on your account;</li>
             <li>error reports, with the link to your account removed (a server-side report's technical details can still contain your former account identifier);</li>
             <li>the unmatched Scout questions described in section 2, which were never linked to your account;</li>
-            <li>sign-up protection records (IP address, date and attempt count), which were never linked to your account; and</li>
+            <li>sign-up protection records (IP address, date and attempt count), which were never linked to your account and are deleted after 30 days; and</li>
             <li>payment records held by Stripe, which Stripe keeps under its own legal obligations and policies.</li>
           </ul>
           <p>Copies may also remain for a limited time in our database provider's backups. <strong>[Legal review advised]</strong> specific retention periods for each category above (rather than "kept"), the backup period, and whether moderation records should keep the text that was flagged should be defined with counsel to meet GDPR and Law 25 data-minimisation requirements precisely.</p>
