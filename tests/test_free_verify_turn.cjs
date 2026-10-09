@@ -46,20 +46,25 @@ const APPROVAL_SRC = slice("const PATHWAY_APPROVAL_PATTERNS = [", "\n// The app'
 const athleteApprovedPathwayBuild = new Function(APPROVAL_SRC)();
 
 const runGateRaw = new Function("userPlan", "classification", "userIsAdmin", "userAiUnlimited", "incomingText", "athleteApprovedPathwayBuild", `
-  let released = false;
-  const reservedQuestion = true, reservedFreeAi = true, userId = "u", questionsRemaining = 2, dailyLimit = 3;
+  let released = false, spendRecorded = false;
+  // let, not const: the gate clears both flags after refunding them, so a
+  // later error path in the handler cannot refund the same question twice.
+  let reservedQuestion = true, reservedFreeAi = true;
+  const userId = "u", questionsRemaining = 2, dailyLimit = 3;
   const releaseScoutQuestion = async () => { released = true; };
   const releaseFreeAiQuestion = async () => { released = true; };
+  // The classifier already ran (and was billed) before this gate refuses.
+  const recordRequestSpend = async () => { spendRecorded = true; };
   let status = null, body = null;
   const res = { status(s) { status = s; return { json(b) { body = b; return { __sent: true }; } }; } };
   const run = async () => {
     ${GATE_SRC.replace(/\breturn res\.status/g, "return __sent(res.status")
               .replace(/scout_usage: \{ remaining: questionsRemaining, limit: dailyLimit \},\n\s*\}\);/,
                        "scout_usage: { remaining: questionsRemaining, limit: dailyLimit },\n        }));")}
-    return { blocked: false, maxToolTurns, status, body, released };
+    return { blocked: false, maxToolTurns, status, body, released, spendRecorded };
   };
   const __sent = (v) => ({ __blocked: true, v });
-  return run().then((r) => (r && r.__blocked ? { blocked: true, status, body, released } : r));
+  return run().then((r) => (r && r.__blocked ? { blocked: true, status, body, released, spendRecorded, flagsCleared: !reservedQuestion && !reservedFreeAi } : r));
 `);
 
 // Existing call sites keep their four arguments and get an ordinary question;
@@ -89,7 +94,20 @@ const none = { intent: "career_advice", needs_tool: false };
     ck("...and the reserved question is released", r.released, true);
     ck("...and the message no longer claims web search is blocked too",
        /Web and player-database/.test(r.body.error), false);
-    ck("...and names the database specifically", /Player-database search/.test(r.body.error), true);
+    // Discovery is off (migration 143): NO plan searches players, so the
+    // upsell used to sell a feature that does not exist ("Player-database
+    // search is a Starter+ feature"). It must say what an upgrade really
+    // buys, name the plan the way the athlete sees it, and say plainly that
+    // player search is not on offer.
+    ck("...and does not sell player search as a paid feature",
+       /Player-database search is a Starter\+ feature/.test(r.body.error), false);
+    ck("...and names the plan as athletes see it (Basic), not the enum",
+       /Basic/.test(r.body.error) && !/Starter/.test(r.body.error), true);
+    ck("...and says player search is not available on any plan",
+       /individual players on any plan/.test(r.body.error), true);
+    ck("...and offers the upgrade", r.body.can_upgrade, true);
+    ck("...and records the classifier's spend before refusing", r.spendRecorded, true);
+    ck("...and clears the reservation flags so nothing refunds twice", r.flagsCleared, true);
   }
 
   // ---- 3. paid accounts keep the validated four turns -------------------
@@ -122,7 +140,9 @@ const none = { intent: "career_advice", needs_tool: false };
   // ---- 6. the cap actually reaches the tool loop ------------------------
   // A cap that is computed and then not threaded through is not a cap.
   const LOOP = slice("async function runDeepReply(", "for (let turn = 0", "tool loop");
-  ck("runDeepReply accepts a maxToolTurns argument", /maxToolTurns\)/.test(LOOP), true);
+  // `ledger` (the request's spend ledger) follows it now; the cap is still
+  // a positional argument of the signature.
+  ck("runDeepReply accepts a maxToolTurns argument", /maxToolTurns(, ledger)?\)/.test(LOOP), true);
   ck("...and defaults to 4 when it is not supplied",
      /typeof maxToolTurns === "number" && maxToolTurns > 0 \? maxToolTurns : 4/.test(LOOP), true);
   // `await` anchors this to real invocations — without it the declaration

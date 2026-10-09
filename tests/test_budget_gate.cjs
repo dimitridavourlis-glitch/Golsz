@@ -121,10 +121,16 @@ ck("free reaches advanced on the same real case (free/starter share the advanced
    budgetGateSync("advanced", "free", REAL_FRESH, REAL_CACHED, ANTHROPIC_DEFAULTS), "advanced");
 
 console.log("\n-- the gate still bites when it should --");
+// 12,000 fresh tokens, was 8,000. Sonnet's real price is $2/$10 per 1M, not
+// the $3/$15 these defaults used to carry (corrected 2026-10-09), so an
+// 8,000-token conversation now genuinely fits under starter's $0.03 ceiling
+// (~$0.027). The gate's job is unchanged — it must still bite on a
+// conversation that does not fit — so the fixture moves past the new break
+// point (~9,300 fresh tokens) instead of the assertion being dropped.
 ck("a very long conversation still downgrades starter",
-   budgetGateSync("advanced", "starter", 8000, SYS, ANTHROPIC_DEFAULTS) !== "advanced", true);
+   budgetGateSync("advanced", "starter", 12000, SYS, ANTHROPIC_DEFAULTS) !== "advanced", true);
 ck("elite survives that same long conversation",
-   budgetGateSync("advanced", "elite", 8000, SYS, ANTHROPIC_DEFAULTS), "advanced");
+   budgetGateSync("advanced", "elite", 12000, SYS, ANTHROPIC_DEFAULTS), "advanced");
 ck("gate never upgrades above the tier passed in",
    budgetGateSync("standard", "elite", CONVO, SYS, ANTHROPIC_DEFAULTS), "standard");
 ck("economy is the floor, never downgraded away",

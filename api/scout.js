@@ -184,7 +184,13 @@ const MODEL_REGISTRY = {
 // identical in content and order. This is a billing boundary, not a context
 // one — unlike the earlier attempt that moved athlete state into `messages`,
 // which changed the interaction shape and broke JSON output entirely.
-async function callAnthropic(apiKey, { model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences, timeoutMs }) {
+//
+// `ledger` (optional, one per request — see createSpendLedger) is handed the
+// usage of EVERY call that returns one, whatever the caller then does with the
+// response. That is the point: a classifier call, a Haiku attempt that is
+// thrown away, a retry and a truncation continuation are all billed by
+// Anthropic, and the request's recorded spend has to see every one of them.
+async function callAnthropic(apiKey, { model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences, timeoutMs, ledger }) {
   const systemBlocks = [{ type: "text", text: system, cache_control: { type: "ephemeral" } }];
   if (systemDynamic) systemBlocks.push({ type: "text", text: systemDynamic });
   const body = { model, max_tokens: maxTokens || 4096, system: systemBlocks, messages };
@@ -205,7 +211,19 @@ async function callAnthropic(apiKey, { model, system, systemDynamic, messages, t
     console.error("GOLSZ Anthropic call failed:", timedOut ? "timeout after " + callBudget(timeoutMs) + "ms" : String(e && e.message || e));
     return { ok: false, status: timedOut ? 504 : 502, data: { error: { message: timedOut ? "model call timed out" : "model call failed" } } };
   }
-  return { ok: r.ok, status: r.status, data: await r.json() };
+  const data = await r.json();
+  if (ledger && data && data.usage) ledger.add(model, data.usage);
+  // A REFUSED GENERATION'S PARTIAL TEXT IS NEVER OUTPUT. stop_reason
+  // "refusal" can arrive after the model has already written part of a reply,
+  // and every extractor downstream (memory writes, profile updates, the
+  // salvage parser) would otherwise mine that fragment as if it were a
+  // finished answer. Text is dropped here, at the one place every Anthropic
+  // response passes through; deriveReplyText() supplies the athlete-facing
+  // decline. Non-text blocks are kept so search telemetry still counts.
+  if (data && data.stop_reason === "refusal" && Array.isArray(data.content)) {
+    data.content = data.content.filter((b) => !(b && b.type === "text"));
+  }
+  return { ok: r.ok, status: r.status, data };
 }
 
 // $ per 1M tokens (standard, non-intro pricing) — used only to estimate a
@@ -213,10 +231,31 @@ async function callAnthropic(apiKey, { model, system, systemDynamic, messages, t
 // monthly cost cards. An estimate, not a bill: Anthropic's own invoice is
 // always the source of truth, but this tracks closely since it uses the
 // same real usage numbers (input/output/cache tokens) the API returns.
+//
+// claude-sonnet-5 is $2 in / $10 out per 1M (Anthropic list price, checked
+// 2026-10-09). It used to read $3 / $15 here and in ANTHROPIC_DEFAULTS, which
+// overstated every Sonnet reply by 50% in scout_routing_log and in the spend
+// kill switches. The scout_model_config rows seeded by migration 110 carry the
+// same stale numbers and need their own UPDATE; the DB is what budgetGate()
+// reads when it is populated, this table is what estimateCost() reads always.
 const PRICING = {
-  "claude-sonnet-5": { input: 3, output: 15 },
+  "claude-sonnet-5": { input: 2, output: 10 },
   "claude-haiku-4-5": { input: 1, output: 5 },
 };
+
+// The web_search server tool is billed per search on top of tokens: $10 per
+// 1,000 searches. It used to be left out of every estimate, so a reply that
+// ran three searches was recorded at its token cost alone. Env-overridable in
+// case the list price moves before this constant does. A function, like
+// fallbackPricing() above, so it is read at call time.
+function webSearchCostPerRequest() {
+  const v = Number(process.env.SCOUT_WEB_SEARCH_COST || 0.01);
+  return Number.isFinite(v) && v >= 0 ? v : 0.01;
+}
+function webSearchRequestsOf(usage) {
+  const n = usage && usage.server_tool_use && usage.server_tool_use.web_search_requests;
+  return typeof n === "number" && Number.isFinite(n) && n > 0 ? n : 0;
+}
 
 // The emergency provider's per-1M rates. Env-driven because only the
 // operator knows which vendor they signed up with. If the fallback model
@@ -251,7 +290,8 @@ function estimateCost(model, usage) {
     (uncachedInput * price.input) / 1e6 +
     (cacheRead * price.input * 0.1) / 1e6 +
     (cacheWrite * price.input * 1.25) / 1e6 +
-    (output * price.output) / 1e6
+    (output * price.output) / 1e6 +
+    webSearchRequestsOf(usage) * webSearchCostPerRequest()
   );
 }
 
@@ -377,8 +417,8 @@ function selectModelTier({ plan, classification, score }) {
 const ANTHROPIC_DEFAULTS = {
   economy: { provider: "anthropic", model_name: "claude-haiku-4-5", input_cost_per_million: 1, output_cost_per_million: 5, max_output_tokens: 1024 },
   standard: { provider: "anthropic", model_name: "claude-haiku-4-5", input_cost_per_million: 1, output_cost_per_million: 5, max_output_tokens: 2048 },
-  advanced: { provider: "anthropic", model_name: "claude-sonnet-5", input_cost_per_million: 3, output_cost_per_million: 15, max_output_tokens: 1024 },
-  premium: { provider: "anthropic", model_name: "claude-sonnet-5", input_cost_per_million: 3, output_cost_per_million: 15, max_output_tokens: 2048 },
+  advanced: { provider: "anthropic", model_name: "claude-sonnet-5", input_cost_per_million: 2, output_cost_per_million: 10, max_output_tokens: 1024 },
+  premium: { provider: "anthropic", model_name: "claude-sonnet-5", input_cost_per_million: 2, output_cost_per_million: 10, max_output_tokens: 2048 },
 };
 
 let modelConfigCache = { at: 0, byTier: null };
@@ -438,7 +478,8 @@ const HARD_MAX_COST_PER_REQUEST = {
 };
 
 // Cache-read rate. scout_model_config.cached_input_cost_per_million is
-// seeded for the Anthropic rows ($0.30/M against $3/M base) but left null on
+// seeded for the Anthropic rows (Sonnet's is $0.20/M against $2/M base; the
+// migration-110 seed still says $0.30, see PRICING) but left null on
 // the dormant provider rows, so fall back to the documented ~10% of base
 // rather than to zero — a null must never make a tier look free.
 function cachedInputRate(cfg) {
@@ -511,7 +552,7 @@ async function budgetGate(tier, plan, freshInputTokens, cachedInputTokens) {
 // change, once a real key and a benchmark pass exist.
 const anthropicAdapter = {
   provider: "anthropic",
-  async generate({ apiKey, model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences, timeoutMs }) {
+  async generate({ apiKey, model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences, timeoutMs, ledger }) {
     // systemDynamic was destructured here but never forwarded — a real bug
     // found 2026-08-09 while adding the second provider. Every caller that
     // went through the adapter (rather than calling callAnthropic directly)
@@ -520,7 +561,9 @@ const anthropicAdapter = {
     // the "live search is unavailable, don't invent results" notice through
     // this field: a degraded reply was answering with no athlete context and
     // without being told it was degraded.
-    return callAnthropic(apiKey, { model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences, timeoutMs });
+    // The same is true of `ledger`: a field this adapter does not forward is
+    // a call whose cost the request never records.
+    return callAnthropic(apiKey, { model, system, systemDynamic, messages, tools, thinking, maxTokens, stopSequences, timeoutMs, ledger });
   },
 };
 
@@ -588,7 +631,7 @@ const openaiCompatibleAdapter = {
   // emergency no-tools reply, so it can never claim to have run a web or
   // database search. The caller pairs it with the same "say plainly that
   // live search is unavailable" notice used by the Haiku fallback.
-  async generate({ apiKey, model, system, systemDynamic, messages, maxTokens, timeoutMs }) {
+  async generate({ apiKey, model, system, systemDynamic, messages, maxTokens, timeoutMs, ledger }) {
     let r;
     try {
       r = await fetchWithDeadline(openaiCompatEndpoint(), {
@@ -610,7 +653,9 @@ const openaiCompatibleAdapter = {
     }
     const raw = await r.json();
     if (!r.ok) return { ok: false, status: r.status, data: raw };
-    return { ok: true, status: r.status, data: normalizeOpenAiResponse(raw) };
+    const normalized = normalizeOpenAiResponse(raw);
+    if (ledger) ledger.add(model, normalized.usage);
+    return { ok: true, status: r.status, data: normalized };
   },
 };
 
@@ -770,13 +815,41 @@ function isRateLimited(userId) {
   return typeof last === "number" && now - last < RATE_LIMIT_MIN_INTERVAL_MS;
 }
 
-function isDuplicateRequest(requestId) {
-  if (!requestId) return false;
+// The id is client-minted, so it is bounded before it is used as a Map key
+// and a cache key. 64 covers a UUID (36) and the client's Date.now()+random
+// fallback with room to spare; anything else is not from this product and is
+// simply treated as absent (no idempotency), never as an error.
+const MAX_REQUEST_ID_LENGTH = 64;
+function normalizeRequestId(value) {
+  if (typeof value !== "string") return null;
+  if (!value.length || value.length > MAX_REQUEST_ID_LENGTH) return null;
+  return /^[A-Za-z0-9._:-]+$/.test(value) ? value : null;
+}
+
+// A request still being worked on cannot be older than the function's own
+// maxDuration (60s): past that the platform has killed it. An id seen longer
+// ago than this with no replay entry belongs to a request that died, and a
+// retry of it must run rather than be told it is "already being processed"
+// for the rest of REQUEST_ID_TTL_MS.
+const REQUEST_IN_FLIGHT_MAX_MS = 65 * 1000;
+
+// Split into look / mark / forget, where this used to be one check-and-mark.
+// The handler now has to look BEFORE the rate limiter (so a fast same-id
+// retry gets its replay instead of a 429), mark only once the request is
+// actually going to run (so a 429 does not poison the id), and forget the id
+// whenever it gives the question back (so the athlete's retry is answered,
+// not refused as a duplicate of a request that produced nothing).
+function requestIdSeenAt(requestId) {
+  if (!requestId) return null;
   const now = Date.now();
   for (const [id, at] of seenRequestIds) if (now - at > REQUEST_ID_TTL_MS) seenRequestIds.delete(id);
-  if (seenRequestIds.has(requestId)) return true;
-  seenRequestIds.set(requestId, now);
-  return false;
+  return seenRequestIds.has(requestId) ? seenRequestIds.get(requestId) : null;
+}
+function markRequestId(requestId) {
+  if (requestId) seenRequestIds.set(requestId, Date.now());
+}
+function forgetRequestId(requestId) {
+  if (requestId) seenRequestIds.delete(requestId);
 }
 
 // Generic response cache (migration 054) — only for genuinely
@@ -997,7 +1070,12 @@ async function logRouting(answeredBy, classification, model, usage, extra) {
         cache_read_input_tokens: num(usage && usage.cache_read_input_tokens),
         cache_creation_input_tokens: num(usage && usage.cache_creation_input_tokens),
         output_tokens: num(usage && usage.output_tokens),
-        estimated_cost_usd: estimateCost(model, usage),
+        // THE WHOLE REQUEST'S COST when the caller has it (extra.costUsd, the
+        // spend ledger's total: classifier + every attempt + continuations +
+        // search fees), not just the answering call's. The token columns
+        // above stay the answering call's own, so per-model token analytics
+        // keep their meaning; the dollar column is what the margin cards sum.
+        estimated_cost_usd: (extra && typeof extra.costUsd === "number" && Number.isFinite(extra.costUsd)) ? extra.costUsd : estimateCost(model, usage),
         plan: (extra && extra.plan) || null,
         escalation_reason: (extra && extra.escalationReason) || null,
         // Anthropic-only until Phase 3 of the AI Scout architecture plan
@@ -3473,6 +3551,15 @@ function parseReplyObject(clean) {
   return found ? out : null;
 }
 
+// A DECLINE IS AN ANSWER, NOT AN EMPTY REPLY. stop_reason "refusal" means the
+// model's safety layer declined; callAnthropic() has already dropped any
+// partial text, so without this every refusal fell through to null and was
+// shown as "connection dropped, send it again" — inviting the athlete to
+// resend the same thing. The client shows its own translation of this when it
+// sees stop_reason "refusal"; this English text is what any other reader
+// (the replay entry, the routing log) gets.
+const REFUSAL_REPLY_TEXT = "That's not something I can help with. Ask me about your sport, your training or your pathway and I'm on it.";
+
 // The athlete must NEVER see the JSON envelope. This derives the clean,
 // human-readable reply ONCE on the server and ships it as data.reply_text, so
 // the client just renders a string instead of re-implementing parsing (which
@@ -3480,12 +3567,14 @@ function parseReplyObject(clean) {
 // the "{" slipped past the client guard and the whole object was rendered
 // into the chat bubble).
 //
-// Four fallbacks, in order, because a reply is worthless if it is unreadable:
+// Four fallbacks, in order, because a reply is worthless if it is unreadable
+// (a refusal short-circuits all four — see REFUSAL_REPLY_TEXT above):
 //   1. strict/salvaged parse -> .reply            (the normal path)
 //   2. salvage just the "reply" value             (truncated object)
 //   3. strip the JSON block out and keep any real prose around it
 //   4. null -> the client shows honest error copy, never braces
 function deriveReplyText(data) {
+  if (data && data.stop_reason === "refusal") return REFUSAL_REPLY_TEXT;
   const blocks = (data && data.content) || [];
   const raw = blocks.map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
   const clean = raw.replace(/```json|```/g, "").trim();
@@ -4422,7 +4511,25 @@ async function searchEvents(input) {
 //
 // Events search stays: a listing is not a person, and nothing about it exposes
 // one athlete to another.
-const SCOUT_SEARCH_TOOLS = [{ type: "web_search_20250305", name: "web_search" }, SEARCH_EVENTS_TOOL];
+//
+// max_uses CAPS SEARCHES PER CALL. web_search runs on Anthropic's side, in its
+// own loop of up to ten iterations inside ONE of our tool turns, and each
+// search is billed. So FREE_VERIFY_TURNS = 1 bounded our loop and not the
+// searches: a free account's single "verification turn" could still run ten.
+// 1 for a free account (one fact checked), 3 for paid — enough for a real
+// comparison, and a hard ceiling on what one question can spend on search.
+// Past the cap the API returns an error block in-band (HTTP 200,
+// max_uses_exceeded) and the model answers from what it has.
+// The paid set stays one shared array (the default for runDeepReply); the free
+// set is a second, equally fixed one. Both are stable byte-for-byte, so each
+// is its own cacheable prefix rather than one rebuilt per request.
+const WEB_SEARCH_MAX_USES_FREE = 1;
+const WEB_SEARCH_MAX_USES_PAID = 3;
+const SCOUT_SEARCH_TOOLS = [{ type: "web_search_20250305", name: "web_search", max_uses: WEB_SEARCH_MAX_USES_PAID }, SEARCH_EVENTS_TOOL];
+const SCOUT_SEARCH_TOOLS_FREE = [{ type: "web_search_20250305", name: "web_search", max_uses: WEB_SEARCH_MAX_USES_FREE }, SEARCH_EVENTS_TOOL];
+function searchToolsFor(freeTier) {
+  return freeTier ? SCOUT_SEARCH_TOOLS_FREE : SCOUT_SEARCH_TOOLS;
+}
 
 // ---- Intent classifier / router ----
 // Classifies every message into the taxonomy below using a cheap Haiku
@@ -4557,6 +4664,115 @@ function latestUserTextLength(conversation) {
   return last.content.reduce((sum, b) => sum + ((b && typeof b.text === "string") ? b.text.length : 0), 0);
 }
 
+// ---- THE REQUEST BOUNDARY: WHAT A CLIENT MAY PUT IN FRONT OF THE MODEL ----
+//
+// `messages` arrives from the browser and used to be forwarded to Anthropic
+// almost verbatim. Every size check here measured JSON bytes or text length,
+// and neither measures cost: a document or image block with
+// source.type "url" is ~100 bytes of JSON and can be hundreds of thousands of
+// input tokens once Anthropic fetches it — re-sent on every tool turn of the
+// request, and billed to GOLSZ. Likewise a client-supplied cache_control
+// buys a 1.25x cache write on whatever it marks, and tool_use/tool_result or
+// server-tool blocks let a caller script the model's own history.
+//
+// So this is an ALLOWLIST, applied once, before anything else reads the
+// conversation. What the real client sends (golsz-app.html, Scout.send):
+//   - role "user" / "assistant", content a string — every history turn;
+//   - the last user turn as [image(base64), text] when a photo is attached.
+// That is exactly what survives. Everything else is dropped, field by field
+// as well as block by block (a text block keeps `type` and `text` and nothing
+// else). An image is accepted only as inline base64 of a common photo type,
+// only in the LAST user turn (the client never re-sends an earlier photo, and
+// a historical image would be re-billed on every turn), at most one per
+// request, and under an explicit size cap. The client resizes a photo to
+// 1024px on its longest side before sending, so a real phone photo lands at
+// a few hundred KB; the cap below is several times that.
+//
+// The conversation must end on a user turn. A trailing assistant turn is a
+// prefill, which claude-sonnet-5 rejects with a 400 — after the classifier has
+// already been billed — and which no real client sends.
+const SCOUT_IMAGE_MEDIA_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const MAX_IMAGE_BASE64_CHARS = 1500 * 1024; // ~1.1MB decoded
+const MAX_IMAGES_PER_REQUEST = 1;
+// Anthropic bills an image by its pixels (~w*h/750 tokens) after downscaling
+// anything past ~1.15 megapixels, so ~1,600 tokens is the most one image can
+// cost — and the right number for budgetGate(), where the base64 length/4
+// that the JSON-length estimate used to charge for it was ~100x too high.
+const IMAGE_TOKEN_ESTIMATE = 1600;
+const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
+
+function sanitizeConversation(messages) {
+  if (!Array.isArray(messages)) return { ok: false, code: "invalid_messages", error: "messages[] required" };
+  let lastUserIdx = -1;
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (messages[i] && messages[i].role === "user") { lastUserIdx = i; break; }
+  }
+  const out = [];
+  let imageCount = 0;
+  let imageChars = 0;
+  for (let i = 0; i < messages.length; i += 1) {
+    const m = messages[i];
+    if (!m || typeof m !== "object") continue;
+    if (m.role !== "user" && m.role !== "assistant") continue;
+    if (typeof m.content === "string") {
+      if (m.content.length) out.push({ role: m.role, content: m.content });
+      continue;
+    }
+    if (!Array.isArray(m.content)) continue;
+    const blocks = [];
+    for (const b of m.content) {
+      if (!b || typeof b !== "object") continue;
+      if (b.type === "text") {
+        if (typeof b.text === "string" && b.text.length) blocks.push({ type: "text", text: b.text });
+        continue;
+      }
+      if (b.type === "image" && m.role === "user" && i === lastUserIdx) {
+        const src = b.source;
+        // url / file sources, unknown media types and non-string data are
+        // dropped like any other disallowed block, not refused: the athlete's
+        // text still deserves an answer.
+        if (!src || src.type !== "base64" || !SCOUT_IMAGE_MEDIA_TYPES.has(src.media_type)) continue;
+        if (typeof src.data !== "string" || !src.data.length) continue;
+        // These three are refused, because silently answering a photo
+        // question without the photo is worse than saying it did not send.
+        if (src.data.length > MAX_IMAGE_BASE64_CHARS) return { ok: false, code: "image_too_large", error: "That photo is too large to send." };
+        if (!BASE64_RE.test(src.data)) return { ok: false, code: "invalid_image", error: "That photo could not be read." };
+        if (imageCount >= MAX_IMAGES_PER_REQUEST) return { ok: false, code: "too_many_images", error: "Send one photo at a time." };
+        imageCount += 1;
+        imageChars += src.data.length;
+        blocks.push({ type: "image", source: { type: "base64", media_type: src.media_type, data: src.data } });
+      }
+      // Every other block type — document, image-by-url, tool_use,
+      // tool_result, server_tool_use, web_search_tool_result, thinking,
+      // search_result, container_upload — falls through and is dropped.
+    }
+    if (blocks.length) out.push({ role: m.role, content: blocks });
+  }
+  if (!out.length || out[out.length - 1].role !== "user") {
+    return { ok: false, code: "invalid_messages", error: "messages[] must end with a user message" };
+  }
+  return { ok: true, messages: out, imageCount, imageChars };
+}
+
+// The conversation's size with every image's bytes left out. Text and images
+// are bounded separately: one honest phone photo is larger than the whole
+// text budget, which is why a real photo used to fail the 64KB text ceiling
+// with "that conversation is too long".
+function conversationTextSize(conversation) {
+  return JSON.stringify(conversation, (k, v) => (v && typeof v === "object" && v.type === "image" ? { type: "image" } : v)).length;
+}
+
+// Input-token estimate for budgetGate(): text at the usual ~4 chars/token,
+// each image at what Anthropic actually bills for one.
+function estimateConversationTokens(conversation) {
+  let images = 0;
+  const text = JSON.stringify(conversation, (k, v) => {
+    if (v && typeof v === "object" && v.type === "image") { images += 1; return { type: "image" }; }
+    return v;
+  });
+  return Math.ceil(text.length / 4) + images * IMAGE_TOKEN_ESTIMATE;
+}
+
 // The intent taxonomy, as an actual set rather than an assumption.
 //
 // WHY THIS EXISTS (2026-08-11, found from production data)
@@ -4632,7 +4848,10 @@ function normalizeClassification(parsed) {
   return fixed;
 }
 
-async function classifyIntent(key, conversation, faqList, authoritativeBlock) {
+// `ledger` records this call's usage even when the handler's 7s withTimeout()
+// has already given up on it: the call keeps running, Anthropic still bills
+// it, and if it lands before the request records its spend it is counted.
+async function classifyIntent(key, conversation, faqList, authoritativeBlock, ledger) {
   const text = latestUserText(conversation);
   if (!text) return null;
   // Step 4: classification happens AFTER authoritative context exists, and
@@ -4680,6 +4899,7 @@ async function classifyIntent(key, conversation, faqList, authoritativeBlock) {
       // without constraining the schema's shape.
       system: buildClassifierSystem(faqList),
       messages: [{ role: "user", content: factPreamble + text.slice(0, 2000) }],
+      ledger,
     });
     if (!ok) return { error: data };
     const block = (data.content || []).find((b) => b.type === "text");
@@ -6064,12 +6284,18 @@ async function recordScoutUsageCost(userId, cost, inputTokens, outputTokens) {
 // reasoning quality. Instead, when a response stops because it hit the
 // ceiling (stop_reason "max_tokens"), continue it.
 //
-// Uses assistant prefill: the partial text is handed back as the start of the
-// assistant turn and the model carries on from exactly that point. The API
-// rejects a prefill with trailing whitespace, hence the trim. Token usage is
-// summed across the parts so cost accounting and the routing log stay honest,
-// and the merged text is reassembled into a single text block so every
-// downstream extractor sees one complete JSON object.
+// NOT A PREFILL. This used to hand the partial text back as a trailing
+// assistant turn for the model to carry on from. claude-sonnet-5 (like every
+// Sonnet/Opus from 4.6 on) rejects a trailing assistant message with a 400,
+// and `if (!cont.ok) break` swallowed it — so on the Sonnet path, the one that
+// truncates, continuation never once worked and every cut-off reply went out
+// through salvage. Now the partial text goes back as an ordinary assistant
+// turn FOLLOWED BY a user turn asking for the remainder, which every model
+// accepts, and mergeContinuation() joins the parts — tolerating the two ways
+// a model answers that request imperfectly (repeating its own tail, or
+// starting the JSON over). Token usage is summed across the parts so the
+// routing log stays honest, and the merged text is reassembled into a single
+// text block so every downstream extractor sees one complete JSON object.
 //
 // Bounded: at most 2 continuations, and never started without real time left
 // in the request budget — a truncated-but-salvageable reply beats a killed
@@ -6093,10 +6319,68 @@ function sumUsage(a, b) {
   const k = ["input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"];
   const out = { ...(a || {}) };
   for (const key of k) out[key] = ((a && a[key]) || 0) + ((b && b[key]) || 0);
+  // Searches are billed per request, so they are summed too; leaving them out
+  // made a continued reply forget the searches its first part ran.
+  const searches = webSearchRequestsOf(a) + webSearchRequestsOf(b);
+  if (searches) out.server_tool_use = { ...((a && a.server_tool_use) || {}), web_search_requests: searches };
   return out;
 }
 
-async function continueIfTruncated(key, cfg, systemPrompt, systemDynamic, baseMessages, data, deadlineMs) {
+// ONE LEDGER PER REQUEST, holding the usage of every model call it made.
+//
+// The reply paths used to record only the answering call's usage — and for
+// the Sonnet path only the LAST turn of the tool loop. The classifier (every
+// request), a Haiku attempt that was discarded for Sonnet, a whole-reply
+// retry, truncation continuations and web-search fees were all billed by
+// Anthropic and recorded nowhere, so scout_daily_usage.total_cost — the
+// number SCOUT_DAILY_SPEND_LIMIT / SCOUT_MONTHLY_SPEND_LIMIT are checked
+// against — saw a fraction of real spend. callAnthropic() and the
+// OpenAI-compatible adapter add to it; the handler totals it once.
+function createSpendLedger() {
+  const calls = [];
+  return {
+    calls,
+    add(model, usage) { if (usage && typeof usage === "object") calls.push({ model, usage }); },
+    totals() {
+      let cost = 0, inputTokens = 0, outputTokens = 0, webSearches = 0;
+      for (const c of calls) {
+        cost += estimateCost(c.model, c.usage) || 0;
+        inputTokens += c.usage.input_tokens || 0;
+        outputTokens += c.usage.output_tokens || 0;
+        webSearches += webSearchRequestsOf(c.usage);
+      }
+      return { calls: calls.length, cost, inputTokens, outputTokens, webSearches };
+    },
+  };
+}
+
+// The user turn that asks for the rest of a cut-off reply. It has to be a
+// user turn: see the NOT A PREFILL note above.
+const CONTINUE_INSTRUCTION = "Your previous message was cut off by the length limit. Continue it from exactly where it stopped: output only the remaining characters, starting with the very next character, so that your previous message followed immediately by this one is the complete reply. Do not repeat anything already written, do not start the JSON object again, and do not add any commentary or code fences.";
+
+// Joins a truncated reply and its continuation. The model is asked for the
+// bare remainder, and usually gives exactly that; the two ways it does not
+// are handled rather than trusted away:
+//   - it starts the reply over as a fresh {"reply": ...} object — then the
+//     restart IS the reply, and gluing it onto the fragment would produce two
+//     half-objects that no parser can read;
+//   - it repeats the tail of what it had already written before carrying on —
+//     the overlap is cut so the seam does not stutter.
+// A leading code fence is dropped either way. `trimmedWs` is the whitespace
+// the partial ended with; it was real text, so it is put back at the seam
+// unless the continuation brings its own.
+function mergeContinuation(partial, trimmedWs, contText) {
+  let cont = String(contText || "").replace(/^\s*```(?:json)?[ \t]*\n?/i, "");
+  if (/^\s*\{\s*"reply"\s*:/.test(cont)) return { text: cont.trim(), restarted: true };
+  const maxOverlap = Math.min(400, partial.length, cont.length);
+  for (let k = maxOverlap; k >= 12; k -= 1) {
+    if (partial.endsWith(cont.slice(0, k))) { cont = cont.slice(k); break; }
+  }
+  const joiner = /^\s/.test(cont) ? "" : trimmedWs;
+  return { text: partial + joiner + cont, restarted: false };
+}
+
+async function continueIfTruncated(key, cfg, systemPrompt, systemDynamic, baseMessages, data, deadlineMs, ledger) {
   let out = data;
   for (let i = 0; i < 2; i += 1) {
     if (!out || out.stop_reason !== "max_tokens") break;
@@ -6104,11 +6388,10 @@ async function continueIfTruncated(key, cfg, systemPrompt, systemDynamic, baseMe
       console.log("GOLSZ reply truncated but no budget left to continue; falling back to salvage");
       break;
     }
-    // The API rejects a prefill ending in whitespace, so it has to be
-    // trimmed — but that whitespace was real text. Dropping it fuses the last
-    // word of part one onto the first word of part two ("first halfand the").
-    // Keep it and re-insert on merge, unless the continuation already starts
-    // with its own whitespace.
+    // Trailing whitespace is trimmed from the assistant turn (a turn ending
+    // in whitespace is rejected) but it was real text: dropping it fuses the
+    // last word of part one onto the first word of part two ("first halfand
+    // the"), so mergeContinuation() puts it back.
     const fullSoFar = replyTextOf(out);
     const partial = fullSoFar.replace(/\s+$/, "");
     const trimmedWs = fullSoFar.slice(partial.length);
@@ -6120,16 +6403,23 @@ async function continueIfTruncated(key, cfg, systemPrompt, systemDynamic, baseMe
       thinking: { type: "disabled" },
       system: systemPrompt,
       systemDynamic,
-      messages: [...baseMessages, { role: "assistant", content: partial }],
+      // Ends on a USER turn. Never on an assistant one: that is a prefill.
+      messages: [...baseMessages, { role: "assistant", content: partial }, { role: "user", content: CONTINUE_INSTRUCTION }],
       maxTokens: cfg.max_output_tokens,
+      ledger,
     });
-    if (!cont.ok) break;
+    if (!cont.ok) {
+      // Logged, where it used to be silent: a continuation that fails every
+      // time looks exactly like one that is never needed.
+      console.error("GOLSZ reply continuation failed:", cont.status, JSON.stringify(cont.data && cont.data.error));
+      break;
+    }
     const contText = replyTextOf(cont.data);
-    const joiner = /^\s/.test(contText) ? "" : trimmedWs;
-    const merged = partial + joiner + contText;
+    if (!contText) break;
+    const merged = mergeContinuation(partial, trimmedWs, contText);
     out = {
       ...cont.data,
-      content: [{ type: "text", text: merged }],
+      content: [{ type: "text", text: merged.text }],
       usage: sumUsage(out.usage, cont.data.usage),
     };
   }
@@ -6142,7 +6432,10 @@ async function continueIfTruncated(key, cfg, systemPrompt, systemDynamic, baseMe
 // the reply with no tools at all — callAnthropic omits the key entirely
 // rather than sending an empty array, so the request is byte-identical to
 // the no-tools fallback the failover path already uses.
-async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, baseConversation, deadlineMs, searchTools, maxToolTurns) {
+//
+// `ledger` receives every turn's usage. This function used to hand back only
+// the LAST turn's, so a four-turn research loop was recorded as one turn.
+async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, baseConversation, deadlineMs, searchTools, maxToolTurns, ledger) {
   const conversation = baseConversation.slice();
   // Undefined means "the caller did not say" — keep the standard set, so
   // every pre-existing call site stays correct as written. Only an explicit
@@ -6194,10 +6487,23 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, ba
       // Minus the reserve, so running out of research time still ends in a
       // written answer instead of in nothing.
       timeoutMs: budgetLeft() - FINAL_ANSWER_RESERVE_MS,
+      ledger,
     });
     data = result.data;
     if (!result.ok) return { ok: false, data, toolBudgetExhausted };
     console.log("GOLSZ scout usage check:", JSON.stringify(data.usage));
+
+    // pause_turn: Anthropic's server-side tool loop (web search) stopped
+    // mid-turn and wants to be resumed. The documented resume is to send the
+    // paused assistant content back unchanged and call again — no extra user
+    // message; the API sees the trailing server_tool_use and carries on. It
+    // used to fall through as a finished reply, which is a reply made of
+    // nothing but search scaffolding: an empty bubble for the athlete.
+    // Counted as a turn, so MAX_TOOL_TURNS and the budget still bound it.
+    if (data.stop_reason === "pause_turn") {
+      conversation.push({ role: "assistant", content: data.content });
+      continue;
+    }
 
     const searchCalls = (data.content || []).filter((b) => b.type === "tool_use" && (b.name === "search_golsz_players" || b.name === "search_golsz_events"));
     if (data.stop_reason !== "tool_use" || !searchCalls.length) return { ok: true, data, toolBudgetExhausted };
@@ -6224,10 +6530,19 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, ba
       maxTokens: deepTierConfig.max_output_tokens,
       // The reserve this loop has been holding back all along.
       timeoutMs: budgetLeft(),
+      ledger,
     });
     if (!result.ok) return { ok: false, data: result.data, toolBudgetExhausted };
     data = result.data;
   }
+  // Still paused when the turns or the budget ran out. There is no forced
+  // no-tools answer for this case: the history now ends in the paused
+  // assistant turn, and re-sending that without the tools that produced it,
+  // or as a trailing turn to a model that rejects prefill, is a 400. The
+  // response goes back as it is — whatever text it holds is still extracted,
+  // and when there is none the handler flags reply_unavailable and gives the
+  // athlete's question back. Recorded as a budget-exhausted reply either way.
+  if (data && data.stop_reason === "pause_turn") toolBudgetExhausted = true;
   return { ok: true, data, toolBudgetExhausted };
 }
 
@@ -6253,8 +6568,8 @@ export default async function handler(req, res) {
   // body: { messages: [...] }
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body); } catch { body = {}; } }
-  const messages = body && body.messages;
-  if (!Array.isArray(messages)) return res.status(400).json({ error: "messages[] required" });
+  const rawMessages = body && body.messages;
+  if (!Array.isArray(rawMessages)) return res.status(400).json({ error: "messages[] required", code: "invalid_messages" });
   // ---- Request-size ceiling. THE ONE PLACE A PAYLOAD IS ACTUALLY REFUSED --
   //
   // Nothing here bounded the request before. MAX_MESSAGE_LENGTH was applied
@@ -6275,28 +6590,40 @@ export default async function handler(req, res) {
   // real bound — it is not a number tuned to any observed request, it is the
   // point past which the payload cannot have come from this product.
   //
-  // Measured on the serialized array, not on text alone, because the cost is
-  // driven by everything the model receives (block wrappers, tool results
-  // echoed back into history) and because it is the one number that cannot be
-  // gamed by moving the bytes into a different field.
+  // Measured on the serialized array AFTER sanitizeConversation(), so what is
+  // measured is what the model will receive (block wrappers included), and
+  // with every image's bytes left out: an image is bounded by its own cap in
+  // sanitizeConversation() and costs a fixed ~1,600 tokens whatever its byte
+  // size, so counting a photo's base64 against this TEXT budget is what made
+  // every real phone photo fail with "that conversation is too long".
   const MAX_MESSAGE_LENGTH = 4000;
   const MAX_CONVERSATION_BYTES = 64 * 1024;
   // Turn count is a separate axis: 5,000 tiny turns is well under the byte
   // cap and still a multi-thousand-message context. 40 is ~7x what the client
   // sends, so no real conversation reaches it.
   const MAX_CONVERSATION_TURNS = 40;
-  if (messages.length > MAX_CONVERSATION_TURNS) {
+  if (rawMessages.length > MAX_CONVERSATION_TURNS) {
     return res.status(400).json({ error: "That conversation is too long to send. Start a new chat and Scout will carry the summary over.", code: "conversation_too_large" });
   }
+  // Every reader below — the classifier, the size checks, the model calls —
+  // sees ONLY the sanitized conversation. See sanitizeConversation().
+  const sanitized = sanitizeConversation(rawMessages);
+  if (!sanitized.ok) return res.status(400).json({ error: sanitized.error, code: sanitized.code });
+  const messages = sanitized.messages;
   let serializedSize = 0;
-  try { serializedSize = JSON.stringify(messages).length; } catch { serializedSize = Infinity; }
+  try { serializedSize = conversationTextSize(messages); } catch { serializedSize = Infinity; }
   if (serializedSize > MAX_CONVERSATION_BYTES) {
     return res.status(400).json({ error: "That conversation is too long to send. Start a new chat and Scout will carry the summary over.", code: "conversation_too_large" });
   }
   // Sums EVERY text block of the last user turn — see latestUserTextLength.
   const incomingText = latestUserText(messages);
-  if (latestUserTextLength(messages) > MAX_MESSAGE_LENGTH) return res.status(400).json({ error: "Message is too long." });
-  const langName = LANG_NAMES[body && body.lang];
+  if (latestUserTextLength(messages) > MAX_MESSAGE_LENGTH) return res.status(400).json({ error: "Message is too long.", code: "message_too_long" });
+  // OWN PROPERTIES ONLY. LANG_NAMES is a plain object, so LANG_NAMES["constructor"]
+  // is Object itself — truthy — and lang:"constructor" used to put a function's
+  // source text into the system prompt ("Respond in function Object() {...}")
+  // and send "constructor" to the FAQ lookup as a language code.
+  const langCode = (body && typeof body.lang === "string" && Object.prototype.hasOwnProperty.call(LANG_NAMES, body.lang)) ? body.lang : null;
+  const langName = langCode ? LANG_NAMES[langCode] : null;
   // Language-adjusted only — the specialist framing (Phase 2d) is layered
   // in below, once recommendedSpecialist is known from classification.
   const baseSystemPrompt = langName && langName !== "English"
@@ -6320,7 +6647,7 @@ export default async function handler(req, res) {
   // reconciliation has settled pathwayType, and read by all four response
   // paths. Stays null when there is no athlete state to reason about.
   let pathwayBuildCtx = null;
-  let requestId = null; // hoisted so logRouting() below can persist the same id already used for isDuplicateRequest() idempotency
+  let requestId = null; // hoisted so logRouting() below can persist the same id already used for replay/idempotency (requestIdSeenAt)
   // Hoisted for the effective-plan resolution below: which link this request
   // arrived on, and who the caller was. Both only ever set by
   // resolveActingAthlete, never read from the request body.
@@ -6332,6 +6659,33 @@ export default async function handler(req, res) {
   let questionsRemaining = null; // null = no usage info to show the client (unmetered deployment, or an unlimited/admin account)
   let reservedQuestion = false; // true once reserve_scout_question has counted this request — release it if we bail before a real answer
   let reservedFreeAi = false; // true once reserve_free_ai_question (068, lifetime, free plan only) has counted this request
+  // Every model call this request makes, priced. See createSpendLedger().
+  const requestLedger = createSpendLedger();
+  let spendRecorded = false;
+  // Records the WHOLE request's cost exactly once, on whichever path ends it —
+  // including the paths that end without a model answer (FAQ, cache hit, a
+  // gate refusal, total failover), all of which had already paid for the
+  // classifier and used to record nothing.
+  const recordRequestSpend = async () => {
+    if (spendRecorded) return;
+    spendRecorded = true;
+    const total = requestLedger.totals();
+    if (!total.calls) return;
+    await recordScoutUsageCost(userId, total.cost, total.inputTokens, total.outputTokens);
+  };
+  // NO ANSWER, NO CHARGE. When a reply comes back with no usable text
+  // (reply_unavailable — a paused or budget-starved tool loop, a scratchpad
+  // with no envelope) the athlete is shown "send that again"; charging the
+  // question as well meant the retry they were invited to make cost a second
+  // one. Released through the same refund path every other failure uses, and
+  // the flags cleared so a later error path cannot refund it twice. The
+  // requestId is forgotten so that retry is answered rather than refused as a
+  // duplicate of a request that produced nothing.
+  const refundUndeliveredQuestion = async () => {
+    if (reservedQuestion) { await releaseScoutQuestion(userId); reservedQuestion = false; }
+    if (reservedFreeAi) { await releaseFreeAiQuestion(userId); reservedFreeAi = false; }
+    forgetRequestId(requestId);
+  };
   // Directive §11 "database-first state logic" — appended to systemPrompt
   // below once populated; empty string (no-op) for unauthenticated/dev-mode
   // requests, same fallback posture as userPlan/dailyLimit above.
@@ -6418,26 +6772,38 @@ export default async function handler(req, res) {
     // rather than one shared pool.
     if (!userId) return res.status(401).json({ error: "Sign in to use the Scout." });
 
-    // Burst protection + duplicate-submission guard — see the comment above
-    // isRateLimited()/isDuplicateRequest() for the honest limits of an
+    // Duplicate-submission guard, then burst protection — see the comment
+    // above isRateLimited()/requestIdSeenAt() for the honest limits of an
     // in-memory, single-instance check.
-    if (isRateLimited(userId)) return res.status(429).json({ error: "Please wait a moment before sending another message." });
-    requestId = body && typeof body.requestId === "string" ? body.requestId : null;
-    if (isDuplicateRequest(requestId)) {
-      // A repeat of a requestId we've already seen is usually a retry after
-      // the CLIENT gave up (AbortSignal.timeout at 58s) on a request the
-      // server actually finished. Returning 409 there made the athlete retype
-      // a question that had already been answered and already been charged.
-      // If the finished reply is still in the response cache, hand it back
-      // instead. Only a request genuinely still in flight falls through to
-      // the conflict.
+    //
+    // REPLAY FIRST, RATE LIMIT SECOND. A repeat of a requestId is a retry,
+    // and the commonest retry is the client giving up (AbortSignal.timeout at
+    // 58s) on a request the server actually finished and charged for. The
+    // rate limiter used to run first, so a retry inside its window got a 429
+    // instead of the reply it had already paid for; and the client minted a
+    // new id per send anyway, so the replay below could never be reached. The
+    // client now keeps the id on the failed message and sends it again with
+    // retry:true. The replay entry lives in the database, so a retry is looked
+    // up there even when it lands on a different warm instance than the
+    // original (body.retry) — not only when this instance remembers the id.
+    requestId = normalizeRequestId(body && body.requestId);
+    const requestSeenAt = requestIdSeenAt(requestId);
+    if (requestId && (requestSeenAt !== null || (body && body.retry === true))) {
       const replayed = await getCachedResponse(replayCacheKey(userId, requestId));
       if (replayed) {
         console.log("GOLSZ scout replaying completed reply for requestId:", requestId);
         return res.status(200).json(replayed);
       }
-      return res.status(409).json({ error: "That message is already being processed." });
+      // Seen here, not finished, and young enough to still be running.
+      // Older than the function can live means it died: run the retry.
+      if (requestSeenAt !== null && Date.now() - requestSeenAt < REQUEST_IN_FLIGHT_MAX_MS) {
+        return res.status(409).json({ error: "That message is already being processed.", code: "request_in_flight" });
+      }
     }
+    if (isRateLimited(userId)) return res.status(429).json({ error: "Please wait a moment before sending another message.", code: "rate_limited" });
+    // Marked only now that it is actually going to run, so a 429 above does
+    // not leave the id looking like a request in flight.
+    markRequestId(requestId);
 
     // Emergency platform-wide spend ceiling — checked before reserving a
     // question, so a tripped budget never counts against the athlete's own
@@ -6445,7 +6811,10 @@ export default async function handler(req, res) {
     if (SCOUT_DAILY_SPEND_LIMIT || SCOUT_MONTHLY_SPEND_LIMIT) {
       const spend = await getPlatformSpend();
       const overBudget = (SCOUT_DAILY_SPEND_LIMIT && spend.today >= SCOUT_DAILY_SPEND_LIMIT) || (SCOUT_MONTHLY_SPEND_LIMIT && spend.month >= SCOUT_MONTHLY_SPEND_LIMIT);
-      if (overBudget) return res.status(503).json({ error: "Scout is temporarily unavailable. Please try again shortly." });
+      if (overBudget) {
+        forgetRequestId(requestId);
+        return res.status(503).json({ error: "Scout is temporarily unavailable. Please try again shortly.", code: "scout_unavailable" });
+      }
     }
 
     // Four tiers, all capped (Elite is a higher ceiling, not unlimited —
@@ -6782,7 +7151,10 @@ A newer source always beats an older one at the same level. If memory says one t
           : plan === "starter"
           ? "Daily Scout limit reached. Upgrade to Pro or Elite for more Scout messages."
           : "Free daily limit reached. Upgrade for more Scout messages.";
-        return res.status(402).json({ error: message, scout_usage: { remaining: 0, limit: dailyLimit } });
+        // code + can_upgrade let the client say this in the athlete's own
+        // language and offer the upgrade (rather than a pointless "try
+        // again") — except on Elite, where there is nothing to upgrade to.
+        return res.status(402).json({ error: message, code: "daily_limit_reached", can_upgrade: plan !== "elite", scout_usage: { remaining: 0, limit: dailyLimit } });
       }
 
       // Lifetime free AI budget (migration 068) — checked only for plan ===
@@ -6817,7 +7189,7 @@ A newer source always beats an older one at the same level. If memory says one t
 
   // ---- route (classify — with the FAQ list embedded — then decide the model) ----
   const conversation = messages.slice();
-  const faqLang = LANG_NAMES[body && body.lang] ? body.lang : "en";
+  const faqLang = langCode || "en";
 
   try {
     const faqList = await getFaqList(faqLang);
@@ -6847,7 +7219,7 @@ A newer source always beats an older one at the same level. If memory says one t
     // rejecting athlete-scoped entries whose stored state digest has moved.
     const topicKey = researchTopicKey(latestUserText(conversation), athleteSport, athleteCountry);
     const [classification, golszKnowledge, priorResearch] = await Promise.all([
-      withTimeout(classifyIntent(key, conversation, faqList, authoritativeBlock), 7000),
+      withTimeout(classifyIntent(key, conversation, faqList, authoritativeBlock, requestLedger), 7000),
       getGolszKnowledge(athleteSport, athleteCountry, latestUserText(conversation)),
       getResearchCache(userId, topicKey, stateDigest),
     ]);
@@ -6930,7 +7302,10 @@ A newer source always beats an older one at the same level. If memory says one t
         scout_usage: reservedQuestion ? { remaining: questionsRemaining, limit: dailyLimit } : undefined,
         next_move: extractNextBestAction(classification),
       };
-      await logRouting("faq", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
+      // The answer itself cost nothing; the classifier that matched it did,
+      // and that is what costUsd carries here.
+      await logRouting("faq", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed, costUsd: requestLedger.totals().cost });
+      await recordRequestSpend();
       return res.status(200).json(payload);
     }
     await logFaqMiss(classification, latestUserText(conversation));
@@ -7001,9 +7376,19 @@ A newer source always beats an older one at the same level. If memory says one t
       if (classification.intent === "db_lookup") {
         if (reservedQuestion) await releaseScoutQuestion(userId);
         if (reservedFreeAi) await releaseFreeAiQuestion(userId);
+        reservedQuestion = false;
+        reservedFreeAi = false;
+        await recordRequestSpend();
+        // SAY WHAT AN UPGRADE ACTUALLY BUYS. This used to read "Player-database
+        // search is a Starter+ feature" — but discovery is off (migration 143),
+        // so no plan searches players, and the upsell sold something that does
+        // not exist. What a paid plan really gets on this kind of question is
+        // the events search and multi-turn research. "Basic" is how the starter
+        // plan is named everywhere an athlete can see it.
         return res.status(402).json({
-          error: "Player-database search is a Starter+ feature. Upgrade to unlock deeper research from Scout.",
+          error: "Deeper searches, including GOLSZ's event listings and multi-step research, are included from the Basic plan up. Scout doesn't search for individual players on any plan right now.",
           code: "free_tool_blocked",
+          can_upgrade: true,
           scout_usage: { remaining: questionsRemaining, limit: dailyLimit },
         });
       }
@@ -7039,7 +7424,11 @@ A newer source always beats an older one at the same level. If memory says one t
     // is re-read at the cached rate on every turn after the first, while the
     // conversation messages are always fresh input. See estimateTierCost().
     const cachedInputTokens = Math.ceil(systemStatic.length / 4);
-    const freshInputTokens = Math.ceil((systemDynamic.length + JSON.stringify(conversation).length) / 4);
+    // estimateConversationTokens, not JSON length/4: a photo's base64 is a
+    // few hundred KB of JSON but ~1,600 billed tokens, and the length-based
+    // estimate priced it ~100x too high and pushed every photo question down
+    // the tiers or out of budget entirely.
+    const freshInputTokens = Math.ceil(systemDynamic.length / 4) + estimateConversationTokens(conversation);
     modelTier = await budgetGate(modelTier, planForRouting, freshInputTokens, cachedInputTokens);
     // null means not even the economy tier fits this plan's hard per-request
     // ceiling — so there is no model to answer on, and the honest thing is to
@@ -7053,6 +7442,10 @@ A newer source always beats an older one at the same level. If memory says one t
     if (!modelTier) {
       if (reservedQuestion) await releaseScoutQuestion(userId);
       if (reservedFreeAi) await releaseFreeAiQuestion(userId);
+      reservedQuestion = false;
+      reservedFreeAi = false;
+      forgetRequestId(requestId);
+      await recordRequestSpend();
       console.error("GOLSZ scout refused a request no tier can afford:", JSON.stringify({ plan: planForRouting, freshInputTokens, cachedInputTokens }));
       await logError("api/scout.js", "Request exceeds the per-request cost ceiling on every tier", { detail: JSON.stringify({ plan: planForRouting, freshInputTokens, cachedInputTokens }) });
       return res.status(400).json({
@@ -7073,14 +7466,19 @@ A newer source always beats an older one at the same level. If memory says one t
     // — or written into — the generic response cache. Identical bug class to
     // the FAQ short-circuit above, reached through a different door.
     let cacheKey = null;
+    // A question about a PHOTO is never cache-eligible: the key is built from
+    // the text alone, so "what do you think of this?" with a new photo would
+    // otherwise be answered about the last one.
     if (classification && CACHE_ELIGIBLE_INTENTS.has(classification.intent)
         && classification.is_correction !== true
+        && sanitized.imageCount === 0
         && !(isReplyToScout(conversation) && isShortReactive(latestText))) {
       cacheKey = cacheKeyFor(classification.intent, latestText, faqLang, modelTier, cacheFingerprint);
       const cached = await getCachedResponse(cacheKey);
       if (cached) {
         console.log("GOLSZ scout cache hit");
-        await logRouting("cache", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
+        await logRouting("cache", classification, null, { input_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, output_tokens: 0 }, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed, costUsd: requestLedger.totals().cost });
+        await recordRequestSpend();
         cached.scout_summary = updatedSummary;
         if (reservedQuestion) cached.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         cached.next_move = extractNextBestAction(classification);
@@ -7103,6 +7501,11 @@ A newer source always beats an older one at the same level. If memory says one t
     // from an ordinary routing decision in scout_routing_log.escalation_reason
     // (Automatic Failover, Failover & Discovery Polish pass).
     let haikuFailureReason = null;
+    // The ONE tool set every answering call carries — the Haiku path and both
+    // runDeepReply attempts — so a free account's one-search cap (max_uses)
+    // cannot be on one path and missing from another. See searchToolsFor().
+    // null when the free-plan gate above dropped tools altogether.
+    const scoutSearchTools = searchToolsAllowed ? searchToolsFor(freeAccountGated) : null;
     if (useHaiku) {
       const adapter = adapterFor(tierConfig.provider);
       // `data` is reassigned by the truncation continuation below, so it
@@ -7120,21 +7523,26 @@ A newer source always beats an older one at the same level. If memory says one t
         // could not read a classification at all: web_search is server-hosted
         // and Anthropic will actually run and bill it, so an unclassified
         // free request must not be handed one.
-        tools: searchToolsAllowed ? SCOUT_SEARCH_TOOLS : null,
+        tools: scoutSearchTools,
         // Every model call is bounded by the request's own deadline, not just
         // by the per-call ceiling. See callBudget().
         timeoutMs: (handlerStartMs + SCOUT_BUDGET_MS) - Date.now() - FINAL_ANSWER_RESERVE_MS,
+        ledger: requestLedger,
       });
       if (ok && data.stop_reason === "max_tokens") {
-        data = await continueIfTruncated(key, tierConfig, systemStatic, systemDynamic, conversationForModel, data, handlerStartMs + SCOUT_BUDGET_MS);
+        data = await continueIfTruncated(key, tierConfig, systemStatic, systemDynamic, conversationForModel, data, handlerStartMs + SCOUT_BUDGET_MS, requestLedger);
       }
-      if (ok && data.stop_reason !== "tool_use") {
+      // pause_turn joins tool_use as "Haiku went looking for something": its
+      // own web search paused mid-turn, so what came back is search
+      // scaffolding, not a reply. Escalated like a tool request rather than
+      // shipped as an empty bubble. (Its cost is already in requestLedger.)
+      const haikuWentSearching = ok && (data.stop_reason === "tool_use" || data.stop_reason === "pause_turn");
+      if (ok && !haikuWentSearching) {
         console.log("GOLSZ scout usage check (haiku):", JSON.stringify(data.usage));
-        const cost = estimateCost(tierConfig.model_name, data.usage);
         const scoutContextUpdates = extractScoutContextUpdates(data);
         const profileUpdates = applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), scoutContextUpdates, currentGoalText, storedScoutContext), currentGoalText, currentGoalSource);
-        await logRouting("haiku", classification, tierConfig.model_name, data.usage, { plan: userPlan, ...countServerTools(data), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
-        await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
+        await logRouting("haiku", classification, tierConfig.model_name, data.usage, { plan: userPlan, ...countServerTools(data), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed, costUsd: requestLedger.totals().cost });
+        await recordRequestSpend();
         await persistProfileUpdates(userId, profileUpdates);
         await persistScoutContext(userId, scoutContextUpdates);
         await persistMemoryWrites(userId, withForcedCorrection(extractMemoryWrites(data), classification, latestText));
@@ -7147,6 +7555,7 @@ A newer source always beats an older one at the same level. If memory says one t
         // the client and an athlete was shown Scout talking about him in the
         // third person. An explicit flag cannot be mistaken for prose.
         data.reply_unavailable = !data.reply_text;
+        if (data.reply_unavailable) await refundUndeliveredQuestion();
         data.scout_summary = updatedSummary;
         // next_move is THIS request's own classification result, not a fact
         // about the shared cached answer — attached only after
@@ -7154,7 +7563,9 @@ A newer source always beats an older one at the same level. If memory says one t
         // before its first await), so a personalized next-move suggestion
         // never gets baked into what a different user sees on a future cache
         // hit for the same generic simple_knowledge answer.
-        if (cacheKey && !profileUpdates && !scoutContextUpdates && !replyIsPlanSpecific(data)) await setCachedResponse(cacheKey, classification.intent, modelTier, data);
+        // Never an empty reply (it would replay "send that again" for 24h)
+        // and never a decline.
+        if (cacheKey && !data.reply_unavailable && data.stop_reason !== "refusal" && !profileUpdates && !scoutContextUpdates && !replyIsPlanSpecific(data)) await setCachedResponse(cacheKey, classification.intent, modelTier, data);
         // scout_usage belongs BELOW the cache write for exactly the same
         // reason as next_move, and used to sit above it. It is the WRITER's
         // remaining-question count, so it was serialized into the shared
@@ -7184,14 +7595,16 @@ A newer source always beats an older one at the same level. If memory says one t
         // stripMetaCommentary, which exist to keep internal terminology and
         // the model's working-out away from the athlete. A replay must be
         // byte-identical to the reply the client would have received.
-        if (requestId) await setCachedResponse(replayCacheKey(userId, requestId), "replay", "n/a", data);
+        // Not for an unavailable reply: that question was just given back,
+        // and the athlete's retry must be answered, not replayed the failure.
+        if (requestId && !data.reply_unavailable) await setCachedResponse(replayCacheKey(userId, requestId), "replay", "n/a", data);
         return res.status(200).json(data);
       }
       if (!ok) {
         haikuFailureReason = "haiku_provider_failure";
         console.log("GOLSZ haiku call failed, escalating to sonnet:", JSON.stringify(data));
       } else {
-        console.log("GOLSZ haiku escalated to sonnet (wanted a tool)");
+        console.log("GOLSZ haiku escalated to sonnet (wanted a tool):", data.stop_reason);
       }
     }
 
@@ -7207,7 +7620,7 @@ A newer source always beats an older one at the same level. If memory says one t
     const deepTierConfig = useHaiku ? (byTier.advanced || ANTHROPIC_DEFAULTS.advanced) : tierConfig;
 
     const scoutDeadline = handlerStartMs + SCOUT_BUDGET_MS;
-    let sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline, searchToolsAllowed ? SCOUT_SEARCH_TOOLS : null, maxToolTurns);
+    let sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline, scoutSearchTools, maxToolTurns, requestLedger);
     if (!sonnetResult.ok) {
       // Automatic failover, step 1: retry the WHOLE reply once, from a fresh
       // conversation copy (runDeepReply never mutates the caller's array) —
@@ -7221,7 +7634,7 @@ A newer source always beats an older one at the same level. If memory says one t
         console.log("GOLSZ sonnet call failed, retrying once:", JSON.stringify(sonnetResult.data));
         if (timeoutReason === "none") timeoutReason = "provider_error";
         fallbackUsed = "sonnet_retry";
-        sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline, searchToolsAllowed ? SCOUT_SEARCH_TOOLS : null, maxToolTurns);
+        sonnetResult = await runDeepReply(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, scoutDeadline, scoutSearchTools, maxToolTurns, requestLedger);
       } else {
         console.log("GOLSZ sonnet call failed, skipping retry (budget left ms:", retryRoom, "):", JSON.stringify(sonnetResult.data));
         timeoutReason = "retry_skipped";
@@ -7245,13 +7658,13 @@ A newer source always beats an older one at the same level. If memory says one t
         messages: conversationForModel,
         maxTokens: fastCfg.max_output_tokens,
         timeoutMs: scoutDeadline - Date.now(),
+        ledger: requestLedger,
       });
       if (haikuFallback.ok) {
         const data = haikuFallback.data;
         console.log("GOLSZ scout usage check (haiku fallback):", JSON.stringify(data.usage));
-        const cost = estimateCost(fastCfg.model_name, data.usage);
-        await logRouting("haiku", classification, fastCfg.model_name, data.usage, { plan: userPlan, ...countServerTools(data), escalationReason: "sonnet_provider_failure", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
-        await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
+        await logRouting("haiku", classification, fastCfg.model_name, data.usage, { plan: userPlan, ...countServerTools(data), escalationReason: "sonnet_provider_failure", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed, costUsd: requestLedger.totals().cost });
+        await recordRequestSpend();
         await persistProfileUpdates(userId, applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext), currentGoalText, currentGoalSource));
         await persistScoutContext(userId, extractScoutContextUpdates(data));
         await persistMemoryWrites(userId, withForcedCorrection(extractMemoryWrites(data), classification, latestText));
@@ -7264,6 +7677,7 @@ A newer source always beats an older one at the same level. If memory says one t
         // the client and an athlete was shown Scout talking about him in the
         // third person. An explicit flag cannot be mistaken for prose.
         data.reply_unavailable = !data.reply_text;
+        if (data.reply_unavailable) await refundUndeliveredQuestion();
         data.scout_summary = updatedSummary;
         if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
         data.next_move = extractNextBestAction(classification);
@@ -7277,7 +7691,7 @@ A newer source always beats an older one at the same level. If memory says one t
         // last, immediately before the response, so the replay carries every
         // derived field — see the same write on the Haiku path above for what
         // a half-built replay costs the athlete.
-        if (requestId) await setCachedResponse(replayCacheKey(userId, requestId), "replay", "n/a", data);
+        if (requestId && !data.reply_unavailable) await setCachedResponse(replayCacheKey(userId, requestId), "replay", "n/a", data);
         // The RESPONSE cache (the shared one) is deliberately never written
         // here — a degraded, apologetic reply shouldn't get served back to a
         // different athlete once things recover. The replay above is a
@@ -7306,6 +7720,7 @@ A newer source always beats an older one at the same level. If memory says one t
             messages: conversationForModel,
             maxTokens: fb.maxOutputTokens,
             timeoutMs: scoutDeadline - Date.now(),
+            ledger: requestLedger,
           });
           if (crossProvider.ok) {
             const data = crossProvider.data;
@@ -7315,9 +7730,8 @@ A newer source always beats an older one at the same level. If memory says one t
             // cost, routing telemetry, usage metering, profile/context/memory
             // persistence. normalizeOpenAiResponse() shaped the response so
             // none of it needs to know which provider answered.
-            const cost = estimateCost(fb.model, data.usage);
-            await logRouting("cross_provider", classification, fb.model, data.usage, { plan: userPlan, ...countServerTools(data), escalationReason: "anthropic_outage", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
-            await recordScoutUsageCost(userId, cost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
+            await logRouting("cross_provider", classification, fb.model, data.usage, { plan: userPlan, ...countServerTools(data), escalationReason: "anthropic_outage", specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed, costUsd: requestLedger.totals().cost });
+            await recordRequestSpend();
             await persistProfileUpdates(userId, applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext), currentGoalText, currentGoalSource));
             await persistScoutContext(userId, extractScoutContextUpdates(data));
             await persistMemoryWrites(userId, withForcedCorrection(extractMemoryWrites(data), classification, latestText));
@@ -7330,6 +7744,7 @@ A newer source always beats an older one at the same level. If memory says one t
         // the client and an athlete was shown Scout talking about him in the
         // third person. An explicit flag cannot be mistaken for prose.
         data.reply_unavailable = !data.reply_text;
+            if (data.reply_unavailable) await refundUndeliveredQuestion();
             data.scout_summary = updatedSummary;
             if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
             data.next_move = extractNextBestAction(classification);
@@ -7355,21 +7770,26 @@ A newer source always beats an older one at the same level. If memory says one t
       // reserved question (no real answer was produced) and fail gracefully,
       // same wording/status as the emergency kill-switch responses above.
       console.log("GOLSZ haiku fallback also failed:", JSON.stringify(haikuFallback.data));
-      if (reservedQuestion) await releaseScoutQuestion(userId);
-      if (reservedFreeAi) await releaseFreeAiQuestion(userId);
+      await refundUndeliveredQuestion();
       await logError("api/scout.js", "Both Sonnet and Haiku failed (automatic failover exhausted)", { detail: JSON.stringify({ sonnet: sonnetResult.data, haiku: haikuFallback.data }) });
       // Failover exhausted with no answer produced — still worth a
       // scout_routing_log row (082) so failure rate is visible in cost/
       // usage telemetry instead of only showing up in error_log.
-      await logRouting("failed", classification, null, null, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, success: false, timeoutReason, fallbackUsed });
-      return res.status(503).json({ error: "Scout is temporarily unavailable. Please try again shortly." });
+      // No answer, but not no cost: the classifier and any attempt that got
+      // a response before failing were billed, and are recorded as such.
+      await logRouting("failed", classification, null, null, { plan: userPlan, specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, success: false, timeoutReason, fallbackUsed, costUsd: requestLedger.totals().cost });
+      await recordRequestSpend();
+      return res.status(503).json({ error: "Scout is temporarily unavailable. Please try again shortly.", code: "scout_unavailable" });
     }
 
-    const data = await continueIfTruncated(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, sonnetResult.data, scoutDeadline);
+    const data = await continueIfTruncated(key, deepTierConfig, systemStatic, systemDynamic, conversationForModel, sonnetResult.data, scoutDeadline, requestLedger);
     if (sonnetResult.toolBudgetExhausted && timeoutReason === "none") timeoutReason = "tool_budget_exhausted";
-    const sonnetCost = estimateCost(deepTierConfig.model_name, data.usage);
-    await logRouting("sonnet", classification, deepTierConfig.model_name, data.usage, { plan: userPlan, ...countServerTools(data), escalationReason: haikuFailureReason || escalationReason(classification), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed });
-    await recordScoutUsageCost(userId, sonnetCost, data.usage && data.usage.input_tokens, data.usage && data.usage.output_tokens);
+    // data.usage stays THIS reply's (the answering turn plus any
+    // continuation) for the token columns; costUsd and the recorded spend are
+    // the whole request — every tool turn, the retry if one ran, the
+    // classifier and the search fees. See createSpendLedger().
+    await logRouting("sonnet", classification, deepTierConfig.model_name, data.usage, { plan: userPlan, ...countServerTools(data), escalationReason: haikuFailureReason || escalationReason(classification), specialist: recommendedSpecialist, requestId, responseTimeMs: Date.now() - handlerStartMs, timeoutReason, fallbackUsed, costUsd: requestLedger.totals().cost });
+    await recordRequestSpend();
     await persistProfileUpdates(userId, applyGoalAuthorship(applyGoalSafetyNet(extractProfileUpdates(data), extractScoutContextUpdates(data), currentGoalText, storedScoutContext), currentGoalText, currentGoalSource));
     await persistScoutContext(userId, extractScoutContextUpdates(data));
     await persistMemoryWrites(userId, withForcedCorrection(extractMemoryWrites(data), classification, latestText));
@@ -7391,6 +7811,7 @@ A newer source always beats an older one at the same level. If memory says one t
     }
     data.reply_text = softenQuestionStreak(deriveReplyText(data), conversationForModel);
     data.reply_unavailable = !data.reply_text;
+    if (data.reply_unavailable) await refundUndeliveredQuestion();
     data.scout_summary = updatedSummary;
     if (reservedQuestion) data.scout_usage = { remaining: questionsRemaining, limit: dailyLimit };
     data.next_move = extractNextBestAction(classification);
@@ -7406,13 +7827,19 @@ A newer source always beats an older one at the same level. If memory says one t
     // half-built replay costs the athlete. This is the path where it matters
     // most: a reply that ran a four-turn tool loop is exactly the reply slow
     // enough to hit the client's 58s timeout in the first place.
-    if (requestId) await setCachedResponse(replayCacheKey(userId, requestId), "replay", "n/a", data);
+    if (requestId && !data.reply_unavailable) await setCachedResponse(replayCacheKey(userId, requestId), "replay", "n/a", data);
     return res.status(200).json(data); // Anthropic-shaped { content: [...] } — client already parses this
   } catch (e) {
-    if (reservedQuestion) await releaseScoutQuestion(userId);
-    if (reservedFreeAi) await releaseFreeAiQuestion(userId);
-    await logError("api/scout.js", "Upstream model call failed", { detail: String(e) });
-    return res.status(502).json({ error: "Upstream model call failed", detail: String(e) });
+    await refundUndeliveredQuestion();
+    // The exception text stays SERVER-SIDE. It used to go back to the
+    // browser as `detail`, which put internal messages (a TypeError naming a
+    // variable, a PostgREST error body, an upstream URL) in front of anyone
+    // holding a session. It is in the function log and in error_log, which is
+    // where someone who can act on it will look.
+    console.error("GOLSZ scout handler failed:", e);
+    await logError("api/scout.js", "Upstream model call failed", { detail: String(e && e.stack || e) });
+    await recordRequestSpend().catch(() => {});
+    return res.status(502).json({ error: "Upstream model call failed", code: "upstream_failed" });
   }
 }
 
