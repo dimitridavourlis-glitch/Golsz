@@ -251,6 +251,18 @@ const BASIC_PRICE = { id: process.env.STRIPE_PRICE_BASIC_EUR, currency: "eur", u
   ck("trialing -> not past_due, and Basic maps to the 'starter' DB enum value",
      r.patch, { payment_past_due: false, plan: "starter" });
 
+  // "incomplete" = the first payment has NOT succeeded (an unfinished 3-D
+  // Secure, a declined first charge). It fell through to the grant branch and
+  // handed out the paid plan for a subscription nobody had paid for.
+  profiles = { [OWNER_ID]: { id: OWNER_ID, stripe_customer_id: CUSTOMER, plan: "free" } };
+  r = await post(subEvent("incomplete", PRO_PRICE, "customer.subscription.created"));
+  ck("incomplete + a resolvable Pro price -> NO plan granted", r.patch, { payment_past_due: false });
+  ck("...and the profile is still on free", profiles[OWNER_ID].plan, "free");
+  r = await post(subEvent("paused", PRO_PRICE));
+  ck("paused (or any other non-paying status) -> no plan granted either", r.patch, { payment_past_due: false });
+  r = await post(subEvent("active", PRO_PRICE));
+  ck("...and the 'active' update that follows a successful payment grants it", r.patch, { payment_past_due: false, plan: "pro" });
+
   r = await post(subEvent("active", PRO_PRICE, "customer.subscription.created"));
   ck("subscription.created takes the same path (it is the event carrying the Price)",
      r.patch, { payment_past_due: false, plan: "pro" });
@@ -317,12 +329,41 @@ const BASIC_PRICE = { id: process.env.STRIPE_PRICE_BASIC_EUR, currency: "eur", u
   // after which the victim's renewals no longer matched anything, and the
   // attacker cancelling their own cheap subscription fired
   // customer.subscription.deleted straight at the victim's row.
-  profiles = { [VICTIM_ID]: { id: VICTIM_ID, stripe_customer_id: CUSTOMER } };
+  profiles = { [VICTIM_ID]: { id: VICTIM_ID, stripe_customer_id: CUSTOMER, plan: "pro" } };
   r = await post(checkout(VICTIM_ID, ATTACKER));
   ck("a profile owned by ANOTHER Stripe customer is not written to", r.patches.length, 0);
   ck("...the attempt is recorded rather than swallowed", r.errorLogs.length, 1);
   ck("...and Stripe still gets its 200 (a 500 would only make it retry)", r.status, 200);
   ck("...the victim's binding is untouched", profiles[VICTIM_ID].stripe_customer_id, CUSTOMER);
+  // An unknown plan is not "free": the re-bind below must never fire on a
+  // row whose subscription state it cannot see.
+  profiles = { [VICTIM_ID]: { id: VICTIM_ID, stripe_customer_id: CUSTOMER } };
+  r = await post(checkout(VICTIM_ID, ATTACKER));
+  ck("...and a claimed profile with no readable plan is refused too", r.patches.length, 0);
+
+  // THE LAPSED SUBSCRIBER. stripe_customer_id is never cleared on
+  // cancellation, and a Payment Link always mints a NEW customer — so a
+  // returning subscriber looked exactly like the attack above, was charged,
+  // and stayed on Free. A free profile has no live subscription for a
+  // takeover to hurt, so it is re-bound (and the re-bind is logged).
+  {
+    const warned = [];
+    const realWarn = console.warn;
+    console.warn = (...a) => { warned.push(a.join(" ")); };
+    profiles = { [OWNER_ID]: { id: OWNER_ID, stripe_customer_id: "cus_old_lapsed", plan: "free" } };
+    r = await post(checkout(OWNER_ID, CUSTOMER));
+    console.warn = realWarn;
+    ck("a LAPSED (free) profile is re-bound to the new customer",
+       r.patch, { stripe_customer_id: CUSTOMER, payment_past_due: false });
+    ck("...by profile id", r.filter, `id=eq.${OWNER_ID}`);
+    ck("...it is not logged as a takeover attempt", r.errorLogs.length, 0);
+    ck("...the re-bind itself is logged with both customer ids",
+       warned.some((w) => /RE-BINDING a lapsed profile/.test(w) && w.includes("cus_old_lapsed") && w.includes(CUSTOMER)), true);
+    // ...and the subscription.created that carries the Price now lands.
+    r = await post(subEvent("active", PRO_PRICE, "customer.subscription.created"));
+    ck("...so the returning subscriber actually gets the plan they paid for",
+       [r.status, profiles[OWNER_ID].plan], [200, "pro"]);
+  }
 
   profiles = {};
   r = await post(checkout(UNKNOWN_ID, CUSTOMER));

@@ -359,16 +359,16 @@ const I18N = {
     auth_working: "Working…", auth_create_free: "Create free account",
     auth_continue_payment: "Continue to payment — ", auth_per_month: "/month", prices_currency_note: "All prices in {currency}.",
     auth_couldnt_signup: "COULDN'T COMPLETE SIGNUP", auth_couldnt_login: "COULDN'T LOG IN",
-    plan_free_tag: "No card needed", plan_starter_tag: "Get started", plan_pro_tag: "Most popular", plan_elite_tag: "It's GOLSZ Time",
+    plan_free_tag: "No card needed", plan_starter_tag: "Get started", plan_pro_tag: "For an active recruiting season", plan_elite_tag: "It's GOLSZ Time",
     plan_free_feat1: "3 AI Scout questions/day — 40 lifetime total", plan_free_feat2: "Digital Sports Passport — profile, achievements & career history", plan_free_feat3: "AI Scout athlete intake & goal discovery", plan_free_feat4: "Passport Strength score & My Next Move",
     conversion_title: "We've learned enough about you — let's build your plan.", conversion_body: "GOLSZ Scout now knows your sport, your goals, and what you're working on. Upgrade to unlock deeper guidance built around your progression — not just more questions.", conversion_dismiss: "Not now", update_available: "A new version of GOLSZ is ready.", scout_try_again: "Try again", update_refresh: "Refresh", update_dismiss: "Dismiss", 
     feature_lock_body: "This is part of GOLSZ's guided pathway tools.", feature_lock_cta: "Upgrade to unlock",
     guided_step_goal: "Understanding your goal: {goal}", guided_step_goal_fallback: "Getting to know what you're working toward.",
     guided_step_passport: "Analyzing your Passport — {score}% complete.", guided_step_missing: "Missing: {list}.", guided_step_missing_none: "Your Passport basics are all filled in.",
     guided_step_readiness: "Initial Passport Strength: {score}/100.", guided_step_next_move: "Your next move: {label}", guided_step_next_move_generic: "Building your first recommended next move.",
-    guided_ready_title: "That's the athlete you are today.", guided_ready_body: "Now let's figure out how you become the athlete you want to be — Passport Strength, My Next Move, Targets, and Benchmarks are ready to unlock.",
+    guided_ready_title: "That's the athlete you are today.", guided_ready_body: "Now let's figure out how you become the athlete you want to be — Passport Strength, your Pathway, Targets, and Benchmarks are ready to unlock.",
     elite_welcome_eyebrow: "IT'S GOLSZ TIME", elite_welcome_title: "Welcome to GOLSZ Elite.", elite_welcome_body: "Before we build your complete program, we need to understand you — the athlete you are today, where you want to go, and what your normal week looks like. We'll build your Passport, establish your goals, create your Pathway, and organize your development around getting there.", elite_welcome_cta: "Let's build it",
-    guided_locked_readiness: "Passport Strength", guided_locked_next_move: "My Next Move", guided_locked_targets: "Targets", guided_locked_benchmarks: "Benchmarks",
+    guided_locked_readiness: "Passport Strength", guided_locked_pathway: "Pathway", guided_locked_targets: "Targets", guided_locked_benchmarks: "Benchmarks",
     guided_continue_cta: "Continue my journey",
     next_move_title: "MY NEXT STEP", next_move_act: "Do this", 
     next_move_type_complete_profile: "Finish your Passport.", next_move_type_define_goal: "Tell Scout what you're aiming for.", next_move_type_build_pathway: "Build your Pathway with Scout.", next_move_type_follow_up: "Follow up on a stale target.", next_move_type_review_progress: "Review your progress.",
@@ -405,8 +405,8 @@ const I18N = {
     targets_delete_confirm: "Delete?", targets_delete_confirm_aria: "Tap again to delete {name} and its drafted email",
     targets_notes_ph: "Notes", targets_draft_ph: "Draft outreach email",
     targets_status_researching: "Researching", targets_status_preparing: "Preparing", targets_status_contacted: "Contacted", targets_status_responded: "Responded", targets_status_follow_up: "Follow up", targets_status_opportunity: "Opportunity", targets_fit_reasoning_ph: "Why this is a good fit (optional)",
-    plan_starter_feat1: "8 AI Scout questions/day — no lifetime limit", plan_starter_feat2: "Everything in Free", plan_starter_feat3: "Personalized Pathway, My Next Move & baseline assessment", plan_starter_feat4: "Target lists, basic outreach & PDF Passport export",
-    plan_pro_feat1: "15 AI Scout questions/day — no lifetime limit", plan_pro_feat2: "Everything in Basic", plan_pro_feat3: "Passport Strength breakdown & progress reviews", plan_pro_feat4: "Training & development plan", plan_pro_feat5: "Richer target tracking & outreach follow-ups", plan_pro_feat6: "Identity verification",
+    plan_starter_feat1: "8 AI Scout questions/day — no lifetime limit", plan_starter_feat2: "Everything in Free", plan_starter_feat3: "Personalized Pathway & benchmark tracking", plan_starter_feat4: "Target lists with outreach tracking & follow-up reminders, plus PDF Passport export",
+    plan_pro_feat1: "15 AI Scout questions/day — no lifetime limit", plan_pro_feat2: "Everything in Basic", plan_pro_feat3: "Passport Strength breakdown", plan_pro_feat4: "Training & development plan", plan_pro_feat5: "Richer target tracking & outreach follow-ups", plan_pro_feat6: "Identity verification",
     plan_elite_feat1: "20 AI Scout questions/day — no lifetime limit", plan_elite_feat2: "Everything in Pro",
     feed_title: "Your feed", feed_search: "Search your feed…", feed_share_update: "Share an update…",
     feed_new_post: "NEW POST", feed_whats_happening: "What's happening?", feed_add_details: "Add details (optional)",
@@ -446,6 +446,7 @@ const I18N = {
     settings_plan_portal_unavailable: "Billing management isn't set up yet — check back soon.",
     settings_plan_cancel_via_stripe: "Cancel your subscription first, otherwise you'd lose Pro access while Stripe kept charging you. Use the receipt email Stripe sent you to cancel — your plan moves to Free automatically once it does.",
     settings_plan_err: "Couldn't update your plan — try again.", settings_plan_switch_via_stripe: "Change your plan from the Stripe receipt email — starting a new checkout here would charge you a second time and leave you on the plan you already have.",
+    settings_plan_switch_contact: "Changing plan isn't available in the app yet. Email hello@golsz.com and we'll switch it for you — or cancel in Manage billing and choose the new plan once your current period ends.", auth_email_already_registered: "An account with this email already exists. Log in instead, or use “Forgot password?” to reset it. No payment was taken.", admin_billing_cancel_first: "This account has an active paid subscription (Stripe customer {customer}). Blocking or deleting it here does NOT stop Stripe charging them — cancel the subscription in the Stripe Dashboard first. Continue anyway?",
     notif_ios_homescreen: "On iPhone/iPad, notifications only work after you add GOLSZ to your Home Screen: tap Share, then \"Add to Home Screen\" — then open GOLSZ from that icon and turn notifications on from there.",
     restricted_title: "Restricted account.", restricted_body: "Your posts stay private and you're hidden from Discover until a parent or guardian approves access — see Family & Parent Access on your Profile.",
     back: "Back",
@@ -711,16 +712,16 @@ const I18N = {
     auth_working: "Chargement…", auth_create_free: "Créer un compte gratuit",
     auth_continue_payment: "Continuer vers le paiement — ", auth_per_month: "/mois", prices_currency_note: "Tous les prix sont en {currency}.",
     auth_couldnt_signup: "INSCRIPTION IMPOSSIBLE", auth_couldnt_login: "CONNEXION IMPOSSIBLE",
-    plan_free_tag: "Sans carte bancaire", plan_starter_tag: "Pour commencer", plan_pro_tag: "Le plus populaire", plan_elite_tag: "C'est l'heure GOLSZ",
+    plan_free_tag: "Sans carte bancaire", plan_starter_tag: "Pour commencer", plan_pro_tag: "Pour une saison de recrutement active", plan_elite_tag: "C'est l'heure GOLSZ",
     plan_free_feat1: "3 questions/jour avec Scout — 40 au total à vie", plan_free_feat2: "Passeport Sportif Numérique — profil, palmarès & parcours", plan_free_feat3: "Découverte de l'athlète & de vos objectifs avec Scout", plan_free_feat4: "Score Force du Passeport & Ma Prochaine Étape",
     conversion_title: "On en sait assez sur vous — construisons votre plan.", conversion_body: "GOLSZ Scout connaît maintenant votre sport, vos objectifs et ce sur quoi vous travaillez. Passez à un forfait supérieur pour un accompagnement plus poussé, centré sur votre progression — pas seulement plus de questions.", conversion_dismiss: "Pas maintenant", update_available: "Une nouvelle version de GOLSZ est prête.", scout_try_again: "Réessayer", update_refresh: "Actualiser", update_dismiss: "Ignorer", 
     feature_lock_body: "Cela fait partie des outils de parcours guidé de GOLSZ.", feature_lock_cta: "Passer à un forfait supérieur",
     guided_step_goal: "Compréhension de votre objectif : {goal}", guided_step_goal_fallback: "Nous apprenons ce vers quoi vous travaillez.",
     guided_step_passport: "Analyse de votre Passeport — {score}% complété.", guided_step_missing: "Manquant : {list}.", guided_step_missing_none: "Les bases de votre Passeport sont toutes remplies.",
     guided_step_readiness: "Force du Passeport initiale : {score}/100.", guided_step_next_move: "Votre prochaine étape : {label}", guided_step_next_move_generic: "Construction de votre première étape recommandée.",
-    guided_ready_title: "Voilà l'athlète que vous êtes aujourd'hui.", guided_ready_body: "Voyons maintenant comment devenir l'athlète que vous voulez être — la Force du Passeport, Ma Prochaine Étape, Cibles et Repères sont prêts à être débloqués.",
+    guided_ready_title: "Voilà l'athlète que vous êtes aujourd'hui.", guided_ready_body: "Voyons maintenant comment devenir l'athlète que vous voulez être — la Force du Passeport, votre Parcours, Cibles et Repères sont prêts à être débloqués.",
     elite_welcome_eyebrow: "C'EST L'HEURE GOLSZ", elite_welcome_title: "Bienvenue dans GOLSZ Elite.", elite_welcome_body: "Avant de construire votre programme complet, nous devons vous comprendre — l'athlète que vous êtes aujourd'hui, où vous voulez aller, et à quoi ressemble votre semaine normale. Nous allons construire votre Passeport, définir vos objectifs, créer votre Parcours et organiser votre développement pour y arriver.", elite_welcome_cta: "Construisons-le",
-    guided_locked_readiness: "Force du Passeport", guided_locked_next_move: "Ma Prochaine Étape", guided_locked_targets: "Cibles", guided_locked_benchmarks: "Repères",
+    guided_locked_readiness: "Force du Passeport", guided_locked_pathway: "Parcours", guided_locked_targets: "Cibles", guided_locked_benchmarks: "Repères",
     guided_continue_cta: "Continuer mon parcours",
     next_move_title: "VOTRE PROCHAINE ÉTAPE", next_move_act: "Faire ça", 
     next_move_type_complete_profile: "Terminez votre Passeport.", next_move_type_define_goal: "Dites à Scout votre objectif.", next_move_type_build_pathway: "Construisez votre Parcours avec Scout.", next_move_type_follow_up: "Relancez une cible en attente.", next_move_type_review_progress: "Consultez vos progrès.",
@@ -757,8 +758,8 @@ const I18N = {
     targets_delete_confirm: "Supprimer ?", targets_delete_confirm_aria: "Touchez à nouveau pour supprimer {name} et son e-mail préparé",
     targets_notes_ph: "Notes", targets_draft_ph: "Brouillon d'email de contact",
     targets_status_researching: "Recherche", targets_status_preparing: "Préparation", targets_status_contacted: "Contacté", targets_status_responded: "Répondu", targets_status_follow_up: "Relance", targets_status_opportunity: "Opportunité", targets_fit_reasoning_ph: "Pourquoi c'est un bon choix (facultatif)",
-    plan_starter_feat1: "8 questions/jour avec Scout — sans limite à vie", plan_starter_feat2: "Tout ce qui est dans Free", plan_starter_feat3: "Parcours personnalisé, Ma Prochaine Étape & bilan de départ", plan_starter_feat4: "Listes de cibles, approche de base & export PDF du Passeport",
-    plan_pro_feat1: "15 questions/jour avec Scout — sans limite à vie", plan_pro_feat2: "Tout ce qui est dans Basic", plan_pro_feat3: "Détail de la Force du Passeport & bilans de progression", plan_pro_feat4: "Plan d'entraînement & de développement", plan_pro_feat5: "Suivi enrichi des cibles & relances", plan_pro_feat6: "Vérification d'identité",
+    plan_starter_feat1: "8 questions/jour avec Scout — sans limite à vie", plan_starter_feat2: "Tout ce qui est dans Free", plan_starter_feat3: "Parcours personnalisé & suivi des repères", plan_starter_feat4: "Listes de cibles avec suivi des prises de contact & rappels de relance, plus export PDF du Passeport",
+    plan_pro_feat1: "15 questions/jour avec Scout — sans limite à vie", plan_pro_feat2: "Tout ce qui est dans Basic", plan_pro_feat3: "Détail de la Force du Passeport", plan_pro_feat4: "Plan d'entraînement & de développement", plan_pro_feat5: "Suivi enrichi des cibles & relances", plan_pro_feat6: "Vérification d'identité",
     plan_elite_feat1: "20 questions/jour avec Scout — sans limite à vie", plan_elite_feat2: "Tout ce qui est dans Pro",
     feed_title: "Votre fil", feed_search: "Rechercher dans votre fil…", feed_share_update: "Partager une actualité…",
     feed_new_post: "NOUVELLE PUBLICATION", feed_whats_happening: "Quoi de neuf ?", feed_add_details: "Ajouter des détails (facultatif)",
@@ -798,6 +799,7 @@ const I18N = {
     settings_plan_portal_unavailable: "La gestion de la facturation n'est pas encore configurée — revenez bientôt.",
     settings_plan_cancel_via_stripe: "Résiliez d'abord votre abonnement, sinon vous perdriez l'accès Pro alors que Stripe continuerait à vous facturer. Utilisez l'e-mail de reçu envoyé par Stripe pour résilier — votre formule passera à Free automatiquement ensuite.",
     settings_plan_err: "Impossible de mettre à jour votre formule — réessayez.", settings_plan_switch_via_stripe: "Changez de formule depuis l’e-mail de reçu Stripe — lancer un nouveau paiement ici vous facturerait une seconde fois sans changer votre formule.",
+    settings_plan_switch_contact: "Le changement de formule n'est pas encore disponible dans l'appli. Écrivez à hello@golsz.com et nous le ferons pour vous — ou résiliez dans Gérer la facturation et choisissez la nouvelle formule à la fin de votre période en cours.", auth_email_already_registered: "Un compte existe déjà avec cet e-mail. Connectez-vous, ou utilisez « Mot de passe oublié ? » pour le réinitialiser. Aucun paiement n'a été effectué.", admin_billing_cancel_first: "Ce compte a un abonnement payant actif (client Stripe {customer}). Le bloquer ou le supprimer ici n'arrête PAS les prélèvements Stripe — résiliez d'abord l'abonnement dans le tableau de bord Stripe. Continuer quand même ?",
     notif_ios_homescreen: "Sur iPhone/iPad, les notifications ne fonctionnent qu'après avoir ajouté GOLSZ à votre écran d'accueil : appuyez sur Partager, puis « Sur l'écran d'accueil » — ouvrez ensuite GOLSZ depuis cette icône et activez les notifications à partir de là.",
     restricted_title: "Compte restreint.", restricted_body: "Vos publications restent privées et vous êtes masqué de Découvrir jusqu'à ce qu'un parent ou tuteur approuve l'accès — voir Famille et accès parental sur votre profil.",
     back: "Retour",
@@ -1063,16 +1065,16 @@ const I18N = {
     auth_working: "Procesando…", auth_create_free: "Crear cuenta gratuita",
     auth_continue_payment: "Continuar al pago — ", auth_per_month: "/mes", prices_currency_note: "Todos los precios en {currency}.",
     auth_couldnt_signup: "NO SE PUDO COMPLETAR EL REGISTRO", auth_couldnt_login: "NO SE PUDO INICIAR SESIÓN",
-    plan_free_tag: "Sin tarjeta", plan_starter_tag: "Para empezar", plan_pro_tag: "Más popular", plan_elite_tag: "Es hora de GOLSZ",
+    plan_free_tag: "Sin tarjeta", plan_starter_tag: "Para empezar", plan_pro_tag: "Para una temporada de reclutamiento activa", plan_elite_tag: "Es hora de GOLSZ",
     plan_free_feat1: "3 preguntas/día con Scout — 40 en total de por vida", plan_free_feat2: "Pasaporte Deportivo Digital — perfil, logros y trayectoria", plan_free_feat3: "Descubrimiento del atleta y tus objetivos con Scout", plan_free_feat4: "Puntuación Fuerza del Pasaporte y Tu Próximo Paso",
     conversion_title: "Ya sabemos suficiente sobre ti — construyamos tu plan.", conversion_body: "GOLSZ Scout ya conoce tu deporte, tus objetivos y en qué estás trabajando. Mejora tu plan para obtener una guía más profunda centrada en tu progreso, no solo más preguntas.", conversion_dismiss: "Ahora no", update_available: "Hay una nueva versión de GOLSZ.", scout_try_again: "Reintentar", update_refresh: "Actualizar", update_dismiss: "Descartar", 
     feature_lock_body: "Esto forma parte de las herramientas de trayectoria guiada de GOLSZ.", feature_lock_cta: "Mejora tu plan para desbloquear",
     guided_step_goal: "Entendiendo tu objetivo: {goal}", guided_step_goal_fallback: "Conociendo hacia qué estás trabajando.",
     guided_step_passport: "Analizando tu Pasaporte — {score}% completo.", guided_step_missing: "Falta: {list}.", guided_step_missing_none: "Los datos básicos de tu Pasaporte están completos.",
     guided_step_readiness: "Fuerza del Pasaporte inicial: {score}/100.", guided_step_next_move: "Tu próximo paso: {label}", guided_step_next_move_generic: "Preparando tu primer paso recomendado.",
-    guided_ready_title: "Ese es el atleta que eres hoy.", guided_ready_body: "Ahora veamos cómo te conviertes en el atleta que quieres ser — la Fuerza del Pasaporte, Tu Próximo Paso, Objetivos y Marcas están listos para desbloquear.",
+    guided_ready_title: "Ese es el atleta que eres hoy.", guided_ready_body: "Ahora veamos cómo te conviertes en el atleta que quieres ser — la Fuerza del Pasaporte, tu Trayectoria, Objetivos y Marcas están listos para desbloquear.",
     elite_welcome_eyebrow: "ES HORA DE GOLSZ", elite_welcome_title: "Bienvenido a GOLSZ Elite.", elite_welcome_body: "Antes de construir tu programa completo, necesitamos entenderte — el atleta que eres hoy, adónde quieres llegar y cómo es tu semana normal. Construiremos tu Pasaporte, definiremos tus objetivos, crearemos tu Camino y organizaremos tu desarrollo para llegar allí.", elite_welcome_cta: "Construyámoslo",
-    guided_locked_readiness: "Fuerza del Pasaporte", guided_locked_next_move: "Tu Próximo Paso", guided_locked_targets: "Objetivos", guided_locked_benchmarks: "Marcas",
+    guided_locked_readiness: "Fuerza del Pasaporte", guided_locked_pathway: "Trayectoria", guided_locked_targets: "Objetivos", guided_locked_benchmarks: "Marcas",
     guided_continue_cta: "Continuar mi camino",
     next_move_title: "TU PRÓXIMO PASO", next_move_act: "Hacer esto", 
     next_move_type_complete_profile: "Termina tu Pasaporte.", next_move_type_define_goal: "Dile a Scout cuál es tu meta.", next_move_type_build_pathway: "Construye tu Trayectoria con Scout.", next_move_type_follow_up: "Da seguimiento a un objetivo pendiente.", next_move_type_review_progress: "Revisa tu progreso.",
@@ -1109,8 +1111,8 @@ const I18N = {
     targets_delete_confirm: "¿Eliminar?", targets_delete_confirm_aria: "Toca de nuevo para eliminar {name} y su correo redactado",
     targets_notes_ph: "Notas", targets_draft_ph: "Borrador de email de contacto",
     targets_status_researching: "Investigando", targets_status_preparing: "Preparando", targets_status_contacted: "Contactado", targets_status_responded: "Respondido", targets_status_follow_up: "Seguimiento", targets_status_opportunity: "Oportunidad", targets_fit_reasoning_ph: "Por qué encaja bien (opcional)",
-    plan_starter_feat1: "8 preguntas/día con Scout — sin límite de por vida", plan_starter_feat2: "Todo lo de Free", plan_starter_feat3: "Camino personalizado, Tu Próximo Paso y evaluación inicial", plan_starter_feat4: "Listas de objetivos, contacto básico y exportación PDF del Pasaporte",
-    plan_pro_feat1: "15 preguntas/día con Scout — sin límite de por vida", plan_pro_feat2: "Todo lo de Basic", plan_pro_feat3: "Desglose de Fuerza del Pasaporte y revisiones de progreso", plan_pro_feat4: "Plan de entrenamiento y desarrollo", plan_pro_feat5: "Seguimiento avanzado de objetivos y seguimientos", plan_pro_feat6: "Verificación de identidad",
+    plan_starter_feat1: "8 preguntas/día con Scout — sin límite de por vida", plan_starter_feat2: "Todo lo de Free", plan_starter_feat3: "Camino personalizado y seguimiento de marcas", plan_starter_feat4: "Listas de objetivos con seguimiento de contactos y recordatorios, más exportación PDF del Pasaporte",
+    plan_pro_feat1: "15 preguntas/día con Scout — sin límite de por vida", plan_pro_feat2: "Todo lo de Basic", plan_pro_feat3: "Desglose de Fuerza del Pasaporte", plan_pro_feat4: "Plan de entrenamiento y desarrollo", plan_pro_feat5: "Seguimiento avanzado de objetivos y seguimientos", plan_pro_feat6: "Verificación de identidad",
     plan_elite_feat1: "20 preguntas/día con Scout — sin límite de por vida", plan_elite_feat2: "Todo lo de Pro",
     feed_title: "Tu feed", feed_search: "Buscar en tu feed…", feed_share_update: "Comparte una novedad…",
     feed_new_post: "NUEVA PUBLICACIÓN", feed_whats_happening: "¿Qué está pasando?", feed_add_details: "Añade detalles (opcional)",
@@ -1150,6 +1152,7 @@ const I18N = {
     settings_plan_portal_unavailable: "La gestión de la facturación aún no está configurada — vuelve pronto.",
     settings_plan_cancel_via_stripe: "Cancela primero tu suscripción; si no, perderías el acceso Pro mientras Stripe te sigue cobrando. Usa el correo del recibo de Stripe para cancelar — tu plan pasará a Free automáticamente después.",
     settings_plan_err: "No se pudo actualizar tu plan — inténtalo de nuevo.", settings_plan_switch_via_stripe: "Cambia de plan desde el correo del recibo de Stripe — iniciar otro pago aquí te cobraría una segunda vez y te dejaría en el plan que ya tienes.",
+    settings_plan_switch_contact: "Todavía no puedes cambiar de plan desde la app. Escribe a hello@golsz.com y lo cambiamos por ti — o cancela en Gestionar la facturación y elige el nuevo plan cuando termine tu periodo actual.", auth_email_already_registered: "Ya existe una cuenta con este correo. Inicia sesión o usa «¿Olvidaste tu contraseña?» para restablecerla. No se ha realizado ningún cobro.", admin_billing_cancel_first: "Esta cuenta tiene una suscripción de pago activa (cliente de Stripe {customer}). Bloquearla o eliminarla aquí NO detiene los cobros de Stripe — cancela primero la suscripción en el panel de Stripe. ¿Continuar de todos modos?",
     notif_ios_homescreen: "En iPhone/iPad, las notificaciones solo funcionan después de añadir GOLSZ a tu pantalla de inicio: toca Compartir y luego \"Añadir a pantalla de inicio\" — después abre GOLSZ desde ese icono y activa las notificaciones desde ahí.",
     restricted_title: "Cuenta restringida.", restricted_body: "Tus publicaciones permanecen privadas y estás oculto en Descubrir hasta que un padre, madre o tutor apruebe el acceso — consulta Familia y acceso parental en tu perfil.",
     back: "Atrás",
@@ -1415,16 +1418,16 @@ const I18N = {
     auth_working: "Επεξεργασία…", auth_create_free: "Δημιουργία δωρεάν λογαριασμού",
     auth_continue_payment: "Συνέχεια στην πληρωμή — ", auth_per_month: "/μήνα", prices_currency_note: "Όλες οι τιμές σε {currency}.",
     auth_couldnt_signup: "Η ΕΓΓΡΑΦΗ ΑΠΕΤΥΧΕ", auth_couldnt_login: "Η ΣΥΝΔΕΣΗ ΑΠΕΤΥΧΕ",
-    plan_free_tag: "Χωρίς κάρτα", plan_starter_tag: "Ξεκινήστε", plan_pro_tag: "Δημοφιλέστερο", plan_elite_tag: "Είναι ώρα για GOLSZ",
+    plan_free_tag: "Χωρίς κάρτα", plan_starter_tag: "Ξεκινήστε", plan_pro_tag: "Για μια ενεργή σεζόν στρατολόγησης", plan_elite_tag: "Είναι ώρα για GOLSZ",
     plan_free_feat1: "3 ερωτήσεις/ημέρα στον Scout — 40 συνολικά εφ' όρου ζωής", plan_free_feat2: "Ψηφιακό Αθλητικό Διαβατήριο — προφίλ, διακρίσεις & πορεία", plan_free_feat3: "Γνωριμία με τον αθλητή & τους στόχους σου μέσω του Scout", plan_free_feat4: "Βαθμολογία Ισχύος Διαβατηρίου & Η Επόμενή σου Κίνηση",
     conversion_title: "Μάθαμε αρκετά για εσένα — ας χτίσουμε το πλάνο σου.", conversion_body: "Ο GOLSZ Scout γνωρίζει πλέον το άθλημά σου, τους στόχους σου και τι δουλεύεις. Αναβάθμισε για βαθύτερη καθοδήγηση γύρω από την εξέλιξή σου — όχι απλώς περισσότερες ερωτήσεις.", conversion_dismiss: "Όχι τώρα", update_available: "Νέα έκδοση του GOLSZ είναι έτοιμη.", scout_try_again: "Δοκίμασε ξανά", update_refresh: "Ανανέωση", update_dismiss: "Απόρριψη", 
     feature_lock_body: "Αυτό αποτελεί μέρος των εργαλείων καθοδηγούμενης πορείας του GOLSZ.", feature_lock_cta: "Αναβάθμισε για ξεκλείδωμα",
     guided_step_goal: "Κατανοώντας τον στόχο σου: {goal}", guided_step_goal_fallback: "Μαθαίνουμε προς τι δουλεύεις.",
     guided_step_passport: "Ανάλυση του Διαβατηρίου σου — {score}% ολοκληρωμένο.", guided_step_missing: "Λείπει: {list}.", guided_step_missing_none: "Τα βασικά στοιχεία του Διαβατηρίου σου είναι πλήρη.",
     guided_step_readiness: "Αρχική Ισχύς Διαβατηρίου: {score}/100.", guided_step_next_move: "Η επόμενή σου κίνηση: {label}", guided_step_next_move_generic: "Δημιουργία της πρώτης προτεινόμενης κίνησής σου.",
-    guided_ready_title: "Αυτός είναι ο αθλητής που είσαι σήμερα.", guided_ready_body: "Τώρα ας δούμε πώς θα γίνεις ο αθλητής που θέλεις να είσαι — Η Ισχύς Διαβατηρίου, Η Επόμενή σου Κίνηση, Στόχοι και Δείκτες είναι έτοιμα για ξεκλείδωμα.",
+    guided_ready_title: "Αυτός είναι ο αθλητής που είσαι σήμερα.", guided_ready_body: "Τώρα ας δούμε πώς θα γίνεις ο αθλητής που θέλεις να είσαι — Η Ισχύς Διαβατηρίου, η Πορεία σου, Στόχοι και Δείκτες είναι έτοιμα για ξεκλείδωμα.",
     elite_welcome_eyebrow: "ΕΙΝΑΙ ΩΡΑ ΓΙΑ GOLSZ", elite_welcome_title: "Καλωσόρισες στο GOLSZ Elite.", elite_welcome_body: "Πριν χτίσουμε το πλήρες πρόγραμμά σου, χρειάζεται να σε γνωρίσουμε — τον αθλητή που είσαι σήμερα, πού θέλεις να φτάσεις και πώς μοιάζει η συνηθισμένη σου εβδομάδα. Θα χτίσουμε το Διαβατήριό σου, θα καθορίσουμε τους στόχους σου, θα δημιουργήσουμε το Μονοπάτι σου και θα οργανώσουμε την ανάπτυξή σου γύρω από αυτό.", elite_welcome_cta: "Ας το χτίσουμε",
-    guided_locked_readiness: "Ισχύς Διαβατηρίου", guided_locked_next_move: "Η Επόμενή σου Κίνηση", guided_locked_targets: "Στόχοι", guided_locked_benchmarks: "Δείκτες",
+    guided_locked_readiness: "Ισχύς Διαβατηρίου", guided_locked_pathway: "Πορεία", guided_locked_targets: "Στόχοι", guided_locked_benchmarks: "Δείκτες",
     guided_continue_cta: "Συνέχισε την πορεία μου",
     next_move_title: "Η ΕΠΟΜΕΝΗ ΣΟΥ ΚΙΝΗΣΗ", next_move_act: "Κάνε το", 
     next_move_type_complete_profile: "Ολοκλήρωσε το Διαβατήριό σου.", next_move_type_define_goal: "Πες στον Scout τον στόχο σου.", next_move_type_build_pathway: "Δημιούργησε την Πορεία σου με τον Scout.", next_move_type_follow_up: "Κάνε follow-up σε έναν στόχο.", next_move_type_review_progress: "Δες την πρόοδό σου.",
@@ -1461,8 +1464,8 @@ const I18N = {
     targets_delete_confirm: "Διαγραφή;", targets_delete_confirm_aria: "Πάτησε ξανά για να διαγράψεις το {name} και το προσχέδιο email του",
     targets_notes_ph: "Σημειώσεις", targets_draft_ph: "Πρόχειρο email επικοινωνίας",
     targets_status_researching: "Έρευνα", targets_status_preparing: "Προετοιμασία", targets_status_contacted: "Επικοινώνησα", targets_status_responded: "Απάντησαν", targets_status_follow_up: "Παρακολούθηση", targets_status_opportunity: "Ευκαιρία", targets_fit_reasoning_ph: "Γιατί ταιριάζει καλά (προαιρετικό)",
-    plan_starter_feat1: "8 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_starter_feat2: "Όλα όσα περιλαμβάνει το Free", plan_starter_feat3: "Προσωπικό Μονοπάτι, Η Επόμενή σου Κίνηση & αρχική αξιολόγηση", plan_starter_feat4: "Λίστες στόχων, βασική προσέγγιση & εξαγωγή PDF Διαβατηρίου",
-    plan_pro_feat1: "15 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_pro_feat2: "Όλα όσα περιλαμβάνει το Basic", plan_pro_feat3: "Ανάλυση Ισχύος Διαβατηρίου & αξιολογήσεις προόδου", plan_pro_feat4: "Πλάνο προπόνησης & ανάπτυξης", plan_pro_feat5: "Εμπλουτισμένη παρακολούθηση στόχων & follow-up", plan_pro_feat6: "Επαλήθευση ταυτότητας",
+    plan_starter_feat1: "8 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_starter_feat2: "Όλα όσα περιλαμβάνει το Free", plan_starter_feat3: "Προσωπικό Μονοπάτι & παρακολούθηση δεικτών", plan_starter_feat4: "Λίστες στόχων με παρακολούθηση επαφών & υπενθυμίσεις follow-up, συν εξαγωγή PDF Διαβατηρίου",
+    plan_pro_feat1: "15 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_pro_feat2: "Όλα όσα περιλαμβάνει το Basic", plan_pro_feat3: "Ανάλυση Ισχύος Διαβατηρίου", plan_pro_feat4: "Πλάνο προπόνησης & ανάπτυξης", plan_pro_feat5: "Εμπλουτισμένη παρακολούθηση στόχων & follow-up", plan_pro_feat6: "Επαλήθευση ταυτότητας",
     plan_elite_feat1: "20 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_elite_feat2: "Όλα όσα περιλαμβάνει το Pro",
     feed_title: "Η ροή σας", feed_search: "Αναζήτηση στη ροή σας…", feed_share_update: "Μοιραστείτε μια ενημέρωση…",
     feed_new_post: "ΝΕΑ ΑΝΑΡΤΗΣΗ", feed_whats_happening: "Τι συμβαίνει;", feed_add_details: "Προσθήκη λεπτομερειών (προαιρετικό)",
@@ -1502,6 +1505,7 @@ const I18N = {
     settings_plan_portal_unavailable: "Η διαχείριση χρέωσης δεν έχει ρυθμιστεί ακόμη — ελέγξτε ξανά σύντομα.",
     settings_plan_cancel_via_stripe: "Ακυρώστε πρώτα τη συνδρομή σας, αλλιώς θα χάνατε την πρόσβαση Pro ενώ το Stripe θα συνέχιζε να σας χρεώνει. Χρησιμοποιήστε το email απόδειξης από το Stripe για ακύρωση — το πλάνο σας θα γίνει Free αυτόματα μετά.",
     settings_plan_err: "Δεν ήταν δυνατή η ενημέρωση του πακέτου σας — δοκιμάστε ξανά.", settings_plan_switch_via_stripe: "Άλλαξε πλάνο από το email απόδειξης του Stripe — μια νέα πληρωμή εδώ θα σε χρέωνε δεύτερη φορά και θα σε άφηνε στο ίδιο πλάνο.",
+    settings_plan_switch_contact: "Η αλλαγή πλάνου δεν είναι ακόμη διαθέσιμη στην εφαρμογή. Στείλτε email στο hello@golsz.com και θα την κάνουμε για εσάς — ή ακυρώστε από τη Διαχείριση χρέωσης και επιλέξτε το νέο πλάνο όταν λήξει η τρέχουσα περίοδός σας.", auth_email_already_registered: "Υπάρχει ήδη λογαριασμός με αυτό το email. Συνδεθείτε ή χρησιμοποιήστε το «Ξεχάσατε τον κωδικό;» για επαναφορά. Δεν έγινε καμία χρέωση.", admin_billing_cancel_first: "Αυτός ο λογαριασμός έχει ενεργή συνδρομή επί πληρωμή (πελάτης Stripe {customer}). Ο αποκλεισμός ή η διαγραφή του εδώ ΔΕΝ σταματά τις χρεώσεις του Stripe — ακυρώστε πρώτα τη συνδρομή στο Stripe Dashboard. Συνέχεια παρ' όλα αυτά;",
     notif_ios_homescreen: "Σε iPhone/iPad, οι ειδοποιήσεις λειτουργούν μόνο αφού προσθέσετε το GOLSZ στην Αρχική οθόνη: πατήστε Κοινή χρήση και μετά «Προσθήκη στην Αρχική οθόνη» — έπειτα ανοίξτε το GOLSZ από αυτό το εικονίδιο και ενεργοποιήστε τις ειδοποιήσεις από εκεί.",
     restricted_title: "Περιορισμένος λογαριασμός.", restricted_body: "Οι αναρτήσεις σας παραμένουν ιδιωτικές και είστε κρυφοί από την Ανακάλυψη μέχρι να εγκρίνει την πρόσβαση γονέας ή κηδεμόνας — δείτε το Οικογένεια & Γονική Πρόσβαση στο προφίλ σας.",
     back: "Πίσω",
@@ -2182,43 +2186,32 @@ function SettingsButton({ openSignal }) {
     if (!sb || !uid || planBusy || planId === currentPlan) return;
     setPlanBusy(true); setPlanMsg("");
     try {
-      if (planId === "free") {
+      const route = planChoiceRoute(planId, currentPlan, stripeCustomerId);
+      if (route === "portal") {
         // Writing plan:"free" here removes ACCESS and does not stop Stripe
-        // charging. For anyone with real billing attached, that combination is
-        // strictly worse than doing nothing, so it is no longer reachable:
-        // send them to the portal, which cancels for real and fires
-        // customer.subscription.deleted for the webhook to act on.
-        if (stripeCustomerId) {
-          const portal = stripePortalLink();
-          if (portal) { window.location.href = portal; return; }
-          // No portal configured yet — say how to cancel, and still refuse to
-          // downgrade. A warning after an irreversible-feeling click is not a
-          // substitute for not taking the harmful action.
-          setPlanMsg(t("settings_plan_cancel_via_stripe"));
-          return;
-        }
+        // charging. For an active subscriber that is strictly worse than doing
+        // nothing, so it is not reachable: send them to the portal, which
+        // cancels for real and fires customer.subscription.deleted.
+        const portal = stripePortalLink();
+        if (portal) { window.location.href = portal; return; }
+        // No portal — say how to cancel, and still refuse to downgrade.
+        setPlanMsg(t("settings_plan_cancel_via_stripe"));
+        return;
+      }
+      if (route === "downgrade") {
         const { error } = await sb.from("profiles").update({ plan: "free" }).eq("id", uid);
         if (error) throw error;
         setCurrentPlan("free");
         setPlanMsg(t("settings_plan_downgrade_note"));
+      } else if (route === "contact") {
+        // An active subscriber switching paid tier. The portal cannot (plan
+        // switching is off) and a Payment Link would bill a second
+        // subscription alongside the first. Say so instead of doing either.
+        setPlanMsg(t("settings_plan_switch_contact"));
+        return;
       } else {
-        // AN EXISTING SUBSCRIBER MUST NOT GO THROUGH A PAYMENT LINK AGAIN.
-        // A Payment Link starts a NEW checkout, which mints a SECOND Stripe
-        // customer for the same person — and the webhook refuses to re-bind a
-        // profile that already carries a stripe_customer_id, so the upgrade is
-        // charged and never granted. The athlete pays twice and gets the old
-        // plan. The portal is where an existing subscription is changed: it
-        // keeps one customer, prorates properly, and fires
-        // customer.subscription.updated for the webhook to act on.
-        if (stripeCustomerId) {
-          const portal = stripePortalLink();
-          if (portal) { window.location.href = portal; return; }
-          // Same rule as the downgrade branch above: no portal configured
-          // means say how, and refuse. Taking money we cannot grant access
-          // for is worse than doing nothing.
-          setPlanMsg(t("settings_plan_switch_via_stripe"));
-          return;
-        }
+        // "checkout" — no active subscription. A lapsed subscriber lands here
+        // too: the webhook re-binds a free profile to the new customer.
         const link = stripeLinkFor(planId, currency);
         if (!link) { setPlanMsg(t("settings_plan_checkout_unavailable")); return; }
         const { data: { user } } = await sb.auth.getUser();
@@ -2301,7 +2294,10 @@ function SettingsButton({ openSignal }) {
     // choosePlan("free") already refuses above for the same reason: a warning
     // shown after an irreversible click is not a substitute for not taking the
     // harmful action.
-    if (stripeCustomerId) {
+    // ACTIVE, not "ever paid": stripe_customer_id is never cleared, so gating
+    // on the id alone stranded every lapsed subscriber with an account they
+    // could never delete. api/delete-account.js enforces the same rule.
+    if (hasActiveSubscription(currentPlan, stripeCustomerId)) {
       setDeleteErr(t("settings_delete_cancel_first"));
       return;
     }
@@ -2321,6 +2317,12 @@ function SettingsButton({ openSignal }) {
       // deleting a minor's account on an implied consent.
       if (res.status === 409 && data && data.code === "managed_children_present") {
         setBlockingChildren(Array.isArray(data.children) ? data.children : []);
+        setDeleteBusy(false);
+        return;
+      }
+      // The server's own billing check (state here can be stale).
+      if (res.status === 409 && data && data.code === "active_subscription") {
+        setDeleteErr(t("settings_delete_cancel_first"));
         setDeleteBusy(false);
         return;
       }
@@ -6917,19 +6919,27 @@ function AdminPanel({ onBack }) {
   // Ban/delete need the real Supabase Admin API (service role key,
   // server-only), not just a profiles/table update — see
   // api/admin-user-action.js and migration 027.
-  async function callAdminUserAction(action, targetId) {
+  async function callAdminUserAction(action, targetId, billingAcknowledged) {
     const { data: { session } } = await sb.auth.getSession();
     const res = await fetch("/api/admin-user-action", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + (session && session.access_token) },
-      body: JSON.stringify({ action, targetId }),
+      body: JSON.stringify({ action, targetId, billingAcknowledged: billingAcknowledged === true }),
     });
     const data = await res.json().catch(() => ({}));
+    // Ban and delete never touch Stripe. The server answers 409 for a target
+    // with an active subscription until the admin confirms billing has been
+    // cancelled in the Stripe Dashboard; then it is retried once with the flag.
+    if (res.status === 409 && data && data.code === "active_subscription" && billingAcknowledged !== true) {
+      const msg = t("admin_billing_cancel_first").replace("{customer}", data.stripe_customer_id || "");
+      if (!window.confirm(msg)) return null;
+      return callAdminUserAction(action, targetId, true);
+    }
     if (!res.ok) throw new Error((data && data.error) || "Action failed");
     return data;
   }
   async function setUserBanned(id, val) {
-    try { await callAdminUserAction(val ? "ban" : "unban", id); loadUsers(userQuery); }
+    try { if (await callAdminUserAction(val ? "ban" : "unban", id)) loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin ban error:", e); alert(t("admin_ban_user_err")); }
   }
   async function setUserVerifiedTier(id, tier) {
@@ -6939,7 +6949,7 @@ function AdminPanel({ onBack }) {
   async function deleteUser(id) {
     if (!window.confirm(t("admin_delete_user_confirm"))) return;
     try {
-      await callAdminUserAction("delete", id);
+      if (!(await callAdminUserAction("delete", id))) return;
       loadUsers(userQuery); loadStats();
     } catch (e) { console.error("GOLSZ admin delete user error:", e); alert(t("admin_delete_user_err")); }
   }
@@ -13511,6 +13521,39 @@ function GolszApp({ onSignOut, startOnboarding }) {
   );
 }
 
+// Shared by UpgradeScreen and GuidedAssessment: loads the two billing facts
+// and routes a paid-tier pick through planChoiceRoute(). A Payment Link for
+// an active subscriber would start a SECOND subscription on a second Stripe
+// customer, so unknown billing never falls through to checkout.
+// billing: null = still loading, false = lookup failed.
+function usePlanPicker(uid) {
+  const { t, currency } = useLang();
+  const [billing, setBilling] = useState(null);
+  const [msg, setMsg] = useState("");
+  useEffect(() => {
+    if (!sb || !uid) { setBilling({ plan: null, customer: null }); return; }
+    let alive = true;
+    (async () => {
+      const { data, error } = await sb.from("profiles").select("plan, stripe_customer_id").eq("id", uid).maybeSingle();
+      if (alive) setBilling(error ? false : { plan: (data && data.plan) || null, customer: (data && data.stripe_customer_id) || null });
+    })();
+    return () => { alive = false; };
+  }, [uid]);
+  function pick(planId) {
+    setMsg("");
+    if (!billing) { if (billing === false) setMsg(t("settings_plan_err")); return; }
+    const route = planChoiceRoute(planId, billing.plan, billing.customer);
+    if (route === "current") return;
+    if (route === "contact") { setMsg(t("settings_plan_switch_contact")); return; }
+    const link = stripeLinkFor(planId, currency);
+    if (!link || !uid) { setMsg(t("settings_plan_checkout_unavailable")); return; }
+    const checkoutUrl = new URL(link);
+    checkoutUrl.searchParams.set("client_reference_id", uid);
+    window.location.href = checkoutUrl.toString();
+  }
+  return { billing, msg, pick };
+}
+
 // Lightweight direct pricing screen — used for manual "Upgrade" taps from
 // locked-feature buttons throughout the app (openUpgrade in GolszApp).
 // Portaled to document.body like every other full-screen overlay in this
@@ -13527,20 +13570,8 @@ function UpgradeScreen({ uid, onDismiss, title, body }) {
   useModalFocus(panelRef, true, onDismiss);
   // AN EXISTING SUBSCRIBER REACHES THIS SCREEN TOO. It is not free-only —
   // openUpgrade() fires from any feature lock, so a Basic subscriber hitting
-  // an Elite-gated feature lands here, and a Payment Link would start a SECOND
-  // checkout and mint a SECOND Stripe customer. The webhook refuses to re-bind
-  // a profile that already carries one, so the upgrade is charged and never
-  // granted: they pay twice and keep the old plan.
-  const [hasBilling, setHasBilling] = useState(false);
-  useEffect(() => {
-    if (!sb || !uid) return;
-    let alive = true;
-    (async () => {
-      const { data } = await sb.from("profiles").select("stripe_customer_id").eq("id", uid).maybeSingle();
-      if (alive) setHasBilling(!!(data && data.stripe_customer_id));
-    })();
-    return () => { alive = false; };
-  }, [uid]);
+  // an Elite-gated feature lands here. See usePlanPicker() above.
+  const { billing, msg, pick } = usePlanPicker(uid);
   return ReactDOM.createPortal(
     <div className="fixed-sheet" style={{ position: "fixed", inset: 0, background: "#000000a6", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
       <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title || t("conversion_title")} className="noscroll" style={{ background: C.pitch, border: `1px solid ${C.line2}`, borderRadius: 18, maxWidth: 440, width: "100%", maxHeight: "calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 48px)", overflowY: "auto", padding: 22, boxSizing: "border-box", boxShadow: "0 24px 60px -20px rgba(0,0,0,0.8)" }}>
@@ -13548,30 +13579,21 @@ function UpgradeScreen({ uid, onDismiss, title, body }) {
         <div style={{ fontSize: 18, fontWeight: 900, textAlign: "center", marginBottom: 8, lineHeight: 1.3 }}>{title || t("conversion_title")}</div>
         <div style={{ fontSize: 13, color: C.slate, textAlign: "center", marginBottom: 20, lineHeight: 1.5 }}>{body || t("conversion_body")}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-          {PLANS.filter((pl) => pl.id !== "free").map((pl) => (
-            <button key={pl.id} onClick={() => {
-              // Already billing? The portal is the only safe route — it keeps
-              // one customer and prorates. See the note at the top.
-              if (hasBilling) {
-                const portal = stripePortalLink();
-                if (portal) { window.location.href = portal; }
-                return;
-              }
-              const link = stripeLinkFor(pl.id, currency);
-              if (!link || !uid) return;
-              const checkoutUrl = new URL(link);
-              checkoutUrl.searchParams.set("client_reference_id", uid);
-              window.location.href = checkoutUrl.toString();
-            }} style={{
-              textAlign: "left", cursor: "pointer", fontFamily: "inherit",
-              background: C.turf, border: `1.5px solid ${C.line2}`, borderRadius: 12,
+          {PLANS.filter((pl) => pl.id !== "free").map((pl) => {
+            const isCurrent = !!billing && billing.plan === pl.id;
+            return (
+            <button key={pl.id} onClick={() => pick(pl.id)} disabled={isCurrent || billing === null} style={{
+              textAlign: "left", cursor: isCurrent ? "default" : "pointer", fontFamily: "inherit",
+              background: C.turf, border: `1.5px solid ${isCurrent ? C.lime : C.line2}`, borderRadius: 12,
               padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
             }}>
               <div style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>{pl.name}</div>
-              <div style={{ fontSize: 12.5, color: C.lime, fontWeight: 700 }}>{planPrice(pl.id, currency)}/mo</div>
+              <div style={{ fontSize: 12.5, color: C.lime, fontWeight: 700 }}>{isCurrent ? t("settings_plan_current") : planPrice(pl.id, currency) + "/mo"}</div>
             </button>
-          ))}
+            );
+          })}
         </div>
+        {msg && <div role="alert" style={{ fontSize: 12, color: C.amber, textAlign: "center", marginBottom: 10, lineHeight: 1.45 }}>{msg}</div>}
         <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_currency_note").replace("{currency}", currency.toUpperCase())}</div>
         <button onClick={onDismiss} style={{ width: "100%", textAlign: "center", background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 8 }}>{t("conversion_dismiss")}</button>
       </div>
@@ -13624,6 +13646,9 @@ function GuidedAssessment({ uid, onDismiss }) {
   const [verified, setVerified] = useState(false);
   const [nextMove, setNextMove] = useState(null);
   const [showPlans, setShowPlans] = useState(false);
+  // Shown to free-plan accounts, which can still carry an old Stripe customer
+  // (lapsed) — the same routing as UpgradeScreen, not a bare Payment Link.
+  const { billing, msg, pick } = usePlanPicker(uid);
 
   useEffect(() => {
     if (!sb || !uid) { setLoaded(true); return; }
@@ -13665,7 +13690,8 @@ function GuidedAssessment({ uid, onDismiss }) {
   // would understate things dishonestly rather than "initial."
   const readinessScore = quality ? Math.round((quality.score + (verified ? 100 : 0)) / 2) : 0;
   const LOCKED_TILES = [
-    { icon: BadgeCheck, key: "readiness" }, { icon: Radar, key: "next_move" },
+    // My Next Move is on Home for every plan, so it is not a locked tile.
+    { icon: BadgeCheck, key: "readiness" }, { icon: Compass, key: "pathway" },
     { icon: Target, key: "targets" }, { icon: Trophy, key: "benchmarks" },
   ];
 
@@ -13716,13 +13742,7 @@ function GuidedAssessment({ uid, onDismiss }) {
             <div style={{ fontSize: 13, color: C.slate, textAlign: "center", marginBottom: 20, lineHeight: 1.5 }}>{t("conversion_body")}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
               {PLANS.filter((pl) => pl.id !== "free").map((pl) => (
-                <button key={pl.id} onClick={() => {
-                  const link = stripeLinkFor(pl.id, currency);
-                  if (!link || !uid) return;
-                  const checkoutUrl = new URL(link);
-                  checkoutUrl.searchParams.set("client_reference_id", uid);
-                  window.location.href = checkoutUrl.toString();
-                }} style={{
+                <button key={pl.id} onClick={() => pick(pl.id)} disabled={billing === null} style={{
                   textAlign: "left", cursor: "pointer", fontFamily: "inherit",
                   background: C.turf, border: `1.5px solid ${C.line2}`, borderRadius: 12,
                   padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
@@ -13732,6 +13752,7 @@ function GuidedAssessment({ uid, onDismiss }) {
                 </button>
               ))}
             </div>
+            {msg && <div role="alert" style={{ fontSize: 12, color: C.amber, textAlign: "center", marginBottom: 10, lineHeight: 1.45 }}>{msg}</div>}
             <div style={{ textAlign: "center", fontSize: 11, color: C.slate, marginTop: 6 }}>{t("prices_currency_note").replace("{currency}", currency.toUpperCase())}</div>
         <button onClick={onDismiss} style={{ width: "100%", textAlign: "center", background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", padding: 8 }}>{t("conversion_dismiss")}</button>
           </>
@@ -14145,34 +14166,52 @@ function stripeLinkFor(planId, currency) {
 // already handles by setting the plan back to free — so the loop closes with
 // no new backend code.
 //
-// Live since 2026-09-03. The portal's Cancellations setting is "cancel at end
-// of billing period", so an athlete who cancels keeps the month they paid for
-// and customer.subscription.deleted arrives at period end — which is when the
-// webhook should, and does, drop them to free.
+// Live since 2026-09-03. It can cancel, update the card and show invoices; it
+// CANNOT switch plans (subscription_update is off) or start a new
+// subscription — see planChoiceRoute() below. Its Cancellations setting is
+// "cancel at end of billing period", so an athlete who cancels keeps the
+// month they paid for and customer.subscription.deleted arrives at period
+// end — which is when the webhook should, and does, drop them to free.
 const STRIPE_PORTAL_LINK = "https://billing.stripe.com/p/login/bJe5kF64dalzdgrcbMaEE00";
 function isLivePortalLink(url) {
   if (typeof url !== "string") return false;
   if (!/^https:\/\/billing\.stripe\.com\/p\/login\//.test(url)) return false;
   if (/\/test_/.test(url)) return false;
-  // A PAYMENT LINK ID PASTED ONTO THE BILLING HOST IS NOT A PORTAL.
-  // STRIPE_PORTAL_LINK carried the CAD Basic Payment Link's id — the same
-  // 24-character base62 string appears in STRIPE_LINKS — and the prefix test
-  // above happily accepted it. It is the only cancel path in the app
-  // (Settings' Manage billing and choosePlan("free") both redirect here) and
-  // index.html promises "Cancel any time", so every subscriber who tried to
-  // cancel hit a dead URL with no way to tell it was dead.
-  //
-  // Rejecting it does not fix the link — only pasting the real one from the
-  // Stripe Dashboard does that — but it makes the app fail HONESTLY: callers
-  // already handle a null portal by telling the athlete how to cancel instead
-  // of sending them nowhere. A wrong URL is worse than an absent one.
-  const id = url.split("/").filter(Boolean).pop();
-  if (id && Object.values(STRIPE_LINKS || {}).some((byPlan) =>
-    Object.values(byPlan || {}).some((link) => typeof link === "string" && link.includes(id)))) return false;
+  // No comparison against STRIPE_LINKS ids. Stripe reuses the same short code
+  // on billing.stripe.com and buy.stripe.com (verified against the live
+  // account on 2026-10-09: this portal's login_page.url and the CAD Basic
+  // Payment Link share bJe5kF64dalzdgrcbMaEE00), so a matching id is not
+  // evidence of a wrong link. Rejecting it disabled Manage billing and
+  // cancellation for every subscriber.
   return true;
 }
 function stripePortalLink() {
   return isLivePortalLink(STRIPE_PORTAL_LINK) ? STRIPE_PORTAL_LINK : null;
+}
+
+// An ACTIVE subscription is a Stripe customer AND a plan that is not free.
+// The webhook never clears stripe_customer_id, so the id alone also matches
+// everyone who ever paid and has since lapsed back to free. An unknown plan
+// with a customer id counts as active: never risk a second subscription.
+function hasActiveSubscription(plan, stripeCustomerId) {
+  return !!stripeCustomerId && plan !== "free";
+}
+
+// Where a plan choice goes. One function so Settings, UpgradeScreen and
+// GuidedAssessment cannot disagree.
+//   "current"   — already on it; nothing to do.
+//   "portal"    — an active subscriber choosing Free: cancel in the portal.
+//   "downgrade" — Free with no active subscription: a plain profile write.
+//   "contact"   — an active subscriber choosing another paid tier. The live
+//                 portal has plan switching DISABLED and a Payment Link would
+//                 start a second subscription, so neither can do it.
+//   "checkout"  — everyone else, INCLUDING a lapsed subscriber: the portal
+//                 cannot start a new subscription, a Payment Link can.
+function planChoiceRoute(targetPlan, currentPlan, stripeCustomerId) {
+  if (targetPlan === currentPlan) return "current";
+  const active = hasActiveSubscription(currentPlan, stripeCustomerId);
+  if (targetPlan === "free") return active ? "portal" : "downgrade";
+  return active ? "contact" : "checkout";
 }
 
 const VAPID_PUBLIC_KEY = "BNrfmAAoP_PL4FocIjzfw5aaxzHsuCknwUeG5pX21v7cjvMCzt3PL2d70QbBJrcz3l36bfgnJ_N4wmC9EiM11mI"; // safe to be public — pairs with the server-only VAPID_PRIVATE_KEY
@@ -14184,10 +14223,12 @@ const VAPID_PUBLIC_KEY = "BNrfmAAoP_PL4FocIjzfw5aaxzHsuCknwUeG5pX21v7cjvMCzt3PL2
 // message counts — id stays "starter" since that's the live Stripe/DB enum
 // value, only the display name changed to "Basic"): FREE = "UNDERSTAND ME"
 // (Passport + athlete intake/discovery with Scout). BASIC = "BUILD MY PATH"
-// — matches FEATURE_MIN_PLAN above: this is where Pathway/My Next Move/
-// targets/benchmarks/PDF export actually unlock. PRO = "MANAGE MY JOURNEY"
+// — matches FEATURE_MIN_PLAN above: this is where Pathway/targets/
+// benchmarks/PDF export actually unlock (My Next Move is on Home for every
+// plan, so it is a Free line, not a Basic one). PRO = "MANAGE MY JOURNEY"
 // — adds the Passport Strength breakdown + the training/development plan (also gated at
-// "pro" in FEATURE_MIN_PLAN) plus richer target/outreach tracking. ELITE =
+// "pro" in FEATURE_MIN_PLAN). Outreach tracking and follow-up reminders are
+// part of "targets", which is Basic, so they are not a Pro line. ELITE =
 // "LIVE THE PLAN" — everything in Pro at the highest Scout volume ceiling;
 // schedule/diary/GOLSZ Motion have DB space reserved (migration 095) but no
 // shipped UI yet, so per §10 ("never promise future features as live") the
@@ -14204,7 +14245,8 @@ const PLANS = [
   // Strength they watch the score move and learn the Pro card was wrong. The
   // string stays in all four dictionaries (unused keys are kept here) so the
   // day it is genuinely gated it goes back with no re-translation.
-  { id: "pro",   name: "Pro",     price: 15, featKeys: ["plan_pro_feat1", "plan_pro_feat2", "plan_pro_feat3", "plan_pro_feat4", "plan_pro_feat5"] },
+  // Nor feat5: target tracking is gated at "starter".
+  { id: "pro",   name: "Pro",     price: 15, featKeys: ["plan_pro_feat1", "plan_pro_feat2", "plan_pro_feat3", "plan_pro_feat4"] },
   { id: "elite", name: "Elite",   price: 30, featKeys: ["plan_elite_feat1", "plan_elite_feat2"] },
 ];
 
@@ -14324,6 +14366,15 @@ async function createChildAccount(childFullName, childDobIso) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data && data.error) || "Couldn't create the athlete's account.");
   return data;
+}
+
+// With email confirmation on, signUp() for an address that ALREADY has an
+// account returns no error and a user whose identities array is empty (so
+// the response cannot be used to probe which emails exist). That user id is
+// not an account: no confirmation email is sent, and a checkout attributed to
+// it would charge a card and grant nothing.
+function signupHitExistingAccount(data) {
+  return !!(data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
 }
 
 function Auth({ onDone, paidReturn }) {
@@ -14615,6 +14666,11 @@ function Auth({ onDone, paidReturn }) {
           hp: website.trim(),
         } } });
         if (error) throw error;
+        if (signupHitExistingAccount(data)) {
+          if (checkoutTab) { try { checkoutTab.close(); } catch (e2) {} }
+          setErr(t("auth_email_already_registered"));
+          return;
+        }
         if (selected.price > 0 && stripeLinkFor(plan, currency) && data.user) {
           // attribute the checkout back to this account for the Stripe webhook
           const checkoutUrl = new URL(stripeLinkFor(plan, currency));
@@ -14689,6 +14745,11 @@ function Auth({ onDone, paidReturn }) {
           pending_child_name: childName.trim(), pending_child_dob: childDobIso,
         } } });
         if (error) throw error;
+        if (signupHitExistingAccount(data)) {
+          if (checkoutTab) { try { checkoutTab.close(); } catch (e2) {} }
+          setErr(t("auth_email_already_registered"));
+          return;
+        }
         // CHECKOUT, WHICH THIS BRANCH NEVER REACHED.
         // Under-18s are routed here by design and the parent buys on their
         // behalf, so this was the only path the target market could take and
@@ -15385,7 +15446,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=11d423e26474e246";
+    s.src = "js/app.js?v=7b8983bea8752b46";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

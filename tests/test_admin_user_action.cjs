@@ -81,6 +81,9 @@ let patchMode = "ok";
 let auditOk = true;
 // The is_admin lookup answering 5xx — NOT the same thing as answering "no".
 let adminLookupOk = true;
+// target id -> { plan, stripe_customer_id } for the billing check.
+const BILLING = {};
+let billingLookupOk = true;
 
 global.fetch = async (url, opts = {}) => {
   const u = String(url);
@@ -107,6 +110,11 @@ global.fetch = async (url, opts = {}) => {
     // Anchored: /id=eq\./ also matches inside "stripe_customer_id=eq." and
     // any other *_id column. Cost six failing assertions elsewhere today.
     const m = /[?&]id=eq\.([^&]+)/.exec(u);
+    // The target's billing lookup (select=plan,stripe_customer_id).
+    if (/select=plan,stripe_customer_id/.test(u)) {
+      if (!billingLookupOk) return { ok: false, status: 503, json: async () => ({}), text: async () => "down" };
+      return { ok: true, json: async () => [BILLING[m && m[1]] || { plan: "free", stripe_customer_id: null }] };
+    }
     return { ok: true, json: async () => [{ is_admin: ADMINS.has(m && m[1]) }] };
   }
   if (u.includes("/auth/v1/admin/users/")) {
@@ -392,6 +400,40 @@ async function call({ auth = "Bearer admin", method = "POST", body = {}, origin 
     r = await call({ auth: "Bearer plain", body: { action: "ban", targetId: TARGET } });
     ck("a genuine non-admin is still 403, and still alerts",
        [r.status, r.pushes.length > 0], [403, true]);
+  }
+
+  console.log("\n-- banning or deleting a SUBSCRIBER does not stop Stripe --");
+  // Neither action touches Stripe (this app holds no Stripe secret key), so a
+  // banned or deleted subscriber kept being charged. The server now refuses
+  // until the admin confirms billing is handled, and the panel asks first.
+  {
+    BILLING[TARGET] = { plan: "pro", stripe_customer_id: "cus_live_sub" };
+    for (const action of ["ban", "delete"]) {
+      r = await call({ body: { action, targetId: TARGET } });
+      ck(`${action} of an ACTIVE subscriber is refused with 409`, r.status, 409);
+      ck("...with a machine-readable code and the customer to cancel",
+         [r.payload.code, r.payload.stripe_customer_id], ["active_subscription", "cus_live_sub"]);
+      ck("...and nothing was done", [r.authApi.length, r.patches.length, r.rpcs.length, r.audit.length], [0, 0, 0, 0]);
+      r = await call({ body: { action, targetId: TARGET, billingAcknowledged: true } });
+      ck(`...${action} proceeds once the admin acknowledges billing`, r.status, 200);
+      ck("...and the audit row records that they did", r.audit[0] && r.audit[0].body.detail, { billing_acknowledged: true });
+    }
+    r = await call({ body: { action: "unban", targetId: TARGET } });
+    ck("unban never needs the acknowledgement", r.status, 200);
+    ck("...a truthy non-boolean is not an acknowledgement",
+       (await call({ body: { action: "ban", targetId: TARGET, billingAcknowledged: "yes" } })).status, 409);
+
+    // Lapsed: the customer id survives cancellation, the plan does not.
+    BILLING[TARGET] = { plan: "free", stripe_customer_id: "cus_lapsed" };
+    r = await call({ body: { action: "delete", targetId: TARGET } });
+    ck("a LAPSED subscriber (old customer id, plan free) needs no acknowledgement", r.status, 200);
+
+    BILLING[TARGET] = { plan: "pro", stripe_customer_id: "cus_live_sub" };
+    billingLookupOk = false;
+    r = await call({ body: { action: "delete", targetId: TARGET } });
+    ck("an unreadable billing state fails CLOSED (503), never deletes", [r.status, r.authApi.length, r.rpcs.length], [503, 0, 0]);
+    billingLookupOk = true;
+    delete BILLING[TARGET];
   }
 
   console.log("\n-- this suite runs the shipping handler --");
