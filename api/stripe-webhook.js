@@ -472,9 +472,18 @@ export default async function handler(req, res) {
         // already belongs to this same customer (the ordinary repeat-
         // checkout case). Anything else is logged and refused — refusing is
         // safe, since the profile simply keeps the state it already had.
-        const existing = await selectProfile(supaUrl, serviceKey, `id=eq.${profileId}`, "id,stripe_customer_id");
+        //
+        // ...OR one that is LAPSED: it still carries an old customer id (it is
+        // never cleared) but its plan is free, so no subscription is live
+        // behind it. A Payment Link always creates a NEW customer, so a lapsed
+        // subscriber re-subscribing arrives exactly like this; refusing them
+        // took their money and left them on Free. The takeover above needs a
+        // live subscription on the victim to hurt, and a free profile has
+        // none — the same position as an unclaimed one, which binds anyway.
+        const existing = await selectProfile(supaUrl, serviceKey, `id=eq.${profileId}`, "id,stripe_customer_id,plan");
         const claimedBy = existing && existing.stripe_customer_id;
-        const mayBind = !!existing && (!claimedBy || claimedBy === customerId);
+        const lapsed = !!existing && !!claimedBy && claimedBy !== customerId && existing.plan === "free";
+        const mayBind = !!existing && (!claimedBy || claimedBy === customerId || lapsed);
 
         if (!existing) {
           // Well-formed UUID that matches no profile: either a typo or a
@@ -503,6 +512,12 @@ export default async function handler(req, res) {
           // this comment was written for. It is still gated on the ownership
           // check above; a plan that resolves cleanly for the wrong profile
           // is not a reason to write it.)
+          if (lapsed) {
+            console.warn("GOLSZ stripe checkout RE-BINDING a lapsed profile to a new customer", JSON.stringify({
+              context: "checkout.session.completed", profileId,
+              previousCustomerId: claimedBy, newCustomerId: customerId || null,
+            }));
+          }
           const patch = { stripe_customer_id: customerId || null, payment_past_due: false };
           if (plan) patch.plan = plan;
           await patchProfile(supaUrl, serviceKey, `id=eq.${profileId}`, patch);
@@ -519,8 +534,14 @@ export default async function handler(req, res) {
       // failed charge, or past_due -> active after Stripe's retry succeeds).
       // A hard cutoff to "free" only happens for a status Stripe uses to
       // mean the subscription is truly over — "canceled"/"unpaid"/
-      // "incomplete_expired" — everything else (trialing, past_due) keeps
-      // the account's paid plan intact while Stripe keeps retrying.
+      // "incomplete_expired". A plan is GRANTED only for "active" and
+      // "trialing"; "past_due" keeps it in sync while Stripe keeps retrying.
+      // "incomplete" means the first payment has NOT succeeded (e.g. a card
+      // needing 3-D Secure that was never completed): it used to fall
+      // through and grant the paid plan. Now it — and any other status —
+      // records the billing state and leaves the plan alone; the
+      // customer.subscription.updated that follows a successful payment
+      // (status "active") is what grants it.
       const sub = event.data.object;
       const customerId = sub.customer;
       const status = sub.status;
@@ -531,7 +552,8 @@ export default async function handler(req, res) {
           const item = sub.items && sub.items.data && sub.items.data[0];
           const fields = readPriceFields(item && item.price);
           fields.metadataPlan = (sub.metadata && sub.metadata.golsz_plan) || null;
-          const plan = resolvePlanOrLog(fields, event.type);
+          const grants = status === "active" || status === "trialing" || status === "past_due";
+          const plan = grants ? resolvePlanOrLog(fields, event.type) : null;
           // past_due is still recorded even when the plan can't be resolved
           // — the billing state is independently true, and refusing to
           // write it would leave a failing subscription looking healthy.
