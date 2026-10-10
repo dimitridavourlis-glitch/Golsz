@@ -10051,7 +10051,19 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
                 style={{ ...primaryBtn, width: "auto", flex: "1 1 120px", minHeight: 44, opacity: stepBusy ? 0.5 : 1 }}>
                 {t("pathway_next_done")}
               </button>
-              <button onClick={() => onNavigate("targets", null, null, pathwayNext.due || null)}
+              {/* RESCHEDULE WAS A DEAD BUTTON ON AN UNDATED STEP.
+                  It passed the step's due date or else a null, and Plan only opens a
+                  day when the value matches /^\d{4}-\d{2}-\d{2}$/ — so for a
+                  step with no date the athlete tapped it, arrived on Plan,
+                  and nothing opened. The step most likely to need a date is
+                  precisely the one that has none.
+
+                  Falling back to today opens a real cell they can drag from
+                  or type into. It does NOT write a date: nothing is scheduled
+                  until the athlete places it, which keeps the app's rule that
+                  a day on a step is the athlete's own unless marked
+                  otherwise. */}
+              <button onClick={() => onNavigate("targets", null, null, pathwayNext.due || isoDay(new Date()))}
                 style={{ ...quietBtn, width: "auto", flex: "1 1 110px", minHeight: 44 }}>
                 {t("home_step_reschedule")}
               </button>
@@ -10232,6 +10244,24 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           than as a rival to it: the week and the standing commitments say
           where the athlete is, and this says the one thing to do next. Same
           ladder, same reason line, smaller frame. */}
+
+      {/* PATHWAY PROGRESS — the brief's "how far along the current route".
+          PathwayStrip has existed as a finished component since the stage
+          work landed and was mounted NOWHERE: one definition, zero render
+          sites. It draws the athlete's own stage ladder with the current
+          stage marked, honouring pathway_plan.current_stage_id, and falls
+          back to the sport's default route only when the athlete has not
+          defined their own. Home previously printed just the stage NAME in
+          the identity sub-line, which answers "where am I" and not "how far
+          along am I".
+
+          Needs a pathway to draw: without one this would render the sport's
+          generic ladder and imply the athlete had chosen it. */}
+      {pathwayRow && (
+        <HomeZone span={2}>
+          <PathwayStrip athlete={athlete} pathwayRow={pathwayRow} t={t} onNavigate={onNavigate} />
+        </HomeZone>
+      )}
 
       {/* BIGGEST BOTTLENECK — the brief's "what is stopping me".
           EVERY VALUE HERE WAS ALREADY BEING COMPUTED AND THROWN AWAY.
@@ -15267,7 +15297,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=22744d7f5b1486c0";
+    s.src = "js/app.js?v=fc8da948c48f01a3";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
