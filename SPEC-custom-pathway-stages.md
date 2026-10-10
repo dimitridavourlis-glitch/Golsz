@@ -1,7 +1,17 @@
 # Custom pathway stages — settled decisions before any code
 
-Written 2026-08-13, at the end of the session that rebuilt milestones. Nothing
-here is implemented yet. Build order is at the bottom.
+Written 2026-08-13, at the end of the session that rebuilt milestones.
+
+**STATUS: SHIPPED.** All six decisions and the whole build order below were
+implemented in commit c4e8c15 and migration
+`supabase-migration-128-custom-pathway-stages.sql` — `pathway_plan.stages`
+jsonb and `current_stage_id`, the single `athleteStages()` resolver (enforced
+by a grep invariant in `tests/test_pathway_milestones.cjs`), MAX_STAGES = 7,
+delete-unfiles-rather-than-cascades, and server-minted stage ids.
+
+This header said "Nothing here is implemented yet" until 2026-10-10, which is
+how a finished subsystem gets re-proposed as new work. Read what follows as
+the record of why it is built this way, not as a plan.
 
 ## The problem this must not create
 

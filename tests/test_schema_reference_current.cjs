@@ -73,5 +73,47 @@ for (const [obj, why] of [
   ck(`${obj} is in the reference (${why})`, SCHEMA.includes(obj), true);
 }
 
+console.log("\n-- the columns the client actually reads must exist here --");
+// THE GUARD ABOVE WAS NOT ENOUGH, and this is the proof.
+// It asserted that the newest migration NUMBER is mentioned in the schema
+// file. On 2026-10-10 it was passing while `current_stage_id` (128),
+// `full_access` (131) and `metric_key` (114) — all applied to production,
+// all selected by the client — appeared nowhere in the file.
+//
+// Migration 131's header explains why that is not cosmetic: PostgREST rejects
+// an ENTIRE select for one unknown column, so a database built from this
+// reference does not return a degraded profile, it returns none.
+//
+// A mention is not a column. This asserts the column.
+{
+  const CLIENT = fs.readFileSync(path.join(REPO, "golsz-app.html"), "utf8");
+  // Columns named in a real .select() in the client, that this file must define.
+  const REQUIRED = [
+    ["profiles", "full_access"],
+    ["pathway_plan", "stages"],
+    ["pathway_plan", "current_stage_id"],
+    ["athlete_benchmarks", "metric_key"],
+    ["athlete_benchmarks", "protocol"],
+    ["athlete_benchmarks", "measured_by"],
+    ["development_plan_ticks", "tick_date"],
+  ];
+  // A DEFINITION, NOT A MENTION. The first version of this check used
+  // SCHEMA.includes(col), which passed on a comment that merely named the
+  // column — the exact weakness it was written to replace. Proven by deleting
+  // the full_access DDL and watching it stay green. It now requires either an
+  // `add column ... <col>` or a `<col> <type>` line inside a create table.
+  const defines = (col) =>
+    new RegExp(`add column if not exists\\s+${col}\\b`).test(SCHEMA) ||
+    new RegExp(`^\\s{2,}${col}\\s+(uuid|text|boolean|jsonb|date|numeric|int|timestamptz)`, "m").test(SCHEMA);
+  const missingFromSchema = REQUIRED.filter(([, col]) => !defines(col)).map(([t, c]) => `${t}.${c}`);
+  ck("every column the client selects is DEFINED (not just mentioned) in the schema reference",
+     missingFromSchema, []);
+
+  // And the other direction: if the client stops reading one, this list is
+  // stale rather than protective, so it has to be noticed.
+  const notUsed = REQUIRED.filter(([, col]) => !CLIENT.includes(col)).map(([t, c]) => `${t}.${c}`);
+  ck("...and every column in this list is still read by the client", notUsed, []);
+}
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);

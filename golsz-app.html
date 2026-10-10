@@ -4524,7 +4524,12 @@ const BENCHMARK_METRICS_BY_SPORT = {
     { key: "match_minutes", label: "Competitive minutes this season", unit: "min" },
     { key: "goals", label: "Goals", unit: "count" },
     { key: "assists", label: "Assists", unit: "count" },
-    { key: "clean_sheets", label: "Clean sheets", unit: "count" },
+    // POSITION GATE, MIRRORED FROM api/scout.js:1644.
+    // The server declares positions ["gk","cb","rb","lb"] for this metric and
+    // the client mirror dropped it, so the picker offered "Clean sheets" to a
+    // striker. test_benchmark_input diffed keys, labels and units between the
+    // two lists and never the gate, which is why it stayed green.
+    { key: "clean_sheets", label: "Clean sheets", unit: "count", positions: ["gk", "cb", "rb", "lb"] },
   ],
   Basketball: [
     { key: "vertical_jump", label: "Max vertical", unit: "cm" },
@@ -4642,6 +4647,10 @@ function Benchmarks({ viewUserId, manageId }) {
   // picker or the original free-text field. null until loaded; "" (no sport
   // on the Passport yet) also falls through to free text.
   const [sport, setSport] = useState(null);
+  // Needed only to apply a metric's position gate. null means "not loaded",
+  // "" means "the athlete has not said" — and those are different, because an
+  // unknown position must never HIDE a metric. See sportMetrics below.
+  const [position, setPosition] = useState(null);
   const [metricKey, setMetricKey] = useState("");
   const [measuredBy, setMeasuredBy] = useState("");
   const [retestBusy, setRetestBusy] = useState(null);
@@ -4667,11 +4676,12 @@ function Benchmarks({ viewUserId, manageId }) {
         const [{ data, error }, { data: ath }] = await Promise.all([
           sb.from("athlete_benchmarks").select("id, metric, metric_key, protocol, measured_by, value, unit, recorded_date").eq("user_id", manageId || user.id).order("recorded_date", { ascending: false })
             .then((r) => (r.error ? sb.from("athlete_benchmarks").select("id, metric, value, unit, recorded_date").eq("user_id", manageId || user.id).order("recorded_date", { ascending: false }) : r)),
-          sb.from("athletes").select("sport").eq("id", manageId || user.id).maybeSingle(),
+          sb.from("athletes").select("sport, position").eq("id", manageId || user.id).maybeSingle(),
         ]);
         if (error) throw error;
         setItems(data || []);
         setSport((ath && ath.sport) || "");
+        setPosition((ath && ath.position) || "");
       } catch (e) { console.error("GOLSZ benchmarks load error:", e); }
       setLoaded(true);
     })();
@@ -4781,7 +4791,20 @@ function Benchmarks({ viewUserId, manageId }) {
   const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
   // null for a sport GOLSZ has no schema for (39 of the 41 offered), which is
   // the free-text path this component has always had.
-  const sportMetrics = sport ? (BENCHMARK_METRICS_BY_SPORT[sport] || null) : null;
+  // UNKNOWN POSITION SHOWS EVERYTHING, DELIBERATELY.
+  // A metric is hidden only when the athlete's position is KNOWN and the
+  // metric names positions that exclude it. Filtering on an unknown position
+  // would remove a capability on a guess, which is the opposite of what the
+  // rest of this card does — an unrecorded measurement method is shown as
+  // "not recorded", never inferred.
+  const allSportMetrics = sport ? (BENCHMARK_METRICS_BY_SPORT[sport] || null) : null;
+  const posKey = (position || "").trim().toLowerCase();
+  const sportMetrics = !allSportMetrics ? null : allSportMetrics.filter((m) => {
+    if (!m.positions || !posKey) return true;
+    return m.positions.some((p) => p === posKey) ||
+      // The stored value is a label ("Right Back"), the gate is an id ("rb").
+      m.positions.some((p) => (POSITION_LABEL_TO_ID[posKey] || "") === p);
+  });
   // Comparability questions are asked only where the answer changes whether
   // two numbers mean the same thing. Provenance is asked always: who took the
   // measurement is meaningful on a goals tally as much as on a sprint, and it
@@ -10902,6 +10925,23 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
 // focus areas an athlete is actively working on, never a prescribed
 // protocol. Private to the owner, same viewUserId convention as
 // Benchmarks — never fetched for another athlete's viewed Passport.
+// SOCCER POSITION LABEL -> ID, mirrored from the sport schema in
+// api/scout.js:1618-1632. athletes.position stores the LABEL an athlete typed
+// or picked ("Right Back"); every position gate on a metric is written in IDs
+// ("rb"), because that is the server's vocabulary. Without this map the two
+// never meet and the gate silently matches nothing — which fails OPEN here
+// (the metric is shown), so the bug would have been invisible rather than
+// loud. Soccer only, like the gates themselves; another sport adds its own.
+const POSITION_LABEL_TO_ID = {
+  "goalkeeper": "gk", "centre back": "cb", "center back": "cb",
+  "right back": "rb", "left back": "lb",
+  "right wing back": "rwb", "left wing back": "lwb",
+  "defensive midfielder": "cdm", "central midfielder": "cm",
+  "attacking midfielder": "cam", "right midfielder": "rm", "left midfielder": "lm",
+  "right winger": "rw", "left winger": "lw", "striker": "st", "centre forward": "cf",
+  "center forward": "cf",
+};
+
 const DEV_FOCUS_AREAS = ["training", "strength", "speed", "conditioning", "recovery", "sleep", "hydration", "nutrition", "other"];
 const DEV_STATUSES = ["active", "done", "paused"];
 function DevelopmentPlan({ viewUserId, manageId }) {
@@ -15166,7 +15206,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=384a60170fb15b29";
+    s.src = "js/app.js?v=e3b505b9cb02f48d";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

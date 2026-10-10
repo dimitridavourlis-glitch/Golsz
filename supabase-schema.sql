@@ -6280,3 +6280,36 @@ begin
     execute format('revoke all on function %s from authenticated', f.sig);
   end loop;
 end $$;
+
+-- ============================================================
+-- 114 / 128 / 131) COLUMNS THE CLIENT SELECTS THAT THIS FILE OMITTED
+--
+-- Found 2026-10-10 while auditing against the Athlete Direction System brief.
+-- All three were applied to production long ago and none appeared here, even
+-- after the 2026-09-20 pass that added sections 136-143 — that pass caught up
+-- on the NEWEST migrations and never checked the older ones, and the guard
+-- written alongside it (tests/test_schema_reference_current.cjs) asserted only
+-- that the newest migration NUMBER is mentioned, not that any column exists.
+-- So the guard passed while three columns the client reads were missing.
+--
+-- WHY THIS IS NOT COSMETIC. Migration 131 spells out the cost in its own
+-- header: PostgREST rejects an ENTIRE select for one unknown column. A profile
+-- read that asks for full_access against a database built from this file does
+-- not come back degraded — it fails completely. Anyone standing up a fresh
+-- environment from this reference would get an app that cannot load a profile,
+-- a pathway stage, or a benchmark's metric key.
+-- ============================================================
+
+-- 114 — benchmark protocol capture. See supabase-migration-114-benchmark-protocol.sql.
+alter table athlete_benchmarks add column if not exists metric_key text;
+alter table athlete_benchmarks add column if not exists protocol jsonb;
+create index if not exists athlete_benchmarks_metric_key_idx
+  on athlete_benchmarks (metric_key) where metric_key is not null;
+
+-- 128 — per-athlete custom pathway stages. See supabase-migration-128-custom-pathway-stages.sql.
+alter table pathway_plan add column if not exists stages jsonb not null default '[]'::jsonb;
+alter table pathway_plan add column if not exists current_stage_id text;
+
+-- 131 — full_access, read on every profile select. See supabase-migration-131-full-access.sql.
+alter table public.profiles
+  add column if not exists full_access boolean not null default false;
