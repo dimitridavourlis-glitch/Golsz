@@ -174,8 +174,20 @@ function installFetch({ tokenUser = PARENT, authOk = true, linkThrows = false, l
      /const who = actingFor \|\| user\.id;\s*\n\s*setUid\(who\);/.test(APP), true);
   ck("...and neither of its reads is scoped to the signed-in user any more",
      /sb\.from\("pathway_plan"\)[^\n]*\.eq\("user_id", user\.id\)/.test(APP), false);
+  // The GUARANTEE is the scoping, not the column list. Pinning the whole
+  // select meant adding a column to it failed a parent-authorization test,
+  // which tells a reader the wrong thing about what broke.
   ck("...including the athletes row it hands to BackupPlanCard",
-     /sb\.from\("athletes"\)\.select\("sport, club_name, recruiting_status, scout_context"\)\.eq\("id", who\)/.test(APP), true);
+     /sb\.from\("athletes"\)\.select\("[^"]*\bsport\b[^"]*"\)\.eq\("id", who\)/.test(APP), true);
+  // Scoped to PathwayPlan: other components legitimately read the signed-in
+  // athlete's own row, and a file-wide version of this flagged two of them.
+  {
+    const at = APP.indexOf("function PathwayPlan(");
+    const body = APP.slice(at, APP.indexOf("\nfunction ", at + 20));
+    ck("...and PathwayPlan never reads the signed-in user's athlete row instead",
+       /sb\.from\("athletes"\)\.select\("[^"]*"\)\.eq\("id", user\.id\)/.test(body), false);
+    ck("...nor any other table by user.id", /\.eq\("user_id", user\.id\)/.test(body), false);
+  }
   // An empty dep array here kept the first child's pathway on screen for the
   // whole session when a parent switched athlete.
   ck("...and it re-fetches when the parent switches athlete",

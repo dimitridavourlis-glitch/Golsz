@@ -167,8 +167,15 @@ ck("...while its strings remain in all four dictionaries",
 {
   const cardAt = APP.indexOf('{t("home_bottleneck_eyebrow")}');
   ck("the bottleneck card exists", cardAt > 0, true);
-  const card = APP.slice(cardAt, cardAt + 2600);
+  // Widened when the requirement gap was added above the caveat. A fixed-size
+  // window is a silent liar: too small and the assertion stops reaching what
+  // it claims to check, which is why the next line re-asserts that it does.
+  const card = APP.slice(cardAt, cardAt + 5200);
   ck("...and discloses what it is measured from", card.includes('t("home_bottleneck_basis")'), true);
+  // The caveat is only TRUE when there is no requirement gap to show. Once
+  // GOLSZ can name a missing requirement it is no longer unable to compare.
+  ck("...only while there is no requirement gap to show instead",
+     /\{!\(gap && gap\.missing\.length > 0\) && \(/.test(card), true);
   ck("...below the projection, not instead of it", card.indexOf('t("home_bottleneck_basis")') > card.indexOf("projectedWeak"), true);
   // The style sits BEFORE the key in the JSX, so this window looks backward.
   // Written forward first, it passed on a gold caveat — the mutation that
