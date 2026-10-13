@@ -1,18 +1,19 @@
-// WHAT MAY BE CALLED VERIFIED.
+// WHAT MAY BE CALLED VERIFIED, AND IN WHOSE WORDS.
 //
-// The brief names seven levels and one rule above all of them: never display
-// self-reported information as verified. Four of the seven are structurally
-// unreachable — COACH, CLUB, PROVIDER and GOLSZ verification all require an
-// actor GOLSZ does not have, because no coach, club, data provider or review
-// process exists in the system. An athlete picking "Official / combine" from
-// a dropdown is still the athlete saying so.
+// The brief names seven verification states and one rule above all of them:
+// never display self-reported information as verified. Those states are
+// DISPLAY LABELS here, over the evidence_tiers ladder api/scout.js already
+// validates. GOLSZ had four provenance vocabularies before this; a fifth set
+// of words for the same idea is the failure mode, not the feature. So the
+// first thing this suite asserts is that there is still only one list, and
+// that the client's copy matches the server's byte for byte — a drift means
+// the server accepts a tier the Passport cannot render.
 //
-// So this suite does two things. It pins the ladder as one list, so nobody
-// re-derives a different set of levels later. And it runs
-// benchmarkVerification on inputs that LOOK like third-party verification —
-// measured_by "coach", measured_by "official" — and asserts the answer is
-// still SELF. That is the assertion worth having: the grep half of this file
-// would pass on a function that promoted a dropdown value to COACH-VERIFIED.
+// Then it runs benchmarkTier on inputs that LOOK like third-party
+// verification — measured_by "coach", measured_by "official", a planted
+// verified flag — and asserts the answer is still athlete_stated. That is the
+// assertion worth having: a grep-only version of this file would pass on a
+// function that promoted a dropdown value to "Coach evaluation".
 
 const fs = require("fs");
 const path = require("path");
@@ -20,6 +21,7 @@ const vm = require("vm");
 
 const REPO = path.join(__dirname, "..");
 const APP = fs.readFileSync(path.join(REPO, "golsz-app.html"), "utf8");
+const SCOUT = fs.readFileSync(path.join(REPO, "api", "scout.js"), "utf8");
 
 let p = 0, f = 0;
 const ck = (l, a, e) => {
@@ -28,97 +30,102 @@ const ck = (l, a, e) => {
   else { f++; console.log(`FAIL  ${l}\n   exp ${E}\n   got ${A}`); }
 };
 
-// ---- the ladder is declared once, and declares all seven -------------------
-const declAt = APP.indexOf("const VERIFICATION = {");
-ck("the ladder is declared", declAt > 0, true);
-const declEnd = APP.indexOf("};", declAt);
-const decl = APP.slice(declAt, declEnd);
-for (const level of ["UNKNOWN", "SELF", "UPLOADED", "VIDEO", "COACH", "CLUB", "PROVIDER", "GOLSZ"]) {
-  ck(`...with ${level}`, new RegExp("\\n  " + level + ": \"").test(decl), true);
-}
-ck("...declared at the top level, not inside a component", /\nconst VERIFICATION = \{/.test(APP), true);
+// ---- one list, and the two copies agree ------------------------------------
+const evalList = (src, decl) => {
+  const at = src.indexOf(decl);
+  if (at < 0) return null;
+  const open = src.indexOf("[", at);
+  const close = src.indexOf("]", open);
+  return vm.runInNewContext(src.slice(open, close + 1));
+};
+const CLIENT = evalList(APP, "const EVIDENCE_TIERS = [");
+const SERVER = evalList(SCOUT, "evidence_tiers: [");
 
-// The four unreachable levels must say so where they are declared, or the
-// next person wires a UI to one of them.
-for (const level of ["COACH", "CLUB", "PROVIDER", "GOLSZ"]) {
-  const line = decl.split("\n").find((l) => l.trim().startsWith(level + ":")) || "";
-  ck(`${level} is marked unreachable at its declaration`, /UNREACHABLE/.test(line), true);
-}
+ck("the client declares the tier list", Array.isArray(CLIENT), true);
+ck("the server declares the tier list", Array.isArray(SERVER), true);
+ck("THE TWO COPIES ARE IDENTICAL, IN ORDER", CLIENT, SERVER);
+ck("...and it is the seven-tier ladder", CLIENT, [
+  "ai_inferred", "athlete_stated", "parent_stated", "coach_evaluation",
+  "measured_test", "official_competition_result", "verified_third_party",
+]);
+ck("no fifth vocabulary was introduced alongside it", /VERIFICATION_REACHABLE|benchmarkVerification/.test(APP), false);
+ck("the client list is top level, not inside a component", /\nconst EVIDENCE_TIERS = \[/.test(APP), true);
 
 // ---- behaviour: run the real function --------------------------------------
-// Both blocks are self-contained — benchmarkVerification reads only
-// VERIFICATION — so they evaluate standalone. If that stops being true this
-// throws rather than silently testing nothing.
-const fnAt = APP.indexOf("function benchmarkVerification(entry) {");
-ck("benchmarkVerification exists", fnAt > 0, true);
-const fnEnd = APP.indexOf("\n}", fnAt) + 2;
-const reachAt = APP.indexOf("const VERIFICATION_REACHABLE = ");
-const sandbox = {};
-vm.createContext(sandbox);
-const RESULT = vm.runInContext(
-  APP.slice(declAt, declEnd + 2) + "\n" +
+// benchmarkTier reads only EVIDENCE_TIERS, so both evaluate standalone. If
+// that stops being true this throws rather than silently testing nothing.
+const declAt = APP.indexOf("const EVIDENCE_TIERS = [");
+const reachAt = APP.indexOf("const BENCH_TIERS_REACHABLE = [");
+const fnAt = APP.indexOf("function benchmarkTier(entry) {");
+ck("benchmarkTier exists", fnAt > 0, true);
+const { TIERS, REACHABLE, fn } = vm.runInNewContext(
+  APP.slice(declAt, APP.indexOf("];", declAt) + 2) + "\n" +
   APP.slice(reachAt, APP.indexOf("\n", reachAt)) + "\n" +
-  APP.slice(fnAt, fnEnd) + "\n" +
-  "({ V: VERIFICATION, REACHABLE: VERIFICATION_REACHABLE, fn: benchmarkVerification })",
-  sandbox
+  APP.slice(fnAt, APP.indexOf("\n}", fnAt) + 2) + "\n" +
+  "({ TIERS: EVIDENCE_TIERS, REACHABLE: BENCH_TIERS_REACHABLE, fn: benchmarkTier })"
 );
-const { V, REACHABLE, fn } = RESULT;
 
-ck("exactly four levels are reachable", REACHABLE.length, 4);
-ck("...and they are the four with no third party in them",
-  REACHABLE.slice().sort(), [V.UNKNOWN, V.SELF, V.UPLOADED, V.VIDEO].slice().sort());
-for (const level of [V.COACH, V.CLUB, V.PROVIDER, V.GOLSZ]) {
-  ck(`${level} is not reachable`, REACHABLE.includes(level), false);
+ck("exactly one tier is reachable for a reading today", REACHABLE, ["athlete_stated"]);
+for (const t of ["coach_evaluation", "measured_test", "official_competition_result", "verified_third_party", "ai_inferred", "parent_stated"]) {
+  ck(`${t} is not reachable`, REACHABLE.includes(t), false);
 }
 
-// A reading with nothing recorded about how it was taken is UNKNOWN, not SELF.
-// Those are different claims and the Passport renders them differently.
-ck("no entry at all is UNKNOWN", fn(null), V.UNKNOWN);
-ck("a bare value is UNKNOWN", fn({ value: "11.2", unit: "s" }), V.UNKNOWN);
-ck("an empty protocol object is UNKNOWN", fn({ value: "11.2", protocol: {} }), V.UNKNOWN);
+// Nothing recorded, and a method recorded, are the same provenance: the
+// athlete typed the number either way. The METHOD being unknown is a separate
+// line on screen (bench_method_none), not a different tier.
+ck("no entry at all is athlete_stated", fn(null), "athlete_stated");
+ck("a bare value is athlete_stated", fn({ value: "11.2", unit: "s" }), "athlete_stated");
+ck("a recorded protocol is athlete_stated", fn({ protocol: { surface: "track" } }), "athlete_stated");
+ck('measured_by "self" is athlete_stated', fn({ measured_by: "self" }), "athlete_stated");
 
-// A method recorded by the athlete is SELF — including when the athlete says
-// someone else took it. THIS is the assertion the rule is about.
-ck("a recorded protocol is SELF-REPORTED", fn({ protocol: { surface: "track" } }), V.SELF);
-ck('measured_by "self" is SELF-REPORTED', fn({ measured_by: "self" }), V.SELF);
-ck('measured_by "coach" is STILL SELF-REPORTED, not COACH-VERIFIED', fn({ measured_by: "coach" }), V.SELF);
-ck('measured_by "official" is STILL SELF-REPORTED, not CLUB-VERIFIED', fn({ measured_by: "official" }), V.SELF);
+// THIS is the assertion the brief's rule is about.
+ck('measured_by "coach" does NOT become coach_evaluation', fn({ measured_by: "coach" }), "athlete_stated");
+ck('measured_by "official" does NOT become official_competition_result', fn({ measured_by: "official" }), "athlete_stated");
+ck("a planted verified flag changes nothing", fn({ verified: true, verified_by: "club" }), "athlete_stated");
+ck("...nor does a planted tier under the wrong key", fn({ verification: "verified_third_party" }), "athlete_stated");
 
-// Whatever is thrown at it, the answer stays inside the reachable set.
+// A stored tier is honoured, so the day per-claim provenance lands there is
+// one place to change — and an unrecognised value falls DOWN, never up.
+ck("a stored tier is honoured", fn({ evidence_quality: "official_competition_result" }), "official_competition_result");
+ck("an unrecognised stored tier falls back down", fn({ evidence_quality: "club_verified" }), "athlete_stated");
+ck("...including one that is merely truthy", fn({ evidence_quality: true }), "athlete_stated");
+
+// Whatever is thrown at it, the answer is a real tier.
 const probes = [null, undefined, {}, { measured_by: "coach" }, { measured_by: "official" },
   { protocol: { surface: "track" }, measured_by: "official" }, { verified: true },
-  { verification: "golsz_verified" }, { protocol: null, measured_by: "" }];
-ck("every input lands on a reachable level",
-  probes.every((x) => REACHABLE.includes(fn(x))), true);
-ck("...and none of them reaches a verified level",
-  probes.some((x) => [V.COACH, V.CLUB, V.PROVIDER, V.GOLSZ].includes(fn(x))), false);
+  { evidence_quality: "" }, { evidence_quality: "nonsense" }, { protocol: null, measured_by: "" }];
+ck("every input lands on a declared tier", probes.every((x) => TIERS.includes(fn(x))), true);
+ck("...and no athlete-entered input reaches a verified tier",
+  probes.some((x) => ["coach_evaluation", "measured_test", "official_competition_result", "verified_third_party"].includes(fn(x))), false);
 
 // ---- the chip must not look like a badge -----------------------------------
 const tagAt = APP.indexOf("function VerifyTag(");
 ck("VerifyTag exists", tagAt > 0, true);
 const tag = APP.slice(tagAt, APP.indexOf("\n}", tagAt));
 ck("...and is not rendered in gold", /C\.lime/.test(tag), false);
-ck("...it covers each reachable level", ["verify_self", "verify_uploaded", "verify_video", "verify_unverified"]
-  .every((k) => tag.includes('t("' + k + '")')), true);
+ck("...it labels the tier through i18n", tag.includes('t("tier_" + tier)'), true);
 
 // ---- it is actually on screen ----------------------------------------------
-ck("every benchmark reading renders its level",
-  /<VerifyTag level=\{benchmarkVerification\(e\)\} t=\{t\} \/>/.test(APP), true);
+ck("every benchmark reading renders its tier",
+  /<VerifyTag tier=\{benchmarkTier\(e\)\} t=\{t\} \/>/.test(APP), true);
 ck("...and the card says once who produced the numbers",
   /items\.length > 0 && \([\s\S]{0,260}t\("verify_bench_note"\)/.test(APP), true);
 
-// ---- four languages --------------------------------------------------------
-const KEYS = ["verify_self", "verify_uploaded", "verify_video", "verify_unverified", "verify_bench_note"];
+// ---- four languages, every tier labelled -----------------------------------
+// A tier with no label renders a raw snake_case string to a scout, so the
+// label set must cover the whole ladder, not just the reachable part.
 for (const lang of ["en", "fr", "es", "el"]) {
   const at = APP.indexOf("\n  " + lang + ": {");
   ck(`${lang} dictionary found`, at > 0, true);
   const dict = APP.slice(at, APP.indexOf("\n  },", at));
-  for (const k of KEYS) ck(`  ${lang}.${k}`, new RegExp("\\b" + k + ': "[^"]+"').test(dict), true);
+  const missing = CLIENT.filter((tier) => !new RegExp("\\btier_" + tier + ': "[^"]+"').test(dict));
+  ck(`  ${lang} labels every tier`, missing, []);
+  ck(`  ${lang}.verify_bench_note`, /\bverify_bench_note: "[^"]+"/.test(dict), true);
 }
 
 // The compiled bundle is what ships.
 const JS = fs.readFileSync(path.join(REPO, "js", "app.js"), "utf8");
-ck("the ladder is in the compiled bundle", JS.includes("benchmarkVerification"), true);
+ck("the ladder is in the compiled bundle", JS.includes("benchmarkTier"), true);
 ck("...and so is the chip", JS.includes("VerifyTag"), true);
 
 console.log(`\n${p}/${p + f} passed`);

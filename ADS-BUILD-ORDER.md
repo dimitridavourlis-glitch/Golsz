@@ -33,13 +33,28 @@ and that is how finished work gets rebuilt.
 - **46 lines of dead computation removed** from Home (`a45d1a5`) — the `doors`
   block, rebuilt on every load since "THE REST OF THE APP" was removed.
 
+- **Phase 7, first slice — provenance on benchmark readings** (`b7c8943`,
+  corrected by the commit after it). Every reading on the Passport now carries
+  its tier, and the card states once, above the numbers, that the athlete
+  entered them. Four of the brief's seven states are NOT implemented and will
+  not be until an actor exists to do the verifying: no coach or club accounts,
+  no evidence bucket, no data provider. `benchmarkTier()` has no promoting code
+  path and `test_verification_ladder` runs the real function on inputs that
+  look like third-party verification to prove it.
+  **The correction is the lesson:** the first attempt added a fifth provenance
+  vocabulary — the precise failure mode §7 names — one commit after writing
+  §7. The client now holds a copy of `evidence_tiers` and the suite compares it
+  to `api/scout.js` byte for byte, so the two cannot drift.
+  Still unbuilt in Phase 7: migrations 149/150, evidence attachment, provenance
+  on the scalar Passport columns, and benchmarks in the public share payload.
+
 **NOT STARTED** — everything in §3 from PHASE 1 onward. The unified Action
 Engine is the next dependency and the build order puts it at 3-4 weeks,
 because Home, Plan and Scout all read `pathway_plan.milestones` today and
 moving that jsonb to a real table means migrating live athlete data while
 three screens keep working.
 
-**NOT VERIFIED SIGNED IN.** Everything above passes 75 suites and is deployed,
+**NOT VERIFIED SIGNED IN.** Everything above passes 76 suites and is deployed,
 but no signed-in session has been available to look at Home since these
 landed. The bottleneck card's gate in particular — `planKnown(plan) &&
 featureUnlocked(plan, "readiness") && pathwayRow` — has never been seen to
