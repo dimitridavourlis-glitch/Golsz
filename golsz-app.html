@@ -4771,6 +4771,7 @@ function Benchmarks({ viewUserId, manageId }) {
         .update({ milestones: next, updated_at: new Date().toISOString() })
         .eq("user_id", uid);
       if (error) throw error;
+      syncActions(sb);
       setRetestMsg(t("bench_retest_done").replace("{date}", due));
     } catch (e) {
       setErr((e && e.message) || t("bench_retest_err"));
@@ -8305,6 +8306,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
         // Mirrors what was WRITTEN, not what was proposed — the re-filed list,
         // and the marker only where this write actually moved it.
         current_stage_id: stagesReplaced ? remap.currentStageId : ((currentPathway && currentPathway.current_stage_id) || null) });
+      syncActions(sb);
       setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedPathway: null, pathwayAdded: true, actionError: null } : msg)));
     } catch (e) {
       console.error("GOLSZ add suggested pathway error:", e);
@@ -9768,6 +9770,8 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
       console.error("GOLSZ mark step done error:", error);
       setPathwayRow(before);
       setStepErr(t("home_step_failed"));
+    } else {
+      syncActions(sb);
     }
     setStepBusy(false);
   }
@@ -11765,6 +11769,38 @@ const PATHWAY_TYPES = ["ncaa", "naia", "juco", "canadian_university", "academy",
 // which returns a fixed shape on purpose, and the difference is deliberate —
 // milestones have a closed field set the client fully owns; stages are about
 // to grow fields across several releases.
+// KEEPING athlete_actions IN STEP WITH THE jsonb, IN ONE CALL.
+//
+// pathway_plan.milestones is still the source of truth this release. Nothing
+// reads athlete_actions yet; this exists so that when readers cut over the
+// table is already correct, including for athletes who never touch their plan
+// again after today.
+//
+// The reconciliation itself is a Postgres function (migration 152) rather than
+// client code, and that is the whole design. A browser cannot do this
+// atomically — it is a read, N updates, an insert and a drop-update — so a
+// client version needs a cache to avoid re-diffing on every save, and a
+// half-applied pass leaves that cache naming a state the table no longer
+// holds. The next write returning to that state is then skipped forever.
+// Tick/untick and delete/undo return to a previous state constantly.
+//
+// So: one statement, one round trip, idempotent, no cache, no queue, no
+// partial states. Calling it twice changes nothing.
+//
+// FIRE AND FORGET, DELIBERATELY. The athlete's write has already succeeded;
+// making them wait on a mirror, or showing them an error for an operation
+// that worked, would both be wrong. A failure is genuinely transient here
+// because there is no cache to go stale — the next save reconciles everything
+// from scratch — so it is logged for us and invisible to them.
+function syncActions(sb) {
+  if (!sb) return;
+  try {
+    sb.rpc("sync_athlete_actions").then(({ error }) => {
+      if (error) console.warn("GOLSZ action mirror deferred:", error.message || error);
+    }, (e) => console.warn("GOLSZ action mirror deferred:", e));
+  } catch (e) { console.warn("GOLSZ action mirror deferred:", e); }
+}
+
 // WHAT A GOAL ACTUALLY REQUIRES — MIRRORED FROM THE SERVER, PINNED BY A TEST.
 //
 // api/scout.js declares key_evidence per pathway. The client needs it to draw
@@ -12241,6 +12277,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
     if (overrides && overrides.stages) stagesRef.current = overrides.stages;
     savesRef.current = savesRef.current.then(async () => {
       setBusy(true);
+      let saved = false;
       const next = {
         pathway_type: pathwayType, target_timeline: timeline.trim().slice(0, 100) || null,
         notes: notes.trim().slice(0, 1000) || null, milestones: milestonesRef.current,
@@ -12252,6 +12289,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
         if (error) throw error;
         setExists(true);
         setSaveError("");
+        saved = true;
       } catch (e) {
         console.error("GOLSZ pathway plan save error:", e);
         // Put it back. A step that shows as done when the server never heard
@@ -12268,6 +12306,22 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
         }
         setSaveError(t("pathway_save_failed"));
       } finally { setBusy(false); }
+      // OUTSIDE THE SAVE'S OWN TRY, AND INSIDE ONE OF ITS OWN.
+      //
+      // Outside, because anything throwing in here would otherwise be caught
+      // by the save's catch and reported to the athlete as a failed save —
+      // for a write that actually succeeded.
+      //
+      // Inside its own, because this runs in the callback of savesRef's
+      // promise chain. An escaping throw rejects that chain, and every later
+      // .then(fn) on a rejected promise skips fn — so one bad mirror call
+      // would silently stop EVERY subsequent write for the rest of the
+      // session. syncActions already guards itself; this makes the guarantee
+      // hold whatever it becomes later.
+      //
+      // Both halves were found by test_plan_writes, which runs this function
+      // for real with a mirror stub that throws on purpose.
+      if (saved) { try { syncActions(sb); } catch (e) { console.warn("GOLSZ action mirror deferred:", e); } }
     });
   }
 
@@ -15835,7 +15889,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=7b4f0d33cbdf3753";
+    s.src = "js/app.js?v=020d32d1cc533ab0";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

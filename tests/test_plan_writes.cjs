@@ -27,7 +27,7 @@ const body = APP.slice(start, APP.indexOf("\n  }", start) + 4);
 
 // A harness that stands in for the component's state and the Supabase client.
 function harness(failOn) {
-  const st = { milestones: [{ id: "a", done: false }], busy: 0, error: "", exists: false, writes: [], stageWrites: [] };
+  const st = { milestones: [{ id: "a", done: false }], busy: 0, error: "", exists: false, writes: [], stageWrites: [], synced: 0 };
   const ref = (v) => ({ current: v });
   const savesRef = ref(Promise.resolve());
   const milestonesRef = ref(st.milestones);
@@ -46,13 +46,17 @@ function harness(failOn) {
   } }) };
   const save = new Function(
     "sb", "uid", "savesRef", "milestonesRef", "stagesRef", "setMilestones", "setCustomStages",
-    "setBusy", "setExists", "setSaveError",
+    "setBusy", "setExists", "setSaveError", "syncActions",
     "pathwayType", "timeline", "notes", "currentStageId", "t", "console",
     body + " return save;"
   )(sb, "u1", savesRef, milestonesRef, stagesRef,
     (v) => { st.milestones = v; }, (v) => { st.stages = v; },
     (b) => { st.busy += b ? 1 : -1; }, () => { st.exists = true; },
-    (e) => { st.error = e; }, "ncaa", "", "", null, (k) => k, { error() {} });
+    (e) => { st.error = e; },
+    // Deliberately THROWS. The mirror is a secondary write; if it can turn a
+    // successful save into a reported failure, that is the bug.
+    () => { st.synced++; throw new Error("mirror down"); },
+    "ncaa", "", "", null, (k) => k, { error() {}, warn() {} });
   return { save, st, savesRef, milestonesRef, stagesRef };
 }
 
@@ -147,6 +151,37 @@ function harness(failOn) {
     ck("the ref is restored", h.stagesRef.current[0].label, "Old");
     ck("...and so is the state behind it", h.st.stages[0].label, "Old");
     ck("...and the athlete is told", h.st.error, "pathway_save_failed");
+  }
+
+  console.log("-- a broken mirror cannot break saving --");
+  {
+    // The mirror stub in this harness THROWS every time. These three
+    // assertions are the whole reason it does.
+    const h = harness();
+    h.save({ milestones: [{ id: "a", done: true }] });
+    await h.savesRef.current;
+    ck("the mirror was attempted after a successful save", h.st.synced, 1);
+    ck("...and the save is still reported as successful", h.st.error, "");
+    ck("...and the write still went out", h.st.writes, ["a:1"]);
+
+    // The chain must survive. A throw escaping into savesRef rejects it, and
+    // every later .then(fn) on a rejected promise skips fn — silently ending
+    // all writes for the session.
+    h.save({ milestones: [{ id: "a", done: false }] });
+    await h.savesRef.current;
+    ck("...and the NEXT save still runs, so the queue was not poisoned",
+       h.st.writes, ["a:1", "a:0"]);
+    ck("...with the mirror attempted again", h.st.synced, 2);
+  }
+
+  console.log("-- a failed save does not mirror --");
+  {
+    const h = harness([1]);
+    h.save({ milestones: [{ id: "a", done: true }] });
+    await h.savesRef.current;
+    ck("nothing was written", h.st.writes, []);
+    ck("...so nothing was mirrored", h.st.synced, 0);
+    ck("...and the athlete was told", h.st.error, "pathway_save_failed");
   }
 
 console.log(`\n${p}/${p + f} passed`);

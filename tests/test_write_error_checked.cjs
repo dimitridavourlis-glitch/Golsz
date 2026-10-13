@@ -62,6 +62,11 @@ const MUTATING_RPCS = [
   "create_passport_share_token", "revoke_passport_share_token",
   "reset_scout_intelligence", "log_admin_action", "log_client_error",
   "record_activity_ping",
+  // Writes athlete_actions for the calling athlete only (migration 152). It is
+  // deliberately fire-and-forget — the athlete's real write has already
+  // succeeded and must not be made to wait on a mirror, nor shown an error for
+  // an operation that worked — so its handler logs rather than surfacing.
+  "sync_athlete_actions",
 ];
 // Six analytics RPCs left this list on 2026-08-13 when loadAnalytics() was
 // deleted with the Analytics tab: admin_analytics_counts, admin_moderation_stats,
