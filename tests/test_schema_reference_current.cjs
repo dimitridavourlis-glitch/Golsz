@@ -37,10 +37,27 @@ const ck = (l, a, e) => {
   else { f++; console.log(`FAIL  ${l}\n   exp ${E}\n   got ${A}`); }
 };
 
-const nums = fs.readdirSync(REPO)
-  .map((n) => /^supabase-migration-(\d+)-/.exec(n))
-  .filter(Boolean)
-  .map((m) => Number(m[1]))
+// A migration FILED but not yet run must NOT be in the schema reference —
+// that file documents what is DEPLOYED. The first version of this guard
+// compared against the newest file on disk and failed the moment an approved
+// migration was committed before it could be applied, which is a legitimate
+// state (the dashboard needed a login the owner had to provide).
+//
+// So the invariant is: every APPLIED migration is in the reference. A file
+// opts out by saying so in its own header, which is a visible claim someone
+// has to write down, not a silent skip.
+const NOT_APPLIED = /\*\*\* NOT YET APPLIED \*\*\*/;
+const all = fs.readdirSync(REPO)
+  .map((n) => ({ n, m: /^supabase-migration-(\d+)-/.exec(n) }))
+  .filter((x) => x.m)
+  .map((x) => ({ num: Number(x.m[1]), file: x.n }));
+const unapplied = all.filter((x) => NOT_APPLIED.test(fs.readFileSync(path.join(REPO, x.file), "utf8")));
+if (unapplied.length) {
+  console.log(`   filed but NOT applied (excluded): ${unapplied.map((u) => u.num).join(", ")}`);
+}
+const nums = all
+  .filter((x) => !unapplied.some((u) => u.num === x.num))
+  .map((x) => x.num)
   .sort((a, b) => a - b);
 
 ck("migrations are on disk", nums.length > 100, true);
