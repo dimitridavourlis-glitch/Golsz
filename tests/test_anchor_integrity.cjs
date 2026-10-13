@@ -159,6 +159,13 @@ const REVIEWED_AMBIGUOUS = new Set([
   // cannot see the fromIndex, which is why this is reviewed rather than a
   // real ambiguity.
   "</script>",
+  // test_home_command_centre slices the bottleneck card by its real bounds —
+  // indexOf("</HomeZone>", cardAt) — so it takes the first close AFTER the
+  // card opens. Same shape as the </script> entry above: the count cannot see
+  // the fromIndex. It replaced a fixed-size character window that broke three
+  // times, silently, by the assertions simply stopping short of what they
+  // claimed to check.
+  "</HomeZone>",
 ]);
 // Entries are matched as PREFIXES, not exact strings. The failure message
 // truncates literals at 50 chars, so an entry copied from the console output

@@ -167,10 +167,18 @@ ck("...while its strings remain in all four dictionaries",
 {
   const cardAt = APP.indexOf('{t("home_bottleneck_eyebrow")}');
   ck("the bottleneck card exists", cardAt > 0, true);
-  // Widened when the requirement gap was added above the caveat. A fixed-size
-  // window is a silent liar: too small and the assertion stops reaching what
-  // it claims to check, which is why the next line re-asserts that it does.
-  const card = APP.slice(cardAt, cardAt + 5200);
+  // SLICED BY ITS REAL BOUNDS, NOT A CHARACTER COUNT.
+  // This was a fixed window and broke three times as the card grew — each
+  // time silently, by the assertion simply stopping short of the thing it
+  // claimed to check. The card is one HomeZone; end it where that ends.
+  const cardEnd = APP.indexOf("</HomeZone>", cardAt);
+  ck("the card's end was found", cardEnd > cardAt, true);
+  const card = APP.slice(cardAt, cardEnd);
+  // A window that no longer contains what the assertions below name is the
+  // failure mode being guarded against, so it is checked rather than assumed.
+  ck("...and the slice still contains every element asserted below",
+     ["home_bottleneck_basis", "leverKey", "projectedWeak", "gap.missing"]
+       .filter((x) => !card.includes(x)), []);
   ck("...and discloses what it is measured from", card.includes('t("home_bottleneck_basis")'), true);
   // The caveat is only TRUE when there is no requirement gap to show. Once
   // GOLSZ can name a missing requirement it is no longer unable to compare.
