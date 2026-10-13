@@ -182,6 +182,20 @@ ck("...and the id did not move", afterRename[0].id, "7");
   }
 }
 
+// The section editor's save button said "Save goal". A shared i18n key is not
+// a shared meaning, and two of the four languages hid it by already being
+// generic.
+{
+  const panelAt = APP.indexOf("function stagePanel() {");
+  const panel = APP.slice(panelAt, APP.indexOf("\n  function ", panelAt + 40));
+  ck("the section editor saves a SECTION", panel.includes('t("pathway_section_save")'), true);
+  ck("...not a goal", panel.includes('t("goal_card_save")'), false);
+  const hits = APP.match(/\bpathway_section_save: "[^"]+"/g) || [];
+  ck("four dictionaries, four distinct strings", [hits.length, new Set(hits).size], [4, 4]);
+  ck("...and none of them still says goal",
+     hits.some((h) => /goal|objetivo|objectif|στόχ/i.test(h)), false);
+}
+
 const JS = fs.readFileSync(path.join(REPO, "js", "app.js"), "utf8");
 ck("normalizeStage is in the compiled bundle", JS.includes("normalizeStage"), true);
 
