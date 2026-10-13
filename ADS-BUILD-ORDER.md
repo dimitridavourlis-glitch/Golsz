@@ -48,6 +48,26 @@ and that is how finished work gets rebuilt.
   Still unbuilt in Phase 7: migrations 149/150, evidence attachment, provenance
   on the scalar Passport columns, and benchmarks in the public share payload.
 
+- **Migration 144 APPLIED** 2026-10-13, verified in place: 17 columns, 5 check
+  constraints, 4 indexes, 4 self-only policies, RLS on. Nothing reads the table
+  yet, which is the design. **The backfill (144b) is NOT run** — it writes live
+  rows, so it is the owner's. Production holds 4 pathway_plan rows, 2 with
+  steps, **2 steps in total**, so the backfill moves 2 rows.
+- **"Set current" fixed** (`b7c5e1f`) — `PathwayMap` called the
+  recruiting_status heuristic directly and ignored `current_stage_id`, so the
+  marker moved on Home and not on Plan, the screen the button is on. One
+  `resolveStageIndex()`, three callers. The test that existed to catch this
+  passed throughout: it matched one spelling of the rule, satisfied by a
+  correct copy a thousand lines from the broken one. It counts producers now.
+
+**STILL BLOCKED ON THE OWNER, not on code**
+
+1. Run `supabase-migration-144b-backfill.sql`. Writes live rows.
+2. Sign in to golsz.com in the browser pane. Home's BOTTLENECK, PATHWAY
+   PROGRESS, TODAY and THIS WEEK have never been seen to render; the gate is
+   `planKnown(plan) && featureUnlocked(plan, "readiness") && pathwayRow`. On
+   this codebase a signed-out check proves nothing — that lesson cost a day.
+
 **NOT STARTED** — everything in §3 from PHASE 1 onward. The unified Action
 Engine is the next dependency and the build order puts it at 3-4 weeks,
 because Home, Plan and Scout all read `pathway_plan.milestones` today and
