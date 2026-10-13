@@ -33,15 +33,44 @@ const normalizeStage = vm.runInNewContext(
   APP.slice(nsAt, APP.indexOf("\n}", nsAt) + 2) + "\nnormalizeStage");
 
 const stored = { id: 7, label: "Tusculum", target_date: "2027-05-01",
-                 status: "in_progress", blockers: ["visa"], evidence: [{ url: "x" }] };
+                 status: "in_progress", blockers: ["visa"], evidence: ["trial invite email"],
+                 // A key NO version of normalizeStage knows about. This is the
+                 // real round-trip guarantee: a row written by a newer client
+                 // must not be stripped by an older one saving over it.
+                 some_future_field: { nested: true } };
 const loaded = normalizeStage(stored);
 ck("id is coerced, because the rest of the app indexes on it", loaded.id, "7");
 ck("label is coerced", loaded.label, "Tusculum");
 ck("a target date survives the load", loaded.target_date, "2027-05-01");
 ck("...and a status", loaded.status, "in_progress");
 ck("...and an array of blockers, by value", loaded.blockers, ["visa"]);
-ck("...and nested evidence", loaded.evidence, [{ url: "x" }]);
-ck("no key is dropped", Object.keys(loaded).sort(), Object.keys(stored).sort());
+ck("...and evidence, as the free text it is", loaded.evidence, ["trial invite email"]);
+ck("A KEY IT HAS NEVER HEARD OF SURVIVES INTACT", loaded.some_future_field, { nested: true });
+// Every stored key survives. The normaliser may ADD known fields with their
+// empty defaults — that is how a stage written before a field existed gets one
+// — so this is containment, not equality.
+ck("no key is dropped",
+   Object.keys(stored).filter((k) => !(k in loaded)), []);
+
+// The known fields are VALIDATED, not merely carried. An allowlist means a
+// value from anywhere unexpected reads as UNKNOWN rather than rendering a
+// status the UI has no label for.
+ck("an unrecognised status reads as UNKNOWN", normalizeStage({ id: "a", status: "nearly" }).status, null);
+ck("...as does a status that is not a string", normalizeStage({ id: "a", status: 3 }).status, null);
+ck("each real status is kept",
+   ["not_started", "in_progress", "completed"].map((v) => normalizeStage({ id: "a", status: v }).status),
+   ["not_started", "in_progress", "completed"]);
+ck("a malformed date is refused rather than rendered", normalizeStage({ id: "a", target_date: "May 2027" }).target_date, null);
+ck("...and a real one kept", normalizeStage({ id: "a", target_date: "2027-05-01" }).target_date, "2027-05-01");
+ck("blank blockers are dropped", normalizeStage({ id: "a", blockers: ["", "  ", "visa"] }).blockers, ["visa"]);
+ck("non-strings are dropped rather than rendered as [object Object]",
+   normalizeStage({ id: "a", blockers: [{ x: 1 }, "visa"] }).blockers, ["visa"]);
+ck("the list is capped, so a runaway cannot bloat the row",
+   normalizeStage({ id: "a", evidence: ["1","2","3","4","5","6","7"] }).evidence.length, 5);
+ck("requirements are the athlete's own words, trimmed",
+   normalizeStage({ id: "a", requirements: "  GPA above what the coach asked  " }).requirements,
+   "GPA above what the coach asked");
+ck("...and never a number GOLSZ does not hold", normalizeStage({ id: "a" }).requirements, "");
 
 ck("a stage with no id is refused", normalizeStage({ label: "orphan" }), null);
 ck("null is refused", normalizeStage(null), null);
@@ -103,7 +132,7 @@ ck("...and the id did not move", afterRename[0].id, "7");
   const bare = (APP.match(/\{ id: String\(x\.id\), label: String\(x\.label \|\| ""\) \}/g) || []).length;
   ck("no site rebuilds a stage from id and label alone", bare, 0);
   ck("...and normalizeStage itself spreads before coercing",
-     /return \{ \.\.\.x, id: String\(x\.id\), label: String\(x\.label \|\| ""\) \};/.test(APP), true);
+     /return \{\s*\.\.\.x,\s*id: String\(x\.id\),/.test(APP), true);
   ck("the load goes through it",
      /data\.stages\.map\(normalizeStage\)\.filter\(Boolean\)/.test(APP), true);
   ck("...and so does accepting a pathway from Scout",
@@ -111,6 +140,46 @@ ck("...and the id did not move", afterRename[0].id, "7");
   // The dead rename path is gone: a function that LOOKS like the rename path
   // but has no callers is how the next person fixes the wrong site.
   ck("no dead second rename path remains", /renameStage/.test(APP), false);
+}
+
+// ---- THE FIELDS ARE EDITABLE, AND THROUGH ONE WRITER ---------------------
+{
+  ck("there is a single per-field writer", /function setStageField\(id, patch\) \{/.test(APP), true);
+  ck("...and it goes through saveStages, so it inherits the ref and the rollback",
+     /function setStageField\(id, patch\) \{\s*saveStages\(/.test(APP), true);
+  ck("...normalising on the way in, so a field cannot be stored unvalidated",
+     /setStageField\(id, patch\)[\s\S]{0,200}?normalizeStage\(\{ \.\.\.st, \.\.\.patch \}\)/.test(APP), true);
+
+  const panelAt = APP.indexOf("function stagePanel() {");
+  const panel = APP.slice(panelAt, APP.indexOf("\n  function ", panelAt + 40));
+  for (const k of ["pathway_field_status", "pathway_field_date", "pathway_field_reqs",
+                   "pathway_field_blockers", "pathway_field_evidence", "pathway_field_note"]) {
+    ck(`  the panel renders ${k}`, panel.includes('t("' + k + '")'), true);
+  }
+  // Text commits on blur, never per keystroke: each save is a write to a jsonb
+  // column on a shared row.
+  ck("free text commits on blur, not on every keystroke",
+     (panel.match(/onBlur=\{\(e\) =>/g) || []).length >= 3, true);
+  ck("...and the fields are uncontrolled, keyed per section so they remount",
+     (panel.match(/key=\{st\.id \+ "/g) || []).length >= 3, true);
+  ck("a status click toggles off rather than trapping the athlete in one",
+     /status: st\.status === v \? null : v/.test(panel), true);
+  ck("the panel says GOLSZ checks none of it", panel.includes('t("pathway_field_note")'), true);
+
+  // pathway_stage_<id> is COMPUTED — stageLabel does t("pathway_stage_" + id).
+  // Field labels must never live in that namespace or they read as stage ids;
+  // test_pathway_milestones enforces it and caught these on first write.
+  ck("no field label squats on the computed stage-id namespace",
+     /pathway_stage_(status|date|reqs|blockers|evidence|lines_ph|note)\b/.test(APP), false);
+
+  for (const k of ["pathway_field_status", "pathway_field_date", "pathway_field_reqs",
+                   "pathway_field_reqs_ph", "pathway_field_blockers", "pathway_field_evidence",
+                   "pathway_field_lines_ph", "pathway_field_note", "pathway_status_not_started",
+                   "pathway_status_in_progress", "pathway_status_completed", "pathway_status_unknown"]) {
+    const hits = APP.match(new RegExp("\\b" + k + ': "[^"]+"', "g")) || [];
+    ck(`  ${k} in four dictionaries, four distinct strings`,
+       [hits.length, new Set(hits).size], [4, 4]);
+  }
 }
 
 const JS = fs.readFileSync(path.join(REPO, "js", "app.js"), "utf8");
