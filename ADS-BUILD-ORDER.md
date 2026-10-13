@@ -1,5 +1,53 @@
 # GOLSZ — ATHLETE DIRECTION SYSTEM: BUILD ORDER
 
+## STATUS — updated 2026-10-13
+
+Keep this section current. `SPEC-custom-pathway-stages.md` sat for two months
+saying "Nothing here is implemented yet" about a subsystem that had shipped,
+and that is how finished work gets rebuilt.
+
+**DONE**
+
+- **Phase 0, the truth pass** (`e518ae5`) — all six items. `supabase-schema.sql`
+  gained `current_stage_id` / `full_access` / `metric_key`, the three columns
+  the client SELECTs and the file omitted; migration 141's reference to a
+  non-existent "144" corrected; `SPEC-custom-pathway-stages.md` marked shipped;
+  `test_schema_reference_current` now asserts column DEFINITIONS, not mentions.
+- **All four cheap defects** named in Phase 0:
+  - a striker was offered "Clean sheets" — the server's position gate was not
+    mirrored client-side (`e518ae5`)
+  - Reschedule was a dead button on an undated step (`f13d5a8`)
+  - `schoolsFact`'s `"replied"` branch could never fire — removed with its
+    block (`a45d1a5`)
+  - Scout proposed 200-char labels that storage silently cut to 120 (`a45d1a5`)
+- **Home, the brief's command centre** — five of six elements:
+  - NEXT ACTION + WHY + Done/Reschedule/Ask Scout/Drop — already existed
+  - GOAL — already existed
+  - BIGGEST BOTTLENECK (`f14a321`) — `weakest` / `leverKey` / `projectedWeak`
+    were computed every load and rendered nowhere
+  - PATHWAY PROGRESS (`f13d5a8`) — `PathwayStrip` was a finished component
+    with zero render sites
+  - TODAY and THIS WEEK (`f14a321`, `a45d1a5`) — real Monday-first week and
+    today fractions over dated steps only
+  - NEW OPPORTUNITY — **not built, blocked on data** (§2)
+- **46 lines of dead computation removed** from Home (`a45d1a5`) — the `doors`
+  block, rebuilt on every load since "THE REST OF THE APP" was removed.
+
+**NOT STARTED** — everything in §3 from PHASE 1 onward. The unified Action
+Engine is the next dependency and the build order puts it at 3-4 weeks,
+because Home, Plan and Scout all read `pathway_plan.milestones` today and
+moving that jsonb to a real table means migrating live athlete data while
+three screens keep working.
+
+**NOT VERIFIED SIGNED IN.** Everything above passes 75 suites and is deployed,
+but no signed-in session has been available to look at Home since these
+landed. The bottleneck card's gate in particular — `planKnown(plan) &&
+featureUnlocked(plan, "readiness") && pathwayRow` — has never been seen to
+render. On this codebase a signed-out check proves nothing; that lesson cost a
+day when every signed-in athlete was served an error boundary.
+
+---
+
 **Read this first:** you are extending a working system, not starting one. Of the brief's nine subsystems, **two are substantially built** (Action Engine, AI Scout), **four are half-built** (Home, Pathway, Gap/Bottleneck, Passport), **one is built but scoring the wrong thing** (Assessment), and **two cannot be honestly built at all today** (Opportunity match scoring, and goal-relative capability assessment) because the reference data does not exist. Six independent audits of this repo agree on that split, and every claim below carries a file:line.
 
 ---
