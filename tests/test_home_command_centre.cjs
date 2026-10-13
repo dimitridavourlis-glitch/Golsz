@@ -156,5 +156,43 @@ ck("...while its strings remain in all four dictionaries",
      new Set(goalVariants).size, 4);
 }
 
+// ---- THE BOTTLENECK CARD DISCLOSES ITS OWN BASIS --------------------------
+//
+// The card is labelled BIGGEST BOTTLENECK and an athlete reads that as "the
+// biggest thing stopping me reaching my goal". It is not that: it is the
+// weakest contributor to Passport Strength, which measures profile
+// completeness. Nothing in GOLSZ evaluates a requirement against a goal yet —
+// BENCHMARK_BANDS is empty and there is no per-stage requirement data — so the
+// card states its basis instead of letting the label overclaim.
+{
+  const cardAt = APP.indexOf('{t("home_bottleneck_eyebrow")}');
+  ck("the bottleneck card exists", cardAt > 0, true);
+  const card = APP.slice(cardAt, cardAt + 2600);
+  ck("...and discloses what it is measured from", card.includes('t("home_bottleneck_basis")'), true);
+  ck("...below the projection, not instead of it", card.indexOf('t("home_bottleneck_basis")') > card.indexOf("projectedWeak"), true);
+  // The style sits BEFORE the key in the JSX, so this window looks backward.
+  // Written forward first, it passed on a gold caveat — the mutation that
+  // caught it is M2 in this file's history.
+  const basisAt = card.indexOf('t("home_bottleneck_basis")');
+  const styleBefore = card.slice(Math.max(0, basisAt - 320), basisAt);
+  ck("...in slate, not gold — it is a caveat, not an achievement",
+     /C\.lime/.test(styleBefore), false);
+  ck("...and the window actually covers its style", /fontSize: 10\.5/.test(styleBefore), true);
+
+  const strings = APP.match(/\bhome_bottleneck_basis: "([^"]+)"/g) || [];
+  ck("four dictionaries carry it", strings.length, 4);
+  ck("...as four distinct strings", new Set(strings).size, 4);
+  // The disclosure is worthless if it does not actually name the limit.
+  ck("...and each one says GOLSZ cannot compare against the goal yet",
+     strings.every((v) => /cannot yet|ne peut pas encore|aún no puede|δεν μπορεί ακόμη/.test(v)), true);
+
+  // The empty reference population is the REASON this disclosure exists. If
+  // someone fills it, this assertion fires and the disclosure gets revisited
+  // rather than quietly outliving the limitation it describes.
+  const SCOUT = fs.readFileSync(path.join(REPO, "api", "scout.js"), "utf8");
+  ck("the reference population is still empty, so the caveat is still true",
+     /const BENCHMARK_BANDS = \[\];/.test(SCOUT), true);
+}
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
