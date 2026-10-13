@@ -16,6 +16,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const vm = require("vm");
 const REPO = path.join(__dirname, "..");
 const APP = fs.readFileSync(path.join(REPO, "golsz-app.html"), "utf8");
 
@@ -256,10 +257,56 @@ ck("every select that reads milestones also reads stages",
    drawing.filter((sel) => !/\bstages\b/.test(sel)), []);
 ck("...and current_stage_id, so stated position survives the trip",
    drawing.filter((sel) => !/current_stage_id/.test(sel)), []);
+// ONE DERIVATION, NOT ONE SPELLING.
+//
 // Stated beats inferred: currentStageIndex() guesses from recruiting_status
-// against the SPORT's sequence and cannot know what a self-written section is.
-ck("a stated current stage overrides the heuristic",
-   /statedIdx >= 0 \? statedIdx : currentStageIndex\(/.test(APP), true);
+// against the SPORT's sequence and cannot know what a self-written section
+// is. The previous version of this assertion matched ONE spelling of that
+// rule, and passed while PathwayMap — the map on Plan, the screen "Set
+// current" lives on — called the heuristic directly and ignored the stated
+// id entirely. A regex that matches a correct copy says nothing about the
+// incorrect one next to it.
+//
+// So count PRODUCERS instead. The heuristic may have exactly one caller; if
+// a screen wants a stage index it has to come through the override.
+{
+  // Comment lines are stripped first: this file's own prose names the
+  // function it is counting.
+  const code = APP.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+  ck("the recruiting_status heuristic is declared once and called once",
+     (code.match(/\bcurrentStageIndex\(/g) || []).length, 2);
+  const at = code.indexOf("function resolveStageIndex(");
+  ck("resolveStageIndex exists", at > 0, true);
+  const body = code.slice(at, code.indexOf("\n}", at));
+  ck("...and it is the one caller", /currentStageIndex\(/.test(body), true);
+  ck("...preferring the stated stage when there is one", /stated >= 0 \? stated :/.test(body), true);
+  ck("every screen that draws a position resolves through it",
+     (code.match(/= resolveStageIndex\(/g) || []).length, 3);
+
+  // The defect this replaces, asserted at the prop boundary rather than by
+  // grepping for a derivation that is now absent from the component.
+  ck("PathwayMap accepts the stated stage id",
+     /function PathwayMap\(\{[^}]*\bcurrentStageId\b/.test(APP), true);
+  ck("...and Plan hands it the id it already holds in state",
+     /<PathwayMap[\s\S]{0,500}currentStageId=\{currentStageId\}/.test(APP), true);
+
+  // Behaviour, not shape. Both functions are self-contained.
+  const heurAt = code.indexOf("function currentStageIndex(");
+  const fn = vm.runInNewContext(
+    code.slice(heurAt, code.indexOf("\n}", heurAt) + 2) + "\n" +
+    code.slice(at, code.indexOf("\n}", at) + 2) + "\nresolveStageIndex"
+  );
+  const stages = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
+  const signed = { recruiting_status: "Signed" };
+  ck("a stated stage wins over the heuristic", fn(stages, "b", signed), 1);
+  ck("no stated stage falls back to the heuristic", fn(stages, null, signed), 3);
+  ck("an unknown stated id falls back rather than blanking the map",
+     fn(stages, "deleted-stage", signed), 3);
+  // Stages are stringified on save; an older row can still hold a number.
+  ck("a numeric stored id matches a stringified stage", fn([{ id: "1" }, { id: "2" }], 2, {}), 1);
+  ck("an empty stage list does not throw", typeof fn([], "b", signed), "number");
+}
+
 // Empty custom stages must fall back, or every existing athlete's map empties.
 ck("an athlete with no custom stages still gets the sport's",
    /if \(custom\.length\)/.test(APP), true);

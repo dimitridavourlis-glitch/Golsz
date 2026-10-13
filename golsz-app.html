@@ -9259,9 +9259,7 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
   // clearly not theirs. If they HAVE told Scout a secondary goal, that is a
   // real fact and gets said in their own words instead.
   const statedSecondary = statedContextValue(athlete && athlete.scout_context, "secondary_goal");
-  const statedIdx = (pathwayRow && pathwayRow.current_stage_id)
-    ? stages.findIndex((st) => st.id === pathwayRow.current_stage_id) : -1;
-  const stageIdx = statedIdx >= 0 ? statedIdx : currentStageIndex(athlete, stages.length);
+  const stageIdx = resolveStageIndex(stages, pathwayRow && pathwayRow.current_stage_id, athlete);
   return (
     <div style={{ padding: "6px 4px 14px" }}>
       {/* ONE OBJECT, ONE PICTURE. This used to render YOU -> current club ->
@@ -9830,9 +9828,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
   // (current_stage_id) over the derived one — an athlete who has said where
   // they are outranks anything GOLSZ infers for them.
   const homeStages = athleteStages(athlete, pathwayRow);
-  const homeStatedIdx = (pathwayRow && pathwayRow.current_stage_id)
-    ? homeStages.findIndex((st) => st.id === pathwayRow.current_stage_id) : -1;
-  const homeStageIdx = homeStatedIdx >= 0 ? homeStatedIdx : currentStageIndex(athlete, homeStages.length);
+  const homeStageIdx = resolveStageIndex(homeStages, pathwayRow && pathwayRow.current_stage_id, athlete);
   const currentStage = homeStageIdx >= 0 ? homeStages[homeStageIdx] : null;
 
   const allMilestones = pathwayRow ? (pathwayRow.milestones || []) : [];
@@ -11332,6 +11328,22 @@ function currentStageIndex(athlete, stageCount) {
   return 0;
 }
 
+// STATED BEATS INFERRED, IN ONE PLACE.
+//
+// currentStageIndex() above guesses from recruiting_status against the
+// SPORT's sequence. It cannot know what a self-written stage means, so when
+// the athlete has said where they are, their answer wins.
+//
+// That rule was written twice on Home and not at all in PathwayMap — which
+// is why "Set current" moved the marker on Home and did nothing to the map on
+// Plan, the screen the button is on. Three callers, one function.
+function resolveStageIndex(stages, currentStageId, athlete) {
+  const list = stages || [];
+  const stated = currentStageId
+    ? list.findIndex((st) => String(st.id) === String(currentStageId)) : -1;
+  return stated >= 0 ? stated : currentStageIndex(athlete, list.length);
+}
+
 // The visual pathway map itself (§8/§9 — "the visual showpiece") — nodes
 // and connecting lines for the sport's real stage sequence, the athlete's
 // current position highlighted, and their stated goal (pathway_type) as
@@ -11377,11 +11389,11 @@ function athleteStages(athlete, pathwayRow) {
 function stageLabel(stage, t) {
   return stage.label === null ? t("pathway_stage_" + stage.id) : stage.label;
 }
-function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing, stages: stagesProp, onNodeTap, onDraftWithScout, drafting, stepCounts, goalText }) {
+function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing, stages: stagesProp, currentStageId, onNodeTap, onDraftWithScout, drafting, stepCounts, goalText }) {
   // Stages arrive resolved from the owner (PathwayPlan). This component does
   // not read SPORT_PATHWAY_STAGES itself — see athleteStages above.
   const stages = stagesProp && stagesProp.length ? stagesProp : athleteStages(athlete, null);
-  const curIdx = currentStageIndex(athlete, stages.length);
+  const curIdx = resolveStageIndex(stages, currentStageId, athlete);
   const hasGoal = !!pathwayType;
   // Per-node sub-label: real detail under each stage where GOLSZ actually
   // knows it (the athlete's own club at their current stage, their grad
@@ -12395,7 +12407,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
           the page.
           A JSX comment cannot live in an attribute list, which is what this
           was until the parse said so. */}
-      <PathwayMap sport={athlete && athlete.sport} athlete={athlete} pathwayType={exists ? pathwayType : null} t={t} goalText={goalText} onEditGoal={() => { setEditingStage(null); setEditingGoal((v) => !v); }} editing={editingGoal}
+      <PathwayMap sport={athlete && athlete.sport} athlete={athlete} pathwayType={exists ? pathwayType : null} t={t} goalText={goalText} currentStageId={currentStageId} onEditGoal={() => { setEditingStage(null); setEditingGoal((v) => !v); }} editing={editingGoal}
         stages={athleteStages(athlete, { stages: customStages })}
         onNodeTap={(id) => { setEditingGoal(false); setStageDraft(stageLabelFor(id)); setPendingStage(null); setEditingStage(id); }}
         onDraftWithScout={(onNavigate && featureUnlocked(plan, "pathway_plan") && milestones.length === 0) ? (() => onNavigate("scout", null, t("pathway_scout_seed"))) : null}
@@ -15323,7 +15335,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=db460eb841feb307";
+    s.src = "js/app.js?v=1b83021f10d5bb0c";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

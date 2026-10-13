@@ -6313,3 +6313,36 @@ alter table pathway_plan add column if not exists current_stage_id text;
 -- 131 — full_access, read on every profile select. See supabase-migration-131-full-access.sql.
 alter table public.profiles
   add column if not exists full_access boolean not null default false;
+
+-- 144 — athlete_actions: the one action table Home, Plan and Scout share.
+-- Applied 2026-10-13. See supabase-migration-144-athlete-actions.sql for the
+-- cutover plan; the backfill is 144b and is NOT run yet, so nothing reads this
+-- table in production. status holds only what cannot be derived —
+-- upcoming/today/overdue are due_on read against today, never stored.
+create table if not exists public.athlete_actions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  title text not null,
+  description text,
+  reason text,
+  category text not null default 'other',
+  stage_id text,
+  due_on date,
+  due_src text,
+  completed_at timestamptz,
+  status text not null default 'open',
+  evidence_note text,
+  priority smallint not null default 0,
+  created_by text not null default 'athlete',
+  legacy_milestone_id text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint athlete_actions_status_check check (status in ('open', 'completed', 'dropped')),
+  constraint athlete_actions_category_check check (category in (
+    'training', 'recovery', 'testing', 'film', 'outreach', 'academic',
+    'recruiting', 'application', 'competition', 'profile', 'other')),
+  constraint athlete_actions_due_src_check check (due_src is null or due_src in ('scout', 'retest')),
+  constraint athlete_actions_created_by_check check (created_by in ('athlete', 'scout', 'golsz')),
+  constraint athlete_actions_completed_coherent check ((status = 'completed') = (completed_at is not null))
+);
+-- Self-only, all four verbs. RLS is enabled on the table.
