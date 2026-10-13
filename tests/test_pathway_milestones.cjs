@@ -148,22 +148,38 @@ ck("...and the athlete's existing steps are normalised too, not trusted raw",
 // Pinned `milestones: merged, baseline_complete` — adjacency, not the property
 // — so it broke when `stages:` was inserted between them. What matters is that
 // the upsert writes `merged`, whatever follows it.
+// The row is built as a named object now, because one field on it is
+// conditional. The guarantee is unchanged: what reaches the upsert is the
+// athlete's steps PLUS Scout's, never Scout's alone — merged feeds the remap,
+// and the remap's output is what the row carries.
 ck("the upsert writes the merged list, not Scout's alone",
-   /pathway_plan"\)\.upsert\([\s\S]{0,300}?milestones: merged\b/.test(APP), true);
+   /remapStagePositions\(merged, existingStages, nextStages,/.test(APP), true);
+ck("...and the row it builds carries the result of that",
+   /const row = \{[^}]*milestones: remap\.milestones,/.test(APP), true);
+ck("...and that row is what is sent",
+   /pathway_plan"\)\.upsert\(row, \{ onConflict: "user_id" \}\)/.test(APP), true);
 // Sections are always a replace, never appended — two half-maps concatenated
 // is not a route — but proposing none must leave the athlete's own intact
 // rather than clearing them.
 ck("Scout's sections replace, and an empty proposal keeps theirs",
    /const nextStages = proposedStages\.length \? proposedStages : existingStages;/.test(APP), true);
-ck("...and stages reach the upsert", /milestones: merged, stages: nextStages/.test(APP), true);
+ck("...and stages reach the upsert", /milestones: remap\.milestones, stages: nextStages/.test(APP), true);
 // Also pinned adjacency — `milestones: merged })` — and broke when stages were
 // added between them. The claim is that the local mirror carries the same
 // merged list the upsert wrote, so a SECOND proposal in the same conversation
 // previews against what is actually on file.
-ck("...and setCurrentPathway mirrors the same merged list",
-   /setCurrentPathway\(\{[\s\S]{0,200}?milestones: merged\b/.test(APP), true);
+// MIRRORS WHAT WAS WRITTEN, which is no longer the same object as what was
+// merged: steps are re-filed by section position before the write, so pinning
+// `milestones: merged` here would assert the local copy diverges from the row.
+// The guarantee is that both carry the SAME expression.
+ck("...and setCurrentPathway mirrors exactly what the upsert wrote",
+   /setCurrentPathway\(\{[\s\S]{0,200}?milestones: remap\.milestones\b/.test(APP), true);
+ck("...which is the re-filed list the row got, not the pre-remap one",
+   /milestones: remap\.milestones, stages: nextStages, baseline_complete: true/.test(APP), true);
 ck("...including the sections, or a second proposal compares against stale ones",
-   /setCurrentPathway\(\{[\s\S]{0,200}?stages: nextStages/.test(APP), true);
+   /setCurrentPathway\(\{[\s\S]{0,260}?stages: nextStages/.test(APP), true);
+ck("...and the marker, so it is not re-read from a pre-write snapshot",
+   /setCurrentPathway\(\{[\s\S]{0,600}?current_stage_id: stagesReplaced \?/.test(APP), true);
 ck("no un-normalised `milestones: pathway.milestones` remains",
    /milestones: pathway\.milestones\b/.test(APP), false);
 // The whole point: an athlete's ticked, dated, self-written steps survive.

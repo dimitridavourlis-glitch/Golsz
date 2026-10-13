@@ -3,7 +3,7 @@
 --
 -- APPROVED BY THE OWNER 2026-10-13. APPLIED 2026-10-13 — verified in place:
 -- 17 columns, 5 check constraints, 4 indexes, 4 self-only policies, RLS on.
--- The BACKFILL (step 2) is NOT run yet; it lives in 144b.
+-- The BACKFILL (step 2) RAN 2026-10-14 (144b): actions=2, legacy=2, match.
 -- Filed here rather than left in /tmp so it cannot be lost. The Supabase
 -- dashboard had no authenticated session when the go-ahead came, and
 -- credentials are the owner's to enter. Flip this header the moment it runs,

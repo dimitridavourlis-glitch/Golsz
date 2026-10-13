@@ -1,5 +1,9 @@
 -- 144b — BACKFILL pathway_plan.milestones -> athlete_actions
 --
+-- *** APPLIED 2026-10-14 by the owner. Verified immediately after:
+--     actions=2  legacy=2  steps_without_id=0  empty_titles=0
+--     Every legacy step is now a row, and the two counts match exactly. ***
+--
 -- Step 2 of the cutover plan in supabase-migration-144-athlete-actions.sql.
 -- 144 itself is APPLIED (2026-10-13): the table, 5 check constraints, 4
 -- indexes, 4 self-only RLS policies and RLS=on were all verified present.
