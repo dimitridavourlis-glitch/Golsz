@@ -46,7 +46,24 @@ const ck = (l, a, e) => {
 // So the invariant is: every APPLIED migration is in the reference. A file
 // opts out by saying so in its own header, which is a visible claim someone
 // has to write down, not a silent skip.
-const NOT_APPLIED = /\*\*\* NOT YET APPLIED \*\*\*/;
+// THE SENTINEL IS AN API, SO IT IS WRITTEN ONCE.
+//
+// A migration file opts out of this guard by carrying this exact marker. A
+// near-miss does not opt out, which is correct — but it fails confusingly, so
+// the marker is a named constant and the assertion below names it in its own
+// failure text. Migration 150 was first written with the words "SHOWN FOR
+// APPROVAL" INSIDE the asterisks and the guard fired on a file that had
+// honestly declared itself unapplied.
+const NOT_APPLIED_MARKER = "*** NOT YET APPLIED ***";
+const NOT_APPLIED = new RegExp(NOT_APPLIED_MARKER.replace(/\*/g, "\\*"));
+
+// The near-miss that actually happened, pinned so it stays a near-miss and
+// nobody "helpfully" loosens the regex into matching any sentence containing
+// the words.
+if (typeof ck === "function") {
+  ck("the exact marker opts a migration out", NOT_APPLIED.test("-- " + NOT_APPLIED_MARKER + " - shown for approval."), true);
+  ck("...and words inside the asterisks do NOT", NOT_APPLIED.test("-- *** NOT YET APPLIED. SHOWN FOR APPROVAL. ***"), false);
+}
 const all = fs.readdirSync(REPO)
   .map((n) => ({ n, m: /^supabase-migration-(\d+)-/.exec(n) }))
   .filter((x) => x.m)
