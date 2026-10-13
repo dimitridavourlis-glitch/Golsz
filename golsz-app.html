@@ -11699,6 +11699,114 @@ const PATHWAY_TYPES = ["ncaa", "naia", "juco", "canadian_university", "academy",
 // which returns a fixed shape on purpose, and the difference is deliberate —
 // milestones have a closed field set the client fully owns; stages are about
 // to grow fields across several releases.
+// WHAT A GOAL ACTUALLY REQUIRES — MIRRORED FROM THE SERVER, PINNED BY A TEST.
+//
+// api/scout.js declares key_evidence per pathway. The client needs it to draw
+// the gap on Home and Plan, and this is a COPY, which in this repo is the
+// answered question rather than the open one: _readiness.js mirrors the
+// client's score, _sport-pathways.js mirrors SPORT_PATHWAY_STAGES,
+// _plan-catalog.js mirrors PLANS, and EVIDENCE_TIERS mirrors evidence_tiers.
+// The one time this was done differently it produced a fifth vocabulary and
+// had to be reverted the same day.
+//
+// A route was not available: /api/scout is a POST AI turn that needs
+// messages[], reserves a question and bills a model call, so Home cannot call
+// it to draw a card, and the serverless function budget is full.
+//
+// EVERY duplication bug this codebase has had shares one cause — a parity
+// check that compared a SUBSET. test_gap_engine therefore compares sport, id,
+// goal_type AND the evidence list in declared order, not a key set.
+const PATHWAY_KEY_EVIDENCE = {
+  soccer: [
+    { id: "ncaa", goal_type: "ncaa", key_evidence: ["grad_year", "gpa", "match_minutes", "film", "exposure"] },
+    { id: "naia", goal_type: "naia", key_evidence: ["grad_year", "gpa", "film"] },
+    { id: "juco", goal_type: "juco", key_evidence: ["grad_year", "film"] },
+    { id: "canadian_university", goal_type: "canadian_university", key_evidence: ["grad_year", "gpa", "film"] },
+    { id: "academy", goal_type: "academy", key_evidence: ["match_minutes", "level", "coach_evaluation"] },
+    { id: "semi_professional", goal_type: "professional", key_evidence: ["match_minutes", "film", "level"] },
+    { id: "professional", goal_type: "professional", key_evidence: ["match_minutes", "level", "film", "trial_history"] },
+    { id: "european_club", goal_type: "european_club", key_evidence: ["citizenship", "match_minutes", "film"] },
+  ],
+  basketball: [
+    { id: "ncaa", goal_type: "ncaa", key_evidence: ["grad_year", "gpa", "ppg", "film", "aau_exposure"] },
+    { id: "naia", goal_type: "naia", key_evidence: ["grad_year", "gpa", "film"] },
+    { id: "juco", goal_type: "juco", key_evidence: ["grad_year", "film"] },
+    { id: "canadian_university", goal_type: "canadian_university", key_evidence: ["grad_year", "gpa", "film"] },
+    { id: "development", goal_type: "development", key_evidence: ["level", "coach_evaluation", "ppg"] },
+    { id: "professional", goal_type: "professional", key_evidence: ["level", "film", "ppg"] },
+  ],
+};
+
+// CAN GOLSZ SEE THIS AT ALL? The whole honesty of the gap rests here.
+//
+// Four of the eleven evidence keys have NO source in this product and are not
+// going to get one by being wished for:
+//   level            — there is no playing-level column on athletes. The
+//                      nearest, education_level and recruiting_status, mean
+//                      other things; using either would be a guess wearing a
+//                      fact's clothes.
+//   coach_evaluation — no coach accounts exist. Structurally unavailable.
+//   trial_history    — nothing records trials.
+//   aau_exposure     — nothing records AAU.
+// They render as UNKNOWN, which says GOLSZ CANNOT SEE IT — never "you do not
+// have it". An athlete may well have all four; the product simply has no way
+// to know, and must not imply a verdict it has not earned.
+//
+// The column list was read from the live database rather than inferred from
+// migration comments, because `athletes` predates the tracked migrations.
+const EVIDENCE_SOURCES = {
+  grad_year: "profile",
+  gpa: "profile",
+  citizenship: "profile",
+  film: "film",
+  match_minutes: "benchmark",
+  ppg: "benchmark",
+  exposure: "outreach",
+  level: null,
+  coach_evaluation: null,
+  trial_history: null,
+  aau_exposure: null,
+};
+
+// PRESENT / MISSING / UNKNOWN per requirement. Nothing is scored, nothing is
+// compared against a standard, and no number is produced: BENCHMARK_BANDS is
+// empty, so "you have recorded match minutes" is the most that can be said
+// and "your match minutes are below what NCAA requires" is exactly what
+// cannot. MISSING means GOLSZ looked and the row is not there. UNKNOWN means
+// GOLSZ has nowhere to look.
+function evaluateGap(sport, pathwayType, athlete, benchmarks, outreach) {
+  const rows = PATHWAY_KEY_EVIDENCE[String(sport || "").toLowerCase()] || null;
+  if (!rows || !pathwayType) return null;
+  // ID FIRST, THEN goal_type. pathway_plan stores a goal_type, and soccer maps
+  // TWO rows to "professional" — semi_professional and professional. Matching
+  // id first means an athlete who has said "professional" is measured against
+  // the professional row, the stricter of the two. Measuring them against the
+  // semi-pro row instead would quietly tell them they need less than they do.
+  const row = rows.find((r) => r.id === pathwayType) || rows.find((r) => r.goal_type === pathwayType);
+  if (!row) return null;
+  const has = (v) => v !== null && v !== undefined && String(v).trim() !== "";
+  const metric = (key) => (benchmarks || []).some((b) => b && b.metric_key === key);
+  const items = row.key_evidence.map((key) => {
+    const src = EVIDENCE_SOURCES[key];
+    if (!src) return { key, state: "unknown", source: null };
+    let present = false;
+    if (src === "profile") present = has(athlete && athlete[key]);
+    else if (src === "film") present = !!(athlete && Array.isArray(athlete.highlights) && athlete.highlights.length > 0);
+    else if (src === "benchmark") present = metric(key);
+    // Being on a list is not being seen by anyone. Only a target the athlete
+    // has actually contacted counts as exposure, and the UI names that basis.
+    else if (src === "outreach") present = (outreach || []).some((o) => o && o.status && o.status !== "to_contact");
+    return { key, state: present ? "present" : "missing", source: src };
+  });
+  return {
+    pathway: row.id,
+    items,
+    missing: items.filter((x) => x.state === "missing").map((x) => x.key),
+    unknown: items.filter((x) => x.state === "unknown").map((x) => x.key),
+    present: items.filter((x) => x.state === "present").map((x) => x.key),
+  };
+}
+
 // REPLACING SECTIONS MUST NOT SILENTLY UNFILE THE ATHLETE'S STEPS.
 //
 // A step stores its section as a stage ID in milestone.stage. Scout proposing
@@ -15617,7 +15725,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=8b2380c35f6ff7f5";
+    s.src = "js/app.js?v=975bdc6f54cb3917";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
