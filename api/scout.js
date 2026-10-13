@@ -3112,7 +3112,15 @@ function extractSuggestedPathway(data, existingStages) {
       const i = m.stage_index;
       const filed = target.length && Number.isInteger(i) && i >= 0 && i < target.length;
       const due = dueFromOffset(m.due_in_days);
-      return { label: m.label.trim().slice(0, 200), done: false, stage: filed ? target[i].id : null,
+      // 120, NOT 200 — the number the rest of the app agrees on.
+      // normalizeMilestone in golsz-app.html stores 120 (pinned by
+      // test_pathway_milestones), and every input an athlete types a step
+      // into is maxLength 120. Proposing 200 here meant a long Scout step was
+      // shown in full on the confirm card and then silently cut mid-sentence
+      // the moment it was accepted — the athlete agreed to one thing and
+      // stored another. Capping at the source means what they see is what
+      // they get, and Scout writes a step that fits.
+      return { label: m.label.trim().slice(0, 120), done: false, stage: filed ? target[i].id : null,
                due, due_src: due ? "scout" : null };
     });
     return {

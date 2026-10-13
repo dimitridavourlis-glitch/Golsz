@@ -9864,18 +9864,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
     return d > acc ? d : acc;
   }, 0);
   const clipCount = (athlete && Array.isArray(athlete.highlights)) ? athlete.highlights.length : 0;
-  const passportFact = lastOpen > 0
-    ? { text: t("home_door_passport_opened").replace("{ago}", (() => {
-        const n = dayAgo(new Date(lastOpen).toISOString());
-        return n === 0 ? t("home_ago_today") : t("home_ago_days").replace("{n}", n);
-      })()), live: true }
-    : shareOpens.length > 0
-      ? { text: t("home_door_passport_unopened"), live: false }
-      : clipCount > 0
-        ? { text: t("home_door_passport_never").replace("{n}", clipCount), live: false }
-        : { text: t("home_door_passport_empty"), live: false };
 
-  const stepsDone = allMilestones.filter((m) => m.done).length;
   // ONE ANSWER TO "WHAT IS TODAY", AND IT IS THE LOCAL ONE.
   // This was `new Date().toISOString().slice(0, 10)` — a UTC day — while the
   // week calendar eleven lines up derives its days from isoDay(), which is
@@ -9899,45 +9888,13 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
   const weekToKey = isoDay(new Date(weekStartFrom(new Date()).getTime() + 6 * 86400000));
   const weekSteps = allMilestones.filter((m) => m.due && m.due >= weekFromKey && m.due <= weekToKey);
   const weekDone = weekSteps.filter((m) => m.done).length;
-  const planFact = !canTargets
-    ? { text: t("nav_plan"), live: false }
-    : allMilestones.length > 0
-      ? { text: t("home_door_plan_steps").replace("{done}", stepsDone).replace("{total}", allMilestones.length),
-          right: stepsLate > 0 ? t("home_door_plan_late").replace("{n}", stepsLate) : null, live: false }
-      : pathway && pathway.pathwayStarted
-        ? { text: t("home_pathway_empty"), live: false }
-        : { text: t("home_pathway_none"), live: false };
+  // TODAY — the brief's "today's actions", same shape as the week.
+  const todaySteps = allMilestones.filter((m) => m.due === homeTodayKey);
+  const todayDone = todaySteps.filter((m) => m.done).length;
 
-  // A named school that answered beats any count. It is the only proper noun
-  // from the outside world available anywhere on this screen.
-  const replied = targetRows.find((r) => r && r.status === "replied" && r.name);
   const contacted = targetRows.filter((r) => r && r.status && r.status !== "researching").length;
-  const schoolsFact = !canTargets || targetRows.length === 0
-    ? { text: t("home_door_schools_empty"), live: false }
-    : replied
-      ? { text: t("home_door_schools_replied").replace("{name}", replied.name), live: true }
-      : { text: t("home_door_schools_counts").replace("{n}", targetRows.length).replace("{c}", contacted), live: false };
 
-  const scoutFact = lastAsk
-    ? { text: t("home_door_scout_last").replace("{q}", lastAsk.length > 58 ? lastAsk.slice(0, 58) + "…" : lastAsk), live: false }
-    : { text: t("home_door_scout_first"), live: false };
 
-  // THREE DOORS, NOT FOUR. PLAN and SCHOOLS & CLUBS both called
-  // onNavigate("targets") — two rows that land on the identical screen,
-  // because Schools & Clubs IS a section of the Plan screen. Tapping two
-  // different doors and arriving in the same room is how someone stops
-  // trusting the navigation. They are one door now, and the school reply
-  // rides along as its second line: it is the only proper noun from the
-  // outside world on this page and it was worth keeping.
-  const doors = [
-    { key: "passport", icon: User, label: t("nav_passport"), fact: passportFact, go: "profile" },
-    { key: "plan", icon: Target, label: t("nav_plan"), fact: planFact,
-      extra: (replied && canTargets) ? { text: schoolsFact.text, live: true } : null, go: "targets" },
-    { key: "scout", icon: Radar, label: t("nav_scout"), fact: scoutFact, go: "scout" },
-  ];
-  // Day one is four dead rows: no film, no schools, no questions, no score.
-  // One honest line beats four separate ways of saying "nothing yet".
-  const doorsAllEmpty = !lastOpen && clipCount === 0 && allMilestones.length === 0 && targetRows.length === 0 && !lastAsk;
 
 
   return (
@@ -10318,10 +10275,19 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
                 k: "strength", label: t("home_readiness_composite"),
                 value: String(composite), colour: compositeColor, go: "profile",
               },
+              // TODAY REPLACED THE LIFETIME STEPS TILE.
+              // Adding TODAY and THIS WEEK alongside it would have put six
+              // number tiles above the fold, and the brief's rule for this
+              // screen is that an athlete understands what matters within
+              // five seconds. Lifetime done/total is the least actionable of
+              // the three and it already lives on Plan, which owns steps —
+              // Home shows, the owning page holds the detail. The late count
+              // moves here so nothing about overdue work is lost.
               canTargets && {
-                k: "steps", label: t("home_status_steps"),
-                value: allMilestones.length ? `${stepsDone}/${allMilestones.length}` : "\u2014",
-                colour: stepsLate > 0 ? C.warnText : C.chalk,
+                k: "today", label: t("home_week_today"),
+                value: todaySteps.length ? `${todayDone}/${todaySteps.length}` : "\u2014",
+                colour: stepsLate > 0 ? C.warnText
+                  : (todaySteps.length && todayDone === todaySteps.length ? C.lime : C.chalk),
                 sub: stepsLate > 0 ? t("home_door_plan_late").replace("{n}", stepsLate) : null,
                 go: "targets",
               },
@@ -15297,7 +15263,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=fc8da948c48f01a3";
+    s.src = "js/app.js?v=5f467a6f54d5aeb5";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

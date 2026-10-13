@@ -58,9 +58,27 @@ ck("...over dated steps only",
   ck("...and shows a dash rather than 0/0 when nothing is dated",
      !!tile && /weekSteps\.length \? /.test(tile[0]) && /u2014/.test(tile[0]), true);
 }
-// STEPS is lifetime and stays — a different question from "this week".
-ck("the lifetime STEPS tile is still there",
-   /value: allMilestones\.length \? `\$\{stepsDone\}\/\$\{allMilestones\.length\}`/.test(APP), true);
+console.log("\n-- today --");
+ck("today is computed from the same key the late count uses",
+   /const todaySteps = allMilestones\.filter\(\(m\) => m\.due === homeTodayKey\)/.test(APP), true);
+ck("...and is rendered as its own tile", /k: "today", label: t\("home_week_today"\)/.test(APP), true);
+
+// THE LIFETIME STEPS TILE WAS DELIBERATELY RETIRED on 2026-10-10, hours after
+// an earlier assertion here insisted it stay. The reason changed: adding TODAY
+// and THIS WEEK alongside it would have put six number tiles above the fold,
+// and the brief's rule for this screen is that an athlete understands what
+// matters within five seconds. Lifetime done/total is the least actionable of
+// the three and already lives on Plan, which owns steps.
+ck("the lifetime STEPS tile is gone",
+   /k: "steps", label: t\("home_status_steps"\)/.test(APP), false);
+// Nothing about overdue work may be lost in that trade.
+ck("...and the late count moved onto TODAY rather than disappearing",
+   /k: "today",[\s\S]{0,400}?home_door_plan_late/.test(APP), true);
+// Its computation must go with it, or it is dead code that looks live.
+ck("...and stepsDone is not left behind", /const stepsDone =/.test(APP), false);
+// The string stays: unused i18n keys are kept in this repo, parity over tidiness.
+ck("...while home_status_steps stays in all four dictionaries",
+   (APP.match(/home_status_steps:/g) || []).length, 4);
 
 console.log("\n-- no control on Home is a no-op --");
 // Reschedule passed `pathwayNext.due || null`, and Plan opens a day only for
@@ -79,6 +97,26 @@ console.log("\n-- no control on Home is a no-op --");
 }
 ck("...it falls back to a real day", 
    /onNavigate\("targets", null, null, pathwayNext\.due \|\| isoDay\(new Date\(\)\)\)/.test(APP), true);
+
+console.log("\n-- nothing on Home is computed and thrown away --");
+// THE DOORS BLOCK. "THE REST OF THE APP" was removed from Home in the
+// 2026-09-18 reorganisation and its 46 lines of computation were not: four
+// *Fact consts, a doors array and doorsAllEmpty were rebuilt on every single
+// Home load and rendered nowhere. One branch could never fire at all —
+// schoolsFact tested `status === "replied"`, and "replied" is not in
+// TARGET_STATUSES, so the only proper noun from the outside world on that
+// screen was unreachable twice over.
+//
+// This is the same class as the three things this suite exists to protect:
+// a value computed and never shown. The difference is that those were worth
+// showing and this was worth deleting.
+for (const gone of ["const doors", "doorsAllEmpty", "planFact", "schoolsFact", "scoutFact", "passportFact", "stepsDone"]) {
+  ck(`${gone} is gone from Home`, APP.includes(gone), false);
+}
+// The strings stay — unused i18n keys are kept in this repo, parity over
+// tidiness — so their absence from the JSX is what has to be asserted.
+ck("...while its strings remain in all four dictionaries",
+   (APP.match(/home_door_schools_replied:/g) || []).length, 4);
 
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
