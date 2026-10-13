@@ -28,7 +28,13 @@ select p.user_id,
        case when (m->>'done')::boolean then now() else null end,
        m->>'id'
 from pathway_plan p, jsonb_array_elements(p.milestones) m
-on conflict (user_id, legacy_milestone_id) do nothing;
+-- The index this infers against is PARTIAL (where legacy_milestone_id is not
+-- null). Postgres will not match a partial unique index unless ON CONFLICT
+-- repeats its predicate, and without it you get:
+--   42P10: there is no unique or exclusion constraint matching the ON CONFLICT
+-- The predicate is not optional decoration; it is how the index is named.
+on conflict (user_id, legacy_milestone_id) where legacy_milestone_id is not null
+do nothing;
 
 -- VERIFY. actions and legacy must match, and steps_without_id must be 0
 -- before this file is ever run a second time.

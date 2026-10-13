@@ -355,8 +355,33 @@ ck("...and clearing current_stage_id when it pointed at the deleted stage", wrot
 ck("...updating local state in the same call", setLocal.length, FIX.length);
 // If the id moved with the label, every step filed under a renamed section
 // would be orphaned the first time an athlete fixed a typo.
-ck("renaming a stage preserves its id", /st\.id === id \? \{ id: st\.id, label: clean \}/.test(APP), true);
-ck("an empty rename is a no-op, not a delete", /if \(!clean\) return;/.test(APP), true);
+// THIS ASSERTION USED TO PIN THE BUG.
+//
+// It guaranteed the id survives a rename — correct, and it mattered, because
+// milestones store the stage id and a moving id orphans them. But it did so by
+// pinning the literal { id: st.id, label: clean }, which ALSO guaranteed every
+// other key on the stage was thrown away. When per-stage target dates and
+// blockers arrive, that literal is how they die. A test that locks in the
+// shape of a line locks in whatever that line gets wrong.
+//
+// It is the guarantee that is asserted now, through the real behaviour:
+// the id survives, and so does everything else.
+{
+  const renameLikeCommit = (list, id, label) =>
+    list.map((st) => (st.id === id ? { ...st, label: label } : st));
+  const before = [{ id: "s1", label: "Old", target_date: "2027-05-01", blockers: ["visa"] },
+                  { id: "s2", label: "Other" }];
+  const after = renameLikeCommit(before, "s1", "New");
+  ck("renaming a stage preserves its id", after[0].id, "s1");
+  ck("...and renames only the one asked for", [after[0].label, after[1].label], ["New", "Other"]);
+  ck("...and keeps every other field on it", [after[0].target_date, after[0].blockers], ["2027-05-01", ["visa"]]);
+  // The shape the source must have for the above to describe it.
+  ck("...and the source spreads rather than rebuilding",
+     /st\.id === id \? \{ \.\.\.st, label: clean \}/.test(APP), true);
+  ck("...with no bare rebuild left anywhere",
+     /st\.id === id \? \{ id: st\.id, label: clean \}/.test(APP), false);
+}
+ck("an empty rename is a no-op, not a delete", /if \(!clean\) \{ if \(pendingStage === id\) cancelStageEdit\(\); return; \}/.test(APP), true);
 ck("the seven-section cap exists", /const MAX_STAGES = 7;/.test(APP), true);
 ck("...and is checked before adding", /length >= MAX_STAGES\) return;/.test(APP), true);
 // A new section must not reach storage unnamed. addStage() used to persist
@@ -374,7 +399,7 @@ ck("cancelling discards the pending section", /setPendingStage\(null\);\s*\/\/ a
 ck("a pending section is inserted, an existing one renamed in place",
    /if \(pendingStage === id\) \{[\s\S]{0,200}?splice\(pendingAt === null \? next\.length : pendingAt, 0, \{ id, label: clean \}\)/.test(APP), true);
 ck("...and renaming still goes through the id-preserving map",
-   /next = base\.map\(\(st\) => \(st\.id === id \? \{ id: st\.id, label: clean \} : st\)\)/.test(APP), true);
+   /next = base\.map\(\(st\) => \(st\.id === id \? \{ \.\.\.st, label: clean \} : st\)\)/.test(APP), true);
 ck("insert refuses past the cap", /function insertStage\(nearId, offset\)[\s\S]{0,300}?length >= MAX_STAGES\) return;/.test(APP), true);
 ck("...and writes nothing until named", /function insertStage\(nearId, offset\)[\s\S]{0,600}?\n  \}/.exec(APP)[0].includes("saveStages"), false);
 // Empty stored stages must keep meaning "the sport's", or every athlete who
@@ -383,7 +408,10 @@ ck("the first edit materialises the sport defaults rather than backfilling",
    /if \(customStages\.length\) return customStages\.slice\(\)/.test(APP), true);
 ck("stages and current_stage_id are read from the row",
    /select\("pathway_type, target_timeline, milestones, notes, stages, current_stage_id"\)/.test(APP), true);
-ck("...and persisted on save", /stages: customStages, current_stage_id: currentStageId/.test(APP), true);
+// Reads the REF, not the closure. A write queued before a rename committed
+// used to resend the pre-rename list and silently revert it; see
+// test_stage_round_trip for the full guarantee.
+ck("...and persisted on save", /stages: stagesRef\.current, current_stage_id: currentStageId/.test(APP), true);
 
 // ---- the Scout note explains, it never blocks ----------------------------
 // Free is locked out of Scout's pathway help at Starter, so the note has three

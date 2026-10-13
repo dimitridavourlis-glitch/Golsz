@@ -176,7 +176,10 @@ comment on table athlete_actions is
 --             case when (m->>'done')::boolean then now() else null end,
 --             m->>'id'
 --      from pathway_plan p, jsonb_array_elements(p.milestones) m
---      on conflict (user_id, legacy_milestone_id) do nothing;
+--      on conflict (user_id, legacy_milestone_id)
+--        where legacy_milestone_id is not null do nothing;
+--    The WHERE is REQUIRED: the index is partial, and ON CONFLICT will not
+--    match a partial unique index without repeating its predicate (42P10).
 --    NOTE the completed_at here is the backfill time, not the real completion
 --    time — the jsonb never recorded one. That is a known, stated loss; do
 --    not invent a date that looks like history.

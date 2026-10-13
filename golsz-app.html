@@ -8273,7 +8273,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
     // the athlete already had — never an empty list, which would silently drop
     // sections they had named themselves.
     const proposedStages = Array.isArray(pathway.stages)
-      ? pathway.stages.filter((x) => x && x.id).map((x) => ({ id: String(x.id), label: String(x.label || "") }))
+      ? pathway.stages.map(normalizeStage).filter(Boolean)
       : [];
     const existingStages = (currentPathway && Array.isArray(currentPathway.stages)) ? currentPathway.stages : [];
     const nextStages = proposedStages.length ? proposedStages : existingStages;
@@ -11630,6 +11630,26 @@ const PATHWAY_TYPES = ["ncaa", "naia", "juco", "canadian_university", "academy",
 // Both new fields are optional and normalised ON READ, never on write: an athlete
 // who never opens this screen must not have their row silently rewritten, and
 // Scout's suggested pathways arrive without either field.
+// A STAGE MUST SURVIVE A ROUND TRIP WITH FIELDS NOBODY HAS WRITTEN YET.
+//
+// The load projection rebuilt every stage from {id, label} alone, so any other
+// key on the stored row was dropped at load — and the next save wrote the
+// stripped version straight back over it. A per-stage target date would
+// therefore survive being saved, render correctly until reload, and then be
+// erased across EVERY section the next time the athlete fixed a typo in a
+// section name. Silent, total, and indistinguishable from "it never saved".
+//
+// So this spreads the stored object through rather than returning a fixed
+// shape: id and label are coerced because the rest of the app indexes on them,
+// everything else is carried as-is. That is the opposite of normalizeMilestone,
+// which returns a fixed shape on purpose, and the difference is deliberate —
+// milestones have a closed field set the client fully owns; stages are about
+// to grow fields across several releases.
+function normalizeStage(x) {
+  if (!x || !x.id) return null;
+  return { ...x, id: String(x.id), label: String(x.label || "") };
+}
+
 function normalizeMilestone(m) {
   return {
     id: m && m.id ? m.id : ((typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random()),
@@ -11843,7 +11863,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
           setTimeline(data.target_timeline || "");
           setNotes(data.notes || "");
           setMilestones(Array.isArray(data.milestones) ? data.milestones.map(normalizeMilestone) : []);
-          setCustomStages(Array.isArray(data.stages) ? data.stages.filter((x) => x && x.id).map((x) => ({ id: String(x.id), label: String(x.label || "") })) : []);
+          setCustomStages(Array.isArray(data.stages) ? data.stages.map(normalizeStage).filter(Boolean) : []);
           setCurrentStageId(data.current_stage_id || null);
         } else {
           setEditingGoal(true);
@@ -11876,22 +11896,33 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
   // before the first. The ref always holds what is on screen right now.
   const milestonesRef = useRef(milestones);
   milestonesRef.current = milestones;
+  // STAGES HAD THE EXACT BUG milestonesRef EXISTS TO PREVENT, and had it for
+  // longer. save() read `customStages` out of its closure, so any write queued
+  // from a render before a rename committed — ticking a step, editing the
+  // timeline, anything — resent the PRE-rename list and reverted the rename.
+  // One list, read at execution time, like milestones.
+  const stagesRef = useRef(customStages);
+  stagesRef.current = customStages;
 
   function save(overrides) {
     if (!sb || !uid) return;
     const before = milestonesRef.current;
+    const beforeStages = stagesRef.current;
     // Optimistic, and the ref moves with it so the next write in the burst
     // builds on this one instead of on what the server last confirmed.
     if (overrides && overrides.milestones) {
       milestonesRef.current = overrides.milestones;
       setMilestones(overrides.milestones);
     }
+    // saveStages() has already called setCustomStages, so this only moves the
+    // ref — without it the NEXT write in the burst still reads the old list.
+    if (overrides && overrides.stages) stagesRef.current = overrides.stages;
     savesRef.current = savesRef.current.then(async () => {
       setBusy(true);
       const next = {
         pathway_type: pathwayType, target_timeline: timeline.trim().slice(0, 100) || null,
         notes: notes.trim().slice(0, 1000) || null, milestones: milestonesRef.current,
-        stages: customStages, current_stage_id: currentStageId,
+        stages: stagesRef.current, current_stage_id: currentStageId,
         ...overrides,
       };
       try {
@@ -11906,6 +11937,12 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
         if (overrides && overrides.milestones) {
           milestonesRef.current = before;
           setMilestones(before);
+        }
+        // Same rule for stages: a renamed section that the server never heard
+        // about is worse than one that visibly failed to rename.
+        if (overrides && overrides.stages) {
+          stagesRef.current = beforeStages;
+          setCustomStages(beforeStages);
         }
         setSaveError(t("pathway_save_failed"));
       } finally { setBusy(false); }
@@ -11928,7 +11965,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
     save(Object.assign({ stages: next }, extra || {}));
   }
   // A NEW SECTION IS NOT PERSISTED UNTIL IT HAS A NAME. The first version
-  // saved { label: "" } on tap, and renameStage rejects empty — so abandoning
+  // saved { label: "" } on tap, and committing a name rejects empty — so abandoning
   // the editor left a blank heading the athlete could not name and could only
   // delete. The pending section lives in state until it is named; cancelling
   // discards it and nothing was ever written.
@@ -12023,20 +12060,20 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
       next = base.slice();
       next.splice(pendingAt === null ? next.length : pendingAt, 0, { id, label: clean });
     } else {
-      next = base.map((st) => (st.id === id ? { id: st.id, label: clean } : st));
+      // SPREAD, DO NOT REBUILD. Rebuilding the stage from {id, label} drops
+      // every other key on it — which is exactly how a per-stage target date
+      // dies: saved fine, rendered fine, gone the moment the athlete fixes a
+      // typo in the section's name. This is the path the section editor
+      // actually uses, so this is the rebuild that would really erase them.
+      // The id is never derived from the label: milestones store it in
+      // `stage`, so a rename must not orphan the steps filed under it.
+      next = base.map((st) => (st.id === id ? { ...st, label: clean } : st));
     }
     setPendingStage(null);
     setPendingAt(null);
     setEditingStage(null);
     setStageDraft("");
     saveStages(next);
-  }
-  function renameStage(id, label) {
-    const clean = String(label || "").trim().slice(0, 40);
-    if (!clean) return;                       // empty is a no-op, not a delete
-    // The id is NEVER derived from the label. Milestones store it in `stage`,
-    // so a rename must not orphan the steps filed under this section.
-    saveStages(materialisedStages().map((st) => (st.id === id ? { id: st.id, label: clean } : st)));
   }
   function moveStage(id, dir) {
     const base = materialisedStages();
@@ -15378,7 +15415,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=846bf2adc90a1600";
+    s.src = "js/app.js?v=cc242fd644461769";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

@@ -27,26 +27,33 @@ const body = APP.slice(start, APP.indexOf("\n  }", start) + 4);
 
 // A harness that stands in for the component's state and the Supabase client.
 function harness(failOn) {
-  const st = { milestones: [{ id: "a", done: false }], busy: 0, error: "", exists: false, writes: [] };
+  const st = { milestones: [{ id: "a", done: false }], busy: 0, error: "", exists: false, writes: [], stageWrites: [] };
   const ref = (v) => ({ current: v });
   const savesRef = ref(Promise.resolve());
   const milestonesRef = ref(st.milestones);
+  // Stages go through a ref for the same reason milestones do: a write queued
+  // before a rename committed would otherwise resend the pre-rename list.
+  st.stages = [{ id: "s1", label: "Old", target_date: "2027-05-01" }];
+  const stagesRef = ref(st.stages);
   let n = 0;
   const sb = { from: () => ({ upsert: async (row) => {
     n++;
     await new Promise((r) => setTimeout(r, 5));
     if (failOn && failOn.includes(n)) return { error: new Error("network") };
     st.writes.push(row.milestones.map((m) => m.id + ":" + (m.done ? 1 : 0)).join(","));
+    st.stageWrites.push(JSON.stringify(row.stages));
     return { error: null };
   } }) };
   const save = new Function(
-    "sb", "uid", "savesRef", "milestonesRef", "setMilestones", "setBusy", "setExists", "setSaveError",
-    "pathwayType", "timeline", "notes", "customStages", "currentStageId", "t", "console",
+    "sb", "uid", "savesRef", "milestonesRef", "stagesRef", "setMilestones", "setCustomStages",
+    "setBusy", "setExists", "setSaveError",
+    "pathwayType", "timeline", "notes", "currentStageId", "t", "console",
     body + " return save;"
-  )(sb, "u1", savesRef, milestonesRef,
-    (v) => { st.milestones = v; }, (b) => { st.busy += b ? 1 : -1; }, () => { st.exists = true; },
-    (e) => { st.error = e; }, "ncaa", "", "", [], null, (k) => k, { error() {} });
-  return { save, st, savesRef, milestonesRef };
+  )(sb, "u1", savesRef, milestonesRef, stagesRef,
+    (v) => { st.milestones = v; }, (v) => { st.stages = v; },
+    (b) => { st.busy += b ? 1 : -1; }, () => { st.exists = true; },
+    (e) => { st.error = e; }, "ncaa", "", "", null, (k) => k, { error() {} });
+  return { save, st, savesRef, milestonesRef, stagesRef };
 }
 
 (async () => {
@@ -103,6 +110,45 @@ function harness(failOn) {
   ck("save() no longer returns early while busy", /\|\| busy\) return;/.test(body), false);
   ck("...and the error is rendered, not only logged", /role="alert"[\s\S]{0,200}\{saveError\}/.test(APP), true);
 
-  console.log(`\n${p}/${p + f} passed`);
+    console.log("-- a queued write must not resend a pre-rename stage list --");
+  {
+    // THE RACE, RUN FOR REAL. save() queues onto savesRef, so a write started
+    // before a rename commits executes AFTER it. Reading the stage list from
+    // the closure meant that write resent the old list and silently reverted
+    // the rename — and, once stages carry target dates and blockers, erased
+    // those too. The ref is read at execution time, so it cannot.
+    const h = harness();
+    h.save({ milestones: [{ id: "a", done: true }] });   // queued, not yet run
+    h.stagesRef.current = [{ id: "s1", label: "Renamed", target_date: "2027-05-01" }];
+    await h.savesRef.current;
+    ck("the queued write carried the RENAMED list, not the one it was queued with",
+       JSON.parse(h.st.stageWrites[0])[0].label, "Renamed");
+    ck("...and the fields on that stage survived the trip",
+       JSON.parse(h.st.stageWrites[0])[0].target_date, "2027-05-01");
+  }
+
+  console.log("-- an overridden stage list moves the ref for the next write --");
+  {
+    const h = harness();
+    h.save({ stages: [{ id: "s1", label: "First" }] });
+    ck("the ref moved before the write ran, so a burst builds on it",
+       h.stagesRef.current[0].label, "First");
+    h.save({ milestones: [{ id: "a", done: true }] });
+    await h.savesRef.current;
+    ck("both writes carried the new list",
+       h.st.stageWrites.map((w) => JSON.parse(w)[0].label), ["First", "First"]);
+  }
+
+  console.log("-- a failed stage write is put back --");
+  {
+    const h = harness([1]);
+    h.save({ stages: [{ id: "s1", label: "Doomed" }] });
+    await h.savesRef.current;
+    ck("the ref is restored", h.stagesRef.current[0].label, "Old");
+    ck("...and so is the state behind it", h.st.stages[0].label, "Old");
+    ck("...and the athlete is told", h.st.error, "pathway_save_failed");
+  }
+
+console.log(`\n${p}/${p + f} passed`);
   process.exit(f ? 1 : 0);
 })();
