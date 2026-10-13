@@ -118,5 +118,43 @@ for (const gone of ["const doors", "doorsAllEmpty", "planFact", "schoolsFact", "
 ck("...while its strings remain in all four dictionaries",
    (APP.match(/home_door_schools_replied:/g) || []).length, 4);
 
+// ---- THE WHY SLOT CARRIES A REASON, NOT A DATE ----------------------------
+//
+// The brief's command centre is NEXT ACTION followed by WHY. Every rung of
+// Home's recommendation ladder puts a reason in that slot except the one that
+// matters most — the athlete's own stated step — which put the date label
+// there, so the most prominent card on Home read "Film 20 minutes of Saturday
+// match / 5w overdue" with no reason at all. Verified signed in before fixing.
+{
+  const branchAt = APP.indexOf("? { labelText: pathwayNext.label,");
+  ck("the stated-step rung exists", branchAt > 0, true);
+  const branch = APP.slice(branchAt, APP.indexOf("go: \"targets\" }", branchAt));
+
+  ck("its why is a translated reason", /whyText: goalText\.trim\(\)/.test(branch), true);
+  ck("...resolved from i18n, both with and without a stated goal",
+     /t\("home_next_why_step"\)/.test(branch) && /t\("home_next_why_step_nogoal"\)/.test(branch), true);
+  // The defect, pinned: the date must not be what the why slot renders.
+  ck("the date is NOT the why", /whyText: \[milestoneDateLabel/.test(branch), false);
+  ck("...it is its own field", /metaText: \[milestoneDateLabel/.test(branch), true);
+
+  ck("the why line renders", /\{nextMove\.whyText \|\| t\(nextMove\.why\)\}/.test(APP), true);
+  ck("...and the date renders separately, only when there is one",
+     /\{nextMove\.metaText && \(/.test(APP), true);
+  // Gold is achievement in this palette; a date is not one.
+  const metaAt = APP.indexOf("{nextMove.metaText && (");
+  ck("...and not in gold", /C\.lime/.test(APP.slice(metaAt, metaAt + 400)), false);
+
+  // Four languages, real strings, and the interpolation the goal variant needs.
+  for (const key of ["home_next_why_step", "home_next_why_step_nogoal"]) {
+    ck(`  ${key} is in all four dictionaries`,
+       (APP.match(new RegExp("\\b" + key + ': "')) || []).length > 0 &&
+       (APP.match(new RegExp("\\b" + key + ': "[^"]+"', "g")) || []).length, 4);
+  }
+  const goalVariants = APP.match(/\bhome_next_why_step: "([^"]+)"/g) || [];
+  ck("every goal variant interpolates {goal}", goalVariants.every((v) => v.includes("{goal}")), true);
+  ck("...and none of the four is the English string pasted twice",
+     new Set(goalVariants).size, 4);
+}
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
