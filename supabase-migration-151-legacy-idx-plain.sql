@@ -1,7 +1,23 @@
 -- ============================================================
 -- 151 — make athlete_actions' legacy key usable from the client
 --
--- *** NOT YET APPLIED *** — shown for approval.
+-- *** DO NOT APPLY. SUPERSEDED, AND NOW ACTIVELY DANGEROUS. ***
+--
+-- This was written to let PostgREST's on_conflict name the key, back when the
+-- plan was a client-side dual-write. That design was rejected in favour of
+-- sync_athlete_actions() (migration 152), which is raw SQL and CAN name a
+-- partial index's predicate — so the problem this solves no longer exists.
+--
+-- Worse, applying it now would BREAK the sync. 152 and 155 both write:
+--     on conflict (user_id, legacy_milestone_id) where legacy_milestone_id is not null
+-- Postgres matches that inference against the PARTIAL index. Replace the index
+-- with a plain unique constraint and the predicate matches nothing, and every
+-- call to sync_athlete_actions() fails with 42P10 — which means every tick,
+-- rename and reschedule stops mirroring, silently, for every athlete.
+--
+-- Caught while about to run it. If the partial index is ever replaced, the
+-- function's ON CONFLICT must lose its WHERE clause IN THE SAME CHANGE.
+-- Kept as a record of the reasoning, not as work to be done.
 --
 -- THE PROBLEM, AND IT IS MINE. Migration 144 created:
 --

@@ -6427,3 +6427,18 @@ create table if not exists public.assessment_snapshots (
   created_at  timestamptz not null default now(),
   primary key (athlete_id, taken_on)
 );
+
+-- 157 — EXECUTE on dismiss_next_move() revoked from authenticated, anon and
+-- public. Applied 2026-10-14, verified false for both roles. The function
+-- itself is KEPT: it has had zero call sites since migration 070, and an
+-- unused grant is a reachable write path nobody reviews or tests. If a dismiss
+-- surface is ever built, grant execute again in the same change as its call
+-- site and its test.
+revoke all on function public.dismiss_next_move() from authenticated, anon, public;
+
+-- 151 — NOT APPLIED, AND MUST NOT BE. It replaces athlete_actions' PARTIAL
+-- unique index with a plain constraint, which was right for the client-side
+-- dual-write that was rejected. sync_athlete_actions() (152, 155) writes
+-- "on conflict (...) where legacy_milestone_id is not null" and Postgres
+-- matches that against the PARTIAL index — remove it and every sync fails with
+-- 42P10, silently, for every athlete. See the migration file.
