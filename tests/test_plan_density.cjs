@@ -55,7 +55,18 @@ ck("schools & clubs is wrapped, and reports its roster",
    /<Collapsible label=\{t\("targets_title"\)\} summary=\{rosterSummary\(t, items\)\}>/.test(APP), true);
 ck("the wrapped card no longer repeats its own title",
    (APP.match(/<Eyebrow>\{t\("targets_title"\)\}<\/Eyebrow>/g) || []).length, 0);
-ck("exactly two sections close on Plan", (APP.match(/<Collapsible /g) || []).length, 2);
+ck("the goal-gap table is wrapped, and its summary is the finding itself",
+   /<Collapsible label=\{t\("gap_title"\)\} summary=\{t\("gap_counts"\)/.test(APP), true);
+// "1 of 4 things your goal asks for are on file" is the whole message; the
+// four rows are only the detail behind it. Printing that sentence in the
+// closed row AND again inside the opened card is how a wrapper turns one
+// finding into two.
+ck("the gap count is stated once, not in the header and the body both",
+   (APP.match(/t\("gap_counts"\)/g) || []).length, 2);  // Plan's header + Home's own copy
+ck("the wrapped gap card no longer repeats its own title",
+   (APP.match(/<Eyebrow>\{t\("gap_title"\)\}<\/Eyebrow>/g) || []).length, 1);  // the unsupported-sport card keeps its own
+
+ck("exactly three sections close on Plan", (APP.match(/<Collapsible /g) || []).length, 3);
 
 // The comment on that card used to assert it was "no longer an accordion".
 // Leaving that in place would have made the source argue against the code.

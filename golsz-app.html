@@ -13671,11 +13671,8 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
         </div>
       )}
       {gap && (
-        <div style={{ ...card, marginTop: 12 }}>
-          <Eyebrow>{t("gap_title")}</Eyebrow>
-          <div style={{ fontSize: 11.5, color: C.slate, lineHeight: 1.5, marginTop: 4, marginBottom: 10 }}>
-            {t("gap_counts").replace("{present}", gap.present.length).replace("{total}", gap.items.length)}
-          </div>
+        <Collapsible label={t("gap_title")} summary={t("gap_counts").replace("{present}", gap.present.length).replace("{total}", gap.items.length)}>
+        <div style={{ ...card, marginTop: 0 }}>
           {gap.items.map((it) => (
             <div key={it.key} style={{ display: "flex", alignItems: "baseline", gap: 9, padding: "7px 0",
               borderTop: `1px solid ${C.line}` }}>
@@ -13694,6 +13691,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
             {t("gap_note")}
           </div>
         </div>
+        </Collapsible>
       )}
       {/* Scout can help build this — said to EVERYONE, because a Free athlete
           should know the door exists rather than discovering it in a paywall.
@@ -16617,7 +16615,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=a8fd27478a4a0ae9";
+    s.src = "js/app.js?v=7c17b71a4ff5344d";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
