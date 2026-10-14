@@ -6359,3 +6359,15 @@ create table if not exists public.athlete_actions (
 --
 -- The full body lives in the migration. Repeating it here would create a
 -- second definition that silently drifts from the one the database runs.
+
+-- 153 — athlete_actions.last_reminded_at + athlete_actions_reminder_idx.
+-- Applied 2026-10-14. NULL means never reminded and is never backfilled, so a
+-- step already overdue when this shipped still gets its first nudge. The
+-- partial index carries the rule the cron enforces: only steps with
+-- due_src IS NULL are reminded, because GOLSZ does not call an athlete late
+-- on a date it chose for them.
+alter table public.athlete_actions
+  add column if not exists last_reminded_at timestamptz;
+create index if not exists athlete_actions_reminder_idx
+  on public.athlete_actions (due_on, last_reminded_at)
+  where status = 'open' and due_on is not null and due_src is null;
