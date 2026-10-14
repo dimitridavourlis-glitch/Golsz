@@ -105,6 +105,35 @@ ck("opening a step loads its fields", /loadActionFields\(sb, uid, m\.id\)\.then\
 ck("...after clearing the previous step's, so one step never shows another's",
    /setFields\(null\);\s*\n\s*loadActionFields/.test(APP), true);
 
+// ---- "SAVE GOAL" ON FIVE THINGS THAT ARE NOT A GOAL -----------------------
+//
+// goal_card_save is correct in GoalCard and was reused in five other editors:
+// the backup plan, a target, two development-plan surfaces and the step
+// editor. English and Spanish athletes read "Save goal" while saving a step;
+// French and Greek never saw it because their translations were already
+// generic. A shared key is not a shared meaning, and a parity test counts
+// keys, not senses — which is why this went unnoticed.
+{
+  const GOAL_SAVE = 't("goal_' + 'card_save")';   // split so this file's own
+                                                   // prose cannot be counted
+  const goalSaves = APP.split(GOAL_SAVE).length - 1;
+  ck("only one surface still says Save goal", goalSaves, 1);
+  // Bounded by the next TOP-LEVEL function, not the next "function " — GoalCard
+  // contains nested ones, and the first version ended the slice inside it.
+  {
+    const start = APP.indexOf("\nfunction GoalCard(");
+    const end = APP.indexOf("\nfunction ", start + 10);
+    ck("GoalCard's body was located", start > 0 && end > start, true);
+    ck("...and the remaining one is inside it",
+       APP.slice(start, end).includes(GOAL_SAVE), true);
+  }
+  ck("the other five use a neutral label", (APP.match(/t\("form_save"\)/g) || []).length, 5);
+  const hits = APP.match(/\bform_save: "[^"]+"/g) || [];
+  ck("four dictionaries, four distinct strings", [hits.length, new Set(hits).size], [4, 4]);
+  ck("...and none of them says goal",
+     hits.some((h) => /goal|objetivo|objectif|στόχ/i.test(h)), false);
+}
+
 ck("it is in the compiled bundle",
    fs.readFileSync(path.join(REPO, "js", "app.js"), "utf8").includes("saveActionFields"), true);
 
