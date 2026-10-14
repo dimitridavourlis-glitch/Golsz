@@ -57,10 +57,46 @@ ck("there is no mirror queue", /actionMirrorQueue|mirrorQueue/.test(APP), false)
 // the data export now carries the table too. What must never come back is the
 // client WRITING or diffing rows itself: that is the rejected design, and all
 // reconciliation goes through sync_athlete_actions().
-const actionVerbs = [...APP.matchAll(/from\("athlete_actions"\)\s*\.\s*(\w+)/g)].map((m) => m[1]);
-ck("the table is read, and only read", [...new Set(actionVerbs)], ["select"]);
-ck("...never upserted, inserted, updated or deleted from the client",
-   /from\("athlete_actions"\)[\s\S]{0,160}?\.(upsert|insert|update|delete)\(/.test(APP), false);
+// THE RULE, STATED PRECISELY RATHER THAN CONVENIENTLY.
+//
+// This began as "the client never writes this table". That was right about the
+// danger and wrong about the boundary. The rejected dual-write design was
+// dangerous because it wrote the MIRRORED columns and tried to keep them in
+// step with the plan — which a browser cannot do atomically. The athlete's own
+// category, priority and reason are different: sync_athlete_actions() never
+// touches them, so there is nothing for a client write to diverge FROM.
+//
+// So the rule is: the client may UPDATE only columns the sync leaves alone,
+// and may never insert or delete. Both halves are derived here rather than
+// retyped — the sync's set from the migration, the client's from the code —
+// and asserted disjoint. If anyone ever adds a mirrored column to either side,
+// this fails.
+const actionVerbs = [...APP.matchAll(/from\("athlete_actions"\)\s*\n?\s*\.\s*(\w+)/g)].map((m) => m[1]);
+ck("the client only selects and updates", [...new Set(actionVerbs)].sort(), ["select", "update"]);
+ck("...never inserts, so a row can only come from the sync",
+   actionVerbs.includes("insert") || actionVerbs.includes("upsert"), false);
+ck("...and never deletes", actionVerbs.includes("delete"), false);
+{
+  // What the sync overwrites, read out of migration 152.
+  const SYNC = fs.readFileSync(path.join(REPO, "supabase-migration-152-sync-actions.sql"), "utf8");
+  const doUpdate = SYNC.slice(SYNC.indexOf("do update set"), SYNC.indexOf("returning 1", SYNC.indexOf("do update set")));
+  const mirrored = [...doUpdate.matchAll(/^\s{4,}([a-z_]+)\s*=/gm)].map((m) => m[1]);
+  ck("the sync's overwritten set was found", mirrored.length >= 6, true);
+
+  // What the client writes, read out of saveActionFields' callers.
+  const at = APP.indexOf("async function saveActionFields(");
+  const writer = APP.slice(at, APP.indexOf("\n}", at));
+  ck("there is exactly one writer", (APP.match(/saveActionFields\(sb, uid, m\.id, \{/g) || []).length, 3);
+  const written = [...APP.matchAll(/saveActionFields\(sb, uid, m\.id, \{ (\w+):/g)].map((m) => m[1]);
+  ck("...writing only category, priority and reason", [...new Set(written)].sort(), ["category", "priority", "reason"]);
+  ck("THE TWO SETS ARE DISJOINT — nothing the client writes can be overwritten",
+     written.filter((c) => mirrored.includes(c)), []);
+  // updated_at IS mirrored, and the writer sets it. That is deliberate and
+  // harmless — the sync will set it again — but it must be the ONLY overlap,
+  // so it is named here rather than left to look like an oversight.
+  ck("...apart from updated_at, which both may touch",
+     /updated_at: new Date\(\)\.toISOString\(\)/.test(writer) && mirrored.includes("updated_at"), true);
+}
 ck("...so reconciliation has exactly one implementation",
    (APP.match(/sb\.rpc\("sync_athlete_actions"\)/g) || []).length, 1);
 
@@ -109,8 +145,12 @@ ck("...only signed-in athletes can", /grant execute on function public\.sync_ath
   // the migrations, so it is a weak anchor even when the slice is scoped to
   // one file — and a weak anchor is how a slice silently ends up covering the
   // wrong thing.
+  // Bounded by the function's own terminator, which occurs once. The previous
+  // bound reused the revoke line that an assertion below also matches, and
+  // test_anchor_integrity flagged the duplicate — a literal doing two jobs is
+  // one rename away from the slice silently covering something else.
   const fn = MIG.slice(MIG.indexOf("create or replace function public.sync_athlete_actions()"),
-                       MIG.indexOf("revoke all on function public.sync_athlete_actions() from public, anon;"));
+                       MIG.indexOf("\n$$;"));
   ck("the function body was actually sliced", /return query select n_synced, n_dropped;/.test(fn), true);
   ck("the read is scoped to the caller", /where p\.user_id = uid/.test(fn), true);
   ck("the insert writes the caller's id", /select uid, s\.title/.test(fn), true);
