@@ -33,6 +33,13 @@ const EVIDENCE_SOURCES = {
   aau_exposure: null,
 };
 
+// Where exposure begins in outreach_targets' taxonomy (migration 077:
+// researching, preparing, contacted, responded, follow_up, opportunity).
+// Everything from "contacted" onward means a program has actually heard from
+// this athlete; the first two are preparation. A status outside the taxonomy
+// must never count — testing for ABSENCE of one value made every row pass.
+const CONTACTED_STATUSES = ["contacted", "responded", "follow_up", "opportunity"];
+
 function gapFromRows(rows, pathwayType, athlete, benchmarks, outreach) {
   if (!rows || !pathwayType) return null;
   // ID FIRST, THEN goal_type. pathway_plan stores a goal_type, and soccer maps
@@ -51,9 +58,16 @@ function gapFromRows(rows, pathwayType, athlete, benchmarks, outreach) {
     if (src === "profile") present = has(athlete && athlete[key]);
     else if (src === "film") present = !!(athlete && Array.isArray(athlete.highlights) && athlete.highlights.length > 0);
     else if (src === "benchmark") present = metric(key);
-    // Being on a list is not being seen by anyone. Only a target the athlete
-    // has actually contacted counts as exposure, and the UI names that basis.
-    else if (src === "outreach") present = (outreach || []).some((o) => o && o.status && o.status !== "to_contact");
+    // Being on a list is not being seen by anyone — but the first version of
+    // this tested `status !== "to_contact"`, and "to_contact" has not been a
+    // legal status since migration 077. Every row passed, so merely ADDING a
+    // school reported exposure as present, to the athlete and to Scout. The
+    // insert default is "researching", which is the opposite of contact.
+    //
+    // The real taxonomy, in order, is researching, preparing, contacted,
+    // responded, follow_up, opportunity. Exposure begins at contacted: the
+    // first two are the athlete preparing to reach out, not being seen.
+    else if (src === "outreach") present = (outreach || []).some((o) => o && CONTACTED_STATUSES.indexOf(o.status) !== -1);
     return { key, state: present ? "present" : "missing", source: src };
   });
   return {

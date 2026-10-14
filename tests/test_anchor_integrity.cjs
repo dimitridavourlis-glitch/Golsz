@@ -174,6 +174,11 @@ const REVIEWED_AMBIGUOUS = new Set([
   // see which variable each one is searched in.
   "const EVIDENCE_SOURCES = {",
   "function gapFromRows(rows, pathwayType, athlete, b",
+  // Same reason as the two above: test_gap_engine holds both implementations
+  // and asserts the client's set and the server's are identical, so it reads
+  // this declaration out of golsz-app.html (APP) and api/_gap.js (GAP_MOD)
+  // separately and compares them. Three uses, two files, each scoped.
+  "const CONTACTED_STATUSES = [",
 ]);
 // Entries are matched as PREFIXES, not exact strings. The failure message
 // truncates literals at 50 chars, so an entry copied from the console output

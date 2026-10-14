@@ -48,6 +48,10 @@ eval(grab("function normalizeMilestone(m) {"));
 // and a hand-written stub here would let the real predicate rot while every
 // assertion below stayed green.
 eval(grab("function suggestedDate(m) {"));
+// Lifted, not stubbed: touchedMilestone stamps a completion date through it,
+// and a stub would let the real date formatting rot while this suite stayed
+// green — the same reason suggestedDate is lifted above.
+eval(grab("function isoDay(d) {"));
 eval(grab("function touchedMilestone(m) {"));
 eval(grab("function nextMilestone(milestones) {"));
 
@@ -633,6 +637,54 @@ ck("touching a step makes the date theirs",
    milestoneDateLabel(touchedMilestone(SUG), "en", tid).tone, "over");
 ck("touching a step the athlete already owns changes nothing",
    touchedMilestone(MINE), MINE);
+
+// ---- "DONE · 12 SEP" WAS PRINTING THE DUE DATE -----------------------------
+//
+// The completed row's label was built from m.due, so a step finished weeks
+// late advertised the deadline it MISSED as its completion date. Nothing in
+// the jsonb recorded a completion moment, so the label could only ever have
+// been wrong or absent — and absent is the honest one.
+{
+  const DUE = { id: "x", label: "Film the game", due: "2026-09-12", done: false };
+
+  // Ticking stamps the day it actually happened.
+  const ticked = touchedMilestone({ ...DUE, done: true });
+  ck("ticking a step stamps when it was done", /^\d{4}-\d{2}-\d{2}$/.test(ticked.done_at), true);
+  ck("...and it is not the due date", ticked.done_at === DUE.due, false);
+
+  // Re-touching must not move it — the first completion is the real one.
+  const again = touchedMilestone(ticked);
+  ck("touching it again does not re-stamp", again.done_at, ticked.done_at);
+  ck("...and returns the same object, so there is no spurious write", again, ticked);
+  // Same-day re-stamping is invisible by value — isoDay returns the identical
+  // string — so the guarantee has to be tested on a date that is NOT today.
+  // A mutation that re-stamped unconditionally passed every assertion above.
+  ck("an OLD completion date is never overwritten",
+     touchedMilestone({ ...ticked, done_at: "2020-01-01" }).done_at, "2020-01-01");
+  ck("...and that step is returned untouched", touchedMilestone({ ...ticked, done_at: "2020-01-01" }).done, true);
+
+  // Un-ticking clears it. done and done_at must never disagree — the same
+  // coupling athlete_actions enforces as a CHECK constraint.
+  const untick = touchedMilestone({ ...ticked, done: false });
+  ck("un-ticking clears the completion date", untick.done_at, null);
+  ck("...so a not-done step can never carry one", !!(untick.done && !untick.done_at) || untick.done_at === null, true);
+
+  // The label.
+  ck("a step done with no recorded date says Done and NOTHING else",
+     milestoneDateLabel({ ...DUE, done: true }, "en", tid).text, "pathway_done");
+  ck("...never the due date it may have missed",
+     /12|Sep/.test(milestoneDateLabel({ ...DUE, done: true }, "en", tid).text), false);
+  ck("a step with a real completion date shows THAT date",
+     milestoneDateLabel({ ...DUE, done: true, done_at: "2026-10-01" }, "en", tid).text, "pathway_done · 1 Oct");
+
+  // It must survive a reload, or it is stamped and lost.
+  ck("normalizeMilestone carries it through",
+     normalizeMilestone({ id: "x", done: true, done_at: "2026-10-01" }).done_at, "2026-10-01");
+  ck("...refuses a malformed one rather than rendering it",
+     normalizeMilestone({ id: "x", done: true, done_at: "last Tuesday" }).done_at, null);
+  ck("...and refuses one on an UNDONE step, which never happened",
+     normalizeMilestone({ id: "x", done: false, done_at: "2026-10-01" }).done_at, null);
+}
 
 console.log("\n-- a suggestion never seizes 'what do I do now' --");
 const MINE_LATER = { id: "ml", label: "ml", done: false, due: "2026-12-01", stage: null };

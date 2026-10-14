@@ -60,9 +60,21 @@ and that is how finished work gets rebuilt.
   passed throughout: it matched one spelling of the rule, satisfied by a
   correct copy a thousand lines from the broken one. It counts producers now.
 
-**STILL BLOCKED ON THE OWNER, not on code**
+**NO LONGER BLOCKED — both ran on 2026-10-14.** 144b was run by the owner
+(actions=2, legacy=2, steps_without_id=0, empty_titles=0, verified by query),
+and 152 (`sync_athlete_actions`) was applied and verified in place: prosecdef
+true, search_path pinned, authenticated EXECUTE true, anon EXECUTE FALSE. The
+mirror was then proven end to end on the live signed-in account by ticking a
+step and un-ticking it, watching the row go open -> completed -> open with the
+completed_coherent CHECK holding on both transitions.
 
-1. Run `supabase-migration-144b-backfill.sql`. Writes live rows.
+This section said the opposite for several hours after the migrations ran,
+which is exactly the failure this file's own header warns about: a planning
+doc that contradicts the database teaches the next reader to distrust both.
+
+**HISTORIC — what was blocked**
+
+1. ~~Run `supabase-migration-144b-backfill.sql`.~~ Done 2026-10-14.
 2. Sign in to golsz.com in the browser pane. Home's BOTTLENECK, PATHWAY
    PROGRESS, TODAY and THIS WEEK have never been seen to render; the gate is
    `planKnown(plan) && featureUnlocked(plan, "readiness") && pathwayRow`. On

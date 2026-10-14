@@ -85,9 +85,12 @@ ck("...and delegates to gapFromRows, which the server also runs", rowsAt > gapAt
 // the next "\n}" and silently stopped at evaluateGap's closing brace once the
 // split landed — gapFromRows was then undefined and the suite crashed rather
 // than passing vacuously, which is the good outcome of two bad ones.
+const contactedAt = APP.indexOf("const CONTACTED_STATUSES = [");
+ck("the contacted set is declared", contactedAt > 0, true);
 const CLIENT_SRC =
   APP.slice(clientAt, APP.indexOf("\n};", clientAt) + 3) + "\n" +
   APP.slice(srcAt, APP.indexOf("\n};", srcAt) + 3) + "\n" +
+  APP.slice(contactedAt, APP.indexOf("];", contactedAt) + 2) + "\n" +
   APP.slice(gapAt, APP.indexOf("\n}", gapAt) + 2) + "\n" +
   APP.slice(rowsAt, APP.indexOf("\n}", rowsAt) + 2);
 const evaluateGap = vm.runInNewContext(CLIENT_SRC + "\nevaluateGap");
@@ -120,12 +123,52 @@ const FULL = { grad_year: 2026, gpa: "3.4", citizenship: "CA", highlights: ["a"]
   ck("...and ppg missing, because no such benchmark is recorded", r.missing, ["ppg"]);
 }
 
-// Being on a list is not being seen by anyone.
+// BEING ON A LIST IS NOT BEING SEEN BY ANYONE.
+//
+// This block used to feed { status: "to_contact" } and { status: "replied" }.
+// NEITHER IS A LEGAL STATUS — migration 077 fixed the taxonomy to
+// researching / preparing / contacted / responded / follow_up / opportunity.
+// The code under test asked `status !== "to_contact"`, so every real row
+// passed and exposure read as present the moment an athlete ADDED a school.
+// The test agreed, because it was fed the same impossible value. A fixture
+// the database could never produce proves nothing about the database.
 {
-  const onList = evaluateGap("soccer", "ncaa", FULL, [{ metric_key: "match_minutes" }], [{ status: "to_contact" }]);
-  ck("an uncontacted target does not count as exposure", onList.missing, ["exposure"]);
-  const contacted = evaluateGap("soccer", "ncaa", FULL, [{ metric_key: "match_minutes" }], [{ status: "replied" }]);
-  ck("...a contacted one does", contacted.missing, []);
+  // The taxonomy itself, read from the migration rather than retyped, so this
+  // suite fails if the statuses change instead of silently testing ghosts.
+  const MIG77 = fs.readFileSync(path.join(REPO, "supabase-migration-077-targets-taxonomy-fit-reasoning.sql"), "utf8");
+  const legal = [...(/check \(status in \(([^)]*)\)\)/.exec(MIG77) || [])[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
+  ck("the real taxonomy was found", legal.length, 6);
+  ck("...and is what the client declares",
+     (/const TARGET_STATUSES = \[([^\]]*)\]/.exec(APP) || [])[1].match(/"[a-z_]+"/g).map((q) => q.slice(1, -1)), legal);
+  ck("'to_contact' is NOT a legal status, which is why the old test was empty",
+     legal.includes("to_contact"), false);
+
+  const exposureOf = (status) =>
+    evaluateGap("soccer", "ncaa", FULL, [{ metric_key: "match_minutes" }], [{ status }]).present.includes("exposure");
+
+  // Every legal status, both sides of the line, with no gaps.
+  ck("researching is not exposure — it is the default on insert", exposureOf("researching"), false);
+  ck("preparing is not exposure either", exposureOf("preparing"), false);
+  ck("contacted IS exposure", exposureOf("contacted"), true);
+  ck("...as are responded, follow_up and opportunity",
+     ["responded", "follow_up", "opportunity"].map(exposureOf), [true, true, true]);
+  ck("EVERY legal status is classified one way or the other",
+     legal.filter((st) => typeof exposureOf(st) !== "boolean"), []);
+  // The bug in one line: an empty list and a list of one researching target
+  // must not look the same as a contacted one.
+  ck("no targets at all is not exposure",
+     evaluateGap("soccer", "ncaa", FULL, [{ metric_key: "match_minutes" }], []).present.includes("exposure"), false);
+  ck("...and a junk status is not exposure either", exposureOf("to_contact"), false);
+  ck("...nor is a missing status", exposureOf(undefined), false);
+
+  // The constant must be a strict subset of the taxonomy, or it is testing
+  // for values the column cannot hold — the original defect, inverted.
+  const declared = (/const CONTACTED_STATUSES = \[([^\]]*)\]/.exec(APP) || [])[1].match(/"[a-z_]+"/g).map((q) => q.slice(1, -1));
+  ck("every value it tests for can actually appear in the column",
+     declared.filter((v) => !legal.includes(v)), []);
+  ck("...and the server declares the identical set",
+     (/const CONTACTED_STATUSES = \[([^\]]*)\]/.exec(fs.readFileSync(path.join(REPO, "api", "_gap.js"), "utf8")) || [])[1]
+       .match(/"[a-z_]+"/g).map((q) => q.slice(1, -1)), declared);
 }
 
 // Degenerate inputs return null rather than an empty verdict that reads as
@@ -244,6 +287,7 @@ ck("an empty profile field is missing, not present",
 
   const serverGapFromRows = vm.runInNewContext(
     GAP_MOD.replace(/export \{[^}]*\};?/, "") + "\ngapFromRows");
+  ck("the server module declares the contacted set too", /const CONTACTED_STATUSES = \[/.test(GAP_MOD), true);
 
   // The real rows from the server, so the matrix exercises every pathway both
   // sports declare rather than a hand-written sample.

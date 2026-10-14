@@ -11893,6 +11893,13 @@ function evaluateGap(sport, pathwayType, athlete, benchmarks, outreach) {
 // second copy of the DATA on the server at all. Only the function is
 // duplicated, and test_gap_engine runs both implementations over the same
 // inputs and compares their output rather than diffing their text.
+// Where exposure begins in outreach_targets' taxonomy (migration 077:
+// researching, preparing, contacted, responded, follow_up, opportunity).
+// Everything from "contacted" onward means a program has actually heard from
+// this athlete; the first two are preparation. A status outside the taxonomy
+// must never count — testing for ABSENCE of one value made every row pass.
+const CONTACTED_STATUSES = ["contacted", "responded", "follow_up", "opportunity"];
+
 function gapFromRows(rows, pathwayType, athlete, benchmarks, outreach) {
   if (!rows || !pathwayType) return null;
   // ID FIRST, THEN goal_type. pathway_plan stores a goal_type, and soccer maps
@@ -11911,9 +11918,16 @@ function gapFromRows(rows, pathwayType, athlete, benchmarks, outreach) {
     if (src === "profile") present = has(athlete && athlete[key]);
     else if (src === "film") present = !!(athlete && Array.isArray(athlete.highlights) && athlete.highlights.length > 0);
     else if (src === "benchmark") present = metric(key);
-    // Being on a list is not being seen by anyone. Only a target the athlete
-    // has actually contacted counts as exposure, and the UI names that basis.
-    else if (src === "outreach") present = (outreach || []).some((o) => o && o.status && o.status !== "to_contact");
+    // Being on a list is not being seen by anyone — but the first version of
+    // this tested `status !== "to_contact"`, and "to_contact" has not been a
+    // legal status since migration 077. Every row passed, so merely ADDING a
+    // school reported exposure as present, to the athlete and to Scout. The
+    // insert default is "researching", which is the opposite of contact.
+    //
+    // The real taxonomy, in order, is researching, preparing, contacted,
+    // responded, follow_up, opportunity. Exposure begins at contacted: the
+    // first two are the athlete preparing to reach out, not being seen.
+    else if (src === "outreach") present = (outreach || []).some((o) => o && CONTACTED_STATUSES.indexOf(o.status) !== -1);
     return { key, state: present ? "present" : "missing", source: src };
   });
   return {
@@ -12020,6 +12034,9 @@ function normalizeMilestone(m) {
     id: m && m.id ? m.id : ((typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random()),
     label: String((m && m.label) || "").slice(0, 120),
     done: !!(m && m.done),
+    // Only meaningful alongside done. A date here on an undone step would be
+    // a completion that never happened.
+    done_at: (m && m.done && typeof m.done_at === "string" && /^\d{4}-\d{2}-\d{2}$/.test(m.done_at)) ? m.done_at : null,
     due: (m && typeof m.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(m.due)) ? m.due : null,
     stage: (m && typeof m.stage === "string" && m.stage) ? m.stage : null,
     // WHERE THE DATE CAME FROM, and the only value that means anything is
@@ -12047,7 +12064,23 @@ function normalizeMilestone(m) {
 // Re-dating goes through setMilestoneDue, which clears due_src by writing the
 // whole field itself; everything else routes through here.
 function touchedMilestone(m) {
-  return m.due_src ? { ...m, due_src: null } : m;
+  // WHEN IT WAS DONE, NOT WHEN IT WAS DUE.
+  // The row label read "Done · 12 Sep" and that date was m.due — so a step
+  // finished weeks late advertised the deadline it missed as its completion
+  // date. Nothing recorded a completion moment at all, so the label could only
+  // ever have been wrong or absent.
+  //
+  // Stamped here because this already runs on every tick path. Cleared on
+  // un-tick in the same expression, so done and done_at cannot disagree —
+  // the same coupling athlete_actions enforces as a CHECK constraint.
+  // Returns m ITSELF when nothing needs to change. Spreading unconditionally
+  // would add done_at: null to every step on every touch, and
+  // test_pathway_milestones pins the identity because a spurious change is a
+  // spurious write to a shared jsonb column.
+  let out = m;
+  if (m.done && !m.done_at) out = { ...out, done_at: isoDay(new Date()) };
+  else if (!m.done && m.done_at) out = { ...out, done_at: null };
+  return out.due_src ? { ...out, due_src: null } : out;
 }
 // THE ONE QUESTION EVERY PUNITIVE SURFACE MUST ASK FIRST.
 // True only while a date is Scout's suggestion AND the athlete has not acted
@@ -12092,7 +12125,14 @@ function milestoneDateLabel(m, lang, t) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const d = new Date(m.due + "T00:00:00");
   const short = d.toLocaleDateString(loc, { day: "numeric", month: "short" });
-  if (m.done) return { text: t("pathway_done") + " · " + short, tone: "flat" };
+  // A step done before this was recorded has no completion date, and the due
+  // date is NOT a substitute for one. "Done" alone is true; "Done · 12 Sep"
+  // when 12 Sep was the deadline is not.
+  if (m.done) {
+    if (!m.done_at) return { text: t("pathway_done"), tone: "flat" };
+    const dd = new Date(m.done_at + "T00:00:00");
+    return { text: t("pathway_done") + " · " + dd.toLocaleDateString(loc, { day: "numeric", month: "short" }), tone: "flat" };
+  }
   const n = Math.round((d - today) / 864e5);
   // The suggestion Scout made has come and gone, and the athlete never took it
   // up. That is not a missed deadline — it is a day that was never theirs. It
@@ -15905,7 +15945,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=fca172b6ecbe1d09";
+    s.src = "js/app.js?v=1868067d1a63c65e";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
