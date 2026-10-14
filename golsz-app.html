@@ -10458,8 +10458,13 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
       <HomeZone span={2}>
         <div>
           <Eyebrow noMargin>{t("next_move_title")}</Eyebrow>
-          <div style={{ fontSize: 18, fontWeight: 900, lineHeight: 1.25, letterSpacing: "-0.015em",
-            color: C.chalk, margin: "8px 0 0", overflowWrap: "anywhere" }}>
+          {/* THE HERO, AND IT WAS NOT ONE. This rendered at 18px while the
+              goal below it rendered at 36 — so on a screen whose entire job
+              is "what do I do now", the eye went to the destination instead
+              of the step. The action is now the largest type on Home and the
+              goal is sized as the context it is. */}
+          <div style={{ fontSize: 27, fontWeight: 900, lineHeight: 1.14, letterSpacing: "-0.03em",
+            color: C.chalk, margin: "9px 0 0", overflowWrap: "anywhere" }}>
             {nextMove.labelText || t(nextMove.label)}
           </div>
           <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.5, marginTop: 7 }}>{nextMove.whyText || t(nextMove.why)}</div>
@@ -10474,12 +10479,21 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           {stepErr && (
             <div role="alert" style={{ fontSize: 12, color: C.warnText, lineHeight: 1.45, marginTop: 8 }}>{stepErr}</div>
           )}
+          {/* ONE PRIMARY ACTION, THEN WAYS OUT OF IT.
+              Four bordered buttons of equal size said Done, Reschedule, Ask
+              and Drop were four equal choices — with the destructive one
+              taking a full row to itself. There is one thing to do here. The
+              others are escape hatches and now look like it.
+              (This comment lives ABOVE the guard, not between `? (` and its
+              element, where it parses as an object literal and takes the app
+              down — which is exactly what it did on the first attempt.) */}
           {pathwayNext ? (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 14 }}>
+            <div style={{ marginTop: 18 }}>
               <button onClick={() => markStepDone(pathwayNext)} disabled={stepBusy}
-                style={{ ...primaryBtn, width: "auto", flex: "1 1 120px", minHeight: 44, opacity: stepBusy ? 0.5 : 1 }}>
+                style={{ ...primaryBtn, width: "100%", minHeight: 50, fontSize: 14.5, opacity: stepBusy ? 0.5 : 1 }}>
                 {t("pathway_next_done")}
               </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 2, marginTop: 8, flexWrap: "wrap", marginLeft: -10 }}>
               {/* RESCHEDULE WAS A DEAD BUTTON ON AN UNDATED STEP.
                   It passed the step's due date or else a null, and Plan only opens a
                   day when the value matches /^\d{4}-\d{2}-\d{2}$/ — so for a
@@ -10493,19 +10507,20 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
                   a day on a step is the athlete's own unless marked
                   otherwise. */}
               <button onClick={() => onNavigate("targets", null, null, pathwayNext.due || isoDay(new Date()))}
-                style={{ ...quietBtn, width: "auto", flex: "1 1 110px", minHeight: 44 }}>
+                style={{ background: "none", border: "none", color: C.slate, fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, padding: "9px 10px", minHeight: 42, cursor: "pointer", letterSpacing: "0.01em" }}>
                 {t("home_step_reschedule")}
               </button>
               <button onClick={() => onNavigate("scout", null, t("home_step_ask_seed").replace("{step}", pathwayNext.label))}
-                style={{ ...quietBtn, width: "auto", flex: "1 1 110px", minHeight: 44 }}>
+                style={{ background: "none", border: "none", color: C.slate, fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, padding: "9px 10px", minHeight: 42, cursor: "pointer", letterSpacing: "0.01em" }}>
                 {t("home_step_ask")}
               </button>
               {stepOverdue && (
                 <button onClick={() => onNavigate("targets", null, null, pathwayNext.due || null)}
-                  style={{ ...quietBtn, width: "auto", flex: "1 1 96px", minHeight: 44, color: C.warnText, borderColor: C.amber }}>
+                  style={{ background: "none", border: "none", color: C.warnText, fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, padding: "9px 10px", minHeight: 42, cursor: "pointer" }}>
                   {t("home_step_drop")}
                 </button>
               )}
+              </div>
             </div>
           ) : (
             <button onClick={() => onNavigate(nextMove.go)} style={{ ...primaryBtn, marginTop: 14, minHeight: 44 }}>
@@ -10538,8 +10553,11 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
               )}
             </span>
           </div>
-          <div style={{ fontSize: 36, fontWeight: 900, letterSpacing: "-0.035em", lineHeight: 1.08,
-            color: goalText ? C.chalk : C.slate, margin: "10px 0 0", overflowWrap: "anywhere" }}>
+          {/* 36px made the destination shout over the step. It is still the
+              athlete's own words and still theirs to tap — it just stops
+              outranking the thing they are meant to do today. */}
+          <div style={{ fontSize: 21, fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1.15,
+            color: goalText ? C.chalk : C.slate, margin: "8px 0 0", overflowWrap: "anywhere" }}>
             {goalText || t("home_goal_none")}
           </div>
 
@@ -10590,10 +10608,15 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           label rather than an icon alone, so it reads the same to a screen
           reader as it does on screen. */}
       <AfterSection>
+        {/* A LINK, NOT A BOX. Full-width and bordered, this read as a
+            disabled input — the same shape as every inactive field in the
+            app — so the one control that reveals the rest of Home looked
+            like something that was not available. */}
         <button onClick={() => setShowMore((v) => !v)} aria-expanded={showMore}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-            minHeight: 46, background: "none", border: `1px solid ${C.line2}`, borderRadius: 12,
-            color: C.slate, fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
+          style={{ display: "block", margin: "0 auto", background: "none", border: "none",
+            padding: "10px 14px", minHeight: 44, color: C.lime, fontFamily: "inherit",
+            fontSize: 12.5, fontWeight: 800, letterSpacing: "0.04em", cursor: "pointer",
+            textDecoration: "underline", textUnderlineOffset: 4 }}>
           {showMore ? t("home_less") : t("home_more")}
         </button>
       </AfterSection>
@@ -10943,10 +10966,11 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           <span style={{ fontSize: 13, color: C.slate }}>{t("home_scout_ask_ph")}</span>
         </button>
 
-        <div style={{ display: "flex", gap: 20, padding: "0 2px", marginTop: 6 }}>
-          <button onClick={() => onNavigate("profile")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: "12px 0", minHeight: 44, display: "flex", alignItems: "center", gap: 6 }}><User size={14} color={C.lime} />{t("nav_passport")}</button>
-          <button onClick={() => onNavigate("targets")} style={{ background: "none", border: "none", color: C.slate, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", padding: "12px 0", minHeight: 44, display: "flex", alignItems: "center", gap: 6 }}><Target size={14} color={C.lime} />{t("nav_plan")}</button>
-        </div>
+        {/* A PASSPORT/PLAN ROW USED TO SIT HERE, directly above a nav bar
+            whose first two items are Passport and Plan. Two routes to the
+            same place, an inch apart, is not a convenience — it is a reason
+            to hesitate, and hesitation is the thing this screen cannot
+            afford. The nav already does this job on every page. */}
       </AfterSection>
 
       {/* THE TAB STRIP IS GONE.
@@ -16506,7 +16530,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=2e3d3ab7db747c19";
+    s.src = "js/app.js?v=5c852d68c0dc7bbd";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

@@ -299,5 +299,64 @@ ck("...while its strings remain in all four dictionaries",
   }
 }
 
+// ---- THE ACTION OUTRANKS THE DESTINATION ----------------------------------
+//
+// The next step rendered at 18px while the goal below it rendered at 36 — so
+// on a screen whose entire job is "what do I do now", the eye landed on the
+// destination. Size IS the hierarchy here; these numbers are the design.
+{
+  const stepAt = APP.indexOf('{nextMove.labelText || t(nextMove.label)}');
+  const stepStyle = APP.slice(Math.max(0, stepAt - 420), stepAt);
+  const stepPx = Number((/fontSize: (\d+(?:\.\d+)?)/.exec(stepStyle) || [])[1]);
+
+  const goalAt = APP.indexOf('{goalText || t("home_goal_none")}');
+  const goalStyle = APP.slice(Math.max(0, goalAt - 420), goalAt);
+  const goalPx = Number((/fontSize: (\d+(?:\.\d+)?)/.exec(goalStyle) || [])[1]);
+
+  ck("both sizes were found", [Number.isFinite(stepPx), Number.isFinite(goalPx)], [true, true]);
+  ck("THE NEXT STEP IS LARGER THAN THE GOAL", stepPx > goalPx, true);
+  ck("...and is the largest type on the closed screen", stepPx >= 24, true);
+  ck("the goal is still prominent, just not dominant", goalPx >= 18 && goalPx < stepPx, true);
+}
+
+// ---- ONE PRIMARY ACTION, THE REST ARE WAYS OUT ----------------------------
+{
+  const at = APP.indexOf("markStepDone(pathwayNext)");
+  const done = APP.slice(at, at + 320);
+  ck("Done is full width", /width: "100%"/.test(done), true);
+  ck("...and is the only primaryBtn in the group",
+     (APP.slice(at, APP.indexOf('t("home_step_drop")', at)).match(/\.\.\.primaryBtn/g) || []).length, 1);
+  // Reschedule, Ask and Drop are text, not boxes — a bordered button says
+  // "this is a choice of equal weight", and they are not.
+  const group = APP.slice(at, APP.indexOf('t("home_step_drop")', at) + 60);
+  ck("the secondary actions carry no border",
+     (group.match(/border: "none"/g) || []).length >= 3, true);
+  ck("...and none of them is a quietBtn box any more", /\.\.\.quietBtn/.test(group), false);
+  // Destructive stays visually distinct even as text.
+  ck("Drop is still marked as the harmful one",
+     /color: C\.warnText[\s\S]{0,200}?t\("home_step_drop"\)/.test(APP), true);
+}
+
+// ---- THE DISCLOSURE IS A LINK, NOT A DISABLED-LOOKING BOX -----------------
+{
+  const at = APP.indexOf('{showMore ? t("home_less") : t("home_more")}');
+  const style = APP.slice(Math.max(0, at - 520), at);
+  ck("it no longer renders as a full-width bordered box",
+     /width: "100%"[\s\S]{0,200}?border: `1px solid/.test(style), false);
+  ck("...it reads as a link", /textDecoration: "underline"/.test(style), true);
+  ck("...and is still a 44px touch target", /minHeight: 44/.test(style), true);
+}
+
+// ---- NO SECOND NAVIGATION -------------------------------------------------
+// A Passport/Plan row sat directly above a nav bar whose first two items are
+// Passport and Plan. Two routes to the same place, an inch apart.
+{
+  const homeStart = APP.indexOf("function HomeTab(");
+  const homeEnd = APP.indexOf("\nfunction ", homeStart + 20);
+  const home = APP.slice(homeStart, homeEnd);
+  ck("Home does not render its own Passport link", /\{t\("nav_passport"\)\}<\/button>/.test(home), false);
+  ck("...nor its own Plan link", /\{t\("nav_plan"\)\}<\/button>/.test(home), false);
+}
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
