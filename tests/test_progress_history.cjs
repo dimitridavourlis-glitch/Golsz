@@ -49,21 +49,33 @@ ck("...and says what it does NOT", /NOT athletic ability|not speed, not techniqu
 // production down for every signed-in athlete. test_hook_order caught it.
 {
   ck("no snapshot hook exists", /snapWrittenRef/.test(APP), false);
-  const at = APP.indexOf('sb.from("assessment_snapshots")\n            .insert(');
+  // The write, by its own call rather than by the verb — which changed from
+  // insert to upsert once the daily 409 was removed, and silently took this
+  // window with it.
+  const at = APP.indexOf('sb.from("assessment_snapshots")\n            .upsert(');
   ck("the write is in the loader", at > 0, true);
   const loaderStart = APP.indexOf("const [{ data: prof }, { data: ath }, { data: reqs }");
   const loaderEnd = APP.indexOf("const composite = Math.round(", loaderStart);
   ck("...which is ABOVE where the composite is computed, so no hook is involved",
      at > loaderStart && at < loaderEnd, true);
-  const blk = APP.slice(at - 1400, at + 900);
+  const blk = APP.slice(at - 1400, at + 1100);
+  ck("...and the window really covers the write", /assessment_snapshots/.test(blk), true);
   // A snapshot of zeros taken before the fetch resolves would be a lie that
   // lives forever in a table nothing is allowed to correct.
   ck("every sub-score comes from the real scoring functions",
      /computeProfileQuality\(ath, prof\)[\s\S]{0,400}?computePerformanceScore\(benchmarks\)[\s\S]{0,200}?computeDevelopmentScore\(devItems\)[\s\S]{0,200}?computePathwayScore\(pathwayRow/.test(blk), true);
   ck("the composite is the same mean the screen shows",
      /READINESS_DIMENSIONS\.reduce\(\(sum, d\) => sum \+ \(snapScores\[d\] \|\| 0\), 0\) \/ READINESS_DIMENSIONS\.length/.test(blk), true);
-  // 23505 is the primary key doing its job, not an error worth logging.
-  ck("a duplicate for today is silent", /error\.code !== "23505"/.test(blk), true);
+  // A plain insert returns 409 for every load after the first each day. The
+  // code handled it, but the browser logs the 409 at the network layer anyway,
+  // so every athlete's console filled with a red line daily for a write that
+  // worked. ON CONFLICT DO NOTHING makes it a genuine no-op.
+  ck("a second load today is a no-op, not a swallowed 409",
+     /ignoreDuplicates: true/.test(blk), true);
+  ck("...naming the real key", /onConflict: "athlete_id,taken_on"/.test(blk), true);
+  // DO NOTHING needs no UPDATE policy — and there is none, by design.
+  ck("...and it does not rely on an update policy that does not exist",
+     /\.update\(/.test(blk), false);
   ck("...and any other failure is logged, never shown",
      /console\.warn\("GOLSZ snapshot not written/.test(blk) &&
      !/setErr|setSaveError|alert\(/.test(blk), true);

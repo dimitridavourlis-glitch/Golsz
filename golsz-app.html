@@ -9831,13 +9831,23 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           };
           const snapComposite = Math.round(
             READINESS_DIMENSIONS.reduce((sum, d) => sum + (snapScores[d] || 0), 0) / READINESS_DIMENSIONS.length);
+          // ON CONFLICT DO NOTHING, not insert-and-swallow-the-error.
+          //
+          // A plain insert returns HTTP 409 for every load after the first
+          // each day. The code handled it, but the browser logs the 409 at the
+          // network layer regardless — so every athlete's console filled with
+          // a red line, every day, for a write that worked exactly as
+          // designed. Noise that looks like a bug costs someone an afternoon
+          // eventually.
+          //
+          // ignoreDuplicates makes PostgREST send ON CONFLICT DO NOTHING,
+          // which needs no UPDATE policy — and there deliberately is none, so
+          // today can never rewrite an earlier day.
           sb.from("assessment_snapshots")
-            .insert({ athlete_id: who, taken_on: isoDay(new Date()), composite: snapComposite, sub_scores: snapScores })
+            .upsert({ athlete_id: who, taken_on: isoDay(new Date()), composite: snapComposite, sub_scores: snapScores },
+                    { onConflict: "athlete_id,taken_on", ignoreDuplicates: true })
             .then(({ error }) => {
-              // 23505 is the primary key doing its job — today is already on
-              // file. Anything else is worth knowing but must never reach the
-              // athlete: they did not ask for a snapshot and cannot act on one.
-              if (error && error.code !== "23505") console.warn("GOLSZ snapshot not written:", error.message || error);
+              if (error) console.warn("GOLSZ snapshot not written:", error.message || error);
             }, (e) => console.warn("GOLSZ snapshot not written:", e));
         }
 
@@ -16446,7 +16456,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=44db597e8e24c87f";
+    s.src = "js/app.js?v=3925e48be0f64843";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
