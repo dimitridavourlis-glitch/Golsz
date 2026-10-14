@@ -53,8 +53,16 @@ ck("...and a synchronous throw cannot escape", /try \{/.test(body) && /catch \(e
 // THE MACHINERY THAT MUST NOT COME BACK.
 ck("there is no fingerprint cache", /actionMirrorSynced|mirrorPrint|syncedPrint/.test(APP), false);
 ck("there is no mirror queue", /actionMirrorQueue|mirrorQueue/.test(APP), false);
-ck("the client does not diff rows itself",
-   /from\("athlete_actions"\)/.test(APP), false);
+// READS are fine and expected — Home's weekly review is the first one, and
+// the data export now carries the table too. What must never come back is the
+// client WRITING or diffing rows itself: that is the rejected design, and all
+// reconciliation goes through sync_athlete_actions().
+const actionVerbs = [...APP.matchAll(/from\("athlete_actions"\)\s*\.\s*(\w+)/g)].map((m) => m[1]);
+ck("the table is read, and only read", [...new Set(actionVerbs)], ["select"]);
+ck("...never upserted, inserted, updated or deleted from the client",
+   /from\("athlete_actions"\)[\s\S]{0,160}?\.(upsert|insert|update|delete)\(/.test(APP), false);
+ck("...so reconciliation has exactly one implementation",
+   (APP.match(/sb\.rpc\("sync_athlete_actions"\)/g) || []).length, 1);
 
 // ---- every write of the jsonb syncs, and only on success -----------------
 {
