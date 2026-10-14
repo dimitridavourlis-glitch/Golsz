@@ -97,7 +97,13 @@ ck("...only signed-in athletes can", /grant execute on function public\.sync_ath
 // Every statement must be scoped to the caller. A missing uid predicate here
 // would let one athlete's save rewrite another's rows.
 {
-  const fn = MIG.slice(MIG.indexOf("create or replace function"), MIG.indexOf("revoke all on function"));
+  // Named in full. "revoke all on function" alone appears nine times across
+  // the migrations, so it is a weak anchor even when the slice is scoped to
+  // one file — and a weak anchor is how a slice silently ends up covering the
+  // wrong thing.
+  const fn = MIG.slice(MIG.indexOf("create or replace function public.sync_athlete_actions()"),
+                       MIG.indexOf("revoke all on function public.sync_athlete_actions() from public, anon;"));
+  ck("the function body was actually sliced", /return query select n_synced, n_dropped;/.test(fn), true);
   ck("the read is scoped to the caller", /where p\.user_id = uid/.test(fn), true);
   ck("the insert writes the caller's id", /select uid, s\.title/.test(fn), true);
   ck("the drop pass is scoped to the caller", /where a\.user_id = uid/.test(fn), true);
@@ -133,8 +139,26 @@ ck("only the three real statuses are written",
 ck("the mirror is in the compiled bundle",
    fs.readFileSync(path.join(REPO, "js", "app.js"), "utf8").includes("sync_athlete_actions"), true);
 
-// It is not applied yet, and must say so until it is.
-ck("the migration is marked unapplied", /\*\*\* NOT YET APPLIED \*\*\*/.test(MIG), true);
+// APPLIED 2026-10-14. This assertion was written the other way round and
+// fired the moment it landed, which is what it was for: the file must never
+// disagree with the database about whether it has run.
+ck("the migration records that it is applied", /\*\*\* APPLIED 2026-10-14/.test(MIG), true);
+ck("...and no longer claims otherwise", /NOT YET APPLIED/.test(MIG), false);
+// The facts that were checked against the live database, kept with the file so
+// a later reader can re-run them rather than trust this note.
+ck("...with anon execute explicitly recorded as denied", /anon EXECUTE = FALSE/.test(MIG), true);
+ck("...and the pinned search_path recorded", /search_path=public, pg_temp/.test(MIG), true);
+
+// The schema reference must know about it too — the guard that catches an
+// applied-but-unrecorded migration is test_schema_reference_current.
+{
+  const SCHEMA = fs.readFileSync(path.join(REPO, "supabase-schema.sql"), "utf8");
+  ck("the schema reference carries 152", /152 — sync_athlete_actions/.test(SCHEMA), true);
+  // Deliberately a pointer, not a copy. A second definition of the body would
+  // drift from the one the database actually runs.
+  ck("...as a pointer, not a second copy of the body",
+     /create or replace function public\.sync_athlete_actions/.test(SCHEMA), false);
+}
 
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);

@@ -6346,3 +6346,16 @@ create table if not exists public.athlete_actions (
   constraint athlete_actions_completed_coherent check ((status = 'completed') = (completed_at is not null))
 );
 -- Self-only, all four verbs. RLS is enabled on the table.
+
+-- 152 — sync_athlete_actions(): reconciles athlete_actions with
+-- pathway_plan.milestones for the CALLING athlete only. Applied 2026-10-14.
+-- Atomic and idempotent, so the client needs no cache, no queue and no
+-- diffing; see supabase-migration-152-sync-actions.sql for why a client-side
+-- dual-write was designed and then rejected. Takes NO arguments — there is no
+-- user_id to forge. Keeps the FIRST completed_at via coalesce. Marks vanished
+-- steps 'dropped' rather than deleting them. security definer, search_path
+-- pinned to (public, pg_temp), execute revoked from public and anon and
+-- granted only to authenticated.
+--
+-- The full body lives in the migration. Repeating it here would create a
+-- second definition that silently drifts from the one the database runs.

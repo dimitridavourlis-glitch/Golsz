@@ -1,7 +1,10 @@
 -- ============================================================
 -- 152 — sync_athlete_actions(): mirror the jsonb into the table, atomically
 --
--- *** NOT YET APPLIED *** — shown for approval.
+-- *** APPLIED 2026-10-14. Verified in place, not assumed:
+--     prosecdef = true, proconfig = ["search_path=public, pg_temp"],
+--     authenticated EXECUTE = true, anon EXECUTE = FALSE,
+--     athlete_actions unchanged at 2 rows, 0 dropped. ***
 --
 -- WHY A FUNCTION AND NOT CLIENT CODE.
 --
