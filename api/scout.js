@@ -5664,6 +5664,7 @@ async function getAthleteState(userId) {
   let allBenchmarks = [];
   let targetsCount = 0;
   let allTargets = [];
+  let actionRows = [];
   let hasPendingVerification = false;
   let pathwayRow = null;
   let questionsUsedToday = 0;
@@ -5844,6 +5845,19 @@ async function getAthleteState(userId) {
   // the same functions. Scout is handed the RESULT, not the ingredients, so
   // it reports the athlete's score rather than forming a second opinion.
   // Fails soft to null: an athlete with no athletes row still gets a reply.
+  // WHAT THEY ACTUALLY DID. Scout has always known what is OPEN and never
+  // what happened — so it could not say "you have done four of these" or
+  // notice a step that quietly went past. athlete_actions carries a real
+  // completed_at (the jsonb only started recording one on 2026-10-14) and is
+  // kept equal to the plan by sync_athlete_actions().
+  try {
+    const r = await fetch(url + "/rest/v1/athlete_actions?user_id=eq." + userId +
+      "&select=title,status,due_on,due_src,completed_at&order=updated_at.desc&limit=200", { headers });
+    if (!r.ok) throw new Error("athlete_actions " + r.status);
+    const rows = await r.json();
+    if (Array.isArray(rows)) actionRows = rows;
+  } catch (e) { console.error("GOLSZ action history load failed:", e && e.message); }
+
   let readiness = null;
   try {
     readiness = computeReadiness({
@@ -5870,6 +5884,19 @@ async function getAthleteState(userId) {
     const sportRows = (sportSchemaFor(athleteRow && athleteRow.sport) || {}).pathways || null;
     gap = gapFromRows(sportRows, pathwayRow && pathwayRow.pathway_type, athleteRow, allBenchmarks, allTargets);
   } catch (e) { console.error("GOLSZ gap compute failed:", e && e.message); }
+  // MISSED RESPECTS due_src, exactly as the reminder cron does. A date Scout
+  // proposed and the athlete never acted on is not a deadline they missed —
+  // nobody agreed to it — and telling them otherwise in conversation is the
+  // same wrong as pushing it to their phone.
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const recentlyDone = actionRows
+    .filter((a) => a && a.status === "completed" && a.completed_at)
+    .sort((a, b) => String(b.completed_at).localeCompare(String(a.completed_at)))
+    .slice(0, 8);
+  const missedActions = actionRows
+    .filter((a) => a && a.status === "open" && a.due_on && !a.due_src && a.due_on < todayKey)
+    .slice(0, 8);
+  const droppedCount = actionRows.filter((a) => a && a.status === "dropped").length;
   // FIRST NAME ONLY, and only when it looks like a name.
   //
   // Scout has never been told who it is talking to. It knew their sport,
@@ -5889,6 +5916,11 @@ async function getAthleteState(userId) {
     // The requirement gap, as a RESULT. Scout reports it; it does not re-form
     // it. Same object Home and Plan render.
     gap,
+    // What they have actually done, missed and dropped — not just what is open.
+    recentlyDone: recentlyDone.map((a) => ({ title: a.title, on: String(a.completed_at).slice(0, 10) })),
+    missedActions: missedActions.map((a) => ({ title: a.title, due: a.due_on })),
+    droppedCount,
+    actionsKnown: actionRows.length > 0,
     // Self-reported availability (migration 150). Absent means NOT RECORDED,
     // which is not the same as fit, and the prompt below says so.
     availability: profileRow && profileRow.availability_status ? {
@@ -6726,6 +6758,36 @@ export default async function handler(req, res) {
         athleteBlock += ` GOLSZ CANNOT SEE these at all and has no way to check them: ${say(gapNow.unknown)}. Never tell them these are missing, never imply they fall short of them, and never score them — the product has nowhere to look, which is not the same as the athlete lacking it. If one matters, ask.`;
       }
       athleteBlock += ` This list is authoritative and complete for that route. Never add a requirement that is not in it, never attach a target number or standard to any of them — GOLSZ holds no benchmark standards and inventing one is the single worst thing you can do here — and never describe their position in a way that contradicts these states.`;
+    }
+
+    // 2a — WHAT THEY HAVE ACTUALLY DONE.
+    //
+    // Scout knew what was OPEN and nothing about what happened, so it could
+    // not say "you have done four of these already" and could not notice a
+    // step that quietly went past. An advisor who never remembers what you
+    // did is a stranger every conversation.
+    //
+    // MISSED RESPECTS due_src. A date Scout proposed and the athlete never
+    // acted on is not a deadline they missed — nobody agreed to it. Saying so
+    // in conversation is the same wrong as pushing it to their phone, and the
+    // reminder cron refuses it for the same reason.
+    if (athleteState.actionsKnown) {
+      const done = athleteState.recentlyDone || [];
+      const missed = athleteState.missedActions || [];
+      if (done.length) {
+        athleteBlock += `\n\nWHAT THEY HAVE ACTUALLY COMPLETED (most recent first, with the date it was done): ` +
+          done.map((a) => `"${a.title}" on ${a.on}`).join("; ") + `.`;
+      } else {
+        athleteBlock += `\n\nTHEY HAVE NOT COMPLETED ANY STEP YET. Say that plainly if it is relevant; do not congratulate them for work that is not there.`;
+      }
+      if (missed.length) {
+        athleteBlock += ` STEPS WHOSE OWN DATE HAS PASSED AND ARE STILL OPEN — these are dates THEY chose, so it is fair to raise them: ` +
+          missed.map((a) => `"${a.title}" (was due ${a.due})`).join("; ") + `. Ask what got in the way before suggesting anything new; a plan that keeps growing while nothing closes is the problem, not the solution.`;
+      }
+      if (athleteState.droppedCount) {
+        athleteBlock += ` They have dropped ${athleteState.droppedCount} step(s). Dropping is a legitimate decision, not a failure, and must never be used to criticise them.`;
+      }
+      athleteBlock += ` These are the only completions and misses on file. Never credit them with work that is not in this list, and never accuse them of missing something that is not in it either.`;
     }
 
     // 2b — CAN THEY TRAIN RIGHT NOW. Without this Scout proposed sprint work
