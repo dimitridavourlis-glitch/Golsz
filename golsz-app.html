@@ -10290,6 +10290,68 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
 
 
 
+  // THE STATUS ROW IS BUILT ONCE, HERE.
+  //
+  // A tile with nothing to say is not rendered. It used to show an em-dash,
+  // which is a tile asking to be ignored — and five of them stacked above the
+  // fold is the "scoreboard architecture" this screen's own history says was
+  // removed once already. A first-time athlete opened GOLSZ and saw five
+  // placeholders for data they could not possibly have yet.
+  //
+  // Hoisted out of the JSX because the guard, the column count and the map all
+  // need the SAME list. Inline, the guard referenced a variable that did not
+  // exist yet and would have thrown at render.
+  const statusTiles = [
+      featureUnlocked(plan, "readiness") && {
+        k: "strength", label: t("home_readiness_composite"),
+        value: String(composite), colour: compositeColor, go: "profile",
+        // A score of 0 on day one is not a status, it is a discouragement.
+        empty: !composite,
+      },
+      // TODAY REPLACED THE LIFETIME STEPS TILE.
+      // Adding TODAY and THIS WEEK alongside it would have put six
+      // number tiles above the fold, and the brief's rule for this
+      // screen is that an athlete understands what matters within
+      // five seconds. Lifetime done/total is the least actionable of
+      // the three and it already lives on Plan, which owns steps —
+      // Home shows, the owning page holds the detail. The late count
+      // moves here so nothing about overdue work is lost.
+      canTargets && {
+        k: "today", label: t("home_week_today"),
+        value: todaySteps.length ? `${todayDone}/${todaySteps.length}` : "\u2014",
+        empty: !todaySteps.length && !stepsLate,
+        colour: stepsLate > 0 ? C.warnText
+          : (todaySteps.length && todayDone === todaySteps.length ? C.lime : C.chalk),
+        sub: stepsLate > 0 ? t("home_door_plan_late").replace("{n}", stepsLate) : null,
+        go: "targets",
+      },
+      // THIS WEEK, from the brief. Dash when nothing is dated inside
+      // the week — a 0/0 would read as failure rather than as an
+      // empty calendar.
+      canTargets && {
+        k: "week", label: t("home_week_title"),
+        value: weekSteps.length ? `${weekDone}/${weekSteps.length}` : "\u2014",
+        empty: !weekSteps.length,
+        colour: weekSteps.length && weekDone === weekSteps.length ? C.lime : C.chalk,
+        go: "targets",
+      },
+      canTargets && {
+        k: "follow", label: t("home_status_follow_up"),
+        value: monthly && monthly.staleTargets > 0 ? String(monthly.staleTargets) : "\u2014",
+        empty: !(monthly && monthly.staleTargets > 0),
+        colour: monthly && monthly.staleTargets > 0 ? C.lime : C.slate, go: "targets",
+      },
+      canBenchmarks && {
+        k: "bench", label: t("home_status_benchmark"),
+        value: recentBenchmarks.length ? String(recentBenchmarks[0].value) : "\u2014",
+        empty: !recentBenchmarks.length,
+        sub: recentBenchmarks.length ? recentBenchmarks[0].metric : null,
+        colour: recentBenchmarks.length ? C.chalk : C.slate, go: "profile",
+      },
+    ]
+    .filter(Boolean).filter((tile) => !tile.empty);
+
+
   return (
     <div className="gz-home" style={{ padding: "8px 12px 20px" }}>
       {(name || (athlete && (athlete.sport || athlete.club_name))) && (
@@ -10811,51 +10873,10 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor }) {
           Plan-gated tiles hide rather than showing a lock: an upsell in a
           status row is not status. While the plan is unknown, planKnown()
           keeps the whole row out, same as everywhere else on this screen. */}
-      {planKnown(plan) && (
+      {planKnown(plan) && statusTiles.length > 0 && (
         <HomeZone span={2}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 1, background: C.line, borderRadius: 12, overflow: "hidden" }}>
-            {[
-              featureUnlocked(plan, "readiness") && {
-                k: "strength", label: t("home_readiness_composite"),
-                value: String(composite), colour: compositeColor, go: "profile",
-              },
-              // TODAY REPLACED THE LIFETIME STEPS TILE.
-              // Adding TODAY and THIS WEEK alongside it would have put six
-              // number tiles above the fold, and the brief's rule for this
-              // screen is that an athlete understands what matters within
-              // five seconds. Lifetime done/total is the least actionable of
-              // the three and it already lives on Plan, which owns steps —
-              // Home shows, the owning page holds the detail. The late count
-              // moves here so nothing about overdue work is lost.
-              canTargets && {
-                k: "today", label: t("home_week_today"),
-                value: todaySteps.length ? `${todayDone}/${todaySteps.length}` : "\u2014",
-                colour: stepsLate > 0 ? C.warnText
-                  : (todaySteps.length && todayDone === todaySteps.length ? C.lime : C.chalk),
-                sub: stepsLate > 0 ? t("home_door_plan_late").replace("{n}", stepsLate) : null,
-                go: "targets",
-              },
-              // THIS WEEK, from the brief. Dash when nothing is dated inside
-              // the week — a 0/0 would read as failure rather than as an
-              // empty calendar.
-              canTargets && {
-                k: "week", label: t("home_week_title"),
-                value: weekSteps.length ? `${weekDone}/${weekSteps.length}` : "\u2014",
-                colour: weekSteps.length && weekDone === weekSteps.length ? C.lime : C.chalk,
-                go: "targets",
-              },
-              canTargets && {
-                k: "follow", label: t("home_status_follow_up"),
-                value: monthly && monthly.staleTargets > 0 ? String(monthly.staleTargets) : "\u2014",
-                colour: monthly && monthly.staleTargets > 0 ? C.lime : C.slate, go: "targets",
-              },
-              canBenchmarks && {
-                k: "bench", label: t("home_status_benchmark"),
-                value: recentBenchmarks.length ? String(recentBenchmarks[0].value) : "\u2014",
-                sub: recentBenchmarks.length ? recentBenchmarks[0].metric : null,
-                colour: recentBenchmarks.length ? C.chalk : C.slate, go: "profile",
-              },
-            ].filter(Boolean).map((tile) => (
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${statusTiles.length === 1 ? 1 : 2}, minmax(0, 1fr))`, gap: 1, background: C.line, borderRadius: 12, overflow: "hidden" }}>
+            {statusTiles.map((tile) => (
               <button key={tile.k} onClick={() => onNavigate(tile.go)}
                 style={{ background: C.card, border: "none", padding: "13px 14px", textAlign: "left",
                   cursor: "pointer", fontFamily: "inherit", minHeight: 76, display: "flex", flexDirection: "column", justifyContent: "center" }}>
@@ -16456,7 +16477,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=3925e48be0f64843";
+    s.src = "js/app.js?v=1eb58e6a5d64cfc3";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

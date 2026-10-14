@@ -209,5 +209,41 @@ ck("...while its strings remain in all four dictionaries",
      /const BENCHMARK_BANDS = \[\];/.test(SCOUT), true);
 }
 
+// ---- A TILE WITH NOTHING TO SAY IS NOT SHOWN ------------------------------
+//
+// The status row rendered five tiles whose value was an em-dash when there was
+// no data — a tile asking to be ignored. A first-time athlete opened GOLSZ and
+// saw five placeholders for data they could not possibly have yet, which is
+// the "scoreboard architecture" this screen's own comments say was removed
+// once already.
+{
+  const at = APP.indexOf("const statusTiles = [");
+  ck("the tiles are built once, above the JSX", at > 0, true);
+  const arr = APP.slice(at, APP.indexOf(".filter(Boolean).filter((tile) => !tile.empty);", at));
+
+  // Every tile must declare it, or it can never be filtered out.
+  const keys = [...arr.matchAll(/k: "(\w+)"/g)].map((x) => x[1]);
+  const empties = (arr.match(/\bempty:/g) || []).length;
+  ck("every tile declares whether it is empty", [keys.length, empties], [5, 5]);
+
+  ck("empty tiles are filtered out",
+     /\.filter\(Boolean\)\.filter\(\(tile\) => !tile\.empty\);/.test(APP), true);
+  // The whole row goes when nothing survives, rather than leaving an empty box.
+  ck("the row itself disappears when none survive",
+     /\{planKnown\(plan\) && statusTiles\.length > 0 && \(/.test(APP), true);
+  // One surviving tile in a two-column grid is a tile and a hole.
+  ck("a single tile does not sit in a two-column grid",
+     /repeat\(\$\{statusTiles\.length === 1 \? 1 : 2\}/.test(APP), true);
+  // The guard, the column count and the map must read the SAME list — the
+  // first version had the guard referencing a variable that did not exist.
+  ck("guard, grid and map all read the hoisted list",
+     (APP.match(/statusTiles/g) || []).length, 4);
+
+  // A score of zero is not a status.
+  ck("a zero Passport Strength is treated as empty", /empty: !composite,/.test(arr), true);
+  // But an overdue count is worth showing even with nothing due today.
+  ck("TODAY still shows when something is late", /empty: !todaySteps\.length && !stepsLate,/.test(arr), true);
+}
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
