@@ -11309,6 +11309,53 @@ function BackupPlanCard({ athlete, loaded, actingFor, onSaved, quiet }) {
   );
 }
 
+/* ============ COLLAPSIBLE SECTION ============
+   Measured on a live account, Plan rendered 53 visible controls. Five of them
+   were the athlete's actual steps; the other forty-eight were the machinery
+   around them - a dropdown, an edit icon and a delete icon on every training
+   row and every school, plus two add-forms, all open at once. It read as a
+   spreadsheet, which is the opposite of what someone opening it for the first
+   time can act on.
+
+   A section that closes has to keep telling you what is inside it, otherwise
+   closing it is just hiding it - the Schools & clubs card carried a comment
+   refusing an accordion for exactly that reason, and that refusal was right
+   about the version of an accordion that shows only a title. So `summary` is
+   not decoration here, it is the condition on which this component is allowed
+   to exist: "5 on the list, 2 contacted" is a sentence you can read without
+   opening anything. Children are passed as elements and only rendered when
+   open, so a closed section also costs no fetch. */
+function Collapsible({ label, summary, children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <button onClick={() => setOpen(!open)} aria-expanded={open}
+        style={{ width: "100%", boxSizing: "border-box", textAlign: "left", fontFamily: "inherit", cursor: "pointer",
+          background: C.card, color: C.chalk, borderTop: `1px solid ${C.line}`, borderLeft: `1px solid ${C.line}`,
+          borderRight: `1px solid ${C.line}`, borderBottom: open ? "none" : `1px solid ${C.line}`,
+          borderRadius: open ? "12px 12px 0 0" : 12, padding: "14px 15px", minHeight: 54,
+          display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: summary ? 9.5 : 12, letterSpacing: "0.14em", fontWeight: 800, color: summary ? C.slate : C.chalk }}>{label}</span>
+          {summary ? <span style={{ display: "block", fontSize: 13.5, color: C.chalk, marginTop: 4 }}>{summary}</span> : null}
+        </span>
+        {open ? <ChevronUp size={17} color={C.slate} /> : <ChevronDown size={17} color={C.slate} />}
+      </button>
+      {open && children}
+    </div>
+  );
+}
+
+/* What a closed Schools & clubs row says about itself. Both strings already
+   existed for the Home door that reports the same list, so the two surfaces
+   cannot drift apart or disagree about how many have been contacted. */
+function rosterSummary(t, items) {
+  const rows = items || [];
+  if (!rows.length) return t("home_door_schools_empty");
+  const contacted = rows.filter((x) => x && CONTACTED_STATUSES.indexOf(x.status) >= 0).length;
+  return t("home_door_schools_counts").replace("{n}", rows.length).replace("{c}", contacted);
+}
+
 function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened }) {
   const { t } = useLang();
   const [uid, setUid] = useState(null);
@@ -11526,7 +11573,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
           The Pro gate and the plan-unknown skeleton come across unchanged:
           development_plan is Pro in FEATURE_MIN_PLAN and tests assert it. */}
       {!planKnown(plan) ? null : featureUnlocked(plan, "development_plan") ? (
-        <DevelopmentPlan viewUserId={null} manageId={actingFor || null} />
+        <Collapsible label={t("dev_plan_title")}><DevelopmentPlan viewUserId={null} manageId={actingFor || null} /></Collapsible>
       ) : (
         <div style={{ marginBottom: 12 }}><FeatureLock label={t("dev_plan_title")} teaser={t("dev_plan_locked_teaser")} onUpgrade={onUpgrade} /></div>
       )}
@@ -11542,11 +11589,13 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
 
           Schools & clubs stays its own card because it is genuinely a
           different kind of thing: organisations to approach, not steps with a
-          horizon. It is no longer an accordion — a target list you have to
-          open to remember you have is a list you forget. */}
+          horizon. It now closes, but a closed row still states how many are on
+          the list and how many have been contacted - the objection that kept it
+          open was to an accordion that shows only a title, and that objection
+          still stands. */}
+      <Collapsible label={t("targets_title")} summary={rosterSummary(t, items)}>
       <div style={{ ...card }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10, minHeight: 26 }}>
-          <Eyebrow>{t("targets_title")}</Eyebrow>
           {!showAddTarget && <button onClick={() => setShowAddTarget(true)} style={{ ...iconBtn(C.lime), fontSize: 12 }}><Plus size={13} /> {t("targets_add")}</button>}
         </div>
         {items.length > 0 && (
@@ -11628,6 +11677,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened 
           </div>
         ))}
       </div>
+      </Collapsible>
     </div>
   );
 }
@@ -16567,7 +16617,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=ca1e423ab0b8d54e";
+    s.src = "js/app.js?v=a8fd27478a4a0ae9";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
