@@ -166,6 +166,14 @@ const REVIEWED_AMBIGUOUS = new Set([
   // times, silently, by the assertions simply stopping short of what they
   // claimed to check.
   "</HomeZone>",
+  // test_gap_engine deliberately holds BOTH implementations of the gap: it
+  // searches golsz-app.html through APP and api/_gap.js through GAP_MOD, then
+  // runs the two over the same inputs and compares their output. The literals
+  // below therefore appear twice on purpose, once per side, each indexOf
+  // scoped to a different source string. The scan counts literals and cannot
+  // see which variable each one is searched in.
+  "const EVIDENCE_SOURCES = {",
+  "function gapFromRows(rows, pathwayType, athlete, b",
 ]);
 // Entries are matched as PREFIXES, not exact strings. The failure message
 // truncates literals at 50 chars, so an entry copied from the console output
