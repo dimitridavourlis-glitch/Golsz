@@ -185,6 +185,16 @@ const REVIEWED_AMBIGUOUS = new Set([
   // purpose, each scoped to a different source string. Same shape as the two
   // entries above.
   "const ACTION_CATEGORIES = [",
+  // test_home_command_centre takes the FIRST of these on purpose: it marks
+  // where Home's disclosure begins, and everything asserted to be "behind the
+  // tap" is tested against that offset. The second occurrence is the trailing
+  // wrapped range, which is also behind the tap, so first is the right one and
+  // the count is expected to be 2.
+  "{showMore && (",
+  // And this one is searched WITH a fromIndex — indexOf(..., open) — to ask
+  // whether Ask Scout falls inside the disclosure. The count here cannot see
+  // the fromIndex, the same limitation as the </script> entry above.
+  "onNavigate(\"scout\")",
 ]);
 // Entries are matched as PREFIXES, not exact strings. The failure message
 // truncates literals at 50 chars, so an entry copied from the console output

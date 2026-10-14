@@ -245,5 +245,59 @@ ck("...while its strings remain in all four dictionaries",
   ck("TODAY still shows when something is late", /empty: !todaySteps\.length && !stepsLate,/.test(arr), true);
 }
 
+// ---- HOME SHOWS ONE THING -------------------------------------------------
+//
+// Seven stacked cards is not "understand what matters within five seconds".
+// Everything reflective now sits behind one tap, CLOSED by default. Nothing is
+// deleted and nothing moves to another page — the tap is the athlete asking
+// for it rather than the screen insisting.
+{
+  ck("the disclosure exists", /const \[showMore, setShowMore\] = useState\(false\);/.test(APP), true);
+  // Asserted on the declaration itself. The first version matched
+  // "useState(false)" anywhere in the file, which is true of several unrelated
+  // hooks and would have passed with this one defaulting open.
+  ck("...and starts closed",
+     /const \[showMore, setShowMore\] = useState\(false\);/.test(APP), true);
+  ck("the toggle says what is behind it, in words",
+     /\{showMore \? t\("home_less"\) : t\("home_more"\)\}/.test(APP), true);
+  // A screen reader must hear the state, not infer it from a caret.
+  ck("...and announces its state", /aria-expanded=\{showMore\}/.test(APP), true);
+
+  // What stays on the surface: identity, the next step, the goal, the toggle,
+  // Ask Scout. Everything else is behind it.
+  const open = APP.indexOf("{showMore && (");
+  const nextStep = APP.indexOf('{t("next_move_title")}');
+  const goal = APP.indexOf('{t("home_your_goal")}');
+  ck("the next step stays above the fold", nextStep < open && nextStep > 0, true);
+  ck("...and so does the goal", goal < open && goal > 0, true);
+  // Ask Scout must NOT be buried: it is the one thing a confused athlete reaches for.
+  const scout = APP.indexOf('onNavigate("scout")', open);
+  const firstClose = APP.indexOf("\n        </>\n      )}", open);
+  ck("Ask Scout is not inside the disclosure", scout > firstClose, true);
+
+  // What IS behind it.
+  // home_dim_focus, not home_focus_title — the latter exists in all four
+  // dictionaries and is rendered nowhere, so asserting on it checked nothing.
+  for (const [what, key] of [["focus areas", "home_dim_focus"], ["the bottleneck", "home_bottleneck_eyebrow"],
+                             ["last week", "review_title"], ["the score breakdown", "home_readiness_why_title"]]) {
+    const at = APP.indexOf('t("' + key + '")');
+    ck(`  ${what} is actually rendered`, at > 0, true);
+    ck(`  ...and is behind the tap`, at > open, true);
+  }
+  // The status tiles too — they were the worst of it for a new athlete.
+  ck("  the status tiles are behind the tap", APP.indexOf("statusTiles.length > 0") > open, true);
+
+  // Both wrapped ranges hold MORE than one sibling, so each needs a fragment.
+  // Without one the JSX does not parse, which is how the first attempt failed.
+  ck("every disclosure block wraps its siblings in a fragment",
+     (APP.match(/\{showMore && \(\s*\n\s*<>/g) || []).length,
+     (APP.match(/\{showMore && \(/g) || []).length);
+
+  for (const k of ["home_more", "home_less"]) {
+    const hits = APP.match(new RegExp("\\b" + k + ': "[^"]+"', "g")) || [];
+    ck(`  ${k} in four dictionaries, four distinct strings`, [hits.length, new Set(hits).size], [4, 4]);
+  }
+}
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
