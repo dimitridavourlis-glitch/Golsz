@@ -49,8 +49,8 @@ ck("it renders a summary line when given one", /\{summary \?/.test(col), true);
 
 /* ---------- the two sections that close ---------- */
 
-ck("the training plan is wrapped",
-   /<Collapsible label=\{t\("dev_plan_title"\)\}><DevelopmentPlan /.test(APP), true);
+ck("the training plan is wrapped, and says what is inside it",
+   /<Collapsible label=\{t\("dev_plan_title"\)\} summary=\{t\("dev_plan_collapsed_hint"\)\}><DevelopmentPlan /.test(APP), true);
 ck("schools & clubs is wrapped, and reports its roster",
    /<Collapsible label=\{t\("targets_title"\)\} summary=\{rosterSummary\(t, items\)\}>/.test(APP), true);
 ck("the wrapped card no longer repeats its own title",
@@ -67,6 +67,13 @@ ck("the wrapped gap card no longer repeats its own title",
    (APP.match(/<Eyebrow>\{t\("gap_title"\)\}<\/Eyebrow>/g) || []).length, 1);  // the unsupported-sport card keeps its own
 
 ck("exactly three sections close on Plan", (APP.match(/<Collapsible /g) || []).length, 3);
+
+// The condition on which this component is allowed to exist at all. A
+// <Collapsible> with no summary is precisely the title-only accordion the
+// Schools & clubs comment refused, and it would pass every other check in this
+// file. This is the assertion that binds a future section, not just these three.
+ck("every section that closes states what is inside it",
+   APP.match(/<Collapsible (?![^>]*summary=)[^>]*>/g) || [], []);
 
 // The comment on that card used to assert it was "no longer an accordion".
 // Leaving that in place would have made the source argue against the code.
@@ -109,7 +116,7 @@ ck("a null row does not throw", rs([null, { status: "contacted" }]), "2 on the l
 
 // Reusing the Home door's own two strings is what stops Plan and Home
 // disagreeing about the same list, and is why this change added no new keys.
-for (const k of ["home_door_schools_empty", "home_door_schools_counts"]) {
+for (const k of ["home_door_schools_empty", "home_door_schools_counts", "dev_plan_collapsed_hint"]) {
   ck(`${k} is translated in all 4 languages`,
      (APP.match(new RegExp(`\\b${k}: "`, "g")) || []).length, 4);
 }
