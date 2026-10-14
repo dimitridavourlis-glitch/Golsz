@@ -6371,3 +6371,20 @@ alter table public.athlete_actions
 create index if not exists athlete_actions_reminder_idx
   on public.athlete_actions (due_on, last_reminded_at)
   where status = 'open' and due_on is not null and due_src is null;
+
+-- 154 — athletes.show_benchmarks / show_timeline, and get_public_passport_by_token
+-- extended to carry benchmarks (WITH their stated method) and the career
+-- timeline. Applied 2026-10-14.
+--
+-- Both flags default FALSE on purpose. Share tokens already existed; defaulting
+-- on would have made every link an athlete sent BEFORE this feature start
+-- revealing more than it did when they sent it. Verified after applying:
+-- 0 athletes opted in across 15 athletes and 4 live links.
+--
+-- A section the athlete has not shared returns NULL, not an empty array, so a
+-- reader can tell "not shared" from "none recorded". The function body lives in
+-- the migration; repeating it here would create a second definition that drifts
+-- from the one the database runs.
+alter table public.athletes
+  add column if not exists show_benchmarks boolean not null default false,
+  add column if not exists show_timeline   boolean not null default false;
