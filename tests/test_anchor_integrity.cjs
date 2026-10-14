@@ -179,6 +179,12 @@ const REVIEWED_AMBIGUOUS = new Set([
   // this declaration out of golsz-app.html (APP) and api/_gap.js (GAP_MOD)
   // separately and compares them. Three uses, two files, each scoped.
   "const CONTACTED_STATUSES = [",
+  // test_scout_category reads this declaration out of golsz-app.html (APP) and
+  // api/scout.js (SCOUT) and compares both against migration 144's CHECK
+  // constraint — three lists that must agree, so the literal appears twice on
+  // purpose, each scoped to a different source string. Same shape as the two
+  // entries above.
+  "const ACTION_CATEGORIES = [",
 ]);
 // Entries are matched as PREFIXES, not exact strings. The failure message
 // truncates literals at 50 chars, so an entry copied from the console output

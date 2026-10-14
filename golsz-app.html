@@ -12324,6 +12324,12 @@ function normalizeStage(x) {
   };
 }
 
+// THE ACTION CATEGORIES, mirrored from migration 144's CHECK constraint.
+// A value outside this list is a 400 from Postgres, not a UI bug, so the list
+// is the constraint's and test_action_fields compares the two.
+const ACTION_CATEGORIES = ["training", "recovery", "testing", "film", "outreach",
+  "academic", "recruiting", "application", "competition", "profile", "other"];
+
 function normalizeMilestone(m) {
   return {
     id: m && m.id ? m.id : ((typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.random()),
@@ -12332,6 +12338,12 @@ function normalizeMilestone(m) {
     // Only meaningful alongside done. A date here on an undone step would be
     // a completion that never happened.
     done_at: (m && m.done && typeof m.done_at === "string" && /^\d{4}-\d{2}-\d{2}$/.test(m.done_at)) ? m.done_at : null,
+    // What KIND of work this is, when Scout proposed one. Validated against
+    // the same allowlist the database enforces, because an unrecognised value
+    // is a 400 at write time rather than a UI bug. It seeds athlete_actions
+    // ON INSERT ONLY (migration 155), so an athlete who changes it later is
+    // never overruled by a later sync.
+    category: (m && typeof m.category === "string" && ACTION_CATEGORIES.indexOf(m.category) !== -1) ? m.category : null,
     due: (m && typeof m.due === "string" && /^\d{4}-\d{2}-\d{2}$/.test(m.due)) ? m.due : null,
     stage: (m && typeof m.stage === "string" && m.stage) ? m.stage : null,
     // WHERE THE DATE CAME FROM, and the only value that means anything is
@@ -12358,12 +12370,6 @@ function normalizeMilestone(m) {
 // one is mine". From then on the date behaves like any date they set.
 // Re-dating goes through setMilestoneDue, which clears due_src by writing the
 // whole field itself; everything else routes through here.
-// THE ACTION CATEGORIES, mirrored from migration 144's CHECK constraint.
-// A value outside this list is a 400 from Postgres, not a UI bug, so the list
-// is the constraint's and test_action_fields compares the two.
-const ACTION_CATEGORIES = ["training", "recovery", "testing", "film", "outreach",
-  "academic", "recruiting", "application", "competition", "profile", "other"];
-
 // WHY THESE FIELDS LIVE ON athlete_actions AND NOT IN THE jsonb.
 //
 // The brief asks an action to carry a category, a priority and a reason. The
@@ -16354,7 +16360,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=28937218e74376cb";
+    s.src = "js/app.js?v=281515a905388acc";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

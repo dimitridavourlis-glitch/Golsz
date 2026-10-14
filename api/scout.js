@@ -3109,6 +3109,15 @@ function extractSuggestedPathway(data, existingStages) {
     // the client must be able to tell the two apart forever after: a date the
     // athlete set can call them late, and a date Scout guessed must not until
     // they have touched that step themselves.
+    // THE CATEGORY IS AN ALLOWLIST, NOT FREE TEXT.
+    // Migration 144's CHECK constraint is the authority; anything outside it
+    // is a 400 from Postgres at write time, so the model's word is validated
+    // here rather than trusted and discovered later. Unrecognised degrades to
+    // "other", which is a real category and not a guess about the athlete.
+    const ACTION_CATEGORIES = ["training", "recovery", "testing", "film", "outreach",
+      "academic", "recruiting", "application", "competition", "profile", "other"];
+    const catOf = (v) => (typeof v === "string" && ACTION_CATEGORIES.includes(v.trim().toLowerCase())
+      ? v.trim().toLowerCase() : "other");
     const milestones = rawMilestones.map((m) => {
       const i = m.stage_index;
       const filed = target.length && Number.isInteger(i) && i >= 0 && i < target.length;
@@ -3122,7 +3131,7 @@ function extractSuggestedPathway(data, existingStages) {
       // stored another. Capping at the source means what they see is what
       // they get, and Scout writes a step that fits.
       return { label: m.label.trim().slice(0, 120), done: false, stage: filed ? target[i].id : null,
-               due, due_src: due ? "scout" : null };
+               due, due_src: due ? "scout" : null, category: catOf(m.category) };
     });
     return {
       pathway_type: p.pathway_type,
@@ -4224,7 +4233,8 @@ Output as valid JSON only:
         "label": "milestone label",
         "done": false,
         "stage_index": null,
-        "due_in_days": null
+        "due_in_days": null,
+        "category": "training|recovery|testing|film|outreach|academic|recruiting|application|competition|profile|other"
       }
     ]
   },
@@ -4261,6 +4271,14 @@ map, like "Academy", "U19 / CS Saint-Laurent", or "Trials in Portugal".
 - Leave it null for a step that genuinely spans the whole pathway, or that
   belongs to a section you are not proposing. Unfiled is honest; wrongly
   filed is not.
+
+"category" says what KIND of work a step is, from that fixed list and nothing
+else. Pick the one that matches what the athlete would actually be doing —
+"film" for recording or editing footage, "outreach" for contacting a program,
+"testing" for measuring something, "training" for the work itself. If none
+fits, use "other"; do not stretch a category to seem precise. It is validated
+server-side and an unrecognised value becomes "other", so guessing gains you
+nothing.
 
 "due_in_days" puts a step on the athlete's calendar. It is a WHOLE NUMBER OF
 DAYS FROM TODAY (1 = tomorrow, 7 = a week from today, 30 = a month), never a

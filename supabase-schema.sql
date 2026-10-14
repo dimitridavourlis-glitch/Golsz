@@ -6403,3 +6403,12 @@ alter table public.profiles
   add column if not exists availability_since date,
   add column if not exists availability_expected_return date,
   add column if not exists availability_note text;
+
+-- 155 — sync_athlete_actions() seeds athlete_actions.category from the jsonb
+-- step ON INSERT ONLY. Applied 2026-10-14.
+--
+-- category is in the INSERT column list and NOT in the DO UPDATE SET, so a new
+-- step is created with the kind Scout proposed and an athlete who corrects it
+-- afterwards is never overruled by a later sync. Putting it in the update
+-- clause would mean every tick quietly reverted their correction. Verified on
+-- live data: a hand-set "film" survived a tick and un-tick.
