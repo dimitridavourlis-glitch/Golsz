@@ -1,7 +1,10 @@
 -- ============================================================
 -- 150 — availability: the trigger the brief's rerouting hangs on
 --
--- *** NOT YET APPLIED *** — shown for approval.
+-- *** APPLIED 2026-10-14. Verified: 4 columns, 0 rows with a status set
+--     (nothing backfilled), both CHECK constraints live, and
+--     athlete_outcomes_outcome_type_check extended to accept
+--     availability_changed. ***
 --
 -- WHY THIS IS NEEDED. The master brief asks that GOLSZ reroute like GPS when
 -- circumstances change, and gives injury as the worked example: Recovery ->

@@ -5699,7 +5699,7 @@ async function getAthleteState(userId) {
     profileComplete = !!sport;
   } catch (e) { loadFailed.push("athletes"); console.error("GOLSZ scout context read failed:", "athletes", e && e.message); }
   try {
-    const pr = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=full_name,occupation,avatar_url,identity_verified", { headers });
+    const pr = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=full_name,occupation,avatar_url,identity_verified,availability_status,availability_since,availability_expected_return,availability_note", { headers });
     if (!pr.ok) throw new Error("profiles " + pr.status);
     const prRows = await pr.json();
     profileRow = Array.isArray(prRows) && prRows[0] ? prRows[0] : null;
@@ -5889,6 +5889,14 @@ async function getAthleteState(userId) {
     // The requirement gap, as a RESULT. Scout reports it; it does not re-form
     // it. Same object Home and Plan render.
     gap,
+    // Self-reported availability (migration 150). Absent means NOT RECORDED,
+    // which is not the same as fit, and the prompt below says so.
+    availability: profileRow && profileRow.availability_status ? {
+      status: profileRow.availability_status,
+      since: profileRow.availability_since || null,
+      expected: profileRow.availability_expected_return || null,
+      note: profileRow.availability_note || null,
+    } : null,
     profileComplete, pathwayCreated, baselineComplete, sportSupportLevel, sport, country,
     structuredSportKnowledge: hasStructuredSportKnowledge(sport),
     pathwayType, pathwayTimeline, milestoneCount, milestonesDone,
@@ -6718,6 +6726,28 @@ export default async function handler(req, res) {
         athleteBlock += ` GOLSZ CANNOT SEE these at all and has no way to check them: ${say(gapNow.unknown)}. Never tell them these are missing, never imply they fall short of them, and never score them — the product has nowhere to look, which is not the same as the athlete lacking it. If one matters, ask.`;
       }
       athleteBlock += ` This list is authoritative and complete for that route. Never add a requirement that is not in it, never attach a target number or standard to any of them — GOLSZ holds no benchmark standards and inventing one is the single worst thing you can do here — and never describe their position in a way that contradicts these states.`;
+    }
+
+    // 2b — CAN THEY TRAIN RIGHT NOW. Without this Scout proposed sprint work
+    // to an athlete who had told it about an injury ten messages earlier and
+    // would do so again in the next conversation, because nothing carried it.
+    //
+    // SELF-REPORTED, AND NOT A MEDICAL FACT. GOLSZ holds no diagnosis, no body
+    // part and no prognosis, and the expected-return date is the ATHLETE'S own
+    // guess. Scout must not reason about recovery as though it were clinical
+    // information, and must not treat a date they picked as a commitment.
+    const av = athleteState.availability;
+    if (av) {
+      const words = { available: "fit and training normally", limited: "training but limited", out: "not able to play" };
+      athleteBlock += `\n\nTHEIR OWN AVAILABILITY (they reported this themselves; GOLSZ has no medical information about them): ${words[av.status] || av.status}.`;
+      if (av.since) athleteBlock += ` Since ${av.since}.`;
+      if (av.expected) athleteBlock += ` They expect to be back around ${av.expected} — that is THEIR estimate, not a diagnosis or a commitment, so never state it as a fact or hold them to it.`;
+      if (av.note) athleteBlock += ` In their words: "${String(av.note).slice(0, 200)}".`;
+      if (av.status !== "available") {
+        athleteBlock += ` Do not propose training, testing or competition that someone in this state cannot do, and do not tell them to push through it. You are not qualified to assess an injury and must not try: if they ask whether they should be playing, say that is for the person treating them.`;
+      }
+    } else {
+      athleteBlock += `\n\nTHEIR AVAILABILITY IS NOT RECORDED. That is not the same as being fit. Do not assume either way; if it matters to the answer, ask.`;
     }
 
     // 3 — PRECEDENCE. Scout was observed telling an athlete "your goal on

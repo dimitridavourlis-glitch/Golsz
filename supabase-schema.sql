@@ -6388,3 +6388,18 @@ create index if not exists athlete_actions_reminder_idx
 alter table public.athletes
   add column if not exists show_benchmarks boolean not null default false,
   add column if not exists show_timeline   boolean not null default false;
+
+-- 150 — profiles.availability_status / _since / _expected_return / _note, and
+-- two new athlete_outcomes types. Applied 2026-10-14.
+--
+-- Three self-reported states (available | limited | out). NO diagnosis, body
+-- part, severity or prognosis: GOLSZ is not a clinical system. NULL means NOT
+-- RECORDED and is never backfilled to 'available' — an athlete who never
+-- answered has not said they are fit. A date cannot exist without a status;
+-- the second CHECK enforces that. The expected-return column is named for
+-- whose estimate it is.
+alter table public.profiles
+  add column if not exists availability_status text,
+  add column if not exists availability_since date,
+  add column if not exists availability_expected_return date,
+  add column if not exists availability_note text;
