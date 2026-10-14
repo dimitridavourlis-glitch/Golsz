@@ -6412,3 +6412,18 @@ alter table public.profiles
 -- afterwards is never overruled by a later sync. Putting it in the update
 -- clause would mean every tick quietly reverted their correction. Verified on
 -- live data: a hand-set "film" survived a tick and un-tick.
+
+-- 156 — assessment_snapshots: dated Passport Strength, one row per athlete per
+-- day, INSERT-ONLY. Applied 2026-10-14. Verified: 0 rows, RLS on, exactly two
+-- policies (INSERT, SELECT) — no update and no delete, so today can never
+-- rewrite last month. Measures profile completeness and evidence, NOT athletic
+-- ability. Written by the client when Home loads; gaps mean the athlete did
+-- not open the app, which is honest.
+create table if not exists public.assessment_snapshots (
+  athlete_id  uuid        not null references public.profiles(id) on delete cascade,
+  taken_on    date        not null,
+  composite   smallint    not null,
+  sub_scores  jsonb       not null default '{}'::jsonb,
+  created_at  timestamptz not null default now(),
+  primary key (athlete_id, taken_on)
+);
