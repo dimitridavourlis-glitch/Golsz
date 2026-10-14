@@ -11878,6 +11878,22 @@ const EVIDENCE_SOURCES = {
 // GOLSZ has nowhere to look.
 function evaluateGap(sport, pathwayType, athlete, benchmarks, outreach) {
   const rows = PATHWAY_KEY_EVIDENCE[String(sport || "").toLowerCase()] || null;
+  return gapFromRows(rows, pathwayType, athlete, benchmarks, outreach);
+}
+
+// THE EVALUATION ITSELF, SPLIT OUT SO THE SERVER CAN RUN THE SAME ONE.
+//
+// Scout needs this too — the brief asks that it receive bottlenecks as
+// structured context rather than re-deriving them in prose — and api/ cannot
+// import from this file. So api/_gap.js holds a copy, exactly as _readiness.js
+// copies the client's score.
+//
+// Taking the pathway ROWS as a parameter is what keeps that copy honest: the
+// server passes SPORT_CORE's own key_evidence, the original, so there is no
+// second copy of the DATA on the server at all. Only the function is
+// duplicated, and test_gap_engine runs both implementations over the same
+// inputs and compares their output rather than diffing their text.
+function gapFromRows(rows, pathwayType, athlete, benchmarks, outreach) {
   if (!rows || !pathwayType) return null;
   // ID FIRST, THEN goal_type. pathway_plan stores a goal_type, and soccer maps
   // TWO rows to "professional" — semi_professional and professional. Matching
@@ -15889,7 +15905,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=020d32d1cc533ab0";
+    s.src = "js/app.js?v=fca172b6ecbe1d09";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

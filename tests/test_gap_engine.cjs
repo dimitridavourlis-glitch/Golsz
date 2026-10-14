@@ -79,10 +79,19 @@ ck("...and `level` is still absent from everything the client reads",
 // ---- behaviour -------------------------------------------------------------
 const gapAt = APP.indexOf("function evaluateGap(sport, pathwayType, athlete, benchmarks, outreach) {");
 ck("evaluateGap exists", gapAt > 0, true);
-const evaluateGap = vm.runInNewContext(
+const rowsAt = APP.indexOf("function gapFromRows(rows, pathwayType, athlete, benchmarks, outreach) {");
+ck("...and delegates to gapFromRows, which the server also runs", rowsAt > gapAt, true);
+// Both functions, not just the wrapper. The first version of this sliced to
+// the next "\n}" and silently stopped at evaluateGap's closing brace once the
+// split landed — gapFromRows was then undefined and the suite crashed rather
+// than passing vacuously, which is the good outcome of two bad ones.
+const CLIENT_SRC =
   APP.slice(clientAt, APP.indexOf("\n};", clientAt) + 3) + "\n" +
   APP.slice(srcAt, APP.indexOf("\n};", srcAt) + 3) + "\n" +
-  APP.slice(gapAt, APP.indexOf("\n}", gapAt) + 2) + "\nevaluateGap");
+  APP.slice(gapAt, APP.indexOf("\n}", gapAt) + 2) + "\n" +
+  APP.slice(rowsAt, APP.indexOf("\n}", rowsAt) + 2);
+const evaluateGap = vm.runInNewContext(CLIENT_SRC + "\nevaluateGap");
+const clientGapFromRows = vm.runInNewContext(CLIENT_SRC + "\ngapFromRows");
 
 const FULL = { grad_year: 2026, gpa: "3.4", citizenship: "CA", highlights: ["a"] };
 {
@@ -144,7 +153,10 @@ ck("an empty profile field is missing, not present",
   // Comments are stripped first: this function's own prose discusses targets
   // and standards, and grepping the prose instead of the code is a trap this
   // repo has fallen into before.
-  const body = APP.slice(gapAt, APP.indexOf("\n}", gapAt))
+  // rowsAt, not gapAt: the scoring would live in the evaluation, not in the
+  // three-line wrapper. Pointed at gapAt after the split, this checked an
+  // empty function and the self-assertion below caught it.
+  const body = APP.slice(rowsAt, APP.indexOf("\n}", rowsAt))
     .split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
   ck("the engine scores nothing", /score|percent|rating/i.test(body), false);
   ck("...and compares against no standard", /BENCHMARK_BANDS|threshold|minimum|requiredValue/i.test(body), false);
@@ -211,6 +223,81 @@ ck("an empty profile field is missing, not present",
   ck("four distinct notes", [notes.length, new Set(notes).size], [4, 4]);
   ck("...each stating nothing is scored",
      notes.every((n) => /scored|noté|puntúa|βαθμολογείται/.test(n)), true);
+}
+
+// ---- CLIENT AND SERVER RUN THE SAME EVALUATION ----------------------------
+//
+// api/_gap.js holds a copy of gapFromRows so Scout can report the gap rather
+// than re-derive it in prose. The DATA is not duplicated — the function takes
+// the pathway rows as an argument, so the server passes SPORT_SCHEMAS' own
+// key_evidence, the original the client mirrors.
+//
+// Every duplication bug in this codebase came from a parity check comparing a
+// SUBSET of the text. So this compares BEHAVIOUR: both implementations, same
+// inputs, outputs must be identical. A branch that differs cannot hide.
+{
+  const GAP_MOD = fs.readFileSync(path.join(REPO, "api", "_gap.js"), "utf8");
+  ck("the server module exists", GAP_MOD.length > 0, true);
+  ck("...and exports the shared function", /export \{ EVIDENCE_SOURCES, gapFromRows \};/.test(GAP_MOD), true);
+  // It must hold no copy of the requirement DATA.
+  ck("...and no copy of the pathway data", /PATHWAY_KEY_EVIDENCE|key_evidence: \[/.test(GAP_MOD), false);
+
+  const serverGapFromRows = vm.runInNewContext(
+    GAP_MOD.replace(/export \{[^}]*\};?/, "") + "\ngapFromRows");
+
+  // The real rows from the server, so the matrix exercises every pathway both
+  // sports declare rather than a hand-written sample.
+  const bySport = {};
+  for (const r of serverRows) (bySport[r.sport] = bySport[r.sport] || []).push(r);
+
+  const athletes = [
+    null,
+    {},
+    { grad_year: 2026 },
+    { grad_year: 2026, gpa: "3.4", citizenship: "CA", highlights: ["a"] },
+    { grad_year: "", gpa: "   ", citizenship: null, highlights: [] },
+    { gpa: 0 },
+  ];
+  const benchSets = [[], [{ metric_key: "match_minutes" }], [{ metric_key: "ppg" }],
+                     [{ metric_key: "match_minutes" }, { metric_key: "ppg" }], null];
+  const targetSets = [[], [{ status: "to_contact" }], [{ status: "contacted" }],
+                      [{ status: "to_contact" }, { status: "replied" }], null];
+
+  let cases = 0, diffs = [];
+  for (const sport of Object.keys(bySport)) {
+    const rows = bySport[sport].map((r) => ({ id: r.id, goal_type: r.goal_type, key_evidence: r.key_evidence }));
+    const types = [...new Set(rows.flatMap((r) => [r.id, r.goal_type]))].concat(["nonsense", null]);
+    for (const ty of types) for (const a of athletes) for (const b of benchSets) for (const tg of targetSets) {
+      cases++;
+      const c = JSON.stringify(clientGapFromRows(rows, ty, a, b, tg));
+      const sv = JSON.stringify(serverGapFromRows(rows, ty, a, b, tg));
+      if (c !== sv && diffs.length < 3) diffs.push(`${sport}/${ty}: client ${c} vs server ${sv}`);
+    }
+  }
+  ck("the matrix actually ran, so an empty loop cannot pass as agreement", cases > 500, true);
+  ck("CLIENT AND SERVER AGREE ON EVERY CASE", diffs, []);
+
+  // And the server is wired into the prompt, not merely present.
+  const SCOUT_SRC = SCOUT;
+  ck("Scout imports it", /import \{ gapFromRows \} from "\.\/_gap\.js";/.test(SCOUT_SRC), true);
+  ck("...reads the per-sport schema, not the cross-sport core",
+     /sportSchemaFor\(athleteRow && athleteRow\.sport\) \|\| \{\}\)\.pathways/.test(SCOUT_SRC), true);
+  ck("...over the FULL target list, not the ten shown in the prompt",
+     /gapFromRows\(sportRows, pathwayRow && pathwayRow\.pathway_type, athleteRow, allBenchmarks, allTargets\)/.test(SCOUT_SRC), true);
+  ck("...and exposes it as a result on athleteState", /\n    gap,\n/.test(SCOUT_SRC), true);
+
+  // The selects. A requirement cannot be satisfied from a column nobody reads.
+  ck("Scout reads gpa and citizenship", /select=sport,country,position,club_name,grad_year,gpa,citizenship,/.test(SCOUT_SRC), true);
+  ck("...and metric_key", /athlete_benchmarks\?user_id=eq\."[\s\S]{0,80}?select=metric,metric_key,/.test(SCOUT_SRC), true);
+
+  // THE PROMPT. The unknown list is the half that stops Scout inventing.
+  ck("the prompt states what the goal requires", /WHAT THEIR STATED GOAL REQUIRES/.test(SCOUT_SRC), true);
+  ck("...names the unseeable ones explicitly", /GOLSZ CANNOT SEE these at all/.test(SCOUT_SRC), true);
+  ck("...forbids treating them as missing", /Never tell them these are missing/.test(SCOUT_SRC), true);
+  ck("...and forbids attaching a standard to any requirement",
+     /never attach a target number or standard to any of them/.test(SCOUT_SRC), true);
+  ck("...and the block is authoritative, like the readiness block it sits beside",
+     /This list is authoritative and complete for that route/.test(SCOUT_SRC), true);
 }
 
 const JS = fs.readFileSync(path.join(REPO, "js", "app.js"), "utf8");

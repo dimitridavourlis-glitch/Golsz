@@ -74,6 +74,7 @@ import { resolveActingAthlete } from "./_acting-for.js";
 // reads a mirror rather than this binding, and for the guard at the foot of
 // this file that pins the two together.
 import { computeReadiness, DIMENSION_LABEL, SPORTS_WITHOUT_POSITION, READINESS_DIMENSIONS as PASSPORT_STRENGTH_DIMENSIONS } from "./_readiness.js";
+import { gapFromRows } from "./_gap.js";
 import { evaluateEntitlements, hasFeature, planDisplayName, FEATURE_LABEL } from "./_entitlements.js";
 // The pathway ladder the CLIENT draws for this athlete's sport, for all 40
 // sports the picker offers — not the two SPORT_SCHEMAS covers. Without it
@@ -5662,6 +5663,7 @@ async function getAthleteState(userId) {
   let allDevItems = [];
   let allBenchmarks = [];
   let targetsCount = 0;
+  let allTargets = [];
   let hasPendingVerification = false;
   let pathwayRow = null;
   let questionsUsedToday = 0;
@@ -5688,7 +5690,7 @@ async function getAthleteState(userId) {
   try {
     // Selects every field computeProfileQuality() checks — the same list
     // HomeTab fetches, so the two cannot score different things.
-    const a = await fetch(url + "/rest/v1/athletes?id=eq." + userId + "&select=sport,country,position,club_name,grad_year,recruiting_status,bio,highlights,timeline", { headers });
+    const a = await fetch(url + "/rest/v1/athletes?id=eq." + userId + "&select=sport,country,position,club_name,grad_year,gpa,citizenship,recruiting_status,bio,highlights,timeline", { headers });
     if (!a.ok) throw new Error("athletes " + a.status);
     const aRows = await a.json();
     athleteRow = Array.isArray(aRows) && aRows[0] ? aRows[0] : null;
@@ -5755,13 +5757,16 @@ async function getAthleteState(userId) {
     const t = await fetch(url + "/rest/v1/outreach_targets?user_id=eq." + userId + "&select=name,status&order=created_at.desc&limit=500", { headers });
     if (!t.ok) throw new Error("outreach_targets " + t.status);
     const tRows = await t.json();
-    if (Array.isArray(tRows)) { targetsCount = tRows.length; targets = tRows.slice(0, 10); }
+    // allTargets is the FULL list. `targets` below is sliced to 10 for the
+    // prompt, and asking the gap "has any target been contacted?" over a
+    // truncated list would answer about the first ten only.
+    if (Array.isArray(tRows)) { targetsCount = tRows.length; targets = tRows.slice(0, 10); allTargets = tRows; }
   } catch (e) { loadFailed.push("outreach_targets"); console.error("GOLSZ scout context read failed:", "outreach_targets", e && e.message); }
   // Passport performance data. Newest first, then de-duplicated per metric
   // below so Scout sees each metric's CURRENT value rather than a history —
   // "your 10m is 2.0s" must reflect the latest retest, not the first entry.
   try {
-    const b = await fetch(url + "/rest/v1/athlete_benchmarks?user_id=eq." + userId + "&select=metric,value,unit,recorded_date&order=recorded_date.desc&limit=500", { headers });
+    const b = await fetch(url + "/rest/v1/athlete_benchmarks?user_id=eq." + userId + "&select=metric,metric_key,value,unit,recorded_date&order=recorded_date.desc&limit=500", { headers });
     if (!b.ok) throw new Error("athlete_benchmarks " + b.status);
     const bRows = await b.json();
     if (Array.isArray(bRows)) {
@@ -5852,6 +5857,19 @@ async function getAthleteState(userId) {
       hasPendingVerification,
     });
   } catch (e) { console.error("GOLSZ readiness compute failed:", e && e.message); }
+  // THE REQUIREMENT GAP, from the sport's own key_evidence. Same evaluation
+  // Home and Plan run — see api/_gap.js for why only the function is shared
+  // and the data is not. Null whenever the sport or the goal is unknown: an
+  // empty verdict would read as "nothing is required of you".
+  let gap = null;
+  try {
+    // SPORT_SCHEMAS, not SPORT_CORE: core holds the cross-sport vocabulary
+    // (stages, goal_types, evidence_tiers); the per-sport pathways with their
+    // key_evidence live on the schema. sportSchemaFor() lowercases and is the
+    // only resolver, so an unknown sport yields null and no verdict.
+    const sportRows = (sportSchemaFor(athleteRow && athleteRow.sport) || {}).pathways || null;
+    gap = gapFromRows(sportRows, pathwayRow && pathwayRow.pathway_type, athleteRow, allBenchmarks, allTargets);
+  } catch (e) { console.error("GOLSZ gap compute failed:", e && e.message); }
   // FIRST NAME ONLY, and only when it looks like a name.
   //
   // Scout has never been told who it is talking to. It knew their sport,
@@ -5868,6 +5886,9 @@ async function getAthleteState(userId) {
   } catch {}
   return {
     firstName,
+    // The requirement gap, as a RESULT. Scout reports it; it does not re-form
+    // it. Same object Home and Plan render.
+    gap,
     profileComplete, pathwayCreated, baselineComplete, sportSupportLevel, sport, country,
     structuredSportKnowledge: hasStructuredSportKnowledge(sport),
     pathwayType, pathwayTimeline, milestoneCount, milestonesDone,
@@ -6673,6 +6694,30 @@ export default async function handler(req, res) {
       }
       athleteBlock += ` Supporting counts: ${rd.performance.metricsTracked} benchmark metric(s) tracked and ${rd.performance.metricsRetested} retested; ${rd.development.done}/${rd.development.total} development items done; ${rd.pathway.milestonesDone}/${rd.pathway.milestonesTotal} milestones done; ${rd.pathway.targetsCount} target(s); identity ${rd.verification.status}.`;
       athleteBlock += ` These numbers are authoritative. Never state a score that is not in this block, never invent a sixth category, and never describe their Passport in a way that contradicts these figures. When you talk about the weakest area, use the plain-language name above and say what would actually raise it.`;
+    }
+
+    // 2 — WHAT THEIR GOAL REQUIRES, AND WHAT GOLSZ CAN SEE OF IT.
+    // Same rule as the block above: Scout is handed the RESULT so it reports
+    // a diagnosis rather than forming a second one. Home and Plan draw this
+    // from the identical evaluation (api/_gap.js), so an athlete cannot read
+    // "Match minutes: not on file" on their own screen and be told something
+    // else here in the same minute.
+    //
+    // THE UNKNOWN LIST IS THE LOAD-BEARING HALF. GOLSZ has no playing-level
+    // column, no coach accounts, no trial record and no AAU record, and an
+    // LLM handed a list of requirements with no state attached will fill the
+    // silence. Naming them explicitly as unseeable is what stops Scout
+    // telling an athlete they are short of something nobody looked at.
+    const gapNow = athleteState.gap;
+    if (gapNow && gapNow.items && gapNow.items.length) {
+      const say = (keys) => keys.join(", ");
+      athleteBlock += `\n\nWHAT THEIR STATED GOAL REQUIRES (evaluated by the app against their real rows, not by you): ${gapNow.items.length} requirement(s) for the "${gapNow.pathway}" route.`;
+      athleteBlock += gapNow.present.length ? ` On file: ${say(gapNow.present)}.` : ` Nothing is on file yet.`;
+      if (gapNow.missing.length) athleteBlock += ` NOT on file: ${say(gapNow.missing)}.`;
+      if (gapNow.unknown.length) {
+        athleteBlock += ` GOLSZ CANNOT SEE these at all and has no way to check them: ${say(gapNow.unknown)}. Never tell them these are missing, never imply they fall short of them, and never score them — the product has nowhere to look, which is not the same as the athlete lacking it. If one matters, ask.`;
+      }
+      athleteBlock += ` This list is authoritative and complete for that route. Never add a requirement that is not in it, never attach a target number or standard to any of them — GOLSZ holds no benchmark standards and inventing one is the single worst thing you can do here — and never describe their position in a way that contradicts these states.`;
     }
 
     // 3 — PRECEDENCE. Scout was observed telling an athlete "your goal on
