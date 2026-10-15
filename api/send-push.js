@@ -62,6 +62,15 @@ function secretMatches(provided, expected) {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isUuid = (v) => typeof v === "string" && UUID_RE.test(v);
 
+// The trigger fires on INSERT, so a genuine call arrives within seconds of the
+// row's created_at. Ten minutes leaves room for pg_net's queue; anything older
+// is a replay of a real row, and re-sending it would be notification spam.
+const FRESH_MS = 10 * 60 * 1000;
+function isFresh(createdAt, now = Date.now()) {
+  const t = Date.parse(createdAt);
+  return Number.isFinite(t) && now - t <= FRESH_MS && t - now <= 60 * 1000;
+}
+
 async function supaSelect(supaUrl, serviceKey, path) {
   const res = await fetch(`${supaUrl}/rest/v1/${path}`, {
     headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
@@ -126,16 +135,29 @@ export default async function handler(req, res) {
         console.warn("GOLSZ send-push: non-UUID id on messages row, skipping");
         return res.status(200).json({ skipped: true, reason: "invalid_id" });
       }
-      targetUserId = record.recipient_id;
-      const [sender] = await supaSelect(supaUrl, serviceKey, `public_profile_names?id=eq.${record.sender_id}&select=full_name`);
+      // TRUST THE DATABASE, NOT THE PAYLOAD. The shared secret that guards
+      // this endpoint was committed to a public repository (see migration
+      // 126's header), so until it is rotated anyone can POST here — and the
+      // payload used to be sent as-is: any recipient, any text, on the lock
+      // screen of any GOLSZ user, admins included. Now the payload only names
+      // a row; recipient, sender and text are read back from the real row,
+      // and nothing is sent for a row that does not exist or is not fresh.
+      if (!isUuid(record.id)) return res.status(200).json({ skipped: true, reason: "invalid_id" });
+      const [row] = await supaSelect(supaUrl, serviceKey, `messages?id=eq.${record.id}&select=sender_id,recipient_id,body,created_at`);
+      if (!row || !isFresh(row.created_at)) return res.status(200).json({ skipped: true, reason: "no_such_row" });
+      targetUserId = row.recipient_id;
+      const [sender] = await supaSelect(supaUrl, serviceKey, `public_profile_names?id=eq.${row.sender_id}&select=full_name`);
       title = "New message";
-      body = `${(sender && sender.full_name) || "Someone"}: ${String(record.body || "").slice(0, 120)}`;
+      body = `${(sender && sender.full_name) || "Someone"}: ${String(row.body || "").slice(0, 120)}`;
       url = "/golsz-app.html?page=messages";
     } else if (table === "follows") {
       if (!isUuid(record.followed_id) || !isUuid(record.follower_id)) {
         console.warn("GOLSZ send-push: non-UUID id on follows row, skipping");
         return res.status(200).json({ skipped: true, reason: "invalid_id" });
       }
+      // Same rule as messages: the follow must really exist, and be new.
+      const [row] = await supaSelect(supaUrl, serviceKey, `follows?follower_id=eq.${record.follower_id}&followed_id=eq.${record.followed_id}&select=created_at`);
+      if (!row || !isFresh(row.created_at)) return res.status(200).json({ skipped: true, reason: "no_such_row" });
       targetUserId = record.followed_id;
       const [follower] = await supaSelect(supaUrl, serviceKey, `public_profile_names?id=eq.${record.follower_id}&select=full_name`);
       title = "New follower";
@@ -166,6 +188,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ sent: results.filter((r) => r.status === "fulfilled").length, total: subs.length });
   } catch (e) {
     await logError("api/send-push.js", "Push send handling failed", { detail: String(e), table });
-    return res.status(500).json({ error: "Push send handling failed", detail: String(e) });
+    return res.status(500).json({ error: "Push send handling failed" });
   }
 }

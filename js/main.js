@@ -162,16 +162,25 @@
       return;
     }
 
+    // AN ELEMENT TALLER THAN ABOUT 8 SCREENS CAN NEVER BE 12% VISIBLE, so a
+    // 0.12 threshold alone never fires for it and it stays at opacity 0 for
+    // good. That is exactly what happened to the terms and privacy bodies:
+    // terms.html rendered as a header over an empty page on every screen size
+    // (privacy.html on phones), on the one page signup links to for consent.
+    // The 0 threshold catches first contact; tall elements reveal on it,
+    // everything else still waits for 12%.
     var observer = new IntersectionObserver(
       function (entries) {
         entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
+          if (!entry.isIntersecting) return;
+          var tall = entry.rootBounds && entry.boundingClientRect.height > entry.rootBounds.height;
+          if (tall || entry.intersectionRatio >= 0.12) {
             entry.target.classList.add("is-visible");
             observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
+      { threshold: [0, 0.12], rootMargin: "0px 0px -40px 0px" }
     );
 
     items.forEach(function (el) { observer.observe(el); });

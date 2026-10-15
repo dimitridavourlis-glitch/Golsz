@@ -58,8 +58,15 @@
       <a href="about.html#how-it-works" class="nav-link">How it works</a>
       <a href="index.html#pricing" class="nav-link">Pricing</a>
       <a href="about.html#about-section" class="nav-link">About</a>
+      <a href="contact.html" class="nav-link" data-page="contact.html">Contact</a>
     </nav>
-    <!-- Sign in and Start free both open the app, which shows either form.
+    <!-- ONE HEADER, BYTE FOR BYTE, ON EVERY MARKETING PAGE (index, about,
+         contact, terms, privacy); tests/test_legal_consistency.cjs diffs
+         them. contact/terms/privacy used to carry an older header whose Feed
+         and Discover links pointed at app pages that are switched off, so
+         they silently landed on Home. Contact carries data-page so
+         initActiveNav() in js/main.js still highlights it on contact.html.
+         Sign in and Start free both open the app, which shows either form.
          Previously "Home", "App" and "Launch the app" all pointed at
          overlapping destinations and competed for the same click. -->
     <a href="golsz-app.html?mode=login" class="nav-link nav-signin">Sign in</a>
@@ -74,6 +81,7 @@
       <a href="about.html#how-it-works" class="nav-link">How it works</a>
       <a href="index.html#pricing" class="nav-link">Pricing</a>
       <a href="about.html#about-section" class="nav-link">About</a>
+      <a href="contact.html" class="nav-link" data-page="contact.html">Contact</a>
       <a href="golsz-app.html?mode=login" class="nav-link">Sign in</a>
       <a href="golsz-app.html" class="btn btn-primary btn-block">Start free</a>
     </nav>
@@ -147,7 +155,7 @@
           <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Club or school team</b><span>Regular competitive minutes at your level.</span></div></li>
           <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Verified benchmarks</b><span>Measured, dated, and recorded with how they were taken.</span></div></li>
           <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Summer showcase</b><span>An event where D1 staff actually attend.</span></div></li>
-          <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Target list &amp; outreach</b><span>Programmes matched to your level. You send the emails &mdash; Scout drafts them and tracks who replied.</span></div></li>
+          <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Target list &amp; outreach</b><span>Programmes matched to your level. You send the emails &mdash; Scout drafts them; you log who replied.</span></div></li>
           <li class="lx-rstop is-in is-goal"><span class="lx-rdot"></span><div><b>NCAA D1 roster</b><span>The goal you named.</span></div></li>
         </ol>
         <div class="lx-next" data-next>
@@ -194,7 +202,7 @@
                 <p class="lx-pp-name">Rosa Milanovi&#263;</p>
                 <p class="lx-pp-sub">Soccer &middot; Centre Back</p>
                 <dl class="lx-pp-meta">
-                  <div><dt>Club</dt><dd>CS Saint-Laurent</dd></div>
+                  <div><dt>Club</dt><dd>AC Exemple</dd></div>
                   <div><dt>Passport no.</dt><dd>GLS&middot;CA&middot;2027&middot;4B1D9</dd></div>
                 </dl>
               </div>
@@ -214,7 +222,7 @@
               <p class="lx-pp-mrz">GLS&lt;CA&lt;2027&lt;4B1D9&lt;ROSAMILANOVIC&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</p>
             </div>
           </div>
-          <figcaption>A sample Passport. Rosa is invented; the card is the real one.</figcaption>
+          <figcaption>A sample Passport. Rosa and her club are invented; the card is the real one.</figcaption>
         </figure>
 
         <div class="lx-showcase-copy reveal">
@@ -260,7 +268,14 @@
        This comment used to cite planFromAmount(), which no longer exists:
        deciding a plan from how much was paid was removed precisely because
        tax, coupons and proration move the amount without changing the
-       product. See the header of api/_plan-catalog.js. -->
+       product. See the header of api/_plan-catalog.js.
+
+       WHAT EACH CARD LISTS must match FEATURE_MIN_PLAN in api/_entitlements.js,
+       which is what actually gates the app: pathway_plan, targets (outreach
+       tracking), benchmarks and pdf_export unlock at Basic ("starter");
+       readiness (the Passport Strength breakdown) and development_plan at Pro.
+       Pro used to list "Outreach tracking & follow-ups", which Basic already
+       unlocks. Scout allowances are the daily limits in api/scout.js. -->
   <section class="section-pad" style="background: var(--charcoal); border-top:1px solid var(--border-strong); border-bottom:1px solid var(--border-strong);" id="pricing">
     <div class="container">
       <div class="reveal text-center mx-auto" style="max-width: 620px;">
@@ -290,7 +305,7 @@
           <ul class="plan-feats">
             <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Everything in Free</span></li>
             <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Personalised pathway &amp; milestones</span></li>
-            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Target schools &amp; clubs</span></li>
+            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Target list &amp; outreach tracking</span></li>
             <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Benchmark tracking</span></li>
             <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>PDF Passport export</span></li>
           </ul>
@@ -314,7 +329,6 @@
             <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Everything in Basic</span></li>
             <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Training &amp; development plan</span></li>
             <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Full Passport Strength breakdown</span></li>
-            <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>Outreach tracking &amp; follow-ups</span></li>
           </ul>
           <p class="plan-scout">15 Scout questions/day</p>
           <a href="golsz-app.html?plan=pro" class="btn btn-primary">Choose Pro</a>

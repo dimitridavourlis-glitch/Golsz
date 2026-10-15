@@ -58,40 +58,148 @@ console.log("\n-- cancelling must be possible, and downgrading must not fake it 
      isLivePortalLink("https://billing.stripe.com.evil.tld/p/login/abc"), false);
   ck("http is refused", isLivePortalLink("http://billing.stripe.com/p/login/abc"), false);
   ck("empty is refused rather than treated as a link", isLivePortalLink(""), false);
-  // THESE TWO USED TO ASSERT "a portal link is configured", AND THAT WAS
-  // FALSE. STRIPE_PORTAL_LINK held the CAD Basic Payment Link's id on the
-  // billing host — it had the right shape and pointed nowhere, so both
-  // assertions passed while every subscriber who tried to cancel hit a dead
-  // URL. A test that confirms a string's shape cannot tell you the string is
-  // correct.
-  //
-  // What is asserted now is the property that holds in BOTH states and is the
-  // one that actually protects an athlete: whatever stripePortalLink() returns
-  // is either a genuine portal link or null — never a payment link wearing a
-  // portal's prefix. Null is handled everywhere by telling them how to cancel.
-  const portalNow = stripePortalLink();
-  ck("the portal gate never hands back a payment link dressed as a portal",
-     portalNow === null || /^https:\/\/billing\.stripe\.com\/p\/login\/[A-Za-z0-9]+$/.test(portalNow), true);
-  ck("...and a payment-link id on the billing host is refused",
-     isLivePortalLink("https://billing.stripe.com/p/login/" + (STRIPE_LINKS.cad && STRIPE_LINKS.cad.starter || "").split("/").pop()), false);
+  // THE CONFIGURED PORTAL LINK IS CORRECT, AND THE APP USED TO REFUSE IT.
+  // isLivePortalLink() rejected any portal id that also appeared in
+  // STRIPE_LINKS, on the theory that a shared id meant a payment link pasted
+  // onto the billing host. Verified against the live account on 2026-10-09:
+  // the portal configuration's login_page.url IS
+  // billing.stripe.com/p/login/bJe5kF64dalzdgrcbMaEE00, and the CAD Basic
+  // Payment Link is buy.stripe.com/bJe5kF64dalzdgrcbMaEE00 — Stripe reuses
+  // the short code across the two hosts. So the "safety" check returned null
+  // for the real portal and disabled Manage billing and cancellation for
+  // every subscriber.
+  const configuredPortal = (APP.match(/const STRIPE_PORTAL_LINK = "([^"]*)"/) || [])[1] || "";
+  ck("the configured portal link is accepted", isLivePortalLink(configuredPortal), true);
+  ck("...and stripePortalLink() hands it back", stripePortalLink(), configuredPortal);
+  ck("...even though its short code also names a Payment Link (Stripe reuses them)",
+     Object.values(STRIPE_LINKS).some((byPlan) => Object.values(byPlan).some((l) => l.endsWith("/" + configuredPortal.split("/").pop()))), true);
+  ck("...while a test_ portal link is still refused",
+     isLivePortalLink(configuredPortal.replace("/p/login/", "/p/login/test_")), false);
+  ck("...and the same code on the payment host is still not a portal",
+     isLivePortalLink(configuredPortal.replace("billing.stripe.com/p/login", "buy.stripe.com")), false);
 
   // Ordering, not adjacency: the guard must stand BETWEEN entering the "free"
   // branch and the write. Asserting the two strings merely exist would pass
   // with the guard sitting uselessly after the update.
-  const fn = APP.slice(APP.indexOf("async function choosePlan("), APP.indexOf("async function choosePlan(") + 2200);
-  const guard = fn.indexOf("if (stripeCustomerId)");
+  const fn = APP.slice(APP.indexOf("async function choosePlan("), APP.indexOf("async function toggleNotifs("));
+  const guard = fn.indexOf('if (route === "portal")');
   const write = fn.indexOf('update({ plan: "free" })');
   ck("the free branch still performs a plan write at all", write > -1, true);
   ck("...and the billing guard exists", guard > -1, true);
   ck("...and the guard comes BEFORE the write", guard > -1 && guard < write, true);
+  ck("...and the write is only reached on the 'downgrade' route",
+     fn.lastIndexOf('if (route === "downgrade")', write) > guard, true);
   ck("...and it can send the user to the real portal", /stripePortalLink\(\)/.test(fn), true);
   ck("...and refuses to downgrade when no portal is configured yet",
      /settings_plan_cancel_via_stripe/.test(fn), true);
+  ck("choosePlan routes through planChoiceRoute with the plan AND the customer",
+     /planChoiceRoute\(planId, currentPlan, stripeCustomerId\)/.test(fn), true);
+  ck("...and an active subscriber switching tier is told how, not sent anywhere",
+     /route === "contact"\) \{[\s\S]{0,400}?settings_plan_switch_contact[\s\S]{0,40}?return;/.test(fn), true);
+}
 
-  // The signal is a Stripe customer, NOT plan !== "free" — an admin-granted
-  // paid plan has no subscription behind it and must stay downgradeable.
-  ck("the guard keys on a Stripe customer, not on the plan name",
-     /if \(stripeCustomerId\)/.test(fn) && !/plan !== "free"/.test(fn), true);
+console.log("\n-- planChoiceRoute: active vs lapsed vs never-paid --");
+// THE ROUTING TABLE. "Has a Stripe customer" used to stand in for "has a
+// subscription", and the webhook never clears the id — so a LAPSED subscriber
+// (cancelled, back on free) was sent to the portal to upgrade, which cannot
+// start a subscription, and an ACTIVE one choosing another tier was sent to a
+// portal whose plan switching is disabled.
+{
+  const R = planChoiceRoute;
+  const CUS = "cus_123";
+  ck("never paid, free -> Pro: checkout", R("pro", "free", null), "checkout");
+  ck("LAPSED (old customer, free) -> Pro: checkout, NOT the portal", R("pro", "free", CUS), "checkout");
+  ck("ACTIVE Basic -> Pro: contact (portal cannot switch, a link would double-bill)", R("pro", "starter", CUS), "contact");
+  ck("ACTIVE Elite -> Basic: contact", R("starter", "elite", CUS), "contact");
+  ck("ACTIVE Pro -> Free: portal (cancel for real)", R("free", "pro", CUS), "portal");
+  ck("admin-granted Pro with no customer -> Free: plain downgrade", R("free", "pro", null), "downgrade");
+  ck("admin-granted Pro with no customer -> Elite: checkout", R("elite", "pro", null), "checkout");
+  ck("same tier: current", R("pro", "pro", CUS), "current");
+  // Unknown plan + a customer id: never risk a second subscription.
+  ck("customer id, plan not loaded -> Pro: contact, never checkout", R("pro", null, CUS), "contact");
+  ck("hasActiveSubscription: customer + paid", hasActiveSubscription("pro", CUS), true);
+  ck("hasActiveSubscription: customer + free (lapsed)", hasActiveSubscription("free", CUS), false);
+  ck("hasActiveSubscription: no customer", hasActiveSubscription("elite", null), false);
+
+  // Every entry point uses it. GuidedAssessment had NO billing check at all.
+  const picker = APP.slice(APP.indexOf("function usePlanPicker("), APP.indexOf("function UpgradeScreen("));
+  ck("the shared picker reads plan AND customer", /select\("plan, stripe_customer_id"\)/.test(picker), true);
+  ck("...routes through planChoiceRoute", /planChoiceRoute\(planId, billing\.plan, billing\.customer\)/.test(picker), true);
+  ck("...never checks out while billing is unknown", /if \(!billing\) \{[^\n]*return; \}/.test(picker), true);
+  ck("...and attributes checkout to the user", /client_reference_id", uid\)/.test(picker), true);
+  const upgrade = APP.slice(APP.indexOf("function UpgradeScreen("), APP.indexOf("function EliteWelcome("));
+  const guided = APP.slice(APP.indexOf("function GuidedAssessment("), APP.indexOf("\nconst CSS = `"));
+  for (const [name, src] of [["UpgradeScreen", upgrade], ["GuidedAssessment", guided]]) {
+    ck(`${name} uses the shared picker`, /usePlanPicker\(uid\)/.test(src) && /onClick=\{\(\) => pick\(pl\.id\)\}/.test(src), true);
+    ck(`...and no longer builds a checkout URL of its own`, /stripeLinkFor\(/.test(src), false);
+    ck(`...and shows the picker's message rather than returning silently`, /\{msg && <div role="alert"/.test(src), true);
+  }
+  ck("UpgradeScreen no longer sends a billing customer to the portal to change tier",
+     /stripePortalLink\(\)/.test(upgrade), false);
+}
+
+console.log("\n-- deleting an account: ACTIVE subscription, not \"ever paid\" --");
+{
+  const del = APP.slice(APP.indexOf("async function deleteAccount("), APP.indexOf("async function deleteAccount(") + 3500);
+  ck("the client gate is an active subscription, not the bare customer id",
+     /if \(hasActiveSubscription\(currentPlan, stripeCustomerId\)\) \{\s*setDeleteErr\(t\("settings_delete_cancel_first"\)\);/.test(del), true);
+  ck("...the old customer-id-only gate is gone", /if \(stripeCustomerId\) \{\s*setDeleteErr/.test(del), false);
+  ck("...and the gate comes before the request",
+     del.indexOf("hasActiveSubscription(") < del.indexOf('fetch("/api/delete-account"'), true);
+  ck("the server's 409 active_subscription is shown as the same message",
+     /data\.code === "active_subscription"\) \{\s*setDeleteErr\(t\("settings_delete_cancel_first"\)\);/.test(del), true);
+}
+
+console.log("\n-- signup with an email that already has an account --");
+// With email confirmation on, Supabase answers with a user whose identities
+// array is empty and NO error. The app said "Account created" and, on a paid
+// plan, opened checkout attributed to that phantom user id — a payment the
+// webhook could never match to an account.
+{
+  eval(APP.slice(APP.indexOf("function signupHitExistingAccount("), APP.indexOf("function Auth(")));
+  ck("an empty identities array is an existing account",
+     signupHitExistingAccount({ user: { id: "x", identities: [] } }), true);
+  ck("a real new user is not", signupHitExistingAccount({ user: { id: "x", identities: [{ id: "i" }] } }), false);
+  ck("no identities field at all is not (do not guess)", signupHitExistingAccount({ user: { id: "x" } }), false);
+  ck("no user is not", signupHitExistingAccount({ user: null }), false);
+  // Auth up to its CTA label: exactly the two signUp() calls in submit().
+  const submit = APP.slice(APP.indexOf("function Auth("), APP.indexOf("  const cta = confirmPolling"));
+  const signUps = [...submit.matchAll(/await sb\.auth\.signUp\(/g)].map((m) => m.index);
+  ck("both signup branches were found", signUps.length, 2);
+  for (const [i, at] of signUps.entries()) {
+    const after = submit.slice(at);
+    const check = after.indexOf("if (signupHitExistingAccount(data)) {");
+    const checkout = after.indexOf("new URL(stripeLinkFor(plan, currency))");
+    ck(`branch ${i + 1}: checked before any checkout URL is built`, check > -1 && check < checkout, true);
+    const block = after.slice(check, check + 300);
+    ck(`branch ${i + 1}: closes the pre-opened checkout tab`, /checkoutTab\.close\(\)/.test(block), true);
+    ck(`branch ${i + 1}: says so, translated, and stops`,
+       /setErr\(t\("auth_email_already_registered"\)\);\s*return;/.test(block), true);
+  }
+}
+
+console.log("\n-- admin ban/delete of a subscriber --");
+{
+  const admin = APP.slice(APP.indexOf("async function callAdminUserAction("), APP.indexOf("async function loadEvents("));
+  ck("a 409 active_subscription asks the admin to cancel in Stripe first",
+     /res\.status === 409 && data && data\.code === "active_subscription"[\s\S]{0,200}window\.confirm\(msg\)/.test(admin), true);
+  ck("...and only an explicit yes retries with billingAcknowledged",
+     /if \(!window\.confirm\(msg\)\) return null;\s*return callAdminUserAction\(action, targetId, true\);/.test(admin), true);
+  ck("...the flag is a strict boolean on the wire", /billingAcknowledged: billingAcknowledged === true/.test(admin), true);
+  ck("a declined confirmation does not report success",
+     /if \(await callAdminUserAction\(val \? "ban" : "unban", id\)\) loadUsers/.test(admin) &&
+     /if \(!\(await callAdminUserAction\("delete", id\)\)\) return;/.test(admin), true);
+}
+
+console.log("\n-- new copy exists in all four languages --");
+for (const key of ["settings_plan_switch_contact", "auth_email_already_registered", "admin_billing_cancel_first", "guided_locked_pathway"]) {
+  ck(`${key} x4`, (APP.match(new RegExp("\\b" + key + ": \"", "g")) || []).length, 4);
+}
+ck("the contact copy names the support address in every language",
+   (APP.match(/settings_plan_switch_contact: "[^"]*hello@golsz\.com/g) || []).length, 4);
+ck("the admin copy carries the customer placeholder in every language",
+   (APP.match(/admin_billing_cancel_first: "[^"]*\{customer\}/g) || []).length, 4);
+{
 
   // The Manage-billing affordance is what makes "Cancel any time" true.
   // Structural, not proximity. The first version of this used a 400-character
@@ -232,40 +340,22 @@ ck("it binds the Stripe customer on a completed checkout",
 ck("...and sets the plan only when one resolved", /if \(plan\) patch\.plan = plan;/.test(WEBHOOK), true);
 ck("it drops back to free on cancellation", /\{ plan: "free", payment_past_due: false \}/.test(WEBHOOK), true);
 
-console.log("\n-- the portal link is a portal, not a payment link --");
-// STRIPE_PORTAL_LINK has been the CAD Basic PAYMENT LINK id pasted onto
-// billing.stripe.com. The same 24-character base62 id appears in both, which
-// across two independent Stripe object namespaces is not coincidence. It is
-// the ONLY cancel path — Settings' "Manage billing" and choosePlan("free")
-// both redirect to it, and index.html promises "Cancel any time" — so every
-// subscriber who tried to cancel hit a dead URL.
-//
-// isLivePortalLink only checks the billing.stripe.com prefix and the absence
-// of /test_, so it passes a payment link id happily. This is the check that
-// would have caught it.
+console.log("\n-- the portal link is the live portal --");
+// This block used to assert that the app REFUSED STRIPE_PORTAL_LINK because
+// its id also appears in STRIPE_LINKS, and printed a NOTE telling the owner to
+// paste "the real" link. The link was real all along: Stripe reuses one short
+// code across billing.stripe.com and buy.stripe.com (checked against the live
+// account, 2026-10-09). The refusal is gone; what stays pinned is that the
+// id-comparison does not come back.
 {
   const portal = (APP.match(/const STRIPE_PORTAL_LINK = "([^"]*)"/) || [])[1] || "";
   ck("the portal link was found", portal.length > 20, true);
-  const portalId = portal.split("/").filter(Boolean).pop() || "";
-  ck("...and it has an id segment", portalId.length > 8, true);
-  // Every buy.stripe.com id in the catalogue, across all currencies.
+  ck("...on the billing host's login path", /^https:\/\/billing\.stripe\.com\/p\/login\/[A-Za-z0-9]+$/.test(portal), true);
+  ck("the payment-link id comparison is gone from isLivePortalLink",
+     /Object\.values\(STRIPE_LINKS \|\| \{\}\)\.some/.test(APP), false);
   const payIds = [...APP.matchAll(/https:\/\/buy\.stripe\.com\/([A-Za-z0-9_]+)/g)].map((m) => m[1]);
   ck("the payment-link catalogue was found", payIds.length >= 3, true);
-  // THE LINK IS STILL WRONG — only the Stripe Dashboard can fix that. What is
-  // asserted here is that the app REFUSES it rather than sending an athlete to
-  // a dead URL: isLivePortalLink now rejects any id that also appears in
-  // STRIPE_LINKS, so stripePortalLink() returns null and every caller falls
-  // back to telling them how to cancel. A wrong URL is worse than an absent
-  // one. When the real portal link is pasted in, this flips on its own.
-  ck("a payment-link id is refused as a portal link",
-     /Object\.values\(STRIPE_LINKS \|\| \{\}\)\.some/.test(APP), true);
-  if (payIds.includes(portalId)) {
-    console.log("   NOTE: STRIPE_PORTAL_LINK is still a payment-link id (" + portalId + ").");
-    console.log("         The app refuses it and tells athletes how to cancel, but nobody can");
-    console.log("         cancel IN the app until the real portal link is pasted at STRIPE_PORTAL_LINK.");
-  }
-  ck("...and every payment link id is distinct",
-     new Set(payIds).size, payIds.length);
+  ck("...and every payment link id is distinct", new Set(payIds).size, payIds.length);
 }
 
 console.log(`\n${p}/${p + f} passed`);

@@ -116,6 +116,22 @@ async function patchProfile(supaUrl, serviceKey, targetId, body) {
   return rows;
 }
 
+// BAN AND DELETE DO NOT TOUCH STRIPE. This app holds no Stripe secret key, so
+// a subscriber banned or deleted here keeps being charged until someone
+// cancels in the Stripe Dashboard. Returns the target's billing when it has an
+// ACTIVE subscription (a Stripe customer AND a plan that is not free), else
+// null. Throws when it cannot tell, so the caller fails closed.
+async function activeSubscriptionOf(supaUrl, serviceKey, targetId) {
+  const r = await fetch(`${supaUrl}/rest/v1/profiles?id=eq.${targetId}&select=plan,stripe_customer_id`, {
+    headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+  });
+  if (!r.ok) throw new Error(`billing lookup failed: ${r.status}`);
+  const rows = await r.json();
+  const row = Array.isArray(rows) ? rows[0] : null;
+  if (!row || !row.stripe_customer_id || row.plan === "free") return null;
+  return { plan: row.plan || null, stripe_customer_id: row.stripe_customer_id };
+}
+
 // Writes directly via service role (bypasses RLS the same way every
 // other write in this function does) rather than the log_admin_action()
 // RPC — that RPC exists for the client-side admin actions, which don't
@@ -232,7 +248,7 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: "Admins only." });
   }
 
-  const { action, targetId } = req.body || {};
+  const { action, targetId, billingAcknowledged } = req.body || {};
   // targetId gets embedded directly into an Admin API URL path and a
   // PostgREST filter below — validating it's actually a UUID first (not
   // just "a string") closes off any path-traversal/filter-injection
@@ -253,6 +269,27 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Cannot act on your own account this way." });
   }
 
+  // An active subscriber can only be banned or deleted once the admin has
+  // confirmed billing is handled in Stripe (the Admin Panel asks, then
+  // retries with billingAcknowledged: true). The 409 changes nothing.
+  if ((action === "ban" || action === "delete") && billingAcknowledged !== true) {
+    let billing;
+    try {
+      billing = await activeSubscriptionOf(supaUrl, serviceKey, targetId);
+    } catch (e) {
+      await logError("api/admin-user-action.js", "Could not check target billing", { detail: String(e), action, targetId });
+      return res.status(503).json({ error: "Could not check this account's subscription right now. Try again." });
+    }
+    if (billing) {
+      return res.status(409).json({
+        error: "This account has an active subscription. Cancel it in the Stripe Dashboard first.",
+        code: "active_subscription",
+        plan: billing.plan,
+        stripe_customer_id: billing.stripe_customer_id,
+      });
+    }
+  }
+
   try {
     if (action === "ban" || action === "unban") {
       // ban_duration is Supabase Admin API's real, auth-layer ban — unlike
@@ -267,7 +304,7 @@ export default async function handler(req, res) {
       });
       if (!banRes.ok) throw new Error(`Auth API ban update failed (${banRes.status})`);
       await patchProfile(supaUrl, serviceKey, targetId, { is_banned: action === "ban" });
-      await logAdminAction(supaUrl, serviceKey, callerId, action, targetId);
+      await logAdminAction(supaUrl, serviceKey, callerId, action, targetId, billingAcknowledged === true ? { billing_acknowledged: true } : null);
       return res.status(200).json({ ok: true });
     }
 
@@ -288,7 +325,7 @@ export default async function handler(req, res) {
         headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
       });
       if (!delRes.ok) throw new Error(`Auth API user delete failed (${delRes.status})`);
-      await logAdminAction(supaUrl, serviceKey, callerId, "delete", targetId);
+      await logAdminAction(supaUrl, serviceKey, callerId, "delete", targetId, billingAcknowledged === true ? { billing_acknowledged: true } : null);
       return res.status(200).json({ ok: true });
     }
 

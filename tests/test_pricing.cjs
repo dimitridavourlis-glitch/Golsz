@@ -209,7 +209,33 @@ ck("display names unchanged", PLANS.map((x) => x.name), ["Free", "Basic", "Pro",
 // verification", which FEATURE_MIN_PLAN does not gate and <VerificationRequest>
 // does not check, so every Free athlete already had it. Selling it as a Pro
 // unlock was the claim, not the feature. The i18n key is deliberately kept.
-ck("feature-key lists unchanged in length", PLANS.map((x) => x.featKeys.length), [4, 4, 5, 2]);
+// ...and from 5 to 4 on 2026-10-09: plan_pro_feat5 ("Richer target tracking &
+// outreach follow-ups") described targets, which FEATURE_MIN_PLAN gates at
+// "starter" — Basic already had all of it. Same rule as feat6 above.
+ck("feature-key lists unchanged in length", PLANS.map((x) => x.featKeys.length), [4, 4, 4, 2]);
+ck("Pro does not sell target tracking, which is a Basic feature",
+   PLANS.find((x) => x.id === "pro").featKeys.includes("plan_pro_feat5") && FEATURE_MIN_PLAN.targets === "starter", false);
+
+console.log("\n-- the plan cards say what the code gates --");
+{
+  const en = APP.slice(APP.indexOf("const I18N = {"), APP.indexOf("\n  fr: {"));
+  const str = (k) => ((en.match(new RegExp("\\b" + k + ': "([^"]*)"')) || [])[1] || null);
+  // A popularity claim with zero sales. index.html dropped it for the same reason.
+  ck("Pro's tag is not a popularity claim", /popular/i.test(str("plan_pro_tag") || ""), false);
+  ck("...in any language", (APP.match(/plan_pro_tag: "(Most popular|Le plus populaire|Más popular|Δημοφιλέστερο)"/g) || []).length, 0);
+  ck("Pro does not promise 'progress reviews' (no such feature)", /progress review/i.test(str("plan_pro_feat3") || ""), false);
+  // My Next Move renders on Home for every plan; FEATURE_MIN_PLAN has no key for it.
+  ck("My Next Move is not gated", "next_move" in FEATURE_MIN_PLAN, false);
+  ck("...so the Free card lists it", /My Next Move/.test(str("plan_free_feat4") || ""), true);
+  ck("...and the Basic card does not", PLANS.find((x) => x.id === "starter").featKeys.some((k) => /My Next Move/.test(str(k) || "")), false);
+  ck("...and the guided 'locked' tiles do not include it",
+     /key: "next_move" \}/.test(APP.slice(APP.indexOf("const LOCKED_TILES = ["), APP.indexOf("const LOCKED_TILES = [") + 400)), false);
+  ck("...nor does the guided 'ready to unlock' line", /My Next Move/.test(str("guided_ready_body") || ""), false);
+  // Basic's card names every feature gated at "starter".
+  const basic = PLANS.find((x) => x.id === "starter").featKeys.map(str).join(" | ");
+  ck("Basic names the Pathway, benchmarks, target outreach + reminders and PDF export",
+     [/Pathway/, /benchmark/i, /outreach tracking/i, /follow-up reminders/i, /PDF/].map((re) => re.test(basic)), [true, true, true, true, true]);
+}
 // No plan may advertise something FEATURE_MIN_PLAN does not gate. This is the
 // assertion that would have caught it, and it is the reason the count above
 // is allowed to change when a claim is withdrawn.
