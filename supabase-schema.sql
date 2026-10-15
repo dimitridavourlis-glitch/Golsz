@@ -6282,8 +6282,170 @@ begin
 end $$;
 
 -- ============================================================
--- 144) ACCESS HARDENING (written 2026-10-09)
--- supabase-migration-144-access-hardening.sql
+-- 114 / 128 / 131) COLUMNS THE CLIENT SELECTS THAT THIS FILE OMITTED
+--
+-- Found 2026-10-10 while auditing against the Athlete Direction System brief.
+-- All three were applied to production long ago and none appeared here, even
+-- after the 2026-09-20 pass that added sections 136-143 — that pass caught up
+-- on the NEWEST migrations and never checked the older ones, and the guard
+-- written alongside it (tests/test_schema_reference_current.cjs) asserted only
+-- that the newest migration NUMBER is mentioned, not that any column exists.
+-- So the guard passed while three columns the client reads were missing.
+--
+-- WHY THIS IS NOT COSMETIC. Migration 131 spells out the cost in its own
+-- header: PostgREST rejects an ENTIRE select for one unknown column. A profile
+-- read that asks for full_access against a database built from this file does
+-- not come back degraded — it fails completely. Anyone standing up a fresh
+-- environment from this reference would get an app that cannot load a profile,
+-- a pathway stage, or a benchmark's metric key.
+-- ============================================================
+
+-- 114 — benchmark protocol capture. See supabase-migration-114-benchmark-protocol.sql.
+alter table athlete_benchmarks add column if not exists metric_key text;
+alter table athlete_benchmarks add column if not exists protocol jsonb;
+create index if not exists athlete_benchmarks_metric_key_idx
+  on athlete_benchmarks (metric_key) where metric_key is not null;
+
+-- 128 — per-athlete custom pathway stages. See supabase-migration-128-custom-pathway-stages.sql.
+alter table pathway_plan add column if not exists stages jsonb not null default '[]'::jsonb;
+alter table pathway_plan add column if not exists current_stage_id text;
+
+-- 131 — full_access, read on every profile select. See supabase-migration-131-full-access.sql.
+alter table public.profiles
+  add column if not exists full_access boolean not null default false;
+
+-- 144 — athlete_actions: the one action table Home, Plan and Scout share.
+-- Applied 2026-10-13. See supabase-migration-144-athlete-actions.sql for the
+-- cutover plan; the backfill is 144b and is NOT run yet, so nothing reads this
+-- table in production. status holds only what cannot be derived —
+-- upcoming/today/overdue are due_on read against today, never stored.
+create table if not exists public.athlete_actions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  title text not null,
+  description text,
+  reason text,
+  category text not null default 'other',
+  stage_id text,
+  due_on date,
+  due_src text,
+  completed_at timestamptz,
+  status text not null default 'open',
+  evidence_note text,
+  priority smallint not null default 0,
+  created_by text not null default 'athlete',
+  legacy_milestone_id text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint athlete_actions_status_check check (status in ('open', 'completed', 'dropped')),
+  constraint athlete_actions_category_check check (category in (
+    'training', 'recovery', 'testing', 'film', 'outreach', 'academic',
+    'recruiting', 'application', 'competition', 'profile', 'other')),
+  constraint athlete_actions_due_src_check check (due_src is null or due_src in ('scout', 'retest')),
+  constraint athlete_actions_created_by_check check (created_by in ('athlete', 'scout', 'golsz')),
+  constraint athlete_actions_completed_coherent check ((status = 'completed') = (completed_at is not null))
+);
+-- Self-only, all four verbs. RLS is enabled on the table.
+
+-- 152 — sync_athlete_actions(): reconciles athlete_actions with
+-- pathway_plan.milestones for the CALLING athlete only. Applied 2026-10-14.
+-- Atomic and idempotent, so the client needs no cache, no queue and no
+-- diffing; see supabase-migration-152-sync-actions.sql for why a client-side
+-- dual-write was designed and then rejected. Takes NO arguments — there is no
+-- user_id to forge. Keeps the FIRST completed_at via coalesce. Marks vanished
+-- steps 'dropped' rather than deleting them. security definer, search_path
+-- pinned to (public, pg_temp), execute revoked from public and anon and
+-- granted only to authenticated.
+--
+-- The full body lives in the migration. Repeating it here would create a
+-- second definition that silently drifts from the one the database runs.
+
+-- 153 — athlete_actions.last_reminded_at + athlete_actions_reminder_idx.
+-- Applied 2026-10-14. NULL means never reminded and is never backfilled, so a
+-- step already overdue when this shipped still gets its first nudge. The
+-- partial index carries the rule the cron enforces: only steps with
+-- due_src IS NULL are reminded, because GOLSZ does not call an athlete late
+-- on a date it chose for them.
+alter table public.athlete_actions
+  add column if not exists last_reminded_at timestamptz;
+create index if not exists athlete_actions_reminder_idx
+  on public.athlete_actions (due_on, last_reminded_at)
+  where status = 'open' and due_on is not null and due_src is null;
+
+-- 154 — athletes.show_benchmarks / show_timeline, and get_public_passport_by_token
+-- extended to carry benchmarks (WITH their stated method) and the career
+-- timeline. Applied 2026-10-14.
+--
+-- Both flags default FALSE on purpose. Share tokens already existed; defaulting
+-- on would have made every link an athlete sent BEFORE this feature start
+-- revealing more than it did when they sent it. Verified after applying:
+-- 0 athletes opted in across 15 athletes and 4 live links.
+--
+-- A section the athlete has not shared returns NULL, not an empty array, so a
+-- reader can tell "not shared" from "none recorded". The function body lives in
+-- the migration; repeating it here would create a second definition that drifts
+-- from the one the database runs.
+alter table public.athletes
+  add column if not exists show_benchmarks boolean not null default false,
+  add column if not exists show_timeline   boolean not null default false;
+
+-- 150 — profiles.availability_status / _since / _expected_return / _note, and
+-- two new athlete_outcomes types. Applied 2026-10-14.
+--
+-- Three self-reported states (available | limited | out). NO diagnosis, body
+-- part, severity or prognosis: GOLSZ is not a clinical system. NULL means NOT
+-- RECORDED and is never backfilled to 'available' — an athlete who never
+-- answered has not said they are fit. A date cannot exist without a status;
+-- the second CHECK enforces that. The expected-return column is named for
+-- whose estimate it is.
+alter table public.profiles
+  add column if not exists availability_status text,
+  add column if not exists availability_since date,
+  add column if not exists availability_expected_return date,
+  add column if not exists availability_note text;
+
+-- 155 — sync_athlete_actions() seeds athlete_actions.category from the jsonb
+-- step ON INSERT ONLY. Applied 2026-10-14.
+--
+-- category is in the INSERT column list and NOT in the DO UPDATE SET, so a new
+-- step is created with the kind Scout proposed and an athlete who corrects it
+-- afterwards is never overruled by a later sync. Putting it in the update
+-- clause would mean every tick quietly reverted their correction. Verified on
+-- live data: a hand-set "film" survived a tick and un-tick.
+
+-- 156 — assessment_snapshots: dated Passport Strength, one row per athlete per
+-- day, INSERT-ONLY. Applied 2026-10-14. Verified: 0 rows, RLS on, exactly two
+-- policies (INSERT, SELECT) — no update and no delete, so today can never
+-- rewrite last month. Measures profile completeness and evidence, NOT athletic
+-- ability. Written by the client when Home loads; gaps mean the athlete did
+-- not open the app, which is honest.
+create table if not exists public.assessment_snapshots (
+  athlete_id  uuid        not null references public.profiles(id) on delete cascade,
+  taken_on    date        not null,
+  composite   smallint    not null,
+  sub_scores  jsonb       not null default '{}'::jsonb,
+  created_at  timestamptz not null default now(),
+  primary key (athlete_id, taken_on)
+);
+
+-- 157 — EXECUTE on dismiss_next_move() revoked from authenticated, anon and
+-- public. Applied 2026-10-14, verified false for both roles. The function
+-- itself is KEPT: it has had zero call sites since migration 070, and an
+-- unused grant is a reachable write path nobody reviews or tests. If a dismiss
+-- surface is ever built, grant execute again in the same change as its call
+-- site and its test.
+revoke all on function public.dismiss_next_move() from authenticated, anon, public;
+
+-- 151 — NOT APPLIED, AND MUST NOT BE. It replaces athlete_actions' PARTIAL
+-- unique index with a plain constraint, which was right for the client-side
+-- dual-write that was rejected. sync_athlete_actions() (152, 155) writes
+-- "on conflict (...) where legacy_milestone_id is not null" and Postgres
+-- matches that against the PARTIAL index — remove it and every sync fails with
+-- 42P10, silently, for every athlete. See the migration file.
+
+-- ============================================================
+-- 158) ACCESS HARDENING (written 2026-10-09)
+-- supabase-migration-158-access-hardening.sql
 --
 -- Load-bearing DDL only, same convention as 136–143 above. The migration
 -- file carries the reasoning, the review queries and the verification
@@ -6298,7 +6460,7 @@ end $$;
 -- block as pending rather than live.
 -- ============================================================
 
--- 144.1 — the names view runs as the caller, so profiles' RLS applies.
+-- 158.1 — the names view runs as the caller, so profiles' RLS applies.
 create or replace view public_profile_names with (security_invoker = true) as
 select id, full_name, occupation, verified_tier, avatar_url
 from profiles;
@@ -6306,7 +6468,7 @@ alter view public_profile_names set (security_invoker = true);
 revoke all on public_profile_names from anon;
 grant select on public_profile_names to authenticated;
 
--- 144.3 — who initiated a parent link; the athlete approves only the parent's.
+-- 158.3 — who initiated a parent link; the athlete approves only the parent's.
 alter table parent_links add column if not exists requested_by uuid;
 create or replace function stamp_parent_link_requester()
 returns trigger language plpgsql security definer set search_path to 'public' as $$
@@ -6329,7 +6491,7 @@ create policy parent_links_approve on parent_links
   using (athlete_id = auth.uid() and requested_by = parent_id)
   with check (athlete_id = auth.uid() and requested_by = parent_id);
 
--- 144.4 — storage listing: own folder, or an admin. Public URLs unaffected.
+-- 158.4 — storage listing: own folder, or an admin. Public URLs unaffected.
 drop policy if exists avatars_read on storage.objects;
 create policy avatars_read on storage.objects for select to authenticated using (
   bucket_id = 'avatars'
@@ -6341,7 +6503,7 @@ create policy post_images_read on storage.objects for select to authenticated us
   and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin())
 );
 
--- 144.5 — non-admins create and keep private events only.
+-- 158.5 — non-admins create and keep private events only.
 alter table events alter column visibility set default 'private';
 drop policy if exists events_write on events;
 create policy events_write on events for insert to authenticated with check (

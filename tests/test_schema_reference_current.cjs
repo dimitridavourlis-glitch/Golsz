@@ -37,10 +37,44 @@ const ck = (l, a, e) => {
   else { f++; console.log(`FAIL  ${l}\n   exp ${E}\n   got ${A}`); }
 };
 
-const nums = fs.readdirSync(REPO)
-  .map((n) => /^supabase-migration-(\d+)-/.exec(n))
-  .filter(Boolean)
-  .map((m) => Number(m[1]))
+// A migration FILED but not yet run must NOT be in the schema reference —
+// that file documents what is DEPLOYED. The first version of this guard
+// compared against the newest file on disk and failed the moment an approved
+// migration was committed before it could be applied, which is a legitimate
+// state (the dashboard needed a login the owner had to provide).
+//
+// So the invariant is: every APPLIED migration is in the reference. A file
+// opts out by saying so in its own header, which is a visible claim someone
+// has to write down, not a silent skip.
+// THE SENTINEL IS AN API, SO IT IS WRITTEN ONCE.
+//
+// A migration file opts out of this guard by carrying this exact marker. A
+// near-miss does not opt out, which is correct — but it fails confusingly, so
+// the marker is a named constant and the assertion below names it in its own
+// failure text. Migration 150 was first written with the words "SHOWN FOR
+// APPROVAL" INSIDE the asterisks and the guard fired on a file that had
+// honestly declared itself unapplied.
+const NOT_APPLIED_MARKER = "*** NOT YET APPLIED ***";
+const NOT_APPLIED = new RegExp(NOT_APPLIED_MARKER.replace(/\*/g, "\\*"));
+
+// The near-miss that actually happened, pinned so it stays a near-miss and
+// nobody "helpfully" loosens the regex into matching any sentence containing
+// the words.
+if (typeof ck === "function") {
+  ck("the exact marker opts a migration out", NOT_APPLIED.test("-- " + NOT_APPLIED_MARKER + " - shown for approval."), true);
+  ck("...and words inside the asterisks do NOT", NOT_APPLIED.test("-- *** NOT YET APPLIED. SHOWN FOR APPROVAL. ***"), false);
+}
+const all = fs.readdirSync(REPO)
+  .map((n) => ({ n, m: /^supabase-migration-(\d+)-/.exec(n) }))
+  .filter((x) => x.m)
+  .map((x) => ({ num: Number(x.m[1]), file: x.n }));
+const unapplied = all.filter((x) => NOT_APPLIED.test(fs.readFileSync(path.join(REPO, x.file), "utf8")));
+if (unapplied.length) {
+  console.log(`   filed but NOT applied (excluded): ${unapplied.map((u) => u.num).join(", ")}`);
+}
+const nums = all
+  .filter((x) => !unapplied.some((u) => u.num === x.num))
+  .map((x) => x.num)
   .sort((a, b) => a - b);
 
 ck("migrations are on disk", nums.length > 100, true);
@@ -71,6 +105,48 @@ for (const [obj, why] of [
   ["athletes_read", "139 rewrote this policy"],
 ]) {
   ck(`${obj} is in the reference (${why})`, SCHEMA.includes(obj), true);
+}
+
+console.log("\n-- the columns the client actually reads must exist here --");
+// THE GUARD ABOVE WAS NOT ENOUGH, and this is the proof.
+// It asserted that the newest migration NUMBER is mentioned in the schema
+// file. On 2026-10-10 it was passing while `current_stage_id` (128),
+// `full_access` (131) and `metric_key` (114) — all applied to production,
+// all selected by the client — appeared nowhere in the file.
+//
+// Migration 131's header explains why that is not cosmetic: PostgREST rejects
+// an ENTIRE select for one unknown column, so a database built from this
+// reference does not return a degraded profile, it returns none.
+//
+// A mention is not a column. This asserts the column.
+{
+  const CLIENT = fs.readFileSync(path.join(REPO, "golsz-app.html"), "utf8");
+  // Columns named in a real .select() in the client, that this file must define.
+  const REQUIRED = [
+    ["profiles", "full_access"],
+    ["pathway_plan", "stages"],
+    ["pathway_plan", "current_stage_id"],
+    ["athlete_benchmarks", "metric_key"],
+    ["athlete_benchmarks", "protocol"],
+    ["athlete_benchmarks", "measured_by"],
+    ["development_plan_ticks", "tick_date"],
+  ];
+  // A DEFINITION, NOT A MENTION. The first version of this check used
+  // SCHEMA.includes(col), which passed on a comment that merely named the
+  // column — the exact weakness it was written to replace. Proven by deleting
+  // the full_access DDL and watching it stay green. It now requires either an
+  // `add column ... <col>` or a `<col> <type>` line inside a create table.
+  const defines = (col) =>
+    new RegExp(`add column if not exists\\s+${col}\\b`).test(SCHEMA) ||
+    new RegExp(`^\\s{2,}${col}\\s+(uuid|text|boolean|jsonb|date|numeric|int|timestamptz)`, "m").test(SCHEMA);
+  const missingFromSchema = REQUIRED.filter(([, col]) => !defines(col)).map(([t, c]) => `${t}.${c}`);
+  ck("every column the client selects is DEFINED (not just mentioned) in the schema reference",
+     missingFromSchema, []);
+
+  // And the other direction: if the client stops reading one, this list is
+  // stale rather than protective, so it has to be noticed.
+  const notUsed = REQUIRED.filter(([, col]) => !CLIENT.includes(col)).map(([t, c]) => `${t}.${c}`);
+  ck("...and every column in this list is still read by the client", notUsed, []);
 }
 
 console.log(`\n${p}/${p + f} passed`);

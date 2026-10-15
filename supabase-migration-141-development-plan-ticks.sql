@@ -34,8 +34,16 @@ alter table development_plan_ticks enable row level security;
 -- read policy: this is personal health-adjacent data about a minor, and 075
 -- deliberately withheld admin visibility from the parent table for the same
 -- reason. Self-only, with no parent branch: parent accounts were turned off
--- in 144, and a policy granting access nobody should have is not worth keeping
--- warm for a feature that may come back differently.
+-- on 2026-09-19, and a policy granting access nobody should have is not worth
+-- keeping warm for a feature that may come back differently.
+--
+-- CORRECTION 2026-10-10: this comment originally said "turned off in 144".
+-- THERE IS NO MIGRATION 144. Parent accounts were switched off in the CLIENT
+-- (PARENT_ACCOUNTS_ENABLED in golsz-app.html) and in api/create-child-account.js,
+-- which returns 403 before any lookup. No migration was involved. The invented
+-- number mattered: this repo has precedent for changes applied to production
+-- and never filed (see 131), so a reader chasing "144" would reasonably
+-- conclude one was missing from the repo rather than from reality.
 drop policy if exists development_plan_ticks_own on development_plan_ticks;
 create policy development_plan_ticks_own on development_plan_ticks
   for select to authenticated using (user_id = auth.uid());

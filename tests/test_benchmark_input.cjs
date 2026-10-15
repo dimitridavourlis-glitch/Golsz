@@ -54,6 +54,40 @@ for (const [displayName, clientList] of Object.entries(BENCHMARK_METRICS_BY_SPOR
   const server = schema.performance_indicators.map((m) => ({ key: m.key, label: m.label, unit: m.unit }));
   const client = clientList.map((m) => ({ key: m.key, label: m.label, unit: m.unit }));
   ck(`${displayName}: keys, labels and units match the schema exactly`, client, server);
+
+  // THE POSITION GATE IS PART OF THE CONTRACT TOO, and leaving it out of this
+  // diff is why a striker was offered "Clean sheets" for as long as the metric
+  // has existed. The server declares positions ["gk","cb","rb","lb"] on
+  // clean_sheets; the client mirror carried key, label and unit and dropped
+  // the gate, and three assertions above passed on a list that excluded the
+  // one field that decides who sees it.
+  const serverPos = schema.performance_indicators
+    .map((m) => ({ key: m.key, positions: m.positions ? [...m.positions].sort() : null }));
+  const clientPos = clientList
+    .map((m) => ({ key: m.key, positions: m.positions ? [...m.positions].sort() : null }));
+  ck(`${displayName}: position gates match the schema exactly`, clientPos, serverPos);
+}
+
+// Every id a gate names must be a real position in that sport's schema, or the
+// gate silently matches nobody and the metric vanishes for everyone.
+for (const [displayName, clientList] of Object.entries(BENCHMARK_METRICS_BY_SPORT)) {
+  const schema = SPORT_SCHEMAS[SPORT_ID_FOR[displayName]];
+  const ids = new Set(schema.positions.map((p) => p.id));
+  const bad = clientList.flatMap((m) => (m.positions || []).filter((p) => !ids.has(p)));
+  ck(`${displayName}: every gated position id exists in the schema`, bad, []);
+}
+
+// athletes.position stores a LABEL; gates are written in IDs. The client map
+// that joins them must cover every position the schema defines, or an athlete
+// in an uncovered position fails open and sees a metric meant for someone else.
+{
+  const mapBlock = /const POSITION_LABEL_TO_ID = \{[\s\S]*?\n\};/.exec(APP);
+  ck("the client carries a position label->id map", !!mapBlock, true);
+  const soccer = SPORT_SCHEMAS.soccer;
+  const missing = soccer.positions
+    .filter((p) => !new RegExp(`"${p.label.toLowerCase()}"\\s*:`).test(mapBlock ? mapBlock[0] : ""))
+    .map((p) => p.label);
+  ck("...covering every soccer position label", missing, []);
 }
 
 console.log("\n-- protocol questions come from real incompatibilities --");
@@ -95,7 +129,19 @@ ck("a free-text metric gets NULL metric_key, never a guessed one",
 ck("switching metric clears protocol answers", /setMetricKey\(key\);\s*\n\s*setProtocol\(\{\}\);/.test(APP), true);
 
 console.log("\n-- sports without a schema keep working --");
-ck("the picker only appears when the sport has a schema", /const sportMetrics = sport \? \(BENCHMARK_METRICS_BY_SPORT\[sport\] \|\| null\) : null;/.test(APP), true);
+// The lookup gained a position filter on 2026-10-10, so this no longer pins a
+// literal line — it pins the two properties that matter: an unknown sport
+// still yields null (free-text fallback), and the filter cannot turn null into
+// an empty array, which would render an empty picker instead of a text field.
+ck("an unknown sport still yields null, not a list",
+   /const allSportMetrics = sport \? \(BENCHMARK_METRICS_BY_SPORT\[sport\] \|\| null\) : null;/.test(APP), true);
+ck("...and the position filter preserves that null",
+   /const sportMetrics = !allSportMetrics \? null : allSportMetrics\.filter\(/.test(APP), true);
+// The filter must fail OPEN on an unknown position. Hiding a metric because
+// the athlete has not said where they play would remove a capability on a
+// guess, which is the opposite of how this card treats unknown elsewhere.
+ck("...and an unknown position hides nothing",
+   /if \(!m\.positions \|\| !posKey\) return true;/.test(APP), true);
 // The `[^>]*?` between onChange and placeholder is deliberate. This used to
 // require the two attributes to be literally adjacent, so adding an
 // aria-label to the input — a pure accessibility improvement that changes

@@ -192,7 +192,17 @@ ck("both branches normalise, so Scout's dateless/stageless steps are repaired",
   // Sections rewrite the map, so a proposal that includes them has to say so
   // in the same panel, and say that steps survive.
   ck("a sections proposal is disclosed too", panel[0].includes("scout_stages_replace"), true);
-  ck("...and states that steps are not lost", panel[0].includes("scout_stages_steps_safe"), true);
+  // The old version of this pinned scout_stages_steps_safe, a standing
+  // sentence that promised steps "simply become unfiled". That was vague when
+  // written and became wrong once sections re-file by position. The guarantee
+  // is unchanged and now stronger: the panel states what will happen to the
+  // steps, as counts from the function that performs the write.
+  ck("...and states what happens to the steps, as a real count",
+     panel[0].includes("scout_stages_unfiled") && panel[0].includes("scout_stages_none_lost"), true);
+  ck("...computed by the same remapper the write uses",
+     panel[0].includes("remapStagePositions(previewMerged,"), true);
+  ck("...and the count is shown BEFORE the commit button",
+     panel[0].indexOf("scout_stages_unfiled") < commit, true);
   ck("...before the commit button as well",
      panel[0].indexOf("scout_stages_replace") < commit, true);
 }
@@ -205,6 +215,11 @@ ck("...read on mount alongside the other athlete reads",
    /sb\.from\("pathway_plan"\)\.select\("pathway_type, target_timeline, milestones[^"]*"\)/.test(APP), true);
 ck("...and refreshed after an apply so a second proposal compares correctly",
    /setCurrentPathway\(\{ pathway_type: pathway\.pathway_type/.test(APP), true);
+// The refresh must carry the POST-remap list. Mirroring the pre-remap one
+// would make a second proposal in the same conversation compare against steps
+// filed under sections that no longer exist.
+ck("...with the list that was actually stored",
+   /setCurrentPathway\(\{[\s\S]{0,200}?milestones: remap\.milestones/.test(APP), true);
 ck("all four preview strings are translated in every language",
    ["scout_pathway_current", "scout_pathway_incoming", "scout_pathway_replace_warning", "scout_pathway_first_build"]
      .every((k) => (APP.match(new RegExp(k + ":", "g")) || []).length === 4), true);

@@ -1,23 +1,23 @@
 -- ============================================================
--- 144 — Access hardening: eight data-access rules an audit found too wide.
+-- 158 — Access hardening: eight data-access rules an audit found too wide.
 --
 -- WHAT THIS DOES (one section per finding, numbered to match the audit):
---   144.1  public_profile_names returns only rows the caller may already
+--   158.1  public_profile_names returns only rows the caller may already
 --          read on profiles (security_invoker), not every member.
---   144.2  handle_new_user() refuses a signup with no date of birth or an
+--   158.2  handle_new_user() refuses a signup with no date of birth or an
 --          age under 18, and no longer auto-links a parent_email.
---   144.3  A parent link can only be approved by the athlete when the
+--   158.3  A parent link can only be approved by the athlete when the
 --          PARENT initiated it (new parent_links.requested_by column).
---   144.4  Storage: avatars / post-images can be listed only inside your own
+--   158.4  Storage: avatars / post-images can be listed only inside your own
 --          folder (or by an admin). Public URLs are unaffected.
---   144.5  events: non-admins can only create or keep PRIVATE rows; the
+--   158.5  events: non-admins can only create or keep PRIVATE rows; the
 --          column defaults to 'private'; Scout's search_events() only
 --          returns public events created by an admin (or with no creator).
---   144.6  Shared Passport RPCs honour athletes.show_club / show_country and
+--   158.6  Shared Passport RPCs honour athletes.show_club / show_country and
 --          return nothing for a banned account.
---   144.7  plan_config.live_features (what Scout tells athletes each plan
+--   158.7  plan_config.live_features (what Scout tells athletes each plan
 --          includes) matches what the product actually ships.
---   144.8  scout_model_config: claude-sonnet-5 priced at $2 / $10 per 1M.
+--   158.8  scout_model_config: claude-sonnet-5 priced at $2 / $10 per 1M.
 --
 -- HOW TO APPLY
 -- Paste into the Supabase SQL Editor and run ONCE, top to bottom. It is one
@@ -25,7 +25,7 @@
 -- is idempotent (create or replace / drop ... if exists / add column if not
 -- exists / guarded updates), so a second run is harmless.
 --
--- BEFORE RUNNING, CONFIRM (each must hold or 144.1 / 144.4 behave wrongly):
+-- BEFORE RUNNING, CONFIRM (each must hold or 158.1 / 158.4 behave wrongly):
 --   select current_setting('server_version_num')::int >= 150000;   -- true (security_invoker needs PG15)
 --   select has_table_privilege('authenticated', 'public.profiles', 'select');  -- true
 --   select relrowsecurity from pg_class where oid = 'public.profiles'::regclass;  -- true
@@ -34,14 +34,14 @@
 --   -- expected: profiles_self (id = auth.uid() or is_parent_of(id)),
 --   --           profiles_linked, profiles_admin_read (is_admin())
 --
--- WHAT TO CHECK AFTERWARDS: see the "144 — Verification" block at the end.
+-- WHAT TO CHECK AFTERWARDS: see the "158 — Verification" block at the end.
 --
 -- WHAT THIS FILE DELIBERATELY DOES NOT DO
 --   * It does not touch api/ or golsz-app.html. Two code follow-ups are
 --     named where they arise: the Admin Panel's (currently unmounted)
 --     createEvent() must pass visibility: 'public' if it is ever re-enabled
---     (144.5), and api/create-child-account.js cannot pass the new signup
---     gate as written if parent accounts are re-enabled (144.2).
+--     (158.5), and api/create-child-account.js cannot pass the new signup
+--     gate as written if parent accounts are re-enabled (158.2).
 --   * It does not auto-revoke any parent link or auto-privatise any event.
 --     Neither can be identified precisely from the data, so each section
 --     carries a commented review query for the owner instead of a guess.
@@ -51,7 +51,7 @@ begin;
 
 
 -- ============================================================
--- 144.1 — public_profile_names listed every member to every signed-in user.
+-- 158.1 — public_profile_names listed every member to every signed-in user.
 --
 -- Migration 038 gave this view a visibility WHERE clause; 126.4d dropped it
 -- when it removed the dead is_restricted_minor() predicate, leaving
@@ -93,7 +93,7 @@ grant select on public_profile_names to authenticated;
 
 
 -- ============================================================
--- 144.2 — handle_new_user() computed is_minor but never refused anyone.
+-- 158.2 — handle_new_user() computed is_minor but never refused anyone.
 --
 -- GOLSZ contracts with adults only. The client blocks under-18 signups, but
 -- the client is not the gate: a direct POST to Supabase Auth's /signup with
@@ -101,7 +101,7 @@ grant select on public_profile_names to authenticated;
 -- of birth at all, and the trigger would happily write it. It also turned a
 -- client-supplied parent_email into a PENDING parent_links row naming
 -- whoever owns that address — and the minor could then approve that row
--- themselves (see 144.3).
+-- themselves (see 158.3).
 --
 -- Reproduced verbatim from migration 138 with exactly two changes:
 --   (a) raise when the date of birth is missing or the age is under 18,
@@ -160,7 +160,7 @@ begin
   end if;
   v_parent_email := nullif(new.raw_user_meta_data->>'parent_email', '');
 
-  -- 144.2 (a): adults only. raw_app_meta_data, never raw_user_meta_data:
+  -- 158.2 (a): adults only. raw_app_meta_data, never raw_user_meta_data:
   -- only the Admin API (service role) can write app_metadata.
   v_parent_managed := coalesce(new.raw_app_meta_data->>'managed_by_parent', '') = 'true';
   if v_dob is null then
@@ -204,9 +204,9 @@ begin
   insert into athletes (id) values (new.id)
   on conflict (id) do nothing;
 
-  -- 144.2 (b): the parent_email -> parent_links auto-link that stood here is
+  -- 158.2 (b): the parent_email -> parent_links auto-link that stood here is
   -- removed. It created a link the athlete initiated and could approve
-  -- themselves (144.3), from an address the client typed.
+  -- themselves (158.3), from an address the client typed.
 
   return new;
 end;
@@ -214,13 +214,13 @@ $$;
 
 
 -- ============================================================
--- 144.3 — An athlete could approve a parent link they created themselves.
+-- 158.3 — An athlete could approve a parent link they created themselves.
 --
 -- parent_links_approve (004) is `for update using (athlete_id = auth.uid())`.
 -- That is right for the one legitimate flow — the PARENT calls
 -- request_parent_link(child_email), a pending row is inserted, the child
 -- approves or denies — but it does not ask who created the row. The
--- handle_new_user() auto-link (removed in 144.2) created rows the ATHLETE
+-- handle_new_user() auto-link (removed in 158.2) created rows the ATHLETE
 -- initiated (by typing an email at signup); the athlete could then approve
 -- their own claim, and an approved link opens the parent's full profile row
 -- to them through profiles_linked (126.2) and the child's rows to the
@@ -257,7 +257,7 @@ $$;
 alter table parent_links add column if not exists requested_by uuid;
 
 comment on column parent_links.requested_by is
-  'Who created the link (144). Stamped from auth.uid() by stamp_parent_link_requester() for every non-service-role insert; NULL = service role, direct SQL, or a row older than migration 144. The athlete may approve only when requested_by = parent_id.';
+  'Who created the link (158). Stamped from auth.uid() by stamp_parent_link_requester() for every non-service-role insert; NULL = service role, direct SQL, or a row older than migration 158. The athlete may approve only when requested_by = parent_id.';
 
 create or replace function stamp_parent_link_requester()
 returns trigger language plpgsql security definer set search_path to 'public' as $$
@@ -291,7 +291,7 @@ begin
   end if;
   new.parent_id  := old.parent_id;
   new.athlete_id := old.athlete_id;
-  -- 144.3: who initiated the link is history, not an editable field.
+  -- 158.3: who initiated the link is history, not an editable field.
   new.requested_by := old.requested_by;
   return new;
 end;
@@ -330,7 +330,7 @@ create policy parent_links_approve on parent_links
 
 
 -- ============================================================
--- 144.4 — Any signed-in user could list every object in both buckets.
+-- 158.4 — Any signed-in user could list every object in both buckets.
 --
 -- 137 limited avatars_read / post_images_read to `authenticated` but kept
 -- the condition at bucket_id alone, so any account could walk both
@@ -365,7 +365,7 @@ create policy post_images_read on storage.objects for select to authenticated us
 
 
 -- ============================================================
--- 144.5 — Any account could plant an "official" event that Scout recommends.
+-- 158.5 — Any account could plant an "official" event that Scout recommends.
 --
 -- events_write (002) only checked created_by = auth.uid(); visibility
 -- defaulted to 'public' (011); and search_events() (126.7) hands every
@@ -422,7 +422,7 @@ begin
     return new;
   end if;
   new.is_blocked := old.is_blocked;
-  -- 144.5: ownership is not editable, so a row cannot be re-attributed.
+  -- 158.5: ownership is not editable, so a row cannot be re-attributed.
   new.created_by := old.created_by;
   return new;
 end;
@@ -449,7 +449,7 @@ language sql security definer set search_path to 'public' as $$
   from events e
   where not e.is_blocked
     and e.visibility = 'public'
-    -- 144.5: only listings GOLSZ itself published
+    -- 158.5: only listings GOLSZ itself published
     and (e.created_by is null
          or exists (select 1 from profiles ap where ap.id = e.created_by and ap.is_admin))
     and e.event_date >= coalesce(p_after_date, current_date)
@@ -483,7 +483,7 @@ grant execute on function search_events(text, text, text, date, int) to service_
 
 
 -- ============================================================
--- 144.6 — "Show my club / Show my country on your shared Passport" did
+-- 158.6 — "Show my club / Show my country on your shared Passport" did
 --         nothing, and a banned account's Passport stayed public.
 --
 -- Settings writes athletes.show_club / show_country (100) and labels them
@@ -494,7 +494,11 @@ grant execute on function search_events(text, text, text, date, int) to service_
 -- account is banned (is_banned()). PublicPassport already renders a null
 -- club or country as "—", and a null result as "this Passport is private".
 --
--- Bodies reproduced verbatim from 126.4f / 126.4g apart from those changes.
+-- get_public_passport() is reproduced verbatim from 126.4f, and
+-- get_public_passport_by_token() verbatim from its LATEST definition,
+-- migration 154 (benchmarks and timeline behind their own switches), apart
+-- from those changes. Rebuilding it from 126 would have silently removed
+-- 154's performance section from every shared Passport.
 -- In the token variant the ban check sits BEFORE the last_accessed_at
 -- touch, so a refused view is not recorded as an access.
 -- ============================================================
@@ -537,7 +541,7 @@ declare
   v_user uuid;
 begin
   select user_id into v_user from passport_share_tokens where token = p_token and not revoked;
-  if v_user is null then return null; end if;
+  if v_user is null or is_restricted_minor(v_user) then return null; end if;
   if is_banned(v_user) then return null; end if;
   update passport_share_tokens set last_accessed_at = now() where token = p_token;
   return (
@@ -557,7 +561,19 @@ begin
       'height_cm', a.height_cm,
       'weight_kg', a.weight_kg,
       'bio', a.bio,
-      'highlights', coalesce(a.highlights, '[]'::jsonb)
+      'highlights', coalesce(a.highlights, '[]'::jsonb),
+      'shows_benchmarks', coalesce(a.show_benchmarks, false),
+      'shows_timeline', coalesce(a.show_timeline, false),
+      'benchmarks', case when coalesce(a.show_benchmarks, false) then (
+          select coalesce(jsonb_agg(jsonb_build_object(
+            'metric', b.metric, 'metric_key', b.metric_key, 'value', b.value,
+            'unit', b.unit, 'recorded_date', b.recorded_date,
+            'measured_by', b.measured_by, 'protocol', b.protocol
+          ) order by b.recorded_date desc), '[]'::jsonb)
+          from athlete_benchmarks b where b.user_id = v_user
+        ) else null end,
+      'timeline', case when coalesce(a.show_timeline, false)
+                       then coalesce(a.timeline, '[]'::jsonb) else null end
     )
     from profiles p
     left join athletes a on a.id = p.id
@@ -573,7 +589,7 @@ grant execute on function get_public_passport_by_token(text) to anon, authentica
 
 
 -- ============================================================
--- 144.7 — Scout was selling features that do not exist.
+-- 158.7 — Scout was selling features that do not exist.
 --
 -- api/scout.js builds "GOLSZ PLANS (real, current — never invent a feature
 -- ...)" from plan_config.live_features (jsonb array of strings, 092). The
@@ -631,7 +647,7 @@ where plan_id = 'elite'
 
 
 -- ============================================================
--- 144.8 — Sonnet was priced at its old list price.
+-- 158.8 — Sonnet was priced at its old list price.
 --
 -- scout_model_config (052; rows seeded by 110) still carries claude-sonnet-5
 -- at $3 input / $15 output / $0.30 cached input per 1M tokens. Anthropic's
@@ -661,7 +677,7 @@ commit;
 
 
 -- ============================================================
--- 144 — Verification. Run these AFTER the migration, separately.
+-- 158 — Verification. Run these AFTER the migration, separately.
 -- ============================================================
 --
 -- 1) The view runs as the caller:
@@ -685,7 +701,7 @@ commit;
 --      select polname, pg_get_expr(polqual, polrelid), pg_get_expr(polwithcheck, polrelid)
 --        from pg_policy where polrelid = 'parent_links'::regclass and polname = 'parent_links_approve';
 --      -- both expressions contain requested_by = parent_id
---      select count(*) from parent_links;   -- expected 0 (or review per 144.3)
+--      select count(*) from parent_links;   -- expected 0 (or review per 158.3)
 --
 -- 4) Storage listing:
 --      select polname, pg_get_expr(polqual, polrelid) from pg_policy

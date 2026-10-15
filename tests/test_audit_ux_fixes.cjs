@@ -78,7 +78,7 @@ console.log("\n-- 2. Home's Next Move names the stage, never a key --");
 {
   const STAGES = { __default: { stages: ["developing", "competing"] }, Soccer: { stages: ["academy", "senior"] } };
   const lib = new Function("SPORT_PATHWAY_STAGES",
-    fn("athleteStages") + fn("stageLabel") + fn("nextStepStageLabel") + " return nextStepStageLabel;")(STAGES);
+    fn("normalizeStage") + fn("athleteStages") + fn("stageLabel") + fn("nextStepStageLabel") + " return nextStepStageLabel;")(STAGES);
   const t = (k) => ({ pathway_stage_academy: "Academy", pathway_stage_developing: "Developing" })[k] || k;
   const uuid = "3f2a9c1e-0000-4000-8000-000000000001";
   const custom = { stages: [{ id: uuid, label: "Sign with a D1 school" }, { id: "x2", label: "" }] };
@@ -218,15 +218,14 @@ console.log("\n-- 5. a render crash is logged and explained in the athlete's lan
 }
 
 // -------------------------------------------------------------------------
-console.log("\n-- 6. Home's 'a school replied' line can actually appear --");
+console.log("\n-- 6. nothing compares against a status that does not exist --");
 {
-  const line = APP.match(/const replied = targetRows\.find\([^\n]+\);/);
-  ck("the line was found", !!line, true);
-  const replied = new Function("targetRows", (line ? line[0] : "const replied = null;") + " return replied;");
-  ck("a 'responded' school is found",
-     (replied([{ status: "contacted", name: "A" }, { status: "responded", name: "Brevard" }]) || {}).name, "Brevard");
-  ck("an 'opportunity' counts as an answer too", (replied([{ status: "opportunity", name: "Tusculum" }]) || {}).name, "Tusculum");
-  ck("contacted-but-silent does not", replied([{ status: "contacted", name: "A" }]), undefined);
+  // Home's "a school replied" line compared r.status === "replied", which no
+  // target can have, so it never appeared. The 2026-10-14 Home redesign then
+  // removed the line altogether. What stays worth pinning is the bug class:
+  // no code may test a target against "replied".
+  ck("no comparison against the non-existent 'replied' status",
+     /status === "replied"/.test(APP), false);
   const statuses = APP.match(/const TARGET_STATUSES = \[([^\]]+)\]/)[1];
   ck("'responded' is a real status", /"responded"/.test(statuses), true);
   ck("'replied' is not", /"replied"/.test(statuses), false);

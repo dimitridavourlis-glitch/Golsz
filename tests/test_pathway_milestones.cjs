@@ -16,6 +16,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const vm = require("vm");
 const REPO = path.join(__dirname, "..");
 const APP = fs.readFileSync(path.join(REPO, "golsz-app.html"), "utf8");
 
@@ -47,6 +48,10 @@ eval(grab("function normalizeMilestone(m) {"));
 // and a hand-written stub here would let the real predicate rot while every
 // assertion below stayed green.
 eval(grab("function suggestedDate(m) {"));
+// Lifted, not stubbed: touchedMilestone stamps a completion date through it,
+// and a stub would let the real date formatting rot while this suite stayed
+// green — the same reason suggestedDate is lifted above.
+eval(grab("function isoDay(d) {"));
 eval(grab("function touchedMilestone(m) {"));
 eval(grab("function nextMilestone(milestones) {"));
 
@@ -147,22 +152,38 @@ ck("...and the athlete's existing steps are normalised too, not trusted raw",
 // Pinned `milestones: merged, baseline_complete` — adjacency, not the property
 // — so it broke when `stages:` was inserted between them. What matters is that
 // the upsert writes `merged`, whatever follows it.
+// The row is built as a named object now, because one field on it is
+// conditional. The guarantee is unchanged: what reaches the upsert is the
+// athlete's steps PLUS Scout's, never Scout's alone — merged feeds the remap,
+// and the remap's output is what the row carries.
 ck("the upsert writes the merged list, not Scout's alone",
-   /pathway_plan"\)\.upsert\([\s\S]{0,300}?milestones: merged\b/.test(APP), true);
+   /remapStagePositions\(merged, existingStages, nextStages,/.test(APP), true);
+ck("...and the row it builds carries the result of that",
+   /const row = \{[^}]*milestones: remap\.milestones,/.test(APP), true);
+ck("...and that row is what is sent",
+   /pathway_plan"\)\.upsert\(row, \{ onConflict: "user_id" \}\)/.test(APP), true);
 // Sections are always a replace, never appended — two half-maps concatenated
 // is not a route — but proposing none must leave the athlete's own intact
 // rather than clearing them.
 ck("Scout's sections replace, and an empty proposal keeps theirs",
    /const nextStages = proposedStages\.length \? proposedStages : existingStages;/.test(APP), true);
-ck("...and stages reach the upsert", /milestones: merged, stages: nextStages/.test(APP), true);
+ck("...and stages reach the upsert", /milestones: remap\.milestones, stages: nextStages/.test(APP), true);
 // Also pinned adjacency — `milestones: merged })` — and broke when stages were
 // added between them. The claim is that the local mirror carries the same
 // merged list the upsert wrote, so a SECOND proposal in the same conversation
 // previews against what is actually on file.
-ck("...and setCurrentPathway mirrors the same merged list",
-   /setCurrentPathway\(\{[\s\S]{0,200}?milestones: merged\b/.test(APP), true);
+// MIRRORS WHAT WAS WRITTEN, which is no longer the same object as what was
+// merged: steps are re-filed by section position before the write, so pinning
+// `milestones: merged` here would assert the local copy diverges from the row.
+// The guarantee is that both carry the SAME expression.
+ck("...and setCurrentPathway mirrors exactly what the upsert wrote",
+   /setCurrentPathway\(\{[\s\S]{0,200}?milestones: remap\.milestones\b/.test(APP), true);
+ck("...which is the re-filed list the row got, not the pre-remap one",
+   /milestones: remap\.milestones, stages: nextStages, baseline_complete: true/.test(APP), true);
 ck("...including the sections, or a second proposal compares against stale ones",
-   /setCurrentPathway\(\{[\s\S]{0,200}?stages: nextStages/.test(APP), true);
+   /setCurrentPathway\(\{[\s\S]{0,260}?stages: nextStages/.test(APP), true);
+ck("...and the marker, so it is not re-read from a pre-write snapshot",
+   /setCurrentPathway\(\{[\s\S]{0,600}?current_stage_id: stagesReplaced \?/.test(APP), true);
 ck("no un-normalised `milestones: pathway.milestones` remains",
    /milestones: pathway\.milestones\b/.test(APP), false);
 // The whole point: an athlete's ticked, dated, self-written steps survive.
@@ -256,10 +277,56 @@ ck("every select that reads milestones also reads stages",
    drawing.filter((sel) => !/\bstages\b/.test(sel)), []);
 ck("...and current_stage_id, so stated position survives the trip",
    drawing.filter((sel) => !/current_stage_id/.test(sel)), []);
+// ONE DERIVATION, NOT ONE SPELLING.
+//
 // Stated beats inferred: currentStageIndex() guesses from recruiting_status
-// against the SPORT's sequence and cannot know what a self-written section is.
-ck("a stated current stage overrides the heuristic",
-   /statedIdx >= 0 \? statedIdx : currentStageIndex\(/.test(APP), true);
+// against the SPORT's sequence and cannot know what a self-written section
+// is. The previous version of this assertion matched ONE spelling of that
+// rule, and passed while PathwayMap — the map on Plan, the screen "Set
+// current" lives on — called the heuristic directly and ignored the stated
+// id entirely. A regex that matches a correct copy says nothing about the
+// incorrect one next to it.
+//
+// So count PRODUCERS instead. The heuristic may have exactly one caller; if
+// a screen wants a stage index it has to come through the override.
+{
+  // Comment lines are stripped first: this file's own prose names the
+  // function it is counting.
+  const code = APP.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+  ck("the recruiting_status heuristic is declared once and called once",
+     (code.match(/\bcurrentStageIndex\(/g) || []).length, 2);
+  const at = code.indexOf("function resolveStageIndex(");
+  ck("resolveStageIndex exists", at > 0, true);
+  const body = code.slice(at, code.indexOf("\n}", at));
+  ck("...and it is the one caller", /currentStageIndex\(/.test(body), true);
+  ck("...preferring the stated stage when there is one", /stated >= 0 \? stated :/.test(body), true);
+  ck("every screen that draws a position resolves through it",
+     (code.match(/= resolveStageIndex\(/g) || []).length, 3);
+
+  // The defect this replaces, asserted at the prop boundary rather than by
+  // grepping for a derivation that is now absent from the component.
+  ck("PathwayMap accepts the stated stage id",
+     /function PathwayMap\(\{[^}]*\bcurrentStageId\b/.test(APP), true);
+  ck("...and Plan hands it the id it already holds in state",
+     /<PathwayMap[\s\S]{0,500}currentStageId=\{currentStageId\}/.test(APP), true);
+
+  // Behaviour, not shape. Both functions are self-contained.
+  const heurAt = code.indexOf("function currentStageIndex(");
+  const fn = vm.runInNewContext(
+    code.slice(heurAt, code.indexOf("\n}", heurAt) + 2) + "\n" +
+    code.slice(at, code.indexOf("\n}", at) + 2) + "\nresolveStageIndex"
+  );
+  const stages = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
+  const signed = { recruiting_status: "Signed" };
+  ck("a stated stage wins over the heuristic", fn(stages, "b", signed), 1);
+  ck("no stated stage falls back to the heuristic", fn(stages, null, signed), 3);
+  ck("an unknown stated id falls back rather than blanking the map",
+     fn(stages, "deleted-stage", signed), 3);
+  // Stages are stringified on save; an older row can still hold a number.
+  ck("a numeric stored id matches a stringified stage", fn([{ id: "1" }, { id: "2" }], 2, {}), 1);
+  ck("an empty stage list does not throw", typeof fn([], "b", signed), "number");
+}
+
 // Empty custom stages must fall back, or every existing athlete's map empties.
 ck("an athlete with no custom stages still gets the sport's",
    /if \(custom\.length\)/.test(APP), true);
@@ -308,8 +375,33 @@ ck("...and clearing current_stage_id when it pointed at the deleted stage", wrot
 ck("...updating local state in the same call", setLocal.length, FIX.length);
 // If the id moved with the label, every step filed under a renamed section
 // would be orphaned the first time an athlete fixed a typo.
-ck("renaming a stage preserves its id", /st\.id === id \? \{ id: st\.id, label: clean \}/.test(APP), true);
-ck("an empty rename is a no-op, not a delete", /if \(!clean\) return;/.test(APP), true);
+// THIS ASSERTION USED TO PIN THE BUG.
+//
+// It guaranteed the id survives a rename — correct, and it mattered, because
+// milestones store the stage id and a moving id orphans them. But it did so by
+// pinning the literal { id: st.id, label: clean }, which ALSO guaranteed every
+// other key on the stage was thrown away. When per-stage target dates and
+// blockers arrive, that literal is how they die. A test that locks in the
+// shape of a line locks in whatever that line gets wrong.
+//
+// It is the guarantee that is asserted now, through the real behaviour:
+// the id survives, and so does everything else.
+{
+  const renameLikeCommit = (list, id, label) =>
+    list.map((st) => (st.id === id ? { ...st, label: label } : st));
+  const before = [{ id: "s1", label: "Old", target_date: "2027-05-01", blockers: ["visa"] },
+                  { id: "s2", label: "Other" }];
+  const after = renameLikeCommit(before, "s1", "New");
+  ck("renaming a stage preserves its id", after[0].id, "s1");
+  ck("...and renames only the one asked for", [after[0].label, after[1].label], ["New", "Other"]);
+  ck("...and keeps every other field on it", [after[0].target_date, after[0].blockers], ["2027-05-01", ["visa"]]);
+  // The shape the source must have for the above to describe it.
+  ck("...and the source spreads rather than rebuilding",
+     /st\.id === id \? \{ \.\.\.st, label: clean \}/.test(APP), true);
+  ck("...with no bare rebuild left anywhere",
+     /st\.id === id \? \{ id: st\.id, label: clean \}/.test(APP), false);
+}
+ck("an empty rename is a no-op, not a delete", /if \(!clean\) \{ if \(pendingStage === id\) cancelStageEdit\(\); return; \}/.test(APP), true);
 ck("the seven-section cap exists", /const MAX_STAGES = 7;/.test(APP), true);
 ck("...and is checked before adding", /length >= MAX_STAGES\) return;/.test(APP), true);
 // A new section must not reach storage unnamed. addStage() used to persist
@@ -327,7 +419,7 @@ ck("cancelling discards the pending section", /setPendingStage\(null\);\s*\/\/ a
 ck("a pending section is inserted, an existing one renamed in place",
    /if \(pendingStage === id\) \{[\s\S]{0,200}?splice\(pendingAt === null \? next\.length : pendingAt, 0, \{ id, label: clean \}\)/.test(APP), true);
 ck("...and renaming still goes through the id-preserving map",
-   /next = base\.map\(\(st\) => \(st\.id === id \? \{ id: st\.id, label: clean \} : st\)\)/.test(APP), true);
+   /next = base\.map\(\(st\) => \(st\.id === id \? \{ \.\.\.st, label: clean \} : st\)\)/.test(APP), true);
 ck("insert refuses past the cap", /function insertStage\(nearId, offset\)[\s\S]{0,300}?length >= MAX_STAGES\) return;/.test(APP), true);
 ck("...and writes nothing until named", /function insertStage\(nearId, offset\)[\s\S]{0,600}?\n  \}/.exec(APP)[0].includes("saveStages"), false);
 // Empty stored stages must keep meaning "the sport's", or every athlete who
@@ -336,7 +428,10 @@ ck("the first edit materialises the sport defaults rather than backfilling",
    /if \(customStages\.length\) return customStages\.slice\(\)/.test(APP), true);
 ck("stages and current_stage_id are read from the row",
    /select\("pathway_type, target_timeline, milestones, notes, stages, current_stage_id"\)/.test(APP), true);
-ck("...and persisted on save", /stages: customStages, current_stage_id: currentStageId/.test(APP), true);
+// Reads the REF, not the closure. A write queued before a rename committed
+// used to resend the pre-rename list and silently revert it; see
+// test_stage_round_trip for the full guarantee.
+ck("...and persisted on save", /stages: stagesRef\.current, current_stage_id: currentStageId/.test(APP), true);
 
 // ---- the Scout note explains, it never blocks ----------------------------
 // Free is locked out of Scout's pathway help at Starter, so the note has three
@@ -542,6 +637,54 @@ ck("touching a step makes the date theirs",
    milestoneDateLabel(touchedMilestone(SUG), "en", tid).tone, "over");
 ck("touching a step the athlete already owns changes nothing",
    touchedMilestone(MINE), MINE);
+
+// ---- "DONE · 12 SEP" WAS PRINTING THE DUE DATE -----------------------------
+//
+// The completed row's label was built from m.due, so a step finished weeks
+// late advertised the deadline it MISSED as its completion date. Nothing in
+// the jsonb recorded a completion moment, so the label could only ever have
+// been wrong or absent — and absent is the honest one.
+{
+  const DUE = { id: "x", label: "Film the game", due: "2026-09-12", done: false };
+
+  // Ticking stamps the day it actually happened.
+  const ticked = touchedMilestone({ ...DUE, done: true });
+  ck("ticking a step stamps when it was done", /^\d{4}-\d{2}-\d{2}$/.test(ticked.done_at), true);
+  ck("...and it is not the due date", ticked.done_at === DUE.due, false);
+
+  // Re-touching must not move it — the first completion is the real one.
+  const again = touchedMilestone(ticked);
+  ck("touching it again does not re-stamp", again.done_at, ticked.done_at);
+  ck("...and returns the same object, so there is no spurious write", again, ticked);
+  // Same-day re-stamping is invisible by value — isoDay returns the identical
+  // string — so the guarantee has to be tested on a date that is NOT today.
+  // A mutation that re-stamped unconditionally passed every assertion above.
+  ck("an OLD completion date is never overwritten",
+     touchedMilestone({ ...ticked, done_at: "2020-01-01" }).done_at, "2020-01-01");
+  ck("...and that step is returned untouched", touchedMilestone({ ...ticked, done_at: "2020-01-01" }).done, true);
+
+  // Un-ticking clears it. done and done_at must never disagree — the same
+  // coupling athlete_actions enforces as a CHECK constraint.
+  const untick = touchedMilestone({ ...ticked, done: false });
+  ck("un-ticking clears the completion date", untick.done_at, null);
+  ck("...so a not-done step can never carry one", !!(untick.done && !untick.done_at) || untick.done_at === null, true);
+
+  // The label.
+  ck("a step done with no recorded date says Done and NOTHING else",
+     milestoneDateLabel({ ...DUE, done: true }, "en", tid).text, "pathway_done");
+  ck("...never the due date it may have missed",
+     /12|Sep/.test(milestoneDateLabel({ ...DUE, done: true }, "en", tid).text), false);
+  ck("a step with a real completion date shows THAT date",
+     milestoneDateLabel({ ...DUE, done: true, done_at: "2026-10-01" }, "en", tid).text, "pathway_done · 1 Oct");
+
+  // It must survive a reload, or it is stamped and lost.
+  ck("normalizeMilestone carries it through",
+     normalizeMilestone({ id: "x", done: true, done_at: "2026-10-01" }).done_at, "2026-10-01");
+  ck("...refuses a malformed one rather than rendering it",
+     normalizeMilestone({ id: "x", done: true, done_at: "last Tuesday" }).done_at, null);
+  ck("...and refuses one on an UNDONE step, which never happened",
+     normalizeMilestone({ id: "x", done: false, done_at: "2026-10-01" }).done_at, null);
+}
 
 console.log("\n-- a suggestion never seizes 'what do I do now' --");
 const MINE_LATER = { id: "ml", label: "ml", done: false, due: "2026-12-01", stage: null };

@@ -159,6 +159,42 @@ const REVIEWED_AMBIGUOUS = new Set([
   // cannot see the fromIndex, which is why this is reviewed rather than a
   // real ambiguity.
   "</script>",
+  // test_home_command_centre slices the bottleneck card by its real bounds —
+  // indexOf("</HomeZone>", cardAt) — so it takes the first close AFTER the
+  // card opens. Same shape as the </script> entry above: the count cannot see
+  // the fromIndex. It replaced a fixed-size character window that broke three
+  // times, silently, by the assertions simply stopping short of what they
+  // claimed to check.
+  "</HomeZone>",
+  // test_gap_engine deliberately holds BOTH implementations of the gap: it
+  // searches golsz-app.html through APP and api/_gap.js through GAP_MOD, then
+  // runs the two over the same inputs and compares their output. The literals
+  // below therefore appear twice on purpose, once per side, each indexOf
+  // scoped to a different source string. The scan counts literals and cannot
+  // see which variable each one is searched in.
+  "const EVIDENCE_SOURCES = {",
+  "function gapFromRows(rows, pathwayType, athlete, b",
+  // Same reason as the two above: test_gap_engine holds both implementations
+  // and asserts the client's set and the server's are identical, so it reads
+  // this declaration out of golsz-app.html (APP) and api/_gap.js (GAP_MOD)
+  // separately and compares them. Three uses, two files, each scoped.
+  "const CONTACTED_STATUSES = [",
+  // test_scout_category reads this declaration out of golsz-app.html (APP) and
+  // api/scout.js (SCOUT) and compares both against migration 144's CHECK
+  // constraint — three lists that must agree, so the literal appears twice on
+  // purpose, each scoped to a different source string. Same shape as the two
+  // entries above.
+  "const ACTION_CATEGORIES = [",
+  // test_home_command_centre takes the FIRST of these on purpose: it marks
+  // where Home's disclosure begins, and everything asserted to be "behind the
+  // tap" is tested against that offset. The second occurrence is the trailing
+  // wrapped range, which is also behind the tap, so first is the right one and
+  // the count is expected to be 2.
+  "{showMore && (",
+  // And this one is searched WITH a fromIndex — indexOf(..., open) — to ask
+  // whether Ask Scout falls inside the disclosure. The count here cannot see
+  // the fromIndex, the same limitation as the </script> entry above.
+  "onNavigate(\"scout\")",
 ]);
 // Entries are matched as PREFIXES, not exact strings. The failure message
 // truncates literals at 50 chars, so an entry copied from the console output

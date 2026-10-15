@@ -74,6 +74,7 @@ import { resolveActingAthlete } from "./_acting-for.js";
 // reads a mirror rather than this binding, and for the guard at the foot of
 // this file that pins the two together.
 import { computeReadiness, DIMENSION_LABEL, SPORTS_WITHOUT_POSITION, READINESS_DIMENSIONS as PASSPORT_STRENGTH_DIMENSIONS } from "./_readiness.js";
+import { gapFromRows } from "./_gap.js";
 import { evaluateEntitlements, hasFeature, planDisplayName, FEATURE_LABEL } from "./_entitlements.js";
 // The pathway ladder the CLIENT draws for this athlete's sport, for all 40
 // sports the picker offers — not the two SPORT_SCHEMAS covers. Without it
@@ -3186,12 +3187,29 @@ function extractSuggestedPathway(data, existingStages) {
     // the client must be able to tell the two apart forever after: a date the
     // athlete set can call them late, and a date Scout guessed must not until
     // they have touched that step themselves.
+    // THE CATEGORY IS AN ALLOWLIST, NOT FREE TEXT.
+    // Migration 144's CHECK constraint is the authority; anything outside it
+    // is a 400 from Postgres at write time, so the model's word is validated
+    // here rather than trusted and discovered later. Unrecognised degrades to
+    // "other", which is a real category and not a guess about the athlete.
+    const ACTION_CATEGORIES = ["training", "recovery", "testing", "film", "outreach",
+      "academic", "recruiting", "application", "competition", "profile", "other"];
+    const catOf = (v) => (typeof v === "string" && ACTION_CATEGORIES.includes(v.trim().toLowerCase())
+      ? v.trim().toLowerCase() : "other");
     const milestones = rawMilestones.map((m) => {
       const i = m.stage_index;
       const filed = target.length && Number.isInteger(i) && i >= 0 && i < target.length;
       const due = dueFromOffset(m.due_in_days);
-      return { label: m.label.trim().slice(0, 200), done: false, stage: filed ? target[i].id : null,
-               due, due_src: due ? "scout" : null };
+      // 120, NOT 200 — the number the rest of the app agrees on.
+      // normalizeMilestone in golsz-app.html stores 120 (pinned by
+      // test_pathway_milestones), and every input an athlete types a step
+      // into is maxLength 120. Proposing 200 here meant a long Scout step was
+      // shown in full on the confirm card and then silently cut mid-sentence
+      // the moment it was accepted — the athlete agreed to one thing and
+      // stored another. Capping at the source means what they see is what
+      // they get, and Scout writes a step that fits.
+      return { label: m.label.trim().slice(0, 120), done: false, stage: filed ? target[i].id : null,
+               due, due_src: due ? "scout" : null, category: catOf(m.category) };
     });
     return {
       pathway_type: p.pathway_type,
@@ -4304,7 +4322,8 @@ Output as valid JSON only:
         "label": "milestone label",
         "done": false,
         "stage_index": null,
-        "due_in_days": null
+        "due_in_days": null,
+        "category": "training|recovery|testing|film|outreach|academic|recruiting|application|competition|profile|other"
       }
     ]
   },
@@ -4341,6 +4360,14 @@ map, like "Academy", "U19 / CS Saint-Laurent", or "Trials in Portugal".
 - Leave it null for a step that genuinely spans the whole pathway, or that
   belongs to a section you are not proposing. Unfiled is honest; wrongly
   filed is not.
+
+"category" says what KIND of work a step is, from that fixed list and nothing
+else. Pick the one that matches what the athlete would actually be doing —
+"film" for recording or editing footage, "outreach" for contacting a program,
+"testing" for measuring something, "training" for the work itself. If none
+fits, use "other"; do not stretch a category to seem precise. It is validated
+server-side and an unrecognised value becomes "other", so guessing gains you
+nothing.
 
 "due_in_days" puts a step on the athlete's calendar. It is a WHOLE NUMBER OF
 DAYS FROM TODAY (1 = tomorrow, 7 = a week from today, 30 = a month), never a
@@ -5874,6 +5901,8 @@ async function getAthleteState(userId) {
   let allDevItems = [];
   let allBenchmarks = [];
   let targetsCount = 0;
+  let allTargets = [];
+  let actionRows = [];
   let hasPendingVerification = false;
   let pathwayRow = null;
   let questionsUsedToday = 0;
@@ -5900,7 +5929,7 @@ async function getAthleteState(userId) {
   try {
     // Selects every field computeProfileQuality() checks — the same list
     // HomeTab fetches, so the two cannot score different things.
-    const a = await fetch(url + "/rest/v1/athletes?id=eq." + userId + "&select=sport,country,position,club_name,grad_year,recruiting_status,bio,highlights,timeline", { headers });
+    const a = await fetch(url + "/rest/v1/athletes?id=eq." + userId + "&select=sport,country,position,club_name,grad_year,gpa,citizenship,recruiting_status,bio,highlights,timeline", { headers });
     if (!a.ok) throw new Error("athletes " + a.status);
     const aRows = await a.json();
     athleteRow = Array.isArray(aRows) && aRows[0] ? aRows[0] : null;
@@ -5909,7 +5938,7 @@ async function getAthleteState(userId) {
     profileComplete = !!sport;
   } catch (e) { loadFailed.push("athletes"); console.error("GOLSZ scout context read failed:", "athletes", e && e.message); }
   try {
-    const pr = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=full_name,occupation,avatar_url,identity_verified", { headers });
+    const pr = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=full_name,occupation,avatar_url,identity_verified,availability_status,availability_since,availability_expected_return,availability_note", { headers });
     if (!pr.ok) throw new Error("profiles " + pr.status);
     const prRows = await pr.json();
     profileRow = Array.isArray(prRows) && prRows[0] ? prRows[0] : null;
@@ -5967,13 +5996,16 @@ async function getAthleteState(userId) {
     const t = await fetch(url + "/rest/v1/outreach_targets?user_id=eq." + userId + "&select=name,status&order=created_at.desc&limit=500", { headers });
     if (!t.ok) throw new Error("outreach_targets " + t.status);
     const tRows = await t.json();
-    if (Array.isArray(tRows)) { targetsCount = tRows.length; targets = tRows.slice(0, 10); }
+    // allTargets is the FULL list. `targets` below is sliced to 10 for the
+    // prompt, and asking the gap "has any target been contacted?" over a
+    // truncated list would answer about the first ten only.
+    if (Array.isArray(tRows)) { targetsCount = tRows.length; targets = tRows.slice(0, 10); allTargets = tRows; }
   } catch (e) { loadFailed.push("outreach_targets"); console.error("GOLSZ scout context read failed:", "outreach_targets", e && e.message); }
   // Passport performance data. Newest first, then de-duplicated per metric
   // below so Scout sees each metric's CURRENT value rather than a history —
   // "your 10m is 2.0s" must reflect the latest retest, not the first entry.
   try {
-    const b = await fetch(url + "/rest/v1/athlete_benchmarks?user_id=eq." + userId + "&select=metric,value,unit,recorded_date&order=recorded_date.desc&limit=500", { headers });
+    const b = await fetch(url + "/rest/v1/athlete_benchmarks?user_id=eq." + userId + "&select=metric,metric_key,value,unit,recorded_date&order=recorded_date.desc&limit=500", { headers });
     if (!b.ok) throw new Error("athlete_benchmarks " + b.status);
     const bRows = await b.json();
     if (Array.isArray(bRows)) {
@@ -6051,6 +6083,19 @@ async function getAthleteState(userId) {
   // the same functions. Scout is handed the RESULT, not the ingredients, so
   // it reports the athlete's score rather than forming a second opinion.
   // Fails soft to null: an athlete with no athletes row still gets a reply.
+  // WHAT THEY ACTUALLY DID. Scout has always known what is OPEN and never
+  // what happened — so it could not say "you have done four of these" or
+  // notice a step that quietly went past. athlete_actions carries a real
+  // completed_at (the jsonb only started recording one on 2026-10-14) and is
+  // kept equal to the plan by sync_athlete_actions().
+  try {
+    const r = await fetch(url + "/rest/v1/athlete_actions?user_id=eq." + userId +
+      "&select=title,status,due_on,due_src,completed_at&order=updated_at.desc&limit=200", { headers });
+    if (!r.ok) throw new Error("athlete_actions " + r.status);
+    const rows = await r.json();
+    if (Array.isArray(rows)) actionRows = rows;
+  } catch (e) { console.error("GOLSZ action history load failed:", e && e.message); }
+
   let readiness = null;
   try {
     readiness = computeReadiness({
@@ -6064,6 +6109,32 @@ async function getAthleteState(userId) {
       hasPendingVerification,
     });
   } catch (e) { console.error("GOLSZ readiness compute failed:", e && e.message); }
+  // THE REQUIREMENT GAP, from the sport's own key_evidence. Same evaluation
+  // Home and Plan run — see api/_gap.js for why only the function is shared
+  // and the data is not. Null whenever the sport or the goal is unknown: an
+  // empty verdict would read as "nothing is required of you".
+  let gap = null;
+  try {
+    // SPORT_SCHEMAS, not SPORT_CORE: core holds the cross-sport vocabulary
+    // (stages, goal_types, evidence_tiers); the per-sport pathways with their
+    // key_evidence live on the schema. sportSchemaFor() lowercases and is the
+    // only resolver, so an unknown sport yields null and no verdict.
+    const sportRows = (sportSchemaFor(athleteRow && athleteRow.sport) || {}).pathways || null;
+    gap = gapFromRows(sportRows, pathwayRow && pathwayRow.pathway_type, athleteRow, allBenchmarks, allTargets);
+  } catch (e) { console.error("GOLSZ gap compute failed:", e && e.message); }
+  // MISSED RESPECTS due_src, exactly as the reminder cron does. A date Scout
+  // proposed and the athlete never acted on is not a deadline they missed —
+  // nobody agreed to it — and telling them otherwise in conversation is the
+  // same wrong as pushing it to their phone.
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const recentlyDone = actionRows
+    .filter((a) => a && a.status === "completed" && a.completed_at)
+    .sort((a, b) => String(b.completed_at).localeCompare(String(a.completed_at)))
+    .slice(0, 8);
+  const missedActions = actionRows
+    .filter((a) => a && a.status === "open" && a.due_on && !a.due_src && a.due_on < todayKey)
+    .slice(0, 8);
+  const droppedCount = actionRows.filter((a) => a && a.status === "dropped").length;
   // FIRST NAME ONLY, and only when it looks like a name.
   //
   // Scout has never been told who it is talking to. It knew their sport,
@@ -6080,6 +6151,22 @@ async function getAthleteState(userId) {
   } catch {}
   return {
     firstName,
+    // The requirement gap, as a RESULT. Scout reports it; it does not re-form
+    // it. Same object Home and Plan render.
+    gap,
+    // What they have actually done, missed and dropped — not just what is open.
+    recentlyDone: recentlyDone.map((a) => ({ title: a.title, on: String(a.completed_at).slice(0, 10) })),
+    missedActions: missedActions.map((a) => ({ title: a.title, due: a.due_on })),
+    droppedCount,
+    actionsKnown: actionRows.length > 0,
+    // Self-reported availability (migration 150). Absent means NOT RECORDED,
+    // which is not the same as fit, and the prompt below says so.
+    availability: profileRow && profileRow.availability_status ? {
+      status: profileRow.availability_status,
+      since: profileRow.availability_since || null,
+      expected: profileRow.availability_expected_return || null,
+      note: profileRow.availability_note || null,
+    } : null,
     profileComplete, pathwayCreated, baselineComplete, sportSupportLevel, sport, country,
     structuredSportKnowledge: hasStructuredSportKnowledge(sport),
     pathwayType, pathwayTimeline, milestoneCount, milestonesDone,
@@ -7034,6 +7121,82 @@ export default async function handler(req, res) {
       }
       athleteBlock += ` Supporting counts: ${rd.performance.metricsTracked} benchmark metric(s) tracked and ${rd.performance.metricsRetested} retested; ${rd.development.done}/${rd.development.total} development items done; ${rd.pathway.milestonesDone}/${rd.pathway.milestonesTotal} milestones done; ${rd.pathway.targetsCount} target(s); identity ${rd.verification.status}.`;
       athleteBlock += ` These numbers are authoritative. Never state a score that is not in this block, never invent a sixth category, and never describe their Passport in a way that contradicts these figures. When you talk about the weakest area, use the plain-language name above and say what would actually raise it.`;
+    }
+
+    // 2 — WHAT THEIR GOAL REQUIRES, AND WHAT GOLSZ CAN SEE OF IT.
+    // Same rule as the block above: Scout is handed the RESULT so it reports
+    // a diagnosis rather than forming a second one. Home and Plan draw this
+    // from the identical evaluation (api/_gap.js), so an athlete cannot read
+    // "Match minutes: not on file" on their own screen and be told something
+    // else here in the same minute.
+    //
+    // THE UNKNOWN LIST IS THE LOAD-BEARING HALF. GOLSZ has no playing-level
+    // column, no coach accounts, no trial record and no AAU record, and an
+    // LLM handed a list of requirements with no state attached will fill the
+    // silence. Naming them explicitly as unseeable is what stops Scout
+    // telling an athlete they are short of something nobody looked at.
+    const gapNow = athleteState.gap;
+    if (gapNow && gapNow.items && gapNow.items.length) {
+      const say = (keys) => keys.join(", ");
+      athleteBlock += `\n\nWHAT THEIR STATED GOAL REQUIRES (evaluated by the app against their real rows, not by you): ${gapNow.items.length} requirement(s) for the "${gapNow.pathway}" route.`;
+      athleteBlock += gapNow.present.length ? ` On file: ${say(gapNow.present)}.` : ` Nothing is on file yet.`;
+      if (gapNow.missing.length) athleteBlock += ` NOT on file: ${say(gapNow.missing)}.`;
+      if (gapNow.unknown.length) {
+        athleteBlock += ` GOLSZ CANNOT SEE these at all and has no way to check them: ${say(gapNow.unknown)}. Never tell them these are missing, never imply they fall short of them, and never score them — the product has nowhere to look, which is not the same as the athlete lacking it. If one matters, ask.`;
+      }
+      athleteBlock += ` This list is authoritative and complete for that route. Never add a requirement that is not in it, never attach a target number or standard to any of them — GOLSZ holds no benchmark standards and inventing one is the single worst thing you can do here — and never describe their position in a way that contradicts these states.`;
+    }
+
+    // 2a — WHAT THEY HAVE ACTUALLY DONE.
+    //
+    // Scout knew what was OPEN and nothing about what happened, so it could
+    // not say "you have done four of these already" and could not notice a
+    // step that quietly went past. An advisor who never remembers what you
+    // did is a stranger every conversation.
+    //
+    // MISSED RESPECTS due_src. A date Scout proposed and the athlete never
+    // acted on is not a deadline they missed — nobody agreed to it. Saying so
+    // in conversation is the same wrong as pushing it to their phone, and the
+    // reminder cron refuses it for the same reason.
+    if (athleteState.actionsKnown) {
+      const done = athleteState.recentlyDone || [];
+      const missed = athleteState.missedActions || [];
+      if (done.length) {
+        athleteBlock += `\n\nWHAT THEY HAVE ACTUALLY COMPLETED (most recent first, with the date it was done): ` +
+          done.map((a) => `"${a.title}" on ${a.on}`).join("; ") + `.`;
+      } else {
+        athleteBlock += `\n\nTHEY HAVE NOT COMPLETED ANY STEP YET. Say that plainly if it is relevant; do not congratulate them for work that is not there.`;
+      }
+      if (missed.length) {
+        athleteBlock += ` STEPS WHOSE OWN DATE HAS PASSED AND ARE STILL OPEN — these are dates THEY chose, so it is fair to raise them: ` +
+          missed.map((a) => `"${a.title}" (was due ${a.due})`).join("; ") + `. Ask what got in the way before suggesting anything new; a plan that keeps growing while nothing closes is the problem, not the solution.`;
+      }
+      if (athleteState.droppedCount) {
+        athleteBlock += ` They have dropped ${athleteState.droppedCount} step(s). Dropping is a legitimate decision, not a failure, and must never be used to criticise them.`;
+      }
+      athleteBlock += ` These are the only completions and misses on file. Never credit them with work that is not in this list, and never accuse them of missing something that is not in it either.`;
+    }
+
+    // 2b — CAN THEY TRAIN RIGHT NOW. Without this Scout proposed sprint work
+    // to an athlete who had told it about an injury ten messages earlier and
+    // would do so again in the next conversation, because nothing carried it.
+    //
+    // SELF-REPORTED, AND NOT A MEDICAL FACT. GOLSZ holds no diagnosis, no body
+    // part and no prognosis, and the expected-return date is the ATHLETE'S own
+    // guess. Scout must not reason about recovery as though it were clinical
+    // information, and must not treat a date they picked as a commitment.
+    const av = athleteState.availability;
+    if (av) {
+      const words = { available: "fit and training normally", limited: "training but limited", out: "not able to play" };
+      athleteBlock += `\n\nTHEIR OWN AVAILABILITY (they reported this themselves; GOLSZ has no medical information about them): ${words[av.status] || av.status}.`;
+      if (av.since) athleteBlock += ` Since ${av.since}.`;
+      if (av.expected) athleteBlock += ` They expect to be back around ${av.expected} — that is THEIR estimate, not a diagnosis or a commitment, so never state it as a fact or hold them to it.`;
+      if (av.note) athleteBlock += ` In their words: "${String(av.note).slice(0, 200)}".`;
+      if (av.status !== "available") {
+        athleteBlock += ` Do not propose training, testing or competition that someone in this state cannot do, and do not tell them to push through it. You are not qualified to assess an injury and must not try: if they ask whether they should be playing, say that is for the person treating them.`;
+      }
+    } else {
+      athleteBlock += `\n\nTHEIR AVAILABILITY IS NOT RECORDED. That is not the same as being fit. Do not assume either way; if it matters to the answer, ask.`;
     }
 
     // 3 — PRECEDENCE. Scout was observed telling an athlete "your goal on

@@ -238,6 +238,83 @@ async function checkHealthHeartbeat(supaUrl, serviceKey) {
   }
 }
 
+
+// ONE PUSH SENDER, because there are now two callers.
+//
+// Copying the send-and-prune loop for the second one left two identical
+// DELETEs that test_server_write_error_checked could not tell apart — it keys
+// a write by file, function and method, and both were
+// "target-followup-reminders.js|(arrow)|DELETE". That collision is the test
+// reporting a duplication, and the fix is to have one implementation rather
+// than to describe two.
+//
+// A 404 or 410 means the browser threw the subscription away: the endpoint is
+// gone for good, and retrying it every day forever is how a cron slowly fills
+// with work that can never succeed.
+async function pushToAll(supaUrl, serviceKey, webpush, subs, payload) {
+  await Promise.allSettled(
+    subs.map((s) =>
+      webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)
+        .catch(async (e) => {
+          if (e && (e.statusCode === 404 || e.statusCode === 410)) {
+            await fetch(`${supaUrl}/rest/v1/push_subscriptions?id=eq.${s.id}`, {
+              method: "DELETE", headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, Prefer: "return=minimal" },
+            });
+          }
+          throw e;
+        })
+    )
+  );
+}
+
+// ---- STEPS THAT ARE DUE, NUDGED ONCE --------------------------------------
+//
+// Nothing in GOLSZ told an athlete a step was due. The date passed and the
+// first they heard was the word "overdue" next time they happened to open the
+// app. This rides the cron that already runs daily rather than taking one of
+// the twelve Vercel function slots, which are full.
+//
+// THE RULE IT MUST NOT BREAK: GOLSZ does not call an athlete late on a date it
+// chose for them. due_src marks a date that came from Scout or from tapping
+// Retest — one tap on a confirm card is consent to a plan, not to twelve
+// individual deadlines — and the client has refused to call such a date late
+// since suggestedDate() was written. A push notification is the most punitive
+// surface there is: it arrives uninvited, on their phone, when they are not
+// even using the product. So this nudges ONLY steps whose date the athlete set
+// themselves, enforced in the query by due_src=is.null and asserted by
+// tests/test_action_reminders.cjs.
+//
+// ONE nudge per step, ever. last_reminded_at (migration 153) is never
+// backfilled, so a step that was already overdue when this shipped still gets
+// its first reminder — but only its first. A plan that nags daily is a plan
+// an athlete turns notifications off for.
+async function remindDueSteps(supaUrl, serviceKey, webpush) {
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = await supaSelect(
+    supaUrl, serviceKey,
+    `athlete_actions?status=eq.open&due_src=is.null&last_reminded_at=is.null` +
+    `&due_on=lte.${today}&select=id,user_id,title,due_on&limit=500`
+  );
+  let sent = 0;
+  for (const row of rows) {
+    const subs = await supaSelect(supaUrl, serviceKey, `push_subscriptions?user_id=eq.${row.user_id}&select=id,endpoint,p256dh,auth`);
+    // No subscription is not a failure, and must NOT stamp last_reminded_at:
+    // doing so would burn the athlete's one nudge on a device that never
+    // received it, and they would never be told about that step again.
+    if (!subs.length) continue;
+    const dueToday = row.due_on === today;
+    const payload = JSON.stringify({
+      title: dueToday ? "Due today" : "Still on your plan",
+      body: dueToday ? row.title : `${row.title} — the day you set has passed.`,
+      url: "/golsz-app.html",
+    });
+    await pushToAll(supaUrl, serviceKey, webpush, subs, payload);
+    await supaPatch(supaUrl, serviceKey, `athlete_actions?id=eq.${row.id}`, { last_reminded_at: new Date().toISOString() });
+    sent++;
+  }
+  return { checked: rows.length, reminded: sent };
+}
+
 export default async function handler(req, res) {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret || req.headers.authorization !== `Bearer ${cronSecret}`) {
@@ -280,24 +357,23 @@ export default async function handler(req, res) {
         body: `It's been a while since you touched ${target.name} — worth a follow-up?`,
         url: "/golsz-app.html?page=targets",
       });
-      await Promise.allSettled(
-        subs.map((s) =>
-          webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)
-            .catch(async (e) => {
-              if (e && (e.statusCode === 404 || e.statusCode === 410)) {
-                await fetch(`${supaUrl}/rest/v1/push_subscriptions?id=eq.${s.id}`, {
-                  method: "DELETE", headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, Prefer: "return=minimal" },
-                });
-              }
-              throw e;
-            })
-        )
-      );
+      await pushToAll(supaUrl, serviceKey, webpush, subs, payload);
       await supaPatch(supaUrl, serviceKey, `outreach_targets?id=eq.${target.id}`, { last_reminded_at: new Date().toISOString() });
       sent++;
     }
 
-    return res.status(200).json({ checked: targets.length, reminded: sent, watchdog });
+    // Its own try: a failure here must not lose the outreach run that already
+    // succeeded, nor the watchdog verdict. Reported either way so a silent
+    // zero cannot be mistaken for "no steps were due".
+    let steps = { checked: 0, reminded: 0 };
+    try {
+      steps = await remindDueSteps(supaUrl, serviceKey, webpush);
+    } catch (e) {
+      steps = { checked: 0, reminded: 0, error: String(e) };
+      await logError("api/target-followup-reminders.js", "Due-step reminders failed", { detail: String(e) });
+    }
+
+    return res.status(200).json({ checked: targets.length, reminded: sent, steps, watchdog });
   } catch (e) {
     await logError("api/target-followup-reminders.js", "Reminder run failed", { detail: String(e) });
     // The watchdog result is reported on this path too: it ran before the
