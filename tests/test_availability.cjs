@@ -135,7 +135,17 @@ ck("dates cannot exist without a status",
   const at = APP.indexOf("async function setAvailability(next) {");
   ck("Settings still has its own handler", at > 0, true);
   const fn = APP.slice(at, APP.indexOf("\n  }", at));
-  ck("...which shows the new value before the server answers", /setAvail\(\{ \.\.\.\(avail \|\| \{\}\), \.\.\.patch \}\)/.test(fn), true);
+  // It still paints before the server answers - but through its OWN key
+  // names. `avail` is { status, since, expected, note }; availabilityPatch
+  // returns database columns. Spreading the patch straight in left
+  // avail.status untouched, so the three buttons never moved when tapped and
+  // the expected-return field, gated on avail.status === "out", never showed.
+  ck("...which shows the new value before the server answers",
+     /setAvail\(\{\s*\n\s*\.\.\.\(avail \|\| \{\}\),/.test(fn), true);
+  ck("...mapped onto the keys this component actually reads",
+     /status: patch\.availability_status,[\s\S]{0,160}note: patch\.availability_note,/.test(fn), true);
+  ck("...and never by spreading column names into short-key state",
+     /\.\.\.\(avail \|\| \{\}\), \.\.\.patch \}/.test(fn), false);
   ck("...puts the old one back on failure", /setAvail\(before\);/.test(fn), true);
   ck("...and tells the athlete", /setPrivacyErr\(t\("privacy_save_failed"\)\)/.test(fn), true);
   ck("...writes through the shared function", /await saveAvailability\(sb, uid, next, patch\)/.test(fn), true);

@@ -2096,7 +2096,18 @@ function SettingsButton({ openSignal }) {
     const before = avail;
     setAvailBusy(true);
     const patch = availabilityPatch(next);
-    setAvail({ ...(avail || {}), ...patch });
+    // availabilityPatch speaks database columns; `avail` speaks short keys
+    // (status/since/expected/note, set at load). Spreading the patch straight
+    // in added four unread keys and left avail.status as it was, so the three
+    // buttons in Settings never moved when tapped and the expected-return
+    // field - gated on avail.status === "out" - never appeared.
+    setAvail({
+      ...(avail || {}),
+      status: patch.availability_status,
+      since: patch.availability_since,
+      expected: patch.availability_expected_return,
+      note: patch.availability_note,
+    });
     const { error } = await saveAvailability(sb, uid, next, patch);
     if (error) {
       setAvail(before);
@@ -9179,9 +9190,36 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   async function addSuggestedPathway(msgIndex, pathway, mode) {
     if (!sb || !uidRef.current || !pathway) return;
     if (mode !== "add" && mode !== "replace") return;   // no default write path
+
+    // THE SNAPSHOT IS STALE BY DESIGN, SO RE-READ BEFORE MERGING.
+    //
+    // currentPathway was loaded once, when Scout mounted. The comment further
+    // down already guards current_stage_id against exactly that staleness -
+    // but milestones had the same exposure and no guard. An athlete who
+    // ticked a step on Home or Plan while this conversation was open would
+    // have the tick silently undone here, because `existing` came from the
+    // mount-time copy and this write replaces the array wholesale.
+    //
+    // A failed re-read ABORTS an "add": merging against a copy we know may be
+    // out of date is how progress disappears, and an athlete would rather tap
+    // again than lose a week of ticks. "replace" does not need it - incoming
+    // replaces the array either way.
+    let base = currentPathway;
+    if (mode === "add") {
+      const { data: fresh, error: readErr } = await sb.from("pathway_plan")
+        .select("pathway_type, target_timeline, milestones, stages, current_stage_id")
+        .eq("user_id", uidRef.current).maybeSingle();
+      if (readErr) {
+        console.error("GOLSZ pathway re-read failed:", readErr);
+        setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, actionError: t("action_add_failed") } : msg)));
+        return;
+      }
+      if (fresh) base = fresh;
+    }
+
     const incoming = (pathway.milestones || []).map(normalizeMilestone);
-    const existing = (currentPathway && Array.isArray(currentPathway.milestones))
-      ? currentPathway.milestones.map(normalizeMilestone) : [];
+    const existing = (base && Array.isArray(base.milestones))
+      ? base.milestones.map(normalizeMilestone) : [];
     const merged = mode === "replace" ? incoming : existing.concat(incoming);
     // SECTIONS ARE ALWAYS A REPLACE, in either mode. There is no meaningful
     // "append" for a map: two half-maps concatenated is not a route. So Scout
@@ -9191,7 +9229,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
     const proposedStages = Array.isArray(pathway.stages)
       ? pathway.stages.map(normalizeStage).filter(Boolean)
       : [];
-    const existingStages = (currentPathway && Array.isArray(currentPathway.stages)) ? currentPathway.stages : [];
+    const existingStages = (base && Array.isArray(base.stages)) ? base.stages : [];
     const nextStages = proposedStages.length ? proposedStages : existingStages;
     // Steps follow their SECTION POSITION across the replacement instead of
     // being left pointing at ids that no longer exist. The same call produces
@@ -9207,7 +9245,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
     const stagesReplaced = proposedStages.length > 0;
     const remap = stagesReplaced
       ? remapStagePositions(merged, existingStages, nextStages,
-          (currentPathway && currentPathway.current_stage_id) || null)
+          (base && base.current_stage_id) || null)
       : { milestones: merged, currentStageId: null, moved: 0, unfiled: 0, markerCleared: false };
     const row = { user_id: uidRef.current, pathway_type: pathway.pathway_type, target_timeline: pathway.target_timeline || null, milestones: remap.milestones, stages: nextStages, baseline_complete: true, updated_at: new Date().toISOString() };
     if (stagesReplaced) row.current_stage_id = remap.currentStageId;
@@ -9220,7 +9258,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       setCurrentPathway({ pathway_type: pathway.pathway_type, target_timeline: pathway.target_timeline || null, milestones: remap.milestones, stages: nextStages,
         // Mirrors what was WRITTEN, not what was proposed — the re-filed list,
         // and the marker only where this write actually moved it.
-        current_stage_id: stagesReplaced ? remap.currentStageId : ((currentPathway && currentPathway.current_stage_id) || null) });
+        current_stage_id: stagesReplaced ? remap.currentStageId : ((base && base.current_stage_id) || null) });
       syncActions(sb);
       setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedPathway: null, pathwayAdded: true, actionError: null } : msg)));
       if (REDESIGN_SCOUT) {
@@ -9286,6 +9324,14 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   // says none remain. Both come from the server; neither is guessed.
   const outOfQuestions = limitHit
     || (scoutUsage && scoutUsage.remaining === 0 ? "daily" : null);
+  // THE COMPOSER IS SHUT WHENEVER THERE IS NOTHING TO SAY INTO IT.
+  //
+  // The receipt screen (addedScreen) replaced only the thread, leaving the
+  // reply chips and the text field live UNDER it. An athlete who tapped a
+  // chip there spent one of the day's metered questions on a message they
+  // could not see the answer to, because the receipt was still covering the
+  // conversation. Out-of-questions had the same shape handled; this did not.
+  const composerShut = REDESIGN_SCOUT && (outOfQuestions || addedScreen);
   const isPlayerChat = !profile.occupation || profile.occupation === "Player";
   // WHAT TO SAY BACK TO AN OFFER is not what to say back to an answer. When
   // Scout's last message carried an action card, the useful replies are about
@@ -9713,7 +9759,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
               )}
             </div>
           ))}
-          {loaded && !pending && msgs && msgs.length <= 1 && REDESIGN_SCOUT && (
+          {loaded && !pending && msgs && msgs.length <= 1 && REDESIGN_SCOUT && !outOfQuestions && (
             <ScoutStart name={profile.name} isPlayer={isPlayerChat} hasSport={!!profile.sport}
               onPick={(label) => send(label)} t={t} />
           )}
@@ -9739,7 +9785,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
 
       {!showHistory && (
         <>
-          {msgs && msgs.length > 1 && !(REDESIGN_SCOUT && outOfQuestions) && (
+          {msgs && msgs.length > 1 && !composerShut && (
             <div style={{ display: "flex", gap: 8, flexWrap: REDESIGN_SCOUT ? "wrap" : "nowrap", overflowX: REDESIGN_SCOUT ? "visible" : "auto", padding: "6px 12px", scrollbarWidth: "none" }} className="noscroll">
               {SHOWN_CHIPS.map((q) => <button key={q} onClick={() => send(q)} disabled={pending || !loaded} style={{ flex: "0 0 auto", background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 999, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>{q}</button>)}
             </div>
@@ -9757,7 +9803,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
               <span style={{ fontSize: 11, color: C.slate }}>{t("scout_photo_attached")}</span>
             </div>
           )}
-          {REDESIGN_SCOUT && outOfQuestions ? (
+          {REDESIGN_SCOUT && addedScreen ? null : REDESIGN_SCOUT && outOfQuestions ? (
             <ScoutLimitCard kind={outOfQuestions} usage={scoutUsage} plan={plan} onUpgrade={onUpgrade} t={t} />
           ) : (
           <div style={{ display: "flex", gap: 8, padding: "10px 12px 14px", borderTop: `1px solid ${C.line}` }}>
@@ -15795,7 +15841,7 @@ function MyAthletes({ children, onManage, onView, t, onAdded }) {
    marked answered, so they are asked again rather than silently recorded as
    something they are not. Availability is health information; a failed write
    that looked like a success is the one outcome worth avoiding here. */
-function DailyCheckIn({ name, current, sb, uid, isDesktop, onFinish, onNavigate }) {
+function DailyCheckIn({ name, current, currentSince, sb, uid, isDesktop, onFinish, onNavigate }) {
   const { t } = useLang();
   const [view, setView] = useState("ask");
   const [busy, setBusy] = useState(false);
@@ -15812,7 +15858,8 @@ function DailyCheckIn({ name, current, sb, uid, isDesktop, onFinish, onNavigate 
     const want = kind === "great" ? "available" : kind === "hurt" ? "out" : null;
     if (!want || current === want) {
       if (kind === "hurt") { setView("rest"); return; }
-      onFinish(kind === "okay" ? "okay" : kind === "great" ? "great" : null, true);
+      // Okay writes nothing, so the status is whatever it already was.
+      onFinish(kind === "okay" ? "okay" : kind === "great" ? "great" : null, true, want || current);
       return;
     }
     setBusy(true);
@@ -15827,7 +15874,7 @@ function DailyCheckIn({ name, current, sb, uid, isDesktop, onFinish, onNavigate 
       return;
     }
     if (kind === "hurt") { setView("rest"); return; }
-    onFinish("great", true);
+    onFinish("great", true, "available");
   }
 
   async function better() {
@@ -15836,13 +15883,18 @@ function DailyCheckIn({ name, current, sb, uid, isDesktop, onFinish, onNavigate 
     const { error } = await saveAvailability(sb, uid, { status: "available", expected: null, note: null });
     setBusy(false);
     if (error) { setErr(t("privacy_save_failed")); return; }
-    onFinish("great", true);
+    onFinish("great", true, "available");
   }
 
+  // The return date must not restart the injury. `since` is when they went
+  // out, not when they got round to estimating their return - an athlete out
+  // since 3 Oct who picks a date on the 21st was still out on the 3rd, and
+  // availabilityPatch defaults a missing `since` to TODAY.
   async function setReturnDate(v) {
     setBack(v);
     if (!v) return;
-    const { error } = await saveAvailability(sb, uid, { status: "out", since: isoDay(new Date()), expected: v });
+    const { error } = await saveAvailability(sb, uid, {
+      status: "out", since: currentSince || isoDay(new Date()), expected: v });
     if (error) setErr(t("privacy_save_failed"));
   }
 
@@ -15922,10 +15974,10 @@ function DailyCheckIn({ name, current, sb, uid, isDesktop, onFinish, onNavigate 
           {err ? <div style={{ fontSize: 15, color: C.amber, marginTop: 12 }}>{err}</div> : null}
 
           <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-            <button onClick={() => { onFinish(null, true); onNavigate("scout", null, t("rest_scout_seed")); }} style={secondary}>
+            <button onClick={() => { onFinish(null, true, "out"); onNavigate("scout", null, t("rest_scout_seed")); }} style={secondary}>
               <Radar size={21} /> {t("rest_tell_scout")}
             </button>
-            <button onClick={() => onFinish(null, true)} style={primary}>{t("rest_continue")}</button>
+            <button onClick={() => onFinish(null, true, "out")} style={primary}>{t("rest_continue")}</button>
             <button onClick={better} disabled={busy} style={{ ...link, alignSelf: "center" }}>{t("resting_better")}</button>
           </div>
 
@@ -16035,6 +16087,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
   //   - resting pauses "late" everywhere via canCallLate()
   const [occupation, setOccupation] = useState(undefined);
   const [availabilityStatus, setAvailabilityStatus] = useState(undefined);
+  const [availabilitySince, setAvailabilitySince] = useState(null);
   const [selfUid, setSelfUid] = useState(null);
   const [firstName, setFirstName] = useState("");
   // What localStorage says about today, read once. Kept in state rather than
@@ -16141,11 +16194,12 @@ function GolszApp({ onSignOut, startOnboarding }) {
         // even opened the dropdown that the database was going to reject.
         const [{ data }, { data: prof }] = await Promise.all([
           sb.from("athletes").select("sport").eq("id", user.id).single(),
-          sb.from("profiles").select("occupation, availability_status, full_name").eq("id", user.id).maybeSingle(),
+          sb.from("profiles").select("occupation, availability_status, availability_since, full_name").eq("id", user.id).maybeSingle(),
         ]);
         setSelfUid(user.id);
         setOccupation(prof ? (prof.occupation || null) : null);
         setAvailabilityStatus(prof ? (prof.availability_status || null) : null);
+        setAvailabilitySince(prof ? (prof.availability_since || null) : null);
         setFirstName(prof && prof.full_name ? String(prof.full_name).trim().split(/\s+/)[0] : "");
         setProfileComplete(!!(data && data.sport) || !!(prof && prof.occupation === "Parent"));
       } catch (e) {
@@ -16182,16 +16236,24 @@ function GolszApp({ onSignOut, startOnboarding }) {
     setAvailabilityStatus("available");
     setCheckinChip("great");
   }
-  function finishCheckin(chip, stamp) {
+  function finishCheckin(chip, stamp, status) {
     if (stamp) {
       const mark = checkinStamp(selfUid, isoDay(new Date()));
       setCheckinStored(mark);
       try { localStorage.setItem("golsz-checkin", mark); } catch (e) {}
     }
     setCheckinChip(chip || null);
-    // Home reads `resting` for its banner and for every late counter, so the
-    // answer has to land here too - not only in the database.
-    if (chip === "great") setAvailabilityStatus("available");
+    // Home, Plan, the Road and the Stop screen all read `resting`, which is
+    // derived from availabilityStatus. So the answer has to land HERE, not
+    // only in the database - and it has to land for BOTH answers.
+    //
+    // This used to read `if (chip === "great")`, which inferred the status
+    // from the chip. Hurt sets no chip, so tapping Hurt wrote 'out' to the
+    // database and left the session believing the athlete was fine: the rest
+    // banner never appeared and every late counter kept running until the
+    // app was reloaded. The status is now passed explicitly by whoever knows
+    // it, rather than guessed from a display value.
+    if (status !== undefined) setAvailabilityStatus(status);
   }
   useEffect(() => { if (mustFinishProfile) setPage("profile"); }, [mustFinishProfile]);
 
@@ -16471,7 +16533,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
       {showConversion && <GuidedAssessment uid={conversionUid} onDismiss={dismissConversion} />}
       {showEliteWelcome && profileComplete === false && !eliteWelcomeDismissed && <EliteWelcome onDismiss={() => setEliteWelcomeDismissed(true)} />}
       {upgradeUid && <UpgradeScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
-      {askCheckin && <DailyCheckIn name={firstName} current={availabilityStatus} sb={sb} uid={selfUid} isDesktop={isDesktop} onFinish={finishCheckin} onNavigate={go} />}
+      {askCheckin && <DailyCheckIn name={firstName} current={availabilityStatus} currentSince={availabilitySince} sb={sb} uid={selfUid} isDesktop={isDesktop} onFinish={finishCheckin} onNavigate={go} />}
       </>
     );
   }
@@ -16558,7 +16620,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
     {showConversion && <GuidedAssessment uid={conversionUid} onDismiss={dismissConversion} />}
       {showEliteWelcome && profileComplete === false && !eliteWelcomeDismissed && <EliteWelcome onDismiss={() => setEliteWelcomeDismissed(true)} />}
     {upgradeUid && <UpgradeScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
-    {askCheckin && <DailyCheckIn name={firstName} current={availabilityStatus} sb={sb} uid={selfUid} isDesktop={isDesktop} onFinish={finishCheckin} onNavigate={go} />}
+    {askCheckin && <DailyCheckIn name={firstName} current={availabilityStatus} currentSince={availabilitySince} sb={sb} uid={selfUid} isDesktop={isDesktop} onFinish={finishCheckin} onNavigate={go} />}
     </>
   );
 }
@@ -18496,7 +18558,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=28cdedc07d9f3062";
+    s.src = "js/app.js?v=86cb12bf46e0fb21";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.

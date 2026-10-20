@@ -108,6 +108,52 @@ ck("a failed write tells the athlete", /setErr\(t\("privacy_save_failed"\)\)/.te
 ck("...and does not finish the check-in",
    CI.indexOf('setErr(t("privacy_save_failed"));\n      return;') > 0, true);
 
+/* ---------- the answer reaches the SESSION, not only the database ---------- */
+
+// THE BUG THIS PINS. finishCheckin used to read `if (chip === "great")` and
+// infer the availability status from a DISPLAY value. Hurt sets no chip, so
+// tapping Hurt wrote 'out' to the database and left the running app believing
+// the athlete was fine: no rest banner, and every late counter on Home, Plan,
+// the Road and the Stop screen kept running until the app was reloaded. The
+// headline promise of this whole phase - nothing is late while you rest - was
+// true in the database and false on the screen.
+ck("the status is passed explicitly, not inferred from the chip",
+   /function finishCheckin\(chip, stamp, status\) \{/.test(APP), true);
+ck("...and the chip no longer decides it",
+   /if \(chip === "great"\) setAvailabilityStatus/.test(APP), false);
+ck("...it is applied whenever one was established",
+   /if \(status !== undefined\) setAvailabilityStatus\(status\);/.test(APP), true);
+
+// Every exit from the screen reports what is now on file. The rest screen is
+// reachable only through Hurt, so leaving it means 'out'.
+ck("leaving the rest screen reports that the athlete is out",
+   (CI.match(/onFinish\(null, true, "out"\)/g) || []).length, 2);
+ck("Great reports available", (CI.match(/onFinish\("great", true, "available"\)/g) || []).length, 2);
+ck("Okay and Skip report the status that was already there",
+   /onFinish\(kind === "okay" \? "okay" : kind === "great" \? "great" : null, true, want \|\| current\)/.test(CI), true);
+ck("no exit forgets to report one",
+   (CI.match(/onFinish\([^)]*\)/g) || []).filter((c) => !/, true, /.test(c) && !/onFinish\(null, true\)/.test(c)).length, 0);
+
+// A return date is not a new injury. availabilityPatch defaults a missing
+// `since` to TODAY, so passing one unconditionally restarted the clock on an
+// athlete who had already been out for weeks.
+ck("picking a return date does not restart availability_since",
+   /since: currentSince \|\| isoDay\(new Date\(\)\)/.test(CI), true);
+ck("...and the component is given the real one to preserve",
+   /currentSince=\{availabilitySince\}/.test(APP), true);
+ck("...which comes from the same profiles read, not a new one",
+   /select\("occupation, availability_status, availability_since, full_name"\)/.test(APP), true);
+
+/* ---------- Settings and the check-in speak one dialect ---------- */
+
+// `avail` is { status, since, expected, note }; availabilityPatch returns
+// database column names. Spreading one into the other left avail.status
+// untouched, so the three buttons never moved when tapped.
+ck("Settings maps the patch onto its own key names",
+   /status: patch\.availability_status,/.test(APP), true);
+ck("...rather than spreading database columns into short-key state",
+   /setAvail\(\{ \.\.\.\(avail \|\| \{\}\), \.\.\.patch \}\)/.test(APP), false);
+
 /* ---------- where it renders ---------- */
 
 // GolszApp returns two different trees. An overlay added to only one of them
@@ -124,7 +170,7 @@ ck("it does not re-inject the stylesheet", /<style>\{CSS\}<\/style>/.test(CI), f
 /* ---------- it costs no extra fetch ---------- */
 
 ck("occupation, availability and name come from one existing read",
-   /select\("occupation, availability_status, full_name"\)/.test(APP), true);
+   /select\("occupation, availability_status, availability_since, full_name"\)/.test(APP), true);
 
 /* ---------- privacy ---------- */
 

@@ -157,7 +157,19 @@ for (const [id, dir] of [["a", 1], ["b", -1], ["b", 1], ["c", -1], ["c", 1], ["d
 ck("Scout's incoming milestones are normalised once, before either branch",
    /const incoming = \(pathway\.milestones \|\| \[\]\)\.map\(normalizeMilestone\)/.test(APP), true);
 ck("...and the athlete's existing steps are normalised too, not trusted raw",
-   /currentPathway\.milestones\.map\(normalizeMilestone\)/.test(APP), true);
+   /base\.milestones\.map\(normalizeMilestone\)/.test(APP), true);
+// WHERE `base` COMES FROM IS THE POINT. currentPathway is loaded once, when
+// Scout mounts. Merging an "add" against that copy silently un-ticks anything
+// the athlete completed on Home or Plan while the conversation was open,
+// because this write replaces the milestone array wholesale.
+ck("...and an add re-reads the plan instead of trusting the mount snapshot",
+   /if \(mode === "add"\) \{[\s\S]{0,200}from\("pathway_plan"\)/.test(APP), true);
+// A failed re-read must abort rather than merge against a copy known to be
+// stale: an athlete would rather tap again than lose a week of ticks.
+ck("...and a failed re-read refuses to write at all",
+   /if \(readErr\) \{[\s\S]{0,220}return;/.test(APP), true);
+ck("...while a replace needs no re-read, because it overwrites either way",
+   /let base = currentPathway;\n\s*if \(mode === "add"\)/.test(APP), true);
 // Pinned `milestones: merged, baseline_complete` — adjacency, not the property
 // — so it broke when `stages:` was inserted between them. What matters is that
 // the upsert writes `merged`, whatever follows it.
