@@ -52,7 +52,13 @@ ck("it renders a summary line when given one", /\{summary \?/.test(col), true);
 ck("the training plan is wrapped, and says what is inside it",
    /<Collapsible label=\{t\("dev_plan_title"\)\} summary=\{t\("dev_plan_collapsed_hint"\)\}><DevelopmentPlan /.test(APP), true);
 ck("schools & clubs is wrapped, and reports its roster",
-   /<Collapsible label=\{t\("targets_title"\)\} summary=\{rosterSummary\(t, items\)\}>/.test(APP), true);
+   /<Collapsible label=\{t\("targets_title"\)\} summary=\{rosterSummary\(t, items\)\}/.test(APP), true);
+// A closed section is only acceptable because it states its contents - and
+// only reachable because a deep link can force it open. Home's Schools tile
+// points straight at it, and a link that lands on a collapsed row is a link
+// that did nothing as far as the athlete can tell.
+ck("...and a deep link can open it",
+   /anchorId="gz-schools" revealSignal=\{focusSection === "gz-schools" \? focusNonce : 0\}/.test(APP), true);
 ck("the wrapped card no longer repeats its own title",
    (APP.match(/<Eyebrow>\{t\("targets_title"\)\}<\/Eyebrow>/g) || []).length, 0);
 ck("the goal-gap table is wrapped, and its summary is the finding itself",
