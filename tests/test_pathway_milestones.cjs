@@ -162,14 +162,40 @@ ck("...and the athlete's existing steps are normalised too, not trusted raw",
 // Scout mounts. Merging an "add" against that copy silently un-ticks anything
 // the athlete completed on Home or Plan while the conversation was open,
 // because this write replaces the milestone array wholesale.
-ck("...and an add re-reads the plan instead of trusting the mount snapshot",
-   /if \(mode === "add"\) \{[\s\S]{0,200}from\("pathway_plan"\)/.test(APP), true);
+ck("...and it re-reads the plan instead of trusting the mount snapshot",
+   /let base = currentPathway;\n\s*\{\n[\s\S]{0,200}from\("pathway_plan"\)/.test(APP), true);
 // A failed re-read must abort rather than merge against a copy known to be
 // stale: an athlete would rather tap again than lose a week of ticks.
 ck("...and a failed re-read refuses to write at all",
    /if \(readErr\) \{[\s\S]{0,220}return;/.test(APP), true);
-ck("...while a replace needs no re-read, because it overwrites either way",
-   /let base = currentPathway;\n\s*if \(mode === "add"\)/.test(APP), true);
+
+// THIS USED TO ASSERT THE OPPOSITE, AND THE OPPOSITE WAS THE BUG.
+// It read: "...while a replace needs no re-read, because it overwrites either
+// way", pinning `if (mode === "add")` as deliberate. True of MILESTONES and
+// false of the two other columns this write derives from `base`:
+// existingStages is the OLD ladder handed to remapStagePositions, and
+// current_stage_id is read off `base` and written back. An athlete who
+// pressed "I'm here now" on Plan after Scout mounted had a snapshot holding
+// null, so mapId(null) returned {id:null,lost:false}, markerCleared evaluated
+// FALSE because it is gated on !!currentStageId, and the write set the column
+// to null regardless - destroying the section they had just stated, with no
+// amber line on the card and no notice afterwards.
+ck("the re-read is not gated on the mode",
+   /if \(mode === "add"\) \{[\s\S]{0,200}from\("pathway_plan"\)/.test(APP), false);
+ck("...so replace sees the live marker, not the one from when Scout mounted",
+   /if \(fresh\) \{ base = fresh; setCurrentPathway\(fresh\); \}/.test(APP), true);
+
+// DISCLOSED AFTER THE WRITE, NOT ONLY BEFORE IT. The amber line on the confirm
+// card is a prediction computed at render time from the mount snapshot; this
+// is the one statement made from what the write actually did, for the athlete
+// who accepted without reading the card.
+ck("the receipt carries whether the marker was cleared",
+   /markerCleared: !!remap\.markerCleared,/.test(APP), true);
+ck("...and the screen takes it", /function ScoutAdded\(\{ kind, step, day, count, markerCleared,/.test(APP), true);
+ck("...and renders it", /\{t\("scout_done_marker_cleared"\)\}/.test(APP), true);
+ck("...and the parent hands it over", /markerCleared=\{addedScreen\.markerCleared\}/.test(APP), true);
+ck("the notice is translated in all 4 languages",
+   (APP.match(/\bscout_done_marker_cleared: "/g) || []).length, 4);
 // Pinned `milestones: merged, baseline_complete` — adjacency, not the property
 // — so it broke when `stages:` was inserted between them. What matters is that
 // the upsert writes `merged`, whatever follows it.
