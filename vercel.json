@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run check",
+  "buildCommand": "npm run check && npm run strip",
   "outputDirectory": ".",
   "crons": [
     {
