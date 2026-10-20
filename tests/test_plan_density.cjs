@@ -72,7 +72,9 @@ ck("the gap count is stated once, not in the header and the body both",
 ck("the wrapped gap card no longer repeats its own title",
    (APP.match(/<Eyebrow>\{t\("gap_title"\)\}<\/Eyebrow>/g) || []).length, 1);  // the unsupported-sport card keeps its own
 
-ck("exactly three sections close on Plan", (APP.match(/<Collapsible /g) || []).length, 3);
+// Four now: Training, Schools & clubs, the goal-gap table, and the dated
+// calendar view that the road displaced from the top of the screen.
+ck("exactly four sections close on Plan", (APP.match(/<Collapsible /g) || []).length, 4);
 
 // The condition on which this component is allowed to exist at all. A
 // <Collapsible> with no summary is precisely the title-only accordion the

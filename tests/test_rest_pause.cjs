@@ -89,27 +89,49 @@ for (const [name, re] of SITES) ck(`${name} asks canCallLate`, re.test(APP), tru
 // prefers a date the athlete chose over one Scout guessed. That is a
 // preference, not a lateness judgement, and an injured athlete still has a
 // next step.
-ck("nextMilestone keeps its own predicate",
-   /const chosen = dated\.filter\(\(m\) => !suggestedDate\(m\)\);/.test(APP), true);
-ck("...and does not consult resting", /dated\.filter\(\(m\) => canCallLate/.test(APP), false);
+// nextMilestone now sorts through the shared comparator, so the preference
+// lives in milestoneRank. The claim is unchanged: choosing what to do NEXT
+// must weigh whose date it is, and must never weigh whether the athlete is
+// injured. An injured athlete still has a next step; it is simply not late.
+ck("the next-step preference still asks whose date it is",
+   /return suggestedDate\(m\) \? 1 : 0;/.test(APP), true);
+const rankSrc = grab("function milestoneRank(m) {");
+ck("...and milestoneRank exists to hold it", rankSrc.length > 0, true);
+ck("...and it never consults resting", /resting/.test(rankSrc), false);
+const cmpSrc = grab("function compareUndone(a, b) {");
+ck("...nor does the comparator", /resting|canCallLate/.test(cmpSrc), false);
+const nextSrc = grab("function nextMilestone(milestones) {");
+ck("nextMilestone never consults resting", /resting|canCallLate/.test(nextSrc), false);
 
-// Exactly three CALLS to suggestedDate survive: its own definition, the call
-// inside canCallLate, and nextMilestone's filter. A fourth means a lateness
-// site was missed. Comment lines are stripped first - the file explains the
-// predicate in prose in several places, and counting those would make this
-// assertion drift every time someone writes a sentence about it.
+// Every CALL to suggestedDate is named, so a new one has to be justified here
+// rather than appearing silently at a fifth site. Comment lines are stripped
+// first: the file explains the predicate in prose in several places, and
+// counting those would make this drift every time someone writes a sentence.
+//
+//   1. its own definition
+//   2. canCallLate, which is the lateness rule
+//   3. milestoneRank, which decides what comes NEXT (not what is late)
+//   4. the stop screen, which DISCLOSES that a date was Scout's guess
+//
+// Only 2 is a lateness judgement. 4 is the opposite of one - it tells the
+// athlete whose date it is so they can decide whether to keep it.
 const CODE = APP.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
-ck("no lateness site still asks suggestedDate directly",
-   (CODE.match(/suggestedDate\(/g) || []).length, 3);
+ck("suggestedDate has exactly four callers", (CODE.match(/suggestedDate\(/g) || []).length, 4);
+ck("...one of which is the lateness rule", /if \(suggestedDate\(m\)\) return false;/.test(CODE), true);
+ck("...one the next-step preference", /return suggestedDate\(m\) \? 1 : 0;/.test(CODE), true);
+ck("...and one a disclosure, not a judgement", /\{suggestedDate\(step\) \? \(/.test(CODE), true);
 
 /* ---------- resting reaches those sites ---------- */
 
 ck("both label helpers take resting", /function milestoneDateLabel\(m, lang, t, resting\)/.test(APP), true);
 ck("GolszApp derives resting from the status, not from a guess",
    /const resting = availabilityStatus === "out";/.test(APP), true);
-// Home and Plan each render twice (sidebar + mobile), and PathwayPlan once.
-ck("resting is handed to every screen that judges lateness",
-   (APP.match(/resting=\{resting\}/g) || []).length, 5);
+// Home and Plan each render twice (sidebar + mobile), PathwayPlan once, and
+// the road and the stop screen one each. Seven. The number matters less than
+// that it is pinned: a screen that shows dates and never receives `resting`
+// will call an injured athlete late.
+ck("resting reaches every screen that shows a date",
+   (APP.match(/resting=\{resting\}/g) || []).length, 7);
 
 /* ---------- the cron, which reaches them with the app closed ---------- */
 

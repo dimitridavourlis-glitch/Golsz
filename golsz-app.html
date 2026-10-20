@@ -148,6 +148,7 @@ const Bandage = svg('<rect x="2" y="8" width="20" height="8" rx="4" transform="r
 const MessageCircle = svg('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>');
 const IdCard = svg('<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="11" r="2.5"/><path d="M14 10h4M14 14h4M6 16c.8-1.5 1.8-2 3-2s2.2.5 3 2"/>');
 const Timer = svg('<circle cx="12" cy="14" r="7"/><path d="M12 10v4l3 2M10 3h4M12 3v4"/>');
+const ArrowRight = svg('<path d="M5 12h14M13 6l6 6-6 6"/>');
 const Share = svg('<circle cx="18" cy="5" r="2.5"/><circle cx="18" cy="19" r="2.5"/><circle cx="6" cy="12" r="2.5"/><line x1="8.2" x2="15.8" y1="10.8" y2="6.2"/><line x1="8.2" x2="15.8" y1="13.2" y2="17.8"/>');
 const GraduationCap = svg('<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>');
 const Mail = svg('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>');
@@ -695,6 +696,7 @@ const I18N = {
     dev_plan_collapsed_hint: "Your training, and the areas you are working on",
     checkin_title_named: "Hi {name}. How do you feel today?", checkin_title: "How do you feel today?", checkin_sub: "Tap one. Your plan will fit your day.", checkin_great: "Great", checkin_great_sub: "Ready to train", checkin_okay: "Okay", checkin_okay_sub: "A bit tired", checkin_hurt: "Hurt", checkin_hurt_sub: "I need a break", checkin_private: "Coaches and schools never see this.", checkin_skip: "Skip for today", checkin_chip_great: "Feeling great", checkin_chip_okay: "Feeling okay", rest_title: "Rest first.", rest_sub: "Your body needs time. That is okay.", rest_paused: "PLAN PAUSED", rest_nothing_late: "Nothing on your road is late while you rest.", rest_back_q: "When do you think you'll be back?", rest_back_hint: "Your own guess. You can skip it or change it.", rest_tell_scout: "Tell Scout what happened", rest_scout_seed: "I'm hurt and taking a break. Can you help me adjust my plan?", rest_continue: "Go to the app", rest_doctor: "If it really hurts, see a doctor or a physio.", resting_banner_strong: "Resting.", resting_banner: "Your plan is paused.", resting_better: "I'm better",
     home_tiles_hi: "Hi {name}!", home_tiles_sub: "Tap a picture to start.", tile_today: "Today", tile_scout: "Scout", tile_passport: "Passport", tile_schools: "Schools", tile_videos: "Videos", tile_tests: "Tests", tile_today_count: "{n} to do", tile_today_rest: "Rest day", tile_scout_sub: "Ask me anything", tile_schools_n: "{n} on my list", tile_videos_n: "{n} clips", tile_tests_n: "{n} results", tile_passport_opened: "Opened {ago}", tile_passport_unshared: "Not shared yet", tile_locked: "Basic plan", home_tiles_goal: "My goal: {goal}", home_today_back: "Back",
+    road_eyebrow: "MY ROAD", road_title: "To {goal}", road_title_nogoal: "My road", road_here: "YOU ARE HERE", road_goal: "My goal", road_pick_goal: "Pick my goal", road_done: "Done", road_by: "By {date}", road_next: "Next stop", road_start: "Start", road_calendar: "Calendar", road_schools: "Schools", road_empty: "Your road has no stops yet. Ask Scout to plan them with you.", road_all_done: "Every stop is done. Time to pick your next goal.", stop_eyebrow: "STOP {n} OF {total}", stop_back: "My road", stop_why: "WHY THIS STEP", stop_did_it: "I did it", stop_not_done: "Not done yet", stop_ask_scout: "Ask Scout to help", stop_change_date: "Change the date", stop_scout_date: "Scout suggested this date", stop_add_clips: "Add my clips to my Passport", stop_open_schools: "Open my schools list", stop_log_test: "Log a test result",
   },
   fr: {
     loading: "Chargement…", yes: "Oui", no: "Non",
@@ -1062,6 +1064,7 @@ const I18N = {
     dev_plan_collapsed_hint: "Votre entraînement, et vos axes de travail",
     checkin_title_named: "Salut {name}. Comment te sens-tu aujourd'hui ?", checkin_title: "Comment te sens-tu aujourd'hui ?", checkin_sub: "Choisis-en un. Ton plan s'adaptera à ta journée.", checkin_great: "En forme", checkin_great_sub: "Prêt à m'entraîner", checkin_okay: "Ça va", checkin_okay_sub: "Un peu fatigué", checkin_hurt: "Blessé", checkin_hurt_sub: "J'ai besoin d'une pause", checkin_private: "Les coachs et les écoles ne voient jamais ça.", checkin_skip: "Passer pour aujourd'hui", checkin_chip_great: "Je me sens bien", checkin_chip_okay: "Ça va", rest_title: "Repose-toi d'abord.", rest_sub: "Ton corps a besoin de temps. C'est normal.", rest_paused: "PLAN EN PAUSE", rest_nothing_late: "Rien sur ta route n'est en retard pendant que tu te reposes.", rest_back_q: "Quand penses-tu revenir ?", rest_back_hint: "Ta propre estimation. Tu peux la passer ou la changer.", rest_tell_scout: "Raconter à Scout ce qui s'est passé", rest_scout_seed: "Je suis blessé et je prends une pause. Peux-tu m'aider à adapter mon plan ?", rest_continue: "Aller à l'application", rest_doctor: "Si ça fait vraiment mal, consulte un médecin ou un physio.", resting_banner_strong: "Repos.", resting_banner: "Ton plan est en pause.", resting_better: "Je vais mieux",
     home_tiles_hi: "Salut {name} !", home_tiles_sub: "Touche une image pour commencer.", tile_today: "Aujourd'hui", tile_scout: "Scout", tile_passport: "Passeport", tile_schools: "Écoles", tile_videos: "Vidéos", tile_tests: "Tests", tile_today_count: "{n} à faire", tile_today_rest: "Jour de repos", tile_scout_sub: "Pose-moi une question", tile_schools_n: "{n} sur ma liste", tile_videos_n: "{n} clips", tile_tests_n: "{n} résultats", tile_passport_opened: "Ouvert {ago}", tile_passport_unshared: "Pas encore partagé", tile_locked: "Forfait Basic", home_tiles_goal: "Mon objectif : {goal}", home_today_back: "Retour",
+    road_eyebrow: "MA ROUTE", road_title: "Vers {goal}", road_title_nogoal: "Ma route", road_here: "TU ES ICI", road_goal: "Mon objectif", road_pick_goal: "Choisir mon objectif", road_done: "Fait", road_by: "Pour le {date}", road_next: "Prochaine étape", road_start: "Commencer", road_calendar: "Calendrier", road_schools: "Écoles", road_empty: "Ta route n'a pas encore d'étapes. Demande à Scout de les préparer avec toi.", road_all_done: "Toutes les étapes sont faites. Le moment de choisir ton prochain objectif.", stop_eyebrow: "ÉTAPE {n} SUR {total}", stop_back: "Ma route", stop_why: "POURQUOI CETTE ÉTAPE", stop_did_it: "C'est fait", stop_not_done: "Pas encore fait", stop_ask_scout: "Demander de l'aide à Scout", stop_change_date: "Changer la date", stop_scout_date: "Date suggérée par Scout", stop_add_clips: "Ajouter mes clips à mon Passeport", stop_open_schools: "Ouvrir ma liste d'écoles", stop_log_test: "Enregistrer un résultat",
   },
   es: {
     loading: "Cargando…", yes: "Sí", no: "No",
@@ -1429,6 +1432,7 @@ const I18N = {
     dev_plan_collapsed_hint: "Tu entrenamiento y las áreas en las que trabajas",
     checkin_title_named: "Hola {name}. ¿Cómo te sientes hoy?", checkin_title: "¿Cómo te sientes hoy?", checkin_sub: "Elige uno. Tu plan se ajustará a tu día.", checkin_great: "Genial", checkin_great_sub: "Listo para entrenar", checkin_okay: "Bien", checkin_okay_sub: "Un poco cansado", checkin_hurt: "Lesionado", checkin_hurt_sub: "Necesito un descanso", checkin_private: "Los entrenadores y las escuelas nunca ven esto.", checkin_skip: "Saltar por hoy", checkin_chip_great: "Me siento genial", checkin_chip_okay: "Me siento bien", rest_title: "Primero descansa.", rest_sub: "Tu cuerpo necesita tiempo. Está bien.", rest_paused: "PLAN EN PAUSA", rest_nothing_late: "Nada en tu ruta está atrasado mientras descansas.", rest_back_q: "¿Cuándo crees que volverás?", rest_back_hint: "Tu propia estimación. Puedes saltarla o cambiarla.", rest_tell_scout: "Cuéntale a Scout qué pasó", rest_scout_seed: "Estoy lesionado y voy a descansar. ¿Puedes ayudarme a ajustar mi plan?", rest_continue: "Ir a la aplicación", rest_doctor: "Si duele de verdad, ve a un médico o a un fisio.", resting_banner_strong: "Descansando.", resting_banner: "Tu plan está en pausa.", resting_better: "Ya estoy mejor",
     home_tiles_hi: "¡Hola {name}!", home_tiles_sub: "Toca una imagen para empezar.", tile_today: "Hoy", tile_scout: "Scout", tile_passport: "Pasaporte", tile_schools: "Escuelas", tile_videos: "Vídeos", tile_tests: "Pruebas", tile_today_count: "{n} por hacer", tile_today_rest: "Día de descanso", tile_scout_sub: "Pregúntame lo que sea", tile_schools_n: "{n} en mi lista", tile_videos_n: "{n} clips", tile_tests_n: "{n} resultados", tile_passport_opened: "Abierto {ago}", tile_passport_unshared: "Aún no compartido", tile_locked: "Plan Basic", home_tiles_goal: "Mi objetivo: {goal}", home_today_back: "Atrás",
+    road_eyebrow: "MI RUTA", road_title: "Hacia {goal}", road_title_nogoal: "Mi ruta", road_here: "ESTÁS AQUÍ", road_goal: "Mi objetivo", road_pick_goal: "Elegir mi objetivo", road_done: "Hecho", road_by: "Para el {date}", road_next: "Próxima parada", road_start: "Empezar", road_calendar: "Calendario", road_schools: "Escuelas", road_empty: "Tu ruta aún no tiene paradas. Pídele a Scout que las prepare contigo.", road_all_done: "Todas las paradas están hechas. Hora de elegir tu próximo objetivo.", stop_eyebrow: "PARADA {n} DE {total}", stop_back: "Mi ruta", stop_why: "POR QUÉ ESTE PASO", stop_did_it: "Lo hice", stop_not_done: "Aún no", stop_ask_scout: "Pedir ayuda a Scout", stop_change_date: "Cambiar la fecha", stop_scout_date: "Fecha sugerida por Scout", stop_add_clips: "Añadir mis clips a mi Pasaporte", stop_open_schools: "Abrir mi lista de escuelas", stop_log_test: "Registrar un resultado",
   },
   el: {
     loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
@@ -1796,6 +1800,7 @@ const I18N = {
     dev_plan_collapsed_hint: "Η προπόνησή σου και οι τομείς που δουλεύεις",
     checkin_title_named: "Γεια σου {name}. Πώς νιώθεις σήμερα;", checkin_title: "Πώς νιώθεις σήμερα;", checkin_sub: "Διάλεξε ένα. Το πλάνο σου θα προσαρμοστεί στη μέρα σου.", checkin_great: "Τέλεια", checkin_great_sub: "Έτοιμος για προπόνηση", checkin_okay: "Εντάξει", checkin_okay_sub: "Λίγο κουρασμένος", checkin_hurt: "Τραυματίας", checkin_hurt_sub: "Χρειάζομαι διάλειμμα", checkin_private: "Οι προπονητές και οι σχολές δεν το βλέπουν ποτέ αυτό.", checkin_skip: "Παράλειψη για σήμερα", checkin_chip_great: "Νιώθω τέλεια", checkin_chip_okay: "Νιώθω εντάξει", rest_title: "Ξεκουράσου πρώτα.", rest_sub: "Το σώμα σου χρειάζεται χρόνο. Αυτό είναι εντάξει.", rest_paused: "ΠΛΑΝΟ ΣΕ ΠΑΥΣΗ", rest_nothing_late: "Τίποτα στη διαδρομή σου δεν είναι εκπρόθεσμο όσο ξεκουράζεσαι.", rest_back_q: "Πότε πιστεύεις ότι θα επιστρέψεις;", rest_back_hint: "Η δική σου εκτίμηση. Μπορείς να την παραλείψεις ή να την αλλάξεις.", rest_tell_scout: "Πες στον Scout τι έγινε", rest_scout_seed: "Τραυματίστηκα και κάνω διάλειμμα. Μπορείς να με βοηθήσεις να προσαρμόσω το πλάνο μου;", rest_continue: "Πήγαινε στην εφαρμογή", rest_doctor: "Αν πονάει πραγματικά, δες γιατρό ή φυσικοθεραπευτή.", resting_banner_strong: "Ξεκούραση.", resting_banner: "Το πλάνο σου είναι σε παύση.", resting_better: "Είμαι καλύτερα",
     home_tiles_hi: "Γεια σου {name}!", home_tiles_sub: "Πάτα μια εικόνα για να ξεκινήσεις.", tile_today: "Σήμερα", tile_scout: "Scout", tile_passport: "Διαβατήριο", tile_schools: "Σχολές", tile_videos: "Βίντεο", tile_tests: "Τεστ", tile_today_count: "{n} να κάνεις", tile_today_rest: "Μέρα ξεκούρασης", tile_scout_sub: "Ρώτα με οτιδήποτε", tile_schools_n: "{n} στη λίστα μου", tile_videos_n: "{n} κλιπ", tile_tests_n: "{n} αποτελέσματα", tile_passport_opened: "Άνοιξε {ago}", tile_passport_unshared: "Δεν έχει μοιραστεί ακόμη", tile_locked: "Πλάνο Basic", home_tiles_goal: "Ο στόχος μου: {goal}", home_today_back: "Πίσω",
+    road_eyebrow: "Η ΔΙΑΔΡΟΜΗ ΜΟΥ", road_title: "Προς {goal}", road_title_nogoal: "Η διαδρομή μου", road_here: "ΕΙΣΑΙ ΕΔΩ", road_goal: "Ο στόχος μου", road_pick_goal: "Διάλεξε στόχο", road_done: "Έγινε", road_by: "Έως {date}", road_next: "Επόμενη στάση", road_start: "Ξεκίνα", road_calendar: "Ημερολόγιο", road_schools: "Σχολές", road_empty: "Η διαδρομή σου δεν έχει στάσεις ακόμη. Ζήτα από τον Scout να τις φτιάξει μαζί σου.", road_all_done: "Όλες οι στάσεις έγιναν. Ώρα να διαλέξεις τον επόμενο στόχο σου.", stop_eyebrow: "ΣΤΑΣΗ {n} ΑΠΟ {total}", stop_back: "Η διαδρομή μου", stop_why: "ΓΙΑΤΙ ΑΥΤΟ ΤΟ ΒΗΜΑ", stop_did_it: "Το έκανα", stop_not_done: "Όχι ακόμη", stop_ask_scout: "Ζήτα βοήθεια από τον Scout", stop_change_date: "Άλλαξε την ημερομηνία", stop_scout_date: "Η ημερομηνία προτάθηκε από τον Scout", stop_add_clips: "Πρόσθεσε τα κλιπ μου στο Διαβατήριο", stop_open_schools: "Άνοιξε τη λίστα σχολών μου", stop_log_test: "Κατέγραψε ένα αποτέλεσμα",
   },
 };
 const LANGS = [["en", "English"], ["fr", "Français"], ["es", "Español"], ["el", "Ελληνικά"]];
@@ -3502,7 +3507,7 @@ const PARENT_ACCOUNTS_ENABLED = false;
 // an anchor on the page it belongs to, which test_home_tiles asserts both
 // ways - an id here with no anchor is a link to nowhere, and an anchor with
 // no id here can never be reached.
-const SECTION_IDS = ["gz-highlights", "gz-benchmarks", "gz-schools"];
+const SECTION_IDS = ["gz-highlights", "gz-benchmarks", "gz-schools", "gz-calendar"];
 
 // Scroll a deep-linked section into view, once.
 //
@@ -3534,7 +3539,7 @@ function useFocusSection(section, nonce, onDone) {
 
 const REDESIGN_CHECKIN = true;   // Phase 1, shipped.
 const REDESIGN_HOME_TILES = true;  // Phase 2, shipped.
-const REDESIGN_ROAD = false;
+const REDESIGN_ROAD = true;       // Phase 3, shipped.
 const REDESIGN_SCOUT = false;
 // A PLAIN LITERAL ON PURPOSE. test_enum_parity reads this list by regex and
 // checks every value against the profiles.occupation CHECK constraint — the
@@ -12236,7 +12241,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
           destination now (brief §14's nav concept) rather than buried on
           Passport — pathway_plan and targets share the same Pro+ minimum
           plan, so the page-level gate above already covers both. */}
-      <PathwayPlan key={goalVersion} viewUserId={null} actingFor={actingFor} resting={resting} onChange={setPathwayState} onNavigate={onNavigate} plan={plan} next30={next30} openDay={openDay} onDayOpened={onDayOpened} goalText={goalHeading} />
+      <PathwayPlan key={goalVersion} viewUserId={null} actingFor={actingFor} resting={resting} focusSection={focusSection} focusNonce={focusNonce} onChange={setPathwayState} onNavigate={onNavigate} plan={plan} next30={next30} openDay={openDay} onDayOpened={onDayOpened} goalText={goalHeading} />
 
       {/* TRAINING — "things to work on", moved here from Passport.
           It sits under the pathway because that is what it serves: the
@@ -13402,6 +13407,42 @@ function suggestedDate(m) {
   // moment the athlete acts on the step, which is what makes the date theirs.
   return !!(m && (m.due_src === "scout" || m.due_src === "retest") && m.due);
 }
+// THE ORDER THE ROAD DRAWS, AND THE RULE "WHAT NOW" ALREADY USED.
+//
+// nextMilestone is a SELECTOR: it returns one step. The road needs the whole
+// list in order, and the brief asked for it "in nextMilestone order" - which
+// did not exist, because nothing nextMilestone computed was ever returned.
+// Rather than write a second ordering beside it, the ordering is extracted
+// here and nextMilestone is rewritten to call it. One rule, two consumers,
+// and they cannot drift: every existing assertion about what comes next is
+// now also an assertion about how the road is drawn.
+//
+// Rank first, then date. A date the athlete CHOSE outranks every date Scout
+// guessed, so a twelve-step drafted plan cannot bury the athlete's own
+// commitments. Undated steps rank last and keep list order, which is what
+// nextMilestone's "if nothing carries a date, the first undone step" meant.
+function milestoneRank(m) {
+  if (!m || !m.due) return 2;
+  return suggestedDate(m) ? 1 : 0;
+}
+function compareUndone(a, b) {
+  const ra = milestoneRank(a), rb = milestoneRank(b);
+  if (ra !== rb) return ra - rb;
+  if (ra === 2) return 0;
+  return a.due < b.due ? -1 : a.due > b.due ? 1 : 0;
+}
+// Done steps, newest first, because the road reads downwards into the past.
+// done_at only started being stamped when touchedMilestone learned to; steps
+// ticked before that carry null and have no position of their own. They sort
+// after the dated ones and keep list order between themselves - a NAMED
+// tiebreak rather than whatever the engine happens to do.
+function compareDone(a, b) {
+  const da = (a && a.done_at) || "", db = (b && b.done_at) || "";
+  if (da && db) return da < db ? 1 : da > db ? -1 : 0;
+  if (da) return -1;
+  if (db) return 1;
+  return 0;
+}
 // THE RULE behind "what do I do now" — stated, never inferred:
 // the earliest-dated step that is not done; if nothing carries a date, the first
 // undone step in list order. Overdue therefore rises on its own, with no second
@@ -13410,17 +13451,10 @@ function suggestedDate(m) {
 function nextMilestone(milestones) {
   const undone = (milestones || []).filter((m) => !m.done);
   if (!undone.length) return null;
-  // A DATE THE ATHLETE CHOSE OUTRANKS EVERY DATE SCOUT GUESSED.
-  // Both are sorted earliest-first, but the athlete's own commitments are
-  // exhausted before a suggestion is offered — otherwise a twelve-step drafted
-  // plan takes over the app's one "what do I do now" card and the athlete's own
-  // steps never surface again until all twelve are done.
-  const soonest = (rows) => rows.slice().sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0))[0];
-  const dated = undone.filter((m) => m.due);
-  if (!dated.length) return undone[0];
-  const chosen = dated.filter((m) => !suggestedDate(m));
-  if (chosen.length) return soonest(chosen);
-  return soonest(dated);
+  // The three-branch version this replaced (athlete-dated, then Scout-dated,
+  // then list order) is exactly what compareUndone encodes. Array.sort is
+  // stable, which is what keeps the undated branch returning undone[0].
+  return undone.slice().sort(compareUndone)[0];
 }
 // Locale follows the app language; "3d overdue" beats "2026-07-29" for a
 // 15-year-old deciding what to do this week.
@@ -13449,8 +13483,301 @@ function milestoneDateLabel(m, lang, t, resting) {
   if (n < 7) return { text: d.toLocaleDateString(loc, { weekday: "long" }), tone: "due" };
   return { text: short, tone: "due" };
 }
-function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], openDay, onDayOpened, goalText, actingFor, resting }) {
+/* ============ ONE STOP ON THE ROAD ============
+   Opened from a stop, and it is the only screen in GOLSZ that shows a single
+   step on its own. Everything on it already existed somewhere: the tick is
+   PathwayPlan's toggleMilestone, the date write goes through touchedMilestone
+   so a date the athlete sets becomes THEIRS and stops being Scout's guess,
+   and "why this step" is athlete_actions.reason.
+
+   The category comes from athlete_actions, NOT from the milestone jsonb.
+   Both exist and they diverge: migration 155 seeds the jsonb copy on insert
+   only, so an athlete who re-categorised a step later changed the row and not
+   the jsonb. The row is the one they edited, so the row is the one that picks
+   the shortcut. When it has not loaded, or says nothing, no shortcut shows -
+   a button to the wrong screen is worse than no button. */
+function RoadStop({ step, index, total, stageName, sb, uid, lang, t, resting,
+                    onBack, onToggle, onSetDate, onNavigate }) {
+  const [fields, setFields] = useState(undefined);
+  const [editingDate, setEditingDate] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    if (!sb || !uid || !step) { setFields(null); return; }
+    loadActionFields(sb, uid, step.id).then((f) => { if (alive) setFields(f); });
+    return () => { alive = false; };
+  }, [sb, uid, step && step.id]);
+
+  if (!step) return null;
+  const label = milestoneDateLabel(step, lang, t, resting);
+  const cat = fields && fields.category ? fields.category : null;
+  const SHORTCUTS = {
+    film: { key: "stop_add_clips", icon: Video, section: "gz-highlights", page: "profile" },
+    outreach: { key: "stop_open_schools", icon: GraduationCap, section: "gz-schools", page: "targets" },
+    testing: { key: "stop_log_test", icon: Timer, section: "gz-benchmarks", page: "profile" },
+  };
+  const shortcut = cat ? SHORTCUTS[cat] : null;
+  const btn = { width: "100%", minHeight: 56, borderRadius: 18, fontFamily: "inherit", fontSize: 17,
+    fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+    gap: 8, boxSizing: "border-box" };
+
+  return (
+    <div style={{ ...card, padding: "14px 14px 18px" }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", color: C.lime,
+        fontFamily: "inherit", fontSize: 16, fontWeight: 700, cursor: "pointer",
+        display: "flex", alignItems: "center", gap: 4, padding: "2px 0 10px" }}>
+        <ChevronLeft size={18} /> {t("stop_back")}
+      </button>
+
+      <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.08em", color: C.lime }}>
+        {t("stop_eyebrow").replace("{n}", index + 1).replace("{total}", total)}
+        {stageName ? " · " + stageName : ""}
+      </div>
+      <div style={{ fontSize: 30, fontWeight: 800, color: C.chalk, lineHeight: 1.12, marginTop: 6 }}>{step.label}</div>
+
+      {step.due ? (
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 12, minHeight: 36,
+          background: C.turf, borderRadius: 12, padding: "7px 12px",
+          color: label.tone === "over" ? C.warnText : C.chalk, fontSize: 15 }}>
+          <Calendar size={15} /> {label.text}
+        </div>
+      ) : null}
+      {suggestedDate(step) ? (
+        <div style={{ fontSize: 13.5, color: C.slate, marginTop: 6 }}>{t("stop_scout_date")}</div>
+      ) : null}
+
+      {fields && fields.reason ? (
+        <div style={{ marginTop: 16, background: C.turf, border: `2px solid ${C.line2}`, borderRadius: 18, padding: 14 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: "0.08em", color: C.slate }}>{t("stop_why")}</div>
+          <div style={{ fontSize: 16, color: C.chalk, lineHeight: 1.45, marginTop: 7 }}>{fields.reason}</div>
+        </div>
+      ) : null}
+
+      {shortcut ? (
+        <button onClick={() => onNavigate(shortcut.page, null, null, null, shortcut.section)}
+          style={{ ...btn, marginTop: 14, background: "none", color: C.chalk, border: `2px solid ${C.line2}` }}>
+          {React.createElement(shortcut.icon, { size: 19, color: C.lime })} {t(shortcut.key)}
+        </button>
+      ) : null}
+
+      <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+        <button onClick={() => onNavigate("scout", null, t("home_step_ask_seed").replace("{step}", step.label))}
+          style={{ ...btn, background: "none", color: C.chalk, border: `2px solid ${C.chalkSoft}` }}>
+          <Radar size={19} /> {t("stop_ask_scout")}
+        </button>
+        <button onClick={() => onToggle(step.id)}
+          style={{ ...btn, minHeight: 66, fontSize: 19,
+            background: step.done ? "none" : C.lime, color: step.done ? C.chalk : C.ink,
+            border: step.done ? `2px solid ${C.chalkSoft}` : "none" }}>
+          {step.done ? null : <Check size={21} />} {step.done ? t("stop_not_done") : t("stop_did_it")}
+        </button>
+        {editingDate ? (
+          <input type="date" defaultValue={step.due || ""} autoFocus
+            onChange={(e) => { if (e.target.value) { onSetDate(step.id, e.target.value); setEditingDate(false); } }}
+            aria-label={t("stop_change_date")}
+            style={{ width: "100%", background: C.turf, border: `2px solid ${C.line2}`, borderRadius: 14,
+              color: C.chalk, padding: "12px 13px", fontSize: 16, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+        ) : (
+          <button onClick={() => setEditingDate(true)} style={{ background: "none", border: "none", color: C.lime,
+            fontFamily: "inherit", fontSize: 16, fontWeight: 700, textDecoration: "underline",
+            cursor: "pointer", padding: "10px 4px", alignSelf: "center" }}>{t("stop_change_date")}</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ============ THE ROAD ============
+   One vertical line, read bottom-to-top: where you have been, where you are,
+   where it goes. It replaces PathwayMap when REDESIGN_ROAD is on, rather
+   than sitting above it - two vertical maps on one screen is exactly the
+   duplication this redesign exists to remove. Stages stop being their own map
+   and become signposts ON this one, and tapping a signpost opens the same
+   stage editor PathwayMap opened.
+
+   ORDER IS NOT DECIDED HERE. It comes from compareUndone and compareDone, the
+   same comparator nextMilestone sorts through, so "what do I do now" and
+   "where am I on the road" cannot disagree. The current stop IS
+   nextMilestone(milestones); this component never re-derives it.
+
+   Nothing is locked. A future stop is grey but still tickable - an athlete
+   who did something early should be able to say so. */
+function RoadMap({ milestones, stages, currentStageId, athlete, goalText, resting, lang, t,
+                   onOpenStop, onEditGoal, onSignpost, onNavigate, focusSection, focusNonce }) {
+  const hereRef = useRef(null);
+  const rows = (milestones || []);
+  const undone = rows.filter((m) => !m.done).slice().sort(compareUndone);
+  const done = rows.filter((m) => m.done).slice().sort(compareDone);
+  const current = undone.length ? undone[0] : null;
+
+  // Top to bottom: the goal, then the far future down to the next stop, then
+  // what is already behind them, newest first.
+  const ordered = undone.slice(1).reverse().concat(current ? [current] : []).concat(done);
+
+  // Opens scrolled to YOU ARE HERE. A long road that opens at the top shows
+  // an athlete the part of it they can do nothing about.
+  useEffect(() => {
+    if (!hereRef.current || typeof window === "undefined") return;
+    const id = window.requestAnimationFrame(() => {
+      if (hereRef.current && hereRef.current.scrollIntoView) {
+        hereRef.current.scrollIntoView({ block: "center" });
+      }
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [current && current.id]);
+
+  const stageOf = (m) => {
+    if (!m || !m.stage) return null;
+    const st = (stages || []).find((x) => String(x.id) === String(m.stage));
+    return st ? { id: st.id, label: stageLabel(st, t) } : null;
+  };
+
+  const nodeCell = (child, lit) => (
+    <span style={{ position: "relative", width: 72, flexShrink: 0, display: "flex",
+      alignItems: "center", justifyContent: "center", alignSelf: "stretch" }}>
+      <span aria-hidden="true" style={{ position: "absolute", top: -10, bottom: -10, left: "50%",
+        width: 14, marginLeft: -7, background: lit ? C.lime : C.line2 }} />
+      {child}
+    </span>
+  );
+
+  if (!rows.length) {
+    return (
+      <div style={{ ...card, padding: 18 }}>
+        <Eyebrow>{t("road_eyebrow")}</Eyebrow>
+        <div style={{ fontSize: 15, color: C.chalkSoft, lineHeight: 1.5, marginTop: 8 }}>{t("road_empty")}</div>
+      </div>
+    );
+  }
+
+  let lastStage = undefined;
+  const drawn = [];
+  ordered.forEach((m, i) => {
+    const st = stageOf(m);
+    const key = st ? String(st.id) : "";
+    if (key !== lastStage) {
+      lastStage = key;
+      if (st) {
+        drawn.push(
+          <div key={"sp-" + st.id + "-" + i} style={{ position: "relative", display: "flex",
+            alignItems: "center", justifyContent: "center", padding: "8px 0" }}>
+            <span aria-hidden="true" style={{ position: "absolute", top: 0, bottom: 0, left: "50%",
+              width: 14, marginLeft: -7, background: C.line2 }} />
+            <button onClick={() => onSignpost && onSignpost(st.id)} style={{ position: "relative",
+              maxWidth: "100%", background: C.card, border: `2px solid ${C.line2}`, borderRadius: 10,
+              color: C.chalkSoft, fontFamily: "inherit", fontSize: 12, fontWeight: 800,
+              letterSpacing: "0.1em", textTransform: "uppercase", padding: "5px 11px", cursor: "pointer",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {st.label}
+            </button>
+          </div>
+        );
+      }
+    }
+    const isHere = current && m.id === current.id;
+    const label = milestoneDateLabel(m, lang, t, resting);
+    const left = i % 2 === 0;
+    const text = (
+      <span style={{ flex: 1, minWidth: 0, textAlign: left ? "right" : "left",
+        paddingLeft: left ? 0 : 4, paddingRight: left ? 4 : 0 }}>
+        {isHere ? (
+          <span style={{ display: "inline-block", background: C.lime, color: C.ink, borderRadius: 10,
+            fontSize: 13, fontWeight: 800, padding: "2px 8px", marginBottom: 4 }}>{t("road_here")}</span>
+        ) : null}
+        <span style={{ display: "block", fontSize: isHere ? 18 : 16, fontWeight: isHere ? 800 : 600,
+          color: m.done ? C.chalkSoft : C.chalk, lineHeight: 1.25,
+          textDecoration: "none" }}>{m.label}</span>
+        <span style={{ display: "block", fontSize: 13, marginTop: 2,
+          color: m.done ? C.lime : label.tone === "over" ? C.warnText : C.slate }}>
+          {m.done ? t("road_done") : label.text}
+        </span>
+      </span>
+    );
+    drawn.push(
+      <button key={m.id} ref={isHere ? hereRef : null} onClick={() => onOpenStop(m)}
+        style={{ display: "flex", alignItems: "center", width: "100%", background: "none", border: "none",
+          fontFamily: "inherit", cursor: "pointer", padding: "9px 0", textAlign: "left",
+          scrollMarginTop: 90 }}>
+        {left ? text : <span style={{ flex: 1, minWidth: 0 }} />}
+        {nodeCell(
+          <span style={{ position: "relative", width: isHere ? 64 : 52, height: isHere ? 64 : 52,
+            borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center",
+            background: m.done || isHere ? C.lime : C.turf,
+            border: m.done || isHere ? "none" : `2px solid ${C.line2}`,
+            boxShadow: isHere ? `0 0 0 10px ${C.limeRing}` : "none" }}>
+            {m.done ? <Check size={24} color={C.ink} /> : isHere ? <ArrowRight size={26} color={C.ink} /> : null}
+          </span>, m.done || isHere)}
+        {left ? <span style={{ flex: 1, minWidth: 0 }} /> : text}
+      </button>
+    );
+  });
+
+  return (
+    <div style={{ ...card, padding: "16px 12px 14px" }}>
+      <Eyebrow>{t("road_eyebrow")}</Eyebrow>
+      <div style={{ fontSize: 30, fontWeight: 800, color: C.chalk, lineHeight: 1.1, margin: "2px 4px 14px" }}>
+        {goalText ? t("road_title").replace("{goal}", goalText) : t("road_title_nogoal")}
+      </div>
+
+      <div style={{ maxHeight: 520, overflowY: "auto" }}>
+        {/* THE FINISH, at the top, because that is where the road goes. */}
+        <button onClick={onEditGoal} style={{ display: "flex", alignItems: "center", width: "100%",
+          background: "none", border: "none", fontFamily: "inherit", cursor: "pointer", padding: "4px 0 9px" }}>
+          <span style={{ flex: 1, minWidth: 0, textAlign: "right", paddingRight: 4 }}>
+            <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: C.chalk }}>
+              {goalText || t("road_pick_goal")}
+            </span>
+            <span style={{ display: "block", fontSize: 13, color: C.slate, marginTop: 2 }}>{t("road_goal")}</span>
+          </span>
+          {nodeCell(
+            <span style={{ position: "relative", width: 52, height: 52, borderRadius: 99, background: C.card,
+              border: `2px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: `0 0 0 8px ${C.limeRing}` }}>
+              <Flag size={22} color={C.lime} />
+            </span>, false)}
+          <span style={{ flex: 1, minWidth: 0 }} />
+        </button>
+        {drawn}
+      </div>
+
+      {current ? (
+        <div style={{ marginTop: 12, background: C.turf, border: `2px solid ${C.line2}`, borderRadius: 18,
+          padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 12.5, color: C.slate }}>{t("road_next")}</span>
+            <span style={{ display: "block", fontSize: 16, fontWeight: 800, color: C.chalk,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{current.label}</span>
+          </span>
+          <button onClick={() => onOpenStop(current)} style={{ background: C.lime, color: C.ink, border: "none",
+            borderRadius: 12, padding: "11px 18px", fontSize: 15, fontWeight: 800, fontFamily: "inherit",
+            cursor: "pointer", flexShrink: 0 }}>{t("road_start")}</button>
+        </div>
+      ) : (
+        <div style={{ marginTop: 12, fontSize: 14.5, color: C.chalkSoft, lineHeight: 1.45, padding: "0 4px" }}>
+          {t("road_all_done")}
+        </div>
+      )}
+
+      <div style={{ display: "flex", justifyContent: "center", gap: 18, marginTop: 12 }}>
+        <button onClick={() => onNavigate("targets", null, null, null, "gz-calendar")} style={roadLink}>
+          <Calendar size={14} /> {t("road_calendar")}
+        </button>
+        <button onClick={() => onNavigate("targets", null, null, null, "gz-schools")} style={roadLink}>
+          <GraduationCap size={14} /> {t("road_schools")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const roadLink = { background: "none", border: "none", color: C.lime, fontFamily: "inherit",
+  fontSize: 15, fontWeight: 700, textDecoration: "underline", cursor: "pointer",
+  display: "flex", alignItems: "center", gap: 5, padding: "10px 4px" };
+
+function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], openDay, onDayOpened, goalText, actingFor, resting, focusSection, focusNonce }) {
   const { t, lang } = useLang();
+  // The stop the athlete has opened, or null for the road itself. Declared
+  // with the other state, above every early return in this component.
+  const [openStop, setOpenStop] = useState(null);
   const [uid, setUid] = useState(null);
   const [loaded, setLoaded] = useState(false);
   // A FAILED READ IS NOT AN EMPTY PLAN. The pathway_plan read's error used to
@@ -13984,6 +14311,11 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
   // Plan edits everything. A milestone the athlete could add, tick and delete
   // but not RENAME meant one typo cost them the item and its done-state — so
   // the only fix was delete and retype, losing the tick.
+  function setMilestoneDate(id, iso) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ""))) return;
+    save({ milestones: milestones.map((m) => (m.id === id ? touchedMilestone({ ...m, due: iso }) : m)) });
+  }
+
   function renameMilestone(id, label) {
     const clean = label.trim().slice(0, 120);
     if (!clean) return;                       // empty is a no-op, not a delete
@@ -14067,6 +14399,13 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
   // subscription would re-run its side effects.
   const dateScheme = (typeof document !== "undefined" && document.documentElement.getAttribute("data-theme") === "light") ? "light" : "dark";
   const doneCount = milestones.filter((m) => m.done).length;
+  // The same order the road draws, so "STOP 3 OF 5" counts the stop the
+  // athlete actually tapped rather than its position in the raw array.
+  const roadOrder = (() => {
+    const un = milestones.filter((m) => !m.done).slice().sort(compareUndone);
+    const dn = milestones.filter((m) => m.done).slice().sort(compareDone);
+    return un.concat(dn);
+  })();
   const todayIso = new Date(); todayIso.setHours(0, 0, 0, 0);
   const overdueCount = milestones.filter((m) => !m.done && m.due && canCallLate(m, resting) && new Date(m.due + "T00:00:00") < todayIso).length;
   const nextStep = nextMilestone(milestones);
@@ -14378,11 +14717,37 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
           the page.
           A JSX comment cannot live in an attribute list, which is what this
           was until the parse said so. */}
+      {/* ONE VERTICAL MAP, NOT TWO. The road draws the athlete's STEPS with
+          their stages as signposts on it; PathwayMap drew the stages alone.
+          Rendering both would put two vertical routes on one screen, which is
+          the duplication this redesign exists to remove - so the flag picks
+          one. PathwayMap keeps its props and its assertions either way. */}
+      {REDESIGN_ROAD && openStop ? (
+        <RoadStop
+          step={milestones.find((m) => m.id === openStop) || null}
+          index={roadOrder.findIndex((m) => m.id === openStop)}
+          total={milestones.length}
+          stageName={nextStepStageLabel(milestones.find((m) => m.id === openStop), athlete, { stages: customStages }, t)}
+          sb={sb} uid={uid} lang={lang} t={t} resting={resting}
+          onBack={() => setOpenStop(null)}
+          onToggle={(id) => { toggleMilestone(id); setOpenStop(null); }}
+          onSetDate={setMilestoneDate}
+          onNavigate={onNavigate} />
+      ) : REDESIGN_ROAD ? (
+        <RoadMap milestones={milestones} stages={athleteStages(athlete, { stages: customStages })}
+          currentStageId={currentStageId} athlete={athlete} goalText={goalText} resting={resting}
+          lang={lang} t={t}
+          onOpenStop={(m) => setOpenStop(m.id)}
+          onEditGoal={() => { setEditingStage(null); setEditingGoal(true); }}
+          onSignpost={(id) => { setEditingGoal(false); setStageDraft(stageLabelFor(id)); setPendingStage(null); setEditingStage(id); }}
+          onNavigate={onNavigate} focusSection={focusSection} focusNonce={focusNonce} />
+      ) : (
       <PathwayMap sport={athlete && athlete.sport} athlete={athlete} pathwayType={exists ? pathwayType : null} t={t} goalText={goalText} currentStageId={currentStageId} onEditGoal={() => { setEditingStage(null); setEditingGoal((v) => !v); }} editing={editingGoal}
         stages={athleteStages(athlete, { stages: customStages })}
         onNodeTap={(id) => { setEditingGoal(false); setStageDraft(stageLabelFor(id)); setPendingStage(null); setEditingStage(id); }}
         onDraftWithScout={(onNavigate && featureUnlocked(plan, "pathway_plan") && milestones.length === 0) ? (() => onNavigate("scout", null, t("pathway_scout_seed"))) : null}
         stepCounts={stepCounts} />
+      )}
       {editingStage && stagePanel()}
       {/* WHAT YOUR GOAL ASKS FOR. The pathway map says where the athlete is
           going; this says what that route actually requires and which of those
@@ -14527,6 +14892,19 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
             worth looking at. Today carries a ring.
             Weekday names come from Intl in the athlete's own language, so
             this needed no new strings for the days themselves. */}
+        {/* THE DATED VIEW, CLOSED BY DEFAULT.
+            The road above is now the primary way to read a plan, and this is
+            the same work seen by date instead of by order. Measured on a live
+            account the calendar alone was 13 of Plan's 53 visible controls -
+            a scale switch, a pager and seven day cells - sitting above the
+            steps rather than beside them.
+            It keeps a summary, like every other closed section: a row that
+            states "4/11 steps" is not a hidden section. The road's Calendar
+            link opens it through revealSignal rather than merely scrolling to
+            a collapsed row, which would look like a link that did nothing. */}
+        <Collapsible label={t("road_calendar")} anchorId="gz-calendar"
+          summary={t("pathway_steps_filed").replace("{d}", doneCount).replace("{n}", milestones.length)}
+          revealSignal={focusSection === "gz-calendar" ? focusNonce : 0}>
         <div style={{ marginTop: 14 }}>
           {/* SCALE SWITCH AND PAGER.
               Three scales, and the week stays the default because the week is
@@ -14794,6 +15172,7 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
             </>
           )}
         </div>
+        </Collapsible>
       </div>
 
       {trash && (
@@ -17717,7 +18096,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=7eda1739ecbc9883";
+    s.src = "js/app.js?v=64888998e84c9c41";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
