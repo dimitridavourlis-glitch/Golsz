@@ -6514,3 +6514,31 @@ drop policy if exists events_update on events;
 create policy events_update on events for update to authenticated
   using (created_by = auth.uid() or is_admin())
   with check ((created_by = auth.uid() and visibility = 'private') or is_admin());
+
+
+-- ============================================================
+-- 159) ADVISOR CLEANUP (applied 2026-10-21)
+-- supabase-migration-159-advisor-cleanup.sql
+--
+-- Two findings from Supabase's security linter, acted on. The other 62
+-- warnings are deliberately NOT acted on and the migration header says
+-- why for each class: the admin_* RPCs all guard internally with
+-- `if not is_admin() then raise exception`, the anon-callable passport
+-- functions are how a logged-out coach opens a shared Passport, and the
+-- four trigger-returning functions cannot be invoked directly by anyone.
+--
+-- Also recorded here because it is live state and no SQL shows it: the
+-- `highlights` storage bucket was DELETED on 2026-10-21. It was public,
+-- listable, 50MB, "Any" MIME type, empty, written by no code (the client
+-- only uses avatars and post-images) and created by no migration — a
+-- dashboard leftover that 158.4 never covered.
+-- ============================================================
+
+-- 159.1 — the FAQ matcher no longer resolves its own table through the
+-- caller's search_path. It is `language sql stable`, not security
+-- definer, so this is correctness rather than privilege escalation.
+alter function public.match_scout_faq(text, text, text) set search_path = public;
+
+-- 159.2 — policies on storage.objects naming the deleted bucket are
+-- dropped by predicate (they were created in the dashboard and never had
+-- names recorded in this repo). See the migration for the DO block.
