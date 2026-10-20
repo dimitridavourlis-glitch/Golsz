@@ -18,3 +18,7 @@ node_modules/
 # Installed plugin copies — source of truth is golsz-guard/
 .claude/plugins/
 _csp-test.html
+
+# Build output: tools/split-i18n.cjs lifts these out of golsz-app.html at
+# deploy time. The dictionaries themselves live in golsz-app.html.
+js/i18n/

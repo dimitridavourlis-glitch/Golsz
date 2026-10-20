@@ -46,11 +46,47 @@ ck("...and precompile can still find the end of it",
 
 const vercel = JSON.parse(fs.readFileSync(path.join(REPO, "vercel.json"), "utf8"));
 const pkg = JSON.parse(fs.readFileSync(path.join(REPO, "package.json"), "utf8"));
-ck("the deploy build strips after it gates", vercel.buildCommand, "npm run check && npm run strip");
-ck("...and `strip` is a real script", pkg.scripts.strip, "node tools/strip-jsx.cjs");
-// Order matters: stripping before the gate would hand the suites a file with
-// no source in it and every assertion would fail for the wrong reason.
-ck("...gate first, strip second", vercel.buildCommand.indexOf("check") < vercel.buildCommand.indexOf("strip"), true);
+// ORDER, not a literal string. The build grew a step and pinning the exact
+// command made this fail for a change that was correct. What must hold is the
+// sequence, and each link is asserted on its own.
+const B = vercel.buildCommand;
+ck("the build gates first", B.indexOf("check") > -1 && B.indexOf("check") < B.indexOf("strip"), true);
+ck("...then lifts the unused languages", B.indexOf("split") > B.indexOf("check"), true);
+// compile has to run AFTER split or js/app.js still carries all four
+// dictionaries and the lift saves nothing.
+ck("...then rebuilds the bundle without them", B.indexOf("compile") > B.indexOf("split"), true);
+ck("...and strips the source last", B.indexOf("strip") > B.indexOf("compile"), true);
+ck("`strip` is a real script", pkg.scripts.strip, "node tools/strip-jsx.cjs");
+ck("`split` is a real script", pkg.scripts.split, "node tools/split-i18n.cjs");
+
+/* ---------- the language split ---------- */
+
+// The merge hook is what makes a lifted dictionary reachable. Without it the
+// split would write three files nothing reads and three languages would
+// silently become English - a regression with no error anywhere.
+// Matched by regex, not a quoted indexOf: the literal contains its own double
+// quotes, and test_anchor_integrity's parser truncates an anchor at the first
+// one, leaving a prefix that matches ambiguously.
+ck("the source merges whatever the loader fetched",
+   /Object\.assign\(I18N, \(typeof window !== "undefined" && window\.__GOLSZ_I18N\) \|\| \{\}\);/.test(APP), true);
+// English is never lifted: it is the fallback every other language leans on.
+ck("English stays in the bundle", /\n  en: \{\n/.test(APP), true);
+for (const lang of ["fr", "es", "el"]) {
+  ck(`${lang} is still in the repo for the suites to read`, new RegExp("\\n  " + lang + ": \\{\\n").test(APP), true);
+}
+// A dictionary that fails to arrive must still produce a working app.
+ck("a failed dictionary load still boots the app", /d\.onerror = loadApp;/.test(APP), true);
+ck("...and a missing key falls back to English rather than rendering its name",
+   /key in I18N\.en \? I18N\.en\[key\] : key/.test(APP), true);
+// One version string for both files, or a fresh bundle eventually pairs with
+// a dictionary cached from an older deploy - silently, because a stale
+// dictionary just falls back.
+ck("the dictionary's cache-buster derives from the bundle's",
+   /var BUILD = APP_SRC\.slice\(APP_SRC\.indexOf\("\?v="\) \+ 3\);/.test(APP), true);
+ck("...and is used for the dictionary URL",
+   /d\.src = "js\/i18n\/" \+ want \+ "\.js\?v=" \+ BUILD;/.test(APP), true);
+ck("generated dictionaries are not committed",
+   fs.readFileSync(path.join(REPO, ".gitignore"), "utf8").indexOf("js/i18n/") > -1, true);
 ck("Vercel serves the repo root, so the stripped file is the served file",
    vercel.outputDirectory, ".");
 

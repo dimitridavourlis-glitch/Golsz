@@ -1813,6 +1813,18 @@ const I18N = {
     scout_reply_done: "Το έκανα ήδη", scout_reply_hard: "Πολύ δύσκολο", scout_reply_else: "Κάτι άλλο", scout_card_steps: "{n} βήματα για τη διαδρομή σου", scout_card_by: "Έως {date}", scout_card_add_road: "Πρόσθεσε στη διαδρομή μου", scout_card_schools: "{n} σχολές για τη λίστα σου", scout_card_add_schools: "Πρόσθεσε στις Σχολές μου", scout_card_train: "{n} πράγματα να δουλέψεις", scout_card_add_train: "Πρόσθεσε στην προπόνησή μου", scout_card_email: "Ένα email στον/στην {name}", scout_card_save_email: "Αποθήκευση σε σχολή", scout_card_locked: "Πλάνο {plan}", scout_replace_road: "Αντικατάσταση της διαδρομής μου", scout_done_road: "Προστέθηκε στη διαδρομή σου!", scout_done_road_one: "Το «{step}» είναι στη διαδρομή σου. Έως {day}.", scout_done_road_one_nodate: "Το «{step}» είναι στη διαδρομή σου.", scout_done_road_many: "{n} βήματα είναι στη διαδρομή σου. Επόμενη στάση: «{step}».", scout_done_schools: "Προστέθηκε στις Σχολές σου!", scout_done_schools_sub: "{n} σχολές είναι στη λίστα σου.", scout_see_road: "Δες τη διαδρομή μου", scout_see_schools: "Δες τις Σχολές μου", scout_ask_else: "Ρώτα τον Scout κάτι άλλο",
   },
 };
+
+// LANGUAGES THE ATHLETE IS NOT READING DO NOT HAVE TO BE IN THE BUNDLE.
+//
+// All four dictionaries live above, because this file is the source and every
+// i18n suite asserts against it. At BUILD time tools/split-i18n.cjs lifts
+// fr/es/el into js/i18n/<lang>.js and the loader fetches only the one in use -
+// measured at 69,304 bytes gzipped, 20.6% of the bundle, carried by every
+// athlete to hold three languages they are not reading.
+//
+// This line is what lets that work, and it is a no-op in the repo: with all
+// four present the global is undefined and Object.assign copies nothing.
+Object.assign(I18N, (typeof window !== "undefined" && window.__GOLSZ_I18N) || {});
 const LANGS = [["en", "English"], ["fr", "Français"], ["es", "Español"], ["el", "Ελληνικά"]];
 const LangContext = React.createContext(null);
 // tv() — "translate value". P1-7.
@@ -18557,13 +18569,44 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // An EXTERNAL script rather than an inline one on purpose: V8 can
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
-    var s = document.createElement("script");
-    s.src = "js/app.js?v=8a45d4ae65b3a01f";
-    // A blank screen with a running loading bar is the worst failure this page
-    // has, because it is indistinguishable from "slow". If the script cannot
-    // load, say so and offer the one action that helps.
-    s.onerror = function () { bootFailed("load"); };
-    document.body.appendChild(s);
+    // ONE version string for the whole build. precompile stamps the app.js
+    // reference; the dictionary derives its own from that, so the two can
+    // never disagree about which build they belong to. Stamping only one
+    // would eventually serve a fresh bundle beside a dictionary cached from
+    // a previous deploy - and a stale dictionary is SILENT, because every
+    // missing key falls back to English rather than erroring.
+    var APP_SRC = "js/app.js?v=7a48816b2b89c3eb";
+    var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
+    function loadApp() {
+      var s = document.createElement("script");
+      s.src = APP_SRC;
+      // A blank screen with a running loading bar is the worst failure this page
+      // has, because it is indistinguishable from "slow". If the script cannot
+      // load, say so and offer the one action that helps.
+      s.onerror = function () { bootFailed("load"); };
+      document.body.appendChild(s);
+    }
+    // THE DICTIONARY FIRST, AND ONLY THE ONE IN USE.
+    //
+    // In the repo all four languages are in the bundle and js/i18n/ does not
+    // exist, so this 404s and falls straight through to loadApp - dev behaves
+    // exactly as before. After the build splits them, this is what puts the
+    // athlete's own language on the page.
+    //
+    // onerror loads the app ANYWAY. Every lookup already falls back to
+    // I18N.en, so a dictionary that fails to arrive means a working app in
+    // English - never a blank screen, and never raw key names.
+    var want = "en";
+    try {
+      var saved = localStorage.getItem("golsz-lang");
+      if (saved === "fr" || saved === "es" || saved === "el") want = saved;
+    } catch (e) {}
+    if (want === "en") { loadApp(); return; }
+    var d = document.createElement("script");
+    d.src = "js/i18n/" + want + ".js?v=" + BUILD;
+    d.onload = loadApp;
+    d.onerror = loadApp;
+    document.body.appendChild(d);
   }
   // Nothing above can detect the script loading but THROWING. The watchdog
   // can: if React has not mounted by now, something is wrong and the athlete

@@ -10,7 +10,8 @@
     "check": "for f in api/*.js js/*.js sw.js; do node --check \"$f\" || exit 1; done && node tests/run-all.cjs",
     "deploy": "npm run check && npx vercel --prod --yes",
     "compile": "node tools/precompile.cjs",
-    "strip": "node tools/strip-jsx.cjs"
+    "strip": "node tools/strip-jsx.cjs",
+    "split": "node tools/split-i18n.cjs"
   },
   "devDependencies": {
     "@babel/parser": "^7.29.8",
