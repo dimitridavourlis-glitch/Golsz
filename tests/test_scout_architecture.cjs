@@ -271,7 +271,25 @@ ck("...and never twice in a reply", /name the plan once, carry on/.test(SCOUT), 
 // =========================================================================
 // Nothing above may move a quota, price, entitlement or auth rule
 // =========================================================================
-ck("free daily limit unmoved", /FREE_DAILY_LIMIT[^\n]*3/.test(SCOUT) || /parseInt\(process\.env\.FREE_DAILY_LIMIT/.test(SCOUT), true);
+// RUN the limit function, do not grep for its number. This assertion used to
+// be /FREE_DAILY_LIMIT[^\n]*3/, which matches the env-var documentation
+// comment at the top of api/scout.js - so it could not see a change to the
+// actual default. Raising Free from 3 to 25 would have kept it green while
+// multiplying what a $0 account costs the owner.
+{
+  const src = SCOUT.slice(SCOUT.indexOf("function planDailyLimit(plan) {"));
+  const body = src.slice(0, src.indexOf("\n}") + 2);
+  ck("the daily-limit function was found", /return plan === "elite"/.test(body), true);
+  let limit = () => "NOT LIFTED";
+  try { limit = new Function("process", body + " return planDailyLimit;")({ env: {} }); } catch (e) {}
+  ck("free daily limit unmoved", limit("free"), 3);
+  ck("Basic daily limit unmoved", limit("starter"), 8);
+  ck("Pro daily limit unmoved", limit("pro"), 15);
+  ck("Elite daily limit unmoved", limit("elite"), 20);
+  // An unknown plan must fall to the SMALLEST allowance, never the largest.
+  ck("an unrecognised plan gets the free allowance", limit("something-else"), 3);
+  ck("...and so does no plan at all", limit(null), 3);
+}
 ck("the Free lifetime AI budget is still enforced", /releaseFreeAiQuestion/.test(SCOUT), true);
 ck("the atomic reserve is still used", /reserve_scout_question/.test(SCOUT), true);
 ck("cost logging is intact", /logRouting/.test(SCOUT), true);

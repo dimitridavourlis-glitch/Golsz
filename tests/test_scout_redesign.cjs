@@ -110,8 +110,21 @@ ck("...or by a usage count of zero, which is also the server's word",
 // as exhausted would invent a cap the athlete does not have.
 ck("a missing usage is never treated as empty",
    /const outOfQuestions = limitHit\s*\n\s*\|\| \(scoutUsage &&/.test(APP), true);
-ck("a new chat does not refill a spent cap",
-   /limitHit is deliberately NOT cleared/.test(APP), true);
+// This asserted the COMMENT inside newChat() saying the cap is not cleared.
+// A comment is not a guard: deleting the line it describes would have left
+// this green while a free athlete refilled their daily allowance by tapping
+// "new chat". What is pinned now is that nothing clears it except the two
+// places that set it.
+{
+  const nc = APP.slice(APP.indexOf("function newChat() {"));
+  const body = nc.slice(0, nc.indexOf("\n  }") + 4);
+  ck("a new chat does not refill a spent cap", /setLimitHit/.test(body), false);
+  // Exactly two: the state declaration and the failure handler that sets it.
+  ck("...and the cap is set from exactly one place",
+     (APP.match(/setLimitHit\(/g) || []).length, 1);
+  ck("...which is a refusal the server sent",
+     /failure\.code === "free_ai_exhausted" \? "life" : "daily"/.test(APP), true);
+}
 
 /* ---------- the balls ---------- */
 

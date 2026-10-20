@@ -71,8 +71,22 @@ ck("the resolved plan is what the rest of the handler reads",
    /const plan = effectivePlan\(ownPlan, parentMeta && parentMeta\.plan\);/.test(SCOUT), true);
 // Metering must NOT follow the payer: a parent on Pro managing two children
 // should not be able to spend one child's allowance on the other.
-ck("metering stays keyed to the athlete, not the parent",
-   /Metering, burst protection and duplicate detection stay keyed to the\s*\/\/ ATHLETE, not the parent/.test(SCOUT), true);
+// This used to assert the COMMENT that says metering stays keyed to the
+// athlete. Changing `p_user: userId` to the parent's id - the natural edit if
+// someone ever "fixes" metering to follow the payer - would have left one
+// child able to spend the other's daily allowance, with this still green.
+// Comments stripped first so the prose above does not satisfy it either.
+const CODE = SCOUT.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+ck("the daily reservation is keyed to the athlete",
+   /reserve_scout_question[\s\S]{0,400}p_user: userId/.test(CODE), true);
+ck("...as is the release that refunds it",
+   /release_scout_question[\s\S]{0,400}p_user: userId/.test(CODE), true);
+// Nothing may key metering to the payer, under any of the names the parent
+// is known by in this file.
+ck("nothing meters against the parent",
+   /p_user: (parentId|parentMeta|payerId|callerId|parent)\b/.test(CODE), false);
+ck("...and the resolved plan is the only thing that follows the payer",
+   /const plan = effectivePlan\(ownPlan, parentMeta && parentMeta\.plan\);/.test(CODE), true);
 
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
