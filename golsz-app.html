@@ -143,6 +143,11 @@ const Pause = svg('<path d="M9 6v12M15 6v12" stroke-width="3"/>');
 const Minus = svg('<path d="M6 12h12" stroke-width="3"/>');
 const Info = svg('<circle cx="12" cy="12" r="10"/><path d="M12 11v6M12 7.5v.5"/>');
 const Bandage = svg('<rect x="2" y="8" width="20" height="8" rx="4" transform="rotate(-45 12 12)"/><path d="M10.5 12h3M12 10.5v3"/>');
+// Phase 2 (Appendix A). Sun, Video, Lock, GraduationCap and Flag already
+// exist and are reused; only these three are genuinely new.
+const MessageCircle = svg('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>');
+const IdCard = svg('<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="11" r="2.5"/><path d="M14 10h4M14 14h4M6 16c.8-1.5 1.8-2 3-2s2.2.5 3 2"/>');
+const Timer = svg('<circle cx="12" cy="14" r="7"/><path d="M12 10v4l3 2M10 3h4M12 3v4"/>');
 const Share = svg('<circle cx="18" cy="5" r="2.5"/><circle cx="18" cy="19" r="2.5"/><circle cx="6" cy="12" r="2.5"/><line x1="8.2" x2="15.8" y1="10.8" y2="6.2"/><line x1="8.2" x2="15.8" y1="13.2" y2="17.8"/>');
 const GraduationCap = svg('<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>');
 const Mail = svg('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>');
@@ -689,6 +694,7 @@ const I18N = {
     ui_cancel: "Cancel", add_highlight_cta: "Add a highlight", add_timeline_cta: "Add an achievement", add_benchmark_cta: "Record a result",
     dev_plan_collapsed_hint: "Your training, and the areas you are working on",
     checkin_title_named: "Hi {name}. How do you feel today?", checkin_title: "How do you feel today?", checkin_sub: "Tap one. Your plan will fit your day.", checkin_great: "Great", checkin_great_sub: "Ready to train", checkin_okay: "Okay", checkin_okay_sub: "A bit tired", checkin_hurt: "Hurt", checkin_hurt_sub: "I need a break", checkin_private: "Coaches and schools never see this.", checkin_skip: "Skip for today", checkin_chip_great: "Feeling great", checkin_chip_okay: "Feeling okay", rest_title: "Rest first.", rest_sub: "Your body needs time. That is okay.", rest_paused: "PLAN PAUSED", rest_nothing_late: "Nothing on your road is late while you rest.", rest_back_q: "When do you think you'll be back?", rest_back_hint: "Your own guess. You can skip it or change it.", rest_tell_scout: "Tell Scout what happened", rest_scout_seed: "I'm hurt and taking a break. Can you help me adjust my plan?", rest_continue: "Go to the app", rest_doctor: "If it really hurts, see a doctor or a physio.", resting_banner_strong: "Resting.", resting_banner: "Your plan is paused.", resting_better: "I'm better",
+    home_tiles_hi: "Hi {name}!", home_tiles_sub: "Tap a picture to start.", tile_today: "Today", tile_scout: "Scout", tile_passport: "Passport", tile_schools: "Schools", tile_videos: "Videos", tile_tests: "Tests", tile_today_count: "{n} to do", tile_today_rest: "Rest day", tile_scout_sub: "Ask me anything", tile_schools_n: "{n} on my list", tile_videos_n: "{n} clips", tile_tests_n: "{n} results", tile_passport_opened: "Opened {ago}", tile_passport_unshared: "Not shared yet", tile_locked: "Basic plan", home_tiles_goal: "My goal: {goal}", home_today_back: "Back",
   },
   fr: {
     loading: "Chargement…", yes: "Oui", no: "Non",
@@ -1055,6 +1061,7 @@ const I18N = {
     ui_cancel: "Annuler", add_highlight_cta: "Ajouter un temps fort", add_timeline_cta: "Ajouter une réussite", add_benchmark_cta: "Enregistrer un résultat",
     dev_plan_collapsed_hint: "Votre entraînement, et vos axes de travail",
     checkin_title_named: "Salut {name}. Comment te sens-tu aujourd'hui ?", checkin_title: "Comment te sens-tu aujourd'hui ?", checkin_sub: "Choisis-en un. Ton plan s'adaptera à ta journée.", checkin_great: "En forme", checkin_great_sub: "Prêt à m'entraîner", checkin_okay: "Ça va", checkin_okay_sub: "Un peu fatigué", checkin_hurt: "Blessé", checkin_hurt_sub: "J'ai besoin d'une pause", checkin_private: "Les coachs et les écoles ne voient jamais ça.", checkin_skip: "Passer pour aujourd'hui", checkin_chip_great: "Je me sens bien", checkin_chip_okay: "Ça va", rest_title: "Repose-toi d'abord.", rest_sub: "Ton corps a besoin de temps. C'est normal.", rest_paused: "PLAN EN PAUSE", rest_nothing_late: "Rien sur ta route n'est en retard pendant que tu te reposes.", rest_back_q: "Quand penses-tu revenir ?", rest_back_hint: "Ta propre estimation. Tu peux la passer ou la changer.", rest_tell_scout: "Raconter à Scout ce qui s'est passé", rest_scout_seed: "Je suis blessé et je prends une pause. Peux-tu m'aider à adapter mon plan ?", rest_continue: "Aller à l'application", rest_doctor: "Si ça fait vraiment mal, consulte un médecin ou un physio.", resting_banner_strong: "Repos.", resting_banner: "Ton plan est en pause.", resting_better: "Je vais mieux",
+    home_tiles_hi: "Salut {name} !", home_tiles_sub: "Touche une image pour commencer.", tile_today: "Aujourd'hui", tile_scout: "Scout", tile_passport: "Passeport", tile_schools: "Écoles", tile_videos: "Vidéos", tile_tests: "Tests", tile_today_count: "{n} à faire", tile_today_rest: "Jour de repos", tile_scout_sub: "Pose-moi une question", tile_schools_n: "{n} sur ma liste", tile_videos_n: "{n} clips", tile_tests_n: "{n} résultats", tile_passport_opened: "Ouvert {ago}", tile_passport_unshared: "Pas encore partagé", tile_locked: "Forfait Basic", home_tiles_goal: "Mon objectif : {goal}", home_today_back: "Retour",
   },
   es: {
     loading: "Cargando…", yes: "Sí", no: "No",
@@ -1421,6 +1428,7 @@ const I18N = {
     ui_cancel: "Cancelar", add_highlight_cta: "Añadir una jugada", add_timeline_cta: "Añadir un logro", add_benchmark_cta: "Registrar un resultado",
     dev_plan_collapsed_hint: "Tu entrenamiento y las áreas en las que trabajas",
     checkin_title_named: "Hola {name}. ¿Cómo te sientes hoy?", checkin_title: "¿Cómo te sientes hoy?", checkin_sub: "Elige uno. Tu plan se ajustará a tu día.", checkin_great: "Genial", checkin_great_sub: "Listo para entrenar", checkin_okay: "Bien", checkin_okay_sub: "Un poco cansado", checkin_hurt: "Lesionado", checkin_hurt_sub: "Necesito un descanso", checkin_private: "Los entrenadores y las escuelas nunca ven esto.", checkin_skip: "Saltar por hoy", checkin_chip_great: "Me siento genial", checkin_chip_okay: "Me siento bien", rest_title: "Primero descansa.", rest_sub: "Tu cuerpo necesita tiempo. Está bien.", rest_paused: "PLAN EN PAUSA", rest_nothing_late: "Nada en tu ruta está atrasado mientras descansas.", rest_back_q: "¿Cuándo crees que volverás?", rest_back_hint: "Tu propia estimación. Puedes saltarla o cambiarla.", rest_tell_scout: "Cuéntale a Scout qué pasó", rest_scout_seed: "Estoy lesionado y voy a descansar. ¿Puedes ayudarme a ajustar mi plan?", rest_continue: "Ir a la aplicación", rest_doctor: "Si duele de verdad, ve a un médico o a un fisio.", resting_banner_strong: "Descansando.", resting_banner: "Tu plan está en pausa.", resting_better: "Ya estoy mejor",
+    home_tiles_hi: "¡Hola {name}!", home_tiles_sub: "Toca una imagen para empezar.", tile_today: "Hoy", tile_scout: "Scout", tile_passport: "Pasaporte", tile_schools: "Escuelas", tile_videos: "Vídeos", tile_tests: "Pruebas", tile_today_count: "{n} por hacer", tile_today_rest: "Día de descanso", tile_scout_sub: "Pregúntame lo que sea", tile_schools_n: "{n} en mi lista", tile_videos_n: "{n} clips", tile_tests_n: "{n} resultados", tile_passport_opened: "Abierto {ago}", tile_passport_unshared: "Aún no compartido", tile_locked: "Plan Basic", home_tiles_goal: "Mi objetivo: {goal}", home_today_back: "Atrás",
   },
   el: {
     loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
@@ -1787,6 +1795,7 @@ const I18N = {
     ui_cancel: "Άκυρο", add_highlight_cta: "Προσθέκη highlight", add_timeline_cta: "Προσθέκη επιτυχίας", add_benchmark_cta: "Καταγραφή αποτελέσματος",
     dev_plan_collapsed_hint: "Η προπόνησή σου και οι τομείς που δουλεύεις",
     checkin_title_named: "Γεια σου {name}. Πώς νιώθεις σήμερα;", checkin_title: "Πώς νιώθεις σήμερα;", checkin_sub: "Διάλεξε ένα. Το πλάνο σου θα προσαρμοστεί στη μέρα σου.", checkin_great: "Τέλεια", checkin_great_sub: "Έτοιμος για προπόνηση", checkin_okay: "Εντάξει", checkin_okay_sub: "Λίγο κουρασμένος", checkin_hurt: "Τραυματίας", checkin_hurt_sub: "Χρειάζομαι διάλειμμα", checkin_private: "Οι προπονητές και οι σχολές δεν το βλέπουν ποτέ αυτό.", checkin_skip: "Παράλειψη για σήμερα", checkin_chip_great: "Νιώθω τέλεια", checkin_chip_okay: "Νιώθω εντάξει", rest_title: "Ξεκουράσου πρώτα.", rest_sub: "Το σώμα σου χρειάζεται χρόνο. Αυτό είναι εντάξει.", rest_paused: "ΠΛΑΝΟ ΣΕ ΠΑΥΣΗ", rest_nothing_late: "Τίποτα στη διαδρομή σου δεν είναι εκπρόθεσμο όσο ξεκουράζεσαι.", rest_back_q: "Πότε πιστεύεις ότι θα επιστρέψεις;", rest_back_hint: "Η δική σου εκτίμηση. Μπορείς να την παραλείψεις ή να την αλλάξεις.", rest_tell_scout: "Πες στον Scout τι έγινε", rest_scout_seed: "Τραυματίστηκα και κάνω διάλειμμα. Μπορείς να με βοηθήσεις να προσαρμόσω το πλάνο μου;", rest_continue: "Πήγαινε στην εφαρμογή", rest_doctor: "Αν πονάει πραγματικά, δες γιατρό ή φυσικοθεραπευτή.", resting_banner_strong: "Ξεκούραση.", resting_banner: "Το πλάνο σου είναι σε παύση.", resting_better: "Είμαι καλύτερα",
+    home_tiles_hi: "Γεια σου {name}!", home_tiles_sub: "Πάτα μια εικόνα για να ξεκινήσεις.", tile_today: "Σήμερα", tile_scout: "Scout", tile_passport: "Διαβατήριο", tile_schools: "Σχολές", tile_videos: "Βίντεο", tile_tests: "Τεστ", tile_today_count: "{n} να κάνεις", tile_today_rest: "Μέρα ξεκούρασης", tile_scout_sub: "Ρώτα με οτιδήποτε", tile_schools_n: "{n} στη λίστα μου", tile_videos_n: "{n} κλιπ", tile_tests_n: "{n} αποτελέσματα", tile_passport_opened: "Άνοιξε {ago}", tile_passport_unshared: "Δεν έχει μοιραστεί ακόμη", tile_locked: "Πλάνο Basic", home_tiles_goal: "Ο στόχος μου: {goal}", home_today_back: "Πίσω",
   },
 };
 const LANGS = [["en", "English"], ["fr", "Français"], ["es", "Español"], ["el", "Ελληνικά"]];
@@ -3489,8 +3498,42 @@ const PARENT_ACCOUNTS_ENABLED = false;
 // A flag is flipped in the SAME pull request that builds its phase, never
 // ahead of it: a flag that is on before its screen is finished is not a
 // switch, it is a half-built screen shipped to production.
+// The only section ids a deep link may name. Every one of these must exist as
+// an anchor on the page it belongs to, which test_home_tiles asserts both
+// ways - an id here with no anchor is a link to nowhere, and an anchor with
+// no id here can never be reached.
+const SECTION_IDS = ["gz-highlights", "gz-benchmarks", "gz-schools"];
+
+// Scroll a deep-linked section into view, once.
+//
+// It retries across frames rather than reading the DOM on the tick the effect
+// fires, because the target may sit inside a Collapsible that this same
+// signal has only just opened - on the first tick that node does not exist
+// yet. It gives up after ~20 frames and STILL calls onDone: a signal that
+// latches because its target never appeared would leave the page unable to
+// accept the next deep link at all.
+function useFocusSection(section, nonce, onDone) {
+  useEffect(() => {
+    if (!section || !nonce || typeof document === "undefined") return;
+    let tries = 0, cancelled = false;
+    const tick = () => {
+      if (cancelled) return;
+      const el = document.getElementById(section);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (onDone) onDone();
+        return;
+      }
+      if (++tries < 20) requestAnimationFrame(tick);
+      else if (onDone) onDone();
+    };
+    requestAnimationFrame(tick);
+    return () => { cancelled = true; };
+  }, [section, nonce]);
+}
+
 const REDESIGN_CHECKIN = true;   // Phase 1, shipped.
-const REDESIGN_HOME_TILES = false;
+const REDESIGN_HOME_TILES = true;  // Phase 2, shipped.
 const REDESIGN_ROAD = false;
 const REDESIGN_SCOUT = false;
 // A PLAIN LITERAL ON PURPOSE. test_enum_parity reads this list by regex and
@@ -6074,8 +6117,11 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved, onSignOut 
   );
 }
 
-function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, onOpenAdmin, viewUserId, manageMode, onBack, onMessage, onViewProfile, plan, onUpgrade }) {
+function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, onOpenAdmin, viewUserId, manageMode, onBack, onMessage, onViewProfile, plan, onUpgrade, focusSection, focusNonce, onSectionDone }) {
   const { t, tv } = useLang();
+  // Above every early return in this component. A hook below a state-gated
+  // return is React #310, which took this app down once before.
+  useFocusSection(focusSection, focusNonce, onSectionDone);
   const [uid, setUid] = useState(null);
   const [profile, setProfile] = useState(null);
   const [athlete, setAthlete] = useState(null);
@@ -6656,7 +6702,9 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           Passport for now — untouched, just not rendered here. */}
 
       {/* media */}
-      <Highlights viewUserId={manageMode ? viewUserId : (viewingOther ? viewUserId : null)} manageMode={manageMode} />
+      <div id="gz-highlights" style={{ scrollMarginTop: 72 }}>
+        <Highlights viewUserId={manageMode ? viewUserId : (viewingOther ? viewUserId : null)} manageMode={manageMode} />
+      </div>
 
       {/* career timeline */}
       <Timeline viewUserId={manageMode ? viewUserId : (viewingOther ? viewUserId : null)} manageMode={manageMode} />
@@ -6666,6 +6714,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           rather than erroring when viewing someone else's Passport.
           Pro+ (brief §13); shown locked rather than hidden for the owner
           on Free/Basic, per §11's "visibly locked" paywall language. */}
+      <div id="gz-benchmarks" style={{ scrollMarginTop: 72 }} />
       {viewingOther ? (
         <Benchmarks viewUserId={viewUserId} />
       ) : !planKnown(plan) ? null : featureUnlocked(plan, "benchmarks") ? (
@@ -10117,6 +10166,11 @@ function HomeZone({ label, children, last, node, span }) {
 function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip, onBetter }) {
   const { t, tv, lang } = useLang();
   const [loaded, setLoaded] = useState(!sb);
+  // "tiles" is the Phase 2 entrance; "today" is the screen Home used to be,
+  // rendered unchanged below with a back row on top. Declared here, above
+  // the `if (!loaded)` early return further down, because a hook below a
+  // state-gated return is React #310.
+  const [view, setView] = useState("tiles");
   const [athlete, setAthlete] = useState(null);
   const [quality, setQuality] = useState(null);
   const [verification, setVerification] = useState(null);
@@ -10851,8 +10905,135 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
     .filter(Boolean).filter((tile) => !tile.empty);
 
 
+  /* ===== PHASE 2: HOME AS SIX PICTURES =====
+     Nothing below is deleted. The screen that used to be Home is still the
+     screen that used to be Home - it now sits behind the Today tile, with a
+     back row on top, and every one of its tests still runs against it
+     unchanged. This branch is an entrance, not a replacement.
+
+     Every number here is already in scope. The brief's "no new fetches" is
+     true: todaySteps, clipCount, targetRows, recentBenchmarks, lastOpen and
+     goalText are all computed above for the old Home, and `resting` arrives
+     as a prop from GolszApp's existing profiles read. */
+  if (REDESIGN_HOME_TILES && view === "tiles") {
+    const openedDays = lastOpen ? dayAgo(new Date(lastOpen).toISOString()) : null;
+    const agoText = openedDays === null ? null
+      : openedDays === 0 ? t("home_ago_today") : t("home_ago_days").replace("{n}", openedDays);
+    const todoLeft = Math.max(0, todaySteps.length - todayDone);
+    // A lock is only shown once the plan is KNOWN. While it is unknown the
+    // tile shows neither a lock nor the feature, which is the rule the rest of
+    // the app follows and the one test_home_tiles pins.
+    const lockedFor = (feat) => planKnown(plan) && !featureUnlocked(plan, feat);
+
+    const TILES = [
+      {
+        k: "today", gold: true, icon: resting ? Pause : Sun, label: t("tile_today"),
+        sub: resting ? t("tile_today_rest") : (pathwayNext && pathwayNext.label ? pathwayNext.label : null),
+        badge: resting || !todoLeft ? null : t("tile_today_count").replace("{n}", todoLeft),
+        grey: resting,
+        act: () => setView("today"),
+      },
+      { k: "scout", icon: MessageCircle, label: t("tile_scout"), sub: t("tile_scout_sub"),
+        act: () => onNavigate("scout") },
+      { k: "passport", icon: IdCard, label: t("tile_passport"),
+        sub: agoText ? t("tile_passport_opened").replace("{ago}", agoText) : t("tile_passport_unshared"),
+        act: () => onNavigate("profile") },
+      { k: "schools", icon: GraduationCap, label: t("tile_schools"),
+        sub: lockedFor("targets") || !targetRows.length ? null : t("tile_schools_n").replace("{n}", targetRows.length),
+        locked: lockedFor("targets"),
+        act: () => onNavigate("targets", null, null, null, "gz-schools") },
+      { k: "videos", icon: Video, label: t("tile_videos"),
+        sub: clipCount ? t("tile_videos_n").replace("{n}", clipCount) : null,
+        act: () => onNavigate("profile", null, null, null, "gz-highlights") },
+      { k: "tests", icon: Timer, label: t("tile_tests"),
+        sub: lockedFor("benchmarks") ? null : (recentBenchmarks.length ? t("tile_tests_n").replace("{n}", recentBenchmarks.length) : null),
+        locked: lockedFor("benchmarks"),
+        act: () => onNavigate("profile", null, null, null, "gz-benchmarks") },
+    ];
+
+    return (
+      <div className="gz-home" style={{ padding: "8px 16px 20px" }}>
+        {(resting || checkinChip) && (
+          <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14,
+            background: C.turf, border: `2px solid ${resting ? C.chalkSoft : C.line2}`,
+            borderRadius: 14, padding: "9px 12px" }}>
+            {resting ? <Pause size={17} color={C.lime} style={{ flexShrink: 0 }} /> : <Check size={17} color={C.lime} style={{ flexShrink: 0 }} />}
+            <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: C.chalk }}>
+              {resting ? <strong style={{ fontWeight: 800 }}>{t("resting_banner_strong")} </strong> : null}
+              {resting ? t("resting_banner") : t(checkinChip === "okay" ? "checkin_chip_okay" : "checkin_chip_great")}
+            </span>
+            {resting && onBetter ? (
+              <button onClick={onBetter} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 10,
+                padding: "7px 12px", fontSize: 12.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", flexShrink: 0 }}>
+                {t("resting_better")}
+              </button>
+            ) : null}
+          </div>
+        )}
+
+        {name ? (
+          <div style={{ fontSize: 32, fontWeight: 800, color: C.chalk, lineHeight: 1.1 }}>
+            {t("home_tiles_hi").replace("{name}", String(name).trim().split(/\s+/)[0])}
+          </div>
+        ) : null}
+        <div style={{ fontSize: 18, color: C.chalkSoft, marginTop: name ? 6 : 0, marginBottom: 18 }}>{t("home_tiles_sub")}</div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+          {TILES.map((tile) => (
+            <button key={tile.k} onClick={tile.locked ? onUpgrade : tile.act}
+              style={{ position: "relative", minHeight: 144, borderRadius: 26, padding: "16px 12px",
+                background: tile.gold && !tile.grey ? C.lime : C.card,
+                border: tile.gold && !tile.grey ? "none" : `2px solid ${C.line2}`,
+                cursor: "pointer", fontFamily: "inherit", display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center", gap: 7, textAlign: "center", boxSizing: "border-box" }}>
+              {tile.badge ? (
+                <span style={{ position: "absolute", top: 10, right: 10, minHeight: 28, borderRadius: 99,
+                  background: C.ink, color: C.chalk, fontSize: 14, fontWeight: 800, padding: "4px 10px",
+                  display: "flex", alignItems: "center" }}>{tile.badge}</span>
+              ) : null}
+              {React.createElement(tile.icon, { size: 38,
+                color: tile.gold && !tile.grey ? C.ink : (tile.locked || tile.grey ? C.slate : C.lime) })}
+              <span style={{ fontSize: 20, fontWeight: 800, color: tile.gold && !tile.grey ? C.ink : C.chalk }}>{tile.label}</span>
+              {tile.locked ? (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, minHeight: 28,
+                  background: C.turf, borderRadius: 99, padding: "4px 10px", fontSize: 13, fontWeight: 700, color: C.slate }}>
+                  <Lock size={13} /> {t("tile_locked")}
+                </span>
+              ) : tile.sub ? (
+                <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3,
+                  color: tile.gold && !tile.grey ? C.ink : C.chalkSoft,
+                  overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{tile.sub}</span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+
+        {goalText ? (
+          <button onClick={() => onNavigate("targets")} style={{ marginTop: 18, width: "100%", background: "none",
+            border: "none", fontFamily: "inherit", cursor: "pointer", display: "flex", alignItems: "center",
+            justifyContent: "center", gap: 7, padding: "12px 0", color: C.chalkSoft, fontSize: 15 }}>
+            <Flag size={15} color={C.lime} style={{ flexShrink: 0 }} />
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {t("home_tiles_goal").replace("{goal}", goalText)}
+            </span>
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="gz-home" style={{ padding: "8px 12px 20px" }}>
+      {/* The way back to the tiles. Rendered only when the tiles exist to go
+          back TO - with the flag off this branch is the whole of Home and a
+          back row would lead nowhere. */}
+      {REDESIGN_HOME_TILES && view === "today" && (
+        <button onClick={() => setView("tiles")} style={{ background: "none", border: "none",
+          fontFamily: "inherit", cursor: "pointer", color: C.lime, fontSize: 16, fontWeight: 700,
+          display: "flex", alignItems: "center", gap: 5, padding: "4px 0 12px" }}>
+          <ChevronLeft size={18} /> {t("home_today_back")}
+        </button>
+      )}
       {(name || (athlete && (athlete.sport || athlete.club_name))) && (
         // ONE identity block, not a greeting stacked on top of a separate
         // profile row. The greeting is the eyebrow, the name is the
@@ -11804,10 +11985,21 @@ function BackupPlanCard({ athlete, loaded, actingFor, onSaved, quiet }) {
    to exist: "5 on the list, 2 contacted" is a sentence you can read without
    opening anything. Children are passed as elements and only rendered when
    open, so a closed section also costs no fetch. */
-function Collapsible({ label, summary, children }) {
+function Collapsible({ label, summary, children, revealSignal, anchorId }) {
   const [open, setOpen] = useState(false);
+  // A deep link has to arrive OPEN. Home's Schools tile points at a section
+  // that lives inside one of these, and a link landing on a closed row is a
+  // link that did nothing as far as the athlete can tell.
+  //
+  // `revealSignal` is a CHANGING value, not a boolean. A boolean `open` prop
+  // would take the state away from this component - the athlete could never
+  // close a section the parent still considered open - and would not re-open
+  // the same section on a second tap, because the value would not have
+  // changed. A counter works; null or 0 means "no signal". Named distinctly
+  // from SettingsButton's openSignal, which is a different mechanism.
+  useEffect(() => { if (revealSignal) setOpen(true); }, [revealSignal]);
   return (
-    <div style={{ marginBottom: 12 }}>
+    <div id={anchorId} style={{ marginBottom: 12, scrollMarginTop: 72 }}>
       <button onClick={() => setOpen(!open)} aria-expanded={open}
         style={{ width: "100%", boxSizing: "border-box", textAlign: "left", fontFamily: "inherit", cursor: "pointer",
           background: C.card, color: C.chalk, borderTop: `1px solid ${C.line}`, borderLeft: `1px solid ${C.line}`,
@@ -11835,8 +12027,10 @@ function rosterSummary(t, items) {
   return t("home_door_schools_counts").replace("{n}", rows.length).replace("{c}", contacted);
 }
 
-function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened, resting }) {
+function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened, resting, focusSection, focusNonce, onSectionDone }) {
   const { t } = useLang();
+  // Above every early return, same reason as Passport.
+  useFocusSection(focusSection, focusNonce, onSectionDone);
   const [uid, setUid] = useState(null);
   // Bumped by GoalCard on a successful save so PathwayPlan below re-reads
   // (a new goal can change which pathway the athlete is on).
@@ -12082,7 +12276,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
           the list and how many have been contacted - the objection that kept it
           open was to an accordion that shows only a title, and that objection
           still stands. */}
-      <Collapsible label={t("targets_title")} summary={rosterSummary(t, items)}>
+      <Collapsible label={t("targets_title")} summary={rosterSummary(t, items)} anchorId="gz-schools" revealSignal={focusSection === "gz-schools" ? focusNonce : 0}>
       <div style={{ ...card }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10, minHeight: 26 }}>
           {!showAddTarget && <button onClick={() => setShowAddTarget(true)} style={{ ...iconBtn(C.lime), fontSize: 12 }}><Plus size={13} /> {t("targets_add")}</button>}
@@ -15037,6 +15231,13 @@ function GolszApp({ onSignOut, startOnboarding }) {
   // PathwayPlan because that component is mounted key={goalVersion} and is
   // destroyed whenever a goal is saved.
   const [planDay, setPlanDay] = useState(null);
+  // WHICH SECTION A DEEP LINK IS AIMED AT, and a counter that changes every
+  // time one is fired. The counter is what lets the same tile be tapped twice:
+  // a bare section id would be unchanged on the second tap, so nothing would
+  // re-open or re-scroll. Cleared by the receiving page once it has scrolled,
+  // exactly like planDay/onDayOpened.
+  const [focusSection, setFocusSection] = useState(null);
+  const [focusNonce, setFocusNonce] = useState(0);
   // Stack of { page, viewProfileId } snapshots to restore on "back" out of a
   // viewed profile — e.g. opening a passport from a chat thread's header and
   // pressing back should land back in that same thread, not on your own
@@ -15349,12 +15550,18 @@ function GolszApp({ onSignOut, startOnboarding }) {
   // athlete on an empty chat and leave them to phrase the request, which is
   // the part they came here to avoid. Cleared as soon as Scout has sent it,
   // so leaving and returning to Scout does not fire it a second time.
-  const go = (id, from, seed, day) => {
+  // SECTION_IDS is an allowlist, not a hint. A section id arrives from a tile
+  // and is written straight into getElementById, so anything not on this list
+  // is dropped rather than carried into the page as a dangling target.
+  const go = (id, from, seed, day, section) => {
     if (mustFinishProfile && id !== "profile") return;
     if (id === "account") { setAccountOpenSignal((s) => s + 1); return; }
     setCameFrom(from || null);
     setScoutSeed(id === "scout" && typeof seed === "string" && seed.trim() ? seed.trim() : null);
     setPlanDay(id === "targets" && typeof day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null);
+    const wanted = SECTION_IDS.indexOf(section) !== -1 ? section : null;
+    setFocusSection(wanted);
+    if (wanted) setFocusNonce((n) => n + 1);
     setPage(id); if (id !== "messages") setThread(null); setViewProfileId(null); setProfileStack([]);
   };
   // Messages is retired. Its only callers were Feed and Discover, both
@@ -15475,9 +15682,9 @@ function GolszApp({ onSignOut, startOnboarding }) {
             )}
             {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} checkinChip={checkinChip} onBetter={clearResting} />}
             {page === "scout" && <div style={{ height: "calc(100dvh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} seedPrompt={scoutSeed} onSeedSent={() => setScoutSeed(null)} onNavigate={go} /></div>}
-            {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} onNavigate={go} openDay={planDay} onDayOpened={() => setPlanDay(null)} /></>}
+            {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} focusSection={focusSection} focusNonce={focusNonce} onSectionDone={() => setFocusSection(null)} onNavigate={go} openDay={planDay} onDayOpened={() => setPlanDay(null)} /></>}
             {page === "events" && <Events />}
-            {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
+            {page === "profile" && <Passport focusSection={focusSection} focusNonce={focusNonce} onSectionDone={() => setFocusSection(null)} onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
             {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
           </div>
         </main>
@@ -15530,9 +15737,9 @@ function GolszApp({ onSignOut, startOnboarding }) {
         )}
         {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} checkinChip={checkinChip} onBetter={clearResting} />}
         {page === "scout" && <Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} seedPrompt={scoutSeed} onSeedSent={() => setScoutSeed(null)} onNavigate={go} />}
-        {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} onNavigate={go} openDay={planDay} onDayOpened={() => setPlanDay(null)} /></>}
+        {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} focusSection={focusSection} focusNonce={focusNonce} onSectionDone={() => setFocusSection(null)} onNavigate={go} openDay={planDay} onDayOpened={() => setPlanDay(null)} /></>}
         {page === "events" && <Events />}
-        {page === "profile" && <Passport onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
+        {page === "profile" && <Passport focusSection={focusSection} focusNonce={focusNonce} onSectionDone={() => setFocusSection(null)} onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
         {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
       </main>
 
@@ -17510,7 +17717,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=26d1ee127003673c";
+    s.src = "js/app.js?v=7eda1739ecbc9883";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
