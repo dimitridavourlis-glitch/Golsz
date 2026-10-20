@@ -82,6 +82,11 @@ ck("...and two of them keep list order",
 
 const road = grab("function RoadMap({ milestones, stages, currentStageId, athlete, goalText, pathwayType, resting, lang, t,");
 ck("RoadMap exists", road.length > 0, true);
+// Comment lines stripped: the component own prose names the props and the
+// functions the counts below are counting, and a grep that counts prose passes
+// on a comment while nothing in the code reads anything. Same idiom, and the
+// same reason, as test_pathway_milestones.cjs.
+const roadCode = road.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
 // .slice() before every .sort(). Array position is semantic here - moveMilestone
 // swaps by index - so sorting the prop in place would silently re-order the
 // athlete's stored plan as a side effect of looking at it.
@@ -110,6 +115,149 @@ const stageOf = grab("  const stageOf = (m) => {");
 ck("a step filed under a deleted stage renders without a signpost",
    /return st \? \{ id: st\.id, label: stageLabel\(st, t\) \} : null;/.test(road), true);
 ck("...and a step with no stage at all is fine", /if \(!m \|\| !m\.stage\) return null;/.test(road), true);
+
+/* ---------- the section the athlete says they are in ---------- */
+
+// THE DEFECT THIS CLOSES. RoadMap destructured currentStageId and never
+// mentioned it again: press "I'm here now" on Plan, the panel closes, and the
+// Road looked identical - the only confirmation was reopening that same editor
+// or going to Home. PathwayMap had been the reader and was deleted in 36c644c,
+// which put back the exact defect resolveStageIndex's own comment records.
+// The prop boundary was already right; what was missing was a reader. So this
+// is asserted at the point of CONSUMPTION, inside the component's own slice.
+ck("the road reads the id it is handed, not just accepts it",
+   (roadCode.match(/currentStageId/g) || []).length > 1, true);
+ck("...through the stated-only lookup",
+   /const statedIdx = statedStageIndex\(stages, currentStageId\);/.test(roadCode), true);
+// Not the resolver Home uses: it falls back to the recruiting_status guess and
+// cannot tell a caller which answer it gave, so a marker built on it prints an
+// inference inside a chip that reads as a quote.
+ck("...and never through the one that falls back to a guess",
+   /resolveStageIndex|currentStageIndex/.test(roadCode), false);
+
+// THE CHIP ACTUALLY RENDERS THE VALUE. Counting statedChip() calls is not
+// enough - a chip whose body ignored statedStage would satisfy the count and
+// render a constant, which is this same defect one layer in.
+const chip = grab("  const statedChip = () => {");
+ck("the chip exists", chip.length > 0, true);
+ck("...and says nothing when the athlete has not said anything",
+   /if \(!statedStage\) return null;/.test(chip), true);
+ck("...and names the section, not a constant",
+   /\{stageLabel\(statedStage, t\)\}/.test(chip), true);
+ck("...with its own label, once", (chip.match(/t\("pathway_section_now"\)/g) || []).length, 1);
+// Disclosed rather than hidden: a marked section with no steps filed under it
+// is asserted in the header and absent from the road below.
+ck("...and says so when no steps are filed under it",
+   /t\("pathway_section_now_empty"\)/.test(chip), true);
+ck("...which is decided from the steps, not from the ladder",
+   /rows\.some\(\(m\) => String\(m\.stage\) === String\(statedStage\.id\)\)/.test(roadCode), true);
+
+// FAILURE MODES 2 AND 3, ANSWERED BY CONSTRUCTION RATHER THAN BY A RULE.
+// Signposts are emitted inside ordered.forEach; `ordered` is three segments in
+// DATE order and lastStage dedupes only consecutive runs, so one section can
+// head three signposts while a section with no steps heads none. A marker
+// there would print a number of times decided by date interleave, and the
+// topmost could sit ABOVE the step pill pointing up the road. So the marker is
+// read from the LADDER, which is always complete, and drawn outside the loop.
+ck("the marker is read from the ladder, not from the drawn road",
+   /const statedStage = statedIdx >= 0 \? \(stages \|\| \[\]\)\[statedIdx\] : null;/.test(roadCode), true);
+ck("...and drawn once per return, outside ordered.forEach",
+   (roadCode.match(/\{statedChip\(\)\}/g) || []).length, 2);
+// The empty-road card is the extreme form of a section with no steps: an
+// athlete whose only statement so far is which section they are in.
+ck("...including in the empty-road card",
+   /\{statedChip\(\)\}\n\s*<div[^>]*>\{t\("road_empty"\)\}<\/div>/.test(roadCode), true);
+ck("...with no per-milestone section comparison anywhere",
+   /m\.stage[^;]*currentStageId|currentStageId[^;]*m\.stage/.test(roadCode), false);
+ck("the signpost loop is left exactly as it was",
+   /if \(key !== lastStage\) \{\n      lastStage = key;/.test(roadCode), true);
+
+// THE PRESS HAS TO CONFIRM ITSELF ON SCREEN. "I'm here now" sits in a panel
+// rendered after the whole Road card, so pressing it closes a tall panel and
+// can leave the chip scrolled past - rendered, invisible, and indistinguishable
+// from the bug. One matched string, two readers: a second spelling is a silent
+// no-op, which is why the id is a constant and not a literal.
+ck("the chip carries the id the reveal looks up",
+   /<button id=\{ROAD_STAGE_CHIP_ID\}/.test(roadCode), true);
+// Signposts are emitted only while walking the milestones, so for a section
+// with no steps filed under it the chip is the ONLY way into its editor.
+ck("...and opens the same editor a signpost opens",
+   /onClick=\{\(\) => onSignpost && onSignpost\(statedStage\.id\)\}/.test(roadCode), true);
+ck("...and the button that sets the section calls the reveal",
+   /setCurrentStage\(editingStage\); setEditingStage\(null\); revealStageChip\(\);/.test(APP), true);
+ck("...which centres it one frame later, as the road does for YOU ARE HERE",
+   /getElementById\(ROAD_STAGE_CHIP_ID\)/.test(APP), true);
+// THREE: the declaration, the chip that carries it, and the getElementById
+// that looks it up. A fourth is a third reader; a literal "gz-road-stage"
+// anywhere instead is the silent no-op this constant exists to prevent.
+ck("the id is declared once and read in exactly two places",
+   (APP.match(/ROAD_STAGE_CHIP_ID/g) || []).length, 3);
+ck("...and never written as a bare string",
+   (APP.match(/"gz-road-stage"/g) || []).length, 1);
+
+// THE RULE, RUN. Both -1 cases are live production states: every pre-128 row
+// holds null, and test_scout_stage_remap pins that an unplaceable section id is
+// deliberately LEFT on the row rather than cleared.
+const statedSrc = grab("function statedStageIndex(stages, currentStageId) {");
+ck("statedStageIndex exists", statedSrc.length > 0, true);
+const statedIdxFn = new Function(statedSrc + " return statedStageIndex;")();
+const LADDER = [{ id: "trials", label: "Trials" }, { id: "academy", label: "Academy" },
+                { id: "firstteam", label: "First team" }];
+ck("a stated section is found by id", statedIdxFn(LADDER, "academy"), 1);
+ck("a numeric stored id matches a stringified section",
+   statedIdxFn([{ id: "1" }, { id: "2" }], 2), 1);
+ck("no statement at all is silence, not section one", statedIdxFn(LADDER, null), -1);
+ck("a stale id naming no section on the ladder is silence too",
+   statedIdxFn(LADDER, "ghost"), -1);
+ck("an empty ladder is silence", statedIdxFn([], "trials"), -1);
+ck("...and so is an absent one", statedIdxFn(null, "trials"), -1);
+
+/* ---------- two markers, two sentences ---------- */
+
+// FAILURE MODE 1. The step pill and the section chip state DIFFERENT facts -
+// "this is your next stop" and "this is the section you say you are in" - and
+// test_launch_p0 records what happens when two markers on one screen say the
+// same words: the goal card and the rail both named a destination and no
+// reader could say which one the steps pointed at.
+//
+// PRESENCE IS NOT ENOUGH, which is why the four-language count loop below
+// cannot do this job. pathway_current_here passed that count for its whole
+// life while rendering - under textTransform: uppercase - byte for byte
+// identical to road_here in Spanish, and identical in Greek too.
+//
+// Folded, not uppercased: JS toUpperCase is not the browser's for Greek (it
+// keeps the tonos the browser drops), so an equality test on case alone is a
+// floor. NFD + strip combining marks + lowercase compares the letters.
+const dictOf = (key) => [...APP.matchAll(new RegExp("\\b" + key + ': "([^"]*)"', "g"))].map((m) => m[1]);
+const words = (s) => new Set(String(s).normalize("NFD").replace(/[̀-ͯ]/g, "")
+  .toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+const HERE = dictOf("road_here"), NEXT = dictOf("road_next"), NOW = dictOf("pathway_section_now");
+ck("all three markers are translated four times",
+   [HERE.length, NEXT.length, NOW.length], [4, 4, 4]);
+ck("...as four distinct strings each",
+   [new Set(HERE).size, new Set(NEXT).size, new Set(NOW).size], [4, 4, 4]);
+// An empty intersection, per language, against BOTH the step pill and the
+// footer's next-stop label - the two strings on this screen that could be
+// mistaken for it. Greek folds to nothing under an a-z split, so it is
+// compared on its own raw letters too.
+const shares = (a, b) => a.map((x, i) => [...words(x)].filter((w) => words(b[i]).has(w)))
+  .map((hit, i) => (hit.length ? i + ":" + hit.join("+") : null)).filter(Boolean);
+ck("no language shares a word between the step pill and the section chip",
+   shares(HERE, NOW), []);
+ck("...nor between the next-stop label and the section chip",
+   shares(NEXT, NOW), []);
+const fold = (s) => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+ck("...and no language renders the two as the same string, case and accents folded",
+   HERE.map((h, i) => fold(h) === fold(NOW[i])).filter(Boolean), []);
+// The stage editor prints this same fact, and tapping a signpost opens that
+// panel over the road - so it must print the same string, not a near-synonym.
+ck("the stage editor names the section with the same key",
+   /\{isCurrent && <span [^>]*>\{t\("pathway_section_now"\)\}<\/span>\}/.test(APP), true);
+ck("...and the string that was identical to the step pill is rendered nowhere",
+   APP.includes('t("pathway_current_here")'), false);
+// Never deleted, only unread - the repo's rule. Asserted, not merely intended.
+ck("...but its four translations are still defined",
+   (APP.match(/\bpathway_current_here: "/g) || []).length, 4);
 
 /* ---------- lateness ---------- */
 
@@ -152,7 +300,8 @@ ck("a done stop offers to un-tick", /t\("stop_not_done"\)/.test(stop), true);
 
 for (const k of ["road_eyebrow", "road_title", "road_title_nogoal", "road_here", "road_goal",
   "road_pick_goal", "road_done", "road_next", "road_start", "road_calendar", "road_schools",
-  "road_empty", "road_all_done", "stop_eyebrow", "stop_back", "stop_why", "stop_did_it",
+  "road_empty", "road_all_done", "pathway_section_now", "pathway_section_now_empty",
+  "stop_eyebrow", "stop_back", "stop_why", "stop_did_it",
   "stop_not_done", "stop_ask_scout", "stop_change_date", "stop_scout_date", "stop_add_clips",
   "stop_open_schools", "stop_log_test"]) {
   ck(`${k} is translated in all 4 languages`, (APP.match(new RegExp(`\\b${k}: "`, "g")) || []).length, 4);

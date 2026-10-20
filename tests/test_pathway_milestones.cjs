@@ -321,30 +321,54 @@ ck("...and current_stage_id, so stated position survives the trip",
   const body = code.slice(at, code.indexOf("\n}", at));
   ck("...and it is the one caller", /currentStageIndex\(/.test(body), true);
   ck("...preferring the stated stage when there is one", /stated >= 0 \? stated :/.test(body), true);
-  // TWO, not three. PathwayMap was the third and is deleted. The Road that
-  // replaced it does NOT resolve a stage index, deliberately: its unit is the
-  // step, and the node it rings as YOU ARE HERE is the next undone milestone.
-  // Raising this back to 3 means a screen has started deriving a position
-  // again, which is the defect resolveStageIndex exists to prevent.
+  // TWO, not three, and the Road is not the third. The Road DOES draw the
+  // athlete's stated section now, but through statedStageIndex, which returns
+  // -1 instead of a guess. Resolving through THIS function would have printed
+  // the recruiting_status guess inside a chip that reads as a quote. So the
+  // producer census stays at 2: raising it still means a screen has started
+  // deriving a position again, which is the defect this function prevents.
   ck("every screen that draws a stage position resolves through it",
      (code.match(/= resolveStageIndex\(/g) || []).length, 2);
 
-  // The defect this replaces, asserted at the prop boundary rather than by
-  // grepping for a derivation that is now absent from the component.
-  // ASSERTED WHERE IT IS CONSUMED, not where it is accepted. RoadMap takes
-  // currentStageId and does not draw it yet, so a prop-boundary assertion here
-  // would pass while nothing read the column. The two readers are Home.
+  // ONE SPELLING OF "DID THEY SAY SO". This is the invariant that stops the
+  // Road and Home drifting apart again. The previous drift was never a WRONG
+  // comparison - it was a SECOND one: Home had the rule twice and Plan's map
+  // had it not at all. So the comparison is written once, and every screen
+  // that wants the athlete's own answer calls that one place.
+  ck("the stated-id comparison is written exactly once in the app",
+     (code.match(/String\(st\.id\) === String\(currentStageId\)/g) || []).length, 1);
+  const statedAt = code.indexOf("function statedStageIndex(");
+  ck("statedStageIndex exists", statedAt > 0, true);
+  ck("...and it is where that comparison lives",
+     /String\(st\.id\) === String\(currentStageId\)/.test(code.slice(statedAt, code.indexOf("\n}", statedAt))), true);
+  // THREE: the declaration, resolveStageIndex, and the Road's section chip. A
+  // fourth means a screen has started asking the question somewhere else.
+  ck("the stated-section question is asked only through it",
+     (code.match(/\bstatedStageIndex\(/g) || []).length, 3);
+  ck("...and the resolver asks it rather than repeating it",
+     /statedStageIndex\(stages, currentStageId\)/.test(body), true);
+
+  // ASSERTED WHERE IT IS CONSUMED, not where it is accepted. These two are
+  // about HOME's two position readers; that the Road actually draws the id is
+  // asserted inside RoadMap's own slice, in test_road_map.cjs, because a
+  // prop-boundary assertion passes while the body ignores the value - which
+  // is exactly what shipped between 36c644c and this change.
   ck("the stated stage id reaches the resolver rather than a heuristic",
      (APP.match(/resolveStageIndex\([a-zA-Z]+, pathwayRow && pathwayRow\.current_stage_id, athlete\)/g) || []).length, 2);
   ck("...and Plan hands the road the id it already holds in state",
      /<RoadMap[\s\S]{0,500}currentStageId=\{currentStageId\}/.test(APP), true);
 
-  // Behaviour, not shape. Both functions are self-contained.
+  // Behaviour, not shape. statedStageIndex goes into the context too, because
+  // resolveStageIndex delegates to it now - without it every assertion below
+  // reports a ReferenceError and the whole suite crashes rather than failing,
+  // which is a red gate that names the wrong thing.
   const heurAt = code.indexOf("function currentStageIndex(");
+  const statedSrc = code.slice(statedAt, code.indexOf("\n}", statedAt) + 2);
   const fn = vm.runInNewContext(
-    code.slice(heurAt, code.indexOf("\n}", heurAt) + 2) + "\n" +
+    code.slice(heurAt, code.indexOf("\n}", heurAt) + 2) + "\n" + statedSrc + "\n" +
     code.slice(at, code.indexOf("\n}", at) + 2) + "\nresolveStageIndex"
   );
+  const statedFn = vm.runInNewContext(statedSrc + "\nstatedStageIndex");
   const stages = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
   const signed = { recruiting_status: "Signed" };
   ck("a stated stage wins over the heuristic", fn(stages, "b", signed), 1);
@@ -354,6 +378,21 @@ ck("...and current_stage_id, so stated position survives the trip",
   // Stages are stringified on save; an older row can still hold a number.
   ck("a numeric stored id matches a stringified stage", fn([{ id: "1" }, { id: "2" }], 2, {}), 1);
   ck("an empty stage list does not throw", typeof fn([], "b", signed), "number");
+
+  // THE DELIBERATE DIFFERENCE, ASSERTED SO IT IS A DECISION AND NOT A BUG.
+  // For an athlete who has said nothing, Home shows a stage and the Road shows
+  // none. Those two are not disagreeing about one fact: Home answers "roughly
+  // where does this athlete sit", the Road quotes them, and a quote of silence
+  // is silence. If that is ever judged unacceptable the honest fix is for HOME
+  // to stop asserting a guess, not for the Road to start.
+  ck("the resolver still answers for a silent athlete", fn(stages, null, signed) >= 0, true);
+  ck("...and the stated-only one refuses to", statedFn(stages, null), -1);
+  ck("...and refuses for an id no longer on the ladder", statedFn(stages, "deleted-stage"), -1);
+  ck("...and for a ladder that is empty or absent",
+     [statedFn([], "b"), statedFn(null, "b")], [-1, -1]);
+  ck("a stated stage is found by id", statedFn(stages, "c"), 2);
+  // Stages are stringified on save; an older row can still hold a number.
+  ck("a numeric stored id matches a stringified stage", statedFn([{ id: "1" }, { id: "2" }], 2), 1);
 }
 
 // Empty custom stages must fall back, or every existing athlete's map empties.
