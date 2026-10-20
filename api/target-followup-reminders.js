@@ -293,10 +293,29 @@ async function remindDueSteps(supaUrl, serviceKey, webpush) {
   const rows = await supaSelect(
     supaUrl, serviceKey,
     `athlete_actions?status=eq.open&due_src=is.null&last_reminded_at=is.null` +
-    `&due_on=lte.${today}&select=id,user_id,title,due_on&limit=500`
+    `&due_on=lte.${today}&select=id,user_id,title,due_on,category&limit=500`
   );
+  // NOBODY IS TOLD THEY ARE LATE WHILE THEY ARE INJURED.
+  //
+  // The app stopped calling these steps late the moment the athlete tapped
+  // Hurt (canCallLate in golsz-app.html). Without the same rule here, the one
+  // surface that reaches them when the app is CLOSED would still push "the day
+  // you set has passed" at someone who cannot train - and it would be the only
+  // thing in GOLSZ still saying it.
+  //
+  // One query, not one per row. Recovery work is excluded from the pause for
+  // the same reason it is excluded in the client: a physio appointment is
+  // exactly the date that still matters when you are hurt.
+  const restingRows = await supaSelect(supaUrl, serviceKey, `profiles?availability_status=eq.out&select=id`);
+  const resting = new Set((restingRows || []).map((r) => r.id));
   let sent = 0;
+  let paused = 0;
   for (const row of rows) {
+    // BEFORE the subscription lookup and before any stamp. Stamping
+    // last_reminded_at here would burn the athlete's single nudge on a day
+    // they were never told about it, and that step would never be raised
+    // again - the same trap the no-subscription case below avoids.
+    if (resting.has(row.user_id) && row.category !== "recovery") { paused++; continue; }
     const subs = await supaSelect(supaUrl, serviceKey, `push_subscriptions?user_id=eq.${row.user_id}&select=id,endpoint,p256dh,auth`);
     // No subscription is not a failure, and must NOT stamp last_reminded_at:
     // doing so would burn the athlete's one nudge on a device that never
@@ -312,7 +331,7 @@ async function remindDueSteps(supaUrl, serviceKey, webpush) {
     await supaPatch(supaUrl, serviceKey, `athlete_actions?id=eq.${row.id}`, { last_reminded_at: new Date().toISOString() });
     sent++;
   }
-  return { checked: rows.length, reminded: sent };
+  return { checked: rows.length, reminded: sent, paused };
 }
 
 export default async function handler(req, res) {

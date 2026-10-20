@@ -85,9 +85,31 @@ ck("the new pass has its own try", /let steps = \{ checked: 0, reminded: 0 \};\s
 ck("...and its failure is logged, not swallowed",
    /Due-step reminders failed/.test(CRON), true);
 ck("...and reported in the response either way", /steps, watchdog \}/.test(CRON), true);
-// A silent zero must be distinguishable from "nothing was due".
+// A silent zero must be distinguishable from "nothing was due" - and now from
+// a third case, "everyone who was due is injured", which would otherwise read
+// as a broken cron rather than a working pause.
 ck("the response says how many were checked, not just how many were sent",
-   /return \{ checked: rows\.length, reminded: sent \};/.test(fn), true);
+   /return \{ checked: rows\.length, reminded: sent, paused \};/.test(fn), true);
+
+// ---- nobody is told they are late while they are injured -------------------
+// The app stopped calling these steps late the moment the athlete tapped Hurt.
+// Push is the one surface that reaches them with the app CLOSED, so without
+// the same rule here it would be the only thing in GOLSZ still saying it.
+ck("resting athletes are looked up once, not once per row",
+   /profiles\?availability_status=eq\.out&select=id/.test(fn), true);
+// NOT `availability_status=not.eq.out`: in PostgREST that excludes NULL rows,
+// and NULL is the status of every athlete who has never answered - which is
+// most of them. The inequality would have silently stopped nudging everyone.
+ck("...by selecting who IS out, never by excluding who is not",
+   /availability_status=not\.eq\.out/.test(fn), false);
+ck("...and recovery work keeps its deadline",
+   /resting\.has\(row\.user_id\) && row\.category !== "recovery"/.test(fn), true);
+// Before the subscription lookup and before any stamp. Stamping here would
+// burn the athlete's single nudge on a day they were never told about it, and
+// that step would never be raised again.
+ck("...and a paused row is never stamped as reminded",
+   fn.indexOf('resting.has(row.user_id)') < fn.indexOf('last_reminded_at: new Date()'), true);
+ck("...which needs the category selected", /select=id,user_id,title,due_on,category/.test(fn), true);
 
 // ---- a dead subscription is pruned, through ONE sender ----------------------
 // The prune was copied for this second caller, leaving two identical DELETEs

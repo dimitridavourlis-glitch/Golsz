@@ -135,6 +135,14 @@ const Calendar = svg('<rect x="3.5" y="5" width="17" height="16" rx="3"/><path d
 const Star = svg('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>');
 const GitBranch = svg('<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>');
 const Shield = svg('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>');
+// Phase 1 of the 16 Oct redesign (Appendix A). strokeWidth is baked in for
+// the two that are a bare rule: at the inherited 2 they read as hairlines
+// beside a 64px circle. Check and Shield above are reused, not redeclared -
+// a second declaration of either would silently win over the first.
+const Pause = svg('<path d="M9 6v12M15 6v12" stroke-width="3"/>');
+const Minus = svg('<path d="M6 12h12" stroke-width="3"/>');
+const Info = svg('<circle cx="12" cy="12" r="10"/><path d="M12 11v6M12 7.5v.5"/>');
+const Bandage = svg('<rect x="2" y="8" width="20" height="8" rx="4" transform="rotate(-45 12 12)"/><path d="M10.5 12h3M12 10.5v3"/>');
 const Share = svg('<circle cx="18" cy="5" r="2.5"/><circle cx="18" cy="19" r="2.5"/><circle cx="6" cy="12" r="2.5"/><line x1="8.2" x2="15.8" y1="10.8" y2="6.2"/><line x1="8.2" x2="15.8" y1="13.2" y2="17.8"/>');
 const GraduationCap = svg('<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>');
 const Mail = svg('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>');
@@ -158,6 +166,7 @@ const C = {
   pitch: "var(--pitch)", turf: "var(--turf)", card: "var(--card)", lime: "var(--lime)",
   chalk: "var(--chalk)", slate: "var(--slate)", line: "var(--line)", line2: "var(--line2)",
   amber: "var(--amber)", body: "var(--body-text)", warnText: "var(--warn-text)",
+  chalkSoft: "var(--chalk-soft)", limeRing: "var(--lime-ring)",
   msgName: "var(--msg-name)", limeBorder: "var(--lime-border)", amberBorder: "var(--amber-border)",
   elite: "var(--elite)", eliteBorder: "var(--elite-border)",
   info: "var(--info)", infoBorder: "var(--info-border)",
@@ -3480,7 +3489,7 @@ const PARENT_ACCOUNTS_ENABLED = false;
 // A flag is flipped in the SAME pull request that builds its phase, never
 // ahead of it: a flag that is on before its screen is finished is not a
 // switch, it is a half-built screen shipped to production.
-const REDESIGN_CHECKIN = false;
+const REDESIGN_CHECKIN = true;   // Phase 1, shipped.
 const REDESIGN_HOME_TILES = false;
 const REDESIGN_ROAD = false;
 const REDESIGN_SCOUT = false;
@@ -10105,7 +10114,7 @@ function HomeZone({ label, children, last, node, span }) {
   );
 }
 
-function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting }) {
+function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip, onBetter }) {
   const { t, tv, lang } = useLang();
   const [loaded, setLoaded] = useState(!sb);
   const [athlete, setAthlete] = useState(null);
@@ -10900,6 +10909,32 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting }) {
           </div>
         </div>
       )}
+
+      {/* RESTING BANNER. The one place on Home that says why nothing is
+          shouting at them. It is not a warning tone: an injured athlete does
+          not need their own app to look alarmed about it. "I'm better" is the
+          way out, and it is the same write Settings makes.
+          The feeling chip sits in the same row because both are answers to the
+          same question, and because Home has no top row of its own until the
+          tiles land in Phase 2. */}
+      {(resting || checkinChip) && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12,
+          background: C.turf, border: `2px solid ${resting ? C.chalkSoft : C.line2}`,
+          borderRadius: 16, padding: "11px 13px" }}>
+          {resting ? <Pause size={18} color={C.lime} style={{ flexShrink: 0 }} /> : <Check size={18} color={C.lime} style={{ flexShrink: 0 }} />}
+          <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: C.chalk, lineHeight: 1.35 }}>
+            {resting ? <strong style={{ fontWeight: 800 }}>{t("resting_banner_strong")} </strong> : null}
+            {resting ? t("resting_banner") : t(checkinChip === "okay" ? "checkin_chip_okay" : "checkin_chip_great")}
+          </span>
+          {resting && onBetter ? (
+            <button onClick={onBetter} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 10,
+              padding: "7px 12px", fontSize: 12.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", flexShrink: 0 }}>
+              {t("resting_better")}
+            </button>
+          ) : null}
+        </div>
+      )}
+
 
       {/* ONE STATEMENT, AT SIZE, WITH THE BUTTON THAT DOES IT.
           The largest type on Home, because it is the only thing on Home an
@@ -14773,6 +14808,193 @@ function MyAthletes({ children, onManage, onView, t, onAdded }) {
   );
 }
 
+/* ============ DAILY CHECK-IN ============
+   Asked once a day, on the first open, by the device's local day.
+
+   It writes nothing unless the answer CHANGES something. "Okay" stores
+   nothing at all - being tired is not an injury, and a daily mood log would
+   be new health data this product has not asked anyone's permission to keep.
+   "Great" and "Hurt" write only when the status is actually different, so an
+   athlete who is already resting and taps Hurt again adds no row and no
+   second availability_since.
+
+   When a write fails they are let into the app anyway and the day is NOT
+   marked answered, so they are asked again rather than silently recorded as
+   something they are not. Availability is health information; a failed write
+   that looked like a success is the one outcome worth avoiding here. */
+function DailyCheckIn({ name, current, sb, uid, isDesktop, onFinish, onNavigate }) {
+  const { t } = useLang();
+  const [view, setView] = useState("ask");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [back, setBack] = useState("");
+  const panelRef = useRef(null);
+  useModalFocus(panelRef, true, () => onFinish(null, true));
+
+  // Only on change. setAvailability in Settings has no diff guard of its own -
+  // it writes whatever it is handed - so the comparison belongs to the caller.
+  async function answer(kind) {
+    if (busy) return;
+    setErr("");
+    const want = kind === "great" ? "available" : kind === "hurt" ? "out" : null;
+    if (!want || current === want) {
+      if (kind === "hurt") { setView("rest"); return; }
+      onFinish(kind === "okay" ? "okay" : kind === "great" ? "great" : null, true);
+      return;
+    }
+    setBusy(true);
+    const next = want === "out"
+      ? { status: "out", since: isoDay(new Date()) }
+      : { status: "available" };
+    const { error } = await saveAvailability(sb, uid, next);
+    setBusy(false);
+    if (error) {
+      // In, but not recorded. They will be asked again next time.
+      setErr(t("privacy_save_failed"));
+      return;
+    }
+    if (kind === "hurt") { setView("rest"); return; }
+    onFinish("great", true);
+  }
+
+  async function better() {
+    if (busy) return;
+    setBusy(true);
+    const { error } = await saveAvailability(sb, uid, { status: "available", expected: null, note: null });
+    setBusy(false);
+    if (error) { setErr(t("privacy_save_failed")); return; }
+    onFinish("great", true);
+  }
+
+  async function setReturnDate(v) {
+    setBack(v);
+    if (!v) return;
+    const { error } = await saveAvailability(sb, uid, { status: "out", since: isoDay(new Date()), expected: v });
+    if (error) setErr(t("privacy_save_failed"));
+  }
+
+  const wrap = {
+    position: "fixed", inset: 0, zIndex: 60, background: isDesktop ? "#000000a6" : C.pitch,
+    backdropFilter: isDesktop ? "blur(6px)" : "none",
+    display: "flex", alignItems: isDesktop ? "center" : "stretch", justifyContent: "center",
+    overflowY: "auto",
+  };
+  const panel = {
+    background: C.pitch, width: "100%", maxWidth: isDesktop ? 480 : "none",
+    borderRadius: isDesktop ? 26 : 0, border: isDesktop ? `2px solid ${C.line2}` : "none",
+    padding: "28px 20px 32px", display: "flex", flexDirection: "column", minHeight: isDesktop ? 0 : "100%",
+    boxSizing: "border-box",
+  };
+  const primary = {
+    width: "100%", minHeight: 60, borderRadius: 20, background: C.lime, color: C.ink,
+    border: "none", fontFamily: "inherit", fontSize: 19, fontWeight: 800, cursor: "pointer",
+    display: "flex", alignItems: "center", justifyContent: "center", gap: 9, boxSizing: "border-box",
+  };
+  const secondary = {
+    ...primary, background: "none", color: C.chalk, border: `2px solid ${C.chalkSoft}`,
+  };
+  const link = {
+    background: "none", border: "none", color: C.lime, fontFamily: "inherit", fontSize: 17,
+    fontWeight: 700, textDecoration: "underline", cursor: "pointer", padding: "12px 4px",
+  };
+
+  function Choice({ id, icon, label, sub, primaryRow }) {
+    return (
+      <button onClick={() => answer(id)} disabled={busy} style={{
+        width: "100%", minHeight: 116, borderRadius: 26, padding: "0 18px", marginBottom: 12,
+        background: C.card, cursor: busy ? "default" : "pointer", fontFamily: "inherit",
+        border: primaryRow ? `3px solid ${C.lime}` : `2px solid ${C.line2}`,
+        display: "flex", alignItems: "center", gap: 16, textAlign: "left", boxSizing: "border-box",
+        opacity: busy ? 0.6 : 1,
+      }}>
+        <span style={{
+          width: 64, height: 64, borderRadius: 99, flexShrink: 0,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: primaryRow ? C.lime : C.turf,
+          border: primaryRow ? "none" : `2px solid ${C.chalkSoft}`,
+        }}>
+          {React.createElement(icon, { size: 30, color: primaryRow ? C.ink : C.chalk })}
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 26, fontWeight: 800, color: C.chalk }}>{label}</span>
+          <span style={{ display: "block", fontSize: 18, color: C.chalkSoft, marginTop: 2 }}>{sub}</span>
+        </span>
+        <ChevronRight size={22} color={C.slate} />
+      </button>
+    );
+  }
+
+  if (view === "rest") {
+    return (
+      <div style={wrap}>
+        <div ref={panelRef} style={panel}>
+          <div style={{ fontSize: 32, fontWeight: 800, color: C.chalk, lineHeight: 1.12 }}>{t("rest_title")}</div>
+          <div style={{ fontSize: 18, color: C.chalkSoft, marginTop: 10, lineHeight: 1.4 }}>{t("rest_sub")}</div>
+
+          <div style={{ marginTop: 22, background: C.card, border: `2px solid ${C.line2}`, borderRadius: 24, padding: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ width: 40, height: 40, borderRadius: 99, background: C.turf, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Pause size={19} color={C.lime} />
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.08em", color: C.lime }}>{t("rest_paused")}</span>
+            </div>
+            <div style={{ fontSize: 18, color: C.chalk, marginTop: 12, lineHeight: 1.4 }}>{t("rest_nothing_late")}</div>
+            <div style={{ fontSize: 16, color: C.chalkSoft, marginTop: 18 }}>{t("rest_back_q")}</div>
+            <input type="date" value={back} onChange={(e) => setReturnDate(e.target.value)} aria-label={t("rest_back_q")}
+              style={{ width: "100%", marginTop: 8, background: C.turf, border: `2px solid ${C.line2}`, borderRadius: 14,
+                color: C.chalk, padding: "12px 13px", fontSize: 17, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }} />
+            <div style={{ fontSize: 14, color: C.slate, marginTop: 7, lineHeight: 1.4 }}>{t("rest_back_hint")}</div>
+          </div>
+
+          {err ? <div style={{ fontSize: 15, color: C.amber, marginTop: 12 }}>{err}</div> : null}
+
+          <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+            <button onClick={() => { onFinish(null, true); onNavigate("scout", null, t("rest_scout_seed")); }} style={secondary}>
+              <Radar size={21} /> {t("rest_tell_scout")}
+            </button>
+            <button onClick={() => onFinish(null, true)} style={primary}>{t("rest_continue")}</button>
+            <button onClick={better} disabled={busy} style={{ ...link, alignSelf: "center" }}>{t("resting_better")}</button>
+          </div>
+
+          <div style={{ marginTop: 18, display: "flex", gap: 10, alignItems: "flex-start",
+            background: C.turf, border: `2px solid ${C.line2}`, borderRadius: 18, padding: 14 }}>
+            <Info size={19} color={C.slate} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span style={{ fontSize: 15, color: C.chalkSoft, lineHeight: 1.45 }}>{t("rest_doctor")}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={wrap}>
+      <div ref={panelRef} style={panel}>
+        <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: "0.02em", color: C.chalk, marginBottom: 22 }}>
+          GOLSZ<span style={{ color: C.lime }}>.</span>
+        </div>
+        <div style={{ fontSize: 32, fontWeight: 800, color: C.chalk, lineHeight: 1.12 }}>
+          {name ? t("checkin_title_named").replace("{name}", name) : t("checkin_title")}
+        </div>
+        <div style={{ fontSize: 18, color: C.chalkSoft, marginTop: 10, marginBottom: 24, lineHeight: 1.4 }}>{t("checkin_sub")}</div>
+
+        <Choice id="great" icon={Check} label={t("checkin_great")} sub={t("checkin_great_sub")} primaryRow />
+        <Choice id="okay" icon={Minus} label={t("checkin_okay")} sub={t("checkin_okay_sub")} />
+        <Choice id="hurt" icon={Bandage} label={t("checkin_hurt")} sub={t("checkin_hurt_sub")} />
+
+        {err ? <div style={{ fontSize: 15, color: C.amber, marginTop: 4 }}>{err}</div> : null}
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14 }}>
+          <Shield size={17} color={C.slate} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 15, color: C.slate, lineHeight: 1.4 }}>{t("checkin_private")}</span>
+        </div>
+
+        <div style={{ flex: 1, minHeight: 18 }} />
+        <button onClick={() => onFinish(null, true)} style={{ ...link, alignSelf: "center" }}>{t("checkin_skip")}</button>
+      </div>
+    </div>
+  );
+}
+
 function GolszApp({ onSignOut, startOnboarding }) {
   const buildUpdateAvailable = useBuildVersion();
   const [updateDismissed, setUpdateDismissed] = useState(false);
@@ -14833,6 +15055,16 @@ function GolszApp({ onSignOut, startOnboarding }) {
   //   - resting pauses "late" everywhere via canCallLate()
   const [occupation, setOccupation] = useState(undefined);
   const [availabilityStatus, setAvailabilityStatus] = useState(undefined);
+  const [selfUid, setSelfUid] = useState(null);
+  const [firstName, setFirstName] = useState("");
+  // What localStorage says about today, read once. Kept in state rather than
+  // re-read: if storage throws (private window, blocked site data) this stays
+  // "" and the check-in is asked, but answering still updates the state, so it
+  // is asked at most once per page load rather than on every render.
+  const [checkinStored, setCheckinStored] = useState(() => {
+    try { return localStorage.getItem("golsz-checkin") || ""; } catch (e) { return ""; }
+  });
+  const [checkinChip, setCheckinChip] = useState(null);
   const isDesktop = useIsDesktop();
   const { t } = useLang();
 
@@ -14929,10 +15161,12 @@ function GolszApp({ onSignOut, startOnboarding }) {
         // even opened the dropdown that the database was going to reject.
         const [{ data }, { data: prof }] = await Promise.all([
           sb.from("athletes").select("sport").eq("id", user.id).single(),
-          sb.from("profiles").select("occupation, availability_status").eq("id", user.id).maybeSingle(),
+          sb.from("profiles").select("occupation, availability_status, full_name").eq("id", user.id).maybeSingle(),
         ]);
+        setSelfUid(user.id);
         setOccupation(prof ? (prof.occupation || null) : null);
         setAvailabilityStatus(prof ? (prof.availability_status || null) : null);
+        setFirstName(prof && prof.full_name ? String(prof.full_name).trim().split(/\s+/)[0] : "");
         setProfileComplete(!!(data && data.sport) || !!(prof && prof.occupation === "Parent"));
       } catch (e) {
         console.error("GOLSZ profile-complete check error:", e);
@@ -14953,6 +15187,32 @@ function GolszApp({ onSignOut, startOnboarding }) {
   // a parent, and what would call an injured athlete late for one render.
   const profileLoaded = occupation !== undefined;
   const resting = availabilityStatus === "out";
+  const askCheckin = REDESIGN_CHECKIN && shouldAskCheckin({
+    hasSb: !!sb, profileLoaded, occupation, actingFor, mustFinishProfile,
+    onboarding, stored: checkinStored, userId: selfUid, today: isoDay(new Date()),
+  });
+  // `stamp` is false only when a write failed. The day is then NOT recorded as
+  // answered, so they are asked again next time instead of being quietly filed
+  // as something the database never actually stored.
+  // "I'm better" from Home's banner: the same write the check-in makes, so
+  // there is still exactly one way availability changes from this screen.
+  async function clearResting() {
+    const { error } = await saveAvailability(sb, selfUid, { status: "available", expected: null, note: null });
+    if (error) return;
+    setAvailabilityStatus("available");
+    setCheckinChip("great");
+  }
+  function finishCheckin(chip, stamp) {
+    if (stamp) {
+      const mark = checkinStamp(selfUid, isoDay(new Date()));
+      setCheckinStored(mark);
+      try { localStorage.setItem("golsz-checkin", mark); } catch (e) {}
+    }
+    setCheckinChip(chip || null);
+    // Home reads `resting` for its banner and for every late counter, so the
+    // answer has to land here too - not only in the database.
+    if (chip === "great") setAvailabilityStatus("available");
+  }
   useEffect(() => { if (mustFinishProfile) setPage("profile"); }, [mustFinishProfile]);
 
   // Guided-onboarding conversion moment ("we've learned enough about you —
@@ -15213,7 +15473,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
                 <FamilyAccess />
               </>
             )}
-            {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} />}
+            {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} checkinChip={checkinChip} onBetter={clearResting} />}
             {page === "scout" && <div style={{ height: "calc(100dvh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} seedPrompt={scoutSeed} onSeedSent={() => setScoutSeed(null)} onNavigate={go} /></div>}
             {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} onNavigate={go} openDay={planDay} onDayOpened={() => setPlanDay(null)} /></>}
             {page === "events" && <Events />}
@@ -15225,6 +15485,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
       {showConversion && <GuidedAssessment uid={conversionUid} onDismiss={dismissConversion} />}
       {showEliteWelcome && profileComplete === false && !eliteWelcomeDismissed && <EliteWelcome onDismiss={() => setEliteWelcomeDismissed(true)} />}
       {upgradeUid && <UpgradeScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
+      {askCheckin && <DailyCheckIn name={firstName} current={availabilityStatus} sb={sb} uid={selfUid} isDesktop={isDesktop} onFinish={finishCheckin} onNavigate={go} />}
       </>
     );
   }
@@ -15267,7 +15528,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         {PARENT_ACCOUNTS_ENABLED && page === "home" && !actingFor && isParentAccount && linkedChildren && linkedChildren.length === 0 && (
           <div style={{ padding: "8px 12px 0" }}><FamilyAccess /></div>
         )}
-        {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} />}
+        {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} checkinChip={checkinChip} onBetter={clearResting} />}
         {page === "scout" && <Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} seedPrompt={scoutSeed} onSeedSent={() => setScoutSeed(null)} onNavigate={go} />}
         {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} onNavigate={go} openDay={planDay} onDayOpened={() => setPlanDay(null)} /></>}
         {page === "events" && <Events />}
@@ -15311,6 +15572,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
     {showConversion && <GuidedAssessment uid={conversionUid} onDismiss={dismissConversion} />}
       {showEliteWelcome && profileComplete === false && !eliteWelcomeDismissed && <EliteWelcome onDismiss={() => setEliteWelcomeDismissed(true)} />}
     {upgradeUid && <UpgradeScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
+    {askCheckin && <DailyCheckIn name={firstName} current={availabilityStatus} sb={sb} uid={selfUid} isDesktop={isDesktop} onFinish={finishCheckin} onNavigate={go} />}
     </>
   );
 }
@@ -15590,6 +15852,13 @@ const CSS = `
        still separates from the page without introducing a second hue. */
     --pitch: #0A0A0A; --turf: #1C1E22; --card: #131519; --lime: #D4AF37;
     --chalk: #F7F4EA; --slate: #8B96A8; --line: rgba(247,244,234,0.08); --line2: rgba(247,244,234,0.16);
+    /* Redesign, section 3.1. --chalk-soft is a secondary text tone that sits
+       between --chalk and --slate: the redesign's sub-lines are too important
+       to be slate (which reads as "metadata") and too quiet to be chalk.
+       --lime-ring is the 22% halo behind the current stop and the big ticks;
+       it exists as a variable for the same reason --lime-border does, because
+       var(--lime) with alpha digits glued on is not valid CSS. */
+    --chalk-soft: #C9CFD8; --lime-ring: rgba(212,175,55,0.22);
     --amber: #B58A1A; --body-text: #ECE8DC; --warn-text: #E6C76A; --msg-name: #8B96A8;
     --lime-border: rgba(212,175,55,0.35); --amber-border: rgba(181,138,26,0.35);
     --elite: #6B84A3; --elite-border: rgba(107,132,163,0.35);
@@ -15613,6 +15882,7 @@ const CSS = `
   html[data-theme="light"] {
     --pitch: #FDF9F2; --turf: #ECE8DC; --card: #FFFFFF; --lime: #B58A1A;
     --chalk: #0D1210; --slate: #415A77; --line: #ECE8DC; --line2: #E6C76A;
+    --chalk-soft: #415A77; --lime-ring: rgba(181,138,26,0.25);
     --amber: #B58A1A; --body-text: #1B263B; --warn-text: #B58A1A; --msg-name: #415A77;
     --lime-border: rgba(181,138,26,0.3); --amber-border: rgba(181,138,26,0.3);
     --elite: #415A77; --elite-border: rgba(65,90,119,0.3);
@@ -17240,7 +17510,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=4d5c08ed1b8c15d7";
+    s.src = "js/app.js?v=26d1ee127003673c";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
