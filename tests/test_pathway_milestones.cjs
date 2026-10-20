@@ -48,6 +48,9 @@ eval(grab("function normalizeMilestone(m) {"));
 // and a hand-written stub here would let the real predicate rot while every
 // assertion below stayed green.
 eval(grab("function suggestedDate(m) {"));
+// canCallLate wraps it, and milestoneDateLabel below calls canCallLate, so
+// both have to be in scope before the consumers are run rather than read.
+eval(grab("function canCallLate(m, resting) {"));
 // Lifted, not stubbed: touchedMilestone stamps a completion date through it,
 // and a stub would let the real date formatting rot while this suite stayed
 // green — the same reason suggestedDate is lifted above.
@@ -612,7 +615,7 @@ console.log("\n-- a date Scout guessed is not a date the athlete agreed to --");
 // The whole safety property of Scout-drafted plans lives in one predicate, so
 // run it, and run the real consumers against it rather than asserting on the
 // source text.
-eval(grab("function milestoneDateLabel(m, lang, t) {"));
+eval(grab("function milestoneDateLabel(m, lang, t, resting) {"));
 const tid = (k) => k;
 const SUG = { id: "s", label: "s", done: false, due: "2020-01-01", stage: null, due_src: "scout" };
 const MINE = { id: "m", label: "m", done: false, due: "2020-01-01", stage: null, due_src: null };
@@ -704,9 +707,9 @@ console.log("\n-- every late counter asks the same question --");
 // predicate is how a fifteen-year-old gets told they are behind on a plan an
 // AI wrote and they never agreed to.
 ck("Plan's overdue count excludes suggestions",
-   /const overdueCount = milestones\.filter\(\(m\) => !m\.done && m\.due && !suggestedDate\(m\)/.test(APP), true);
+   /const overdueCount = milestones\.filter\(\(m\) => !m\.done && m\.due && canCallLate\(m, resting\)/.test(APP), true);
 ck("Home's plan-door late count excludes suggestions",
-   /const stepsLate = allMilestones\.filter\(\(m\) => !m\.done && m\.due && !suggestedDate\(m\)/.test(APP), true);
+   /const stepsLate = allMilestones\.filter\(\(m\) => !m\.done && m\.due && canCallLate\(m, resting\)/.test(APP), true);
 // Home's WEEK late count went with Home's week calendar — the read-only
 // calendar was removed in the reorganisation and Plan owns dates now. The
 // door-level late count below still runs on Home's status row and still has to
@@ -715,12 +718,38 @@ ck("Home's plan-door late count excludes suggestions",
 ck("Home's week late count went with Home's week calendar",
    /const late = allMilestones\.filter/.test(APP), false);
 ck("...and the count Home still shows excludes suggestions",
-   /const stepsLate = allMilestones\.filter\(\(m\) => !m\.done && m\.due && !suggestedDate\(m\)/.test(APP), true);
+   /const stepsLate = allMilestones\.filter\(\(m\) => !m\.done && m\.due && canCallLate\(m, resting\)/.test(APP), true);
 // The band itself is RUN across every branch in test_plan_week; this only
 // confirms the predicate is still what routes an untouched suggestion away
 // from OVERDUE.
 ck("the OVERDUE band excludes suggestions",
-   /if \(days < 0 && suggestedDate\(m\)\) return "undated";/.test(APP), true);
+   /if \(days < 0 && !canCallLate\(m, resting\)\) return "undated";/.test(APP), true);
+console.log("\n-- and nothing is late while someone is injured --");
+// The counters above now ask canCallLate, so the predicate itself is RUN here
+// rather than asserted on. Two separate reasons not to call someone late: a
+// date they never agreed to, and a body that cannot train.
+ck("an athlete's own overdue date can be called late", canCallLate(MINE, false), true);
+ck("...but not while they are resting", canCallLate(MINE, true), false);
+ck("a scout suggestion is never late", canCallLate(SUG, false), false);
+ck("...and resting does not change that", canCallLate(SUG, true), false);
+// Section 4.3: recovery work keeps its deadlines, because "see the physio on
+// Tuesday" is exactly the date that still matters when you are hurt.
+ck("a recovery step stays normal while resting",
+   canCallLate({ ...MINE, category: "recovery" }, true), true);
+ck("...unless the date was Scout's guess anyway",
+   canCallLate({ ...SUG, category: "recovery" }, true), false);
+// m.category is only populated when SCOUT proposed the step (migration 155
+// seeds athlete_actions on insert only), so an unknown category must fail
+// SAFE - paused, never a step wrongly marked late at an injured athlete.
+ck("an uncategorised step is paused, not late", canCallLate({ ...MINE, category: null }, true), false);
+ck("a missing milestone does not throw", canCallLate(null, true), false);
+
+// The user-visible end of it: the same overdue step reads "overdue" normally
+// and flat while resting. This is the guarantee; the regexes above only check
+// that the call sites still ask for it.
+ck("an overdue step reads as overdue", milestoneDateLabel(MINE, "en", tid, false).tone, "over");
+ck("...and reads flat while resting", milestoneDateLabel(MINE, "en", tid, true).tone, "flat");
+
 // Every athlete edit is consent; each mutator must say so.
 ck("ticking a step clears the suggestion", /touchedMilestone\(\{ \.\.\.m, done: !m\.done \}\)/.test(APP), true);
 ck("renaming a step clears it", /touchedMilestone\(\{ \.\.\.m, label: clean \}\)/.test(APP), true);
