@@ -18,8 +18,14 @@ const ck = (l, a, e) => {
   else { f++; console.log(`FAIL  ${l}\n   exp ${E}\n   got ${A}`); }
 };
 
-const PLAN = ["scout_chip1", "scout_chip2", "scout_chip3", "scout_chip4"];
-const NP = ["scout_np_chip1", "scout_np_chip2", "scout_np_chip3", "scout_np_chip4"];
+// THREE, not four. chipsFor used to return a fourth chip that the only call
+// site sliced off (CHIPS.slice(0, 3)), so scout_chip4 and scout_np_chip4 were
+// translated into four languages and drawn for nobody. The redesign chose
+// three - they wrap onto one row at 375px where four do not - so the count is
+// stated in chipsFor and nothing trims it afterwards. Both chip4 keys remain
+// in the dictionaries, unread, per the never-delete rule.
+const PLAN = ["scout_chip1", "scout_chip2", "scout_chip3"];
+const NP = ["scout_np_chip1", "scout_np_chip2", "scout_np_chip3"];
 
 ck("a player gets the planning chips, unconditionally", chipsFor(t, true), PLAN);
 ck("a non-player gets the recruiter chips", chipsFor(t, false), NP);

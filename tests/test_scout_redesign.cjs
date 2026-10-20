@@ -239,7 +239,11 @@ ck("overwriting an existing draft still takes a second, specific tap",
 /* ---------- replies that follow an offer ---------- */
 
 ck("a card changes what the quick replies are",
-   /const SHOWN_CHIPS = lastHasCard \? REPLY_AFTER_CARD : CHIPS\.slice\(0, 3\);/.test(APP), true);
+   /const SHOWN_CHIPS = lastHasCard \? REPLY_AFTER_CARD : CHIPS;/.test(APP), true);
+// ...and nothing trims the list after it is built. A slice here is how the
+// fourth starter chip came to be written, translated and never shown.
+ck("...and the starter set is drawn whole, not cut down at the call site",
+   /CHIPS\.slice\(/.test(APP), false);
 ck("...and a failed message does not count as an offer",
    /lastMsg\.role === "assistant" && !lastMsg\.failed/.test(APP), true);
 ck("chips wrap rather than scroll out of sight",
