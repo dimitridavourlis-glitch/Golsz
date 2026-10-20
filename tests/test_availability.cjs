@@ -95,16 +95,18 @@ ck("dates cannot exist without a status",
 }
 
 // ---- the write -------------------------------------------------------------
+// It moved. saveAvailability() is top-level now, so the daily check-in writes
+// availability through the same function Settings does instead of growing a
+// second writer that drifts. What stayed in SettingsButton is the on-screen
+// value and its rollback, which belong to whoever is displaying it. These
+// assertions are split to match: one slice can no longer see both halves.
 {
-  const at = APP.indexOf("async function setAvailability(next) {");
-  ck("the writer exists", at > 0, true);
-  const fn = APP.slice(at, APP.indexOf("\n  }", at));
+  const at = APP.indexOf("async function saveAvailability(sb, uid, next, patch) {");
+  ck("the writer exists, and is top-level", at > 0, true);
+  const fn = APP.slice(at, APP.indexOf("\n}", at));
   ck("it checks { error } rather than assuming", /if \(error\) \{/.test(fn), true);
-  ck("...and restores the previous value on failure", /setAvail\(before\);/.test(fn), true);
-  ck("...and tells the athlete", /setPrivacyErr\(t\("privacy_save_failed"\)\)/.test(fn), true);
-  // Clearing must null the dates too, or the CHECK rejects the row.
-  ck("clearing nulls the dates with the status",
-     /availability_status: null, availability_since: null,\s*\n\s*availability_expected_return: null, availability_note: null/.test(fn), true);
+  ck("...and hands the error back instead of swallowing it", /return \{ patch: p, error \};/.test(fn), true);
+  ck("...and refuses to write without a session", /if \(!sb \|\| !uid\)/.test(fn), true);
 
   // HISTORY. The brief's rule is that pathway history is never destroyed, and
   // a log that starts being written only when something reads it starts empty.
@@ -115,6 +117,40 @@ ck("dates cannot exist without a status",
   // An athlete reporting an injury must not be blocked by a failed audit row.
   ck("...and a failed log never blocks the change", /console\.warn\("GOLSZ availability history not written/.test(fn), true);
 }
+
+// ---- the patch, which is the pure half -------------------------------------
+{
+  const at = APP.indexOf("function availabilityPatch(next) {");
+  ck("the patch builder exists", at > 0, true);
+  const fn = APP.slice(at, APP.indexOf("\n}", at));
+  // Clearing must null the dates too, or migration 150's CHECK rejects the row.
+  ck("clearing nulls the dates with the status",
+     /availability_status: null, availability_since: null,\s*\n\s*availability_expected_return: null, availability_note: null/.test(fn), true);
+  ck("...and a set status defaults `since` to today, not to null",
+     /availability_since: next\.since \|\| isoDay\(new Date\(\)\)/.test(fn), true);
+}
+
+// ---- what Settings kept ----------------------------------------------------
+{
+  const at = APP.indexOf("async function setAvailability(next) {");
+  ck("Settings still has its own handler", at > 0, true);
+  const fn = APP.slice(at, APP.indexOf("\n  }", at));
+  ck("...which shows the new value before the server answers", /setAvail\(\{ \.\.\.\(avail \|\| \{\}\), \.\.\.patch \}\)/.test(fn), true);
+  ck("...puts the old one back on failure", /setAvail\(before\);/.test(fn), true);
+  ck("...and tells the athlete", /setPrivacyErr\(t\("privacy_save_failed"\)\)/.test(fn), true);
+  ck("...writes through the shared function", /await saveAvailability\(sb, uid, next, patch\)/.test(fn), true);
+  // The point of the lift. If this ever goes true again there are two writers.
+  ck("...and no longer updates profiles itself", /from\("profiles"\)\.update/.test(fn), false);
+  // It passes its own patch back in so the optimistic value and the stored
+  // value cannot disagree about which day `since` is, across midnight.
+  ck("...and reuses the patch it already showed", /const patch = availabilityPatch\(next\);/.test(fn), true);
+}
+
+// ONE WRITER, which is the whole reason the function was lifted. Both of these
+// occurrences are the two arms of availabilityPatch; a third anywhere means a
+// screen has started assembling availability for itself again.
+ck("availability is assembled in exactly one place",
+   (APP.match(/availability_since:/g) || []).length, 2);
 ck("the outcome type is allowed by the constraint", /'availability_changed','pathway_rerouted'/.test(MIG), true);
 
 // ---- Scout --------------------------------------------------------------

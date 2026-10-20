@@ -131,10 +131,18 @@ ck("in-week steps are excluded from the bands below", /if \(weekKeys\.has\(m\.du
 {
   const src = APP.slice(APP.indexOf("function milestoneBand(m) {"));
   const body = src.slice(0, src.indexOf("\n  }") + 4);
-  const band = new Function("todayIso", "weekKeys", "suggestedDate", body + " return milestoneBand;");
+  // canCallLate is LIFTED from the app, not restated here. A hand-written
+  // stand-in would keep every assertion below green while the real predicate
+  // rotted - and this predicate is the one deciding whether an injured
+  // fifteen-year-old is told they are behind.
+  const cclSrc = APP.slice(APP.indexOf("function canCallLate(m, resting) {"));
+  const ccl = new Function("suggestedDate",
+    cclSrc.slice(0, cclSrc.indexOf("\n}") + 2) + " return canCallLate;")(
+      (m) => !!(m && (m.due_src === "scout" || m.due_src === "retest") && m.due));
+  const band = new Function("todayIso", "weekKeys", "canCallLate", "resting", body + " return milestoneBand;");
   const today = new Date("2026-09-13T00:00:00");
   const thisWeek = new Set(["2026-09-07", "2026-09-08", "2026-09-09", "2026-09-10", "2026-09-11", "2026-09-12", "2026-09-13"]);
-  const f = band(today, thisWeek, (m) => !!(m && m.due_src === "scout" && m.due));
+  const f = band(today, thisWeek, ccl, false);
   ck("an overdue step inside the drawn window is the calendar's, not the band's",
      f({ due: "2026-09-10", done: false }), "inweek");
   ck("...while one outside it is still overdue",
@@ -145,6 +153,22 @@ ck("in-week steps are excluded from the bands below", /if \(weekKeys\.has\(m\.du
   ck("...but inside the drawn window the calendar owns it",
      f({ due: "2026-09-10", done: false, due_src: "scout" }), "inweek");
   ck("a step with no date at all is undated", f({ due: null, done: false }), "undated");
+
+  // THE PAUSE, run through the real band. Same step, same day, injured athlete:
+  // it must leave OVERDUE and ask for a date the athlete chooses, exactly as an
+  // untouched Scout suggestion does. Nothing about the step itself changed.
+  const fRest = band(today, thisWeek, ccl, true);
+  ck("an overdue step is not overdue while resting",
+     fRest({ due: "2026-08-10", done: false }), "undated");
+  ck("...but recovery work keeps its deadline",
+     fRest({ due: "2026-08-10", done: false, category: "recovery" }), "overdue");
+  ck("...and the drawn week still owns its own days",
+     fRest({ due: "2026-09-10", done: false }), "inweek");
+  // Compared against the non-resting band rather than a literal: the claim is
+  // "resting changes nothing here", and naming the band would only test that I
+  // counted the days to December correctly.
+  ck("resting changes nothing for a step that was never late",
+     fRest({ due: "2026-12-10", done: false }), f({ due: "2026-12-10", done: false }));
   ck("a future step outside the window still bands by horizon",
      f({ due: "2026-10-01", done: false }), "d30");
 }
