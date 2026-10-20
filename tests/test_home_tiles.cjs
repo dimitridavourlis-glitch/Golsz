@@ -93,6 +93,42 @@ ck("the tile branch fetches nothing", /sb\.from\(/.test(TILES), false);
 ck("...and reads the resting prop rather than its own query",
    /availability_status/.test(TILES), false);
 
+/* ---------- the loader's positional destructuring ---------- */
+
+// Home awaits one Promise.all and destructures it BY POSITION. Adding or
+// removing a query shifts every name after it onto the wrong table, and
+// nothing throws - benchmarks would simply contain development plan items.
+// This walks both lists and checks each name against the table it is fed by,
+// so the next person to touch that array finds out immediately.
+{
+  const lines = APP.split("\n");
+  const i = lines.findIndex((l) => /data: shareTokens/.test(l) && /await Promise\.all/.test(l));
+  ck("Home's combined loader was found", i > -1, true);
+  const m = i > -1 ? lines[i].match(/const \[(.*)\] = await/) : null;
+  const slots = m ? m[1].split(/,\s*(?=\{)/).map((x) => x.trim().replace(/[{}]/g, "").replace("data: ", "").trim()) : [];
+  const q = [];
+  for (let n = i; n > -1 && n < i + 70; n++) {
+    const mm = (lines[n] || "").match(/sb\.from\("([a-z_]+)"\)/);
+    if (mm) q.push(mm[1]);
+  }
+  ck("every destructured name has a query behind it", slots.length, q.length);
+  // The pairs themselves, so a reorder is caught and not just a count change.
+  const EXPECT = [
+    ["prof", "profiles"], ["ath", "athletes"], ["reqs", "verification_requests"],
+    ["benchmarks", "athlete_benchmarks"], ["devItems", "development_plan_items"],
+    ["pathwayRow", "pathway_plan"], ["targets", "outreach_targets"],
+    ["shareTokens", "passport_share_tokens"], ["todayTicks", "development_plan_ticks"],
+    ["actionRows", "athlete_actions"], ["lastSnap", "assessment_snapshots"],
+  ];
+  ck("...and each one is fed by the table it is named for",
+     slots.map((sName, n) => sName + "<-" + (q[n] || "none")),
+     EXPECT.map(([a, b]) => a + "<-" + b));
+  // scout_history pulled six full jsonb transcripts on the app's most-opened
+  // screen to compute a value nothing rendered. It must not come back by
+  // accident.
+  ck("Home does not fetch Scout transcripts", q.indexOf("scout_history"), -1);
+}
+
 /* ---------- deep links, checked both ways ---------- */
 
 ck("go() takes a section", /const go = \(id, from, seed, day, section\) => \{/.test(APP), true);

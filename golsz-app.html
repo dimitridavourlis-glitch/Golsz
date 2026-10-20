@@ -8566,7 +8566,6 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   // Flattened {field: value} view of athletes.scout_context (migration 050,
   // Phase 2a) — the "softer" qualification facts (goal, gap, urgency, etc.)
   // Scout has picked up, as opposed to `profile`'s hard Passport facts.
-  const [scoutContext, setScoutContext] = useState({});
   // The athlete's CURRENT Pathway, held here only so a proposed rebuild can
   // be previewed against it, and so ADD mode has something to append to.
   // This used to describe a straight REPLACE on a single tap — an athlete with
@@ -8734,7 +8733,6 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
             const v = (entry && typeof entry === "object") ? entry.value : entry;
             if (v != null && v !== "") flatContext[k] = v;
           }
-          if (Object.keys(flatContext).length) setScoutContext(flatContext);
         }
 
         // NEWEST FIRST — see latestScoutConversation() for why ascending +
@@ -9079,14 +9077,6 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
         // confidence} shape via merge_scout_context(); this just keeps the
         // client's own working copy (used for the next prompt) in sync
         // without a second round-trip.
-        setScoutContext((c) => {
-          const next = { ...c };
-          for (const [k, entry] of Object.entries(contextUpdates)) {
-            const v = (entry && typeof entry === "object") ? entry.value : entry;
-            if (v != null && v !== "") next[k] = v;
-          }
-          return next;
-        });
       }
       if (typeof data.scout_summary === "string") setSummary(data.scout_summary);
       // suggested_targets/suggested_dev_items (brief §2B "persistent
@@ -10674,7 +10664,6 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
   // which is different from no change, and the card says so.
   const [prevScore, setPrevScore] = useState(null);
   const [shareOpens, setShareOpens] = useState([]);
-  const [lastAsk, setLastAsk] = useState(null);
   const [devBusy, setDevBusy] = useState(null);
   const [devError, setDevError] = useState("");
   // Habit ids ticked TODAY (migration 141). A Set because the only questions
@@ -10693,14 +10682,6 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
   // rather than one long ribbon. Nothing was deleted: every card still
   // renders, which is also why the tests pinning them still pass. What was
   // removed is the scroll.
-  // Drives the score ring's sweep. Starts false so the arc is drawn from zero
-  // on the first paint after data lands, rather than snapping to its value.
-  const [ringIn, setRingIn] = useState(false);
-  useEffect(() => {
-    if (!loaded) return undefined;
-    const id = setTimeout(() => setRingIn(true), 90);
-    return () => clearTimeout(id);
-  }, [loaded]);
   const [monthly, setMonthly] = useState(null);
   const [name, setName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -10731,7 +10712,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
         // parent — ticking on the parent's own plan is the bug the Plan tab
         // had until yesterday.
         setWhoId(who);
-        const [{ data: prof }, { data: ath }, { data: reqs }, { data: benchmarks }, { data: devItems }, { data: pathwayRow }, { data: targets }, { data: shareTokens }, { data: scoutRows }, { data: todayTicks }, { data: actionRows }, { data: lastSnap }] = await Promise.all([
+        const [{ data: prof }, { data: ath }, { data: reqs }, { data: benchmarks }, { data: devItems }, { data: pathwayRow }, { data: targets }, { data: shareTokens }, { data: todayTicks }, { data: actionRows }, { data: lastSnap }] = await Promise.all([
           sb.from("profiles").select("full_name, occupation, avatar_url, identity_verified, goal_defined, goal_text, created_at, plan").eq("id", who).single(),
           sb.from("athletes").select("sport, position, club_name, grad_year, gpa, citizenship, height_cm, weight_kg, country, recruiting_status, bio, highlights, timeline, scout_context").eq("id", who).single(),
           sb.from("verification_requests").select("status").eq("user_id", who).order("created_at", { ascending: false }).limit(1),
@@ -10746,9 +10727,6 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
           // they typed. Somebody opened your Passport is the closing half of
           // the loop the product is for.
           sb.from("passport_share_tokens").select("last_accessed_at").eq("user_id", who).eq("revoked", false),
-          // The athlete's own last question, quoted back. Scout is the only
-          // screen that leaves no trace anywhere else in the app.
-          sb.from("scout_history").select("conversation_id, messages, created_at").eq("user_id", who).order("created_at", { ascending: false }).limit(6),
           // TODAY'S TICKS (migration 141). One row per habit per day; presence
           // is the tick. Scoped to today because that is the only day Home
           // asks about — history belongs to the habit, not to this screen.
@@ -10811,16 +10789,6 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
         setPrevScore(lastSnap && typeof lastSnap.composite === "number"
           ? { on: lastSnap.taken_on, composite: lastSnap.composite } : null);
         setShareOpens(Array.isArray(shareTokens) ? shareTokens : []);
-        // Newest row whose message is the athlete's own. logTurn writes one
-        // row per turn, so the newest USER row is the last thing they asked.
-        setLastAsk((() => {
-          if (!Array.isArray(scoutRows)) return null;
-          for (const r of scoutRows) {
-            const m = Array.isArray(r.messages) ? r.messages.find((x) => x && x.role === "user" && x.content) : null;
-            if (m) return String(m.content).trim();
-          }
-          return null;
-        })());
         setPathway(computePathwayScore(pathwayRow, (targets || []).length));
 
         // TODAY'S READING, KEPT. GOLSZ computed Passport Strength on every
@@ -18575,7 +18543,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=7a48816b2b89c3eb";
+    var APP_SRC = "js/app.js?v=48c686113314d9ce";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
