@@ -513,7 +513,11 @@ const HAIKU_CLASSIFY = () => Object.assign(DEFAULT_CLASSIFY(), { intent: "agent_
     ck("...the retry says it is one", /retry: !!retryOf/.test(sendSrc), true);
     ck("...and retryFailed hands back the failed attempt's id and photo",
        /send\(failed\.failedInput \|\| "", \{ requestId: failed\.failedRequestId, photo: failed\.failedPhoto \|\| null, baseMsgs \}\)/.test(sendSrc), true);
-    const render = sliceOf(APP, "{m.retryable && (", "{m.suggestedTargets && m.suggestedTargets.length > 0 && (", "failure render");
+    // End marker is the upgrade button that CLOSES the failure render, not
+    // whatever feature happens to follow it. The old marker was the targets
+    // block's opening line, which moved the moment that block learned a flag -
+    // a slice bounded by someone else's code breaks when their code changes.
+    const render = sliceOf(APP, "{m.retryable && (", 't("scout_upgrade_cta")', "failure render");
     ck("a limit bubble renders the upgrade action (when the screen has one)", /m\.upgradeOffer && onUpgrade && \(/.test(render) && /onClick=\{onUpgrade\}/.test(render), true);
 
     const KEYS = ["scout_err_daily_limit", "scout_err_daily_limit_top", "scout_err_free_exhausted", "scout_err_free_tool_blocked",
