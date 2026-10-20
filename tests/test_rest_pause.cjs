@@ -89,9 +89,19 @@ for (const [name, re] of SITES) ck(`${name} asks canCallLate`, re.test(APP), tru
 // prefers a date the athlete chose over one Scout guessed. That is a
 // preference, not a lateness judgement, and an injured athlete still has a
 // next step.
-ck("nextMilestone keeps its own predicate",
-   /const chosen = dated\.filter\(\(m\) => !suggestedDate\(m\)\);/.test(APP), true);
-ck("...and does not consult resting", /dated\.filter\(\(m\) => canCallLate/.test(APP), false);
+// nextMilestone now sorts through the shared comparator, so the preference
+// lives in milestoneRank. The claim is unchanged: choosing what to do NEXT
+// must weigh whose date it is, and must never weigh whether the athlete is
+// injured. An injured athlete still has a next step; it is simply not late.
+ck("the next-step preference still asks whose date it is",
+   /return suggestedDate\(m\) \? 1 : 0;/.test(APP), true);
+const rankSrc = grab("function milestoneRank(m) {");
+ck("...and milestoneRank exists to hold it", rankSrc.length > 0, true);
+ck("...and it never consults resting", /resting/.test(rankSrc), false);
+const cmpSrc = grab("function compareUndone(a, b) {");
+ck("...nor does the comparator", /resting|canCallLate/.test(cmpSrc), false);
+const nextSrc = grab("function nextMilestone(milestones) {");
+ck("nextMilestone never consults resting", /resting|canCallLate/.test(nextSrc), false);
 
 // Exactly three CALLS to suggestedDate survive: its own definition, the call
 // inside canCallLate, and nextMilestone's filter. A fourth means a lateness

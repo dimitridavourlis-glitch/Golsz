@@ -56,6 +56,12 @@ eval(grab("function canCallLate(m, resting) {"));
 // green — the same reason suggestedDate is lifted above.
 eval(grab("function isoDay(d) {"));
 eval(grab("function touchedMilestone(m) {"));
+// nextMilestone now sorts through the shared comparator, so both halves of
+// the rule have to be in scope. Lifted, never restated: a stand-in here
+// would let the real ordering rot while every assertion below stayed green.
+eval(grab("function milestoneRank(m) {"));
+eval(grab("function compareUndone(a, b) {"));
+eval(grab("function compareDone(a, b) {"));
 eval(grab("function nextMilestone(milestones) {"));
 
 // ---- normalizeMilestone: additive, never destructive ---------------------
