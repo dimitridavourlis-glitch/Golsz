@@ -155,6 +155,79 @@ ck("...and so do the typing dots", /className="running"/.test(APP), true);
 
 ck("the flag exists", /const REDESIGN_SCOUT = (true|false);/.test(APP), true);
 
+/* ---------- one shape for every offer ---------- */
+
+ck("every suggestion uses the one card", (APP.match(/<ScoutActionCard /g) || []).length, 4);
+const cardSrc = APP.slice(APP.indexOf("function ScoutActionCard({"), APP.indexOf("\nfunction ", APP.indexOf("function ScoutActionCard({") + 10));
+// A locked card is still DRAWN. An athlete who cannot see what they are
+// missing cannot decide whether to pay for it.
+ck("a locked card shows the offer and the plan, not nothing",
+   /t\("scout_card_locked"\)\.replace\("\{plan\}", lockPlan\)/.test(cardSrc), true);
+ck("...and the destructive path is a text link, never a second button",
+   /textDecoration: "underline"[\s\S]{0,120}dangerLabel/.test(cardSrc) || /dangerLabel[\s\S]{0,400}textDecoration: "underline"/.test(cardSrc), true);
+
+/* ---------- the one-tap gate ---------- */
+
+// THE LOAD-BEARING TEST. addSuggestedPathway writes pathway_type
+// UNCONDITIONALLY in both modes, and api/scout.js guarantees every proposal
+// carries one - so without this equality check, one tap silently changes which
+// route the athlete is on.
+ck("the write really does overwrite pathway_type every time",
+   /const row = \{ user_id: uidRef\.current, pathway_type: pathway\.pathway_type/.test(APP), true);
+ck("one tap requires the same route type",
+   /const oneTap = !bringsStages && \(!curType \|\| curType === p\.pathway_type\);/.test(APP), true);
+ck("...and a proposal bringing stages is never one tap",
+   /const bringsStages = Array\.isArray\(p\.stages\) && p\.stages\.length > 0;/.test(APP), true);
+// Anything else opens the existing panel. Nothing is written until they confirm.
+ck("otherwise it opens the what-changes panel instead of writing",
+   /oneTap\s*\n?\s*\? addSuggestedPathway\(i, p, "add"\)\s*\n?\s*: setMsgs\(\(ms\) => ms\.map\(\(x, xi\) => \(xi === i \? \{ \.\.\.x, pathwayConfirm: "choose" \}/.test(APP), true);
+ck("replacing is offered only when there is something to lose",
+   /dangerLabel=\{cur\.length \? t\("scout_replace_road"\) : null\}/.test(APP), true);
+ck("...and still goes through its own confirmation",
+   /pathwayConfirm: "replace"/.test(APP), true);
+
+/* ---------- the receipt ---------- */
+
+const addPath = APP.slice(APP.indexOf("async function addSuggestedPathway("), APP.indexOf("\n  async function", APP.indexOf("async function addSuggestedPathway(") + 10));
+ck("the road receipt is set only after the write resolved",
+   addPath.indexOf("if (error) throw error;") < addPath.indexOf("setAddedScreen"), true);
+// remap.milestones is what was WRITTEN, so the "next stop" it names is the one
+// Plan will actually show.
+ck("...and names the next stop from what was written, not what was proposed",
+   /const nx = nextMilestone\(remap\.milestones\);/.test(addPath), true);
+const addTgt = APP.slice(APP.indexOf("async function addSuggestedTargets("), APP.indexOf("\n  async function", APP.indexOf("async function addSuggestedTargets(") + 10));
+ck("the schools receipt is also set only after its write",
+   addTgt.indexOf("if (error) throw error;") < addTgt.indexOf("setAddedScreen"), true);
+ck("it covers the conversation, not the header or the tabs",
+   /\{REDESIGN_SCOUT && addedScreen \? \(/.test(APP), true);
+const added = APP.slice(APP.indexOf("function ScoutAdded({"), APP.indexOf("\nfunction ", APP.indexOf("function ScoutAdded({") + 10));
+ck("one step with a date reads differently from one without",
+   /day\s*\n?\s*\? t\("scout_done_road_one"\)/.test(added) && /scout_done_road_one_nodate/.test(added), true);
+ck("...and several read differently again", /scout_done_road_many/.test(added), true);
+ck("the receipt's icon follows its destination",
+   /road \? <MapFolded size=\{22\} \/> : <GraduationCap size=\{22\} \/>/.test(added), true);
+
+/* ---------- the email card invents nothing ---------- */
+
+// The recipient is chosen in the picker, so the card cannot name one. It shows
+// what the email SAYS; the picker names who it is to, once that is known.
+ck("the card shows the email's own first line, not a guessed recipient",
+   /title=\{String\(m\.draftedEmail\)\.split\("\\n"\)/.test(APP), true);
+ck("the picker names the recipient once one is chosen",
+   /REDESIGN_SCOUT && selectedEmailTarget \? \(/.test(APP), true);
+// The restyle must not have touched the save path's overwrite guard.
+ck("overwriting an existing draft still takes a second, specific tap",
+   /if \(chosen && chosen\.draft_email && String\(chosen\.draft_email\)\.trim\(\) && !confirmedReplace\) \{/.test(APP), true);
+
+/* ---------- replies that follow an offer ---------- */
+
+ck("a card changes what the quick replies are",
+   /const SHOWN_CHIPS = REDESIGN_SCOUT\s*\n?\s*\? \(lastHasCard \? REPLY_AFTER_CARD : CHIPS\.slice\(0, 3\)\)/.test(APP), true);
+ck("...and a failed message does not count as an offer",
+   /lastMsg\.role === "assistant" && !lastMsg\.failed/.test(APP), true);
+ck("chips wrap rather than scroll out of sight",
+   /flexWrap: REDESIGN_SCOUT \? "wrap" : "nowrap"/.test(APP), true);
+
 /* ---------- translations ---------- */
 
 for (const k of ["scout_title", "scout_start_hi", "scout_start_q", "scout_start_intro",
