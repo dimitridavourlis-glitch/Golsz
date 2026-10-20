@@ -144,7 +144,21 @@ ck("...by selecting who IS out, never by excluding who is not",
 ck("...and skips them", /if \(resting\.has\(row\.user_id\) && row\.category !== "recovery"\)/.test(CRON), true);
 ck("...without stamping the nudge it never sent",
    CRON.indexOf("resting.has(row.user_id)") < CRON.indexOf("last_reminded_at: new Date()"), true);
-ck("...once, not once per row", (CRON.match(/availability_status=eq\.out/g) || []).length, 1);
+// Comment lines stripped first: the route explains the old uncapped query in
+// prose, and counting that made this assertion fail on a change that fixed it.
+const CRON_CODE = CRON.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+ck("...once, not once per row", (CRON_CODE.match(/availability_status=eq\.out/g) || []).length, 1);
+// AND IT CANNOT BE TRUNCATED. An uncapped PostgREST select stops at max-rows
+// (1000 on Supabase) and still returns 200, so once more than that many
+// athletes were marked out the ones past the cut-off would silently fall out
+// of the Set and be pushed "the day you set has passed" while injured.
+// Scoping the lookup to the ids already in hand makes that impossible.
+ck("...scoped to the candidates, not to the whole user base",
+   /profiles\?id=in\.\(\$\{chunk\.join\(","\)\}\)&availability_status=eq\.out/.test(CRON_CODE), true);
+ck("...and chunked, so no single request can exceed what it asks for",
+   /for \(let i = 0; i < candidateIds\.length; i \+= 100\)/.test(CRON_CODE), true);
+ck("...with no unbounded profiles select left anywhere in the route",
+   /profiles\?availability_status=eq\.out&select=id`\)/.test(CRON_CODE), false);
 ck("...and reports the pause, so it is not mistaken for a broken cron",
    /reminded: sent, paused \}/.test(CRON), true);
 

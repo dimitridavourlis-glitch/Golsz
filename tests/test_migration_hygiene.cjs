@@ -74,7 +74,11 @@ ck("the comment tells the next person to grant it WITH a call site",
   ck("...gated on the requirement table, not a hardcoded sport list",
      /!PATHWAY_KEY_EVIDENCE\[String\(athlete\.sport\)\.toLowerCase\(\)\]/.test(blk), true);
   ck("...and only once they have a goal to compare against", /pathwayType &&/.test(blk), true);
-  ck("the athlete's own sport is named back to them", /replace\("\{sport\}", athlete\.sport\)/.test(blk), true);
+  // Named back to them IN THEIR OWN LANGUAGE. athlete.sport is the canonical
+  // stored English value; this sentence is the one telling them GOLSZ will not
+  // guess what their sport requires, and reading "Basketball" in Latin script
+  // mid-Greek undercuts exactly that claim.
+  ck("the athlete's own sport is named back to them", /replace\("\{sport\}", tv\(athlete\.sport\)\)/.test(blk), true);
 
   const strings = APP.match(/\bgap_sport_unsupported: "([^"]+)"/g) || [];
   ck("four dictionaries, four distinct strings", [strings.length, new Set(strings).size], [4, 4]);

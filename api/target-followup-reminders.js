@@ -306,8 +306,27 @@ async function remindDueSteps(supaUrl, serviceKey, webpush) {
   // One query, not one per row. Recovery work is excluded from the pause for
   // the same reason it is excluded in the client: a physio appointment is
   // exactly the date that still matters when you are hurt.
-  const restingRows = await supaSelect(supaUrl, serviceKey, `profiles?availability_status=eq.out&select=id`);
-  const resting = new Set((restingRows || []).map((r) => r.id));
+  // ASKED ABOUT THE CANDIDATES, NOT ABOUT THE WHOLE USER BASE.
+  //
+  // This used to be `profiles?availability_status=eq.out&select=id` with no
+  // limit. PostgREST silently truncates an uncapped select at its configured
+  // max-rows (1000 on Supabase) and still returns 200 - so once more than
+  // that many athletes were marked out, the ones past the cut-off would fall
+  // out of this Set and be pushed "the day you set has passed" while injured.
+  // A guarantee that quietly stops holding at scale is worse than one that
+  // was never claimed.
+  //
+  // Scoping it to the ids already in hand makes truncation impossible: the
+  // candidate query above is capped at 500, and each chunk asks for at most
+  // the 100 ids it names.
+  const candidateIds = [...new Set(rows.map((r) => r && r.user_id).filter(Boolean))];
+  const resting = new Set();
+  for (let i = 0; i < candidateIds.length; i += 100) {
+    const chunk = candidateIds.slice(i, i + 100);
+    const got = await supaSelect(supaUrl, serviceKey,
+      `profiles?id=in.(${chunk.join(",")})&availability_status=eq.out&select=id`);
+    (got || []).forEach((r) => { if (r && r.id) resting.add(r.id); });
+  }
   let sent = 0;
   let paused = 0;
   for (const row of rows) {
