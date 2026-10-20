@@ -196,7 +196,7 @@ console.log("\n-- cost telemetry stays honest across providers --");
 eval(slice("function estimateCost", "\n// Deterministic recovery for the goal-capture"));
 const GROK = "grok-4.20-0309-non-reasoning";
 const fbCost = estimateCost(GROK, { input_tokens: 1e6, output_tokens: 1e6 });
-ck("the fallback model is NOT billed at Sonnet rates", fbCost !== (3 + 15), true);
+ck("the fallback model is NOT billed at Sonnet rates", fbCost !== (2 + 10), true);
 // xAI published pricing for this model's sub-200k tier, checked 2026-08-09.
 ck("...it uses xAI's real published rates ($1.25 in / $2.50 out per 1M)",
    Number(fbCost.toFixed(4)), Number((1.25 + 2.5).toFixed(4)));
@@ -210,10 +210,12 @@ ck("...which the operator can override (xAI's >200k tier, or another vendor)",
    Number(estimateCost(GROK, { input_tokens: 1e6, output_tokens: 1e6 }).toFixed(4)), 3);
 delete process.env.SCOUT_FALLBACK_INPUT_COST;
 delete process.env.SCOUT_FALLBACK_OUTPUT_COST;
+// claude-sonnet-5 list price is $2 in / $10 out per 1M (checked 2026-10-09);
+// this asserted $3/$15 until then, i.e. it pinned the overstatement in place.
 ck("Anthropic pricing is untouched by any of this",
-   Number(estimateCost("claude-sonnet-5", { input_tokens: 1e6, output_tokens: 1e6 }).toFixed(4)), 18);
+   Number(estimateCost("claude-sonnet-5", { input_tokens: 1e6, output_tokens: 1e6 }).toFixed(4)), 12);
 ck("an unknown model still defaults to Sonnet rates (unchanged behaviour)",
-   Number(estimateCost("who-knows", { input_tokens: 1e6, output_tokens: 0 }).toFixed(4)), 3);
+   Number(estimateCost("who-knows", { input_tokens: 1e6, output_tokens: 0 }).toFixed(4)), 2);
 
 console.log("\n-- the adapter's own request shape --");
 (async () => {

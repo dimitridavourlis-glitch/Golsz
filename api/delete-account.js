@@ -19,6 +19,12 @@
 // first, before the account itself is gone and nothing can look up which
 // files were theirs anymore.
 //
+// Correction: the five pre-migration base tables (athletes, coaches, agents,
+// parent_links, scout_history) are NOT confirmed to cascade — migration 027
+// says they do not — and scout_response_cache rows are keyed by text. So,
+// like the admin delete path, this calls admin_delete_profile_data() and
+// clears cached Scout replies before the auth user is deleted.
+//
 // PARENT-MANAGED CHILDREN (P1-5). The original behaviour here was to leave
 // a managed child untouched, on the reasoning that deleting a parent must
 // never silently destroy their athlete's profile. That reasoning was right
@@ -76,7 +82,10 @@ async function deleteStoragePrefix(supaUrl, serviceKey, bucket, prefix) {
       headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
       body: JSON.stringify({ prefix, limit: 1000 }),
     });
-    if (!listRes.ok) return;
+    if (!listRes.ok) {
+      const detail = await listRes.text().catch(() => "");
+      throw new Error(`storage LIST ${bucket} failed: ${listRes.status} ${detail.slice(0, 200)}`);
+    }
     const files = await listRes.json();
     if (!Array.isArray(files) || !files.length) return;
     const paths = files.map((f) => `${prefix}/${f.name}`);
@@ -102,6 +111,48 @@ async function deleteStoragePrefix(supaUrl, serviceKey, bucket, prefix) {
   }
 }
 
+// Scout replies cached in scout_response_cache are keyed by text, not by a
+// foreign key, so nothing cascades to them and expired rows are never swept.
+// api/scout.js writes two per-athlete key shapes (grep replayCacheKey and
+// scopeFingerprintToAthlete): "req:<uid>:<requestId>" and
+// "<intent>:<lang>:<tier>:u:<uid>|<fingerprint>:<text>". Same posture as the
+// storage sweep: a failure is logged with the exact pattern, and does not
+// block the erasure itself.
+async function deleteScoutReplyCache(supaUrl, serviceKey, uid) {
+  for (const pattern of [`req:${uid}:*`, `*:u:${uid}|*`]) {
+    try {
+      const r = await fetch(`${supaUrl}/rest/v1/scout_response_cache?cache_key=like.${encodeURIComponent(pattern)}`, {
+        method: "DELETE",
+        headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, Prefer: "return=minimal" },
+      });
+      if (!r.ok) {
+        const detail = await r.text().catch(() => "");
+        throw new Error(`scout_response_cache DELETE failed: ${r.status} ${detail.slice(0, 200)}`);
+      }
+    } catch (e) {
+      console.error("GOLSZ scout cache cleanup failed:", e);
+      await logError(supaUrl, serviceKey, "api/delete-account.js", "Cached Scout replies were NOT deleted with the account", { detail: String(e), userId: uid, pattern });
+    }
+  }
+}
+
+// Migration 027: scout_history, parent_links, athletes, coaches and agents do
+// not cascade from profiles, so the admin delete path calls this before the
+// auth delete. Self-delete has to as well. Returns false on failure — the
+// caller must then NOT delete the auth user, or those rows are orphaned with
+// no account left to find them by.
+async function deleteNonCascadingData(supaUrl, serviceKey, uid) {
+  const r = await fetch(`${supaUrl}/rest/v1/rpc/admin_delete_profile_data`, {
+    method: "POST",
+    headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_target: uid }),
+  });
+  if (r.ok) return true;
+  const detail = await r.text().catch(() => "");
+  await logError(supaUrl, serviceKey, "api/delete-account.js", "admin_delete_profile_data failed", { detail: detail.slice(0, 500), status: r.status, userId: uid });
+  return false;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -119,6 +170,30 @@ export default async function handler(req, res) {
   // the user (the client's own confirmation UI is the primary guard; this
   // is the server-side backstop for it).
   if (!body || body.confirm !== true) return res.status(400).json({ error: "Confirmation required." });
+
+  // --- an active subscription blocks deletion ---
+  // Deleting the account does not cancel Stripe, so the customer would keep
+  // being charged with no screen left to stop it. ACTIVE = a Stripe customer
+  // AND a plan that is not free (unknown counts as active) — never the id
+  // alone, which the webhook keeps after a cancellation.
+  try {
+    const billRes = await fetch(`${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=plan,stripe_customer_id`, {
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+    });
+    if (!billRes.ok) throw new Error(`profiles billing lookup failed: ${billRes.status}`);
+    const rows = await billRes.json();
+    const me = Array.isArray(rows) ? rows[0] : null;
+    if (me && me.stripe_customer_id && me.plan !== "free") {
+      return res.status(409).json({
+        error: "You have an active subscription. Cancel it in Manage billing first — deleting your account does not stop Stripe charging you.",
+        code: "active_subscription",
+      });
+    }
+  } catch (e) {
+    // Fail CLOSED, same as the managed-children lookup below.
+    await logError(supaUrl, serviceKey, "api/delete-account.js", "Billing lookup failed", { detail: String(e), userId });
+    return res.status(503).json({ error: "Couldn't check your subscription just now. Please try again in a moment." });
+  }
 
   // --- P1-5: never leave an unreachable managed child behind ---
   let managedChildren = [];
@@ -165,6 +240,7 @@ export default async function handler(req, res) {
     for (const child of managedChildren) {
       await deleteStoragePrefix(supaUrl, serviceKey, "avatars", child.id);
       await deleteStoragePrefix(supaUrl, serviceKey, "post-images", child.id);
+      await deleteScoutReplyCache(supaUrl, serviceKey, child.id);
       const childDel = await fetch(`${supaUrl}/auth/v1/admin/users/${child.id}`, {
         method: "DELETE",
         headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
@@ -174,10 +250,21 @@ export default async function handler(req, res) {
         await logError(supaUrl, serviceKey, "api/delete-account.js", "Managed-child delete failed", { detail, parentId: userId, childId: child.id });
         return res.status(502).json({ error: "Couldn't delete a linked athlete's account, so nothing was deleted. Please contact support." });
       }
+      // AFTER the child's auth delete, unlike the parent's below: the RPC also
+      // removes the parent_links row, which is the only way back to this
+      // child. Run first, a failed auth delete would leave a minor's account
+      // that nobody can sign in to and a retry could no longer find. It
+      // deletes by id, so it still clears any leftover rows; a failure is
+      // logged inside and does not stop the parent's deletion.
+      await deleteNonCascadingData(supaUrl, serviceKey, child.id);
     }
 
     await deleteStoragePrefix(supaUrl, serviceKey, "avatars", userId);
     await deleteStoragePrefix(supaUrl, serviceKey, "post-images", userId);
+    await deleteScoutReplyCache(supaUrl, serviceKey, userId);
+    if (!(await deleteNonCascadingData(supaUrl, serviceKey, userId))) {
+      return res.status(502).json({ error: "Couldn't delete the account. Please try again or contact support." });
+    }
 
     const delRes = await fetch(`${supaUrl}/auth/v1/admin/users/${userId}`, {
       method: "DELETE",
