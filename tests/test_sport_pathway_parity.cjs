@@ -50,8 +50,12 @@ ck("every sport's ladder is identical on both sides, in the same order", mismatc
 
 // Scout must actually USE it — a synced copy nothing reads is dead weight.
 const SCOUT = fs.readFileSync(REPO + "/api/scout.js", "utf8");
+// The named imports are open-ended on purpose: the module also exports the
+// stage LABELS now (tests/test_scout_stage_labels.cjs owns those), and pinning
+// this to the exact import list would fail on every addition to it rather than
+// on the thing being asserted — that scout.js reads the ladder from here.
 ck("api/scout.js imports the shared table",
-   /import \{ SPORT_PATHWAY_STAGES \} from "\.\/_sport-pathways\.js"/.test(SCOUT), true);
+   /import \{[^}]*\bSPORT_PATHWAY_STAGES\b[^}]*\} from "\.\/_sport-pathways\.js"/.test(SCOUT), true);
 ck("...and renders the athlete's own ladder into the prompt",
    /GOLSZ'S STANDARD ROUTE FOR \$\{athleteState\.sport\.toUpperCase\(\)\}/.test(SCOUT), true);
 // The blanket disclaimer had to go with it, or Scout contradicts the screen.

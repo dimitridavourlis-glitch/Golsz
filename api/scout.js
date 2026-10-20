@@ -80,7 +80,10 @@ import { evaluateEntitlements, hasFeature, planDisplayName, FEATURE_LABEL } from
 // sports the picker offers — not the two SPORT_SCHEMAS covers. Without it
 // Scout told an archer it had no route data for their sport while the Plan
 // screen was drawing them a four-stage route in the same app.
-import { SPORT_PATHWAY_STAGES } from "./_sport-pathways.js";
+// defaultStageLabel resolves a stage ID to the name the Plan screen shows.
+// A default stage's id IS the translation key, so without it this file put
+// raw keys in the prompt ("currently at: school_club") — see that module.
+import { SPORT_PATHWAY_STAGES, defaultStageLabel } from "./_sport-pathways.js";
 
 // THE EFFECTIVE PLAN RULE, in one place.
 //
@@ -6045,10 +6048,26 @@ async function getAthleteState(userId) {
     ? pathwayRow.stages.filter((x) => x && x.id).map((x) => ({ id: String(x.id), label: String(x.label || "") }))
     : [];
   const stagesAreCustom = storedStages.length > 0;
+  // THEIR NAME FOR IT, ELSE GOLSZ'S, ELSE NOTHING — never the id.
+  //
+  // This returned the id itself when it could not match one, with the comment
+  // "sport-default ids are the key itself" — which is exactly why that was
+  // wrong. A default stage's id IS the translation key the client renders
+  // through t("pathway_stage_" + id); the server has no dictionary, so the
+  // prompt read "They have said they are currently at: school_club" and the
+  // model was handed an internal key as something the athlete had said. It
+  // could reason about it, and quote it back.
+  //
+  // Three steps, in this order:
+  //   1. a label the athlete typed (storedStages) — their words win;
+  //   2. the sport-default label, the same string the Plan screen draws;
+  //   3. null, which drops the clause. An id nothing can name — a uuid left
+  //      behind by a deleted custom section — must not reach the prompt at
+  //      all, and saying nothing is better than naming it wrongly.
   const stageNameOf = (id) => {
     if (!id) return null;
     const hit = storedStages.find((x) => x.id === id);
-    return hit ? hit.label : id;      // sport-default ids are the key itself
+    return (hit && hit.label) || defaultStageLabel(id);
   };
   const currentStageId = (pathwayRow && pathwayRow.current_stage_id) || null;
 
@@ -7059,8 +7078,17 @@ export default async function handler(req, res) {
     // thing and the AI inside it says another.
     if (athleteState.sport && SPORT_PATHWAY_STAGES[athleteState.sport]) {
       const ladder = SPORT_PATHWAY_STAGES[athleteState.sport].stages || [];
-      if (ladder.length) {
-        athleteBlock += `\n\nGOLSZ'S STANDARD ROUTE FOR ${athleteState.sport.toUpperCase()} (what the Plan screen draws for this athlete by default, in order): ${ladder.join(" -> ")}. This is GOLSZ's model of how progression works in their sport, not a rule — they can rename, reorder, add or remove any stage. Use it as the shared frame when you talk about where they are and what comes next, and say plainly when you are going beyond it.`;
+      // NAMES, NOT KEYS, and all of them or none. These ids are translation
+      // keys (see defaultStageLabel) and this line used to join them raw, so
+      // every soccer player's prompt said "academy -> u19_u21 -> senior ->
+      // professional" while their Plan screen said "Academy -> U19/U21 ->
+      // Senior -> Professional" — the sentence claims to be what that screen
+      // draws. A ladder with any unnamed stage is dropped whole rather than
+      // silently shortened: a route missing a rung is a wrong route, and
+      // test_scout_stage_labels proves all 41 are complete, so this holds.
+      const ladderNames = ladder.map((id) => defaultStageLabel(id));
+      if (ladderNames.length && ladderNames.every(Boolean)) {
+        athleteBlock += `\n\nGOLSZ'S STANDARD ROUTE FOR ${athleteState.sport.toUpperCase()} (what the Plan screen draws for this athlete by default, in order): ${ladderNames.join(" -> ")}. This is GOLSZ's model of how progression works in their sport, not a rule — they can rename, reorder, add or remove any stage. Use it as the shared frame when you talk about where they are and what comes next, and say plainly when you are going beyond it.`;
       }
     }
     if (athleteState.stagesAreCustom && athleteState.stageNames && athleteState.stageNames.length) {

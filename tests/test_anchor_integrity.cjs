@@ -195,6 +195,14 @@ const REVIEWED_AMBIGUOUS = new Set([
   // whether Ask Scout falls inside the disclosure. The count here cannot see
   // the fromIndex, the same limitation as the </script> entry above.
   "onNavigate(\"scout\")",
+  // test_scout_stage_labels bounds I18N.en with indexOf("  fr: {", i) — the
+  // first French dictionary AFTER the I18N declaration, which is the right
+  // one. The second occurrence is the ErrorBoundary's own four-language
+  // mini-dictionary, ~17,000 lines later. Same shape as the </script> entry:
+  // the count cannot see the fromIndex. That suite also asserts two known
+  // English values, so a wrong pick fails there by name rather than silently
+  // comparing the server's labels against French.
+  "  fr: {",
 ]);
 // Entries are matched as PREFIXES, not exact strings. The failure message
 // truncates literals at 50 chars, so an entry copied from the console output
