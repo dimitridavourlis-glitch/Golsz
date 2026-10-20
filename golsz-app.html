@@ -149,6 +149,7 @@ const MessageCircle = svg('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1
 const IdCard = svg('<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="11" r="2.5"/><path d="M14 10h4M14 14h4M6 16c.8-1.5 1.8-2 3-2s2.2.5 3 2"/>');
 const Timer = svg('<circle cx="12" cy="14" r="7"/><path d="M12 10v4l3 2M10 3h4M12 3v4"/>');
 const ArrowRight = svg('<path d="M5 12h14M13 6l6 6-6 6"/>');
+const HelpCircle = svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/>');
 const Share = svg('<circle cx="18" cy="5" r="2.5"/><circle cx="18" cy="19" r="2.5"/><circle cx="6" cy="12" r="2.5"/><line x1="8.2" x2="15.8" y1="10.8" y2="6.2"/><line x1="8.2" x2="15.8" y1="13.2" y2="17.8"/>');
 const GraduationCap = svg('<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>');
 const Mail = svg('<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>');
@@ -697,6 +698,7 @@ const I18N = {
     checkin_title_named: "Hi {name}. How do you feel today?", checkin_title: "How do you feel today?", checkin_sub: "Tap one. Your plan will fit your day.", checkin_great: "Great", checkin_great_sub: "Ready to train", checkin_okay: "Okay", checkin_okay_sub: "A bit tired", checkin_hurt: "Hurt", checkin_hurt_sub: "I need a break", checkin_private: "Coaches and schools never see this.", checkin_skip: "Skip for today", checkin_chip_great: "Feeling great", checkin_chip_okay: "Feeling okay", rest_title: "Rest first.", rest_sub: "Your body needs time. That is okay.", rest_paused: "PLAN PAUSED", rest_nothing_late: "Nothing on your road is late while you rest.", rest_back_q: "When do you think you'll be back?", rest_back_hint: "Your own guess. You can skip it or change it.", rest_tell_scout: "Tell Scout what happened", rest_scout_seed: "I'm hurt and taking a break. Can you help me adjust my plan?", rest_continue: "Go to the app", rest_doctor: "If it really hurts, see a doctor or a physio.", resting_banner_strong: "Resting.", resting_banner: "Your plan is paused.", resting_better: "I'm better",
     home_tiles_hi: "Hi {name}!", home_tiles_sub: "Tap a picture to start.", tile_today: "Today", tile_scout: "Scout", tile_passport: "Passport", tile_schools: "Schools", tile_videos: "Videos", tile_tests: "Tests", tile_today_count: "{n} to do", tile_today_rest: "Rest day", tile_scout_sub: "Ask me anything", tile_schools_n: "{n} on my list", tile_videos_n: "{n} clips", tile_tests_n: "{n} results", tile_passport_opened: "Opened {ago}", tile_passport_unshared: "Not shared yet", tile_locked: "Basic plan", home_tiles_goal: "My goal: {goal}", home_today_back: "Back",
     road_eyebrow: "MY ROAD", road_title: "To {goal}", road_title_nogoal: "My road", road_here: "YOU ARE HERE", road_goal: "My goal", road_pick_goal: "Pick my goal", road_done: "Done", road_by: "By {date}", road_next: "Next stop", road_start: "Start", road_calendar: "Calendar", road_schools: "Schools", road_empty: "Your road has no stops yet. Ask Scout to plan them with you.", road_all_done: "Every stop is done. Time to pick your next goal.", stop_eyebrow: "STOP {n} OF {total}", stop_back: "My road", stop_why: "WHY THIS STEP", stop_did_it: "I did it", stop_not_done: "Not done yet", stop_ask_scout: "Ask Scout to help", stop_change_date: "Change the date", stop_scout_date: "Scout suggested this date", stop_add_clips: "Add my clips to my Passport", stop_open_schools: "Open my schools list", stop_log_test: "Log a test result",
+    scout_title: "Scout", scout_start_hi: "Hi {name}!", scout_start_q: "What do you need?", scout_start_intro: "First, tell me about you: your age, sport, position and where you play.", scout_big_next: "What's next for me?", scout_big_schools: "Find schools for me", scout_big_coach: "Write to a coach", scout_big_stuck: "I'm stuck", scout_input_start: "Or type your own…", scout_left: "{n} left", scout_limit_title: "That's all {n} for today", scout_limit_sub: "New questions tomorrow. Your chats are saved.", scout_limit_cta: "Get more questions", scout_limit_plans: "Basic {b} a day · Pro {p} · Elite {e}", scout_limit_life_title: "You've used all {n} free questions", scout_limit_life_sub: "These do not come back tomorrow. Your chats are saved.",
   },
   fr: {
     loading: "Chargement…", yes: "Oui", no: "Non",
@@ -1065,6 +1067,7 @@ const I18N = {
     checkin_title_named: "Salut {name}. Comment te sens-tu aujourd'hui ?", checkin_title: "Comment te sens-tu aujourd'hui ?", checkin_sub: "Choisis-en un. Ton plan s'adaptera à ta journée.", checkin_great: "En forme", checkin_great_sub: "Prêt à m'entraîner", checkin_okay: "Ça va", checkin_okay_sub: "Un peu fatigué", checkin_hurt: "Blessé", checkin_hurt_sub: "J'ai besoin d'une pause", checkin_private: "Les coachs et les écoles ne voient jamais ça.", checkin_skip: "Passer pour aujourd'hui", checkin_chip_great: "Je me sens bien", checkin_chip_okay: "Ça va", rest_title: "Repose-toi d'abord.", rest_sub: "Ton corps a besoin de temps. C'est normal.", rest_paused: "PLAN EN PAUSE", rest_nothing_late: "Rien sur ta route n'est en retard pendant que tu te reposes.", rest_back_q: "Quand penses-tu revenir ?", rest_back_hint: "Ta propre estimation. Tu peux la passer ou la changer.", rest_tell_scout: "Raconter à Scout ce qui s'est passé", rest_scout_seed: "Je suis blessé et je prends une pause. Peux-tu m'aider à adapter mon plan ?", rest_continue: "Aller à l'application", rest_doctor: "Si ça fait vraiment mal, consulte un médecin ou un physio.", resting_banner_strong: "Repos.", resting_banner: "Ton plan est en pause.", resting_better: "Je vais mieux",
     home_tiles_hi: "Salut {name} !", home_tiles_sub: "Touche une image pour commencer.", tile_today: "Aujourd'hui", tile_scout: "Scout", tile_passport: "Passeport", tile_schools: "Écoles", tile_videos: "Vidéos", tile_tests: "Tests", tile_today_count: "{n} à faire", tile_today_rest: "Jour de repos", tile_scout_sub: "Pose-moi une question", tile_schools_n: "{n} sur ma liste", tile_videos_n: "{n} clips", tile_tests_n: "{n} résultats", tile_passport_opened: "Ouvert {ago}", tile_passport_unshared: "Pas encore partagé", tile_locked: "Forfait Basic", home_tiles_goal: "Mon objectif : {goal}", home_today_back: "Retour",
     road_eyebrow: "MA ROUTE", road_title: "Vers {goal}", road_title_nogoal: "Ma route", road_here: "TU ES ICI", road_goal: "Mon objectif", road_pick_goal: "Choisir mon objectif", road_done: "Fait", road_by: "Pour le {date}", road_next: "Prochaine étape", road_start: "Commencer", road_calendar: "Calendrier", road_schools: "Écoles", road_empty: "Ta route n'a pas encore d'étapes. Demande à Scout de les préparer avec toi.", road_all_done: "Toutes les étapes sont faites. Le moment de choisir ton prochain objectif.", stop_eyebrow: "ÉTAPE {n} SUR {total}", stop_back: "Ma route", stop_why: "POURQUOI CETTE ÉTAPE", stop_did_it: "C'est fait", stop_not_done: "Pas encore fait", stop_ask_scout: "Demander de l'aide à Scout", stop_change_date: "Changer la date", stop_scout_date: "Date suggérée par Scout", stop_add_clips: "Ajouter mes clips à mon Passeport", stop_open_schools: "Ouvrir ma liste d'écoles", stop_log_test: "Enregistrer un résultat",
+    scout_title: "Scout", scout_start_hi: "Salut {name} !", scout_start_q: "De quoi as-tu besoin ?", scout_start_intro: "D'abord, parle-moi de toi : ton âge, ton sport, ton poste et où tu joues.", scout_big_next: "C'est quoi la suite ?", scout_big_schools: "Trouve-moi des écoles", scout_big_coach: "Écrire à un coach", scout_big_stuck: "Je bloque", scout_input_start: "Ou écris la tienne…", scout_left: "{n} restantes", scout_limit_title: "C'est tout pour aujourd'hui : {n}", scout_limit_sub: "De nouvelles questions demain. Tes discussions sont gardées.", scout_limit_cta: "Obtenir plus de questions", scout_limit_plans: "Basic {b} par jour · Pro {p} · Elite {e}", scout_limit_life_title: "Tu as utilisé tes {n} questions gratuites", scout_limit_life_sub: "Celles-ci ne reviennent pas demain. Tes discussions sont gardées.",
   },
   es: {
     loading: "Cargando…", yes: "Sí", no: "No",
@@ -1433,6 +1436,7 @@ const I18N = {
     checkin_title_named: "Hola {name}. ¿Cómo te sientes hoy?", checkin_title: "¿Cómo te sientes hoy?", checkin_sub: "Elige uno. Tu plan se ajustará a tu día.", checkin_great: "Genial", checkin_great_sub: "Listo para entrenar", checkin_okay: "Bien", checkin_okay_sub: "Un poco cansado", checkin_hurt: "Lesionado", checkin_hurt_sub: "Necesito un descanso", checkin_private: "Los entrenadores y las escuelas nunca ven esto.", checkin_skip: "Saltar por hoy", checkin_chip_great: "Me siento genial", checkin_chip_okay: "Me siento bien", rest_title: "Primero descansa.", rest_sub: "Tu cuerpo necesita tiempo. Está bien.", rest_paused: "PLAN EN PAUSA", rest_nothing_late: "Nada en tu ruta está atrasado mientras descansas.", rest_back_q: "¿Cuándo crees que volverás?", rest_back_hint: "Tu propia estimación. Puedes saltarla o cambiarla.", rest_tell_scout: "Cuéntale a Scout qué pasó", rest_scout_seed: "Estoy lesionado y voy a descansar. ¿Puedes ayudarme a ajustar mi plan?", rest_continue: "Ir a la aplicación", rest_doctor: "Si duele de verdad, ve a un médico o a un fisio.", resting_banner_strong: "Descansando.", resting_banner: "Tu plan está en pausa.", resting_better: "Ya estoy mejor",
     home_tiles_hi: "¡Hola {name}!", home_tiles_sub: "Toca una imagen para empezar.", tile_today: "Hoy", tile_scout: "Scout", tile_passport: "Pasaporte", tile_schools: "Escuelas", tile_videos: "Vídeos", tile_tests: "Pruebas", tile_today_count: "{n} por hacer", tile_today_rest: "Día de descanso", tile_scout_sub: "Pregúntame lo que sea", tile_schools_n: "{n} en mi lista", tile_videos_n: "{n} clips", tile_tests_n: "{n} resultados", tile_passport_opened: "Abierto {ago}", tile_passport_unshared: "Aún no compartido", tile_locked: "Plan Basic", home_tiles_goal: "Mi objetivo: {goal}", home_today_back: "Atrás",
     road_eyebrow: "MI RUTA", road_title: "Hacia {goal}", road_title_nogoal: "Mi ruta", road_here: "ESTÁS AQUÍ", road_goal: "Mi objetivo", road_pick_goal: "Elegir mi objetivo", road_done: "Hecho", road_by: "Para el {date}", road_next: "Próxima parada", road_start: "Empezar", road_calendar: "Calendario", road_schools: "Escuelas", road_empty: "Tu ruta aún no tiene paradas. Pídele a Scout que las prepare contigo.", road_all_done: "Todas las paradas están hechas. Hora de elegir tu próximo objetivo.", stop_eyebrow: "PARADA {n} DE {total}", stop_back: "Mi ruta", stop_why: "POR QUÉ ESTE PASO", stop_did_it: "Lo hice", stop_not_done: "Aún no", stop_ask_scout: "Pedir ayuda a Scout", stop_change_date: "Cambiar la fecha", stop_scout_date: "Fecha sugerida por Scout", stop_add_clips: "Añadir mis clips a mi Pasaporte", stop_open_schools: "Abrir mi lista de escuelas", stop_log_test: "Registrar un resultado",
+    scout_title: "Scout", scout_start_hi: "¡Hola {name}!", scout_start_q: "¿Qué necesitas?", scout_start_intro: "Primero, cuéntame sobre ti: tu edad, tu deporte, tu posición y dónde juegas.", scout_big_next: "¿Qué sigue para mí?", scout_big_schools: "Búscame escuelas", scout_big_coach: "Escribir a un entrenador", scout_big_stuck: "Estoy atascado", scout_input_start: "O escribe la tuya…", scout_left: "{n} restantes", scout_limit_title: "Eso es todo por hoy: {n}", scout_limit_sub: "Mañana hay preguntas nuevas. Tus chats se guardan.", scout_limit_cta: "Conseguir más preguntas", scout_limit_plans: "Basic {b} al día · Pro {p} · Elite {e}", scout_limit_life_title: "Has usado tus {n} preguntas gratis", scout_limit_life_sub: "Estas no vuelven mañana. Tus chats se guardan.",
   },
   el: {
     loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
@@ -1801,6 +1805,7 @@ const I18N = {
     checkin_title_named: "Γεια σου {name}. Πώς νιώθεις σήμερα;", checkin_title: "Πώς νιώθεις σήμερα;", checkin_sub: "Διάλεξε ένα. Το πλάνο σου θα προσαρμοστεί στη μέρα σου.", checkin_great: "Τέλεια", checkin_great_sub: "Έτοιμος για προπόνηση", checkin_okay: "Εντάξει", checkin_okay_sub: "Λίγο κουρασμένος", checkin_hurt: "Τραυματίας", checkin_hurt_sub: "Χρειάζομαι διάλειμμα", checkin_private: "Οι προπονητές και οι σχολές δεν το βλέπουν ποτέ αυτό.", checkin_skip: "Παράλειψη για σήμερα", checkin_chip_great: "Νιώθω τέλεια", checkin_chip_okay: "Νιώθω εντάξει", rest_title: "Ξεκουράσου πρώτα.", rest_sub: "Το σώμα σου χρειάζεται χρόνο. Αυτό είναι εντάξει.", rest_paused: "ΠΛΑΝΟ ΣΕ ΠΑΥΣΗ", rest_nothing_late: "Τίποτα στη διαδρομή σου δεν είναι εκπρόθεσμο όσο ξεκουράζεσαι.", rest_back_q: "Πότε πιστεύεις ότι θα επιστρέψεις;", rest_back_hint: "Η δική σου εκτίμηση. Μπορείς να την παραλείψεις ή να την αλλάξεις.", rest_tell_scout: "Πες στον Scout τι έγινε", rest_scout_seed: "Τραυματίστηκα και κάνω διάλειμμα. Μπορείς να με βοηθήσεις να προσαρμόσω το πλάνο μου;", rest_continue: "Πήγαινε στην εφαρμογή", rest_doctor: "Αν πονάει πραγματικά, δες γιατρό ή φυσικοθεραπευτή.", resting_banner_strong: "Ξεκούραση.", resting_banner: "Το πλάνο σου είναι σε παύση.", resting_better: "Είμαι καλύτερα",
     home_tiles_hi: "Γεια σου {name}!", home_tiles_sub: "Πάτα μια εικόνα για να ξεκινήσεις.", tile_today: "Σήμερα", tile_scout: "Scout", tile_passport: "Διαβατήριο", tile_schools: "Σχολές", tile_videos: "Βίντεο", tile_tests: "Τεστ", tile_today_count: "{n} να κάνεις", tile_today_rest: "Μέρα ξεκούρασης", tile_scout_sub: "Ρώτα με οτιδήποτε", tile_schools_n: "{n} στη λίστα μου", tile_videos_n: "{n} κλιπ", tile_tests_n: "{n} αποτελέσματα", tile_passport_opened: "Άνοιξε {ago}", tile_passport_unshared: "Δεν έχει μοιραστεί ακόμη", tile_locked: "Πλάνο Basic", home_tiles_goal: "Ο στόχος μου: {goal}", home_today_back: "Πίσω",
     road_eyebrow: "Η ΔΙΑΔΡΟΜΗ ΜΟΥ", road_title: "Προς {goal}", road_title_nogoal: "Η διαδρομή μου", road_here: "ΕΙΣΑΙ ΕΔΩ", road_goal: "Ο στόχος μου", road_pick_goal: "Διάλεξε στόχο", road_done: "Έγινε", road_by: "Έως {date}", road_next: "Επόμενη στάση", road_start: "Ξεκίνα", road_calendar: "Ημερολόγιο", road_schools: "Σχολές", road_empty: "Η διαδρομή σου δεν έχει στάσεις ακόμη. Ζήτα από τον Scout να τις φτιάξει μαζί σου.", road_all_done: "Όλες οι στάσεις έγιναν. Ώρα να διαλέξεις τον επόμενο στόχο σου.", stop_eyebrow: "ΣΤΑΣΗ {n} ΑΠΟ {total}", stop_back: "Η διαδρομή μου", stop_why: "ΓΙΑΤΙ ΑΥΤΟ ΤΟ ΒΗΜΑ", stop_did_it: "Το έκανα", stop_not_done: "Όχι ακόμη", stop_ask_scout: "Ζήτα βοήθεια από τον Scout", stop_change_date: "Άλλαξε την ημερομηνία", stop_scout_date: "Η ημερομηνία προτάθηκε από τον Scout", stop_add_clips: "Πρόσθεσε τα κλιπ μου στο Διαβατήριο", stop_open_schools: "Άνοιξε τη λίστα σχολών μου", stop_log_test: "Κατέγραψε ένα αποτέλεσμα",
+    scout_title: "Scout", scout_start_hi: "Γεια σου {name}!", scout_start_q: "Τι χρειάζεσαι;", scout_start_intro: "Πρώτα, πες μου για σένα: ηλικία, άθλημα, θέση και πού παίζεις.", scout_big_next: "Τι ακολουθεί για μένα;", scout_big_schools: "Βρες μου σχολές", scout_big_coach: "Γράψε σε προπονητή", scout_big_stuck: "Κόλλησα", scout_input_start: "Ή γράψε τη δική σου…", scout_left: "{n} ακόμη", scout_limit_title: "Αυτές ήταν και οι {n} για σήμερα", scout_limit_sub: "Νέες ερωτήσεις αύριο. Οι συζητήσεις σου αποθηκεύονται.", scout_limit_cta: "Πάρε περισσότερες ερωτήσεις", scout_limit_plans: "Basic {b} τη μέρα · Pro {p} · Elite {e}", scout_limit_life_title: "Χρησιμοποίησες και τις {n} δωρεάν ερωτήσεις", scout_limit_life_sub: "Αυτές δεν επιστρέφουν αύριο. Οι συζητήσεις σου αποθηκεύονται.",
   },
 };
 const LANGS = [["en", "English"], ["fr", "Français"], ["es", "Español"], ["el", "Ελληνικά"]];
@@ -3509,6 +3514,23 @@ const PARENT_ACCOUNTS_ENABLED = false;
 // no id here can never be reached.
 const SECTION_IDS = ["gz-highlights", "gz-benchmarks", "gz-schools", "gz-calendar"];
 
+// SCOUT'S DAILY CAPS, MIRRORED FROM THE SERVER.
+//
+// The server owns these (api/scout.js reads FREE_/STARTER_/PRO_/ELITE_
+// DAILY_LIMIT and falls back to exactly these numbers). The client needs them
+// only to say what a plan WOULD give you, on the card shown when you have run
+// out - at which point no response is arriving to carry scout_usage.
+//
+// Mirrored numbers drift, and these have drifted before, so a test pins them
+// against api/scout.js AND against the plan_*_feat1 strings the pricing page
+// sells. Three copies, one assertion.
+//
+// FREE ALSO HAS A LIFETIME CAP of 40 (plan_free_feat1 says so, migration 068
+// enforces it). It is deliberately not in here: it is not a daily number, and
+// the two run out for different reasons that need different sentences.
+const SCOUT_DAILY_LIMITS = { free: 3, starter: 8, pro: 15, elite: 20 };
+const SCOUT_FREE_LIFETIME = 40;
+
 // Scroll a deep-linked section into view, once.
 //
 // It retries across frames rather than reading the DOM on the tick the effect
@@ -3540,7 +3562,7 @@ function useFocusSection(section, nonce, onDone) {
 const REDESIGN_CHECKIN = true;   // Phase 1, shipped.
 const REDESIGN_HOME_TILES = true;  // Phase 2, shipped.
 const REDESIGN_ROAD = true;       // Phase 3, shipped.
-const REDESIGN_SCOUT = false;
+const REDESIGN_SCOUT = true;      // Phase 4, shipped.
 // A PLAIN LITERAL ON PURPOSE. test_enum_parity reads this list by regex and
 // checks every value against the profiles.occupation CHECK constraint — the
 // guard that caught "Parent" being offered here while the constraint rejected
@@ -8194,6 +8216,150 @@ function scoutHistoryList(rowsNewestFirst) {
 // the one thing that cannot work. Each known status/code now maps to a
 // translated message and to the action that can actually help: retry (same
 // request id), the upgrade screen, or neither.
+/* ============ SCOUT: FOUR QUESTIONS, NOT A BLANK BOX ============
+   The old start screen offered three topic rows under a greeting bubble. The
+   bubble said hello and nothing else, and the rows were the only affordance -
+   so an athlete who did not already know what to ask Scout had one blank text
+   box and a prompt to be clever.
+
+   These four are real messages. Each sends its own label through the normal
+   send(), so it costs one daily question exactly as typing it would: a button
+   that was free would be a different product than the one metered, and the
+   count in the header would stop matching what was spent.
+
+   Non-players get the four scout_np_chip strings that already exist for them,
+   because "find schools for me" is not a question a coach has. */
+/* ============ OUT OF QUESTIONS ============
+   TWO limits, and they are not the same problem.
+
+   The daily cap returns 402 and comes back tomorrow. The free LIFETIME cap
+   (40, migration 068) returns 403 and does not - api/scout.js says exactly
+   that in its own comment, and chose a different status code so the client
+   could tell an athlete which one they hit. The brief's §7.5 describes only
+   the daily one, so following it literally would tell a Free athlete who has
+   spent all forty that new questions arrive tomorrow. They do not, and they
+   would find that out tomorrow.
+
+   The limit is NEVER inferred from a missing scout_usage. An account the
+   server sends no usage for is unlimited, not exhausted.  */
+function ScoutLimitCard({ kind, usage, plan, onUpgrade, t }) {
+  const daily = kind !== "life";
+  // scout_usage carries the real limit when a response arrived. When the card
+  // is shown without one, the mirrored table is the only source left.
+  const limit = usage && typeof usage.limit === "number" && usage.limit > 0
+    ? usage.limit : (SCOUT_DAILY_LIMITS[plan] || SCOUT_DAILY_LIMITS.free);
+  const dots = daily && limit <= 8 ? limit : 0;
+  return (
+    <div style={{ margin: "0 12px 14px", background: C.card, border: `2px solid ${C.line2}`,
+      borderRadius: 22, padding: "18px 16px", textAlign: "center" }}>
+      {dots ? (
+        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 12 }}>
+          {Array.from({ length: dots }).map((_, i) => (
+            <span key={i} style={{ width: 34, height: 34, borderRadius: 99,
+              border: `2px dashed ${C.slate}`, boxSizing: "border-box" }} />
+          ))}
+        </div>
+      ) : null}
+      <div style={{ fontSize: 22, fontWeight: 800, color: C.chalk, lineHeight: 1.2 }}>
+        {daily ? t("scout_limit_title").replace("{n}", limit)
+               : t("scout_limit_life_title").replace("{n}", SCOUT_FREE_LIFETIME)}
+      </div>
+      <div style={{ fontSize: 15, color: C.chalkSoft, lineHeight: 1.45, marginTop: 7 }}>
+        {daily ? t("scout_limit_sub") : t("scout_limit_life_sub")}
+      </div>
+      {/* Elite has nothing to upgrade to, and the server says so with
+          can_upgrade:false on the daily refusal. The lifetime cap only ever
+          applies to Free, who always can. */}
+      {plan !== "elite" ? (
+        <button onClick={onUpgrade} style={{ width: "100%", minHeight: 56, marginTop: 14, borderRadius: 18,
+          background: C.lime, color: C.ink, border: "none", fontFamily: "inherit", fontSize: 17,
+          fontWeight: 800, cursor: "pointer" }}>{t("scout_limit_cta")}</button>
+      ) : null}
+      <div style={{ fontSize: 15, color: C.slate, marginTop: 10 }}>
+        {t("scout_limit_plans").replace("{b}", SCOUT_DAILY_LIMITS.starter)
+          .replace("{p}", SCOUT_DAILY_LIMITS.pro).replace("{e}", SCOUT_DAILY_LIMITS.elite)}
+      </div>
+    </div>
+  );
+}
+
+function ScoutStart({ name, isPlayer, hasSport, onPick, t }) {
+  const Q = isPlayer
+    ? [{ k: "scout_big_next", icon: ArrowRight, gold: true },
+       { k: "scout_big_schools", icon: GraduationCap },
+       { k: "scout_big_coach", icon: Mail },
+       { k: "scout_big_stuck", icon: HelpCircle }]
+    : [{ k: "scout_np_chip4", icon: ArrowRight, gold: true },
+       { k: "scout_np_chip1", icon: Users },
+       { k: "scout_np_chip3", icon: Mail },
+       { k: "scout_np_chip2", icon: Target }];
+  const first = name ? String(name).trim().split(/\s+/)[0] : "";
+  return (
+    <div style={{ padding: "6px 2px 2px" }}>
+      <div style={{ fontSize: 30, fontWeight: 800, color: C.chalk, lineHeight: 1.12 }}>
+        {first ? t("scout_start_hi").replace("{name}", first) : null}
+        {first ? <br /> : null}
+        {t("scout_start_q")}
+      </div>
+      {isPlayer && !hasSport ? (
+        <div style={{ fontSize: 17, color: C.chalkSoft, lineHeight: 1.4, marginTop: 10 }}>{t("scout_start_intro")}</div>
+      ) : null}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10, marginTop: 18 }}>
+        {Q.map((q) => (
+          <button key={q.k} onClick={() => onPick(t(q.k))}
+            style={{ minHeight: 136, borderRadius: 24, padding: 16, cursor: "pointer", fontFamily: "inherit",
+              background: q.gold ? C.lime : C.card, border: q.gold ? "none" : `2px solid ${C.line2}`,
+              display: "flex", flexDirection: "column", alignItems: "flex-start", justifyContent: "space-between",
+              textAlign: "left", boxSizing: "border-box" }}>
+            {React.createElement(q.icon, { size: 34, color: q.gold ? C.ink : C.lime })}
+            <span style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.15, color: q.gold ? C.ink : C.chalk }}>{t(q.k)}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ScoutFace({ size }) {
+  const s = size || 40;
+  return (
+    <span style={{ width: s, height: s, borderRadius: 99, flexShrink: 0, background: C.ink,
+      border: `2px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <Radar size={Math.round(s * 0.45)} color={C.lime} />
+    </span>
+  );
+}
+
+// HOW MANY QUESTIONS ARE LEFT, as dots you can count at a glance.
+//
+// Drawn only when the daily limit is small enough to count - above eight the
+// dots stop being readable and become decoration, so those plans get the
+// number alone. Nothing at all is drawn when the server sent no scout_usage:
+// that is how an unlimited account looks, and inventing a cap for it would be
+// a limit the athlete does not actually have.
+function ScoutBalls({ usage, t }) {
+  if (!usage || typeof usage.remaining !== "number") return null;
+  const limit = typeof usage.limit === "number" ? usage.limit : 0;
+  const dots = limit > 0 && limit <= 8 ? limit : 0;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, height: 40, borderRadius: 20,
+      background: C.turf, padding: "0 12px", flexShrink: 0 }}>
+      {dots ? (
+        <span style={{ display: "inline-flex", gap: 4 }}>
+          {Array.from({ length: dots }).map((_, i) => (
+            <span key={i} style={{ width: 14, height: 14, borderRadius: 99,
+              background: i < usage.remaining ? C.lime : "transparent",
+              border: i < usage.remaining ? "none" : `2px solid ${C.slate}`, boxSizing: "border-box" }} />
+          ))}
+        </span>
+      ) : null}
+      <span style={{ fontSize: 14, fontWeight: 800, color: C.chalk, whiteSpace: "nowrap" }}>
+        {t("scout_left").replace("{n}", usage.remaining)}
+      </span>
+    </span>
+  );
+}
+
 function scoutFailureFor(status, data, t) {
   const code = data && typeof data.code === "string" ? data.code : "";
   const canUpgrade = !(data && data.can_upgrade === false);
@@ -8202,7 +8368,7 @@ function scoutFailureFor(status, data, t) {
       : code === "free_ai_exhausted" ? t("scout_err_free_exhausted")
       : canUpgrade ? t("scout_err_daily_limit")
       : t("scout_err_daily_limit_top");
-    return { text, retry: false, upgrade: canUpgrade };
+    return { text, retry: false, upgrade: canUpgrade, code: code || (status === 402 ? "daily_limit_reached" : "") };
   }
   if (status === 401) return { text: t("scout_err_signin"), retry: false, upgrade: false };
   if (status === 403) return { text: t("scout_err_no_access"), retry: false, upgrade: false };
@@ -8309,6 +8475,9 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   // reply/limit-reached response arrives, or forever null for an admin/
   // unlimited account (server omits scout_usage in that case).
   const [scoutUsage, setScoutUsage] = useState(null);
+  // "daily" or "life", set only by a refusal the SERVER sent. Never inferred
+  // from a missing scout_usage, which is what an unlimited account looks like.
+  const [limitHit, setLimitHit] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   // Which history row's delete is armed. One tap arms, the next deletes.
   const [armedDelete, setArmedDelete] = useState(null);
@@ -8473,6 +8642,8 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   }
 
   function newChat() {
+    // limitHit is deliberately NOT cleared: a fresh chat does not refill a
+    // cap that is counted per day or per account.
     setMsgs([{ role: "assistant", text: scoutGreetingFor(baseProfileRef.current, t) }]);
     setProfile(baseProfileRef.current);
     setConversationId(newScoutConvId());
@@ -8815,6 +8986,9 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       // dropped and the retry offered only for text.
       const failure = (e && e.failure) ? e.failure
         : { text: isTimeout ? t("scout_timed_out") : t("scout_connection_dropped"), retry: true, upgrade: false };
+      if (failure && (failure.code === "free_ai_exhausted" || failure.code === "daily_limit_reached")) {
+        setLimitHit(failure.code === "free_ai_exhausted" ? "life" : "daily");
+      }
       showFailure(failure);
       // NOT written to scout_history. A failure is not something Scout said;
       // saved as an assistant turn it came back as conversation history on
@@ -8991,6 +9165,10 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
     }
   }
 
+  // Out of questions when the server REFUSED one, or when the usage it sent
+  // says none remain. Both come from the server; neither is guessed.
+  const outOfQuestions = limitHit
+    || (scoutUsage && scoutUsage.remaining === 0 ? "daily" : null);
   const isPlayerChat = !profile.occupation || profile.occupation === "Player";
   const CHIPS = chipsFor(t, isPlayerChat);
   // Topic rows (Master UX/UI redesign — "Scout should be visually the
@@ -9014,10 +9192,20 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
           it says something true. */}
       <div style={{ padding: "9px 14px", borderBottom: `1px solid ${C.line}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          {REDESIGN_SCOUT && msgs && msgs.length > 1 ? (
+            <button onClick={newChat} aria-label={t("scout_new_chat")} style={{ background: "none", border: "none",
+              color: C.lime, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}>
+              <ChevronLeft size={22} />
+            </button>
+          ) : null}
+          {REDESIGN_SCOUT ? <ScoutFace size={40} /> : (
           <div style={{ width: 26, height: 26, borderRadius: 99, border: `1.5px solid ${C.lime}`, background: C.limeWash, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <Radar size={13} color={C.lime} />
           </div>
-          <span style={{ fontWeight: 800, letterSpacing: "0.1em", fontSize: 11.5, flexShrink: 0 }}>{t("scout_header")}</span>
+          )}
+          <span style={{ fontWeight: 800, letterSpacing: REDESIGN_SCOUT ? "0" : "0.1em", fontSize: REDESIGN_SCOUT ? 20 : 11.5, flexShrink: 0 }}>
+            {REDESIGN_SCOUT ? t("scout_title") : t("scout_header")}
+          </span>
           {busy && (
             <svg viewBox="0 0 240 28" width="64" height="13" aria-hidden="true" style={{ flexShrink: 0 }}>
               <path d="M2 14 H52 l6 -9 l7 18 l6 -13 l6 8 l8 -11 l9 15 l7 -7 h18 l6 -10 l7 16 l6 -12 l7 7 l8 -9 l8 12 l6 -6 H238"
@@ -9027,11 +9215,15 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
             </svg>
           )}
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            {REDESIGN_SCOUT ? <ScoutBalls usage={scoutUsage} t={t} /> : (
             <span style={{ fontSize: 9, color: C.slate, fontFamily: "'Space Mono', monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {scoutUsage ? `${scoutUsage.remaining} ${t("scout_questions_left")}` : t("scout_live_agent")}
             </span>
+            )}
             <button onClick={openHistory} title={t("scout_history_title")} style={iconBtn(showHistory ? C.lime : C.slate)}><History size={15} /></button>
+            {REDESIGN_SCOUT ? null : (
             <button onClick={newChat} title={t("scout_new_chat")} style={iconBtn(C.lime)}><Plus size={16} /></button>
+            )}
           </span>
         </div>
       </div>
@@ -9074,7 +9266,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       ) : (
         <div style={{ flex: 1, overflowY: "auto", padding: "14px 12px 6px" }}>
           {!loaded && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
-          {msgs && msgs.map((m, i) => (
+          {msgs && !(REDESIGN_SCOUT && msgs.length <= 1) && msgs.map((m, i) => (
             <div key={i} className="msg" style={m.role === "user" ? bubbleUser : bubbleAgent}>
               {m.photo && <img src={m.photo} alt={t("alt_scout_photo")} style={{ display: "block", maxWidth: "100%", borderRadius: 10, marginBottom: m.text ? 6 : 0 }} />}
               {m.text && <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>}
@@ -9321,7 +9513,11 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
               )}
             </div>
           ))}
-          {loaded && !pending && msgs && msgs.length <= 1 && (
+          {loaded && !pending && msgs && msgs.length <= 1 && REDESIGN_SCOUT && (
+            <ScoutStart name={profile.name} isPlayer={isPlayerChat} hasSport={!!profile.sport}
+              onPick={(label) => send(label)} t={t} />
+          )}
+          {loaded && !pending && msgs && msgs.length <= 1 && !REDESIGN_SCOUT && (
             <div style={{ marginTop: 6 }}>
               {TOPICS.map((tp) => (
                 <button key={tp.label} onClick={() => send(tp.prompt)} style={{
@@ -9343,7 +9539,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
 
       {!showHistory && (
         <>
-          {msgs && msgs.length > 1 && (
+          {msgs && msgs.length > 1 && !(REDESIGN_SCOUT && outOfQuestions) && (
             <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "6px 12px", scrollbarWidth: "none" }} className="noscroll">
               {CHIPS.map((q) => <button key={q} onClick={() => send(q)} disabled={pending || !loaded} style={{ flex: "0 0 auto", background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 999, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>{q}</button>)}
             </div>
@@ -9361,6 +9557,9 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
               <span style={{ fontSize: 11, color: C.slate }}>{t("scout_photo_attached")}</span>
             </div>
           )}
+          {REDESIGN_SCOUT && outOfQuestions ? (
+            <ScoutLimitCard kind={outOfQuestions} usage={scoutUsage} plan={plan} onUpgrade={onUpgrade} t={t} />
+          ) : (
           <div style={{ display: "flex", gap: 8, padding: "10px 12px 14px", borderTop: `1px solid ${C.line}` }}>
             <input ref={fileRef} type="file" accept="image/*" onChange={onPhotoChange} style={{ display: "none" }} />
             <button onClick={pickPhoto} disabled={pending || !loaded} title={t("scout_attach_photo")}
@@ -9379,6 +9578,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
               </button>
             </div>
           </div>
+          )}
         </>
       )}
     </div>
@@ -18096,7 +18296,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // stream-parse it during download and code-cache it across loads, neither
     // of which it can do for a string embedded in the HTML.
     var s = document.createElement("script");
-    s.src = "js/app.js?v=64888998e84c9c41";
+    s.src = "js/app.js?v=ad6a2b77998249a6";
     // A blank screen with a running loading bar is the worst failure this page
     // has, because it is indistinguishable from "slow". If the script cannot
     // load, say so and offer the one action that helps.
