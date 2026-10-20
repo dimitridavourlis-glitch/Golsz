@@ -161,8 +161,11 @@ ck("...rather than spreading database columns into short-key state",
 // mounted and why this is counted rather than merely found.
 ck("it is mounted in BOTH of GolszApp's render branches",
    (APP.match(/<DailyCheckIn /g) || []).length, 2);
-ck("...behind its phase flag", /const askCheckin = REDESIGN_CHECKIN && shouldAskCheckin\(\{/.test(APP), true);
-ck("the flag exists", /const REDESIGN_CHECKIN = (true|false);/.test(APP), true);
+ck("...and it is reached unconditionally", /const askCheckin = shouldAskCheckin\(\{/.test(APP), true);
+// The phase flag it used to sit behind was deleted once the redesign was
+// committed to. Asserted as a declaration, not a bare name, because the source
+// still DESCRIBES the flags in a comment and a loose match would read that.
+ck("...not behind a phase flag any more", /const REDESIGN_[A-Z_]+ =/.test(APP), false);
 
 // It renders inside GolszApp, so it must NOT carry its own <style>{CSS}</style>
 ck("it does not re-inject the stylesheet", /<style>\{CSS\}<\/style>/.test(CI), false);

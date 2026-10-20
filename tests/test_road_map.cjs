@@ -80,7 +80,7 @@ ck("...and two of them keep list order",
 
 /* ---------- the road is a view, not a mutation ---------- */
 
-const road = grab("function RoadMap({ milestones, stages, currentStageId, athlete, goalText, resting, lang, t,");
+const road = grab("function RoadMap({ milestones, stages, currentStageId, athlete, goalText, pathwayType, resting, lang, t,");
 ck("RoadMap exists", road.length > 0, true);
 // .slice() before every .sort(). Array position is semantic here - moveMilestone
 // swaps by index - so sorting the prop in place would silently re-order the
@@ -97,7 +97,7 @@ ck("the current stop is the first undone, not a second rule",
 
 ck("ticking goes through PathwayPlan's own toggleMilestone",
    /onToggle=\{\(id\) => \{ toggleMilestone\(id\); setOpenStop\(null\); \}\}/.test(APP), true);
-ck("a signpost opens the stage editor PathwayMap opened",
+ck("a signpost opens the stage editor the old map opened",
    /onSignpost=\{\(id\) => \{ setEditingGoal\(false\); setStageDraft\(stageLabelFor\(id\)\); setPendingStage\(null\); setEditingStage\(id\); \}\}/.test(APP), true);
 // A date the athlete sets must become THEIRS, or canCallLate keeps treating
 // it as Scout's guess and never calls it late however far it slips.
@@ -120,11 +120,15 @@ ck("...so resting and Scout-suggested dates are handled once, not again here",
 
 /* ---------- one map, not two ---------- */
 
-ck("the flag picks the road or PathwayMap, never both",
-   /\{REDESIGN_ROAD \? \(\n\s*<RoadMap|REDESIGN_ROAD && openStop \? \(/.test(APP), true);
-ck("PathwayMap still exists, with its props",
-   /function PathwayMap\(\{[^}]*stages: stagesProp/.test(APP), true);
-ck("...and still takes the stated stage id", /function PathwayMap\(\{[^}]*\bcurrentStageId\b/.test(APP), true);
+// PathwayMap is GONE, not switched off. It drew the stages as a second
+// vertical route above this one, and the phase flag that chose between them
+// was deleted with it once the redesign was committed to. There is one map.
+ck("the stop or the road, and nothing else",
+   /\{openStop \? \(/.test(APP), true);
+ck("the map it replaced was deleted, not left unreachable",
+   /function PathwayMap\(/.test(APP), false);
+ck("...and the road took over its props",
+   /function RoadMap\(\{ milestones, stages, currentStageId,/.test(APP), true);
 
 /* ---------- the stop ---------- */
 

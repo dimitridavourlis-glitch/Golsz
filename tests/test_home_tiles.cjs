@@ -29,10 +29,12 @@ const grab = (sig) => {
 
 /* ---------- the branch exists and is gated ---------- */
 
-const at = APP.indexOf('if (REDESIGN_HOME_TILES && view === "tiles") {');
-ck("the tile Home is behind its phase flag", at > 0, true);
+const at = APP.indexOf('if (view === "tiles") {');
+ck("the tile Home is the branch HomeTab takes", at > 0, true);
 const TILES = at > 0 ? APP.slice(at, APP.indexOf('\n  return (\n    <div className="gz-home"', at)) : "";
-ck("the flag exists", /const REDESIGN_HOME_TILES = (true|false);/.test(APP), true);
+// Declaration, not a bare name: the source still describes the deleted flags
+// in a comment, which a loose match would read as the flag surviving.
+ck("...and not behind a phase flag any more", /const REDESIGN_[A-Z_]+ =/.test(APP), false);
 
 /* ---------- nothing was deleted ---------- */
 
@@ -40,8 +42,8 @@ ck("the flag exists", /const REDESIGN_HOME_TILES = (true|false);/.test(APP), tru
 ck("the Today tile opens the screen Home used to be", /act: \(\) => setView\("today"\)/.test(TILES), true);
 ck("...and there is a way back", /onClick=\{\(\) => setView\("tiles"\)\}/.test(APP), true);
 // The back row must not render when the flag is off, or it leads nowhere.
-ck("...which is itself behind the flag",
-   /\{REDESIGN_HOME_TILES && view === "today" && \(/.test(APP), true);
+ck("...and the back row renders only on that screen",
+   /\{view === "today" && \(/.test(APP), true);
 // The old body is still one `return (` in HomeTab, not a copy.
 ck("the old Home body was not duplicated",
    (APP.match(/<div className="gz-home" style=\{\{ padding: "8px 12px 20px" \}\}>/g) || []).length, 1);

@@ -3528,14 +3528,6 @@ const SCHOOL_LEVELS = ["High School", "University", "Other"];
 // links, so this stranded nobody.
 const PARENT_ACCOUNTS_ENABLED = false;
 
-// REDESIGN SWITCHES. The 16 Oct redesign ships as four separate phases, each
-// behind its own flag so a phase can be merged without being shown to anyone,
-// and turned off again without a revert. With a flag off the old screen
-// renders byte-for-byte as it does today - the new code is simply not reached.
-//
-// A flag is flipped in the SAME pull request that builds its phase, never
-// ahead of it: a flag that is on before its screen is finished is not a
-// switch, it is a half-built screen shipped to production.
 // The only section ids a deep link may name. Every one of these must exist as
 // an anchor on the page it belongs to, which test_home_tiles asserts both
 // ways - an id here with no anchor is a link to nowhere, and an anchor with
@@ -3587,10 +3579,6 @@ function useFocusSection(section, nonce, onDone) {
   }, [section, nonce]);
 }
 
-const REDESIGN_CHECKIN = true;   // Phase 1, shipped.
-const REDESIGN_HOME_TILES = true;  // Phase 2, shipped.
-const REDESIGN_ROAD = true;       // Phase 3, shipped.
-const REDESIGN_SCOUT = true;      // Phase 4, shipped.
 // A PLAIN LITERAL ON PURPOSE. test_enum_parity reads this list by regex and
 // checks every value against the profiles.occupation CHECK constraint — the
 // guard that caught "Parent" being offered here while the constraint rejected
@@ -6183,8 +6171,6 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const [editing, setEditing] = useState(false);
   const [following, setFollowing] = useState(false);
   const [followedByThem, setFollowedByThem] = useState(false);
-  const [followers, setFollowers] = useState(null);
-  const [followingList, setFollowingList] = useState(null);
   // Icon+count summary strip (Master UX/UI redesign) — Highlights/Timeline
   // come straight off the athletes.* row already fetched below; Benchmarks is
   // a separate table, so this one count-only query (own profile only, never
@@ -6305,7 +6291,6 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       // selfId is whose Passport this actually IS — the child's when a parent
       // is managing, the signed-in user's otherwise.
       const selfId = manageMode && viewUserId ? viewUserId : user.id;
-      const targetId = other ? viewUserId : selfId;
       if (other) {
         // profiles has no public-read policy (dob is sensitive), so the
         // viewed person's name comes from the public_profile_names view —
@@ -6333,21 +6318,6 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           .select("id", { count: "exact", head: true }).eq("user_id", selfId);
         setBenchmarkCount(bCount || 0);
       }
-
-      const [{ data: followerRows }, { data: followingRows }] = await Promise.all([
-        sb.from("follows").select("follower_id").eq("followed_id", targetId),
-        sb.from("follows").select("followed_id").eq("follower_id", targetId),
-      ]);
-      const followerIds = (followerRows || []).map((r) => r.follower_id);
-      const followingIds = (followingRows || []).map((r) => r.followed_id);
-      const allIds = [...new Set([...followerIds, ...followingIds])];
-      let nameById = {};
-      if (allIds.length) {
-        const { data: names } = await sb.from("public_profile_names").select("id, full_name").in("id", allIds);
-        nameById = Object.fromEntries((names || []).map((r) => [r.id, r.full_name]));
-      }
-      setFollowers(followerIds.map((id) => ({ id, name: nameById[id] || "GOLSZ User" })));
-      setFollowingList(followingIds.map((id) => ({ id, name: nameById[id] || "GOLSZ User" })));
     } catch (e) { console.error("GOLSZ passport load error:", e); }
     finally { setLoaded(true); }
   }
@@ -6753,8 +6723,19 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         <div style={{ fontSize: 13.5, lineHeight: 1.55, color: C.body }}>{p.bio}</div>
       </div>
 
-      {/* Following/Followers (FollowListCard) are launch-scoped off
-          Passport for now — untouched, just not rendered here. */}
+      {/* FOLLOWING/FOLLOWERS ARE LAUNCH-SCOPED OFF PASSPORT, and as of
+          2026-10-21 nothing fetches them either.
+
+          FollowListCard below is intact but is not rendered anywhere. It was
+          still being FED: every passport open ran two follows selects plus a
+          public_profile_names lookup for the union of both id lists, awaited
+          in series after the profile load, into two useState values no JSX
+          read. Three round trips and a name join, on the critical path of a
+          screen that never showed any of it.
+
+          To bring the card back, render it AND restore the fetch - it needs
+          followers/following name lists, which no longer exist in this
+          component. Do it inside the card, lazily, not in this load(). */}
 
       {/* media */}
       <div id="gz-highlights" style={{ scrollMarginTop: 72 }}>
@@ -9153,7 +9134,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       const { error } = await sb.from("outreach_targets").insert(rows);
       if (error) throw error;
       setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedTargets: null, targetsAdded: true, actionError: null } : msg)));
-      if (REDESIGN_SCOUT) setAddedScreen({ kind: "schools", count: (targets || []).length });
+      setAddedScreen({ kind: "schools", count: (targets || []).length });
     } catch (e) {
       console.error("GOLSZ add suggested targets error:", e);
       setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, actionError: t("action_add_failed") } : msg)));
@@ -9263,12 +9244,10 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
         current_stage_id: stagesReplaced ? remap.currentStageId : ((base && base.current_stage_id) || null) });
       syncActions(sb);
       setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, suggestedPathway: null, pathwayAdded: true, actionError: null } : msg)));
-      if (REDESIGN_SCOUT) {
-        const nx = nextMilestone(remap.milestones);
-        setAddedScreen({ kind: "road", count: incoming.length,
-          step: incoming.length > 1 ? (nx && nx.label) : (incoming[0] && incoming[0].label),
-          day: incoming.length === 1 && incoming[0] ? incoming[0].due : null });
-      }
+      const nx = nextMilestone(remap.milestones);
+      setAddedScreen({ kind: "road", count: incoming.length,
+        step: incoming.length > 1 ? (nx && nx.label) : (incoming[0] && incoming[0].label),
+        day: incoming.length === 1 && incoming[0] ? incoming[0].due : null });
     } catch (e) {
       console.error("GOLSZ add suggested pathway error:", e);
       setMsgs((m) => m.map((msg, i) => (i === msgIndex ? { ...msg, actionError: t("action_add_failed") } : msg)));
@@ -9333,7 +9312,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   // chip there spent one of the day's metered questions on a message they
   // could not see the answer to, because the receipt was still covering the
   // conversation. Out-of-questions had the same shape handled; this did not.
-  const composerShut = REDESIGN_SCOUT && (outOfQuestions || addedScreen);
+  const composerShut = !!(outOfQuestions || addedScreen);
   const isPlayerChat = !profile.occupation || profile.occupation === "Player";
   // WHAT TO SAY BACK TO AN OFFER is not what to say back to an answer. When
   // Scout's last message carried an action card, the useful replies are about
@@ -9344,9 +9323,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
     && (lastMsg.suggestedPathway || lastMsg.suggestedTargets || lastMsg.suggestedDevItems || lastMsg.draftedEmail));
   const REPLY_AFTER_CARD = [t("scout_reply_done"), t("scout_reply_hard"), t("scout_reply_else")];
   const CHIPS = chipsFor(t, isPlayerChat);
-  const SHOWN_CHIPS = REDESIGN_SCOUT
-    ? (lastHasCard ? REPLY_AFTER_CARD : CHIPS.slice(0, 3))
-    : CHIPS;
+  const SHOWN_CHIPS = lastHasCard ? REPLY_AFTER_CARD : CHIPS.slice(0, 3);
   // Topic rows (Master UX/UI redesign — "Scout should be visually the
   // CLEANEST section") replace the old 2x2 icon-chip grid for the very
   // first empty state only; the horizontal scrolling CHIPS row further
@@ -9368,19 +9345,15 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
           it says something true. */}
       <div style={{ padding: "9px 14px", borderBottom: `1px solid ${C.line}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          {REDESIGN_SCOUT && msgs && msgs.length > 1 ? (
+          {msgs && msgs.length > 1 ? (
             <button onClick={newChat} aria-label={t("scout_new_chat")} style={{ background: "none", border: "none",
               color: C.lime, cursor: "pointer", padding: 0, display: "flex", flexShrink: 0 }}>
               <ChevronLeft size={22} />
             </button>
           ) : null}
-          {REDESIGN_SCOUT ? <ScoutFace size={40} /> : (
-          <div style={{ width: 26, height: 26, borderRadius: 99, border: `1.5px solid ${C.lime}`, background: C.limeWash, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Radar size={13} color={C.lime} />
-          </div>
-          )}
-          <span style={{ fontWeight: 800, letterSpacing: REDESIGN_SCOUT ? "0" : "0.1em", fontSize: REDESIGN_SCOUT ? 20 : 11.5, flexShrink: 0 }}>
-            {REDESIGN_SCOUT ? t("scout_title") : t("scout_header")}
+          <ScoutFace size={40} />
+          <span style={{ fontWeight: 800, letterSpacing: "0", fontSize: 20, flexShrink: 0 }}>
+            {t("scout_title")}
           </span>
           {busy && (
             <svg viewBox="0 0 240 28" width="64" height="13" aria-hidden="true" style={{ flexShrink: 0 }}>
@@ -9391,20 +9364,13 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
             </svg>
           )}
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            {REDESIGN_SCOUT ? <ScoutBalls usage={scoutUsage} t={t} /> : (
-            <span style={{ fontSize: 9, color: C.slate, fontFamily: "'Space Mono', monospace", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {scoutUsage ? `${scoutUsage.remaining} ${t("scout_questions_left")}` : t("scout_live_agent")}
-            </span>
-            )}
+            <ScoutBalls usage={scoutUsage} t={t} />
             <button onClick={openHistory} title={t("scout_history_title")} style={iconBtn(showHistory ? C.lime : C.slate)}><History size={15} /></button>
-            {REDESIGN_SCOUT ? null : (
-            <button onClick={newChat} title={t("scout_new_chat")} style={iconBtn(C.lime)}><Plus size={16} /></button>
-            )}
           </span>
         </div>
       </div>
 
-      {REDESIGN_SCOUT && addedScreen ? (
+      {addedScreen ? (
         <ScoutAdded kind={addedScreen.kind} step={addedScreen.step} day={addedScreen.day}
           count={addedScreen.count}
           onSee={() => { setAddedScreen(null); onNavigate(addedScreen.kind === "road" ? "targets" : "targets", null, null, null, addedScreen.kind === "road" ? null : "gz-schools"); }}
@@ -9447,7 +9413,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       ) : (
         <div style={{ flex: 1, overflowY: "auto", padding: "14px 12px 6px" }}>
           {!loaded && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
-          {msgs && !(REDESIGN_SCOUT && msgs.length <= 1) && msgs.map((m, i) => (
+          {msgs && msgs.length > 1 && msgs.map((m, i) => (
             <div key={i} className="msg" style={m.role === "user" ? bubbleUser : bubbleAgent}>
               {m.photo && <img src={m.photo} alt={t("alt_scout_photo")} style={{ display: "block", maxWidth: "100%", borderRadius: 10, marginBottom: m.text ? 6 : 0 }} />}
               {m.text && <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>}
@@ -9467,43 +9433,21 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
                   <Lock size={12} /> {t("scout_upgrade_cta")}
                 </button>
               )}
-              {REDESIGN_SCOUT && m.suggestedTargets && m.suggestedTargets.length > 0 && planKnown(plan) && (
+              {m.suggestedTargets && m.suggestedTargets.length > 0 && planKnown(plan) && (
                 <ScoutActionCard icon={GraduationCap}
                   title={t("scout_card_schools").replace("{n}", m.suggestedTargets.length)}
                   sub={m.suggestedTargets.slice(0, 3).map((x) => x && x.name).filter(Boolean).join(", ")}
                   cta={t("scout_card_add_schools")} onTap={() => addSuggestedTargets(i, m.suggestedTargets)}
                   locked={!featureUnlocked(plan, "targets")} lockPlan="Basic" onUpgrade={onUpgrade} t={t} />
               )}
-              {!REDESIGN_SCOUT && m.suggestedTargets && m.suggestedTargets.length > 0 && (
-                !planKnown(plan) ? null : featureUnlocked(plan, "targets") ? (
-                  <button onClick={() => addSuggestedTargets(i, m.suggestedTargets)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-                    <Target size={13} /> {t("scout_build_target_list").replace("{n}", m.suggestedTargets.length)}
-                  </button>
-                ) : (
-                  <button onClick={onUpgrade} style={{ marginTop: 8, background: C.turf, color: C.slate, border: `1px dashed ${C.line2}`, borderRadius: 9, padding: "8px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-                    <Lock size={12} /> {t("scout_build_target_list_locked")}
-                  </button>
-                )
-              )}
 
               {m.targetsAdded && <div style={{ marginTop: 8, fontSize: 11.5, color: C.lime }}>{t("scout_targets_added")}</div>}
-              {REDESIGN_SCOUT && m.suggestedDevItems && m.suggestedDevItems.length > 0 && planKnown(plan) && (
+              {m.suggestedDevItems && m.suggestedDevItems.length > 0 && planKnown(plan) && (
                 <ScoutActionCard icon={Target}
                   title={t("scout_card_train").replace("{n}", m.suggestedDevItems.length)}
                   sub={m.suggestedDevItems.slice(0, 3).map((x) => (typeof x === "string" ? x : x && x.goal)).filter(Boolean).join(", ")}
                   cta={t("scout_card_add_train")} onTap={() => addSuggestedDevItems(i, m.suggestedDevItems)}
                   locked={!featureUnlocked(plan, "development_plan")} lockPlan="Pro" onUpgrade={onUpgrade} t={t} />
-              )}
-              {!REDESIGN_SCOUT && m.suggestedDevItems && m.suggestedDevItems.length > 0 && (
-                !planKnown(plan) ? null : featureUnlocked(plan, "development_plan") ? (
-                  <button onClick={() => addSuggestedDevItems(i, m.suggestedDevItems)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-                    <Radar size={13} /> {t("scout_add_dev_items").replace("{n}", m.suggestedDevItems.length)}
-                  </button>
-                ) : (
-                  <button onClick={onUpgrade} style={{ marginTop: 8, background: C.turf, color: C.slate, border: `1px dashed ${C.line2}`, borderRadius: 9, padding: "8px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-                    <Lock size={12} /> {t("scout_add_dev_items_locked")}
-                  </button>
-                )
               )}
 
               {m.devItemsAdded && <div style={{ marginTop: 8, fontSize: 11.5, color: C.lime }}>{t("scout_dev_items_added")}</div>}
@@ -9641,7 +9585,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
                       </div>
                     );
                   })() : (
-                  REDESIGN_SCOUT ? (() => {
+                  (() => {
                     // Same gate, computed in the scope that uses it.
                     // addSuggestedPathway writes pathway_type UNCONDITIONALLY in
                     // both modes, and api/scout.js guarantees every proposal
@@ -9674,11 +9618,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
                     onDanger={cur.length ? (() => setMsgs((ms) => ms.map((x, xi) => (xi === i ? { ...x, pathwayConfirm: "replace" } : x)))) : null}
                     t={t} />
                     );
-                  })() : (
-                  <button onClick={() => setMsgs((ms) => ms.map((x, xi) => (xi === i ? { ...x, pathwayConfirm: "choose" } : x)))} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", minHeight: 44, fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-                    <Compass size={13} /> {t("scout_build_pathway")}
-                  </button>
-                  )
+                  })()
                   )
                 ) : (
                   <button onClick={onUpgrade} style={{ marginTop: 8, background: C.turf, color: C.slate, border: `1px dashed ${C.line2}`, borderRadius: 9, padding: "8px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
@@ -9702,23 +9642,12 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
               {/* P1-8: a failed one-tap action is visible, on the message it
                   belongs to, with the buttons still there to retry. */}
               {m.actionError && <div style={{ marginTop: 8, fontSize: 11.5, color: C.amber }}>{m.actionError}</div>}
-              {REDESIGN_SCOUT && m.draftedEmail && savingEmailFor !== i && planKnown(plan) && (
+              {m.draftedEmail && savingEmailFor !== i && planKnown(plan) && (
                 <ScoutActionCard icon={Mail}
                   title={String(m.draftedEmail).split("\n").map((x) => x.trim()).filter(Boolean)[0] || t("scout_save_email")}
                   sub={String(m.draftedEmail).split("\n").map((x) => x.trim()).filter(Boolean)[1] || null}
                   cta={t("scout_card_save_email")} onTap={() => openSaveEmailPicker(i)}
                   locked={!featureUnlocked(plan, "targets")} lockPlan="Basic" onUpgrade={onUpgrade} t={t} />
-              )}
-              {!REDESIGN_SCOUT && m.draftedEmail && savingEmailFor !== i && (
-                !planKnown(plan) ? null : featureUnlocked(plan, "targets") ? (
-                  <button onClick={() => openSaveEmailPicker(i)} style={{ marginTop: 8, background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "8px 12px", fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-                    <Mail size={13} /> {t("scout_save_email")}
-                  </button>
-                ) : (
-                  <button onClick={onUpgrade} style={{ marginTop: 8, background: C.turf, color: C.slate, border: `1px dashed ${C.line2}`, borderRadius: 9, padding: "8px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
-                    <Lock size={12} /> {t("scout_save_email_locked")}
-                  </button>
-                )
               )}
               {m.draftedEmail && savingEmailFor === i && (
                 <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -9732,7 +9661,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
                   {/* Who it is going to, named only once it is known. The
                       card above cannot say it: the recipient is chosen HERE,
                       so a name on the card would have been a guess. */}
-                  {REDESIGN_SCOUT && selectedEmailTarget ? (
+                  {selectedEmailTarget ? (
                     <div style={{ width: "100%", fontSize: 14, color: C.chalkSoft, marginTop: 2 }}>
                       {t("scout_card_email").replace("{name}",
                         ((emailTargets || []).find((tg) => String(tg.id) === String(selectedEmailTarget)) || {}).name || "")}
@@ -9761,24 +9690,9 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
               )}
             </div>
           ))}
-          {loaded && !pending && msgs && msgs.length <= 1 && REDESIGN_SCOUT && !outOfQuestions && (
+          {loaded && !pending && msgs && msgs.length <= 1 && !outOfQuestions && (
             <ScoutStart name={profile.name} isPlayer={isPlayerChat} hasSport={!!profile.sport}
               onPick={(label) => send(label)} t={t} />
-          )}
-          {loaded && !pending && msgs && msgs.length <= 1 && !REDESIGN_SCOUT && (
-            <div style={{ marginTop: 6 }}>
-              {TOPICS.map((tp) => (
-                <button key={tp.label} onClick={() => send(tp.prompt)} style={{
-                  display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left",
-                  background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "12px 14px",
-                  marginBottom: 8, cursor: "pointer", fontFamily: "inherit", color: C.chalk,
-                }}>
-                  <tp.Icon size={16} color={C.lime} style={{ flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>{tp.label}</span>
-                  <ChevronRight size={15} color={C.slate} style={{ flexShrink: 0 }} />
-                </button>
-              ))}
-            </div>
           )}
           {busy && <div style={bubbleAgent}><div className="running"><span /><span /><span /></div></div>}
           <div ref={endRef} />
@@ -9788,7 +9702,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       {!showHistory && (
         <>
           {msgs && msgs.length > 1 && !composerShut && (
-            <div style={{ display: "flex", gap: 8, flexWrap: REDESIGN_SCOUT ? "wrap" : "nowrap", overflowX: REDESIGN_SCOUT ? "visible" : "auto", padding: "6px 12px", scrollbarWidth: "none" }} className="noscroll">
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", overflowX: "visible", padding: "6px 12px", scrollbarWidth: "none" }} className="noscroll">
               {SHOWN_CHIPS.map((q) => <button key={q} onClick={() => send(q)} disabled={pending || !loaded} style={{ flex: "0 0 auto", background: "transparent", border: `1px solid ${C.line2}`, color: C.lime, borderRadius: 999, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>{q}</button>)}
             </div>
           )}
@@ -9805,7 +9719,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
               <span style={{ fontSize: 11, color: C.slate }}>{t("scout_photo_attached")}</span>
             </div>
           )}
-          {REDESIGN_SCOUT && addedScreen ? null : REDESIGN_SCOUT && outOfQuestions ? (
+          {addedScreen ? null : outOfQuestions ? (
             <ScoutLimitCard kind={outOfQuestions} usage={scoutUsage} plan={plan} onUpgrade={onUpgrade} t={t} />
           ) : (
           <div style={{ display: "flex", gap: 8, padding: "10px 12px 14px", borderTop: `1px solid ${C.line}` }}>
@@ -10239,7 +10153,7 @@ const READINESS_DIMENSIONS = ["profile_quality", "verification", "performance", 
 // HomeTab) — purely presentational, same 4 real signals as before.
 const READINESS_STATUS_ICON = { profile: User, film: Video, performance: Flame, pathway: Compass };
 // Compact "YOUR PATH" strip (Master UX/UI redesign §5) — a snapshot, not
-// the full branching map (that lives on the Plan tab's PathwayMap, §8/§9).
+// the full branching map (that lives on the Plan tab's road, §8/§9).
 // Built entirely from data Home already fetches: no new schema. "Current"
 // prefers the athlete's own club (a real, stated fact) over recruiting
 // status (a category) over a plain "Developing" fallback so it never
@@ -10536,7 +10450,7 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
   return (
     <div style={{ padding: "6px 4px 14px" }}>
       {/* ONE OBJECT, ONE PICTURE. This used to render YOU -> current club ->
-          goal while PathwayMap on Plan rendered the sport's real stage
+          goal while Plan's map rendered the sport's real stage
           sequence. Two drawings of the same thing, so an athlete comparing the
           two screens saw a contradiction that did not exist in the data. Same
           stages, same source (SPORT_PATHWAY_STAGES), same current-stage
@@ -10545,7 +10459,7 @@ function PathwayStrip({ athlete, pathwayRow, t, onNavigate }) {
           This was a row of text pills while Plan drew circular nodes with
           icons, so the two screens rendered one object two ways and an
           athlete had to work out that they were the same pathway. It now
-          uses PathNode — literally the component PathwayMap uses — with the
+          uses PathNode — the node component Plan's map used — with the
           same stageIcon() sequence, so the pictures match. What stays
           different is only what Home's job requires: no rise, no tap-to-edit,
           smaller nodes. */}
@@ -11346,7 +11260,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
      true: todaySteps, clipCount, targetRows, recentBenchmarks, lastOpen and
      goalText are all computed above for the old Home, and `resting` arrives
      as a prop from GolszApp's existing profiles read. */
-  if (REDESIGN_HOME_TILES && view === "tiles") {
+  if (view === "tiles") {
     const openedDays = lastOpen ? dayAgo(new Date(lastOpen).toISOString()) : null;
     const agoText = openedDays === null ? null
       : openedDays === 0 ? t("home_ago_today") : t("home_ago_days").replace("{n}", openedDays);
@@ -11458,7 +11372,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
       {/* The way back to the tiles. Rendered only when the tiles exist to go
           back TO - with the flag off this branch is the whole of Home and a
           back row would lead nowhere. */}
-      {REDESIGN_HOME_TILES && view === "today" && (
+      {view === "today" && (
         <button onClick={() => setView("tiles")} style={{ background: "none", border: "none",
           fontFamily: "inherit", cursor: "pointer", color: C.lime, fontSize: 16, fontWeight: 700,
           display: "flex", alignItems: "center", gap: 5, padding: "4px 0 12px" }}>
@@ -13158,7 +13072,7 @@ function currentStageIndex(athlete, stageCount) {
 // SPORT's sequence. It cannot know what a self-written stage means, so when
 // the athlete has said where they are, their answer wins.
 //
-// That rule was written twice on Home and not at all in PathwayMap — which
+// That rule was written twice on Home and not at all in Plan's map — which
 // is why "Set current" moved the marker on Home and did nothing to the map on
 // Plan, the screen the button is on. Three callers, one function.
 function resolveStageIndex(stages, currentStageId, athlete) {
@@ -13225,194 +13139,6 @@ function nextStepStageLabel(milestone, athlete, pathwayRow, t) {
   const st = athleteStages(athlete, pathwayRow).find((x) => x.id === milestone.stage);
   return st ? (stageLabel(st, t) || null) : null;
 }
-function PathwayMap({ sport, athlete, pathwayType, t, onEditGoal, editing, stages: stagesProp, currentStageId, onNodeTap, onDraftWithScout, drafting, stepCounts, goalText }) {
-  // Stages arrive resolved from the owner (PathwayPlan). This component does
-  // not read SPORT_PATHWAY_STAGES itself — see athleteStages above.
-  const stages = stagesProp && stagesProp.length ? stagesProp : athleteStages(athlete, null);
-  const curIdx = resolveStageIndex(stages, currentStageId, athlete);
-  const hasGoal = !!pathwayType;
-  // Per-node sub-label: real detail under each stage where GOLSZ actually
-  // knows it (the athlete's own club at their current stage, their grad
-  // year at the goal) — blank rather than invented anywhere else.
-  const gradYear = athlete && athlete.grad_year;
-  const subFor = (i) => {
-    if (i === curIdx && athlete && athlete.club_name) return athlete.club_name;
-    if (i === curIdx) return t("home_path_now");
-    return "";
-  };
-  const total = stages.length;
-  return (
-    <div style={{ ...card, position: "relative", overflow: "hidden" }}>
-      {/* The label lives inside the card it names, like every other card on
-          Home and Plan. Before this, the map was an unlabelled box: an
-          athlete had to infer from the icons what they were looking at. */}
-      <Eyebrow style={{ position: "relative", marginBottom: 4 }}>{t("pathway_plan_title")}</Eyebrow>
-      {/* WHICH END IS WHICH. This rail runs top = furthest future, bottom =
-          where you are now, while every other list on this page and on Home
-          runs top = soonest. Four independent readers read it backwards, and
-          the "you are here" node was marked only by being gold — a colour this
-          page also uses for overdue, for today and for every button.
-          So: the goal is named above the top of the rail, and the current node
-          is tagged NOW. Two labels, no layout change, no new colour.
-          The goal is stated here rather than tagged onto the top node: that
-          node holds the route TYPE ("Professional pathway") and the goal is an
-          outcome ("Scholarship"). Tagging the node GOAL would have printed the
-          contradiction in bold instead of resolving it. */}
-      {goalText && (
-        <div style={{ fontSize: 11, fontWeight: 700, color: C.slate, marginBottom: 2, overflowWrap: "anywhere" }}>
-          {t("pathway_rail_goal")}: <span style={{ color: C.chalk }}>{goalText}</span>
-        </div>
-      )}
-      {/* THE STEM. Replaces the horizontal ascending strip on 2026-09-09.
-          A pathway read left-to-right as icons on a diagonal was a diagram of
-          a process; this reads as something an athlete is growing. Same
-          stages, same order, same current index, same onNodeTap into the same
-          editor — only the drawing changed.
-          Deliberately NOT leaves: a leaf per cleared stage made the stem look
-          like a houseplant rather than a route. A cleared stage is the node
-          itself, filled, inside a quiet ring.
-          The stem is drawn segment by segment so grown and ungrown differ
-          honestly — solid and thick behind the athlete, faint and dashed
-          above. GOLSZ does not draw a future as though it has happened. */}
-      {(() => {
-        const all = stages.concat([{ id: "__goal__", label: hasGoal ? t("pathway_type_" + pathwayType) : t("home_path_goal_placeholder"), goal: true }]);
-        const n = all.length;
-        const GAP = 64, TOP = 18;
-        const H = TOP + (n - 1) * GAP + 22;
-        // Bottom is the first stage, top is the goal: it grows upward.
-        const yOf = (i) => H - 18 - i * GAP;
-        const xOf = (i) => 28 + (i % 2 ? 3 : -3);
-        return (
-          // maxWidth, not full bleed: on a wide screen the stem sat in a 56px
-          // column at the far left of a very wide card with two-thirds of the
-          // row empty beside it. Capping the block keeps stem and labels
-          // together as one object instead of stranding them at one edge.
-          <div className="gz-pathway" style={{ position: "relative", display: "flex", gap: 16, alignItems: "stretch", marginTop: 8, maxWidth: 460 }}>
-            <svg width="60" height={H} viewBox={`0 0 60 ${H}`} style={{ flex: "0 0 60px", overflow: "visible" }} aria-hidden="true">
-              {all.map((st, i) => {
-                if (i === 0) return null;
-                const a = { x: xOf(i - 1), y: yOf(i - 1) }, b = { x: xOf(i), y: yOf(i) };
-                const grown = i <= curIdx;
-                const mid = (a.y + b.y) / 2;
-                return (
-                  <path key={"seg" + i}
-                    d={`M${a.x} ${a.y} C${a.x} ${mid} ${b.x} ${mid} ${b.x} ${b.y}`}
-                    fill="none" strokeLinecap="round"
-                    stroke={grown ? C.lime : C.line2}
-                    strokeWidth={grown ? 4 : 2.6}
-                    strokeDasharray={grown ? undefined : "7 8"} />
-                );
-              })}
-              {/* a small root, so the pathway is planted rather than floating */}
-              <path d={`M${xOf(0) - 10} ${yOf(0) + 9} Q${xOf(0)} ${yOf(0) + 1} ${xOf(0) + 10} ${yOf(0) + 9}`}
-                fill="none" stroke={C.line2} strokeWidth="1.6" strokeLinecap="round" />
-              {all.map((st, i) => {
-                const done = i < curIdx, cur = i === curIdx;
-                return (
-                  <g key={"n" + st.id}>
-                    {done && <circle cx={xOf(i)} cy={yOf(i)} r="9" fill="none" stroke={C.amberBorder || C.line2} strokeWidth="1.2" />}
-                    {cur && <circle cx={xOf(i)} cy={yOf(i)} r="12" fill="none" stroke={C.limeBorder || C.line2} strokeWidth="1.6" />}
-                    <circle cx={xOf(i)} cy={yOf(i)} r={cur ? 7 : done ? 5.5 : 4.5}
-                      fill={done ? C.amber : cur ? C.lime : C.pitch}
-                      stroke={done || cur ? "none" : C.line2}
-                      strokeWidth={done || cur ? 0 : 1.8} />
-                  </g>
-                );
-              })}
-            </svg>
-            <div style={{ flex: 1, minWidth: 0, position: "relative", height: H }}>
-              {all.map((st, i) => {
-                const done = i < curIdx, cur = i === curIdx;
-                const label = st.goal ? st.label : stageLabel(st, t);
-                // A section with steps filed under it says so. Scout can
-                // return a dozen steps at once, and a flat list of twelve
-                // leaves the athlete to work out which part of their route
-                // each one belongs to — the map is where that answer lives.
-                const cnt = stepCounts && stepCounts[st.id];
-                const countText = (cnt && cnt.total) ? t("pathway_steps_filed").replace("{d}", cnt.done).replace("{n}", cnt.total) : "";
-                const sub = st.goal ? (hasGoal && gradYear ? String(gradYear) : "") : [subFor(i), countText].filter(Boolean).join(" · ");
-                const tappable = onNodeTap && !st.goal;
-                return (
-                  <div key={"l" + st.id}
-                    onClick={tappable ? () => onNodeTap(st.id) : undefined}
-                    role={tappable ? "button" : undefined}
-                    tabIndex={tappable ? 0 : undefined}
-                    onKeyDown={tappable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onNodeTap(st.id); } } : undefined}
-                    style={{ position: "absolute", left: 0, right: 0, top: yOf(i) - 18, minHeight: 36,
-                      // CAPPED AT THE PITCH. The nodes sit on a fixed 64px
-                      // rhythm but the labels had no height limit, so a long
-                      // stage name — or a short one plus the YOU ARE HERE badge
-                      // wrapping to its own row — grew past its slot and
-                      // overlapped the node below it on a narrow phone. The
-                      // rail is the one picture on this page; two names on top
-                      // of each other is the fastest way to make it unreadable.
-                      maxHeight: GAP - 6, overflow: "hidden",
-                      display: "flex", flexDirection: "column", justifyContent: "center",
-                      cursor: tappable ? "pointer" : "default" }}>
-                    {/* A NODE HAS ALWAYS BEEN TAPPABLE — onNodeTap opens the
-                        stage editor, which can rename, reorder, insert and
-                        DELETE. Nothing on screen said so. Four readers of this
-                        page concluded the junk stage an athlete had typed by
-                        mistake was permanent, and stopped trusting the rest of
-                        the picture because of it. The control existed; the
-                        affordance did not. One pencil, shown only on nodes
-                        that actually respond. */}
-                    <span style={{ display: "flex", alignItems: "baseline", gap: 7, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 15, fontWeight: cur ? 700 : 500, letterSpacing: "-0.01em",
-                        color: cur ? C.lime : done ? C.chalk : C.slate, overflowWrap: "anywhere",
-                        // Two lines, then an ellipsis — a hard overflow cut
-                        // slices a line of text in half, which reads as a
-                        // rendering fault rather than as truncation.
-                        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{label}</span>
-                      {tappable && (
-                        <Pencil size={11} style={{ color: C.slate, opacity: 0.55, flexShrink: 0, alignSelf: "center" }} />
-                      )}
-                      {cur && !st.goal && (
-                        <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: "0.12em", textTransform: "uppercase",
-                          color: C.pitch, background: C.lime, borderRadius: 5, padding: "2px 5px", whiteSpace: "nowrap" }}>
-                          {t("pathway_rail_now")}
-                        </span>
-                      )}
-                    </span>
-                    {sub && <span style={{ fontSize: 11.5, color: C.slate, marginTop: 2 }}>{sub}</span>}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
-      {/* The derived alt-branch node that used to sit here is gone. It came
-          from SPORT_PATHWAY_STAGES.altBranch, so EVERY Soccer athlete saw
-          "NCAA — also possible" on a screen they read as being about them,
-          with no control anywhere that could remove it. A fact about the
-          SPORT rendered as a fact about the ATHLETE. A secondary route now
-          appears only when they have stated one, which BackupPlanCard owns.
-          KEEP THIS AS A JSX COMMENT BLOCK. Written as double-slash lines it
-          is not a comment inside JSX — it is TEXT, and it rendered on the Plan
-          page in production on 2026-08-13. */}
-      {/* The edit affordance belongs to the thing it edits. It used to float
-          below the card as a 12px text link, which read as page furniture
-          rather than as this map's own control. */}
-      {onEditGoal && !editing && (
-        <button onClick={onEditGoal} style={{ ...quietBtn, marginTop: 14, position: "relative" }}>
-          <Pencil size={13} color={C.chalk} /> {t("pathway_edit_goal")}
-        </button>
-      )}
-      {/* "Let Scout draft my steps" used to sit in the Timeline card's empty
-          state, which is the wrong card: what Scout drafts is THIS map — the
-          sections of the route and the steps filed under them. It also only
-          navigated to Scout and left the athlete on an empty chat to work out
-          what to ask for. It now sends the request itself. */}
-      {onDraftWithScout && !editing && (
-        <button onClick={onDraftWithScout} disabled={drafting} style={{ ...quietBtn, marginTop: 8, position: "relative", color: C.lime, borderColor: C.limeBorder, opacity: drafting ? 0.6 : 1 }}>
-          <Radar size={13} color={C.lime} /> {drafting ? t("pathway_scout_working") : t("pathway_draft_with_scout")}
-        </button>
-      )}
-    </div>
-  );
-}
-
 // Pathway plan (migration 076) — brief §7: GOLSZ must never brand itself
 // NCAA-only, so pathway_type spans the full set the brief lists. One row
 // per athlete (not a list) — this is THE stated pathway, upserted rather
@@ -14014,11 +13740,12 @@ function RoadStop({ step, index, total, stageName, sb, uid, lang, t, resting,
 
 /* ============ THE ROAD ============
    One vertical line, read bottom-to-top: where you have been, where you are,
-   where it goes. It replaces PathwayMap when REDESIGN_ROAD is on, rather
-   than sitting above it - two vertical maps on one screen is exactly the
-   duplication this redesign exists to remove. Stages stop being their own map
-   and become signposts ON this one, and tapping a signpost opens the same
-   stage editor PathwayMap opened.
+   where it goes. It replaced PathwayMap, which drew the STAGES as their own
+   vertical route - two vertical maps on one screen was the duplication this
+   redesign existed to remove. Stages are now signposts ON this one, and
+   tapping a signpost opens the stage editor that map used to open.
+   (PathwayMap and the REDESIGN_* flags were deleted once all four phases had
+   shipped and the off-state had no test covering it.)
 
    ORDER IS NOT DECIDED HERE. It comes from compareUndone and compareDone, the
    same comparator nextMilestone sorts through, so "what do I do now" and
@@ -14027,7 +13754,7 @@ function RoadStop({ step, index, total, stageName, sb, uid, lang, t, resting,
 
    Nothing is locked. A future stop is grey but still tickable - an athlete
    who did something early should be able to say so. */
-function RoadMap({ milestones, stages, currentStageId, athlete, goalText, resting, lang, t,
+function RoadMap({ milestones, stages, currentStageId, athlete, goalText, pathwayType, resting, lang, t,
                    onOpenStop, onEditGoal, onSignpost, onNavigate, focusSection, focusNonce }) {
   const hereRef = useRef(null);
   const rows = (milestones || []);
@@ -14152,7 +13879,24 @@ function RoadMap({ milestones, stages, currentStageId, athlete, goalText, restin
             <span style={{ display: "block", fontSize: 17, fontWeight: 800, color: C.chalk }}>
               {goalText || t("road_pick_goal")}
             </span>
-            <span style={{ display: "block", fontSize: 13, color: C.slate, marginTop: 2 }}>{t("road_goal")}</span>
+            {/* THE PATHWAY CATEGORY, ONCE, HERE.
+                2026-09-13 deleted it from the goal card because it was being shown
+                twice - "Scholarship" in the card and "Professional pathway"
+                forty pixels below - and no reader could say which one the steps
+                were steps toward. It survived on PathwayMap-s rail. When the
+                Road replaced that rail the category came off the Plan page
+                entirely, so the goal read "Scholarship" with nothing saying
+                what kind of pathway it is filed under. It belongs on the node
+                that IS the destination, and nowhere else on the screen.
+
+                Gated on the row existing, not on pathwayType being set: the
+                state defaults to PATHWAY_TYPES[0], so an athlete who has saved
+                nothing would otherwise be told their pathway is NCAA. That is
+                the bug the old rail shipped - it read `hasGoal = !!pathwayType`
+                against a state that is never null. */}
+            <span style={{ display: "block", fontSize: 13, color: C.slate, marginTop: 2 }}>
+              {t("road_goal")}{goalText && pathwayType ? " · " + t("pathway_type_" + pathwayType) : ""}
+            </span>
           </span>
           {nodeCell(
             <span style={{ position: "relative", width: 52, height: 52, borderRadius: 99, background: C.card,
@@ -15143,12 +14887,10 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
           the page.
           A JSX comment cannot live in an attribute list, which is what this
           was until the parse said so. */}
-      {/* ONE VERTICAL MAP, NOT TWO. The road draws the athlete's STEPS with
-          their stages as signposts on it; PathwayMap drew the stages alone.
-          Rendering both would put two vertical routes on one screen, which is
-          the duplication this redesign exists to remove - so the flag picks
-          one. PathwayMap keeps its props and its assertions either way. */}
-      {REDESIGN_ROAD && openStop ? (
+      {/* ONE VERTICAL MAP. The road draws the athlete's STEPS with their
+          stages as signposts on it. The stage-only map it replaced is gone,
+          not flag-gated: a branch no test covers is not a rollback. */}
+      {openStop ? (
         <RoadStop
           step={milestones.find((m) => m.id === openStop) || null}
           index={roadOrder.findIndex((m) => m.id === openStop)}
@@ -15159,20 +14901,16 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
           onToggle={(id) => { toggleMilestone(id); setOpenStop(null); }}
           onSetDate={setMilestoneDate}
           onNavigate={onNavigate} />
-      ) : REDESIGN_ROAD ? (
+      ) : (
         <RoadMap milestones={milestones} stages={athleteStages(athlete, { stages: customStages })}
-          currentStageId={currentStageId} athlete={athlete} goalText={goalText} resting={resting}
+          currentStageId={currentStageId} athlete={athlete} goalText={goalText}
+          pathwayType={exists ? pathwayType : null} resting={resting}
           lang={lang} t={t}
           onOpenStop={(m) => setOpenStop(m.id)}
           onEditGoal={() => { setEditingStage(null); setEditingGoal(true); }}
           onSignpost={(id) => { setEditingGoal(false); setStageDraft(stageLabelFor(id)); setPendingStage(null); setEditingStage(id); }}
           onNavigate={onNavigate} focusSection={focusSection} focusNonce={focusNonce} />
-      ) : (
-      <PathwayMap sport={athlete && athlete.sport} athlete={athlete} pathwayType={exists ? pathwayType : null} t={t} goalText={goalText} currentStageId={currentStageId} onEditGoal={() => { setEditingStage(null); setEditingGoal((v) => !v); }} editing={editingGoal}
-        stages={athleteStages(athlete, { stages: customStages })}
-        onNodeTap={(id) => { setEditingGoal(false); setStageDraft(stageLabelFor(id)); setPendingStage(null); setEditingStage(id); }}
-        onDraftWithScout={(onNavigate && featureUnlocked(plan, "pathway_plan") && milestones.length === 0) ? (() => onNavigate("scout", null, t("pathway_scout_seed"))) : null}
-        stepCounts={stepCounts} />
+
       )}
       {editingStage && stagePanel()}
       {/* WHAT YOUR GOAL ASKS FOR. The pathway map says where the athlete is
@@ -16201,7 +15939,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
   // a parent, and what would call an injured athlete late for one render.
   const profileLoaded = occupation !== undefined;
   const resting = availabilityStatus === "out";
-  const askCheckin = REDESIGN_CHECKIN && shouldAskCheckin({
+  const askCheckin = shouldAskCheckin({
     hasSb: !!sb, profileLoaded, occupation, actingFor, mustFinishProfile,
     onboarding, stored: checkinStored, userId: selfUid, today: isoDay(new Date()),
   });
@@ -18543,7 +18281,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=48c686113314d9ce";
+    var APP_SRC = "js/app.js?v=5187e35bc9cf4821";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

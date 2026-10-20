@@ -149,24 +149,28 @@ ck("a button is a real message, metered like any other",
    /onPick=\{\(label\) => send\(label\)\}/.test(APP), true);
 ck("the first-time line shows only when the sport is unknown",
    /isPlayer && !hasSport \? \(/.test(START), true);
-ck("it shows only before the first question",
-   /msgs\.length <= 1 && REDESIGN_SCOUT/.test(APP), true);
+ck("it shows only before the first question, and not once they are spent",
+   /msgs && msgs\.length <= 1 && !outOfQuestions && \(/.test(APP), true);
 // The greeting stays in msgs (and in what is sent) but is not drawn.
 ck("the greeting bubble is hidden, not deleted",
-   /!\(REDESIGN_SCOUT && msgs\.length <= 1\) && msgs\.map/.test(APP), true);
+   /\{msgs && msgs\.length > 1 && msgs\.map\(/.test(APP), true);
 
 /* ---------- the header ---------- */
 
 ck("the avatar exists, because none did before", /function ScoutFace\(\{ size \}\)/.test(APP), true);
-ck("the back arrow is the new-chat button", /REDESIGN_SCOUT && msgs && msgs\.length > 1 \? \(/.test(APP), true);
-ck("the separate plus button is gone when the flag is on",
-   /REDESIGN_SCOUT \? null : \(\n\s*<button onClick=\{newChat\}/.test(APP), true);
+ck("the back arrow is the new-chat button", /\{msgs && msgs\.length > 1 \? \(/.test(APP), true);
+// Counted, not grepped for absence: the old header had a SECOND new-chat
+// control beside the arrow, and the redesign exists partly to remove it.
+ck("...and it is the only new-chat control on the screen",
+   (APP.match(/onClick=\{newChat\}/g) || []).length, 1);
 // The brief's header rewrite would have removed this silently. It is the one
 // indicator that says something true: a reply is actually in flight.
 ck("the in-flight heartbeat survives the rewrite", /M2 14 H52 l6 -9/.test(APP), true);
 ck("...and so do the typing dots", /className="running"/.test(APP), true);
 
-ck("the flag exists", /const REDESIGN_SCOUT = (true|false);/.test(APP), true);
+// Declaration, not a bare name: the source still describes the deleted flags
+// in a comment, which a loose match would read as the flag surviving.
+ck("none of it is behind a phase flag any more", /const REDESIGN_[A-Z_]+ =/.test(APP), false);
 
 /* ---------- one shape for every offer ---------- */
 
@@ -212,7 +216,7 @@ const addTgt = APP.slice(APP.indexOf("async function addSuggestedTargets("), APP
 ck("the schools receipt is also set only after its write",
    addTgt.indexOf("if (error) throw error;") < addTgt.indexOf("setAddedScreen"), true);
 ck("it covers the conversation, not the header or the tabs",
-   /\{REDESIGN_SCOUT && addedScreen \? \(/.test(APP), true);
+   /\{addedScreen \? \(/.test(APP), true);
 const added = APP.slice(APP.indexOf("function ScoutAdded({"), APP.indexOf("\nfunction ", APP.indexOf("function ScoutAdded({") + 10));
 ck("one step with a date reads differently from one without",
    /day\s*\n?\s*\? t\("scout_done_road_one"\)/.test(added) && /scout_done_road_one_nodate/.test(added), true);
@@ -227,7 +231,7 @@ ck("the receipt's icon follows its destination",
 ck("the card shows the email's own first line, not a guessed recipient",
    /title=\{String\(m\.draftedEmail\)\.split\("\\n"\)/.test(APP), true);
 ck("the picker names the recipient once one is chosen",
-   /REDESIGN_SCOUT && selectedEmailTarget \? \(/.test(APP), true);
+   /\{selectedEmailTarget \? \(/.test(APP), true);
 // The restyle must not have touched the save path's overwrite guard.
 ck("overwriting an existing draft still takes a second, specific tap",
    /if \(chosen && chosen\.draft_email && String\(chosen\.draft_email\)\.trim\(\) && !confirmedReplace\) \{/.test(APP), true);
@@ -235,11 +239,11 @@ ck("overwriting an existing draft still takes a second, specific tap",
 /* ---------- replies that follow an offer ---------- */
 
 ck("a card changes what the quick replies are",
-   /const SHOWN_CHIPS = REDESIGN_SCOUT\s*\n?\s*\? \(lastHasCard \? REPLY_AFTER_CARD : CHIPS\.slice\(0, 3\)\)/.test(APP), true);
+   /const SHOWN_CHIPS = lastHasCard \? REPLY_AFTER_CARD : CHIPS\.slice\(0, 3\);/.test(APP), true);
 ck("...and a failed message does not count as an offer",
    /lastMsg\.role === "assistant" && !lastMsg\.failed/.test(APP), true);
 ck("chips wrap rather than scroll out of sight",
-   /flexWrap: REDESIGN_SCOUT \? "wrap" : "nowrap"/.test(APP), true);
+   /flexWrap: "wrap", overflowX: "visible", padding: "6px 12px"/.test(APP), true);
 
 /* ---------- translations ---------- */
 

@@ -275,8 +275,8 @@ const total = [...CODE_ONLY.matchAll(/SPORT_PATHWAY_STAGES\s*[[.]/g)].length;
 const inside = [...RESOLVER.matchAll(/SPORT_PATHWAY_STAGES\s*[[.]/g)].length;
 ck("every read of SPORT_PATHWAY_STAGES is inside athleteStages()", total - inside, 0);
 ck("...and the resolver really does read it", inside > 0, true);
-ck("PathwayMap takes stages as a prop rather than deriving them",
-   /function PathwayMap\(\{[^}]*stages: stagesProp/.test(APP), true);
+ck("RoadMap takes stages as a prop rather than deriving them",
+   /function RoadMap\(\{ milestones, stages,/.test(APP), true);
 ck("PathwayStrip resolves through the same function",
    /const stages = athleteStages\(athlete, pathwayRow\)/.test(APP), true);
 
@@ -321,15 +321,23 @@ ck("...and current_stage_id, so stated position survives the trip",
   const body = code.slice(at, code.indexOf("\n}", at));
   ck("...and it is the one caller", /currentStageIndex\(/.test(body), true);
   ck("...preferring the stated stage when there is one", /stated >= 0 \? stated :/.test(body), true);
-  ck("every screen that draws a position resolves through it",
-     (code.match(/= resolveStageIndex\(/g) || []).length, 3);
+  // TWO, not three. PathwayMap was the third and is deleted. The Road that
+  // replaced it does NOT resolve a stage index, deliberately: its unit is the
+  // step, and the node it rings as YOU ARE HERE is the next undone milestone.
+  // Raising this back to 3 means a screen has started deriving a position
+  // again, which is the defect resolveStageIndex exists to prevent.
+  ck("every screen that draws a stage position resolves through it",
+     (code.match(/= resolveStageIndex\(/g) || []).length, 2);
 
   // The defect this replaces, asserted at the prop boundary rather than by
   // grepping for a derivation that is now absent from the component.
-  ck("PathwayMap accepts the stated stage id",
-     /function PathwayMap\(\{[^}]*\bcurrentStageId\b/.test(APP), true);
-  ck("...and Plan hands it the id it already holds in state",
-     /<PathwayMap[\s\S]{0,500}currentStageId=\{currentStageId\}/.test(APP), true);
+  // ASSERTED WHERE IT IS CONSUMED, not where it is accepted. RoadMap takes
+  // currentStageId and does not draw it yet, so a prop-boundary assertion here
+  // would pass while nothing read the column. The two readers are Home.
+  ck("the stated stage id reaches the resolver rather than a heuristic",
+     (APP.match(/resolveStageIndex\([a-zA-Z]+, pathwayRow && pathwayRow\.current_stage_id, athlete\)/g) || []).length, 2);
+  ck("...and Plan hands the road the id it already holds in state",
+     /<RoadMap[\s\S]{0,500}currentStageId=\{currentStageId\}/.test(APP), true);
 
   // Behaviour, not shape. Both functions are self-contained.
   const heurAt = code.indexOf("function currentStageIndex(");

@@ -216,14 +216,23 @@ ck("the category never replaces the goal in the goal card",
    /lineHeight: 1\.35, overflowWrap: "anywhere" \}\}>\{t\("pathway_type_/.test(APP), false);
 ck("...and it is not restated as metadata beneath the goal either",
    /\{t\("goal_card_pathway"\)\}:/.test(APP), false);
-// Still rendered, once, where it belongs: the top node of the route rail.
-ck("the category is still shown to the athlete, on the rail",
-   /label: hasGoal \? t\("pathway_type_" \+ pathwayType\)/.test(APP), true);
-// And the rail now names the goal itself, so the two are never confused again.
-ck("the rail names the goal it points at",
-   /\{t\("pathway_rail_goal"\)\}: <span style=\{\{ color: C\.chalk \}\}>\{goalText\}<\/span>/.test(APP), true);
-ck("...and marks where the athlete actually is",
-   /\{t\("pathway_rail_now"\)\}/.test(APP), true);
+// Still rendered, once, where it belongs: the node that IS the destination.
+// That used to be the top of PathwayMap's route rail. The Road replaced that
+// rail and did not pick the category up, so for one release the Plan page
+// showed the goal with nothing saying what kind of pathway it is filed under.
+// These three assert the Road, which is what an athlete actually reads - the
+// rail versions passed for as long as PathwayMap's source existed, by which
+// point no athlete could reach it.
+ck("the category is still shown to the athlete, on the goal node",
+   /\{t\("road_goal"\)\}\{goalText && pathwayType \? " · " \+ t\("pathway_type_" \+ pathwayType\)/.test(APP), true);
+// ...and only when a row exists, or an athlete who has saved nothing is told
+// their pathway is whatever PATHWAY_TYPES happens to list first.
+ck("...and not invented from the default state",
+   /pathwayType=\{exists \? pathwayType : null\}/.test(APP), true);
+ck("the goal node names the goal it points at",
+   /\{goalText \|\| t\("road_pick_goal"\)\}/.test(APP), true);
+ck("...and the road marks where the athlete actually is",
+   /isHere \? <ArrowRight size=\{26\} color=\{C\.ink\} \/> : null/.test(APP), true);
 ck("it writes goal_text", /goal_text: clean,/.test(APP), true);
 ck("...and derives goal_defined in the same write", /goal_defined: true,/.test(APP), true);
 ck("...and marks it athlete-authored", /goal_source: "athlete_edited",/.test(APP), true);
