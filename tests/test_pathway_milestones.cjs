@@ -685,6 +685,15 @@ ck("...and that condition is derived from milestones that really are filed",
 
   const groups = [
     ["pathway_stage_", [...stageIds]],
+    // Both added 2026-10-21, when these stopped being English literals printed
+    // into translated sentences and became runtime-resolved keys. The slugs
+    // live in SPORT_POSITION_LABEL and SPORT_PREFERENCE's label field, so a
+    // sport added to either map without a dictionary entry renders the raw
+    // key at an athlete - the direction this whole block exists to catch.
+    ["position_label_", [...new Set([...(/const SPORT_POSITION_LABEL = \{([^}]*)\}/.exec(APP) || ["", ""])[1]
+      .matchAll(/: "([a-z_]+)"/g)].map((m) => m[1]).concat("position"))]],
+    ["pref_label_", [...new Set([...(/const SPORT_PREFERENCE = \{([\s\S]*?)\n\};/.exec(APP) || ["", ""])[1]
+      .matchAll(/label: "([a-z_]+)"/g)].map((m) => m[1]).concat("foot"))]],
     ["pathway_type_", setFrom(/"([a-z_]+)"/g, (/const PATHWAY_TYPES = \[([^\]]*)\]/.exec(APP) || [])[1] || "")],
     ["targets_status_", setFrom(/"([a-z_]+)"/g, (/const TARGET_STATUSES = \[([^\]]*)\]/.exec(APP) || [])[1] || "")],
     ["dev_plan_status_", setFrom(/"([a-z_]+)"/g, (/const DEV_STATUSES = \[([^\]]*)\]/.exec(APP) || [])[1] || "")],

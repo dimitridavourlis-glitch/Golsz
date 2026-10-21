@@ -60,8 +60,15 @@ const pending = [];
 // -------------------------------------------------------------------------
 console.log("-- 1. the printed Passport only says Verified when it is --");
 {
+  // positionLabelFor/prefLabelFor go in too: toPassport resolves its two
+  // field labels through them now, so without them this eval throws a
+  // ReferenceError and the suite crashes rather than failing on an answer.
   const toPassport = new Function("initials", "flagFor", "SPORT_POSITION_LABEL", "SPORT_PREFERENCE",
-    fn("toPassport") + " return toPassport;")(() => "AB", () => "", {}, {});
+    "positionLabelFor", "prefLabelFor",
+    fn("toPassport") + " return toPassport;")(
+      () => "AB", () => "", {}, {},
+      (sport, t) => t("position_label_" + (sport || "position")),
+      (sport, t) => t("pref_label_" + (sport || "foot")));
   const m = APP.match(/\{([^{}]+?) \? <span className="pp-verified">/);
   ck("the print view's verified label was found", !!m, true);
   const shows = new Function("p", "return !!(" + (m ? m[1] : "true") + ");");

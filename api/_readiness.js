@@ -45,16 +45,21 @@ const READINESS_DIMENSIONS = ["profile_quality", "verification", "performance", 
 // asking for one would permanently hold profile_quality below 100.
 const SPORTS_WITHOUT_POSITION = ["Golf", "Bowling"];
 
-// Mirrors SPORT_POSITION_LABEL in golsz-app.html. Only the label differs by
-// sport; the check itself is "is ath.position set". A sport missing from
-// this map still gets the check, labelled "Position".
+// Mirrors SPORT_POSITION_LABEL in golsz-app.html, and holds the same KEY
+// SLUGS it does. These were English labels on both sides - "EVENT", "WEIGHT
+// CLASS" - and `missing` is interpolated into a translated sentence, so a
+// Greek athlete read Greek with English nouns in it. The client resolves
+// position_label_<slug> and quality_item_<key> through its dictionaries; this
+// file has none, and does not need one, because it only ever hands the names
+// back to that client. A sport missing from this map still gets the check,
+// under the "position" slug.
 const SPORT_POSITION_LABEL = {
-  Track: "EVENT", Swimming: "EVENT", Diving: "EVENT", "Cross Country": "EVENT", Triathlon: "EVENT", Gymnastics: "EVENT",
-  Boxing: "WEIGHT CLASS", Wrestling: "WEIGHT CLASS", Weightlifting: "WEIGHT CLASS",
-  "Martial Arts": "DISCIPLINE", Cycling: "DISCIPLINE", Skiing: "DISCIPLINE", Snowboarding: "DISCIPLINE", Equestrian: "DISCIPLINE",
-  Fencing: "WEAPON", Sailing: "CLASS", Rowing: "SEAT", Archery: "DIVISION",
-  Tennis: "PLAYS", "Table Tennis": "PLAYS", Badminton: "PLAYS", Squash: "PLAYS", Racquetball: "PLAYS",
-  Cheerleading: "ROLE",
+  Track: "event", Swimming: "event", Diving: "event", "Cross Country": "event", Triathlon: "event", Gymnastics: "event",
+  Boxing: "weight_class", Wrestling: "weight_class", Weightlifting: "weight_class",
+  "Martial Arts": "discipline", Cycling: "discipline", Skiing: "discipline", Snowboarding: "discipline", Equestrian: "discipline",
+  Fencing: "weapon", Sailing: "class", Rowing: "seat", Archery: "division",
+  Tennis: "plays", "Table Tennis": "plays", Badminton: "plays", Squash: "plays", Racquetball: "plays",
+  Cheerleading: "role",
 };
 
 // ---- profile_quality -----------------------------------------------------
@@ -65,20 +70,20 @@ function computeProfileQuality(ath, prof) {
   const isPlayerLike = !prof || !prof.occupation || prof.occupation === "Player";
   const needsPosition = isPlayerLike && ath.sport && !SPORTS_WITHOUT_POSITION.includes(ath.sport);
   const checks = [
-    { label: "Sport", ok: !!ath.sport },
-    { label: "Club", ok: !!ath.club_name },
-    { label: "Grad year", ok: !!ath.grad_year },
-    { label: "Country", ok: !!ath.country },
-    { label: "Recruiting status", ok: !!ath.recruiting_status },
-    { label: "Bio", ok: !!(ath.bio && ath.bio.trim()) },
-    { label: "Photo", ok: !!(prof && prof.avatar_url) },
-    { label: "Highlights", ok: Array.isArray(ath.highlights) && ath.highlights.length > 0 },
-    { label: "Career timeline", ok: Array.isArray(ath.timeline) && ath.timeline.length > 0 },
+    { key: "quality_item_sport", ok: !!ath.sport },
+    { key: "quality_item_club", ok: !!ath.club_name },
+    { key: "quality_item_grad_year", ok: !!ath.grad_year },
+    { key: "quality_item_country", ok: !!ath.country },
+    { key: "quality_item_recruiting", ok: !!ath.recruiting_status },
+    { key: "quality_item_bio", ok: !!(ath.bio && ath.bio.trim()) },
+    { key: "quality_item_photo", ok: !!(prof && prof.avatar_url) },
+    { key: "quality_item_highlights", ok: Array.isArray(ath.highlights) && ath.highlights.length > 0 },
+    { key: "quality_item_timeline", ok: Array.isArray(ath.timeline) && ath.timeline.length > 0 },
   ];
-  if (needsPosition) checks.splice(1, 0, { label: SPORT_POSITION_LABEL[ath.sport] || "Position", ok: !!ath.position });
+  if (needsPosition) checks.splice(1, 0, { key: "position_label_" + (SPORT_POSITION_LABEL[ath.sport] || "position"), ok: !!ath.position });
   const filled = checks.filter((c) => c.ok).length;
   const total = checks.length;
-  return { score: total ? Math.round((filled / total) * 100) : 0, filled, total, missing: checks.filter((c) => !c.ok).map((c) => c.label) };
+  return { score: total ? Math.round((filled / total) * 100) : 0, filled, total, missing: checks.filter((c) => !c.ok).map((c) => c.key) };
 }
 
 // ---- verification --------------------------------------------------------
