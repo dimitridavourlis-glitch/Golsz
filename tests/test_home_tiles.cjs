@@ -72,7 +72,19 @@ ck("a missing sub-line renders nothing at all", /: tile\.sub \? \(/.test(TILES),
 ck("Schools goes quiet at zero rather than reporting none",
    /!targetRows\.length \? null/.test(TILES), true);
 ck("Videos goes quiet at zero", /clipCount \? t\("tile_videos_n"\)/.test(TILES), true);
-ck("Tests goes quiet at zero", /recentBenchmarks\.length \? t\("tile_tests_n"\)/.test(TILES), true);
+ck("Tests goes quiet at zero", /benchmarkTotal \? t\("tile_tests_n"\)/.test(TILES), true);
+// ...and the number it reports is the readings, not the three it draws.
+// recentBenchmarks is distinct metrics AFTER slice(0, 3), so this tile told an
+// athlete with twelve readings across five metrics "3 results".
+ck("...and counts the readings, not the preview slice",
+   /recentBenchmarks\.length \? t\("tile_tests_n"\)/.test(TILES), false);
+ck("...from the rows Home already fetched",
+   /setBenchmarkTotal\(\(benchmarks \|\| \[\]\)\.length\);/.test(APP), true);
+// Passport had the same shape of lie: one timestamp covering two states.
+ck("a live but unopened share link is not reported as unshared",
+   /shareOpens\.length \? t\("tile_passport_shared"\) : t\("tile_passport_unshared"\)/.test(TILES), true);
+ck("...and the new line is translated four times",
+   (APP.match(/tile_passport_shared: "/g) || []).length, 4);
 // The page is not named after one of its own buttons when there is no name.
 ck("no name means no greeting line, not a wrong one",
    /\{name \? \(\n\s*<div style=\{\{ fontSize: 32/.test(TILES), true);

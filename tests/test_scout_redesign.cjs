@@ -232,6 +232,14 @@ ck("the card shows the email's own first line, not a guessed recipient",
    /title=\{String\(m\.draftedEmail\)\.split\("\\n"\)/.test(APP), true);
 ck("the picker names the recipient once one is chosen",
    /\{selectedEmailTarget \? \(/.test(APP), true);
+// THE GUARD NEEDS A LIST THAT IS CURRENT, or it guards nothing. The fetch
+// behind it used to be skipped once emailTargets was non-null, so draft_email
+// went stale within a session: saving a second email to the same target
+// overwrote the first silently, because the cached row still said empty.
+ck("the picker re-reads its targets every time it opens",
+   /if \(emailTargets !== null \|\| !sb/.test(APP), false);
+ck("...and a successful save updates the row it just wrote",
+   /String\(x\.id\) === String\(selectedEmailTarget\) \? \{ \.\.\.x, draft_email: emailText \}/.test(APP), true);
 // The restyle must not have touched the save path's overwrite guard.
 ck("overwriting an existing draft still takes a second, specific tap",
    /if \(chosen && chosen\.draft_email && String\(chosen\.draft_email\)\.trim\(\) && !confirmedReplace\) \{/.test(APP), true);
