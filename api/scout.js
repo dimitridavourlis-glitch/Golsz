@@ -770,23 +770,49 @@ async function getPlatformSpend() {
     const todayStr = new Date().toISOString().slice(0, 10);
     const monthStr = todayStr.slice(0, 7) + "-01";
     const headers = { apikey: key, Authorization: "Bearer " + key };
-    const [todayRows, monthRows] = await Promise.all([
-      // THROW ON A FAILED READ rather than parsing an error body. PostgREST
-      // answers a failure with a JSON OBJECT, not an array — so .json()
-      // succeeded, Array.isArray() was false, sum() returned 0, and the
-      // platform looked like it had spent nothing today. Zero spend is the
-      // one value that disables every cap below it, so the guard against
-      // runaway AI cost switched itself off precisely when the database was
-      // unhealthy. The catch below already falls back to the last cached
-      // value, which is a real measurement rather than an invented one.
-      fetch(`${url}/rest/v1/scout_daily_usage?usage_date=eq.${todayStr}&select=total_cost`, { headers })
-        .then((r) => { if (!r.ok) throw new Error("spend read failed: " + r.status); return r.json(); }),
-      fetch(`${url}/rest/v1/scout_daily_usage?usage_date=gte.${monthStr}&select=total_cost`, { headers })
-        .then((r) => { if (!r.ok) throw new Error("spend read failed: " + r.status); return r.json(); }),
+    // READ IN PAGES, OR THE METER UNDER-READS AND THE BRAKE STOPS TRIPPING.
+    //
+    // scout_daily_usage holds one row per (user_id, usage_date). These were
+    // uncapped selects, and PostgREST answers an uncapped read with AT MOST
+    // max-rows — 1000 on Supabase — HTTP 200, and no error. So once the
+    // platform had 1000 athlete-days of Scout usage in a month (roughly 35
+    // daily-active athletes) the monthly sum silently became a fraction of
+    // real spend, spend.month could never reach SCOUT_MONTHLY_SPEND_LIMIT_USD,
+    // and the emergency cost ceiling stopped being enforceable. The daily read
+    // had the same shape and clipped at 1000 athletes in one day.
+    //
+    // Both failure directions are now impossible rather than unlikely: the
+    // rows are paged to exhaustion, and the page boundary is a TOTAL order —
+    // (user_id, usage_date) is this table's unique key — so a page can
+    // neither skip nor repeat a row.
+    //
+    // THROW ON A FAILED READ rather than parsing an error body. PostgREST
+    // answers a failure with a JSON OBJECT, not an array — so .json()
+    // succeeded, Array.isArray() was false, sum() returned 0, and the
+    // platform looked like it had spent nothing today. Zero spend is the
+    // one value that disables every cap below it, so the guard against
+    // runaway AI cost switched itself off precisely when the database was
+    // unhealthy. The catch below already falls back to the last cached
+    // value, which is a real measurement rather than an invented one.
+    const PAGE = 1000;
+    const sumAll = async (filter) => {
+      let total = 0;
+      for (let from = 0; ; from += PAGE) {
+        const res = await fetch(
+          `${url}/rest/v1/scout_daily_usage?${filter}&select=total_cost&order=user_id.asc,usage_date.asc`,
+          { headers: { ...headers, Range: `${from}-${from + PAGE - 1}`, "Range-Unit": "items" } });
+        if (!res.ok && res.status !== 206) throw new Error("spend read failed: " + res.status);
+        const rows = await res.json();
+        if (!Array.isArray(rows)) throw new Error("spend read returned a non-array");
+        for (const row of rows) total += Number(row.total_cost) || 0;
+        if (rows.length < PAGE) return total;
+      }
+    };
+    const [todaySum, monthSum] = await Promise.all([
+      sumAll(`usage_date=eq.${todayStr}`),
+      sumAll(`usage_date=gte.${monthStr}`),
     ]);
-    if (!Array.isArray(todayRows) || !Array.isArray(monthRows)) throw new Error("spend read returned a non-array");
-    const sum = (rows) => rows.reduce((s, row) => s + (Number(row.total_cost) || 0), 0);
-    const value = { today: sum(todayRows), month: sum(monthRows) };
+    const value = { today: todaySum, month: monthSum };
     platformSpendCache = { at: now, value };
     return value;
   } catch (e) {

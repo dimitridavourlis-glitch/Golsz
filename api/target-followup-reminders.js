@@ -41,6 +41,12 @@
 
 import webpush from "web-push";
 
+// The loops below are strictly sequential and do three or more round trips
+// per row, so a busy night is minutes of work, not seconds. Without this the
+// platform's default kills the function mid-loop: the pushes already sent
+// are stamped, the rest are not, and the response never arrives to say which.
+export const config = { maxDuration: 60 };
+
 const REMINDER_STATUSES = ["preparing", "contacted", "follow_up"];
 
 async function supaSelect(supaUrl, serviceKey, path) {
@@ -48,6 +54,24 @@ async function supaSelect(supaUrl, serviceKey, path) {
     headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
   });
   if (!res.ok) return [];
+  return res.json();
+}
+
+// THE SAME READ, BUT ABLE TO SAY IT FAILED.
+//
+// supaSelect above answers a failed read with [], which reads as "there is
+// nothing there". That is harmless where an empty result and a failure lead
+// to the same safe action - no subscriptions, no push - and dangerous where
+// EMPTY MEANS GO. The availability lookup is the second kind: [] there means
+// "nobody is injured", so one failed request turned the injury pause off for
+// the whole run and pushed "the day you set has passed" to every hurt
+// athlete on the platform. Callers that would act on emptiness use this and
+// decide for themselves.
+async function supaSelectOrNull(supaUrl, serviceKey, path) {
+  const res = await fetch(`${supaUrl}/rest/v1/${path}`, {
+    headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+  });
+  if (!res.ok) return null;
   return res.json();
 }
 
@@ -319,12 +343,27 @@ async function remindDueSteps(supaUrl, serviceKey, webpush) {
   // Scoping it to the ids already in hand makes truncation impossible: the
   // candidate query above is capped at 500, and each chunk asks for at most
   // the 100 ids it names.
+  //
+  // AND IT FAILS CLOSED. This read decides who is NOT told they are late, so
+  // an empty answer means "push to everyone". Through supaSelect a failed
+  // request was indistinguishable from "nobody is injured", and the one
+  // surface that reaches an athlete with the app shut would have told every
+  // hurt athlete on the platform that the day they set had passed. A missed
+  // nudge is recoverable on the next run; that push is not. So a failure
+  // abandons the whole loop and says so in the response.
   const candidateIds = [...new Set(rows.map((r) => r && r.user_id).filter(Boolean))];
   const resting = new Set();
   for (let i = 0; i < candidateIds.length; i += 100) {
     const chunk = candidateIds.slice(i, i + 100);
-    const got = await supaSelect(supaUrl, serviceKey,
+    const got = await supaSelectOrNull(supaUrl, serviceKey,
       `profiles?id=in.(${chunk.join(",")})&availability_status=eq.out&select=id`);
+    if (got === null) {
+      await logError("api/target-followup-reminders.js",
+        "Availability read failed — due-step reminders skipped rather than risk telling injured athletes they are late",
+        { candidates: candidateIds.length });
+      return { checked: rows.length, reminded: 0, paused: 0,
+        skipped: "availability unreadable" };
+    }
     (got || []).forEach((r) => { if (r && r.id) resting.add(r.id); });
   }
   let sent = 0;
@@ -381,10 +420,19 @@ export default async function handler(req, res) {
   try {
     const statusFilter = REMINDER_STATUSES.map((s) => `"${s}"`).join(",");
     const cutoffEnc = encodeURIComponent(staleCutoff);
-    const targets = await supaSelect(
+    // CAPPED AND ORDERED, like the due-step query 70 lines above and for the
+    // reason that query already documents: an uncapped PostgREST select stops
+    // at max-rows (1000 on Supabase) and still returns 200, so the rows past
+    // the cut-off were dropped from the run with nothing saying so - and with
+    // no ORDER BY, WHICH athletes were dropped was arbitrary and could differ
+    // between two nights. Oldest-first means the longest-waiting target is
+    // the one that gets its nudge, and anything beyond the cap is simply
+    // first in line tomorrow rather than permanently invisible.
+    const targets = await supaSelectOrNull(
       supaUrl, serviceKey,
-      `outreach_targets?status=in.(${statusFilter})&updated_at=lt.${cutoffEnc}&or=(last_reminded_at.is.null,last_reminded_at.lt.${cutoffEnc})&select=id,user_id,name,status,updated_at`
+      `outreach_targets?status=in.(${statusFilter})&updated_at=lt.${cutoffEnc}&or=(last_reminded_at.is.null,last_reminded_at.lt.${cutoffEnc})&select=id,user_id,name,status,updated_at&order=updated_at.asc&limit=500`
     );
+    if (targets === null) throw new Error("outreach target scan failed");
 
     let sent = 0;
     for (const target of targets) {

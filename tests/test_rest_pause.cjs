@@ -135,18 +135,50 @@ ck("resting reaches every screen that shows a date",
 
 /* ---------- the cron, which reaches them with the app closed ---------- */
 
-ck("the nudge looks up who is resting", /profiles\?availability_status=eq\.out&select=id/.test(CRON), true);
+// COMMENT LINES STRIPPED BEFORE ANY OF THIS. The route explains its own
+// history in prose, including the old query verbatim - "This used to be
+// `profiles?availability_status=eq.out&select=id` with no limit" - and the
+// assertion below used to be satisfied by that sentence. It passed while
+// matching a comment, which means the live lookup could have been deleted
+// outright and this suite would still have been green, on the one guard
+// standing between an injured athlete and a push telling them they are late.
+const CRON_CODE = CRON.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+ck("the nudge looks up who is resting, in code and not in a comment",
+   /profiles\?id=in\.[^&]*&availability_status=eq\.out&select=id/.test(CRON_CODE), true);
+ck("...and the old uncapped shape is not what is running",
+   /profiles\?availability_status=eq\.out&select=id/.test(CRON_CODE), false);
 // NOT `not.eq.out`: in PostgREST that excludes NULL rows, and NULL is the
 // status of every athlete who has never answered - which is most of them. The
 // inequality would have silently stopped nudging almost everybody.
 ck("...by selecting who IS out, never by excluding who is not",
    /availability_status=not\.eq\.out/.test(CRON), false);
 ck("...and skips them", /if \(resting\.has\(row\.user_id\) && row\.category !== "recovery"\)/.test(CRON), true);
+// IT FAILS CLOSED. This lookup decides who is NOT told they are late, so an
+// empty answer means "push to everyone". supaSelect returns [] on a failed
+// request, which is indistinguishable from "nobody is injured" - one bad
+// response would have pushed "the day you set has passed" to every hurt
+// athlete on the platform, on the one surface that reaches them with the app
+// shut. A missed nudge is recoverable next run; that push is not.
+ck("a reader that can report failure exists",
+   /async function supaSelectOrNull\(/.test(CRON_CODE), true);
+ck("...and the availability lookup uses it, not the one that returns []",
+   /const got = await supaSelectOrNull\(supaUrl, serviceKey,/.test(CRON_CODE), true);
+ck("...and a failed read abandons the loop instead of pushing",
+   /if \(got === null\) \{[\s\S]{0,420}return \{ checked: rows\.length, reminded: 0, paused: 0,/.test(CRON_CODE), true);
+ck("...and says so in the response rather than reporting a quiet zero",
+   /skipped: "availability unreadable"/.test(CRON_CODE), true);
+
+// The stale-target scan had the same uncapped shape this file fixed for the
+// due-step query, 70 lines above it in the same route.
+ck("the outreach scan is capped",
+   /&order=updated_at\.asc&limit=500/.test(CRON_CODE), true);
+ck("...and a failed scan is raised, not read as an empty night",
+   /if \(targets === null\) throw new Error\("outreach target scan failed"\);/.test(CRON_CODE), true);
+// Sequential loops doing three round trips a row need longer than the default.
+ck("the route is allowed to finish", /export const config = \{ maxDuration: 60 \};/.test(CRON_CODE), true);
+
 ck("...without stamping the nudge it never sent",
    CRON.indexOf("resting.has(row.user_id)") < CRON.indexOf("last_reminded_at: new Date()"), true);
-// Comment lines stripped first: the route explains the old uncapped query in
-// prose, and counting that made this assertion fail on a change that fixed it.
-const CRON_CODE = CRON.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
 ck("...once, not once per row", (CRON_CODE.match(/availability_status=eq\.out/g) || []).length, 1);
 // AND IT CANNOT BE TRUNCATED. An uncapped PostgREST select stops at max-rows
 // (1000 on Supabase) and still returns 200, so once more than that many

@@ -128,6 +128,43 @@ ck("settings_export_empty_note exists in all four dictionaries",
 // It must not throw the whole export away on one bad table either.
 ck("one failed table does not abandon the rest", /continue;/.test(fn), true);
 
+/* ---------- it cannot quietly hand over a clipped file ---------- */
+
+// THE DEFECT THIS CLOSES. Every section was read with one uncapped select.
+// PostgREST answers that with at most max-rows (1000 on Supabase), HTTP 200
+// and no error — stated in this repo's own words at tests/test_rest_pause.cjs
+// — so a long-lived account's export was cut and every safeguard in the file
+// still passed: no error, section not empty, profile canary "ok",
+// _sections[label].rows reporting the clipped length AS the count, and the
+// athlete told "Downloaded." scout_history reaches it first, at two rows per
+// Scout exchange. This is the right-of-access copy; overstating what it holds
+// is the one thing it must never do.
+ck("every section is read in pages, not in one uncapped select",
+   /\.order\(col\)\.range\(from, from \+ PAGE - 1\)/.test(fn), true);
+ck("...until a short page says there is no more",
+   /if \(page\.length < PAGE\) break;/.test(fn), true);
+ck("...and no bare select survives in the loop",
+   /select\("\*"\)\.eq\(col, uid\);/.test(fn), false);
+
+// PAGING IS NOT TRUSTED TO PROVE COMPLETENESS. These tables share no sortable
+// key, so PostgREST promises no stable partition; the count is read
+// separately and a disagreement is disclosed rather than resolved.
+ck("each section is counted independently of the rows it returned",
+   /count: "exact", head: true/.test(fn), true);
+ck("...and a disagreement is reported as an error, not smoothed over",
+   /if \(count !== rows\.length\)/.test(fn), true);
+// _errors is what flips the message to settings_export_partial, so the two
+// failures above reach the athlete rather than only the file.
+ck("...which is what makes the screen say partial",
+   /out\._errors\.length\s*\n?\s*\? t\("settings_export_partial"\)/.test(APP), true);
+ck("a section that cannot be counted is called out too",
+   /could not be counted/.test(fn), true);
+
+// The one health-adjacent record GOLSZ keeps about an athlete, and the file
+// did not contain it.
+ck("their availability history is in the export",
+   /\["availability_history", "athlete_outcomes", "athlete_id"\]/.test(APP), true);
+
 // ---- reachable from the UI, in all four languages -------------------------
 ck("the button is rendered", /onClick=\{exportMyData\}/.test(APP), true);
 for (const k of ["settings_export_data", "settings_export_partial", "settings_your_data"]) {

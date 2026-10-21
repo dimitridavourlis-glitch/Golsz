@@ -2271,6 +2271,11 @@ function SettingsButton({ openSignal }) {
     // forward would expose someone else's choice about them.
     ["follows_i_made", "follows", "follower_id"],
     ["blocks_i_made", "blocks", "blocker_id"],
+    // Their availability history - every time they marked themselves hurt,
+    // limited or back. golsz-app.html writes a row here on each change and
+    // this file omitted it, so the one health-adjacent thing GOLSZ keeps
+    // about an athlete was the one thing their own copy did not contain.
+    ["availability_history", "athlete_outcomes", "athlete_id"],
   ];
   async function exportMyData() {
     if (!sb || !uid || exportBusy) return;
@@ -2298,16 +2303,67 @@ function SettingsButton({ openSignal }) {
       _errors: [],
       _sections: {},
       _zero_row_sections: [],
-      _note: "Each section lists the rows VISIBLE TO YOU at export time. A section with zero rows means either you have no data there or a permission rule filtered it — this file is produced in your browser under your own access, and those two cases are indistinguishable from here. _zero_row_sections lists every empty section so you can check any you did not expect. If _profile_canary is not \"ok\", treat the whole file as incomplete and contact support.",
+      _note: "Each section lists the rows VISIBLE TO YOU at export time. Every section is read in pages and then counted separately; where the two disagree the section is listed in _errors as incomplete rather than handed over as if it were whole. A section with zero rows means either you have no data there or a permission rule filtered it — this file is produced in your browser under your own access, and those two cases are indistinguishable from here. _zero_row_sections lists every empty section so you can check any you did not expect. If _profile_canary is not \"ok\", treat the whole file as incomplete and contact support.",
       _profile_canary: "unchecked",
     };
     try {
+      // PAGED, AND CROSS-CHECKED AGAINST A COUNT.
+      //
+      // This asked for every row of 23 tables in one request each. PostgREST
+      // answers an uncapped read by returning AT MOST max-rows - 1000 on
+      // Supabase - with HTTP 200 and no error, which this file's own
+      // tests/test_rest_pause.cjs states in those words. So a long-lived
+      // account's export was clipped, and every safeguard here still passed:
+      // _errors was empty because there was no error, _zero_row_sections was
+      // empty because the section was not empty but cut, the profile canary
+      // read "ok" because that is one owned row, _sections[label].rows
+      // reported the clipped length AS the count, and the athlete was told
+      // "Downloaded." scout_history is the first to reach it - every Scout
+      // exchange writes two rows - then development_plan_ticks, one per habit
+      // per day. This is the right-of-access copy; it is the one file in
+      // GOLSZ that must never overstate what it contains.
+      //
+      // THE COUNT IS THE AUTHORITY, NOT THE PAGING. Rows are fetched in
+      // PAGE-sized ranges until a short page arrives, and separately counted
+      // with a head request. Those two can only disagree if the row set moved
+      // under us or a page boundary misbehaved - PostgREST does not promise a
+      // stable partition without a total order, and these tables do not all
+      // share a sortable key - so a disagreement is recorded as an error
+      // rather than resolved. That turns the one failure this file could not
+      // previously detect into the "partial" message it already has.
+      const PAGE = 1000;
       for (const [label, table, col] of EXPORT_TABLES) {
-        const { data, error } = await sb.from(table).select("*").eq(col, uid);
-        if (error) { out._errors.push({ section: label, table, message: error.message }); continue; }
-        out[label] = data || [];
-        out._sections[label] = { table, rows: out[label].length };
-        if (out[label].length === 0) out._zero_row_sections.push(label);
+        const rows = [];
+        let failed = false;
+        for (let from = 0; ; from += PAGE) {
+          const { data, error } = await sb.from(table).select("*").eq(col, uid)
+            .order(col).range(from, from + PAGE - 1);
+          if (error) {
+            out._errors.push({ section: label, table, message: error.message });
+            failed = true;
+            break;
+          }
+          const page = data || [];
+          rows.push(...page);
+          if (page.length < PAGE) break;
+        }
+        if (failed) continue;
+        out[label] = rows;
+        out._sections[label] = { table, rows: rows.length };
+        // Counted independently of the paging that produced the rows.
+        const { count, error: countErr } = await sb.from(table)
+          .select(col, { count: "exact", head: true }).eq(col, uid);
+        if (countErr) {
+          out._errors.push({ section: label, table,
+            message: "Rows were read but could not be counted, so this section cannot be confirmed complete: " + countErr.message });
+        } else if (typeof count === "number") {
+          out._sections[label].counted = count;
+          if (count !== rows.length) {
+            out._errors.push({ section: label, table,
+              message: `Incomplete: ${rows.length} rows were read but this section holds ${count}. Export again; if it keeps disagreeing, contact support.` });
+          }
+        }
+        if (rows.length === 0) out._zero_row_sections.push(label);
       }
       // THE CANARY. A signed-in athlete provably owns exactly one profiles row
       // keyed on their own id. If that comes back empty, the export is not
@@ -18374,7 +18430,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=13635770f358e323";
+    var APP_SRC = "js/app.js?v=b646c9ffe95b782f";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
