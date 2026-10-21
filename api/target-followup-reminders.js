@@ -327,7 +327,12 @@ async function remindDueSteps(supaUrl, serviceKey, webpush, deadline) {
   const rows = await supaSelect(
     supaUrl, serviceKey,
     `athlete_actions?status=eq.open&due_src=is.null&last_reminded_at=is.null` +
-    `&due_on=lte.${today}&select=id,user_id,title,due_on,category&limit=500`
+    // ORDERED as well as capped, for the reason the outreach scan 110 lines
+    // below already states: a cap with no ORDER BY drops an ARBITRARY set,
+    // which can differ between two nights, so a step past the cut-off is not
+    // merely late — it may never be reached at all. Oldest due first means
+    // the longest-overdue step is the one that gets its nudge.
+    `&due_on=lte.${today}&select=id,user_id,title,due_on,category&order=due_on.asc&limit=500`
   );
   // NOBODY IS TOLD THEY ARE LATE WHILE THEY ARE INJURED.
   //

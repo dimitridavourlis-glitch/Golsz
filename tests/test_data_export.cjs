@@ -207,8 +207,16 @@ ck("...with no uncapped select awaited anywhere in the loop",
 // separately and a disagreement is disclosed rather than resolved.
 ck("each section is counted independently of the rows it returned",
    /count: "exact", head: true/.test(fn), true);
-ck("...and a disagreement is reported as an error, not smoothed over",
-   /if \(count !== rows\.length\)/.test(fn), true);
+// MISSING ROWS, not merely a different number. Rows added while a section is
+// being read make the count larger than what we hold; rows deleted make it
+// smaller. Only the first is data absent from the file, and calling both
+// "Incomplete" pointed an athlete at support for a race that resolves itself.
+ck("...and missing rows are reported as an error, not smoothed over",
+   /if \(count > rows\.length\)/.test(fn), true);
+ck("...while a section that merely changed under the read says so instead",
+   /out\._sections\[label\]\.changed_while_reading = true;/.test(fn), true);
+ck("...so the two outcomes are not one branch",
+   /if \(count !== rows\.length\)/.test(fn), false);
 // _errors is what flips the message to settings_export_partial, so the two
 // failures above reach the athlete rather than only the file.
 ck("...which is what makes the screen say partial",

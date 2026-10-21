@@ -65,4 +65,17 @@ ck("every row action refreshes with the active search",
 ck("...and the one that does not is the initial load of every panel",
    /loadStats\(\); loadUsers\(\); loadAuditLog\(\)/.test(APP), true);
 
+// EVERY DESTRUCTIVE ADMIN ACTION LEAVES A ROW. reset_scout_intelligence wipes
+// an athlete's Scout context and their stated goal with no undo, behind two
+// confirmations - which are a speed bump, not a record. It was the only
+// destructive action in this panel that nothing could account for afterwards.
+ck("resetting Scout intelligence is audited",
+   /logAdmin\("reset_scout_intelligence", id\);/.test(APP), true);
+// After the RPC, so the row describes what happened rather than what was
+// attempted.
+const resetFn = APP.slice(APP.indexOf("async function resetScoutIntelligence(uid) {"),
+                          APP.indexOf("\n  }", APP.indexOf("async function resetScoutIntelligence(uid) {")));
+ck("...after it succeeded, not before it ran",
+   resetFn.indexOf("if (error) throw error;") < resetFn.indexOf("logAdmin("), true);
+
 console.log(`\n${p}/${p + f} passed`); process.exit(f ? 1 : 0);
