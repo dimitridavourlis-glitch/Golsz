@@ -6246,8 +6246,6 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   const [profile, setProfile] = useState(null);
   const [athlete, setAthlete] = useState(null);
   const [editing, setEditing] = useState(false);
-  const [following, setFollowing] = useState(false);
-  const [followedByThem, setFollowedByThem] = useState(false);
   // Icon+count summary strip (Master UX/UI redesign) — Highlights/Timeline
   // come straight off the athletes.* row already fetched below; Benchmarks is
   // a separate table, so this one count-only query (own profile only, never
@@ -6372,16 +6370,12 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         // profiles has no public-read policy (dob is sensitive), so the
         // viewed person's name comes from the public_profile_names view —
         // same pattern used in Feed/Discover/Messages.
-        const [{ data: nameRow }, { data: ath }, { data: myFollow }, { data: theirFollow }] = await Promise.all([
+        const [{ data: nameRow }, { data: ath }] = await Promise.all([
           sb.from("public_profile_names").select("full_name, occupation, verified_tier, avatar_url").eq("id", viewUserId).maybeSingle(),
           sb.from("athletes").select("*").eq("id", viewUserId).maybeSingle(),
-          sb.from("follows").select("followed_id").eq("follower_id", user.id).eq("followed_id", viewUserId).maybeSingle(),
-          sb.from("follows").select("follower_id").eq("follower_id", viewUserId).eq("followed_id", user.id).maybeSingle(),
         ]);
         setProfile(nameRow ? { full_name: nameRow.full_name, occupation: nameRow.occupation, verified_tier: nameRow.verified_tier, avatar_url: nameRow.avatar_url } : null);
         setAthlete(ath || null);
-        setFollowing(!!myFollow);
-        setFollowedByThem(!!theirFollow);
       } else {
         const [{ data: prof }, { data: ath }] = await Promise.all([
           sb.from("profiles").select("full_name, is_admin, occupation, verified_tier, plan, avatar_url, identity_verified").eq("id", selfId).single(),
@@ -6423,17 +6417,13 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     onProfileStatus(!!(athlete && athlete.sport) || !!(profile && profile.occupation === "Parent"));
   }, [loaded, athlete, profile, viewingOther, manageMode]);
 
-  async function toggleFollowThis() {
-    if (!sb || !uid || !viewUserId || viewUserId === uid) return;
-    const was = following;
-    setFollowing(!was);
-    try {
-      const { error } = was
-        ? await sb.from("follows").delete().eq("follower_id", uid).eq("followed_id", viewUserId)
-        : await sb.from("follows").insert({ follower_id: uid, followed_id: viewUserId });
-      if (error) throw error;
-    } catch (e) { console.error("GOLSZ passport follow error:", e); setFollowing(was); }
-  }
+  // FOLLOW ON A VIEWED PASSPORT WAS NEVER WIRED UP. Two follows selects ran
+  // on every open of someone else's Passport, into two useState values, read
+  // by a toggle handler that no button called - so the queries, the state and
+  // the handler were a complete round trip to nowhere. Feed and Discover have
+  // working follow controls and are untouched; this branch had the plumbing
+  // and no tap. Putting it back means rendering a control, not restoring
+  // these reads.
 
   // Trust & Safety Moderation System — generalized report path (migration
   // 060, content_reports), same pattern as Messages' reportThread().
@@ -8606,9 +8596,6 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   const [msgs, setMsgs] = useState(sb ? null : [{ role: "assistant", text: t("scout_greeting") }]);
   const [loaded, setLoaded] = useState(!sb); // no backend at all -> nothing to wait for, show demo greeting immediately
   const [profile, setProfile] = useState({});
-  // Flattened {field: value} view of athletes.scout_context (migration 050,
-  // Phase 2a) — the "softer" qualification facts (goal, gap, urgency, etc.)
-  // Scout has picked up, as opposed to `profile`'s hard Passport facts.
   // The athlete's CURRENT Pathway, held here only so a proposed rebuild can
   // be previewed against it, and so ADD mode has something to append to.
   // This used to describe a straight REPLACE on a single tap — an athlete with
@@ -8727,7 +8714,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
 
         const [{ data: prof }, { data: ath }, { data: benchmarks }, { data: pathwayNow }] = await Promise.all([
           sb.from("profiles").select("full_name, dob, occupation").eq("id", who).single(),
-          sb.from("athletes").select("sport, position, grad_year, gpa, country, club_name, recruiting_status, license, looking_for_players, education_level, scout_context").eq("id", who).single(),
+          sb.from("athletes").select("sport, position, grad_year, gpa, country, club_name, recruiting_status, license, looking_for_players, education_level").eq("id", who).single(),
           sb.from("athlete_benchmarks").select("metric, metric_key, value, unit, recorded_date").eq("user_id", who).order("recorded_date", { ascending: false }),
           sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, stages, current_stage_id").eq("user_id", who).maybeSingle(),
         ]);
@@ -8763,20 +8750,6 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
         }
         baseProfileRef.current = seeded;
         if (Object.keys(seeded).length) setProfile((p) => ({ ...seeded, ...p }));
-
-        // Flatten scout_context's {field: {value, source, confidence, updated_at}}
-        // shape down to {field: value} for prompt purposes — the full shape
-        // (migration 050) is what api/scout.js reads/writes; the client only
-        // ever needs the plain values to give Scout visibility into what it
-        // already knows, same role PROFILE SO FAR already plays for hard facts.
-        if (ath && ath.scout_context && typeof ath.scout_context === "object") {
-          const flatContext = {};
-          for (const [k, entry] of Object.entries(ath.scout_context)) {
-            if (k === "ai_meta") continue;
-            const v = (entry && typeof entry === "object") ? entry.value : entry;
-            if (v != null && v !== "") flatContext[k] = v;
-          }
-        }
 
         // NEWEST FIRST — see latestScoutConversation() for why ascending +
         // limit(1000) restored the wrong conversation for long-time athletes.
@@ -10323,7 +10296,6 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan, flush, he
   const [uid, setUid] = useState(null);
   const [goalText, setGoalText] = useState("");
   const [goalSource, setGoalSource] = useState(null);
-  const [pathwayType, setPathwayType] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -10340,15 +10312,17 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan, flush, he
         if (!user) { if (alive) setLoaded(true); return; }
         const target = actingFor || user.id;
         if (alive) setUid(target);
-        const [{ data: prof }, { data: pw }] = await Promise.all([
-          sb.from("profiles").select("goal_text, goal_source").eq("id", target).single(),
-          sb.from("pathway_plan").select("pathway_type").eq("user_id", target).maybeSingle(),
-        ]);
+        // ONE READ. This used to fetch pathway_plan alongside the profile for
+        // a pathwayType that nothing here rendered - a second PostgREST
+        // request with its own RLS evaluation on every Plan and Home open,
+        // for a value that went into state and stopped. The category is drawn
+        // on the Road's goal node now, from PathwayPlan's own row.
+        const { data: prof } = await sb.from("profiles")
+          .select("goal_text, goal_source").eq("id", target).single();
         if (!alive) return;
         setGoalText((prof && prof.goal_text) || "");
         if (onGoalText) onGoalText((prof && prof.goal_text) || "");
         setGoalSource((prof && prof.goal_source) || null);
-        setPathwayType((pw && pw.pathway_type) || null);
       } catch (e) { console.error("GOLSZ goal load error:", e); }
       if (alive) setLoaded(true);
     })();
@@ -14810,13 +14784,6 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
   // once another row in the same list IS filed.
   const anyMilestoneFiled = milestones.some(
     (m) => m.stage && materialisedStages().some((st) => st.id === m.stage));
-  const stepCounts = milestones.reduce((acc, m) => {
-    if (!m.stage) return acc;
-    const c = acc[m.stage] || (acc[m.stage] = { done: 0, total: 0 });
-    c.total += 1; if (m.done) c.done += 1;
-    return acc;
-  }, {});
-
   function milestoneBand(m) {
     if (!m.due) return "undated";
     const days = Math.round((new Date(m.due + "T00:00:00") - todayIso) / 86400000);
@@ -18488,7 +18455,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=9e2f95313262c3e3";
+    var APP_SRC = "js/app.js?v=e050eea7ab9a50b4";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
