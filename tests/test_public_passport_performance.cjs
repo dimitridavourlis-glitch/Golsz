@@ -82,8 +82,24 @@ ck("rendering checks the flag, not just the data",
   // THE BUG THIS AVOIDS: the three older columns are `default true`, so the
   // existing rule reads undefined as ON. Applied to these two it would show an
   // athlete a switch saying ON while their link shares nothing.
+  // passport_public joined them 2026-10-21: it is also \`not null default
+  // false\`, and it is the only row in this panel that lives on profiles
+  // rather than athletes.
   ck("the new rows read undefined as OFF, not ON",
-     /const defaultsOff = col === "show_benchmarks" \|\| col === "show_timeline";/.test(APP), true);
+     /const defaultsOff = col === "show_benchmarks" \|\| col === "show_timeline" \|\| col === "passport_public";/.test(APP), true);
+  // THE ONE ROW ON A DIFFERENT TABLE. Every other switch here is on
+  // athletes; passport_public is on profiles. Writing it to athletes would
+  // fail silently under RLS and the switch would spring back on reload.
+  ck("passport_public is written to profiles, not athletes",
+     /const PRIVACY_TABLE = \(col\) => \(col === "passport_public" \? "profiles" : "athletes"\);/.test(APP), true);
+  ck("...and the toggle routes through it rather than naming a table",
+     /sb\.from\(PRIVACY_TABLE\(col\)\)\.update\(\{ \[col\]: next \}\)/.test(APP), true);
+  ck("...and it is read from profiles in the same panel's load",
+     /select\("occupation, passport_public, availability_status/.test(APP), true);
+  // A consent toggle the athlete cannot reach is the defect this closes.
+  ck("the row is in the list", /\["passport_public", "privacy_passport_public", "privacy_passport_public_sub"\]/.test(APP), true);
+  ck("...and its copy exists in all four languages",
+     (APP.match(/privacy_passport_public: "/g) || []).length, 4);
   ck("...and the older rows keep reading undefined as ON",
      /const on = defaultsOff \? privacy\[col\] === true : privacy\[col\] !== false;/.test(APP), true);
 }
