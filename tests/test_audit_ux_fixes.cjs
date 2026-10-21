@@ -134,6 +134,24 @@ for (const [comp, col] of [["Highlights", "highlights"], ["Timeline", "timeline"
   ck("Targets: it no longer claims 'No targets yet' after a failure",
      /\{!targetsLoadFailed && items\.length === 0 && /.test(tg), true);
   ck("Targets: Retry is offered", /\{targetsLoadFailed && <LoadError onRetry=\{retryTargets\} \/>\}/.test(tg), true);
+
+/* ---------- a failed read does not outlive itself on the share panel ------ */
+
+// The share-links panel is where an athlete revokes a Passport link they sent
+// to the wrong person. A failed read sets shareErr and shows the banner; a
+// later OPEN of the same panel re-reads and can succeed. Until this, only
+// revokeShareLink cleared shareErr, so the banner stayed over a list that had
+// loaded correctly - telling them the links could not be fetched while
+// showing them. Both the set and the clear are asserted, so neither half can
+// be dropped on its own.
+{
+  const ld = fn("loadShareLinks");
+  ck("the share panel reports a failed read", /setShareErr\(t\("load_failed"\)\)/.test(ld), true);
+  ck("...and a later successful read retires that report",
+     /setShareLinks\(data \|\| \[\]\);[\s\S]{0,700}?setShareErr\(""\);/.test(ld), true);
+  ck("...before the catch that would set it again",
+     ld.indexOf('setShareErr("")') < ld.indexOf('setShareErr(t("load_failed"))'), true);
+}
 }
 
 // -------------------------------------------------------------------------
@@ -349,6 +367,46 @@ console.log("\n-- every new string exists in all four languages --");
   for (const l of order) {
     const seg = segFor(l);
     ck(`${l} defines every new key`, keys.filter((k) => !new RegExp("[\\s,{]" + k + ': "').test(seg)), []);
+  }
+}
+
+// -------------------------------------------------------------------------
+// THE THREE PASSPORT RENDERERS MUST AGREE ON THEIR LABELS.
+//
+// There are three: the athlete's own Passport and the print/PDF view, both
+// fed by toPassport(), and PublicPassport() — the shared link a coach opens,
+// which reads the get_public_passport() RPC and builds its own rows. The
+// 2026-10-21 label work moved the first two onto positionLabelFor and
+// prefLabelFor and moved PublicPassport's POSITION row across with them,
+// and left PublicPassport's handedness row on the fixed t("passport_foot").
+// So a baseball player's own screen and PDF read BATS/THROWS while the link
+// they send a coach read FOOT, for the same stored value.
+//
+// The sport went the same way: toPassport() was given tv() because the PDF
+// printed "Soccer" under ΑΘΛΗΜΑ, and this renderer kept printing it raw.
+console.log("\n-- the shared Passport link labels fields like the other two --");
+{
+  const pub = block(APP, "function PublicPassport({ userId, token }) {");
+  ck("PublicPassport was found", pub.length > 500, true);
+  ck("it takes tv as well as t", /const \{ t, tv \} = useLang\(\);/.test(pub), true);
+  // The row itself, not the file: the assertion has to be that the SPORT
+  // header and the translated value sit on the same line, or it would pass on
+  // a tv() call anywhere in the component.
+  const sportRow = pub.split("\n").filter((l) => /t\("passport_sport"\)/.test(l));
+  ck("the sport row was found, once", sportRow.length, 1);
+  ck("the sport VALUE is translated, like toPassport's",
+     /\{dash\(p\.sport \? tv\(p\.sport\) : null\)\}/.test(sportRow[0] || ""), true);
+  ck("the position label resolves per sport", /positionLabelFor\(p\.sport, t\)/.test(pub), true);
+  ck("...and so does the handedness label", /prefLabelFor\(p\.sport, t\)/.test(pub), true);
+  ck("no row prints a fixed FOOT label any more", /t\("passport_foot"\)/.test(pub), false);
+  // The athlete's own words stay their own words, here as in toPassport.
+  ck("position is not run through tv", /tv\(p\.position\)/.test(pub), false);
+  ck("club is not run through tv", /tv\(p\.club_name\)/.test(pub), false);
+  // Both helpers are reachable from here: PublicPassport renders before
+  // GolszApp mounts, so a helper declared inside a component would be out of
+  // scope and this card would white-screen on a shared link.
+  for (const h of ["positionLabelFor", "prefLabelFor"]) {
+    ck(`${h} is declared at module scope`, new RegExp("^function " + h + "\\(", "m").test(APP), true);
   }
 }
 

@@ -2144,6 +2144,14 @@ function SettingsButton({ openSignal }) {
       const { data, error } = await sb.from("passport_share_tokens").select("id, token, label, revoked, created_at, last_accessed_at").eq("user_id", uid).eq("revoked", false).order("created_at", { ascending: false });
       if (error) throw error;
       setShareLinks(data || []);
+      // AND THE OLD FAILURE STOPS BEING SHOWN. Only revokeShareLink used to
+      // clear this, so a read that failed once left "could not load" standing
+      // over a list that had since loaded correctly - on the panel an athlete
+      // opens to kill a Passport link they sent to the wrong person. A live
+      // list under a banner saying it could not be fetched invites them to
+      // believe a link is missing from it. A success is the answer to the
+      // previous failure, so it retires it.
+      setShareErr("");
     } catch (e) {
       // NOT setShareLinks([]). This panel exists so an athlete can kill a
       // Passport link sent to the wrong person, and the comment below calls a
@@ -2248,49 +2256,71 @@ function SettingsButton({ openSignal }) {
   // A table that FAILS is recorded in _errors rather than dropped. A silent
   // omission looks identical to "you had no data there", which is exactly the
   // failure mode this codebase keeps finding elsewhere.
+  //
+  // THE FOURTH ELEMENT IS THE SORT KEY, AND IT HAS TO BE A TOTAL ORDER.
+  //
+  // Paging below asks for ranges, which PostgREST sends as LIMIT/OFFSET. An
+  // OFFSET is only meaningful against a sort that puts the rows in ONE
+  // definite sequence. The first version of the paging ordered by `col` - the
+  // same column it filters with .eq(col, uid) - so every row in the result
+  // had the identical sort value and the "order" decided nothing: Postgres
+  // was free to hand back page 2 in a different arrangement than page 1 was
+  // cut from, which duplicates some rows and drops others.
+  //
+  // That failure is invisible to the count check that follows. k rows dropped
+  // and k rows repeated leaves rows.length EQUAL to the exact count, so the
+  // file reported itself complete while containing neither all of their data
+  // nor only their data. This is the right-of-access copy; it is the one file
+  // in GOLSZ that must never overstate what it holds, and "the count is the
+  // authority" is only true once the partition it checks is stable.
+  //
+  // So each table names its own primary key here, as a string or as the
+  // columns of a composite one. Every table in this list has one - verified
+  // against supabase-schema.sql and the migrations that created them - which
+  // is what makes a total order available at all.
   const EXPORT_TABLES = [
-    ["profile", "profiles", "id"],
-    ["athlete", "athletes", "id"],
-    ["pathway_plan", "pathway_plan", "user_id"],
-    ["benchmarks", "athlete_benchmarks", "user_id"],
-    ["outreach_targets", "outreach_targets", "user_id"],
-    ["development_plan", "development_plan_items", "user_id"],
+    ["profile", "profiles", "id", "id"],
+    ["athlete", "athletes", "id", "id"],
+    ["pathway_plan", "pathway_plan", "user_id", "user_id"],
+    ["benchmarks", "athlete_benchmarks", "user_id", "id"],
+    ["outreach_targets", "outreach_targets", "user_id", "id"],
+    ["development_plan", "development_plan_items", "user_id", "id"],
     // The habit's daily history. An export that returned the habits but not
     // the days they were kept would hand someone their goals with the record
     // of actually doing them quietly missing.
-    ["development_plan_ticks", "development_plan_ticks", "user_id"],
+    ["development_plan_ticks", "development_plan_ticks", "user_id", ["item_id", "tick_date"]],
     // Their actions, with the real completion dates. Added the moment Home
     // started reading this table: a table the app reads about you but omits
     // from your export does not look like a bug, it looks like there was
     // nothing there. test_data_export derives this from the client's own
     // owner-filtered reads and failed on exactly that.
-    ["athlete_actions", "athlete_actions", "user_id"],
+    ["athlete_actions", "athlete_actions", "user_id", "id"],
     // Their score history. Added the moment Home started reading it: a table
     // the app keeps about you but omits from your export does not look like a
     // bug, it looks like there was nothing there.
-    ["assessment_snapshots", "assessment_snapshots", "athlete_id"],
-    ["scout_history", "scout_history", "user_id"],
-    ["verification_requests", "verification_requests", "user_id"],
-    ["posts", "posts", "author_id"],
-    ["messages_sent", "messages", "sender_id"],
-    ["messages_received", "messages", "recipient_id"],
-    ["parent_links_as_athlete", "parent_links", "athlete_id"],
-    ["parent_links_as_parent", "parent_links", "parent_id"],
-    ["hidden_conversations", "hidden_conversations", "user_id"],
-    ["daily_activity", "daily_activity", "user_id"],
-    ["post_likes", "post_likes", "profile_id"],
-    ["appeals", "moderation_appeals", "user_id"],
+    ["assessment_snapshots", "assessment_snapshots", "athlete_id", ["athlete_id", "taken_on"]],
+    ["scout_history", "scout_history", "user_id", "id"],
+    ["verification_requests", "verification_requests", "user_id", "id"],
+    ["posts", "posts", "author_id", "id"],
+    ["messages_sent", "messages", "sender_id", "id"],
+    ["messages_received", "messages", "recipient_id", "id"],
+    ["parent_links_as_athlete", "parent_links", "athlete_id", "id"],
+    ["parent_links_as_parent", "parent_links", "parent_id", "id"],
+    ["hidden_conversations", "hidden_conversations", "user_id", ["user_id", "other_id"]],
+    ["daily_activity", "daily_activity", "user_id", ["user_id", "activity_date"]],
+    ["post_likes", "post_likes", "profile_id", ["post_id", "profile_id"]],
+    ["appeals", "moderation_appeals", "user_id", "id"],
     // Only the direction the athlete CAUSED. "who I followed" and "who I
     // blocked" are their own actions; "who followed me" and "who blocked me"
     // are other people's, and handing those over in a file the athlete may
     // forward would expose someone else's choice about them.
-    ["follows_i_made", "follows", "follower_id"],
-    ["blocks_i_made", "blocks", "blocker_id"],
+    ["follows_i_made", "follows", "follower_id", ["follower_id", "followed_id"]],
+    ["blocks_i_made", "blocks", "blocker_id", ["blocker_id", "blocked_id"]],
     // Their availability history - every time they marked themselves hurt,
     // limited or back. golsz-app.html writes a row here on each change and
     // this file omitted it, so the one health-adjacent thing GOLSZ keeps
     // about an athlete was the one thing their own copy did not contain.
-    ["availability_history", "athlete_outcomes", "athlete_id"],
+    ["availability_history", "athlete_outcomes", "athlete_id", "id"],
   ];
   async function exportMyData() {
     if (!sb || !uid || exportBusy) return;
@@ -2318,7 +2348,7 @@ function SettingsButton({ openSignal }) {
       _errors: [],
       _sections: {},
       _zero_row_sections: [],
-      _note: "Each section lists the rows VISIBLE TO YOU at export time. Every section is read in pages and then counted separately; where the two disagree the section is listed in _errors as incomplete rather than handed over as if it were whole. A section with zero rows means either you have no data there or a permission rule filtered it — this file is produced in your browser under your own access, and those two cases are indistinguishable from here. _zero_row_sections lists every empty section so you can check any you did not expect. If _profile_canary is not \"ok\", treat the whole file as incomplete and contact support.",
+      _note: "Each section lists the rows VISIBLE TO YOU at export time. Every section is read in pages ordered by that table's primary key, then counted separately and checked for a row that came back twice; where any of those disagree the section is listed in _errors as incomplete rather than handed over as if it were whole. A section with zero rows means either you have no data there or a permission rule filtered it — this file is produced in your browser under your own access, and those two cases are indistinguishable from here. _zero_row_sections lists every empty section so you can check any you did not expect. If _profile_canary is not \"ok\", treat the whole file as incomplete and contact support.",
       _profile_canary: "unchecked",
     };
     try {
@@ -2347,12 +2377,18 @@ function SettingsButton({ openSignal }) {
       // rather than resolved. That turns the one failure this file could not
       // previously detect into the "partial" message it already has.
       const PAGE = 1000;
-      for (const [label, table, col] of EXPORT_TABLES) {
+      for (const [label, table, col, key] of EXPORT_TABLES) {
         const rows = [];
         let failed = false;
+        // ORDERED BY THE TABLE'S OWN KEY, not by the column it was filtered
+        // on. See EXPORT_TABLES: a sort every row ties on is not an order,
+        // and an OFFSET taken against one can repeat a row on page 2 that
+        // page 1 already returned while never returning another.
+        const sortCols = Array.isArray(key) ? key : [key];
         for (let from = 0; ; from += PAGE) {
-          const { data, error } = await sb.from(table).select("*").eq(col, uid)
-            .order(col).range(from, from + PAGE - 1);
+          let q = sb.from(table).select("*").eq(col, uid);
+          for (const sc of sortCols) q = q.order(sc);
+          const { data, error } = await q.range(from, from + PAGE - 1);
           if (error) {
             out._errors.push({ section: label, table, message: error.message });
             failed = true;
@@ -2363,6 +2399,21 @@ function SettingsButton({ openSignal }) {
           if (page.length < PAGE) break;
         }
         if (failed) continue;
+        // AND THE PARTITION IS CHECKED, not assumed. Every table here has a
+        // primary key, so no two distinct rows can share it - which makes a
+        // repeat proof that a page boundary moved, and catches the one case
+        // the count comparison below cannot: k rows dropped and k repeated
+        // leaves the total unchanged.
+        const seen = new Set();
+        let repeated = 0;
+        for (const r of rows) {
+          const fp = JSON.stringify(sortCols.map((sc) => (r == null ? null : r[sc])));
+          if (seen.has(fp)) repeated++; else seen.add(fp);
+        }
+        if (repeated > 0) {
+          out._errors.push({ section: label, table,
+            message: `Incomplete: ${repeated} row(s) came back more than once across pages, so this section both repeats rows and is missing others. Export again; if it keeps happening, contact support.` });
+        }
         out[label] = rows;
         out._sections[label] = { table, rows: rows.length };
         // Counted independently of the paging that produced the rows.
@@ -5881,7 +5932,11 @@ function toPassport(profile, ath, uid, t, tv) {
    than that RPC deliberately returns, and returns null outright for a
    restricted (unapproved) minor, same gate as everywhere else in the app. */
 function PublicPassport({ userId, token }) {
-  const { t } = useLang();
+  // tv as well as t: the sport is a STORED ENGLISH VALUE, same as everywhere
+  // else, and this card renders it under a translated header. toPassport()
+  // was given tv for exactly that reason; this renderer — the shared link a
+  // coach actually opens — was left printing "Soccer" under ΑΘΛΗΜΑ.
+  const { t, tv } = useLang();
   const [state, setState] = useState("loading"); // loading | ok | private | error
   const [p, setP] = useState(null);
 
@@ -5948,12 +6003,18 @@ function PublicPassport({ userId, token }) {
                   <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 999, padding: "2px 8px", display: "inline-block", marginTop: 4 }}>{p.occupation.toUpperCase()}</span>
                 )}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 10px", marginTop: 10, fontSize: 11.5 }}>
-                  <div><span style={{ color: C.slate }}>{t("passport_sport")}: </span>{dash(p.sport)}</div>
+                  <div><span style={{ color: C.slate }}>{t("passport_sport")}: </span>{dash(p.sport ? tv(p.sport) : null)}</div>
                   <div><span style={{ color: C.slate }}>{positionLabelFor(p.sport, t)}: </span>{dash(p.position)}</div>
                   <div><span style={{ color: C.slate }}>{t("passport_club")}: </span>{dash(p.club_name)}</div>
                   <div><span style={{ color: C.slate }}>{t("passport_grad")}: </span>{dash(p.grad_year)}</div>
                   <div><span style={{ color: C.slate }}>{t("passport_status")}: </span>{dash(p.recruiting_status)}</div>
-                  <div><span style={{ color: C.slate }}>{t("passport_foot")}: </span>{dash(p.foot)}</div>
+                  {/* prefLabelFor, not passport_foot. The row above this one
+                      became sport-aware on 2026-10-21 and this one did not,
+                      so the shared link told a coach a baseball player's
+                      "Right" was their FOOT while the same athlete's own
+                      screen and their PDF both said BATS/THROWS. Same helper
+                      as those two now, so the three cannot drift again. */}
+                  <div><span style={{ color: C.slate }}>{prefLabelFor(p.sport, t)}: </span>{dash(p.foot)}</div>
                 </div>
               </div>
             </div>
@@ -8241,8 +8302,15 @@ function AdminPanel({ onBack }) {
 // written, translated into four languages and shown to nobody. The redesign
 // chose three deliberately - they wrap onto one row at 375px where four do
 // not - so the count is stated here, once, instead of being built here and
-// cut somewhere else. Both chip4 keys stay in the dictionaries unread, per the
-// never-delete rule; restoring the fourth chip is adding it back to this list.
+// cut somewhere else. Restoring the fourth chip is adding it back to this list.
+//
+// ONLY scout_chip4 IS NOW UNREAD. scout_np_chip4 IS STILL RENDERED - it is
+// the gold first tile on ScoutStart's non-player grid, which is the first
+// thing a coach or scout sees on the Scout tab. An earlier version of this
+// comment said both keys were unread, which would have made deleting
+// scout_np_chip4 look free; it is a rendered key, so a deletion puts a raw
+// identifier on that screen. Both stay in the dictionaries either way, per
+// the never-delete rule.
 function chipsFor(t, isPlayer) {
   return isPlayer
     ? [t("scout_chip1"), t("scout_chip2"), t("scout_chip3")]
@@ -18371,7 +18439,27 @@ function Root() {
   const [freshSignup, setFreshSignup] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const [banned, setBanned] = useState(false);
-  const [banChecked, setBanChecked] = useState(false);
+  // WHICH SIGN-IN STATE THE BAN CHECK HAS COVERED — not a bare "it finished".
+  //
+  // This was a boolean, and it lagged by exactly one render in the one case
+  // that matters. Signed out, the effect below sets it TRUE. Signing in flips
+  // `authed` to true while it is still true from the signed-out pass, so the
+  // guard further down ("authed && !banChecked") does not fire, GolszApp
+  // MOUNTS AND PAINTS, and only then does the effect run and set it false —
+  // unmounting the app to a blank screen, until the check finishes and mounts
+  // it a third time.
+  //
+  // So signing in rendered the whole app, threw it away, and built it again:
+  // a visible flash of a half-loaded app, and every fetch GolszApp makes on
+  // mount — profile, athlete, pathway, benchmarks, targets, actions, share
+  // tokens — issued twice, with the first set's results discarded.
+  //
+  // Storing WHAT the check covered instead of THAT it happened makes the
+  // comparison answer for the current render rather than the previous one.
+  // On the render where authed becomes true, banCheckedFor is still false, so
+  // they disagree immediately and the blank holding screen shows first.
+  const [banCheckedFor, setBanCheckedFor] = useState(null);
+  const banChecked = banCheckedFor === authed;
 
   useEffect(() => {
     // paidReturn only auto-authenticates in no-backend preview mode (no real
@@ -18398,12 +18486,14 @@ function Root() {
   // 019's notes in CLAUDE.md) — an admin ban is enforced here plus via RLS
   // (posts_write/athletes_read), not by disabling the credential itself.
   useEffect(() => {
-    if (!sb || !authed) { setBanChecked(true); return; }
-    setBanChecked(false);
+    if (!sb || !authed) { setBanCheckedFor(authed); return; }
     (async () => {
       try {
         const { data: { user } } = await sb.auth.getUser();
-        if (!user) return;
+        // Stamped on every exit, including this one. Returning without
+        // recording which state was checked would leave the holding screen up
+        // for ever — a blank page instead of a flash, which is worse.
+        if (!user) { setBanCheckedFor(authed); return; }
         const { data: prof } = await sb.from("profiles").select("is_banned").eq("id", user.id).single();
         if (prof && prof.is_banned) {
           setBanned(true);
@@ -18411,7 +18501,7 @@ function Root() {
           setAuthed(false);
         }
       } catch (e) { console.error("GOLSZ ban check error:", e); }
-      finally { setBanChecked(true); }
+      finally { setBanCheckedFor(authed); }
     })();
   }, [authed]);
 
@@ -18525,7 +18615,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=b5c1854f6cc5cfb5";
+    var APP_SRC = "js/app.js?v=077c15137f688a7f";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

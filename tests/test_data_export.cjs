@@ -153,11 +153,54 @@ ck("one failed table does not abandon the rest", /continue;/.test(fn), true);
 // Scout exchange. This is the right-of-access copy; overstating what it holds
 // is the one thing it must never do.
 ck("every section is read in pages, not in one uncapped select",
-   /\.order\(col\)\.range\(from, from \+ PAGE - 1\)/.test(fn), true);
+   /\.range\(from, from \+ PAGE - 1\)/.test(fn), true);
+// AND THE PAGES ARE CUT ON A TOTAL ORDER. This assertion used to pin
+// `.order(col).range(...)` - ordering by the SAME column the section is
+// filtered on with .eq(col, uid), so every row tied on the sort value and the
+// order decided nothing. A range against that is an OFFSET into an
+// arrangement Postgres may change between requests: page 2 can repeat a row
+// page 1 already returned and never return another. The count check below
+// cannot see it, because k dropped and k repeated leaves the total equal. So
+// the suite pinned the defect it was written to close.
+ck("...cut on the table's own key, never on the column it was filtered by",
+   /\.order\(col\)/.test(fn), false);
+ck("...which each section names for itself",
+   /const sortCols = Array\.isArray\(key\) \? key : \[key\];/.test(fn), true);
+// EVALUATED, NOT PATTERN-MATCHED. The first version of this check built the
+// rows with a regex and a lazy quantifier, and passed just as happily on a
+// row with no key at all - a guard for a missing declaration that could not
+// detect a missing declaration. The list is a literal of strings and arrays,
+// so the honest way to count its elements is to let JS count them.
+const EXPORT_ROWS = new Function(
+  "return " + (/const EXPORT_TABLES = (\[[\s\S]*?\n  \]);/.exec(APP) || ["", "[]"])[1])();
+ck("the export table list was read", EXPORT_ROWS.length >= 20, true);
+ck("...and every section declares a sort key",
+   EXPORT_ROWS.filter((r) => {
+     const k = r[3];
+     if (typeof k === "string") return !k;
+     return !Array.isArray(k) || k.length === 0 || k.some((c) => typeof c !== "string" || !c);
+   }).map((r) => r[0]), []);
+// A key that is just the owner column is the defect in its original form -
+// the single-valued sort that made the paging unstable - so it is named here
+// rather than left to look like a declaration. pathway_plan is the one real
+// exception: user_id IS its primary key, one row per athlete.
+ck("...that is not simply the column the section was filtered on",
+   EXPORT_ROWS.filter((r) => r[3] === r[2] && r[1] !== "profiles" && r[1] !== "athletes" && r[1] !== "pathway_plan")
+     .map((r) => r[0]), []);
+// A repeat is the only visible trace of a moved page boundary, and every
+// table here has a primary key, so two distinct rows can never share one.
+ck("a row that came back twice is reported, not merged into the file",
+   /if \(repeated > 0\)/.test(fn), true);
 ck("...until a short page says there is no more",
    /if \(page\.length < PAGE\) break;/.test(fn), true);
-ck("...and no bare select survives in the loop",
-   /select\("\*"\)\.eq\(col, uid\);/.test(fn), false);
+// The read that is actually SENT must carry the range. The builder line
+// holding select("*").eq(col, uid) is not the request - `q` is awaited one
+// line later - so this asserts on the await, which is the thing that goes to
+// PostgREST, rather than on the shape of the line that assembles it.
+ck("...and the read that is sent always carries a range",
+   /await q\.range\(from, from \+ PAGE - 1\)/.test(fn), true);
+ck("...with no uncapped select awaited anywhere in the loop",
+   /await sb\.from\(table\)\.select\("\*"\)/.test(fn), false);
 
 // PAGING IS NOT TRUSTED TO PROVE COMPLETENESS. These tables share no sortable
 // key, so PostgREST promises no stable partition; the count is read
@@ -176,7 +219,7 @@ ck("a section that cannot be counted is called out too",
 // The one health-adjacent record GOLSZ keeps about an athlete, and the file
 // did not contain it.
 ck("their availability history is in the export",
-   /\["availability_history", "athlete_outcomes", "athlete_id"\]/.test(APP), true);
+   /\["availability_history", "athlete_outcomes", "athlete_id", "id"\]/.test(APP), true);
 
 // ---- reachable from the UI, in all four languages -------------------------
 ck("the button is rendered", /onClick=\{exportMyData\}/.test(APP), true);

@@ -268,16 +268,29 @@ for (const [name, idx] of [
 // late, unable to be next, unable to appear in any week, month or year of the
 // calendar. The whole scheduling feature was inert exactly where it mattered.
 {
-  const synth = new Function("PATHWAY_TYPE_SET", "dueFromOffset",
+  const synth = new Function("PATHWAY_TYPE_SET", "dueFromOffset", "labelsForMissing",
     lift("function synthesizePathwayFromState", "\n\n") + " return synthesizePathwayFromState;"
-  )(PATHWAY_TYPE_SET_FOR_SYNTH, dueFromOffsetLive);
+  )(PATHWAY_TYPE_SET_FOR_SYNTH, dueFromOffsetLive, require("../api/_readiness.js").labelsForMissing);
+  // THE FIXTURE IS WHAT computeProfileQuality ACTUALLY RETURNS. It used to
+  // read ["height", "bio", "club"] — hand-written words, one of which
+  // ("height") is not even a check — so when the real array turned into
+  // dictionary keys on 2026-10-21 this suite stayed green while the step it
+  // asserts on read "Complete your Passport: add quality_item_grad_year,
+  // quality_item_recruiting, quality_item_timeline" in production, written
+  // into pathway_plan.milestones on the athlete's tap.
   const full = {
-    quality: { missing: ["height", "bio", "club"] },
+    quality: { missing: ["quality_item_grad_year", "quality_item_bio", "quality_item_club"] },
     performance: { metricsTracked: 0, metricsRetested: 0 },
     pathway: { targetsCount: 0 }, development: { total: 0 }, verification: { status: "none" },
   };
   const r = synth({ pathwayType: "ncaa", readiness: full });
   ck("the fallback produces steps at all", r.milestones.length > 0, true);
+  // These labels are PERSISTED, so a key in one cannot be corrected later.
+  ck("no step label carries a dictionary key",
+     r.milestones.filter((m) => /quality_item_|position_label_|pathway_stage_/.test(m.label)), []);
+  ck("the Passport step names the gaps in words",
+     (r.milestones.find((m) => /^Complete your Passport/.test(m.label)) || {}).label,
+     "Complete your Passport: add grad year, bio, club");
   ck("...and every one of them carries a date",
      r.milestones.every((m) => /^\d{4}-\d{2}-\d{2}$/.test(m.due)), true);
   // GOLSZ picked these days, not the athlete. Without the marker they could

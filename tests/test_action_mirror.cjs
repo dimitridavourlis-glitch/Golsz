@@ -93,10 +93,23 @@ ck("...and never deletes", actionVerbs.includes("delete"), false);
   // The guard that exists to prove the client never writes a column the sync
   // overwrites was reading a third of what the client writes.
   ck("there are three call sites, one writer", (APP.match(/saveActionFields\(sb, uid, m\.id, \{/g) || []).length, 3);
-  const written = [...APP.matchAll(/saveActionFields\(sb, uid, m\.id, \{([^}]*)\}/g)]
+  const keysOf = (src) => [...src.matchAll(/saveActionFields\(sb, uid, m\.id, \{([^}]*)\}/g)]
     .flatMap((m) => [...m[1].matchAll(/(\w+)\s*:/g)].map((k) => k[1]));
-  ck("...and more keys than there are call sites, or this is still reading one each",
-     written.length >= 3, true);
+  // VALIDATE THE EXTRACTOR ON KNOWN TRUTH, not on the live call sites. All
+  // three of those happen to write a single key today, so the old one-key-per-
+  // call regex and this one return the same array on the real file: no
+  // assertion over golsz-app.html can tell the fixed extractor from the broken
+  // one, and `written.length >= 3` with three call sites pinned above was true
+  // whatever the extractor did. A planted two-key call is the only thing that
+  // fails for the old regex and passes for this one, so it is what the fix is
+  // proved against. Keep this fixture multi-key: if it is ever reduced to one
+  // key, the regression below goes unseen again.
+  const FIXTURE = "saveActionFields(sb, uid, m.id, { category: v, due_on: d }).then(({ error }) => {});";
+  ck("the extractor reads EVERY key of a call, not the first",
+     keysOf(FIXTURE), ["category", "due_on"]);
+  ck("...so a mirrored column added beside an existing key is seen",
+     keysOf(FIXTURE).filter((c) => mirrored.includes(c)), ["due_on"]);
+  const written = keysOf(APP);
   ck("...writing only category, priority and reason", [...new Set(written)].sort(), ["category", "priority", "reason"]);
   ck("THE TWO SETS ARE DISJOINT — nothing the client writes can be overwritten",
      written.filter((c) => mirrored.includes(c)), []);

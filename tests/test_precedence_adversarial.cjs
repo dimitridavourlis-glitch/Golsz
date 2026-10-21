@@ -254,16 +254,24 @@ ck("internal terminology still rewritten through the combined path",
 // A prompt override fixed it but depended on obedience. Now the five
 // CURRENT sections are rendered from live structured state every turn and
 // the model never writes them, so a stale goal cannot occupy them at all.
-// composeStructuredSummary closes over DIMENSION_LABEL from
-// api/_readiness.js; supply the real one.
-const { DIMENSION_LABEL } = require("../api/_readiness.js");
+// composeStructuredSummary closes over DIMENSION_LABEL and labelsForMissing
+// from api/_readiness.js; supply the real ones.
+//
+// labelsForMissing is not optional scaffolding. quality.missing holds
+// DICTIONARY KEYS, which only the client can resolve, so every server-side
+// use of that array goes through this function to turn them into words. Lift
+// it rather than stub it, or this suite reads words nobody ships. Omitting it
+// is not a soft failure either: composeStructuredSummary throws a
+// ReferenceError the moment an athlete has a Passport gap, which is most of
+// them.
+const { DIMENSION_LABEL, labelsForMissing } = require("../api/_readiness.js");
 eval(slice("function splitNarrativeByGoal(narrative, currentGoalType) {", "// ---- 5 / RECOMMEND", "summary composer"));
 {
   const STATE = {
     sport: "Soccer", profileComplete: true,
     pathwayCreated: true, pathwayType: "ncaa", pathwayTimeline: "2027", milestoneCount: 0, milestonesDone: 0, pathwayComplete: false,
     targetsCount: 0, benchmarks: [{ metric: "10m", value: 2.0, unit: "s" }], devItems: [],
-    readiness: { composite: 54, weakest: "development", quality: { missing: ["Highlights"] }, performance: { metricsTracked: 1, metricsRetested: 0 }, development: { total: 0 } },
+    readiness: { composite: 54, weakest: "development", quality: { missing: ["quality_item_highlights"] }, performance: { metricsTracked: 1, metricsRetested: 0 }, development: { total: 0 } },
   };
   // A note thoroughly polluted with the OLD goal, the realistic long
   // conversation case.
@@ -292,6 +300,12 @@ eval(slice("function splitNarrativeByGoal(narrative, currentGoalType) {", "// --
   ck("the state section carries the real Passport Strength", /54\/100/.test(stateSection), true);
   const needsSection = outS.slice(outS.indexOf("CURRENT NEEDS"), outS.indexOf("CONFIRMED CURRENT FACTS"));
   ck("needs are derived from the record", /no benchmarks recorded|Passport missing|no development plan|no targets/.test(needsSection), true);
+  // THE FIXTURE FEEDS THE SHAPE THE FUNCTION REALLY RECEIVES. computeProfileQuality
+  // emits "quality_item_highlights", not "Highlights", so a fixture carrying the
+  // old English label let this note pass without the key-to-words step running at
+  // all. The gap must reach the prompt as the word, and the key must not reach it.
+  ck("...as words, not as the dictionary key", /Passport missing: highlights/.test(needsSection), true);
+  ck("...and no dictionary key survives anywhere in the note", /quality_item_|position_label_/.test(outS), false);
   ck("...and carry the computed lowest plan", /lowest plan covering these: Pro/.test(needsSection), true);
   const factsSection = outS.slice(outS.indexOf("CONFIRMED CURRENT FACTS"), outS.indexOf("HISTORICAL GOALS"));
   ck("confirmed facts carry live benchmarks", /10m 2s/.test(factsSection), true);

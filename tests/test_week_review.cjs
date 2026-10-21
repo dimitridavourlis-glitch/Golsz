@@ -143,8 +143,10 @@ ck("...completions in gold, misses in amber",
 
 // A table the app reads about you must be in your export, or its absence
 // reads as "there was nothing there".
+// Matched up to the owner column, not to the end of the row: the sort key
+// after it is test_data_export's invariant, not this suite's.
 ck("the table is in the data export",
-   /\["athlete_actions", "athlete_actions", "user_id"\]/.test(APP), true);
+   /\["athlete_actions", "athlete_actions", "user_id"[,\]]/.test(APP), true);
 // ...and in the privacy policy, which enumerates categories specifically
 // enough that an omission is a claim.
 {

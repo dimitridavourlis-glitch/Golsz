@@ -106,6 +106,11 @@ eval(slice("const GOAL_TEXT_PATTERNS", "// Applies ONLY the derived pathway_type
 // now". synthesizePathwayFromState calls it, so it has to be in scope here —
 // lifted, not stubbed, or the dates this suite exercises would be a copy.
 eval(slice("function dueFromOffset(n) {", "function extractSuggestedPathway", "offset resolver"));
+// Same reasoning for labelsForMissing: synthesizePathwayFromState writes the
+// names of the athlete's Passport gaps into a step label that is PERSISTED,
+// and quality.missing holds dictionary keys. Imported from the module that
+// owns it, not stubbed, so the words this suite sees are the stored words.
+const { labelsForMissing } = require("../api/_readiness.js");
 eval(slice("const PATHWAY_APPROVAL_PATTERNS = [", "// Same extraction shape again, pulling drafted_email", "handoff"));
 
 // Approval is read from the ATHLETE's words. These are the real messages
@@ -239,8 +244,18 @@ ck("readiness is computed in getAthleteState, not in the prompt", /readiness = c
 ck("the scores are handed over as the athlete's own screen figures",
    /THEIR PASSPORT STRENGTH \(the exact figures on their Home screen right now/.test(SCOUT), true);
 ck("the weakest dimension is named", /Weakest area: \$\{DIMENSION_LABEL\[rd\.weakest\]\}/.test(SCOUT), true);
+// NAMED IN WORDS. This assertion read `missing\.join` until 2026-10-21 and
+// passed either way — which is how `missing` turning into dictionary keys put
+// "quality_item_grad_year" into a prompt whose next sentence tells the model
+// to "use the plain-language name above". Every use of the array in this file
+// goes through labelsForMissing(), so the check is now on that, in both
+// directions: no site may read the raw array.
 ck("missing Passport information is named, not summarised as a number",
-   /Still missing from their Passport: \$\{rd\.quality\.missing\.join/.test(SCOUT), true);
+   /Still missing from their Passport: \$\{labelsForMissing\(rd\.quality\.missing\)\.join/.test(SCOUT), true);
+ck("...and nothing in scout.js reads the key array without labelling it",
+   SCOUT.split("\n")
+     .filter((l) => /quality\.missing/.test(l) && !/^\s*(\/\/|\*)/.test(l))
+     .filter((l) => /quality\.missing\s*\.(join|slice|map)/.test(l) && !/labelsForMissing\(/.test(l)), []);
 ck("supporting measurements travel with the scores",
    /Supporting counts: \$\{rd\.performance\.metricsTracked\}/.test(SCOUT), true);
 ck("Scout is forbidden from inventing a different score",

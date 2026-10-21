@@ -117,8 +117,12 @@ for (const k of ["progress_up", "progress_down", "progress_same"]) {
 }
 
 // A table the app keeps about you must be in your export.
+// The owner column is what this suite is asserting; the sort key that
+// follows it belongs to test_data_export, which owns that invariant. So the
+// row is matched up to its owner column and then allowed to continue, rather
+// than pinned to an arity this file has no stake in.
 ck("the history is exported",
-   /\["assessment_snapshots", "assessment_snapshots", "athlete_id"\]/.test(APP), true);
+   /\["assessment_snapshots", "assessment_snapshots", "athlete_id"[,\]]/.test(APP), true);
 
 ck("it is in the compiled bundle",
    fs.readFileSync(path.join(REPO, "js", "app.js"), "utf8").includes("assessment_snapshots"), true);

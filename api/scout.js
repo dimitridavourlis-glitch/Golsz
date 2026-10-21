@@ -73,7 +73,10 @@ import { resolveActingAthlete } from "./_acting-for.js";
 // POSITIONLESS_SPORTS by PATHWAY_FIELD_PRIORITY for why the triage block
 // reads a mirror rather than this binding, and for the guard at the foot of
 // this file that pins the two together.
-import { computeReadiness, DIMENSION_LABEL, SPORTS_WITHOUT_POSITION, READINESS_DIMENSIONS as PASSPORT_STRENGTH_DIMENSIONS } from "./_readiness.js";
+// labelsForMissing comes along for the same reason DIMENSION_LABEL does:
+// quality.missing holds DICTIONARY KEYS, which the client resolves and this
+// file cannot. Every use of that array below goes through it.
+import { computeReadiness, DIMENSION_LABEL, SPORTS_WITHOUT_POSITION, labelsForMissing, READINESS_DIMENSIONS as PASSPORT_STRENGTH_DIMENSIONS } from "./_readiness.js";
 import { gapFromRows } from "./_gap.js";
 import { evaluateEntitlements, hasFeature, planDisplayName, FEATURE_LABEL } from "./_entitlements.js";
 // The pathway ladder the CLIENT draws for this athlete's sport, for all 40
@@ -1557,7 +1560,7 @@ function composeStructuredSummary({ goalText, goalSource, athleteState, narrativ
     : "no Plan built yet"}`);
 
   const gaps = [];
-  if (rd && rd.quality && rd.quality.missing && rd.quality.missing.length) gaps.push(`Passport missing: ${rd.quality.missing.join(", ")}`);
+  if (rd && rd.quality && rd.quality.missing && rd.quality.missing.length) gaps.push(`Passport missing: ${labelsForMissing(rd.quality.missing).join(", ")}`);
   if (rd && rd.performance && rd.performance.metricsTracked === 0) gaps.push("no benchmarks recorded");
   if (rd && rd.development && rd.development.total === 0) gaps.push("no development plan");
   if (athleteState && !athleteState.targetsCount) gaps.push("no targets being contacted");
@@ -3335,7 +3338,11 @@ function synthesizePathwayFromState({ pathwayType, readiness }) {
   const milestones = [];
   const step = (label, days) => milestones.push({ label, done: false, due: dueFromOffset(days), due_src: "scout" });
   if (rd && rd.quality && Array.isArray(rd.quality.missing) && rd.quality.missing.length) {
-    step(`Complete your Passport: add ${rd.quality.missing.slice(0, 3).join(", ")}`, 3);
+    // THE ONLY ONE OF THE THREE THAT IS WRITTEN DOWN. This label goes into
+    // pathway_plan.milestones on the athlete's tap and is read back from that
+    // row forever, so a key reaching it is not a bad sentence in one reply —
+    // it is a permanent step in their Plan that says nothing.
+    step(`Complete your Passport: add ${labelsForMissing(rd.quality.missing).slice(0, 3).join(", ")}`, 3);
   }
   if (rd && rd.performance) {
     if (rd.performance.metricsTracked === 0) step("Record your first set of benchmark results", 7);
@@ -7171,7 +7178,7 @@ export default async function handler(req, res) {
       const dims = PASSPORT_STRENGTH_DIMENSIONS.map((d) => `${DIMENSION_LABEL[d]} ${rd.subScores[d]}`).join(", ");
       athleteBlock += `\n\nTHEIR PASSPORT STRENGTH (the exact figures on their Home screen right now — computed by the app, not by you): overall ${rd.composite} out of 100. ${dims}. Weakest area: ${DIMENSION_LABEL[rd.weakest]}.`;
       if (rd.quality && rd.quality.missing && rd.quality.missing.length) {
-        athleteBlock += ` Still missing from their Passport: ${rd.quality.missing.join(", ")}.`;
+        athleteBlock += ` Still missing from their Passport: ${labelsForMissing(rd.quality.missing).join(", ")}.`;
       }
       athleteBlock += ` Supporting counts: ${rd.performance.metricsTracked} benchmark metric(s) tracked and ${rd.performance.metricsRetested} retested; ${rd.development.done}/${rd.development.total} development items done; ${rd.pathway.milestonesDone}/${rd.pathway.milestonesTotal} milestones done; ${rd.pathway.targetsCount} target(s); identity ${rd.verification.status}.`;
       athleteBlock += ` These numbers are authoritative. Never state a score that is not in this block, never invent a sixth category, and never describe their Passport in a way that contradicts these figures. When you talk about the weakest area, use the plain-language name above and say what would actually raise it.`;

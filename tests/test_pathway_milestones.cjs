@@ -703,9 +703,22 @@ ck("...and that condition is derived from milestones that really are filed",
   ];
   for (const [prefix, values] of groups) {
     ck(`${prefix}* has values to build from`, values.length > 0, true);
-    const defined = [...new Set([...APP.matchAll(new RegExp("\\b(" + prefix + "[a-z0-9_]+)\\s*:", "g"))].map((m) => m[1]))];
-    ck(`${prefix}* — every value has a key (a missing one renders raw)`,
-       values.map((v) => prefix + v).filter((k) => !defined.includes(k)), []);
+    // DEFINED MEANS "IN EVERY DICTIONARY", not "the string appears somewhere
+    // in the file followed by a colon". The old text scan counted any
+    // `<key>:` anywhere in golsz-app.html — an object literal, a style map,
+    // a line of prose — so a family key that was in no dictionary at all
+    // could satisfy it, and the i18n parity block above cannot see that
+    // either: it only checks the four against EACH OTHER, and a key missing
+    // from all four is missing from them equally. Taken from the parsed
+    // dictionaries, one language at a time, it now asserts what this block
+    // has always claimed.
+    const perLang = Object.fromEntries(["en", "fr", "es", "el"].map((l) =>
+      [l, new Set(sets[l].filter((k) => k.startsWith(prefix)))]));
+    const defined = [...perLang.en];
+    for (const l of ["en", "fr", "es", "el"]) {
+      ck(`${prefix}* — every value has a key in ${l} (a missing one renders raw)`,
+         values.map((v) => prefix + v).filter((k) => !perLang[l].has(k)), []);
+    }
     ck(`${prefix}* — every key has a value behind it`,
        defined.filter((k) => !values.map((v) => prefix + v).includes(k)), []);
   }

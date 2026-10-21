@@ -165,5 +165,52 @@ for (const d of server.READINESS_DIMENSIONS) {
   ck(`${d}'s label is not the raw key`, server.DIMENSION_LABEL[d] === d, false);
 }
 
+// ---- and so does every item in `missing` ---------------------------------
+// The check above was written for the five DIMENSIONS and stopped there, so
+// when quality.missing turned from English labels into dictionary keys on
+// 2026-10-21 nothing noticed that api/scout.js has no dictionary: the keys
+// went straight into the Scout prompt that says "use the plain-language name
+// above", and into the label of a Plan step that is WRITTEN to
+// pathway_plan.milestones and read back from that row forever. An athlete
+// who tapped "build my plan" got "Complete your Passport: add
+// quality_item_grad_year, quality_item_recruiting".
+//
+// Asserting on the map alone would only prove the map exists. This derives
+// the keys the REAL function emits — over the same fixtures, plus one sport
+// per distinct position slug — and requires a word for every one of them.
+const everyEmittedKey = new Set();
+for (const fx of FIXTURES) {
+  for (const k of server.computeProfileQuality(fx.athlete, fx.profile).missing) everyEmittedKey.add(k);
+}
+for (const sport of Object.keys(server.SPORT_POSITION_LABEL).concat("Soccer")) {
+  for (const k of server.computeProfileQuality({ sport }, null).missing) everyEmittedKey.add(k);
+}
+// A row with no sport yet — the only shape that reports the sport itself as
+// missing, and the one every other case above fills in by construction.
+for (const k of server.computeProfileQuality({}, null).missing) everyEmittedKey.add(k);
+ck("the emitted-key scan found the whole quality checklist", everyEmittedKey.size >= 10, true);
+ck("...including a position slug per distinct label",
+   [...new Set(Object.values(server.SPORT_POSITION_LABEL))].filter((s) => !everyEmittedKey.has("position_label_" + s)), []);
+// A key with no line in the map falls back to a humanised slug, which reads
+// as words but is not a translation anyone chose. Both are checked, because
+// the fallback is a floor and this is the thing that keeps it unused.
+ck("every key the function can emit has a written label",
+   [...everyEmittedKey].filter((k) => !Object.prototype.hasOwnProperty.call(server.MISSING_ITEM_LABEL, k)).sort(), []);
+ck("...and no label is the key, or carries its prefix or an underscore",
+   [...everyEmittedKey].filter((k) => {
+     const w = server.labelForMissing(k);
+     return !w || w === k || /_/.test(w) || /^(quality_item|position_label)\b/.test(w);
+   }).sort(), []);
+// The array form is what all three call sites use, and it must not drop or
+// reorder anything — the prompt names them in checklist order.
+ck("the array form maps one-to-one, in order",
+   server.labelsForMissing(["quality_item_bio", "position_label_weight_class", "quality_item_sport"]),
+   ["bio", "weight class", "sport"]);
+ck("a non-array is an empty list, not a crash", server.labelsForMissing(null), []);
+// The map must not grow a line for a key nothing can emit: a stale entry is
+// how the next slug rename looks covered when it is not.
+ck("no written label exists for a key the function cannot emit",
+   Object.keys(server.MISSING_ITEM_LABEL).filter((k) => !everyEmittedKey.has(k)).sort(), []);
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);

@@ -62,6 +62,65 @@ const SPORT_POSITION_LABEL = {
   Cheerleading: "role",
 };
 
+// WHAT THOSE KEYS MEAN IN WORDS, for the consumer that is not the client.
+//
+// The comment above says this file "only ever hands the names back to that
+// client". That premise was already false when it was written. api/scout.js
+// imports computeReadiness and feeds quality.missing into three places that
+// have no dictionary behind them:
+//   * the Scout system prompt — "Still missing from their Passport: ..." ,
+//     directly above the instruction to "use the plain-language name above";
+//   * the CONVERSATION NOTE's gap list;
+//   * the LABEL of a Plan step that synthesizePathwayFromState WRITES to
+//     pathway_plan.milestones, which an athlete then reads on Plan, in the
+//     week and month calendars and in the next-step receipt, for as long as
+//     the row exists.
+// So between the key conversion and this map, an athlete who tapped "build
+// my plan" got a stored step reading "Complete your Passport: add
+// quality_item_grad_year, quality_item_recruiting, quality_item_timeline",
+// and stripInternalTerminology() has no entry that would have caught the
+// model echoing those back at them either.
+//
+// ENGLISH, deliberately. Every other label synthesizePathwayFromState writes
+// is English ("Record your first set of benchmark results"), this is a server
+// with no dictionaries, and the alternative — shipping a key as a word — is
+// the bug. The client keeps resolving the SAME array through t(); nothing
+// here changes what `missing` contains or what the parity suite compares.
+const MISSING_ITEM_LABEL = {
+  quality_item_sport: "sport",
+  quality_item_club: "club",
+  quality_item_grad_year: "grad year",
+  quality_item_country: "country",
+  quality_item_recruiting: "recruiting status",
+  quality_item_bio: "bio",
+  quality_item_photo: "photo",
+  quality_item_highlights: "highlights",
+  quality_item_timeline: "career timeline",
+  position_label_position: "position",
+  position_label_event: "event",
+  position_label_weight_class: "weight class",
+  position_label_discipline: "discipline",
+  position_label_weapon: "weapon",
+  position_label_class: "class",
+  position_label_seat: "seat",
+  position_label_division: "division",
+  position_label_plays: "plays",
+  position_label_role: "role",
+};
+// A slug added to SPORT_POSITION_LABEL without a line above still has to read
+// as words rather than as an identifier, because the label it ends up in is
+// persisted and cannot be corrected after the fact. test_readiness_parity
+// pins the map against every key computeProfileQuality can emit, so this is a
+// floor, not the plan.
+function labelForMissing(key) {
+  if (Object.prototype.hasOwnProperty.call(MISSING_ITEM_LABEL, key)) return MISSING_ITEM_LABEL[key];
+  return String(key == null ? "" : key).replace(/^(?:quality_item_|position_label_)/, "").replace(/_/g, " ");
+}
+// The whole array at once, which is how all three call sites want it.
+function labelsForMissing(keys) {
+  return (Array.isArray(keys) ? keys : []).map(labelForMissing);
+}
+
 // ---- profile_quality -----------------------------------------------------
 // Breadth of a completed Passport. Returns the named gaps, not just a score,
 // because "add a bio and a highlight" is actionable and "61%" is not.
@@ -181,6 +240,9 @@ export {
   READINESS_DIMENSIONS,
   SPORTS_WITHOUT_POSITION,
   SPORT_POSITION_LABEL,
+  MISSING_ITEM_LABEL,
+  labelForMissing,
+  labelsForMissing,
   DIMENSION_LABEL,
   computeProfileQuality,
   computeVerificationScore,
