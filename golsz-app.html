@@ -7416,7 +7416,10 @@ function AdminPanel({ onBack }) {
 
   async function loadUsers(query) {
     try {
-      let q = sb.from("profiles").select("id, full_name, plan, is_minor, is_admin, is_banned, occupation, verified_tier, ai_unlimited, full_access, created_at").order("created_at", { ascending: false }).limit(100);
+      // stripe_customer_id is selected so the plan dropdown below can tell a
+      // paying subscriber from a free account. It is shown to nobody; it only
+      // decides whether a downgrade asks first.
+      let q = sb.from("profiles").select("id, full_name, plan, is_minor, is_admin, is_banned, occupation, verified_tier, ai_unlimited, full_access, stripe_customer_id, created_at").order("created_at", { ascending: false }).limit(100);
       if (query && query.trim()) q = q.ilike("full_name", `%${query.trim()}%`);
       const { data, error } = await q;
       if (error) throw error;
@@ -7467,8 +7470,41 @@ function AdminPanel({ onBack }) {
     try { const { error } = await sb.from("profiles").update({ is_admin: val }).eq("id", id); if (error) throw error; logAdmin(val ? "make_admin" : "revoke_admin", id); loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin set-admin error:", e); }
   }
+  // A DOWNGRADE DOES NOT CANCEL A SUBSCRIPTION, and this write looked like it
+  // did. The dropdown fired straight into profiles.plan with no confirmation,
+  // so an admin could move a paying subscriber to free: they lose everything
+  // they are paying for and Stripe keeps charging them, with nothing on
+  // screen saying those are separate systems.
+  //
+  // Both sibling paths already refuse exactly this. The athlete's own plan
+  // switch in Settings routes an active subscriber to the billing portal
+  // instead of writing the column, and ban/delete get a 409 from
+  // api/admin-user-action.js until the admin confirms billing was cancelled
+  // in Stripe. This is the third door into the same consequence and it was
+  // the only one standing open.
+  //
+  // Asked, not blocked: an admin fixing a webhook that never landed has a
+  // real reason to set the column directly, and they are told what it does
+  // and does not do. The acknowledgement goes into the audit row, so "they
+  // were warned" is a fact on file rather than a recollection.
   async function setUserPlan(id, val) {
-    try { const { error } = await sb.from("profiles").update({ plan: val }).eq("id", id); if (error) throw error; logAdmin("set_plan", id, { plan: val }); loadUsers(userQuery); }
+    const u = (users || []).find((x) => String(x.id) === String(id));
+    const downgrade = u && PLAN_RANK[val] !== undefined && PLAN_RANK[u.plan] !== undefined
+      && PLAN_RANK[val] < PLAN_RANK[u.plan];
+    let acknowledged = false;
+    if (u && u.stripe_customer_id && downgrade) {
+      if (!window.confirm(t("admin_billing_cancel_first").replace("{customer}", u.stripe_customer_id))) {
+        loadUsers(userQuery);   // put the dropdown back to what is on file
+        return;
+      }
+      acknowledged = true;
+    }
+    try {
+      const { error } = await sb.from("profiles").update({ plan: val }).eq("id", id);
+      if (error) throw error;
+      logAdmin("set_plan", id, acknowledged ? { plan: val, billing_acknowledged: true } : { plan: val });
+      loadUsers(userQuery);
+    }
     catch (e) { console.error("GOLSZ admin set-plan error:", e); }
   }
   // migration 045 — profiles.ai_unlimited. Deliberately separate from
@@ -7481,8 +7517,11 @@ function AdminPanel({ onBack }) {
   // The enforcement is protect_profile_columns(), which is an allowlist and
   // therefore pins full_access automatically — this button is a convenience on
   // top of that, not the thing that makes it safe.
+  // loadUsers(userQuery), not loadUsers(): refreshing without the active
+  // search drops the admin back to the unfiltered first 100 rows, so the
+  // account they just changed vanishes from the list in front of them.
   async function setUserFullAccess(id, val) {
-    try { const { error } = await sb.from("profiles").update({ full_access: val }).eq("id", id); if (error) throw error; logAdmin(val ? "grant_full_access" : "revoke_full_access", id); loadUsers(); }
+    try { const { error } = await sb.from("profiles").update({ full_access: val }).eq("id", id); if (error) throw error; logAdmin(val ? "grant_full_access" : "revoke_full_access", id); loadUsers(userQuery); }
     catch (e) { console.error("GOLSZ admin full-access error:", e); }
   }
   async function setUserAiUnlimited(id, val) {
@@ -9434,6 +9473,10 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   // fetched lazily (only once the athlete actually opens the picker) since
   // most Scout replies never need it.
   const [emailTargets, setEmailTargets] = useState(null);
+  // Whether the last read of that list FAILED, kept apart from the list
+  // itself. "I could not look" and "there is nothing there" lead to opposite
+  // actions in saveDraftedEmail, and one value cannot carry both.
+  const [emailTargetsFailed, setEmailTargetsFailed] = useState(false);
   const [savingEmailFor, setSavingEmailFor] = useState(null);
   const [selectedEmailTarget, setSelectedEmailTarget] = useState("");
   // Which message is waiting on "yes, replace what is already there".
@@ -9463,7 +9506,20 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       const { data, error } = await sb.from("outreach_targets").select("id, name, draft_email").eq("user_id", uidRef.current).order("created_at", { ascending: false });
       if (error) throw error;
       setEmailTargets(data || []);
-    } catch (e) { console.error("GOLSZ load targets for email save error:", e); setEmailTargets([]); }
+      setEmailTargetsFailed(false);
+    } catch (e) {
+      // NOT setEmailTargets([]). This list is what the overwrite guard below
+      // reads, so an empty array here is not "no targets" - it is "the guard
+      // cannot find a draft", which reads identically to "there is no draft
+      // to lose". Combined with re-reading on EVERY open rather than once a
+      // conversation, that turned one read failure into a silent overwrite of
+      // a real email to a real coach.
+      //
+      // The last good list is kept, and the failure is recorded separately so
+      // the save path can refuse rather than guess.
+      console.error("GOLSZ load targets for email save error:", e);
+      setEmailTargetsFailed(true);
+    }
   }
   async function saveDraftedEmail(msgIndex, emailText, confirmedReplace) {
     if (!sb || !selectedEmailTarget) return;
@@ -9471,8 +9527,16 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
     // addSuggestedPathway uses, and for the same reason: an overwrite the
     // athlete did not ask for is indistinguishable from data loss. Filling an
     // empty draft is unchanged and still one tap.
+    //
+    // AND IT FAILS CLOSED. The guard can only clear a save when it has
+    // actually looked and found nothing. If the list never loaded, or the
+    // last read failed, or the chosen target is not in it, then whether a
+    // draft exists is UNKNOWN - and an unknown must ask, not overwrite. The
+    // second tap is cheap; the email underneath it may be the only copy.
     const chosen = (emailTargets || []).find((x) => String(x.id) === String(selectedEmailTarget));
-    if (chosen && chosen.draft_email && String(chosen.draft_email).trim() && !confirmedReplace) {
+    const cannotTell = emailTargets === null || emailTargetsFailed || !chosen;
+    const hasDraft = !!(chosen && chosen.draft_email && String(chosen.draft_email).trim());
+    if ((cannotTell || hasDraft) && !confirmedReplace) {
       setReplaceDraftFor(msgIndex);
       return;
     }
@@ -15769,7 +15833,10 @@ function AddAthleteForm({ t, onAdded }) {
   const [open, setOpen] = useState(false);
   const iso = () => {
     const dd = parseInt(d, 10), mm = parseInt(m, 10), yy = parseInt(y, 10);
-    if (!(dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12 && yy >= 1900 && yy <= 2100)) return null;
+    // Same round-trip as signup, and the ceiling is this year rather than
+    // 2100: a child cannot be born in the future, and 2100 accepted one born
+    // seventy-five years from now.
+    if (!isRealDate(yy, mm, dd) || yy > new Date().getFullYear()) return null;
     return `${yy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
   };
   const ready = name.trim().length > 1 && !!iso();
@@ -17460,6 +17527,25 @@ function TurnstileWidget({ onToken }) {
 // so a birthday later this calendar year doesn't undercount by one.
 // Mirrors api/create-child-account.js's ageFromDob() exactly; keep both
 // in sync if this ever changes.
+// A DAY THAT EXISTS IN THAT MONTH, not just a number between 1 and 31.
+//
+// The three signup boxes were each validated alone — d 1..31, m 1..12, y a
+// four-digit year — and the ISO string was then assembled by concatenation.
+// So 31 February 1998 passed every check and became the literal
+// "1998-02-31", which is not a date. Postgres rejects it on insert, and the
+// athlete gets the raw database error at the end of signup rather than a word
+// about the box they got wrong.
+//
+// Built in UTC and read back in UTC: a local-time Date would shift the day
+// either side of midnight for athletes east or west of the server and start
+// rejecting real birthdays. If any field comes back different from what went
+// in, the calendar rolled it over and the date does not exist.
+function isRealDate(y, m, d) {
+  if (!(y >= 1900 && m >= 1 && m <= 12 && d >= 1 && d <= 31)) return false;
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
+}
+
 function ageFromDobIso(dobIso) {
   const today = new Date(); const b = new Date(dobIso);
   let a = today.getFullYear() - b.getFullYear();
@@ -17643,7 +17729,8 @@ function Auth({ onDone, paidReturn }) {
   const dobOk = dobDay && dobMonth && dobYear
     && dobNum.d >= 1 && dobNum.d <= 31
     && dobNum.m >= 1 && dobNum.m <= 12
-    && String(dobYear).length === 4 && dobNum.y >= 1900 && dobNum.y <= new Date().getFullYear();
+    && String(dobYear).length === 4 && dobNum.y >= 1900 && dobNum.y <= new Date().getFullYear()
+    && isRealDate(dobNum.y, dobNum.m, dobNum.d);
   const dobIso = dobOk ? `${dobYear}-${String(dobNum.m).padStart(2, "0")}-${String(dobNum.d).padStart(2, "0")}` : "";
   const age = dobOk ? ageFromDobIso(dobIso) : null;
   // GOLSZ sells to adults. Only an 18+ account holder can create and control
@@ -17669,7 +17756,8 @@ function Auth({ onDone, paidReturn }) {
   const childDobOk = childDobDay && childDobMonth && childDobYear
     && childDobNum.d >= 1 && childDobNum.d <= 31
     && childDobNum.m >= 1 && childDobNum.m <= 12
-    && String(childDobYear).length === 4 && childDobNum.y >= 1900 && childDobNum.y <= new Date().getFullYear();
+    && String(childDobYear).length === 4 && childDobNum.y >= 1900 && childDobNum.y <= new Date().getFullYear()
+    && isRealDate(childDobNum.y, childDobNum.m, childDobNum.d);
   const childDobIso = childDobOk ? `${childDobYear}-${String(childDobNum.m).padStart(2, "0")}-${String(childDobNum.d).padStart(2, "0")}` : "";
   const childAge = childDobOk ? ageFromDobIso(childDobIso) : null;
   const childAgeOk = childAge !== null && childAge < 18;
@@ -18615,7 +18703,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=077c15137f688a7f";
+    var APP_SRC = "js/app.js?v=742d61ebaea63e41";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

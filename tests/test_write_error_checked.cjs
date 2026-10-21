@@ -99,47 +99,72 @@ const THEN_WRITE = new RegExp(
   "|rpc\\(\\s*[\"'](?:" + MUTATING_RPCS.join("|") + ")[\"'])");
 const THEN_HANDLED = /\.then\(\s*\(?\s*\{[^}]*\berror\b/;
 
-// STATEMENTS, NOT LINES. This walked code.split("\n") and tested each line on
-// its own, while every regex above needs the write AND its binding in the
-// same string. So a write formatted across lines was invisible to the suite
-// whose whole job is finding unchecked writes — and golsz-app.html formats
-// five of its writes that way, pathway_plan's among them. The two fixtures
-// below were both single-line, so the detector's own validation never
-// exercised the gap and nothing disclosed it.
+// ANCHORED ON THE WRITE, NOT ON PUNCTUATION.
 //
-// A statement is the run of lines up to and including the first one holding a
-// semicolon. Single-line writes still form their own statement, so nothing
-// that was caught before stops being caught, and adjacent statements do not
-// merge — which matters, because a neighbour's `{ error }` must not be able
-// to satisfy BOUND for an unbound write beside it.
-function statementsOf(code) {
-  const out = [];
-  const lines = code.split("\n");
-  let buf = [], startIdx = -1;
-  lines.forEach((l, i) => {
-    if (startIdx < 0 && l.trim()) startIdx = i;
-    if (startIdx >= 0) buf.push(l);
-    if (l.includes(";")) {
-      if (startIdx >= 0) out.push({ line: startIdx + 1, text: buf.join("\n") });
-      buf = []; startIdx = -1;
-    }
-  });
-  if (startIdx >= 0 && buf.length) out.push({ line: startIdx + 1, text: buf.join("\n") });
-  return out;
+// Two previous versions of this were both wrong in the same direction — they
+// decided where a statement ENDS and then asked whether the binding was
+// anywhere inside it:
+//
+//   by line       a write split across lines was invisible, because every
+//                 regex needs the write and its binding in one string, and
+//                 golsz-app.html formats five of its writes that way.
+//   by semicolon  a write whose last line carries no `;` kept accumulating
+//                 forward and merged with the NEXT statement, so a
+//                 neighbour's `{ error }` satisfied the binding check for an
+//                 unbound write beside it. The comment here claimed adjacent
+//                 statements could not merge. They could.
+//
+// Both holes come from the same mistake: treating "is there a binding nearby"
+// as the question. The real rule is tighter and needs no statement at all —
+// a binding belongs to a write only when it is IMMEDIATELY before it:
+//
+//     const { error } = await sb.from(...).update(...)
+//                     ^ this text, adjacent, with nothing in between
+//
+// A neighbour's binding is by definition not adjacent, so it cannot launder
+// anything, and a write spanning any number of lines is still one match.
+const BINDING_BEFORE = /\{[^{}]*\berror\b[^{}]*\}\s*=\s*$/;
+const LOOKBEHIND = 120;   // enough for `const { data: x, error: e } = `
+const LOOKAHEAD = 600;    // ceiling, in case a statement never closes
+
+// THE WINDOW FORWARD IS THE STATEMENT'S OWN, not a fixed number of characters.
+// A flat slice reaches past the end of a read and into the next line, so
+// `await sb.auth.getUser();` with a write below it was reported as an
+// unchecked write — the detector blaming a read for its neighbour, which is
+// the same laundering as before pointing the other way. Depth-aware so the
+// semicolons inside a chained call's arguments do not end it early.
+function statementFrom(code, i) {
+  let depth = 0;
+  const end = Math.min(code.length, i + LOOKAHEAD);
+  for (let j = i; j < end; j++) {
+    const c = code[j];
+    if (c === "(" || c === "[" || c === "{") depth++;
+    else if (c === ")" || c === "]" || c === "}") depth--;
+    else if (c === ";" && depth <= 0) return code.slice(i, j + 1);
+  }
+  return code.slice(i, end);
 }
 
 function unboundWrites(code) {
   const out = [];
-  for (const { line, text } of statementsOf(code)) {
-    const awaited = /await\s+sb\s*\./.test(text);
-    if (awaited) {
-      if (!WRITE.test(text) || BOUND.test(text)) continue;
-    } else {
-      // unawaited: only flag if it is a write AND its .then() never sees error
-      if (!THEN_WRITE.test(text) || THEN_HANDLED.test(text)) continue;
-      if (!/\.then\(/.test(text)) continue; // fire-and-forget with no handler at all
-    }
-    out.push({ line, text: text.trim() });
+  const lineAt = (i) => code.slice(0, i).split("\n").length;
+  // Awaited writes. The window forward decides whether it IS a write; the
+  // text immediately behind decides whether THIS write was bound.
+  for (const m of code.matchAll(/await\s+sb\s*\./g)) {
+    const fwd = statementFrom(code, m.index);
+    if (!WRITE.test(fwd)) continue;
+    const behind = code.slice(Math.max(0, m.index - LOOKBEHIND), m.index);
+    if (BINDING_BEFORE.test(behind)) continue;
+    out.push({ line: lineAt(m.index), text: fwd.split("\n")[0].trim() });
+  }
+  // Unawaited writes: `sb.rpc(...).then(({ error }) => ...)`. Here the handler
+  // follows the call, so the window forward is the right place to look — and
+  // a write with no .then() at all is fire-and-forget by choice, not a miss.
+  for (const m of code.matchAll(/(?<!await\s{1,8})\bsb\s*\.\s*(?:from|rpc)\(/g)) {
+    const fwd = statementFrom(code, m.index);
+    if (!THEN_WRITE.test(fwd)) continue;
+    if (!/\.then\(/.test(fwd) || THEN_HANDLED.test(fwd)) continue;
+    out.push({ line: lineAt(m.index), text: fwd.split("\n")[0].trim() });
   }
   return out;
 }
@@ -190,6 +215,44 @@ const GOOD_MULTILINE = `
 `;
 ck("the detector flags a write split across lines", unboundWrites(BROKEN_MULTILINE).length, 1);
 ck("...and stays silent when that same shape is bound", unboundWrites(GOOD_MULTILINE).length, 0);
+// THE LAUNDERING CASE, PLANTED. The semicolon-grouping version of this
+// detector merged a write whose last line carries no `;` with the statement
+// after it, so the NEXT write's `{ error }` satisfied the binding check for
+// this one and it was never reported. Both writes are real; only the first is
+// unbound, and exactly one must be flagged.
+const LAUNDERED = `
+  async function save(a, b) {
+    await sb.from("athletes").update(a).eq("id", b)
+    const { error } = await sb.from("profiles").update(b).eq("id", b);
+    if (error) throw error;
+  }
+`;
+const launderedHits = unboundWrites(LAUNDERED);
+ck("a neighbour's binding cannot launder an unbound write", launderedHits.length, 1);
+ck("...and it is the unbound one that is named",
+   /athletes/.test(launderedHits[0] ? launderedHits[0].text : ""), true);
+
+// THE MIRROR: a read must not be blamed for a write below it. A flat forward
+// window reached past `await sb.auth.getUser();` into the next statement and
+// reported the READ as an unchecked write — six of them on the real file.
+const READ_THEN_WRITE = `
+  async function go(id) {
+    const { data: { user } } = await sb.auth.getUser();
+    const { error } = await sb.from("profiles").update({ x: 1 }).eq("id", id);
+    if (error) throw error;
+  }
+`;
+ck("a read is not blamed for the write after it", unboundWrites(READ_THEN_WRITE).length, 0);
+// ...and the same read above a genuinely unbound write still reports once.
+const READ_THEN_UNBOUND = `
+  async function go(id) {
+    const { data: { user } } = await sb.auth.getUser();
+    await sb.from("profiles").update({ x: 1 }).eq("id", id);
+  }
+`;
+ck("...but an unbound write under a read is still caught",
+   unboundWrites(READ_THEN_UNBOUND).length, 1);
+
 // Proof the two fixtures differ in the way claimed, not by accident.
 ck("...and the two fixtures really are the same call, bound and unbound",
    [/\.update\(updates\)/.test(BROKEN_MULTILINE), /\.update\(updates\)/.test(GOOD_MULTILINE)], [true, true]);

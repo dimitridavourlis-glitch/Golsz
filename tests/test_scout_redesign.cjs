@@ -242,7 +242,20 @@ ck("...and a successful save updates the row it just wrote",
    /String\(x\.id\) === String\(selectedEmailTarget\) \? \{ \.\.\.x, draft_email: emailText \}/.test(APP), true);
 // The restyle must not have touched the save path's overwrite guard.
 ck("overwriting an existing draft still takes a second, specific tap",
-   /if \(chosen && chosen\.draft_email && String\(chosen\.draft_email\)\.trim\(\) && !confirmedReplace\) \{/.test(APP), true);
+   /const hasDraft = !!\(chosen && chosen\.draft_email && String\(chosen\.draft_email\)\.trim\(\)\);/.test(APP), true);
+// AND NOT KNOWING COUNTS AS "THERE MIGHT BE ONE". A failed read used to set
+// the list to [], so `chosen` was undefined, the guard did not fire, and Save
+// overwrote a real email to a real coach with no warning - on every picker
+// open, once the re-read above stopped being once-per-conversation.
+ck("...and an unknown list asks rather than overwrites",
+   /const cannotTell = emailTargets === null \|\| emailTargetsFailed \|\| !chosen;/.test(APP), true);
+ck("...which is what the guard actually branches on",
+   /if \(\(cannotTell \|\| hasDraft\) && !confirmedReplace\) \{/.test(APP), true);
+// The two states a single array cannot hold at once.
+ck("a failed read is recorded apart from the list it failed to fetch",
+   /setEmailTargetsFailed\(true\);/.test(APP), true);
+ck("...and never clobbers the last good list",
+   /setEmailTargets\(\[\]\); \}/.test(APP), false);
 
 /* ---------- replies that follow an offer ---------- */
 

@@ -69,4 +69,39 @@ ck("...and they are two distinct calls, not one counted twice",
 // /auth/v1/signup remain unrated and unchallenged.
 ck("this file says what it cannot check", /dashboard setting/.test(fs.readFileSync(__filename, "utf8")), true);
 
+/* ---------- a date of birth has to be a date ---------- */
+
+// The three boxes were validated independently — d 1..31, m 1..12, a
+// four-digit year — and the ISO string assembled by concatenation, so
+// 31 February 1998 passed every check and became the literal "1998-02-31".
+// Postgres rejects that on insert, so the athlete reached the end of signup
+// and got a raw database error instead of a word about the box they got
+// wrong. Run, not grepped: the rule is arithmetic and a regex cannot tell a
+// correct leap-year check from a wrong one.
+const realAt = APP.indexOf("function isRealDate(");
+ck("isRealDate exists", realAt > 0, true);
+const isRealDate = new Function(APP.slice(realAt, APP.indexOf("\n}", realAt) + 2) + " return isRealDate;")();
+ck("31 February is not a date", isRealDate(1998, 2, 31), false);
+ck("28 February is", isRealDate(1998, 2, 28), true);
+ck("29 February 2000 is — a century divisible by 400",
+   isRealDate(2000, 2, 29), true);
+ck("29 February 1900 is NOT — a century that is not",
+   isRealDate(1900, 2, 29), false);
+ck("31 April is not a date", isRealDate(2024, 4, 31), false);
+ck("30 April is", isRealDate(2024, 4, 30), true);
+ck("month 13 and month 0 are not months",
+   [isRealDate(1998, 13, 1), isRealDate(1998, 0, 1)], [false, false]);
+
+// All three places that build a date of birth from three boxes use it. The
+// parent adding a second child is the one most easily forgotten, and its
+// year ceiling was 2100 — a child born seventy-five years from now.
+ck("the athlete's own date of birth is checked",
+   /&& isRealDate\(dobNum\.y, dobNum\.m, dobNum\.d\);/.test(APP), true);
+ck("...and the child's at parent signup",
+   /&& isRealDate\(childDobNum\.y, childDobNum\.m, childDobNum\.d\);/.test(APP), true);
+ck("...and a child added later, which cannot be born in the future either",
+   /if \(!isRealDate\(yy, mm, dd\) \|\| yy > new Date\(\)\.getFullYear\(\)\) return null;/.test(APP), true);
+ck("no date-of-birth path still trusts a bare 1..31",
+   (APP.match(/dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12 && yy >= 1900 && yy <= 2100/g) || []).length, 0);
+
 console.log(`\n${p}/${p + f} passed`); process.exit(f ? 1 : 0);
