@@ -798,13 +798,31 @@ async function getPlatformSpend() {
     // unhealthy. The catch below already falls back to the last cached
     // value, which is a real measurement rather than an invented one.
     const PAGE = 1000;
+    // A CEILING, SO THE LOOP CANNOT BE THE OUTAGE. Every athlete's Scout
+    // request waits on this. An unbounded "page until a short page" loop
+    // trusts the server to honour Range: if it ever ignores the header it
+    // returns the same full page for ever, and the loop runs until the
+    // platform kills the function at maxDuration — a 60-second hang on every
+    // request, caused by the guard rather than by the thing it guards.
+    //
+    // Two independent stops. The page offset is capped, and each response's
+    // Content-Range is checked to start where we asked; a server that ignores
+    // Range fails on the second page rather than on the thousandth.
+    const MAX_ROWS = 1000000;
     const sumAll = async (filter) => {
       let total = 0;
       for (let from = 0; ; from += PAGE) {
+        if (from > MAX_ROWS) throw new Error("spend read did not terminate at " + from + " rows");
         const res = await fetch(
           `${url}/rest/v1/scout_daily_usage?${filter}&select=total_cost&order=user_id.asc,usage_date.asc`,
           { headers: { ...headers, Range: `${from}-${from + PAGE - 1}`, "Range-Unit": "items" } });
-        if (!res.ok && res.status !== 206) throw new Error("spend read failed: " + res.status);
+        if (!res.ok) throw new Error("spend read failed: " + res.status);
+        const cr = res.headers.get("content-range");
+        // "0-999/12345", or "*/0" for an empty set. A lower bound that is not
+        // where we asked means the window we got is not the window we meant.
+        if (cr && cr !== "*/0" && Number(String(cr).split("-")[0]) !== from) {
+          throw new Error("spend read ignored Range: asked " + from + ", got " + cr);
+        }
         const rows = await res.json();
         if (!Array.isArray(rows)) throw new Error("spend read returned a non-array");
         for (const row of rows) total += Number(row.total_cost) || 0;
@@ -822,7 +840,18 @@ async function getPlatformSpend() {
     // Logged, not silent. A spend guard that cannot read its own meter is
     // worth a line in the log even though falling back is the right move.
     console.error("GOLSZ platform spend read failed:", e && e.message);
-    return platformSpendCache.value || { today: 0, month: 0 };
+    // ZERO IS NOT "UNKNOWN", and on a cold instance there is no cache to fall
+    // back to — so a failed read handed every caller $0 spent, which is the
+    // single value that disables every ceiling underneath it. The guard
+    // switched itself fully off exactly when the database was unhealthy, and
+    // a serverless platform makes cold instances the common case, not a rare
+    // one.
+    //
+    // The last real measurement is still preferred. Where there is none, the
+    // figures are returned as unknown rather than as zero, and the callers
+    // below decide — which is a decision they can only make if they are told.
+    if (platformSpendCache.value) return { ...platformSpendCache.value, stale: true };
+    return { today: null, month: null, unknown: true };
   }
 }
 
@@ -6949,7 +6978,22 @@ export default async function handler(req, res) {
     // daily allowance.
     if (SCOUT_DAILY_SPEND_LIMIT || SCOUT_MONTHLY_SPEND_LIMIT) {
       const spend = await getPlatformSpend();
-      const overBudget = (SCOUT_DAILY_SPEND_LIMIT && spend.today >= SCOUT_DAILY_SPEND_LIMIT) || (SCOUT_MONTHLY_SPEND_LIMIT && spend.month >= SCOUT_MONTHLY_SPEND_LIMIT);
+      // UNKNOWN IS NOT UNDER BUDGET. It is not over budget either, and the
+      // choice between those is made here rather than by a null comparing
+      // false further along.
+      //
+      // Serving is the decision: refusing would take Scout down for every
+      // athlete on a transient read failure, and the ceiling exists to stop
+      // runaway cost over hours, not to be the thing that causes an outage.
+      // But it is a decision with a consequence - the ceiling is NOT enforced
+      // for this request - so it is logged as that, every time, instead of
+      // being indistinguishable from a healthy $0.
+      if (spend.unknown) {
+        console.error("GOLSZ spend ceiling NOT enforced: platform spend unreadable and no cached measurement");
+      }
+      const overBudget = !spend.unknown && (
+        (SCOUT_DAILY_SPEND_LIMIT && spend.today >= SCOUT_DAILY_SPEND_LIMIT) ||
+        (SCOUT_MONTHLY_SPEND_LIMIT && spend.month >= SCOUT_MONTHLY_SPEND_LIMIT));
       if (overBudget) {
         forgetRequestId(requestId);
         return res.status(503).json({ error: "Scout is temporarily unavailable. Please try again shortly.", code: "scout_unavailable" });

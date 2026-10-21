@@ -175,7 +175,20 @@ ck("the outreach scan is capped",
 ck("...and a failed scan is raised, not read as an empty night",
    /if \(targets === null\) throw new Error\("outreach target scan failed"\);/.test(CRON_CODE), true);
 // Sequential loops doing three round trips a row need longer than the default.
-ck("the route is allowed to finish", /export const config = \{ maxDuration: 60 \};/.test(CRON_CODE), true);
+// ONE NUMBER, TWO READERS: the platform's kill deadline and the loops' own
+// budget. Declaring 60 while the loops plan for longer is how a run gets cut
+// off mid-iteration, with pushes sent and last_reminded_at unstamped.
+ck("the route is allowed to finish", /export const config = \{ maxDuration: MAX_SECONDS \};/.test(CRON_CODE), true);
+ck("...and the loops budget from that same number",
+   /const BUDGET_MS = \(MAX_SECONDS - 8\) \* 1000;/.test(CRON_CODE), true);
+// Each loop gets a share, because they run in sequence and the due-step nudge
+// is second - so every overrun landed on the same half, the injury-aware one.
+ck("neither loop can consume the whole window",
+   /const outreachDeadline = startedAt \+ Math\.floor\(BUDGET_MS \* 0\.5\);/.test(CRON_CODE), true);
+ck("...and the second half still gets the rest",
+   /const stepsDeadline = startedAt \+ BUDGET_MS;/.test(CRON_CODE), true);
+ck("...and the due-step loop is handed its deadline, not left to guess",
+   /remindDueSteps\(supaUrl, serviceKey, webpush, stepsDeadline\)/.test(CRON_CODE), true);
 
 ck("...without stamping the nudge it never sent",
    CRON.indexOf("resting.has(row.user_id)") < CRON.indexOf("last_reminded_at: new Date()"), true);

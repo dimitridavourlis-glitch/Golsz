@@ -89,7 +89,15 @@ ck("...and reported in the response either way", /steps, watchdog \}/.test(CRON)
 // a third case, "everyone who was due is injured", which would otherwise read
 // as a broken cron rather than a working pause.
 ck("the response says how many were checked, not just how many were sent",
-   /return \{ checked: rows\.length, reminded: sent, paused \};/.test(fn), true);
+   /checked: rows\.length, reminded: sent, paused \};/.test(fn), true);
+// AND WHETHER IT GOT THROUGH THEM ALL. Both loops in this route now stop at a
+// wall-clock deadline rather than being killed mid-iteration by the platform,
+// so "reminded: 3" has two meanings - three were due, or three fitted - and a
+// permanently truncated run reads as a healthy quiet night without this.
+ck("...and says so when it stopped early",
+   /truncated: true, remaining: rows\.length - sent - paused/.test(fn), true);
+ck("...which is only reachable by the deadline break",
+   /if \(Date\.now\(\) > deadline\) \{ truncated = true; break; \}/.test(fn), true);
 
 // ---- nobody is told they are late while they are injured -------------------
 // The app stopped calling these steps late the moment the athlete tapped Hurt.

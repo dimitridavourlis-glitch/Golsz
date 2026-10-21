@@ -45,7 +45,17 @@ import webpush from "web-push";
 // per row, so a busy night is minutes of work, not seconds. Without this the
 // platform's default kills the function mid-loop: the pushes already sent
 // are stamped, the rest are not, and the response never arrives to say which.
-export const config = { maxDuration: 60 };
+// ONE NUMBER, TWO READERS. The platform's kill deadline and the loops' own
+// budget have to come from the same place, or the loops plan for a window
+// they do not have and the platform cuts them off mid-iteration — pushes
+// already sent, last_reminded_at not yet stamped, and no response to say
+// which. 60 is the Hobby ceiling; on a plan that allows more, raise this and
+// both loops get the room automatically.
+const MAX_SECONDS = 60;
+// Headroom to finish the in-flight row, write the response and return. A
+// budget equal to the ceiling is a budget that ends in a kill.
+const BUDGET_MS = (MAX_SECONDS - 8) * 1000;
+export const config = { maxDuration: MAX_SECONDS };
 
 const REMINDER_STATUSES = ["preparing", "contacted", "follow_up"];
 
@@ -312,7 +322,7 @@ async function pushToAll(supaUrl, serviceKey, webpush, subs, payload) {
 // backfilled, so a step that was already overdue when this shipped still gets
 // its first reminder — but only its first. A plan that nags daily is a plan
 // an athlete turns notifications off for.
-async function remindDueSteps(supaUrl, serviceKey, webpush) {
+async function remindDueSteps(supaUrl, serviceKey, webpush, deadline) {
   const today = new Date().toISOString().slice(0, 10);
   const rows = await supaSelect(
     supaUrl, serviceKey,
@@ -368,7 +378,15 @@ async function remindDueSteps(supaUrl, serviceKey, webpush) {
   }
   let sent = 0;
   let paused = 0;
+  let truncated = false;
   for (const row of rows) {
+    // STOPPED ON PURPOSE, AND SAID SO. Three-plus round trips per row,
+    // strictly sequential, so a busy night does not fit. Breaking here leaves
+    // the remaining rows un-stamped, which means the next run picks them up
+    // first rather than skipping them — the one property that makes stopping
+    // safe. Being killed by the platform instead gives up the same work AND
+    // the response that would have reported it.
+    if (Date.now() > deadline) { truncated = true; break; }
     // BEFORE the subscription lookup and before any stamp. Stamping
     // last_reminded_at here would burn the athlete's single nudge on a day
     // they were never told about it, and that step would never be raised
@@ -389,7 +407,9 @@ async function remindDueSteps(supaUrl, serviceKey, webpush) {
     await supaPatch(supaUrl, serviceKey, `athlete_actions?id=eq.${row.id}`, { last_reminded_at: new Date().toISOString() });
     sent++;
   }
-  return { checked: rows.length, reminded: sent, paused };
+  return truncated
+    ? { checked: rows.length, reminded: sent, paused, truncated: true, remaining: rows.length - sent - paused }
+    : { checked: rows.length, reminded: sent, paused };
 }
 
 export default async function handler(req, res) {
@@ -414,6 +434,17 @@ export default async function handler(req, res) {
   // throws, so there is nothing here to catch.
   const watchdog = await checkHealthHeartbeat(supaUrl, serviceKey);
 
+  // NEITHER LOOP MAY STARVE THE OTHER. They run in sequence and the due-step
+  // nudge is second, so on a busy night the platform's kill always landed on
+  // the same half — the one that is injury-aware and tells an athlete about
+  // their own plan, which is the half that matters more. A share each means
+  // the outreach scan cannot consume the whole window, and whatever either
+  // leaves undone is first in line on the next run because nothing it skipped
+  // was stamped.
+  const startedAt = Date.now();
+  const outreachDeadline = startedAt + Math.floor(BUDGET_MS * 0.5);
+  const stepsDeadline = startedAt + BUDGET_MS;
+
   const reminderDays = Number(process.env.TARGET_REMINDER_DAYS || 7);
   const staleCutoff = new Date(Date.now() - reminderDays * 24 * 60 * 60 * 1000).toISOString();
 
@@ -435,7 +466,9 @@ export default async function handler(req, res) {
     if (targets === null) throw new Error("outreach target scan failed");
 
     let sent = 0;
+    let outreachTruncated = false;
     for (const target of targets) {
+      if (Date.now() > outreachDeadline) { outreachTruncated = true; break; }
       const subs = await supaSelect(supaUrl, serviceKey, `push_subscriptions?user_id=eq.${target.user_id}&select=id,endpoint,p256dh,auth`);
       if (!subs.length) continue;
       const payload = JSON.stringify({
@@ -453,13 +486,18 @@ export default async function handler(req, res) {
     // zero cannot be mistaken for "no steps were due".
     let steps = { checked: 0, reminded: 0 };
     try {
-      steps = await remindDueSteps(supaUrl, serviceKey, webpush);
+      steps = await remindDueSteps(supaUrl, serviceKey, webpush, stepsDeadline);
     } catch (e) {
       steps = { checked: 0, reminded: 0, error: String(e) };
       await logError("api/target-followup-reminders.js", "Due-step reminders failed", { detail: String(e) });
     }
 
-    return res.status(200).json({ checked: targets.length, reminded: sent, steps, watchdog });
+    // A run that stopped early reports it. A quiet 200 saying "reminded: 3"
+    // is indistinguishable from a night with three stale targets, and that is
+    // the reading that lets a permanently-truncated run look healthy.
+    return res.status(200).json(outreachTruncated
+      ? { checked: targets.length, reminded: sent, truncated: true, remaining: targets.length - sent, steps, watchdog }
+      : { checked: targets.length, reminded: sent, steps, watchdog });
   } catch (e) {
     await logError("api/target-followup-reminders.js", "Reminder run failed", { detail: String(e) });
     // The watchdog result is reported on this path too: it ran before the

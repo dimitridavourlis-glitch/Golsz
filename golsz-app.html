@@ -4836,6 +4836,12 @@ function Highlights({ viewUserId, manageMode }) {
   useEffect(() => {
     if (!sb) return;
     (async () => {
+      // Cleared where the read STARTS, not only where the athlete taps retry.
+      // This effect also re-runs on its own props - viewUserId, manageId - so a
+      // failure on one athlete left the error banner standing over the next
+      // one's correctly loaded list, with a Try again button that reloads data
+      // that was never wrong.
+      setLoadFailed(false);
       try {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
@@ -4985,6 +4991,12 @@ function Timeline({ viewUserId, manageMode }) {
   useEffect(() => {
     if (!sb) return;
     (async () => {
+      // Cleared where the read STARTS, not only where the athlete taps retry.
+      // This effect also re-runs on its own props - viewUserId, manageId - so a
+      // failure on one athlete left the error banner standing over the next
+      // one's correctly loaded list, with a Try again button that reloads data
+      // that was never wrong.
+      setLoadFailed(false);
       try {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
@@ -5266,6 +5278,12 @@ function Benchmarks({ viewUserId, manageId }) {
   useEffect(() => {
     if (!sb || viewUserId) return; // private in v1 — never fetched for another athlete's viewed Passport
     (async () => {
+      // Cleared where the read STARTS, not only where the athlete taps retry.
+      // This effect also re-runs on its own props - viewUserId, manageId - so a
+      // failure on one athlete left the error banner standing over the next
+      // one's correctly loaded list, with a Try again button that reloads data
+      // that was never wrong.
+      setLoadFailed(false);
       try {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
@@ -5897,6 +5915,17 @@ function FeatureLock({ label, teaser, onUpgrade }) {
 // text, so it has a translation and the PDF was printing the English one
 // beside Greek headers. position and club stay verbatim - an athlete typed
 // those, and translating someone own words is not a kindness.
+// The object key inside the avatars bucket, back out of its public URL.
+// Returns null for anything that is not one of ours, so a hand-edited or
+// externally hosted avatar_url can never be turned into a delete call.
+function avatarPathFromUrl(url) {
+  if (!url || typeof url !== "string") return null;
+  const at = url.indexOf("/avatars/");
+  if (at < 0) return null;
+  const path = url.slice(at + "/avatars/".length).split("?")[0];
+  return /^[0-9a-f-]{36}\/[^/]+$/i.test(path) ? path : null;
+}
+
 function toPassport(profile, ath, uid, t, tv) {
   const name = (profile && profile.full_name) || t("passport_athlete_fallback");
   const dash = (v) => (v === null || v === undefined || v === "" ? "—" : v);
@@ -6434,9 +6463,18 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         const { error: upErr } = await sb.storage.from("avatars").upload(path, bytes, { contentType: file.type || "image/jpeg" });
         if (upErr) throw upErr;
         const avatarUrl = sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+        const previous = avatarPathFromUrl(profile && profile.avatar_url);
         const { error } = await sb.from("profiles").update({ avatar_url: avatarUrl }).eq("id", editId);
         if (error) throw error;
         setProfile((p) => (p ? { ...p, avatar_url: avatarUrl } : p));
+        // The outgoing photo, for the same reason: every change of picture
+        // left the old one public at its own address. Not fatal if it fails —
+        // the new photo IS saved by this point and the athlete should not be
+        // told otherwise — so this is logged rather than thrown.
+        if (previous && previous !== path) {
+          const { error: rmErr } = await sb.storage.from("avatars").remove([previous]);
+          if (rmErr) console.error("GOLSZ previous avatar not removed:", rmErr);
+        }
       } catch (err) {
         console.error("GOLSZ avatar upload error:", err);
         setAvatarErr(userErrorText(err, t, "passport_photo_err"));
@@ -6444,19 +6482,33 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     })();
   }
 
-  // Just clears profiles.avatar_url back to null — doesn't delete the
-  // file out of the avatars Storage bucket (harmless: it's keyed under
-  // this user's own folder, never linked from anywhere once the column
-  // is cleared, and re-uploading always writes a fresh timestamped
-  // filename anyway, so nothing stale can ever be shown by accident).
-  // Passport already falls back to initials whenever avatarUrl is falsy.
+  // REMOVE THE PHOTO, not just the link to it.
+  //
+  // This used to clear profiles.avatar_url and stop, under a comment calling
+  // that harmless because the file is "never linked from anywhere once the
+  // column is cleared". That reasons about LINKING and the question is
+  // RETRIEVAL: the bucket is public — the upload above takes its URL from
+  // getPublicUrl — so the object stays fetchable at a stable address by
+  // anyone who ever saw it, for ever. An athlete who takes their photo down,
+  // and on this platform that athlete may be fifteen, has not taken it down.
+  //
+  // The column is cleared FIRST and the object second: if the delete fails,
+  // the photo is already off their Passport and the next attempt can still
+  // find the path, whereas the reverse order can leave a live URL pointing at
+  // nothing. A failed delete is surfaced, not swallowed — "removed" must not
+  // be said about a file that is still there.
   async function removeAvatar() {
     if (!sb || !uid || avatarBusy) return;
     setAvatarBusy(true); setAvatarErr("");
     try {
+      const gone = avatarPathFromUrl(profile && profile.avatar_url);
       const { error } = await sb.from("profiles").update({ avatar_url: null }).eq("id", editId);
       if (error) throw error;
       setProfile((p) => (p ? { ...p, avatar_url: null } : p));
+      if (gone) {
+        const { error: rmErr } = await sb.storage.from("avatars").remove([gone]);
+        if (rmErr) throw rmErr;
+      }
     } catch (err) {
       console.error("GOLSZ avatar remove error:", err);
       setAvatarErr(userErrorText(err, t, "passport_photo_err"));
@@ -13094,6 +13146,12 @@ function DevelopmentPlan({ viewUserId, manageId }) {
     // Targets' own effect has always bailed this way.
     if (!sb) { setLoaded(true); return; }
     (async () => {
+      // Cleared where the read STARTS, not only where the athlete taps retry.
+      // This effect also re-runs on its own props - viewUserId, manageId - so a
+      // failure on one athlete left the error banner standing over the next
+      // one's correctly loaded list, with a Try again button that reloads data
+      // that was never wrong.
+      setLoadFailed(false);
       try {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) { setLoaded(true); return; }  // same reason as the !sb bail above
@@ -14397,6 +14455,12 @@ function PathwayPlan({ viewUserId, onChange, onNavigate, plan, next30 = [], open
   useEffect(() => {
     if (!sb || viewUserId) return;
     (async () => {
+      // Cleared where the read STARTS, not only where the athlete taps retry.
+      // This effect also re-runs on its own props - viewUserId, manageId - so a
+      // failure on one athlete left the error banner standing over the next
+      // one's correctly loaded list, with a Try again button that reloads data
+      // that was never wrong.
+      setLoadFailed(false);
       try {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) return;
@@ -18703,7 +18767,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=742d61ebaea63e41";
+    var APP_SRC = "js/app.js?v=5dd28ae0b68236d3";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
