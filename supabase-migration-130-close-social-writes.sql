@@ -62,17 +62,41 @@ revoke execute on function respond_to_message_request(uuid, boolean) from authen
 
 -- ---- VERIFY (run separately; do not trust this file) ---------------------
 --   select tablename, policyname, cmd, qual, with_check from pg_policies
---    where tablename in ('posts','post_likes') order by tablename, cmd;
+--    where tablename in ('posts','post_likes','messages') order by tablename, cmd;
 -- Expect: posts has SELECT (scoped, from 129) and DELETE (is_admin) only.
 --         post_likes has SELECT only.
+--         messages has SELECT (from 129) and DELETE (is_admin) only.
+--
+--   select has_function_privilege('authenticated',
+--            'ensure_message_request(uuid)', 'execute') as ensure_open,
+--          has_function_privilege('authenticated',
+--            'respond_to_message_request(uuid, boolean)', 'execute') as respond_open;
+-- Expect: both false.
 --
 -- Confirm nothing was destroyed:
 --   select count(*) from posts;        -- expect 7
 --   select count(*) from post_likes;   -- expect 3
+--   select count(*) from messages;     -- unchanged; no row is deleted here
 --
--- DELIBERATELY NOT IN THIS MIGRATION: messages and message_requests. The brief
--- named posts and post_likes. messages_write already requires can_message()
--- plus both parties unrestricted, so it is not wide open — but with no UI
--- there is no legitimate writer left either, and closing it is a separate
--- decision because 237 of the 262 moderation_queue rows are direct_message
--- entries and that path may be revisited. Ask before assuming.
+-- WHAT THIS MIGRATION DID, CORRECTED 2026-10-21.
+--
+-- This note used to read "DELIBERATELY NOT IN THIS MIGRATION: messages and
+-- message_requests ... closing it is a separate decision. Ask before
+-- assuming." That was false the moment it was written: the body above drops
+-- messages_write, messages_update and messages_delete, and revokes execute on
+-- ensure_message_request and respond_to_message_request from `authenticated`.
+-- Both were closed here, twenty-five lines above the sentence saying they
+-- were not.
+--
+-- The error mattered because this file IS the record of what was closed. A
+-- reader checking whether direct messages still accept writes would have
+-- concluded yes and could have built on that, and a later migration could
+-- have "closed" them again or reopened them believing nothing was there.
+--
+-- WHAT IS DELIBERATELY KEPT, which is the reasoning the old note attached to
+-- the wrong claim: admin DELETE on messages, and every read. 237 of the 262
+-- moderation_queue rows are direct_message entries, so an admin must still be
+-- able to action them and a moderator must still be able to read the message
+-- a report points at. The direct-message surface may be revisited; if it is,
+-- it needs new write policies and the two function grants back, not the
+-- removal of something still standing.

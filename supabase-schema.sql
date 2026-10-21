@@ -6542,3 +6542,83 @@ alter function public.match_scout_faq(text, text, text) set search_path = public
 -- 159.2 — policies on storage.objects naming the deleted bucket are
 -- dropped by predicate (they were created in the dashboard and never had
 -- names recorded in this repo). See the migration for the DO block.
+
+
+-- ============================================================
+-- BACKFILL, 2026-10-21 — three migrations this file had never recorded.
+--
+-- This file's whole job is to say what the live database looks like, and
+-- it was missing 113, 123 and 127.2 entirely. 113 is the one that matters:
+-- profiles.goal_source is the only thing stopping Scout from overwriting a
+-- goal the athlete typed themselves (applyGoalAuthorship, api/scout.js).
+-- Both writers of that column fall back to dropping it when PostgREST
+-- answers PGRST204 "column does not exist", so if 113 were NOT applied the
+-- app would keep working and silently lose goal authorship — and the file
+-- a reader consults to find out said nothing either way.
+--
+-- Recorded here as the schema these migrations declare. Whether 113 is
+-- actually applied is the one fact only the database can answer; the
+-- verification query is at the bottom of this section, and once it has been
+-- run and confirmed, the PGRST204 fallbacks in the client and in
+-- api/scout.js can be deleted instead of carried indefinitely.
+-- ============================================================
+
+-- 113 — goal authorship. Who last set profiles.goal_text, so Scout can
+-- propose a goal without overwriting one the athlete wrote.
+alter table profiles add column if not exists goal_source text
+  check (goal_source in ('athlete', 'scout'));
+alter table profiles add column if not exists goal_updated_at timestamptz;
+comment on column profiles.goal_source is
+  'Who last wrote goal_text: ''athlete'' (typed it) or ''scout'' (accepted a proposal). NULL = set before migration 113. Scout must not overwrite an athlete-authored goal without asking.';
+
+-- 123 — search telemetry on the routing log, so the cost of a web search
+-- can be attributed to the turn that caused it.
+alter table scout_routing_log
+  add column if not exists web_search_count int,
+  add column if not exists server_tool_calls int;
+
+-- 127.2 — the heartbeat the outage watchdog reads. One row, stamped by the
+-- cron; api/target-followup-reminders.js checks its age before anything else
+-- it does, so the monitor's own monitor survives a failure in the reminders.
+create table if not exists ops_heartbeat (
+  id text primary key,
+  beat_at timestamptz not null default now()
+);
+alter table ops_heartbeat enable row level security;
+
+-- VERIFY (run separately):
+--   select column_name from information_schema.columns
+--    where table_schema = 'public' and table_name = 'profiles'
+--      and column_name in ('goal_source', 'goal_updated_at');
+--   -- expect 2 rows. If 0, migration 113 was never applied and every goal
+--   -- Scout has proposed since has been written with no authorship.
+--   select count(*) from profiles where goal_source is not null;
+--   -- expect > 0 on an account that has set a goal since 113.
+
+
+-- ============================================================
+-- 160 — NOT YET APPLIED, as of 2026-10-21.
+--
+-- supabase-migration-160-passport-parity-and-append-only.sql is written and
+-- waiting to be run. It is recorded here rather than left out because this
+-- file claims to describe live state, and "a migration exists that has not
+-- been run" is part of that state — the gap migration 113 sat in for months
+-- is the reason that matters (see the backfill section above).
+--
+-- WHAT IT WILL CHANGE, once run:
+--
+--   160.1  get_public_passport(p_user) starts honouring show_benchmarks and
+--          show_timeline, which it ignores today. The ?public=<uuid> share
+--          path is the only one a pre-078 account has, and two Settings
+--          toggles labelled "On your shared Passport" currently do nothing
+--          on it. Widens no disclosure: both columns are `not null default
+--          false` and the function is still gated on passport_public.
+--
+--   160.2  athlete_outcomes becomes genuinely append-only. Its only policy
+--          is `for all`, which grants UPDATE and DELETE, while migration 150
+--          and two comments describe the table as the immutable record of an
+--          athlete's availability history.
+--
+-- UNTIL IT IS RUN, both of the above remain true of the live database.
+-- Re-read this section after applying and replace it with what was done.
+-- ============================================================

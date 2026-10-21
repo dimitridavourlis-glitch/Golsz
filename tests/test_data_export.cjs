@@ -47,6 +47,19 @@ const readWithOwner = new Set();
 for (const m of APP.matchAll(/from\("([a-z_]+)"\)[\s\S]{0,260}?\.eq\("([a-z_]+)"/g)) {
   if (OWNER_COLS.includes(m[2])) readWithOwner.add(m[1]);
 }
+// WRITES COUNT TOO, and this is the hole that let athlete_outcomes sit
+// outside the export unnoticed for its whole life. The scan above finds
+// tables the client READS with an owner filter — but a table the app only
+// ever WRITES about the athlete is just as much their record, and is
+// invisible to an owner-filtered read scan precisely because nothing reads
+// it back. athlete_outcomes is the athlete's injury and availability
+// history: the one health-adjacent thing GOLSZ stores about them, written
+// on every change, read by nobody in the client, and absent from their own
+// copy without appearing in _zero_row_sections, because it was never asked
+// for at all.
+for (const m of APP.matchAll(/from\("([a-z_]+)"\)[\s\S]{0,260}?\.(?:insert|upsert|update)\(\{[\s\S]{0,200}?([a-z_]+)\s*:/g)) {
+  if (OWNER_COLS.includes(m[2])) readWithOwner.add(m[1]);
+}
 // Tables that are NOT the athlete's own record, with the reason each is out.
 const NOT_PERSONAL = {
   // The only one. A share token is a LIVE access link to the athlete's
