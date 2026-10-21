@@ -19,6 +19,9 @@
 // ============================================================
 
 import webpush from "web-push";
+// The same two sweeps the athlete's own delete runs. See api/_erasure.js for
+// why they are shared rather than copied.
+import { deleteStoragePrefix, deleteScoutReplyCache } from "./_erasure.js";
 
 // Defaults cover both real origins this app is actually served from today
 // (golsz.com once its DNS is fixed, golsz.vercel.app in the meantime) —
@@ -248,7 +251,7 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: "Admins only." });
   }
 
-  const { action, targetId, billingAcknowledged } = req.body || {};
+  const { action, targetId, billingAcknowledged, confirmDeleteChildren } = req.body || {};
   // targetId gets embedded directly into an Admin API URL path and a
   // PostgREST filter below — validating it's actually a UUID first (not
   // just "a string") closes off any path-traversal/filter-injection
@@ -309,6 +312,48 @@ export default async function handler(req, res) {
     }
 
     if (action === "delete") {
+      // A PARENT'S ACCOUNT IS NOT ONLY THEIR OWN. api/delete-account.js
+      // refuses this exact deletion until the athlete confirms, because a
+      // parent_managed child has no credentials of their own: delete the
+      // parent and the child's data has no owner and nobody who can reach it.
+      // The admin path did not ask, so the safer route was the one the
+      // athlete took themselves.
+      //
+      // Only parent_managed children block. A 16+ athlete who linked a parent
+      // keeps their own login and is unaffected.
+      let managedChildren = [];
+      try {
+        const linkRes = await fetch(
+          `${supaUrl}/rest/v1/parent_links?parent_id=eq.${targetId}&approved_at=not.is.null&select=athlete_id`,
+          { headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey } },
+        );
+        if (!linkRes.ok) throw new Error("parent_links lookup failed (" + linkRes.status + ")");
+        const links = await linkRes.json();
+        const ids = Array.isArray(links) ? links.map((l) => l.athlete_id).filter(Boolean) : [];
+        if (ids.length) {
+          const profRes = await fetch(
+            `${supaUrl}/rest/v1/profiles?id=in.(${ids.join(",")})&parent_managed=is.true&select=id,full_name`,
+            { headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey } },
+          );
+          if (!profRes.ok) throw new Error("managed-children lookup failed (" + profRes.status + ")");
+          const kids = await profRes.json();
+          managedChildren = Array.isArray(kids) ? kids : [];
+        }
+      } catch (e) {
+        // FAIL CLOSED, as the self-delete path does. If we cannot establish
+        // whether this parent manages a child, deleting anyway IS the
+        // orphaning this guard exists to prevent, and there is no undo.
+        await logError("api/admin-user-action.js", "Managed-children lookup failed — delete refused", { detail: String(e), targetId });
+        return res.status(503).json({ error: "Couldn't check this account's linked athletes. Try again in a moment." });
+      }
+      if (managedChildren.length && confirmDeleteChildren !== true) {
+        return res.status(409).json({
+          error: "This account manages athlete profiles that nobody else can sign in to. Deleting it would leave their data with no owner.",
+          code: "managed_children_present",
+          children: managedChildren.map((c) => ({ id: c.id, full_name: c.full_name || null })),
+        });
+      }
+
       // Clean up the app-level tables that don't cascade from profiles
       // first (same ordering the old admin_delete_profile RPC used) —
       // see migration 027. Then delete the real auth.users row, which
@@ -320,6 +365,18 @@ export default async function handler(req, res) {
         body: JSON.stringify({ p_target: targetId }),
       });
       if (!rpcRes.ok) throw new Error(`admin_delete_profile_data failed (${rpcRes.status})`);
+      // BEFORE the auth row goes. Once it is gone nothing can look up which
+      // files were theirs, so a sweep afterwards has nothing to sweep by —
+      // the ordering api/delete-account.js already uses.
+      for (const child of managedChildren) {
+        await deleteStoragePrefix(supaUrl, serviceKey, "avatars", child.id);
+        await deleteStoragePrefix(supaUrl, serviceKey, "post-images", child.id);
+        await deleteScoutReplyCache(supaUrl, serviceKey, child.id);
+      }
+      await deleteStoragePrefix(supaUrl, serviceKey, "avatars", targetId);
+      await deleteStoragePrefix(supaUrl, serviceKey, "post-images", targetId);
+      await deleteScoutReplyCache(supaUrl, serviceKey, targetId);
+
       const delRes = await fetch(`${supaUrl}/auth/v1/admin/users/${targetId}`, {
         method: "DELETE",
         headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },

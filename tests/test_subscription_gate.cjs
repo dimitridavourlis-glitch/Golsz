@@ -183,8 +183,17 @@ console.log("\n-- admin ban/delete of a subscriber --");
   const admin = APP.slice(APP.indexOf("async function callAdminUserAction("), APP.indexOf("async function loadEvents("));
   ck("a 409 active_subscription asks the admin to cancel in Stripe first",
      /res\.status === 409 && data && data\.code === "active_subscription"[\s\S]{0,200}window\.confirm\(msg\)/.test(admin), true);
+  // The retry now carries the children flag through unchanged, because there
+  // are TWO 409s on this route and acknowledging one must not silently answer
+  // the other.
   ck("...and only an explicit yes retries with billingAcknowledged",
-     /if \(!window\.confirm\(msg\)\) return null;\s*return callAdminUserAction\(action, targetId, true\);/.test(admin), true);
+     /if \(!window\.confirm\(msg\)\) return null;\s*return callAdminUserAction\(action, targetId, true, confirmDeleteChildren\);/.test(admin), true);
+  ck("deleting a parent of managed children asks, by name",
+     /data\.code === "managed_children_present" && confirmDeleteChildren !== true/.test(admin), true);
+  ck("...naming them rather than counting them",
+     /\(data\.children \|\| \[\]\)\.map\(\(c\) => c\.full_name \|\| c\.id\)\.join\(", "\)/.test(admin), true);
+  ck("...and a no deletes nothing",
+     /if \(!window\.confirm\(t\("admin_delete_children_warn"\)[\s\S]{0,60}?\)\) return null;/.test(admin), true);
   ck("...the flag is a strict boolean on the wire", /billingAcknowledged: billingAcknowledged === true/.test(admin), true);
   ck("a declined confirmation does not report success",
      /if \(await callAdminUserAction\(val \? "ban" : "unban", id\)\) loadUsers/.test(admin) &&

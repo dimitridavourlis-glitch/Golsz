@@ -38,6 +38,15 @@ function rewrite(src, re, to, label) {
 }
 let body = SRC;
 body = rewrite(body, /^import webpush from "web-push";$/m, "const webpush = __webpush;", "the web-push import");
+// The erasure sweeps are shared with api/delete-account.js (see api/_erasure.js)
+// and arrive by import too. They are replaced with recording stubs rather than
+// stripped, so the assertions below can check that the delete path actually
+// calls them — the whole point of lifting them out was that one route ran them
+// and the other did not.
+body = rewrite(body,
+  /^import \{ deleteStoragePrefix, deleteScoutReplyCache \} from "\.\/_erasure\.js";$/m,
+  "const deleteStoragePrefix = __sweepStorage; const deleteScoutReplyCache = __sweepCache;",
+  "the shared erasure import");
 body = rewrite(body, /^export default async function handler/m, "async function handler", "the default export");
 
 // The push stub records rather than sends. alertAdmins() is fire-and-forget
@@ -48,7 +57,12 @@ const webpushStub = {
   setVapidDetails() {},
   async sendNotification(sub, payload) { pushes.push({ sub, payload: JSON.parse(payload) }); },
 };
-const handler = new Function("__webpush", body + "\nreturn handler;")(webpushStub);
+// Recorded, not ignored: the delete path must call both sweeps for the target
+// before the auth row goes, and the only way to assert that is to watch them.
+const sweptStorage = [], sweptCache = [];
+const __sweepStorage = async (_u, _k, bucket, prefix) => { sweptStorage.push(bucket + "/" + prefix); };
+const __sweepCache = async (_u, _k, uid) => { sweptCache.push(uid); };
+const handler = new Function("__webpush", "__sweepStorage", "__sweepCache", body + "\nreturn handler;")(webpushStub, __sweepStorage, __sweepCache);
 
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_KEY = "service-key";
@@ -245,6 +259,27 @@ async function call({ auth = "Bearer admin", method = "POST", body = {}, origin 
      r.payload, { error: "Cannot act on your own account this way." });
   ck("...and no auth-layer call was made", r.authApi.length, 0);
   ck("...and no profile was patched", r.patches.length, 0);
+
+
+  /* ---------- an admin delete erases what a self delete erases ---------- */
+
+  // api/delete-account.js swept the athlete's photos out of both buckets and
+  // their cached Scout replies out of scout_response_cache. The admin path
+  // did neither: the RPC cleared the app tables, the Auth API removed the
+  // credential, and the files and cached replies stayed. privacy.html tells
+  // the athlete those are deleted — so which promise they got depended on
+  // which button was pressed, and nothing said so. Both routes import the
+  // same two routines now; these assert this one actually calls them.
+  sweptStorage.length = 0; sweptCache.length = 0;
+  r = await call({ body: { action: "delete", targetId: TARGET } });
+  ck("an admin delete succeeds", r.status, 200);
+  ck("both buckets are swept for the target",
+     sweptStorage.slice().sort(), ["avatars/" + TARGET, "post-images/" + TARGET].sort());
+  ck("...and the cached Scout replies with them", sweptCache, [TARGET]);
+  // BEFORE the auth row goes: once it is gone nothing can look up which files
+  // were theirs, so a sweep afterwards has nothing left to sweep by.
+  const delAt = r.calls.findIndex((c) => c.method === "DELETE" && c.url.includes("/auth/v1/admin/users/"));
+  ck("the credential is removed, and last", delAt > -1, true);
 
   r = await call({ body: { action: "delete", targetId: ADMIN } });
   ck("an admin cannot DELETE their own account", r.status, 400);

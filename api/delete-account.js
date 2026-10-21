@@ -65,6 +65,8 @@ async function getUserId(authHeader, supaUrl, serviceKey) {
   }
 }
 
+import { deleteStoragePrefix, deleteScoutReplyCache } from "./_erasure.js";
+
 async function logError(supaUrl, serviceKey, source, message, detail) {
   try {
     await fetch(`${supaUrl}/rest/v1/error_log`, {
@@ -75,41 +77,6 @@ async function logError(supaUrl, serviceKey, source, message, detail) {
   } catch (e) { console.error("GOLSZ error-log write failed:", e); }
 }
 
-async function deleteStoragePrefix(supaUrl, serviceKey, bucket, prefix) {
-  try {
-    const listRes = await fetch(`${supaUrl}/storage/v1/object/list/${bucket}`, {
-      method: "POST",
-      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ prefix, limit: 1000 }),
-    });
-    if (!listRes.ok) {
-      const detail = await listRes.text().catch(() => "");
-      throw new Error(`storage LIST ${bucket} failed: ${listRes.status} ${detail.slice(0, 200)}`);
-    }
-    const files = await listRes.json();
-    if (!Array.isArray(files) || !files.length) return;
-    const paths = files.map((f) => `${prefix}/${f.name}`);
-    // The one write in this flow whose silent failure LEAVES DATA BEHIND: the
-    // account is gone but the athlete's photos are still in the bucket. On a
-    // platform serving minors that is a retention problem, and the old bare
-    // catch could not see it, because `await fetch()` resolves on 4xx/5xx.
-    //
-    // Does not throw - account deletion must continue even if a bucket sweep
-    // fails - but the orphaned files are now named somewhere a human looks.
-    const delRes = await fetch(`${supaUrl}/storage/v1/object/${bucket}`, {
-      method: "DELETE",
-      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ prefixes: paths }),
-    });
-    if (!delRes.ok) {
-      const detail = await delRes.text().catch(() => "");
-      throw new Error(`storage DELETE ${bucket} failed: ${delRes.status} ${detail.slice(0, 200)}`);
-    }
-  } catch (e) {
-    console.error(`GOLSZ storage cleanup (${bucket}) failed:`, e);
-    await logError(supaUrl, serviceKey, "api/delete-account.js", "Storage files were NOT deleted with the account", { detail: String(e), bucket, prefix });
-  }
-}
 
 // Scout replies cached in scout_response_cache are keyed by text, not by a
 // foreign key, so nothing cascades to them and expired rows are never swept.
@@ -118,23 +85,6 @@ async function deleteStoragePrefix(supaUrl, serviceKey, bucket, prefix) {
 // "<intent>:<lang>:<tier>:u:<uid>|<fingerprint>:<text>". Same posture as the
 // storage sweep: a failure is logged with the exact pattern, and does not
 // block the erasure itself.
-async function deleteScoutReplyCache(supaUrl, serviceKey, uid) {
-  for (const pattern of [`req:${uid}:*`, `*:u:${uid}|*`]) {
-    try {
-      const r = await fetch(`${supaUrl}/rest/v1/scout_response_cache?cache_key=like.${encodeURIComponent(pattern)}`, {
-        method: "DELETE",
-        headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, Prefer: "return=minimal" },
-      });
-      if (!r.ok) {
-        const detail = await r.text().catch(() => "");
-        throw new Error(`scout_response_cache DELETE failed: ${r.status} ${detail.slice(0, 200)}`);
-      }
-    } catch (e) {
-      console.error("GOLSZ scout cache cleanup failed:", e);
-      await logError(supaUrl, serviceKey, "api/delete-account.js", "Cached Scout replies were NOT deleted with the account", { detail: String(e), userId: uid, pattern });
-    }
-  }
-}
 
 // Migration 027: scout_history, parent_links, athletes, coaches and agents do
 // not cascade from profiles, so the admin delete path calls this before the

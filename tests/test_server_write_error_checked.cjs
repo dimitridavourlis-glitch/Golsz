@@ -137,6 +137,9 @@ const REVIEWED = {
   "admin-user-action.js|logError|POST": "terminal logger",
   "create-child-account.js|logError|POST": "terminal logger",
   "delete-account.js|logError|POST": "terminal logger",
+  // Same logger, now in the module both delete routes share. It is the LAST
+  // thing in a failure path: if it fails there is nowhere left to report that.
+  "_erasure.js|logError|POST": "terminal logger",
   "moderate.js|logError|POST": "terminal logger",
   "scout.js|logError|POST": "terminal logger",
   "send-push.js|logError|POST": "terminal logger",
