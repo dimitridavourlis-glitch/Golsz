@@ -86,8 +86,17 @@ ck("...and never deletes", actionVerbs.includes("delete"), false);
   // What the client writes, read out of saveActionFields' callers.
   const at = APP.indexOf("async function saveActionFields(");
   const writer = APP.slice(at, APP.indexOf("\n}", at));
-  ck("there is exactly one writer", (APP.match(/saveActionFields\(sb, uid, m\.id, \{/g) || []).length, 3);
-  const written = [...APP.matchAll(/saveActionFields\(sb, uid, m\.id, \{ (\w+):/g)].map((m) => m[1]);
+  // EVERY KEY OF EVERY CALL, not the first of each. This captured
+  // `\{ (\w+):` — one key per call site — so a call writing
+  // `{ category: v, due_on: d }` contributed only "category" and the
+  // disjointness check below could not see the mirrored column beside it.
+  // The guard that exists to prove the client never writes a column the sync
+  // overwrites was reading a third of what the client writes.
+  ck("there are three call sites, one writer", (APP.match(/saveActionFields\(sb, uid, m\.id, \{/g) || []).length, 3);
+  const written = [...APP.matchAll(/saveActionFields\(sb, uid, m\.id, \{([^}]*)\}/g)]
+    .flatMap((m) => [...m[1].matchAll(/(\w+)\s*:/g)].map((k) => k[1]));
+  ck("...and more keys than there are call sites, or this is still reading one each",
+     written.length >= 3, true);
   ck("...writing only category, priority and reason", [...new Set(written)].sort(), ["category", "priority", "reason"]);
   ck("THE TWO SETS ARE DISJOINT — nothing the client writes can be overwritten",
      written.filter((c) => mirrored.includes(c)), []);

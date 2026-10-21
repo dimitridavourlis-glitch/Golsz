@@ -99,19 +99,48 @@ const THEN_WRITE = new RegExp(
   "|rpc\\(\\s*[\"'](?:" + MUTATING_RPCS.join("|") + ")[\"'])");
 const THEN_HANDLED = /\.then\(\s*\(?\s*\{[^}]*\berror\b/;
 
+// STATEMENTS, NOT LINES. This walked code.split("\n") and tested each line on
+// its own, while every regex above needs the write AND its binding in the
+// same string. So a write formatted across lines was invisible to the suite
+// whose whole job is finding unchecked writes — and golsz-app.html formats
+// five of its writes that way, pathway_plan's among them. The two fixtures
+// below were both single-line, so the detector's own validation never
+// exercised the gap and nothing disclosed it.
+//
+// A statement is the run of lines up to and including the first one holding a
+// semicolon. Single-line writes still form their own statement, so nothing
+// that was caught before stops being caught, and adjacent statements do not
+// merge — which matters, because a neighbour's `{ error }` must not be able
+// to satisfy BOUND for an unbound write beside it.
+function statementsOf(code) {
+  const out = [];
+  const lines = code.split("\n");
+  let buf = [], startIdx = -1;
+  lines.forEach((l, i) => {
+    if (startIdx < 0 && l.trim()) startIdx = i;
+    if (startIdx >= 0) buf.push(l);
+    if (l.includes(";")) {
+      if (startIdx >= 0) out.push({ line: startIdx + 1, text: buf.join("\n") });
+      buf = []; startIdx = -1;
+    }
+  });
+  if (startIdx >= 0 && buf.length) out.push({ line: startIdx + 1, text: buf.join("\n") });
+  return out;
+}
+
 function unboundWrites(code) {
   const out = [];
-  code.split("\n").forEach((line, i) => {
-    const awaited = /await\s+sb\s*\./.test(line);
+  for (const { line, text } of statementsOf(code)) {
+    const awaited = /await\s+sb\s*\./.test(text);
     if (awaited) {
-      if (!WRITE.test(line) || BOUND.test(line)) return;
+      if (!WRITE.test(text) || BOUND.test(text)) continue;
     } else {
       // unawaited: only flag if it is a write AND its .then() never sees error
-      if (!THEN_WRITE.test(line) || THEN_HANDLED.test(line)) return;
-      if (!/\.then\(/.test(line)) return; // fire-and-forget with no handler at all
+      if (!THEN_WRITE.test(text) || THEN_HANDLED.test(text)) continue;
+      if (!/\.then\(/.test(text)) continue; // fire-and-forget with no handler at all
     }
-    out.push({ line: i + 1, text: line.trim() });
-  });
+    out.push({ line, text: text.trim() });
+  }
   return out;
 }
 
@@ -137,6 +166,38 @@ ck("the detector flags a write whose result is discarded", unboundWrites(BROKEN)
 ck("...and is NOT fooled by console.error in the catch",
    unboundWrites(BROKEN)[0] && /console\.error/.test(BROKEN), true);
 ck("the detector stays silent when the result is bound and checked", unboundWrites(GOOD).length, 0);
+// THE GAP THAT EXISTED, PLANTED SO IT CANNOT REOPEN. Both fixtures above are
+// single-line, so they passed just as happily against the line scanner this
+// replaced. These two are the shape golsz-app.html actually writes in — the
+// call split over several lines — and the broken one is what the suite was
+// blind to for its whole life.
+const BROKEN_MULTILINE = `
+  async function save(id, updates) {
+    try {
+      await sb.from("development_plan_items")
+        .update(updates)
+        .eq("id", id);
+    } catch (e) { console.error("GOLSZ update error:", e); }
+  }
+`;
+const GOOD_MULTILINE = `
+  async function save(id, updates) {
+    const { error } = await sb.from("development_plan_items")
+      .update(updates)
+      .eq("id", id);
+    if (error) throw error;
+  }
+`;
+ck("the detector flags a write split across lines", unboundWrites(BROKEN_MULTILINE).length, 1);
+ck("...and stays silent when that same shape is bound", unboundWrites(GOOD_MULTILINE).length, 0);
+// Proof the two fixtures differ in the way claimed, not by accident.
+ck("...and the two fixtures really are the same call, bound and unbound",
+   [/\.update\(updates\)/.test(BROKEN_MULTILINE), /\.update\(updates\)/.test(GOOD_MULTILINE)], [true, true]);
+// The real file writes this way; if it ever stops, these fixtures are still
+// the contract but this line stops being the reason to keep them.
+ck("the client really does format writes across lines",
+   /const \{ error \} = await sb\.from\("pathway_plan"\)\n/.test(APP), true);
+
 
 // The .then() shape, both ways. A write need not be awaited to lose data.
 const THEN_BROKEN = `sb.rpc("log_client_error", { p_message: m }).then(() => {});`;
