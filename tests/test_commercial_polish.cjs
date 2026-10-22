@@ -88,6 +88,20 @@ const re = new RegExp("^" + redir.source + "$");
 ck("...but /api/* is NOT redirected (the push-notification trigger posts there)",
    [re.test("/api/send-push"), re.test("/api/stripe-webhook"), re.test("/golsz-app.html"), re.test("/index.html"), re.test("/")], [false, false, true, true, true]);
 
+/* ---------- search and install metadata ---------- */
+const decode = (t) => t.replace(/&amp;/g, "&");
+for (const pg of ["index.html", "about.html", "contact.html", "terms.html", "privacy.html"]) {
+  const title = decode((/<title>(.*?)<\/title>/s.exec(read(pg)) || [])[1] || "");
+  ck(`${pg} title fits a search result (<= 60 chars, got ${title.length})`, title.length > 0 && title.length <= 60, true);
+}
+const MAN = JSON.parse(read("manifest.json"));
+ck("the manifest has a stable id and a scope", [MAN.id, MAN.scope], ["/golsz-app.html", "/"]);
+ck("...whose scope contains the start URL", MAN.start_url.startsWith(MAN.scope), true);
+ck("...and describes the app", typeof MAN.description === "string" && MAN.description.length > 20, true);
+const SITEMAP = read("sitemap.xml");
+const lastmods = [...SITEMAP.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)].map((m) => m[1]);
+ck("every sitemap entry has a valid ISO date", lastmods.length === 5 && lastmods.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(Date.parse(d))), true);
+
 /* ---------- admin link ---------- */
 ck("the knowledge source link goes through safeHref", /safeHref\(k\.source_url\)\s*\?\s*<a href=\{safeHref\(k\.source_url\)\}/.test(APP), true);
 ck("...and a non-http value is shown as text, not as a link", /<span style=\{\{ color: C\.slate \}\}>\{k\.source_url\}<\/span>/.test(APP), true);

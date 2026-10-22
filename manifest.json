@@ -1,12 +1,30 @@
 {
-  "name": "GOLSZ — Every Goal Has a Path",
+  "id": "/golsz-app.html",
+  "name": "GOLSZ \u2014 Every Goal Has a Path",
   "short_name": "GOLSZ",
+  "description": "Your Sports Passport, an AI Scout that knows your profile, and a plan built around your goal.",
+  "lang": "en",
   "start_url": "/golsz-app.html",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0A0A0A",
   "theme_color": "#0A0A0A",
+  "categories": [
+    "sports",
+    "productivity"
+  ],
   "icons": [
-    { "src": "/assets/favicon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" },
-    { "src": "/assets/favicon-maskable.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/assets/favicon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/favicon-maskable.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
