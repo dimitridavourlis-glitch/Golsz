@@ -6665,3 +6665,22 @@ alter table ops_heartbeat enable row level security;
 -- by api/admin-user-action.js, but NOT by the database: a password-only
 -- admin session still passes RLS. Re-read this section after applying.
 -- ============================================================
+
+
+-- ============================================================
+-- 163 — APPLIED 2026-10-22.
+--
+-- supabase-migration-163-stripe-pending-plans.sql, run in the Supabase SQL
+-- Editor. A plan seen on a Stripe subscription event BEFORE the checkout event
+-- linked that customer to a profile is remembered here, and applied the moment
+-- the checkout event links it (api/stripe-webhook.js). Service role only:
+-- row level security is on with no policy, and anon/authenticated hold no
+-- privilege on it (verified).
+-- ============================================================
+
+create table if not exists stripe_pending_plans (
+  customer_id text primary key,
+  plan        text not null check (plan in ('starter', 'pro', 'elite')),
+  created_at  timestamptz not null default now()
+);
+alter table stripe_pending_plans enable row level security;

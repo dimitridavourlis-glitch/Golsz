@@ -1296,6 +1296,13 @@ you add another place that surfaces a Message button, it doesn't need any follow
   What remains genuinely unresolved: the parent-verification flow is mutual in-app consent, **not**
   identity-verified COPPA/GDPR-K parental consent, and the site takes money from minors' families. That
   needs a lawyer before this is defensible, not just a disclaimer.
+- **Webhook ordering (2026-10-22, migration 163).** `customer.subscription.created` can arrive before
+  `checkout.session.completed` (no guaranteed order); only the checkout event can link a customer to a profile
+  and this app holds no Stripe key. A subscription event for an unknown customer now stashes its plan in
+  `stripe_pending_plans` (service role only) and STILL answers 500 (Stripe keeps retrying, failure stays
+  loud); the checkout event applies and deletes the stash right after a successful bind. A refused (takeover)
+  checkout never applies it. All stash writes are best-effort, so a missing table changes nothing.
+  Unverified against real Stripe until the first purchase.
 - **Stripe is LIVE, but has never taken a real payment.** (Corrected 2026-09-07; this entry previously said
   sandbox/test mode and that Live-mode links still needed creating. They exist — do not create them again.)
   Account `acct_1TqxVCRtNFWlwsi4` (Canada) holds 3 products, 9 Prices (CAD/USD/EUR × Basic/Pro/Elite),

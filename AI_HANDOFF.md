@@ -15,6 +15,15 @@ Last real feature work: Claude Code, 2026-10-21, a review-fix round after the re
 The five `redesign/phase-*` branches are fully merged into `main`.
 
 ## Last Completed Work
+- 2026-10-22 (OpenCode): commercial-readiness pass from a 27-finding audit. SHIPPED: branded `404.html`;
+  right-sized icons (126 KB -> 13 KB / 2.5 KB); pricing footnote says taxes are extra + links refund terms;
+  content visible with JS off; Permissions-Policy (denies camera/mic/geo/payment, not clipboard/share/push);
+  /assets cache header; admin knowledge link via `safeHref`; `CheckoutReturnBanner` (waits for the plan to
+  flip after paying, says who to write to when slow); "Update card" on the failed-payment notice; Help &
+  support block in Settings; 9 strings x 4 languages. PAYMENTS: stripe-webhook now stashes a plan that
+  arrives before its customer is linked (migration 163, APPLIED, service-role only) and applies it at the
+  link; the event still answers 500 so Stripe keeps retrying. Suites: `test_commercial_polish.cjs` (67),
+  `test_stripe_webhook_logic.cjs` (95), all mutation-checked. NOT exercised against real Stripe.
 - 2026-10-22 (OpenCode, production, owner present): rotated SUPABASE_WEBHOOK_SECRET. Generated in the browser
   (never in the transcript or repo), set in Vercel (Production), redeployed (empty commit 9bdbd51), re-ran 026
   with comments stripped. Verified: /api/send-push 200 for the right secret and 401 for wrong, missing and
@@ -55,6 +64,18 @@ enrol/verify screens and a real aal2 token are unproven until the owner runs OWN
 - OWNER: admin MFA rollout, OWNER-RUNBOOK.md section 8. DONE: TOTP enabled in Supabase; 161 applied; code
   merged and deployed. LEFT: enrol an authenticator in the Admin Panel (only the owner can scan the QR),
   test a password-only sign-in, THEN run 162 (an agent can run it once the owner confirms).
+- COMMERCIAL AUDIT BACKLOG (2026-10-22, not done; HIGH first). Needs owner/dashboard: Vercel Hobby is
+  non-commercial -> move to Pro; Supabase plan/backups/PITR undocumented, do a restore drill; enable plan
+  switching in the Stripe portal (config bpc_1UBZUwRtNFWlwsi4HXthKxbz) and drop the "email us to switch"
+  route; confirm the Payment Link after-payment redirect is /golsz-app.html?checkout=success; external
+  uptime probe + email alerts (health-alert is push-only, owner phone); define a real Elite benefit (it is
+  Pro +5 questions/day); French marketing pages + default app language from navigator.language (Quebec);
+  legal entity name/address, then remove the visible "not reviewed" banners. Agent-doable: store
+  current_period_end / cancel_at_period_end and show them (needs a migration); allow account deletion once a
+  subscription is set to cancel; confirm-email field on paid signup + password min 8; hard-coded English
+  strings in Auth; JSON-LD WebSite/SoftwareApplication; shorten the index <title>; og tags on shared
+  Passport links; minify js/app.js (1.18 MB) and self-host fonts/libs; keyboard-accessible span/div
+  onClick controls; localise dates; "paid but no plan" list in the Admin Panel.
 - Agent-doable gaps from the ADS reconciliation (ADS-BUILD-ORDER.md STATUS): parallel `getAthleteState`
   reads; a server "today" line for Scout and a date digest in `responseCacheFingerprint`; `measured_by` /
   `protocol` in Scout's benchmark select; Reschedule/Drop from Home; `removed_at` on stages.

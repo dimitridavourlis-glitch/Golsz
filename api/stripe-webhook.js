@@ -340,9 +340,55 @@ async function patchProfile(supaUrl, serviceKey, filterQuery, body) {
   if (!Array.isArray(rows) || rows.length === 0) {
     // The filter matched nobody. For a billing event this is never benign: it
     // means the profile this payment belongs to was not found.
-    throw new Error(`profiles PATCH ${filterQuery} matched no profile — nothing was updated`);
+    const err = new Error(`profiles PATCH ${filterQuery} matched no profile — nothing was updated`);
+    err.noMatch = true;
+    throw err;
   }
   return rows;
+}
+
+// A plan seen on a subscription event BEFORE the checkout event has linked that
+// Stripe customer to a profile (migration 163). The two events have no
+// guaranteed order, only the checkout one carries our profile id, and this app
+// holds no Stripe secret key to ask Stripe for the plan later. So the plan is
+// stashed here and applied the moment the checkout event links the customer.
+//
+// BEST EFFORT, BY DESIGN. Both helpers swallow their own failures: the
+// subscription path still answers 500 afterwards (so Stripe keeps retrying and
+// the failure stays loud), and the checkout path has already linked the
+// customer by the time it asks. A missing table (163 not yet run) is therefore
+// just today's behaviour, never a new way to fail an event.
+const STASHABLE_PLANS = ["starter", "pro", "elite"];
+async function stashPendingPlan(supaUrl, serviceKey, customerId, plan) {
+  if (!customerId || !STASHABLE_PLANS.includes(plan)) return;
+  try {
+    const r = await fetch(`${supaUrl}/rest/v1/stripe_pending_plans?on_conflict=customer_id`, {
+      method: "POST",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify({ customer_id: customerId, plan }),
+    });
+    if (!r.ok) console.warn("GOLSZ stripe pending-plan stash not written", r.status);
+  } catch (e) { console.warn("GOLSZ stripe pending-plan stash failed", String(e)); }
+}
+async function applyPendingPlan(supaUrl, serviceKey, profileId, customerId) {
+  if (!customerId) return;
+  try {
+    const r = await fetch(`${supaUrl}/rest/v1/stripe_pending_plans?customer_id=eq.${encodeURIComponent(customerId)}&select=plan`, {
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+    });
+    if (!r.ok) return;
+    const rows = await r.json();
+    const plan = Array.isArray(rows) && rows[0] && rows[0].plan;
+    if (!STASHABLE_PLANS.includes(plan)) return;
+    await patchProfile(supaUrl, serviceKey, `id=eq.${profileId}`, { plan });
+    const del = await fetch(`${supaUrl}/rest/v1/stripe_pending_plans?customer_id=eq.${encodeURIComponent(customerId)}`, {
+      method: "DELETE",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
+    });
+    // A leftover row is harmless (the plan is already applied and a replay
+    // writes the same value), but it should not vanish silently.
+    if (!del.ok) console.warn("GOLSZ stripe pending-plan row not deleted", del.status);
+  } catch (e) { console.warn("GOLSZ stripe pending-plan apply failed", String(e)); }
 }
 
 export default async function handler(req, res) {
@@ -521,6 +567,9 @@ export default async function handler(req, res) {
           const patch = { stripe_customer_id: customerId || null, payment_past_due: false };
           if (plan) patch.plan = plan;
           await patchProfile(supaUrl, serviceKey, `id=eq.${profileId}`, patch);
+          // Only reached when the ownership check above allowed the bind, so a
+          // refused (takeover) checkout never inherits a stashed plan.
+          if (!plan) await applyPendingPlan(supaUrl, serviceKey, profileId, customerId);
         }
       }
     } else if (event.type === "customer.subscription.deleted") {
@@ -559,7 +608,15 @@ export default async function handler(req, res) {
           // write it would leave a failing subscription looking healthy.
           const patch = { payment_past_due: status === "past_due" };
           if (plan) patch.plan = plan;
-          await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, patch);
+          try {
+            await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, patch);
+          } catch (e) {
+            // This subscription arrived before the checkout event linked its
+            // customer. Remember the plan so that event can apply it at once,
+            // then fail exactly as before: the 500 is what keeps Stripe retrying.
+            if (e && e.noMatch && plan) await stashPendingPlan(supaUrl, serviceKey, customerId, plan);
+            throw e;
+          }
         }
       }
     } else if (event.type === "invoice.payment_failed") {

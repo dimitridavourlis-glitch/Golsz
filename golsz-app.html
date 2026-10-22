@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="GOLSZ" />
-<link rel="apple-touch-icon" href="/assets/favicon.png" />
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
 <link rel="manifest" href="/manifest.json" />
 <!-- Every render-blocking script below comes from one of these two origins,
      and neither connection exists yet when the parser reaches them. Warming
@@ -701,6 +701,8 @@ const I18N = {
     scout_reply_done: "I already did it", scout_reply_hard: "Too hard", scout_reply_else: "Something else", scout_card_steps: "{n} steps for your road", scout_card_by: "By {date}", scout_card_add_road: "Add to my road", scout_card_schools: "{n} schools for your list", scout_card_add_schools: "Add to my Schools", scout_card_train: "{n} things to work on", scout_card_add_train: "Add to my training", scout_card_email: "An email to {name}", scout_card_save_email: "Save to a school", scout_card_locked: "{plan} plan", scout_replace_road: "Replace my road instead", scout_done_road: "Added to your road!", scout_done_road_one: "\"{step}\" is on your road. It's due {day}.", scout_done_road_one_nodate: "\"{step}\" is on your road.", scout_done_road_many: "{n} steps are on your road. Next stop: \"{step}\".", scout_done_schools: "Added to your Schools!", scout_done_schools_sub: "{n} schools are on your list.", scout_see_road: "See my road", scout_see_schools: "See my Schools", scout_ask_else: "Ask Scout something else", scout_done_marker_cleared: "Your current-section marker was cleared — the section it pointed at is not on your new road. Tap a section on your road to set it again.",
     admin_mfa_title: "Two-step sign-in for admins", admin_mfa_enrol_intro: "Admin actions need a second step. Scan the QR code with an authenticator app (1Password, Google Authenticator, Authy), then enter the 6-digit code it shows.", admin_mfa_enrol_button: "Set up authenticator", admin_mfa_secret: "Can't scan? Enter this key instead:", admin_mfa_code_label: "6-digit code", admin_mfa_verify: "Verify", admin_mfa_challenge_intro: "Enter the 6-digit code from your authenticator app to open the admin panel.", admin_mfa_bad_code: "That code didn't work. Check the time on your phone and try the newest code.", admin_mfa_unavailable: "Two-step sign-in could not be started. In Supabase, check that Authentication → Multi-Factor has TOTP enabled.",
     admin_role_owner: "Owner", admin_role_moderator: "Moderator", admin_make_owner: "Make owner", admin_make_moderator: "Make moderator", admin_owner_only: "Owner only", admin_action_failed: "That didn't go through. You may not have permission for it.",
+    checkout_activating: "Payment received. Activating your plan…", checkout_active: "You're on {plan}. Thank you: everything in your plan is unlocked.", checkout_continue: "Continue", checkout_late: "Your payment went through, but your plan is taking longer than usual to activate. Refresh in a minute. If it still shows Free, email hello@golsz.com and we'll fix it straight away.",
+    settings_payment_update_card: "Update card", settings_help: "HELP & SUPPORT", settings_help_contact: "Email support: hello@golsz.com", settings_help_billing: "Cancellation and refund terms", settings_help_privacy: "Privacy policy",
   },
   fr: {
     loading: "Chargement…", yes: "Oui", no: "Non",
@@ -1073,6 +1075,8 @@ const I18N = {
     scout_reply_done: "Je l'ai déjà fait", scout_reply_hard: "Trop difficile", scout_reply_else: "Autre chose", scout_card_steps: "{n} étapes pour ta route", scout_card_by: "Pour le {date}", scout_card_add_road: "Ajouter à ma route", scout_card_schools: "{n} écoles pour ta liste", scout_card_add_schools: "Ajouter à mes Écoles", scout_card_train: "{n} choses à travailler", scout_card_add_train: "Ajouter à mon entraînement", scout_card_email: "Un e-mail à {name}", scout_card_save_email: "Enregistrer pour une école", scout_card_locked: "Forfait {plan}", scout_replace_road: "Remplacer ma route à la place", scout_done_road: "Ajouté à ta route !", scout_done_road_one: "« {step} » est sur ta route. À faire pour le {day}.", scout_done_road_one_nodate: "« {step} » est sur ta route.", scout_done_road_many: "{n} étapes sont sur ta route. Prochaine étape : « {step} ».", scout_done_schools: "Ajouté à tes Écoles !", scout_done_schools_sub: "{n} écoles sont sur ta liste.", scout_see_road: "Voir ma route", scout_see_schools: "Voir mes Écoles", scout_ask_else: "Demander autre chose à Scout", scout_done_marker_cleared: "Votre repère de section actuelle a été effacé — la section qu’il désignait n’est pas sur votre nouvelle route. Touchez une phase de votre route pour le redéfinir.",
     admin_mfa_title: "Connexion en deux étapes pour les administrateurs", admin_mfa_enrol_intro: "Les actions d'administration demandent une seconde étape. Scannez le code QR avec une application d'authentification (1Password, Google Authenticator, Authy), puis saisissez le code à 6 chiffres affiché.", admin_mfa_enrol_button: "Configurer l'authentificateur", admin_mfa_secret: "Impossible de scanner ? Saisissez plutôt cette clé :", admin_mfa_code_label: "Code à 6 chiffres", admin_mfa_verify: "Vérifier", admin_mfa_challenge_intro: "Saisissez le code à 6 chiffres de votre application d'authentification pour ouvrir le panneau d'administration.", admin_mfa_bad_code: "Ce code n'a pas fonctionné. Vérifiez l'heure de votre téléphone et essayez le code le plus récent.", admin_mfa_unavailable: "La connexion en deux étapes n'a pas pu démarrer. Dans Supabase, vérifiez que Authentication → Multi-Factor a TOTP activé.",
     admin_role_owner: "Propriétaire", admin_role_moderator: "Modérateur", admin_make_owner: "Nommer propriétaire", admin_make_moderator: "Nommer modérateur", admin_owner_only: "Réservé au propriétaire", admin_action_failed: "Cela n'a pas abouti. Vous n'en avez peut-être pas l'autorisation.",
+    checkout_activating: "Paiement reçu. Activation de votre formule…", checkout_active: "Vous êtes sur {plan}. Merci : tout ce que comprend votre formule est débloqué.", checkout_continue: "Continuer", checkout_late: "Votre paiement a bien été effectué, mais l'activation de votre formule prend plus de temps que d'habitude. Actualisez dans une minute. Si elle affiche toujours Gratuit, écrivez à hello@golsz.com et nous réglerons cela immédiatement.",
+    settings_payment_update_card: "Mettre à jour la carte", settings_help: "AIDE ET ASSISTANCE", settings_help_contact: "Écrire à l'assistance : hello@golsz.com", settings_help_billing: "Conditions d'annulation et de remboursement", settings_help_privacy: "Politique de confidentialité",
   },
   es: {
     loading: "Cargando…", yes: "Sí", no: "No",
@@ -1445,6 +1449,8 @@ const I18N = {
     scout_reply_done: "Ya lo hice", scout_reply_hard: "Muy difícil", scout_reply_else: "Otra cosa", scout_card_steps: "{n} pasos para tu ruta", scout_card_by: "Para el {date}", scout_card_add_road: "Añadir a mi ruta", scout_card_schools: "{n} escuelas para tu lista", scout_card_add_schools: "Añadir a mis Escuelas", scout_card_train: "{n} cosas en las que trabajar", scout_card_add_train: "Añadir a mi entrenamiento", scout_card_email: "Un correo para {name}", scout_card_save_email: "Guardar en una escuela", scout_card_locked: "Plan {plan}", scout_replace_road: "Reemplazar mi ruta", scout_done_road: "¡Añadido a tu ruta!", scout_done_road_one: "«{step}» está en tu ruta. Para el {day}.", scout_done_road_one_nodate: "«{step}» está en tu ruta.", scout_done_road_many: "{n} pasos están en tu ruta. Próxima parada: «{step}».", scout_done_schools: "¡Añadido a tus Escuelas!", scout_done_schools_sub: "{n} escuelas están en tu lista.", scout_see_road: "Ver mi ruta", scout_see_schools: "Ver mis Escuelas", scout_ask_else: "Preguntar otra cosa a Scout", scout_done_marker_cleared: "Se borró tu marca de sección actual — la etapa que señalaba no está en tu nueva ruta. Toca una etapa de tu ruta para volver a marcarla.",
     admin_mfa_title: "Inicio de sesión en dos pasos para administradores", admin_mfa_enrol_intro: "Las acciones de administración necesitan un segundo paso. Escanea el código QR con una app de autenticación (1Password, Google Authenticator, Authy) e introduce el código de 6 dígitos que muestra.", admin_mfa_enrol_button: "Configurar autenticador", admin_mfa_secret: "¿No puedes escanear? Introduce esta clave:", admin_mfa_code_label: "Código de 6 dígitos", admin_mfa_verify: "Verificar", admin_mfa_challenge_intro: "Introduce el código de 6 dígitos de tu app de autenticación para abrir el panel de administración.", admin_mfa_bad_code: "Ese código no funcionó. Revisa la hora de tu teléfono e inténtalo con el código más reciente.", admin_mfa_unavailable: "No se pudo iniciar el inicio de sesión en dos pasos. En Supabase, comprueba que Authentication → Multi-Factor tenga TOTP activado.",
     admin_role_owner: "Propietario", admin_role_moderator: "Moderador", admin_make_owner: "Hacer propietario", admin_make_moderator: "Hacer moderador", admin_owner_only: "Solo el propietario", admin_action_failed: "No se completó. Puede que no tengas permiso para hacerlo.",
+    checkout_activating: "Pago recibido. Activando tu plan…", checkout_active: "Estás en {plan}. Gracias: todo lo que incluye tu plan está desbloqueado.", checkout_continue: "Continuar", checkout_late: "Tu pago se procesó, pero tu plan está tardando más de lo habitual en activarse. Actualiza en un minuto. Si sigue mostrando Gratis, escribe a hello@golsz.com y lo arreglamos enseguida.",
+    settings_payment_update_card: "Actualizar tarjeta", settings_help: "AYUDA Y SOPORTE", settings_help_contact: "Escribir a soporte: hello@golsz.com", settings_help_billing: "Condiciones de cancelación y reembolso", settings_help_privacy: "Política de privacidad",
   },
   el: {
     loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
@@ -1817,6 +1823,8 @@ const I18N = {
     scout_reply_done: "Το έκανα ήδη", scout_reply_hard: "Πολύ δύσκολο", scout_reply_else: "Κάτι άλλο", scout_card_steps: "{n} βήματα για τη διαδρομή σου", scout_card_by: "Έως {date}", scout_card_add_road: "Πρόσθεσε στη διαδρομή μου", scout_card_schools: "{n} σχολές για τη λίστα σου", scout_card_add_schools: "Πρόσθεσε στις Σχολές μου", scout_card_train: "{n} πράγματα να δουλέψεις", scout_card_add_train: "Πρόσθεσε στην προπόνησή μου", scout_card_email: "Ένα email στον/στην {name}", scout_card_save_email: "Αποθήκευση σε σχολή", scout_card_locked: "Πλάνο {plan}", scout_replace_road: "Αντικατάσταση της διαδρομής μου", scout_done_road: "Προστέθηκε στη διαδρομή σου!", scout_done_road_one: "Το «{step}» είναι στη διαδρομή σου. Έως {day}.", scout_done_road_one_nodate: "Το «{step}» είναι στη διαδρομή σου.", scout_done_road_many: "{n} βήματα είναι στη διαδρομή σου. Επόμενη στάση: «{step}».", scout_done_schools: "Προστέθηκε στις Σχολές σου!", scout_done_schools_sub: "{n} σχολές είναι στη λίστα σου.", scout_see_road: "Δες τη διαδρομή μου", scout_see_schools: "Δες τις Σχολές μου", scout_ask_else: "Ρώτα τον Scout κάτι άλλο", scout_done_marker_cleared: "Η ένδειξη τρέχοντος τμήματος διαγράφηκε — το στάδιο που έδειχνε δεν υπάρχει στη νέα σου διαδρομή. Πάτα ένα στάδιο στη διαδρομή σου για να την ορίσεις ξανά.",
     admin_mfa_title: "Σύνδεση σε δύο βήματα για διαχειριστές", admin_mfa_enrol_intro: "Οι ενέργειες διαχείρισης απαιτούν δεύτερο βήμα. Σαρώστε τον κωδικό QR με μια εφαρμογή επαλήθευσης (1Password, Google Authenticator, Authy) και πληκτρολογήστε τον 6ψήφιο κωδικό που εμφανίζει.", admin_mfa_enrol_button: "Ρύθμιση εφαρμογής επαλήθευσης", admin_mfa_secret: "Δεν μπορείτε να σαρώσετε; Πληκτρολογήστε αυτό το κλειδί:", admin_mfa_code_label: "6ψήφιος κωδικός", admin_mfa_verify: "Επαλήθευση", admin_mfa_challenge_intro: "Πληκτρολογήστε τον 6ψήφιο κωδικό από την εφαρμογή επαλήθευσης για να ανοίξει ο πίνακας διαχείρισης.", admin_mfa_bad_code: "Ο κωδικός δεν λειτούργησε. Ελέγξτε την ώρα του τηλεφώνου σας και δοκιμάστε τον πιο πρόσφατο κωδικό.", admin_mfa_unavailable: "Η σύνδεση σε δύο βήματα δεν ξεκίνησε. Στο Supabase, ελέγξτε ότι το Authentication → Multi-Factor έχει ενεργό το TOTP.",
     admin_role_owner: "Κάτοχος", admin_role_moderator: "Συντονιστής", admin_make_owner: "Ορισμός ως κάτοχο", admin_make_moderator: "Ορισμός ως συντονιστή", admin_owner_only: "Μόνο για τον κάτοχο", admin_action_failed: "Δεν ολοκληρώθηκε. Ίσως δεν έχετε δικαίωμα γι' αυτό.",
+    checkout_activating: "Η πληρωμή ελήφθη. Ενεργοποίηση του πλάνου σας…", checkout_active: "Είστε στο {plan}. Ευχαριστούμε: όλα όσα περιλαμβάνει το πλάνο σας είναι διαθέσιμα.", checkout_continue: "Συνέχεια", checkout_late: "Η πληρωμή σας ολοκληρώθηκε, αλλά η ενεργοποίηση του πλάνου σας καθυστερεί περισσότερο από το συνηθισμένο. Ανανεώστε σε ένα λεπτό. Αν εξακολουθεί να εμφανίζεται Δωρεάν, στείλτε email στο hello@golsz.com και θα το διορθώσουμε αμέσως.",
+    settings_payment_update_card: "Ενημέρωση κάρτας", settings_help: "ΒΟΗΘΕΙΑ ΚΑΙ ΥΠΟΣΤΗΡΙΞΗ", settings_help_contact: "Email υποστήριξης: hello@golsz.com", settings_help_billing: "Όροι ακύρωσης και επιστροφής χρημάτων", settings_help_privacy: "Πολιτική απορρήτου",
   },
 };
 
@@ -2670,6 +2678,15 @@ function SettingsButton({ openSignal }) {
                 {paymentPastDue && (
                   <div style={{ background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 12, padding: "10px 12px", marginBottom: 10, fontSize: 12, color: C.warnText, lineHeight: 1.4 }}>
                     {t("settings_payment_past_due")}
+                    {stripeCustomerId && (
+                      <button onClick={() => {
+                        const portal = stripePortalLink();
+                        if (portal) window.location.href = portal;
+                        else setPlanMsg(t("settings_plan_portal_unavailable"));
+                      }} style={{ display: "block", marginTop: 8, minHeight: 40, padding: "8px 14px", borderRadius: 9, border: `1px solid ${C.amberBorder}`, background: "transparent", color: C.warnText, fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, cursor: "pointer" }}>
+                        {t("settings_payment_update_card")}
+                      </button>
+                    )}
                   </div>
                 )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2728,6 +2745,14 @@ function SettingsButton({ openSignal }) {
                 {planMsg && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 8, lineHeight: 1.4 }}>{planMsg}</div>}
               </div>
             )}
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_help")}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
+                <a href="mailto:hello@golsz.com" style={{ color: C.lime, fontWeight: 700, textDecoration: "none" }}>{t("settings_help_contact")}</a>
+                <a href="terms.html#refunds" target="_blank" rel="noopener noreferrer" style={{ color: C.slate, textDecoration: "none" }}>{t("settings_help_billing")}</a>
+                <a href="privacy.html" target="_blank" rel="noopener noreferrer" style={{ color: C.slate, textDecoration: "none" }}>{t("settings_help_privacy")}</a>
+              </div>
+            </div>
             {sb && pushSupported() && (
               <div style={{ marginBottom: 18 }}>
                 <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("settings_notifications")}</div>
@@ -8552,7 +8577,9 @@ function AdminPanel({ onBack }) {
                       check, so the source is shown, not summarized. */}
                   <div style={{ fontSize: 11, color: C.slate, marginBottom: 8, wordBreak: "break-all" }}>
                     {t("admin_knowledge_source")}: {k.source_url
-                      ? <a href={k.source_url} target="_blank" rel="noopener noreferrer" style={{ color: C.lime }}>{k.source_url}</a>
+                      ? (safeHref(k.source_url)
+                          ? <a href={safeHref(k.source_url)} target="_blank" rel="noopener noreferrer" style={{ color: C.lime }}>{k.source_url}</a>
+                          : <span style={{ color: C.slate }}>{k.source_url}</span>)
                       : t("admin_knowledge_no_source")}
                     {" · "}{t("admin_knowledge_confidence")} {Math.round((Number(k.confidence) || 0) * 100)}%
                     {k.recheck_after && <> · {t("admin_knowledge_recheck")} {new Date(k.recheck_after).toLocaleDateString()}</>}
@@ -16376,6 +16403,50 @@ function DailyCheckIn({ name, current, currentSince, sb, uid, isDesktop, onFinis
   );
 }
 
+// Shown on the first load after paying. The webhook that flips profiles.plan
+// runs a moment after Stripe sends the buyer back, so for a few seconds an
+// athlete who has just paid is looking at Free with nothing to explain it.
+// This waits for the plan to change (polling the athlete's own row, which RLS
+// already lets them read), says so, and after ~90s admits it is slow and says
+// who to write to. It never grants anything: it only reads.
+function CheckoutReturnBanner() {
+  const { t } = useLang();
+  const [state, setState] = useState(() => (typeof window !== "undefined" && /[?&]checkout=success\b/.test(window.location.search)) ? "waiting" : "none");
+  const [plan, setPlan] = useState(null);
+  useEffect(() => {
+    if (state !== "waiting" || !sb) return;
+    let stop = false, tries = 0, timer = null;
+    const tick = async () => {
+      tries++;
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (user) {
+          const { data } = await sb.from("profiles").select("plan").eq("id", user.id).single();
+          if (data && data.plan && data.plan !== "free") { if (!stop) { setPlan(data.plan); setState("active"); } return; }
+        }
+      } catch (e) { console.error("GOLSZ checkout-return poll error:", e); }
+      if (stop) return;
+      if (tries >= 30) { setState("late"); return; }
+      timer = setTimeout(tick, 3000);
+    };
+    timer = setTimeout(tick, 1500);
+    return () => { stop = true; if (timer) clearTimeout(timer); };
+  }, [state]);
+  if (state === "none") return null;
+  const done = state === "active";
+  const late = state === "late";
+  const pl = plan ? PLANS.find((x) => x.id === plan) : null;
+  const msg = done ? t("checkout_active").replace("{plan}", pl ? pl.name : plan) : late ? t("checkout_late") : t("checkout_activating");
+  return (
+    <div role="status" aria-live="polite" style={{ background: late ? C.amberWash : C.limeWash, border: `1px solid ${late ? C.amberBorder : C.limeBorder}`, color: late ? C.warnText : C.chalk, borderRadius: 12, margin: "10px 12px 0", padding: "10px 12px", fontSize: 13, lineHeight: 1.4, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+      <span>{msg}</span>
+      {(done || late) && (
+        <button onClick={() => { window.location.replace(window.location.pathname); }} style={{ flex: "0 0 auto", minHeight: 36, padding: "6px 12px", borderRadius: 9, border: `1px solid ${late ? C.amberBorder : C.lime}`, background: "transparent", color: late ? C.warnText : C.lime, fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{t("checkout_continue")}</button>
+      )}
+    </div>
+  );
+}
+
 function GolszApp({ onSignOut, startOnboarding }) {
   const buildUpdateAvailable = useBuildVersion();
   const [updateDismissed, setUpdateDismissed] = useState(false);
@@ -16899,6 +16970,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
     <div className="app-shell" style={{ display: "flex", flexDirection: "column", background: C.pitch, color: C.chalk, fontFamily: "'Archivo', system-ui, sans-serif", maxWidth: 480, margin: "0 auto", position: "relative" }}>
       <style>{CSS}</style>
       {showUpdateBar && <UpdateBar onDismiss={() => setUpdateDismissed(true)} />}
+      <CheckoutReturnBanner />
 
       {/* top bar
           THE UPDATE BAR IS position:fixed AND SITS OVER THIS HEADER, which put
@@ -18986,7 +19058,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=4df9880560cf4f76";
+    var APP_SRC = "js/app.js?v=09cdc39b8eeb0c1d";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

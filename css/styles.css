@@ -1122,6 +1122,11 @@ select {
 @media (prefers-reduced-motion: reduce) {
   .reveal { opacity: 1; transform: none; transition: none; }
 }
+/* Without JavaScript nothing ever adds .is-visible, so pricing and legal text
+   would stay invisible to no-JS visitors and some crawlers. */
+@media (scripting: none) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+}
 
 /* ==========================================================================
    Page hero (inner pages)

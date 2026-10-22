@@ -67,6 +67,10 @@ let profiles = {};
 // 0 = respond normally. Set to a status code to make the next profiles PATCH
 // answer 4xx, the case `await fetch()` resolves rather than throwing on.
 let patchHttpStatus = 0;
+// Migration 163: a plan seen before its customer was linked. `pendingTableMissing`
+// models 163 not yet run (PostgREST answers 404 for an unknown relation).
+let pendingPlans = {};
+let pendingTableMissing = false;
 
 global.fetch = async (url, opts = {}) => {
   const u = String(url);
@@ -117,6 +121,16 @@ global.fetch = async (url, opts = {}) => {
     // Apply the patch so later assertions see the effect, then return the rows.
     for (const row of matched) Object.assign(row, body || {});
     return { ok: true, json: async () => matched };
+  }
+  if (u.includes("/rest/v1/stripe_pending_plans")) {
+    if (pendingTableMissing) {
+      return { ok: false, status: 404, json: async () => ({ code: "42P01" }), text: async () => 'relation "stripe_pending_plans" does not exist' };
+    }
+    const cm = /customer_id=eq\.([^&]+)/.exec(u);
+    const key = cm ? decodeURIComponent(cm[1]) : null;
+    if (method === "POST") { pendingPlans[body.customer_id] = { plan: body.plan }; return { ok: true, status: 201, json: async () => [] }; }
+    if (method === "GET") { const row = key ? pendingPlans[key] : null; return { ok: true, json: async () => (row ? [{ plan: row.plan }] : []) }; }
+    if (method === "DELETE") { if (key) delete pendingPlans[key]; return { ok: true, status: 204, json: async () => [] }; }
   }
   // stripe_events — the replay guard, modelled as a real table because the
   // whole point of the two-phase claim is WHAT THE ROW SAYS on a retry.
@@ -515,6 +529,82 @@ const BASIC_PRICE = { id: process.env.STRIPE_PRICE_BASIC_EUR, currency: "eur", u
     ck("a completed event is still ignored on redelivery", replay.payload && replay.payload.duplicate, true);
     ck("...and applies nothing", profiles[OWNER_ID].plan, "starter");
     ck("...answering 200, because a 4xx/5xx would make Stripe retry forever", replay.status, 200);
+  }
+
+  console.log("\n-- two events, no guaranteed order (migration 163) --");
+  // Stripe sends customer.subscription.created and checkout.session.completed
+  // separately. Only the checkout event can link a customer to a profile, only
+  // the subscription event reliably names the plan, and this app has no Stripe
+  // key to look the plan up later. When the subscription event lands first, its
+  // profile update matches nobody: the athlete paid and sat on Free until
+  // Stripe's retry. The plan is now stashed and applied at the link.
+  {
+    const PAYER = "55555555-5555-4555-8555-555555555555";
+    const LATE = "cus_late_linked";
+    const lateSub = (status, price) => ({
+      id: "evt_lsub_" + Math.random().toString(16).slice(2), type: "customer.subscription.created",
+      data: { object: { customer: LATE, status, items: { data: price ? [{ price }] : [] } } },
+    });
+    // Realistic: the checkout event carries NO plan (line_items are never expanded) and no metadata.
+    const lateCheckout = (profileId) => ({
+      id: "evt_lco_" + Math.random().toString(16).slice(2), type: "checkout.session.completed",
+      data: { object: { client_reference_id: profileId, customer: LATE } },
+    });
+    pendingPlans = {}; pendingTableMissing = false;
+
+    // Positive control: the normal order is untouched and uses no stash at all.
+    profiles = { [PAYER]: { id: PAYER, stripe_customer_id: null, plan: "free" } };
+    r = await post(lateCheckout(PAYER));
+    ck("control: checkout first still links the customer and writes no plan", [profiles[PAYER].stripe_customer_id, profiles[PAYER].plan], [LATE, "free"]);
+    r = await post(lateSub("active", PRO_PRICE));
+    ck("control: ...then the subscription grants the plan, as before", [r.status, profiles[PAYER].plan], [200, "pro"]);
+    ck("control: ...and nothing was stashed", Object.keys(pendingPlans).length, 0);
+
+    // The race: subscription first.
+    profiles = { [PAYER]: { id: PAYER, stripe_customer_id: null, plan: "free" } };
+    pendingPlans = {};
+    r = await post(lateSub("active", PRO_PRICE));
+    ck("subscription first: still a 500, so Stripe keeps retrying and the failure stays loud", r.status, 500);
+    ck("...the plan was remembered for that customer", pendingPlans[LATE], { plan: "pro" });
+    ck("...and nothing was granted to anyone yet", profiles[PAYER].plan, "free");
+
+    r = await post(lateCheckout(PAYER));
+    ck("then the checkout event links the customer", [r.status, profiles[PAYER].stripe_customer_id], [200, LATE]);
+    ck("...and applies the remembered plan AT ONCE, with no wait for a retry", profiles[PAYER].plan, "pro");
+    ck("...and the stash is consumed", Object.keys(pendingPlans).length, 0);
+    ck("a Stripe retry of the subscription event is then simply a 200", (await post(lateSub("active", PRO_PRICE))).status, 200);
+
+    // A takeover attempt must not inherit a stash.
+    const VICTIM = "66666666-6666-4666-8666-666666666666";
+    profiles = { [VICTIM]: { id: VICTIM, stripe_customer_id: "cus_victim_live", plan: "pro" } };
+    pendingPlans = { [LATE]: { plan: "elite" } };
+    r = await post(lateCheckout(VICTIM));
+    ck("a checkout REFUSED by the ownership guard applies no stashed plan", [profiles[VICTIM].plan, profiles[VICTIM].stripe_customer_id], ["pro", "cus_victim_live"]);
+    ck("...and does not consume it", pendingPlans[LATE], { plan: "elite" });
+
+    // Only a plan worth granting is ever stashed.
+    profiles = {}; pendingPlans = {};
+    for (const status of ["incomplete", "canceled", "unpaid"]) {
+      await post(lateSub(status, PRO_PRICE));
+    }
+    ck("an unpaid, incomplete or cancelled subscription is never stashed", Object.keys(pendingPlans).length, 0);
+    await post(lateSub("active", { id: "price_not_configured", currency: "eur", unit_amount: 1500 }));
+    ck("a price that does not resolve to a plan is never stashed", Object.keys(pendingPlans).length, 0);
+
+    // A tampered stash cannot grant an arbitrary value.
+    profiles = { [PAYER]: { id: PAYER, stripe_customer_id: null, plan: "free" } };
+    pendingPlans = { [LATE]: { plan: "admin" } };
+    await post(lateCheckout(PAYER));
+    ck("a stash holding anything but starter/pro/elite is ignored", profiles[PAYER].plan, "free");
+
+    // 163 not run yet: the code must not outrun the database.
+    profiles = {}; pendingPlans = {}; pendingTableMissing = true;
+    r = await post(lateSub("active", PRO_PRICE));
+    ck("table missing: the subscription event is the same 500 it always was", r.status, 500);
+    profiles = { [PAYER]: { id: PAYER, stripe_customer_id: null, plan: "free" } };
+    r = await post(lateCheckout(PAYER));
+    ck("table missing: the checkout event still links the customer and answers 200", [r.status, profiles[PAYER].stripe_customer_id], [200, LATE]);
+    pendingTableMissing = false;
   }
 
   console.log("\n-- this suite tests the shipping handler, not a copy --");
