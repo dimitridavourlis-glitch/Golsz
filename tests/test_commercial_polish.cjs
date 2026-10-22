@@ -77,6 +77,17 @@ const assets = VERCEL.headers.find((h) => h.source === "/assets/(.*)");
 ck("static images and icons are cacheable", !!assets && /max-age=86400/.test(assets.headers[0].value), true);
 ck("...but the unhashed stylesheet and scripts are not made stale for a day", VERCEL.headers.some((h) => /css|js\/\(/.test(h.source) && /max-age=86400/.test(JSON.stringify(h.headers))), false);
 
+/* ---------- one canonical host ---------- */
+const redir = (VERCEL.redirects || []).find((r) => (r.has || []).some((h) => h.type === "host" && h.value === "golsz.vercel.app"));
+ck("golsz.vercel.app redirects to golsz.com (it served a full duplicate of the site)", !!redir && /^https:\/\/golsz\.com\//.test(redir.destination), true);
+ck("...permanently, and keeps the path", !!redir && redir.permanent === true && /\$1/.test(redir.destination), true);
+// The database's push trigger posts to https://golsz.vercel.app/api/send-push.
+// A redirect on /api would turn that POST into a GET or drop it, silently
+// ending every push notification, so /api must be excluded by the pattern.
+const re = new RegExp("^" + redir.source + "$");
+ck("...but /api/* is NOT redirected (the push-notification trigger posts there)",
+   [re.test("/api/send-push"), re.test("/api/stripe-webhook"), re.test("/golsz-app.html"), re.test("/index.html"), re.test("/")], [false, false, true, true, true]);
+
 /* ---------- admin link ---------- */
 ck("the knowledge source link goes through safeHref", /safeHref\(k\.source_url\)\s*\?\s*<a href=\{safeHref\(k\.source_url\)\}/.test(APP), true);
 ck("...and a non-http value is shown as text, not as a link", /<span style=\{\{ color: C\.slate \}\}>\{k\.source_url\}<\/span>/.test(APP), true);

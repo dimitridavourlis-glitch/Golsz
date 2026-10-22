@@ -2,6 +2,19 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run check && npm run split && npm run compile && npm run strip && npm run unpublish",
   "outputDirectory": ".",
+  "redirects": [
+    {
+      "source": "/((?!api/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "golsz.vercel.app"
+        }
+      ],
+      "destination": "https://golsz.com/$1",
+      "permanent": true
+    }
+  ],
   "crons": [
     {
       "path": "/api/target-followup-reminders",
