@@ -30,6 +30,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const Babel = require("@babel/standalone");
+const Terser = require("terser");
 
 const REPO = path.join(__dirname, "..");
 const HTML = path.join(REPO, "golsz-app.html");
@@ -61,7 +62,35 @@ function compile(jsx) {
   const code = out.code;
   if (!code.includes("React.createElement")) throw new Error("no React.createElement in output — the react preset did not run");
   if (/jsx-runtime|jsx-dev-runtime/.test(code)) throw new Error("automatic runtime leaked in — this browser has no module loader");
-  return code;
+  return minify(code);
+}
+
+// MINIFIED, CONSERVATIVELY. Babel compiles JSX but does not compress, so the
+// bundle was 1.18 MB (about 352 KB gzipped) for an athlete on a phone.
+//
+// Settings that matter, and why:
+//   toplevel is OFF (the default). This is a classic script, not a module, and
+//     golsz-app.html's own loader references globals the bundle defines
+//     (I18N, BUILD, window.__GOLSZ_I18N). Top-level names must keep their names.
+//   keep_fnames is ON. Error messages, the render-crash boundary's logs and any
+//     stack an athlete pastes into a support email name the component that
+//     failed; "t.a is not a function" would make the next outage harder to
+//     diagnose than it is worth saving a few KB.
+//   comments are dropped. The source-sha stamp is added by the caller AFTER
+//     this runs, because tools/strip-jsx.cjs and tests/test_compiled_artifact.cjs
+//     read it from the first lines of the file.
+// Deterministic: the same JSX always yields the same bytes, which is what lets
+// test_compiled_artifact rebuild the bundle and compare it byte for byte.
+function minify(code) {
+  const out = Terser.minify_sync(code, {
+    compress: { passes: 1 },
+    mangle: { keep_fnames: true },
+    keep_fnames: true,
+    format: { comments: false },
+  });
+  if (!out || out.error || !out.code) throw new Error("terser produced no output: " + (out && out.error));
+  if (!out.code.includes("React.createElement")) throw new Error("minified bundle lost React.createElement");
+  return out.code;
 }
 
 module.exports = { OPEN, OPTIONS, extract, compile, sha };
