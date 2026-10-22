@@ -134,9 +134,9 @@ node tests/test_<name>.cjs     # one suite
 - Doc drift fixed 2026-10-22: CLAUDE.md (§ Commands, § Architecture > The app and CSP, § THE DEPLOY
   GATE, monitoring), README.md (suite count, `STRIPE_PORTAL_LINK`: the link is correct), check.yml
   comments. Suite counts are quoted "as of 2026-10-22"; `node tests/run-all.cjs` prints the current one.
-- Known stale code comments, not fixed (docs-only pass): `tools/precompile.cjs` header says the
-  buildCommand "writes nothing" (it now runs split, compile and strip); the `api/health-alert.js`
-  header says it runs on Vercel Cron (it is called by `.github/workflows/health-alert.yml`).
+- The two stale code comments (`tools/precompile.cjs`, `api/health-alert.js`) were fixed 2026-10-22.
+- Repo-root docs (CLAUDE.md, AGENTS.md, AI_HANDOFF.md, README.md, opencode.json) are served on
+  golsz.com (verified 2026-10-22): keep them free of anything private.
 
 ## Environment variables (names only, never values)
 - Template `.env.example`; production values live in Vercel. Full list:

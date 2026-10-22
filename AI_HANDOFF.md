@@ -5,7 +5,8 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Claude Code: setup session, 2026-10-22 (added AGENTS.md, AI_HANDOFF.md, opencode.json; no application code changed)
+OpenCode, 2026-10-22: verified the live deploy, fixed the two stale code comments (comments only).
+Before that: Claude Code setup session, 2026-10-22 (AGENTS.md, AI_HANDOFF.md, opencode.json).
 Last real development work: Claude Code, 2026-10-21, a review-fix round after the redesign merge (ends at commit 5bfb860).
 
 ## Current Branch
@@ -25,9 +26,9 @@ The five `redesign/phase-*` branches are fully merged into `main` (0 commits ahe
   spend guard, admin action logging).
 
 ## Current Work
-None in progress. 2026-10-22 (Claude Code): added AGENTS.md, AI_HANDOFF.md and opencode.json, and fixed
-stale facts in CLAUDE.md, README.md and check.yml comments (docs only; pushed, which redeployed the
-same app code).
+None in progress. 2026-10-22 (OpenCode): confirmed golsz.com `/api/geo` reports version 15c6729d378f
+(the maxDuration fix deployed). Rewrote the stale header comments in `tools/precompile.cjs` and
+`api/health-alert.js`; no code changed.
 
 ## Remaining Tasks
 - Owner, in the Supabase SQL Editor: run migration 160; confirm migration 158 ran, then update
@@ -35,9 +36,9 @@ same app code).
 - One real Basic purchase to prove the Stripe webhook, then cancel it in the portal
   (CLAUDE.md § Current state). Until then payments are unproven.
 - Rotate `SUPABASE_WEBHOOK_SECRET` and re-run migration 026 (CLAUDE.md § Current state).
-- Stale docs: fixed 2026-10-22 (CLAUDE.md, README.md, check.yml comments, AGENTS.md; also CLAUDE.md
-  now describes the health-alert monitor). Still stale, code comments only: `tools/precompile.cjs`
-  ("buildCommand writes nothing") and the `api/health-alert.js` header ("Vercel Cron").
+- Stale docs and code comments: all fixed 2026-10-22.
+- Owner decision: repo-root docs are publicly served (see Known Problems). Options: a `.vercelignore`
+  (must be tested: the Vercel build needs tests/ and tools/) or moving the docs into a folder.
 - ADS-BUILD-ORDER.md phases: status last updated 2026-10-13. Owner to confirm what remains.
 
 ## Important Architecture Decisions
@@ -52,19 +53,22 @@ same app code).
 
 ## Latest Test / Build Status
 Last recorded: `npm run check` 110/110 suites, 5,252 assertions (commit 5bfb860 message,
-2026-10-21). Re-run 2026-10-22 after the doc fixes: `npm run check` 110/110 suites passed (5252 assertions). CI and Vercel results for that push
-were not checked (no network in the setup session).
+2026-10-21). Re-run 2026-10-22 (OpenCode, after the comment fixes): `npm run check` 110/110 suites passed
+(5253 assertions). Vercel built 15c6729 successfully (live `/api/geo` version). CI result not checked.
 
 ## Known Problems
 - Payments live but no real purchase has completed; webhook signing secret unverified.
 - An old push-webhook secret is exposed in public git history until it is rotated.
 - Migration 160 not applied; migration 158 status unconfirmed.
-- `outputDirectory: "."` with no `.vercelignore`: repo-root files (CLAUDE.md, AGENTS.md, this
-  file) may be served on golsz.com. Not verified. Owner to confirm.
+- VERIFIED 2026-10-22: `outputDirectory: "."` with no `.vercelignore` serves repo-root files:
+  golsz.com/CLAUDE.md, /AGENTS.md, /AI_HANDOFF.md, /README.md and /opencode.json return 200
+  (`.env.example` returns 404). The repo is public, so nothing new leaks, but keep these files
+  free of anything private.
 
 ## Next Recommended Action
-Owner: review AGENTS.md, AI_HANDOFF.md and opencode.json, then commit them. Pushing that commit
-to `main` triggers a production deploy, so run `npm run check` first. Then run migration 160.
+Owner: run migration 160 in the Supabase SQL Editor and confirm 158; decide how to stop serving
+repo-root docs. Agents: nothing code-side is pending; do not call payments working until a real
+purchase has completed.
 
 ---
 _How to update: overwrite the sections above (do not append a log); put the agent name

@@ -8,7 +8,8 @@
 // whole time — nobody reads error_log. Telemetry that nobody is paged on is
 // a post-mortem tool, not monitoring.
 //
-// Runs on Vercel Cron every 15 minutes. It answers one question: "in the
+// Called every 15 minutes by .github/workflows/health-alert.yml (not Vercel
+// Cron: the Hobby plan allows only daily schedules). It answers one question: "in the
 // last window, did a meaningful share of Scout calls fail?" — and pushes to
 // admins if so, using the same Web Push path alertAdmins() already uses for
 // minor-safety events, so there is no new service, no new bill, and no new

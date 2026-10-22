@@ -10,12 +10,12 @@
 // identical — you close both.
 //
 // WHY THE OUTPUT IS COMMITTED RATHER THAN BUILT ON DEPLOY.
-// Pushing to main auto-deploys production, there is no Vercel CLI here, and
-// today's buildCommand writes nothing — production serves the committed bytes
-// unmodified. A build step that mutates files during deploy would bet the
-// whole product on a mechanism this repo has never once exercised and that
-// cannot be dry-run locally. Committing the artifact keeps the deploy path
-// exactly as it is: the file git holds is the file Vercel serves.
+// Pushing to main auto-deploys production and there is no Vercel CLI here.
+// The artifact (js/app.js) is committed, and the gate fails if it is stale.
+// (Since 2026-10-21 the buildCommand also runs split, a second compile and
+// strip on Vercel; see CLAUDE.md "THE DEPLOY GATE". Those steps never touch
+// what is committed.) Committing the artifact keeps the deploy path
+// checkable locally: the compiled file git holds is the one the gate tests.
 //
 // WHY THE JSX BLOCK STAYS IN THE HTML.
 // 21 test suites readFileSync golsz-app.html and slice real expressions out of
