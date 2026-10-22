@@ -13,6 +13,10 @@ Last real development work: Claude Code, 2026-10-21, a review-fix round after th
 The five `redesign/phase-*` branches are fully merged into `main` (0 commits ahead).
 
 ## Last Completed Work
+- 2026-10-22 (Claude Code): Vercel deploys had failed since 3d585b7 (2026-10-21) with
+  `[BUILD_FAILED] Unhandled type: "Identifier"`: Vercel reads api `config` statically and
+  `maxDuration: MAX_SECONDS` was not a literal. Now `maxDuration: 60` (test keeps it equal to
+  MAX_SECONDS). Until this deploy, golsz.com served e24faab.
 - 2026-10-20: redesign phases 1 to 4b merged by PRs #3 to #7 (daily check-in, Home tiles, Plan as
   one road, Scout start screen, action cards).
 - 2026-10-21: "the redesign is the app now" (old flags removed); deploy-time `split` (only English

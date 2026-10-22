@@ -178,7 +178,8 @@ ck("...and a failed scan is raised, not read as an empty night",
 // ONE NUMBER, TWO READERS: the platform's kill deadline and the loops' own
 // budget. Declaring 60 while the loops plan for longer is how a run gets cut
 // off mid-iteration, with pushes sent and last_reminded_at unstamped.
-ck("the route is allowed to finish", /export const config = \{ maxDuration: MAX_SECONDS \};/.test(CRON_CODE), true);
+ck("the route is allowed to finish (a literal: Vercel rejects an identifier in config)", /export const config = \{ maxDuration: 60 \};/.test(CRON_CODE), true);
+ck("maxDuration and MAX_SECONDS stay equal", /const MAX_SECONDS = 60;/.test(CRON_CODE), true);
 ck("...and the loops budget from that same number",
    /const BUDGET_MS = \(MAX_SECONDS - 8\) \* 1000;/.test(CRON_CODE), true);
 // Each loop gets a share, because they run in sequence and the due-step nudge

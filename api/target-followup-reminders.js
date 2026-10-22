@@ -55,7 +55,10 @@ const MAX_SECONDS = 60;
 // Headroom to finish the in-flight row, write the response and return. A
 // budget equal to the ceiling is a budget that ends in a kill.
 const BUDGET_MS = (MAX_SECONDS - 8) * 1000;
-export const config = { maxDuration: MAX_SECONDS };
+// Vercel reads `config` statically and accepts only literals here (an identifier fails the
+// build with "Unhandled type: Identifier"), so the number is written out; tests keep it equal
+// to MAX_SECONDS.
+export const config = { maxDuration: 60 };
 
 const REMINDER_STATUSES = ["preparing", "contacted", "follow_up"];
 
