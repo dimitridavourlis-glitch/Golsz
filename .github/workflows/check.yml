@@ -1,7 +1,8 @@
 # Run `npm run check` on every push and pull request.
 #
 # WHY THIS EXISTS
-# The repo had 60 suites and ~2,600 assertions that gated nothing unattended.
+# The repo had 60 suites and ~2,600 assertions that gated nothing unattended
+# (the count when this file was written; 110 suites as of 2026-10-22).
 # `npm run check` only ever ran when someone typed it, or via `npm run deploy`
 # — and pushing to main deploys production through the Vercel git integration
 # WITHOUT going through that script. So the tests could be green for weeks
@@ -53,7 +54,8 @@ jobs:
       matrix:
         # 24.x is what these suites were written and verified on locally.
         # 22.x is Vercel's default runtime, so it is the version that actually
-        # serves production; package.json pins no `engines`, so the two can
+        # serves production; package.json pins `engines` node >=22, which is
+        # a floor rather than an exact version, so 22.x and 24.x can still
         # drift apart silently. Testing both is what makes that visible.
         node: ["22.x", "24.x"]
     steps:
@@ -66,5 +68,6 @@ jobs:
 
       - run: npm ci
 
-      # `npm run check` = node --check on every api/*.js, then all 60 suites.
+      # `npm run check` = node --check on every api/*.js, js/*.js and sw.js, then all the
+      # suites (110 suites, 5,252 assertions as of 2026-10-22).
       - run: npm run check

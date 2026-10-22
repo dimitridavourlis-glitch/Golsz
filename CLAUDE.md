@@ -28,8 +28,8 @@ npm run check     # syntax-checks every api/*.js and js/*.js, then runs the suit
 npm run compile   # re-compiles the JSX in golsz-app.html into js/app.js
 ```
 
-`npm run check` is the gate before any push. It currently runs **80 plain-Node `.cjs` suites, ~3,700
-assertions**, no framework — `tests/run-all.cjs` discovers anything matching `test_*.cjs`. Many suites lift
+`npm run check` is the gate before any push. As of 2026-10-22 it runs **110 plain-Node `.cjs` suites, 5,252
+assertions** (`node tests/run-all.cjs` prints the current count), no framework — `tests/run-all.cjs` discovers anything matching `test_*.cjs`. Many suites lift
 real expressions out of the source and `eval` them, so they fail when the source changes rather than when a
 mock does. There is no linter.
 
@@ -46,8 +46,14 @@ this file's predecessor version broke a running migration mid-session.
 
 ## Commands
 
-There is no build/lint/test tooling in this repo. Relevant commands:
+There is no linter. There IS test and build tooling: the `package.json` scripts `check`, `test`, `compile`,
+`split`, `strip` and `deploy`, plus `tests/run-all.cjs` (see "What this is" above and THE DEPLOY GATE below).
+Relevant commands:
 
+- **Test gate (run before any push):** `npm ci` once, then `npm run check` (syntax-checks `api/*.js`, `js/*.js`
+  and `sw.js`, then runs every `tests/test_*.cjs`). `npm test` runs the suites alone; `node tests/run-all.cjs
+  <text>` runs only suites whose file name contains `<text>`.
+- **Recompile the app after editing its JSX:** `npm run compile` (see "The app" below).
 - **Preview the static site locally:** serve the directory over HTTP (not `file://`, since `fetch`/module
   scripts and relative asset paths need a real origin) — e.g. `python3 -m http.server 8000` or `npx serve .`
   from the repo root, then open `index.html` / `golsz-app.html` in a browser.
@@ -55,9 +61,10 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   from "Backend config" below, either in `.env` or via `vercel env pull`). Plain static hosting will not
   execute `api/scout.js` — only Vercel (or an equivalent serverless platform) will.
 - **Deploy:** push to a Vercel project (dashboard-connected or `vercel deploy`). Vercel auto-detects
-  `api/scout.js` as a serverless function at `/api/scout` with zero config — no framework/build settings
-  needed. Netlify/Cloudflare Pages work for the static pages but would need their own equivalent of a
-  serverless function for `api/scout.js` (Netlify Functions / Pages Functions) if not deploying to Vercel.
+  `api/scout.js` as a serverless function at `/api/scout` with zero config — no framework preset needed; the
+  build gate is the `buildCommand` in `vercel.json` (see THE DEPLOY GATE). Netlify/Cloudflare Pages work for
+  the static pages but would need their own equivalent of a serverless function for `api/scout.js` (Netlify
+  Functions / Pages Functions) if not deploying to Vercel.
 - **Database migrations:** there's no migration tool — `supabase-schema.sql` is applied by pasting it into
   the Supabase project's SQL Editor and running it once. Any schema changes should be made as additive SQL
   appended to (or as a new file alongside) that script, since it also defines the `handle_new_user()` trigger
@@ -95,9 +102,18 @@ There is no build/lint/test tooling in this repo. Relevant commands:
 
 ### The app (`golsz-app.html`)
 
-- Fully self-contained: React 18 + ReactDOM (UMD builds) and `@supabase/supabase-js` loaded from CDN
-  `<script>` tags, JSX transpiled in-browser via Babel standalone (`<script type="text/babel">`). No JSX
-  build step — edit the file directly and reload.
+- Single HTML file plus one generated script: React 18 + ReactDOM (UMD builds) and `@supabase/supabase-js`
+  are loaded from CDN `<script>` tags. The JSX source lives in one inert `<script type="text/babel-deferred"
+  data-presets="react">` block in `golsz-app.html` (no browser executes that type, and Babel is no longer
+  loaded in the page). It is compiled ahead of time, not in the browser: `npm run compile`
+  (`tools/precompile.cjs`, `@babel/standalone` pinned to 7.23.2) writes the committed `js/app.js`, which the
+  page loads with a content-hash `?v=` stamp. After editing the JSX, run `npm run compile` and commit
+  `js/app.js` too; `test_compiled_artifact.cjs` fails the gate if it is stale. Never hand-edit `js/app.js`.
+  On Vercel only, the `buildCommand` then runs `npm run split` (lifts the fr/es/el dictionaries out into
+  `js/i18n/`), `npm run compile` again (so the deployed bundle is English-only) and `npm run strip`
+  (`tools/strip-jsx.cjs`, removes the JSX source block from the served HTML) against a throwaway checkout.
+  `split` and `strip` rewrite `golsz-app.html`, so do not run them in your working tree and never commit
+  their output (the `tools/*.cjs` headers and `test_served_bundle.cjs` explain why).
 - Component tree lives under one `<script>` block: `Feed`, `Discover`, `Events`, `Messages`, `Passport`
   (the "Digital Sports Passport" profile UI), `Scout` (AI chat), assembled by `GolszApp` (bottom tab bar on
   mobile, sidebar nav on desktop — see "Responsive layout" below) and mounted via `Root`, which decides
@@ -489,7 +505,8 @@ There is no build/lint/test tooling in this repo. Relevant commands:
 - **Passive, not push-alerted.** Unlike the two security signals above, entries here don't trigger a push
   notification — they're meant to be checked in the Errors tab, not paged for immediately. If genuinely
   urgent failure classes (e.g. every Stripe webhook failing) turn out to need immediate paging too, that's
-  a reasonable follow-up, not something this migration does today.
+  a reasonable follow-up, not something this migration does today. (Update: `api/health-alert.js` now pages
+  admins in aggregate when 3 or more rows land in a 20-minute window; see Current state.)
 
 ### Admin action audit log (migration 030)
 
@@ -679,12 +696,11 @@ There is no build/lint/test tooling in this repo. Relevant commands:
   Vercel's `headers` config, scoped to everything except `/api/*` (serverless functions set their own CORS
   headers programmatically — a blanket static rule would conflict). Only takes effect on an actual Vercel
   deployment, not local static preview.
-- `script-src` deliberately still includes `'unsafe-inline'` and `'unsafe-eval'` — this app has no build
-  step, and Babel-standalone transpiles/executes JSX at runtime in the browser, which needs eval-like
-  execution. A stricter `script-src` isn't achievable without rebuilding how the app is served (a real build
-  step). This is an accepted, documented trade-off, not an oversight — the policy still meaningfully
-  restricts which *origins* scripts/styles/images/connections can come from (cdnjs/jsdelivr/fonts/Supabase/
-  Anthropic only), it just can't fully sandbox the eval'd JSX itself.
+- `script-src` no longer includes `'unsafe-eval'` (removed in c62b9c9, once the JSX was compiled ahead of
+  time into `js/app.js` rather than by Babel in the browser). It deliberately still includes
+  `'unsafe-inline'` for the page's inline `<script>` blocks. This is an accepted, documented trade-off, not
+  an oversight — the policy still meaningfully restricts which *origins* scripts/styles/images/connections
+  can come from (cdnjs/jsdelivr/fonts/Supabase/Anthropic only).
 
 ### Signup bot protection (honeypot)
 
@@ -919,7 +935,7 @@ The user handed over a 28-item "Master Intelligence & Multi-Model Protocol" spec
 model-agnostic Athlete Context as real memory, an AI Manager/router, named specialists sharing one Scout
 persona, and provider-swappable models. The spec's own instruction was to audit what exists first and
 propose the smallest change before writing code — that audit + the approved MVP plan live at
-`/Users/dimitriosdavourlis/.claude/plans/rosy-doodling-toast.md` (kept for reference; not part of the repo).
+`~/.claude/plans/rosy-doodling-toast.md` (kept for reference; not part of the repo).
 Six pieces shipped, all additive, no existing behavior removed:
 
 - **Bounded conversation context (migration 049, `scout_conversation_summaries`)**: `Scout()`'s `send()`
@@ -989,10 +1005,11 @@ database-first event search, rate limiting/idempotency, emergency kill switches,
 dashboard — written in generic TypeScript/Next.js SaaS vocabulary (`PLAN_MODEL_ACCESS`, `AiProviderAdapter`,
 `ai_daily_usage`, a Jest-style test list) that doesn't match this repo's real stack (single-file JSX,
 Babel, no TypeScript, no test framework). The JSX is no longer compiled in the browser: tools/precompile.cjs
-compiles it once into js/app.js, which is COMMITTED. There is still no build step on deploy — the file git holds
-is the file Vercel serves — but after editing the JSX in golsz-app.html you must run `npm run compile`, and
+compiles it once into js/app.js, which is COMMITTED. (Since 2026-10-21 Vercel also runs `split`, `compile` and
+`strip` at deploy time, so what it serves is no longer byte-identical to what git holds; see THE DEPLOY GATE.)
+After editing the JSX in golsz-app.html you must run `npm run compile`, and
 test_compiled_artifact.cjs fails the gate if you forget. The plan translating the spec onto the
-real stack lives at `/Users/dimitriosdavourlis/.claude/plans/rosy-doodling-toast.md` (overwritten from the
+real stack lives at `~/.claude/plans/rosy-doodling-toast.md` (overwritten from the
 Phase 2 plan above — not part of the repo). Extends the Phase 2 MVP's real infrastructure rather than
 building a parallel `ai_*` schema next to it.
 
@@ -1311,7 +1328,16 @@ you add another place that surfaces a Message button, it doesn't need any follow
   shape as `push_subscriptions`. Still unused by the app today (every occupation's extra fields live in
   `athletes` — see `ProfileEditor` — so nothing actually writes to these two tables yet), but they're no
   longer fully locked the moment something does.
-- Production monitoring/alerting (e.g. Sentry) — nothing wired up yet.
+- **Production monitoring exists, but only for Scout outages; there is no third-party error tracker (e.g.
+  Sentry).** `.github/workflows/health-alert.yml` calls `/api/health-alert` every 15 minutes (GitHub
+  Actions, not Vercel Cron: the project is on the Hobby plan, which only allows daily crons; needs the repo
+  secret `CRON_SECRET` and the variable `PROD_BASE_URL`). `api/health-alert.js` looks at the last 20 minutes
+  and web-pushes every admin when at least half of 5+ Scout calls failed or 3+ `error_log` rows appeared
+  (tunable via `HEALTH_*`). It stamps `ops_heartbeat` (migration 127) on each successful run, and the daily
+  Vercel cron `api/target-followup-reminders.js` pushes admins if that stamp is older than
+  `HEARTBEAT_MAX_AGE_HOURS` (default 6) — so a dead monitor is noticed within a day. If the workflow call
+  itself fails, it opens a GitHub issue. Individual `error_log` entries stay passive (see the "Application
+  error log" section); only the count above pages anyone.
 - **Push notifications are fully wired (migration 026)** — `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
   `VAPID_SUBJECT`, and `SUPABASE_WEBHOOK_SECRET` are set as Vercel env vars, and the two triggers that call
   `api/send-push.js` (see above) are created directly in SQL rather than the Dashboard Webhooks wizard, since
@@ -1319,8 +1345,14 @@ you add another place that surfaces a Message button, it doesn't need any follow
 
 ## THE DEPLOY GATE (vercel.json buildCommand)
 
-`vercel.json` sets `buildCommand: "npm run check"`. That is not a build —
-this repo has no build step — it is the gate.
+`vercel.json` sets `buildCommand: "npm run check && npm run split && npm run compile && npm run strip"`.
+The first step, `npm run check`, is the gate. The other three are real deploy-time build steps (`strip`
+added in 2b44ac2, `split` and the second `compile` in c3742a0, both 2026-10-21): `split` lifts the fr/es/el
+dictionaries out into `js/i18n/`, `compile` rebuilds `js/app.js` without them, and `strip` removes the JSX
+source block from the served `golsz-app.html`. They run on Vercel's throwaway checkout and their output is
+never committed; the ORDER is asserted by `tests/test_served_bundle.cjs`. Until 2b44ac2 the buildCommand
+was just `npm run check` and the repo had no deploy-time build, which is the situation the WHY below
+describes.
 
 WHY: pushing to main deploys production through Vercel's git integration,
 which does NOT go through `npm run deploy`. `.github/workflows/check.yml`

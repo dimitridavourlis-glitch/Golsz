@@ -36,7 +36,7 @@ npm run compile   # regenerates js/app.js — the gate fails if you forget
 | `api/*.js` | Vercel serverless functions. **At the 12-function ceiling** — adding one means removing one. |
 | `supabase-migration-NNN-*.sql` | The database, one numbered migration at a time. Each carries its reasoning. |
 | `supabase-schema.sql` | Reference for what is deployed. See the warning below. |
-| `tests/*.cjs` | 74 suites, ~3,150 assertions. Plain Node, no framework. |
+| `tests/*.cjs` | 110 suites, 5,252 assertions (as of 2026-10-22; `node tests/run-all.cjs` prints the current count). Plain Node, no framework. |
 
 ## The tests are the thing to read first
 
@@ -75,9 +75,12 @@ breaks.
 - **Payments are live but unproven.** Nine Stripe Payment Links (3 tiers x
   EUR/CAD/USD) and a webhook exist, but **nobody has completed a purchase**, so
   the signing secret has never been exercised by a real event.
-- **`STRIPE_PORTAL_LINK` is wrong** — it holds a payment-link id, so no
-  subscriber can cancel, while `index.html` says "Cancel any time". Fixing it
-  means pasting the real portal URL from the Stripe Dashboard.
+- **`STRIPE_PORTAL_LINK` is correct** (this bullet used to say it was wrong;
+  corrected 2026-10-22). It holds a genuine `billing.stripe.com/p/login/...`
+  customer-portal link. It shares its short code with the CAD Basic Payment Link
+  only because Stripe reuses short codes across the two hosts (verified against
+  the live account on 2026-10-09), so do not "fix" it. Subscribers can cancel at
+  period end, update their card and see invoices there; plan switching is off.
 - **Parent accounts are off** behind `PARENT_ACCOUNTS_ENABLED` in
   `golsz-app.html`; the plumbing is intact and production had zero of them.
 - **Athlete discovery is off** — migration 143 revoked execute on
