@@ -6627,11 +6627,17 @@ alter table ops_heartbeat enable row level security;
 
 
 -- ============================================================
--- 161 — NOT YET APPLIED, as of 2026-10-22.
+-- 161 — APPLIED 2026-10-22.
 --
--- supabase-migration-161-admin-roles.sql is written and waiting to be run.
+-- supabase-migration-161-admin-roles.sql was run in the Supabase SQL Editor on
+-- 2026-10-22. Afterwards, in production: 1 admin, 1 with role owner, none
+-- without a role, no non-admin with a role, is_admin_owner() present, the
+-- trigger enabled, and the stored protect_profile_columns() source hashing
+-- (sha256) to 826cb413d17621dedc4636b36e774fa72fde7da4782e7754d4839222886d5887,
+-- identical to the body in the file. Before the run the live function hashed
+-- to migration 126's body (7d136c64...), so nothing hand-edited was overwritten.
 --
--- WHAT IT WILL CHANGE, once run:
+-- WHAT IT CHANGED:
 --   * profiles.admin_role ('owner' | 'moderator' | null); existing admins
 --     become owners.
 --   * is_admin_owner() (is_admin() and role = 'owner').
@@ -6640,10 +6646,9 @@ alter table ops_heartbeat enable row level security;
 --     stripe_customer_id are reverted; admin_role follows is_admin; the last
 --     owner cannot be removed.
 --
--- UNTIL IT IS RUN, every admin is effectively an owner (today's behaviour),
--- and api/admin-user-action.js and the Admin Panel fall back to that when
--- the column does not exist. Re-read this section after applying and replace
--- it with what was done.
+-- NOTE: api/admin-user-action.js and the Admin Panel on branch
+-- admin-mfa-roles read admin_role; `main` does not yet, and is unaffected
+-- (the only admin is an owner, as before).
 -- ============================================================
 
 

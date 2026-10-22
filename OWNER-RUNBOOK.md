@@ -44,7 +44,7 @@ Per `CLAUDE.md` § Current state: buy Basic (about CA$9), then in Stripe check t
 destination's Event deliveries show Total 1 / Failed 0, confirm `profiles.plan` flips, then cancel
 in the customer portal to exercise the downgrade. Until then, payments are unproven.
 
-## 5. Settle the signup bot-check state (2 minutes, a read)
+## 5. Settle the signup bot-check state (DONE 2026-10-22: CAPTCHA is DISABLED in Supabase, site key empty, so they agree and privacy.html is accurate; the open question is whether to turn bot protection on before launch)
 
 The code supports Cloudflare Turnstile but `TURNSTILE_SITE_KEY` in `golsz-app.html` is empty.
 Supabase dashboard, Authentication, Attack Protection (CAPTCHA): is it on?
@@ -70,9 +70,9 @@ platform that once admitted minors waits there until someone reviews it.
 Built, tested, not on `main`: a gate that could lock the only admin out should not ship before you
 are ready. Order matters; each step says what to check.
 
-a. **Enable TOTP in Supabase** (Authentication, Multi-Factor; newer dashboards list it under Sign In /
+a. **(DONE 2026-10-22: TOTP reads Enabled.) Enable TOTP in Supabase** (Authentication, Multi-Factor; newer dashboards list it under Sign In /
    Providers). If it is off, the panel will say so in step d instead of opening.
-b. **Run migration 161** in the SQL Editor (roles). It is safe before or after the code ships: until it
+b. **(DONE 2026-10-22, verified: your account is the one owner.) Run migration 161** in the SQL Editor (roles). It is safe before or after the code ships: until it
    runs, every admin is treated as an owner, exactly as today. Run the probe: rows 161.1 to 161.3 `true`.
    Your admin account becomes an owner automatically.
 c. **Merge the branch** to `main` (that deploys it). The first time you open the Admin Panel it asks you

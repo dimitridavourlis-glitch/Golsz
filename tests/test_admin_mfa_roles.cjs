@@ -10,7 +10,7 @@
 //      is compared with 126's TEXT: strip the fenced insertions and nothing
 //      else may differ.
 //   2. Migration 162 changes is_admin() by exactly one clause.
-//   3. Both are recorded as NOT YET APPLIED in the ledger (they are run by
+//   3. 161 is recorded as applied and 162 as pending in the ledger (they are run by
 //      hand), and the probe knows how to tell.
 //   4. The Admin Panel loads NOTHING until the session passed its second
 //      factor, and every owner-only control sits behind isOwner while the
@@ -108,11 +108,14 @@ ck("...and says how to recover a lost authenticator", /delete from auth\.mfa_fac
 
 /* ---------- 3. ledger and probe ---------- */
 
-for (const [n, file, src] of [[161, "161", M161], [162, "162", M162]]) {
-  ck(`${file} opts out of the ledger guard with the exact marker`, src.includes("*** NOT YET APPLIED ***"), true);
-  ck(`${file} is recorded as pending in supabase-schema.sql`,
-     new RegExp(`-- ${n} — NOT YET APPLIED`).test(SCHEMA), true);
-}
+// 161 was run in production on 2026-10-22, so it must NOT still opt out of the
+// ledger guard, and the ledger must say it was applied. 162 has not been run
+// (and must not be until the owner has enrolled), so it keeps the marker.
+ck("161 no longer carries the not-applied marker", M161.includes("*** NOT YET APPLIED ***"), false);
+ck("161 is recorded as applied in supabase-schema.sql", /-- 161 — APPLIED 2026-10-22\./.test(SCHEMA), true);
+ck("...with the hash the stored function was verified against", SCHEMA.includes("826cb413d17621dedc4636b36e774fa72fde7da4782e7754d4839222886d5887"), true);
+ck("162 opts out of the ledger guard with the exact marker", M162.includes("*** NOT YET APPLIED ***"), true);
+ck("162 is recorded as pending in supabase-schema.sql", /-- 162 — NOT YET APPLIED/.test(SCHEMA), true);
 ck("the probe checks the 161 column, function and trigger, and the 162 clause",
    ["profiles.admin_role exists", "is_admin_owner() exists", "cannot remove the last owner", "aal2"].every((x) => PROBE.includes(x)), true);
 

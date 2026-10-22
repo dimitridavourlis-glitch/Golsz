@@ -1,7 +1,10 @@
 -- ============================================================
 -- 161 — Admin roles: owner and moderator.
 --
--- *** NOT YET APPLIED ***  (written 2026-10-22; the owner runs it by hand)
+-- APPLIED to production 2026-10-22 (written the same day), run in the Supabase SQL
+-- Editor and verified: the stored protect_profile_columns() source hashes to
+-- 826cb413d17621dedc4636b36e774fa72fde7da4782e7754d4839222886d5887, the same
+-- as the function body in this file; the one admin became an owner.
 --
 -- WHY. Until now every admin held the same full power: `profiles.is_admin` is
 -- one boolean, checked in 51 migrations' policies and functions, and the

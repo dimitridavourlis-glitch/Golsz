@@ -1255,8 +1255,8 @@ you add another place that surfaces a Message button, it doesn't need any follow
   and this repository is PUBLIC on GitHub, so git history exposes it. Rotate `SUPABASE_WEBHOOK_SECRET` in
   Vercel and re-run migration 026 with the new value. Everything else in the repo (this file, every
   migration) is public for the same reason — write nothing here you would not publish.
-- **Admin MFA and roles: built 2026-10-22 on branch `admin-mfa-roles`; not live until merged and the
-  migrations are run.** Before: no second factor anywhere and every admin held the same full `is_admin`
+- **Admin MFA and roles: built 2026-10-22 on branch `admin-mfa-roles`. Migration 161 is APPLIED in production
+  (2026-10-22); the code and migration 162 are not live until the branch is merged and the owner has enrolled.** Before: no second factor anywhere and every admin held the same full `is_admin`
   power. Now: (1) migration 161 adds `profiles.admin_role` (`owner` | `moderator`; existing admins become
   owners; a new admin is a moderator) and `is_admin_owner()`, and `protect_profile_columns()` reverts a
   moderator's writes to `is_admin`, `admin_role`, `plan`, `full_access`, `ai_unlimited` and

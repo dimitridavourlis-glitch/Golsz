@@ -46,11 +46,12 @@ enrol/verify screens and a real aal2 token are unproven until the owner runs OWN
 
 ## Remaining Tasks
 - OWNER (OWNER-RUNBOOK.md): rotate `SUPABASE_WEBHOOK_SECRET` and re-run 026 with the new value (never
-  commit it); one real Basic purchase; check the Supabase CAPTCHA setting against the empty
-  `TURNSTILE_SITE_KEY` (if CAPTCHA is on, signup is down). Runbook steps 1 and 2 are DONE.
+  commit it); one real Basic purchase. The browser pane was not signed in to Vercel, so the rotation
+  (a Vercel env var + redeploy, then 026 re-run) is waiting on that. Runbook steps 1, 2 and 5 are DONE.
 - OWNER: send LEGAL-REVIEW-BRIEF.md to counsel (run its three count queries first).
-- OWNER: admin MFA rollout, OWNER-RUNBOOK.md section 8 (enable TOTP, run 161, merge, enrol, test, run 162).
-  Review the branch first: `git diff main...admin-mfa-roles --stat`.
+- OWNER: admin MFA rollout, OWNER-RUNBOOK.md section 8. DONE: TOTP is enabled in Supabase; 161 is applied.
+  LEFT: merge `admin-mfa-roles` (review `git diff main...admin-mfa-roles --stat`), enrol an authenticator in
+  the Admin Panel (only the owner can scan the QR), test a password-only sign-in, THEN run 162.
 - Agent-doable gaps from the ADS reconciliation (ADS-BUILD-ORDER.md STATUS): parallel `getAthleteState`
   reads; a server "today" line for Scout and a date digest in `responseCacheFingerprint`; `measured_by` /
   `protocol` in Scout's benchmark select; Reschedule/Drop from Home; `removed_at` on stages.
@@ -76,9 +77,12 @@ catalog checks), i.e. nobody has loaded a `?public=<uuid>` link since 160.
 ## Known Problems
 - Payments live but no real purchase has completed; webhook signing secret unverified.
 - An old push-webhook secret is exposed in public git history until it is rotated.
-- No MFA live and every admin has the same full power, until `admin-mfa-roles` merges and 161/162 run.
-  The MFA screens have not been seen working in a browser.
-- Privacy policy says Turnstile is not active; Supabase CAPTCHA state unknown (owner-only fact).
+- No MFA live. Migration 161 (roles) IS applied in production, so the one admin is an owner and a new admin
+  would be a moderator; the code for it is on `admin-mfa-roles`, not `main`. 162 is not applied (must not be
+  until the owner has enrolled). The MFA screens have not been seen working in a browser.
+- Signup has NO bot protection: Supabase CAPTCHA is DISABLED (read in the dashboard 2026-10-22) and
+  `TURNSTILE_SITE_KEY` is empty. They agree, so signup works and privacy.html ("not active") is accurate.
+  Turning it on needs the key in the client AND the Supabase setting together, or signup breaks.
 - `api/*.js` source is still readable as static files on golsz.com (deliberate: deleting `api/` at build
   time would delete the functions; the repo is public).
 
