@@ -64,6 +64,10 @@ enrol/verify screens and a real aal2 token are unproven until the owner runs OWN
 - OWNER: admin MFA rollout, OWNER-RUNBOOK.md section 8. DONE: TOTP enabled in Supabase; 161 applied; code
   merged and deployed. LEFT: enrol an authenticator in the Admin Panel (only the owner can scan the QR),
   test a password-only sign-in, THEN run 162 (an agent can run it once the owner confirms).
+- DONE from that backlog, in order: vercel.app -> golsz.com redirect (api excluded, push trigger posts there);
+  shorter titles + manifest id/scope + honest sitemap lastmod; signup hardening (confirm-email on paid plans,
+  password floor 8 in ONE constant AND in Supabase's own PASSWORD_MIN_LENGTH setting, signup errors mapped by
+  code to translated text, 4 hard-coded notices translated; `test_signup_hardening.cjs`).
 - COMMERCIAL AUDIT BACKLOG (2026-10-22, not done; HIGH first). Needs owner/dashboard: Vercel Hobby is
   non-commercial -> move to Pro; Supabase plan/backups/PITR undocumented, do a restore drill; enable plan
   switching in the Stripe portal (config bpc_1UBZUwRtNFWlwsi4HXthKxbz) and drop the "email us to switch"
@@ -72,8 +76,7 @@ enrol/verify screens and a real aal2 token are unproven until the owner runs OWN
   Pro +5 questions/day); French marketing pages + default app language from navigator.language (Quebec);
   legal entity name/address, then remove the visible "not reviewed" banners. Agent-doable: store
   current_period_end / cancel_at_period_end and show them (needs a migration); allow account deletion once a
-  subscription is set to cancel; confirm-email field on paid signup + password min 8; hard-coded English
-  strings in Auth; JSON-LD WebSite/SoftwareApplication; shorten the index <title>; og tags on shared
+  subscription is set to cancel; JSON-LD WebSite/SoftwareApplication; og tags on shared
   Passport links; minify js/app.js (1.18 MB) and self-host fonts/libs; keyboard-accessible span/div
   onClick controls; localise dates; "paid but no plan" list in the Admin Panel.
 - Agent-doable gaps from the ADS reconciliation (ADS-BUILD-ORDER.md STATUS): parallel `getAthleteState`
