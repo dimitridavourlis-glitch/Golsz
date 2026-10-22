@@ -64,23 +64,27 @@ enrol/verify screens and a real aal2 token are unproven until the owner runs OWN
 - OWNER: admin MFA rollout, OWNER-RUNBOOK.md section 8. DONE: TOTP enabled in Supabase; 161 applied; code
   merged and deployed. LEFT: enrol an authenticator in the Admin Panel (only the owner can scan the QR),
   test a password-only sign-in, THEN run 162 (an agent can run it once the owner confirms).
-- DONE from that backlog, in order: vercel.app -> golsz.com redirect (api excluded, push trigger posts there);
-  shorter titles + manifest id/scope + honest sitemap lastmod; signup hardening (confirm-email on paid plans,
-  password floor 8 in ONE constant AND in Supabase's own PASSWORD_MIN_LENGTH setting, signup errors mapped by
-  code to translated text, 4 hard-coded notices translated; `test_signup_hardening.cjs`); first-visit language from
-  the browser (loader `pickLang`, remembered choice always wins; `test_language_default.cjs`); billing visibility
-  (migration 164 APPLIED: webhook mirrors period end + cancel flag as a separate best-effort write, Settings shows
-  "renews on / ends on", a subscription set to END may delete the account, a deleted account's final
-  subscription.deleted is a 200; `test_billing_visibility.cjs` + extended webhook/delete suites).
-- COMMERCIAL AUDIT BACKLOG (2026-10-22, not done; HIGH first). Needs owner/dashboard: Vercel Hobby is
-  non-commercial -> move to Pro; Supabase plan/backups/PITR undocumented, do a restore drill; enable plan
-  switching in the Stripe portal (config bpc_1UBZUwRtNFWlwsi4HXthKxbz) and drop the "email us to switch"
-  route; confirm the Payment Link after-payment redirect is /golsz-app.html?checkout=success; external
-  uptime probe + email alerts (health-alert is push-only, owner phone); define a real Elite benefit (it is
-  Pro +5 questions/day); French marketing pages + default app language from navigator.language (Quebec);
-  legal entity name/address, then remove the visible "not reviewed" banners. Agent-doable: JSON-LD WebSite/SoftwareApplication; og tags on shared
-  Passport links; minify js/app.js (1.18 MB) and self-host fonts/libs; keyboard-accessible span/div
-  onClick controls; localise dates; "paid but no plan" list in the Admin Panel.
+- DONE from the audit backlog (all verified live unless noted), one change each: vercel.app -> golsz.com
+  redirect (/api excluded: the push trigger posts there); shorter titles + manifest id/scope + honest sitemap
+  lastmod; signup hardening (confirm-email on paid plans, password floor 8 in ONE constant AND Supabase's own
+  PASSWORD_MIN_LENGTH, signup errors mapped by code, notices translated); first-visit language from the browser
+  (loader `pickLang`, remembered choice wins); billing visibility (migration 164 APPLIED: Settings shows "renews
+  on / ends on", a subscription set to END may delete the account); dates follow the athlete's language;
+  11 mouse-only controls are keyboard-operable (`asButton`); shared Passport links can draw a preview card
+  (OG tags + `noindex`, robots no longer Disallows the app page); WebSite JSON-LD; noscript fallback in the
+  app; app.js MINIFIED with terser (1.18 MB -> 798 KB; 277 KB -> 139 KB on the wire; verified in a Vercel preview
+  AND in production). Suites: test_signup_hardening, test_language_default, test_billing_visibility,
+  test_keyboard_controls, test_bundle_minified, test_commercial_polish (all mutation-checked).
+  NOTE: js/app.js is now minified; debug from the JSX in golsz-app.html (function names are kept in stacks).
+- COMMERCIAL AUDIT BACKLOG STILL OPEN. Owner/dashboard: Vercel Hobby is non-commercial -> move to Pro;
+  Supabase plan/backups/PITR undocumented, do a restore drill; enable plan switching in the Stripe portal (config
+  bpc_1UBZUwRtNFWlwsi4HXthKxbz) and drop the "email us to switch" route; confirm the Payment Link after-payment
+  redirect is /golsz-app.html?checkout=success; external uptime probe + email alerts (health-alert is push-only);
+  define a real Elite benefit (Pro +5 questions/day today); French marketing pages (Quebec); legal entity
+  name/address, then remove the "not reviewed" banners; first real purchase. Agent-doable: self-host fonts and the
+  two CDN libraries (privacy + one fewer render-blocking origin; needs a CSP change); an admin RPC to list
+  `stripe_pending_plans` ("paid but unlinked"; the table is service-role only); hero images (270 KB each) are
+  already well compressed, sips made them LARGER, so leave them or re-encode with a better tool.
 - Agent-doable gaps from the ADS reconciliation (ADS-BUILD-ORDER.md STATUS): parallel `getAthleteState`
   reads; a server "today" line for Scout and a date digest in `responseCacheFingerprint`; `measured_by` /
   `protocol` in Scout's benchmark select; Reschedule/Drop from Home; `removed_at` on stages.

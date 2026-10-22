@@ -1296,6 +1296,12 @@ you add another place that surfaces a Message button, it doesn't need any follow
   What remains genuinely unresolved: the parent-verification flow is mutual in-app consent, **not**
   identity-verified COPPA/GDPR-K parental consent, and the site takes money from minors' families. That
   needs a lawyer before this is defensible, not just a disclaimer.
+- **js/app.js is MINIFIED (2026-10-22).** `tools/precompile.cjs` runs terser (pinned) inside `compile()`:
+  top-level names are NOT mangled (golsz-app.html's loader and the suites refer to globals), function names ARE
+  kept (stacks still name the screen), output is deterministic (test_compiled_artifact rebuilds and compares),
+  the source-sha stamp is added after. Read bugs against the JSX in golsz-app.html, not the bundle. A bundle that
+  fails to run takes the app down: change the minifier options on a branch, open the Vercel preview in a
+  browser (it sits behind Vercel SSO; the owner's pane is signed in), and only then merge.
 - **Webhook ordering (2026-10-22, migration 163).** `customer.subscription.created` can arrive before
   `checkout.session.completed` (no guaranteed order); only the checkout event can link a customer to a profile
   and this app holds no Stripe key. A subscription event for an unknown customer now stashes its plan in

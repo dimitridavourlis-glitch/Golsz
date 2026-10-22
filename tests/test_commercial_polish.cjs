@@ -120,6 +120,12 @@ const LDS = [...HOME.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\
 ck("the home page declares both an Organization and a WebSite", LDS.map((j) => j["@type"]).sort(), ["Organization", "WebSite"]);
 ck("the WebSite points at the canonical host", LDS.find((j) => j["@type"] === "WebSite").url, "https://golsz.com/");
 
+/* ---------- the app without JavaScript ---------- */
+const BODY = APP.slice(APP.indexOf("<noscript>"), APP.indexOf('<div id="root">'));
+ck("the app says what is wrong when scripts are blocked, instead of animating for ever", /<noscript>[\s\S]*GOLSZ needs JavaScript/.test(BODY), true);
+ck("...in all four languages", ["GOLSZ needs JavaScript", "GOLSZ a besoin de JavaScript", "GOLSZ necesita JavaScript", "Το GOLSZ χρειάζεται JavaScript"].every((x) => BODY.includes(x)), true);
+ck("...and hides the loading animation, which would otherwise suggest it is working", /<noscript>\s*<style>#boot\{display:none\}<\/style>/.test(BODY), true);
+
 /* ---------- admin link ---------- */
 ck("the knowledge source link goes through safeHref", /safeHref\(k\.source_url\)\s*\?\s*<a href=\{safeHref\(k\.source_url\)\}/.test(APP), true);
 ck("...and a non-http value is shown as text, not as a link", /<span style=\{\{ color: C\.slate \}\}>\{k\.source_url\}<\/span>/.test(APP), true);
