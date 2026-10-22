@@ -6456,8 +6456,8 @@ revoke all on function public.dismiss_next_move() from authenticated, anon, publ
 -- public events only), get_public_passport() / get_public_passport_by_token()
 -- (honour show_club / show_country, nothing for a banned account), plus the
 -- plan_config.live_features and claude-sonnet-5 price updates.
--- Until the owner confirms it has been run in the SQL Editor, treat this
--- block as pending rather than live.
+-- APPLIED, confirmed 2026-10-22: supabase-probe-migration-state.sql read
+-- true on every 158 check (158.1 to 158.6, 158.8) against production.
 -- ============================================================
 
 -- 158.1 — the names view runs as the caller, so profiles' RLS applies.
@@ -6597,30 +6597,32 @@ alter table ops_heartbeat enable row level security;
 
 
 -- ============================================================
--- 160 — NOT YET APPLIED, as of 2026-10-21.
+-- 160 — APPLIED 2026-10-22 (it was written 2026-10-21).
 --
--- supabase-migration-160-passport-parity-and-append-only.sql is written and
--- waiting to be run. It is recorded here rather than left out because this
--- file claims to describe live state, and "a migration exists that has not
--- been run" is part of that state — the gap migration 113 sat in for months
--- is the reason that matters (see the backfill section above).
+-- supabase-migration-160-passport-parity-and-append-only.sql was run in the
+-- Supabase SQL Editor on 2026-10-22 (the editor answered "Success. No rows
+-- returned") and confirmed by supabase-probe-migration-state.sql, which read
+-- true on 160.1 and 160.2 afterwards. It was recorded here as pending while it
+-- waited, because this file claims to describe live state and "a migration
+-- exists that has not been run" is part of that state (the gap migration 113
+-- sat in for months is why).
 --
--- WHAT IT WILL CHANGE, once run:
+-- WHAT IT CHANGED:
 --
---   160.1  get_public_passport(p_user) starts honouring show_benchmarks and
---          show_timeline, which it ignores today. The ?public=<uuid> share
+--   160.1  get_public_passport(p_user) now honours show_benchmarks and
+--          show_timeline, which it ignored before. The ?public=<uuid> share
 --          path is the only one a pre-078 account has, and two Settings
 --          toggles labelled "On your shared Passport" currently do nothing
 --          on it. Widens no disclosure: both columns are `not null default
 --          false` and the function is still gated on passport_public.
 --
---   160.2  athlete_outcomes becomes genuinely append-only. Its only policy
+--   160.2  athlete_outcomes is now genuinely append-only. Its only policy
 --          is `for all`, which grants UPDATE and DELETE, while migration 150
 --          and two comments describe the table as the immutable record of an
 --          athlete's availability history.
 --
--- UNTIL IT IS RUN, both of the above remain true of the live database.
--- Re-read this section after applying and replace it with what was done.
+-- The "toggles do nothing" and "owner can rewrite their history" statements
+-- above described the database BEFORE this run; they are no longer true.
 -- ============================================================
 
 

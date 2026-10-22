@@ -5,7 +5,7 @@ to confirm it worked. Names only: never paste a secret into this file, a commit 
 
 This file is removed from the served site at deploy time (`tools/unpublish-internal.cjs`).
 
-## 1. Find out what is actually applied (2 minutes, read-only)
+## 1. Find out what is actually applied (DONE 2026-10-22: 158, 159, 160 and 026 all read true)
 
 Paste `supabase-probe-migration-state.sql` into the Supabase SQL Editor and run it. One row per
 check, with an `applied` column. It writes nothing.
@@ -16,7 +16,7 @@ check, with an `applied` column. It writes nothing.
 - All `true`: edit `supabase-schema.sql` (the 158 "pending" note near line 6447, and the 160 block
   at the end) to say so, then commit.
 
-## 2. Run migration 160 (if the probe says it is not applied)
+## 2. Run migration 160 (DONE 2026-10-22, confirmed by the probe)
 
 Paste `supabase-migration-160-passport-parity-and-append-only.sql` and run it once. It is one
 transaction and idempotent. Then run the probe again: rows 160.1 and 160.2 must read `true`.

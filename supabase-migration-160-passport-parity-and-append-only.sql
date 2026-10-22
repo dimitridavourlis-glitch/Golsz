@@ -119,6 +119,8 @@ grant execute on function get_public_passport(uuid) to anon, authenticated;
 -- ============================================================
 
 drop policy if exists athlete_outcomes_own on athlete_outcomes;
+drop policy if exists athlete_outcomes_read on athlete_outcomes;
+drop policy if exists athlete_outcomes_append on athlete_outcomes;
 
 create policy athlete_outcomes_read on athlete_outcomes for select to authenticated
   using (athlete_id = auth.uid() or is_parent_of(athlete_id) or is_admin());
