@@ -44,7 +44,7 @@ Per `CLAUDE.md` § Current state: buy Basic (about CA$9), then in Stripe check t
 destination's Event deliveries show Total 1 / Failed 0, confirm `profiles.plan` flips, then cancel
 in the customer portal to exercise the downgrade. Until then, payments are unproven.
 
-## 5. Settle the signup bot-check state (2 minutes, a read)
+## 5. Settle the signup bot-check state (DONE 2026-10-22: CAPTCHA is DISABLED in Supabase, site key empty, so they agree and privacy.html is accurate; the open question is whether to turn bot protection on before launch)
 
 The code supports Cloudflare Turnstile but `TURNSTILE_SITE_KEY` in `golsz-app.html` is empty.
 Supabase dashboard, Authentication, Attack Protection (CAPTCHA): is it on?

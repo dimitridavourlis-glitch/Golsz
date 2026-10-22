@@ -40,8 +40,8 @@ Admin MFA + admin roles: see "Remaining Tasks". Not on `main`.
 
 ## Remaining Tasks
 - OWNER (OWNER-RUNBOOK.md): rotate `SUPABASE_WEBHOOK_SECRET` and re-run 026 with the new value (never
-  commit it); one real Basic purchase; check the Supabase CAPTCHA setting against the empty
-  `TURNSTILE_SITE_KEY` (if CAPTCHA is on, signup is down). Runbook steps 1 and 2 are DONE.
+  commit it); one real Basic purchase. The browser pane was not signed in to Vercel, so the rotation
+  (a Vercel env var + redeploy, then 026 re-run) is waiting on that. Runbook steps 1, 2 and 5 are DONE.
 - OWNER: send LEGAL-REVIEW-BRIEF.md to counsel (run its three count queries first).
 - Admin MFA and roles (CLAUDE.md "No 2FA/MFA"): work lives on a feature branch if present, not `main`
   (a gate that can lock the only admin out must not ship before the owner has enabled TOTP).
@@ -71,7 +71,9 @@ catalog checks), i.e. nobody has loaded a `?public=<uuid>` link since 160.
 - Payments live but no real purchase has completed; webhook signing secret unverified.
 - An old push-webhook secret is exposed in public git history until it is rotated.
 - No MFA anywhere; every admin has the same full power (until the branch work merges).
-- Privacy policy says Turnstile is not active; Supabase CAPTCHA state unknown (owner-only fact).
+- Signup has NO bot protection: Supabase CAPTCHA is DISABLED (read in the dashboard 2026-10-22) and
+  `TURNSTILE_SITE_KEY` is empty. They agree, so signup works and privacy.html ("not active") is accurate.
+  Turning it on needs the key in the client AND the Supabase setting together, or signup breaks.
 - `api/*.js` source is still readable as static files on golsz.com (deliberate: deleting `api/` at build
   time would delete the functions; the repo is public).
 
