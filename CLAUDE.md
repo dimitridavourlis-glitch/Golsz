@@ -1258,6 +1258,11 @@ you add another place that surfaces a Message button, it doesn't need any follow
   every admin has the exact same full `is_admin` flag (no reduced-scope roles), and there's no second factor
   on login for anyone, admin or not. Deliberately deferred (not forgotten) in favor of shipping CSP, the
   admin audit log, and signup bot protection first — see those sections above.
+- **CORRECTION 2026-10-22: under-18s cannot register at all today.** Managed profiles are switched off
+  (`PARENT_ACCOUNTS_ENABLED = false` in `golsz-app.html` AND `api/create-child-account.js`, which refuses every
+  request since 2026-09-20) and, once migration 158 is applied, `handle_new_user()` rejects a missing or
+  under-18 date of birth. Read the next bullet as history plus the policy for *if* managed profiles return.
+  What the legal review actually has to cover today: `LEGAL-REVIEW-BRIEF.md`.
 - **AGE POLICY: GOLSZ contracts with and bills ADULTS ONLY (18+).** Changed 2026-09-07 on the founder's
   instruction, from a 16+ self-signup model. Anyone under 18 is a managed profile inside a parent or
   guardian's account and is never a contracting or paying party. The threshold lives in **four** places and
@@ -1345,11 +1350,16 @@ you add another place that surfaces a Message button, it doesn't need any follow
 
 ## THE DEPLOY GATE (vercel.json buildCommand)
 
-`vercel.json` sets `buildCommand: "npm run check && npm run split && npm run compile && npm run strip"`.
-The first step, `npm run check`, is the gate. The other three are real deploy-time build steps (`strip`
-added in 2b44ac2, `split` and the second `compile` in c3742a0, both 2026-10-21): `split` lifts the fr/es/el
-dictionaries out into `js/i18n/`, `compile` rebuilds `js/app.js` without them, and `strip` removes the JSX
-source block from the served `golsz-app.html`. They run on Vercel's throwaway checkout and their output is
+`vercel.json` sets `buildCommand: "npm run check && npm run split && npm run compile && npm run strip && npm run unpublish"`.
+The first step, `npm run check`, is the gate. The other four are real deploy-time build steps (`strip`
+added in 2b44ac2, `split` and the second `compile` in c3742a0, both 2026-10-21; `unpublish` 2026-10-22): `split` lifts the fr/es/el
+dictionaries out into `js/i18n/`, `compile` rebuilds `js/app.js` without them, `strip` removes the JSX
+source block from the served `golsz-app.html`, and `unpublish` (`tools/unpublish-internal.cjs`) deletes the
+repo's working papers from the served tree: root `*.md`, `opencode.json`, `supabase-*.sql`, `tests/`, `tools/`,
+`golsz-guard/`, `.github/`, `.claude/`. Before it, `outputDirectory: "."` made all of those public URLs
+(verified live 2026-10-22). It NEVER touches `api/` (Vercel builds the functions from it after buildCommand)
+and refuses to run without `VERCEL=1` or an explicit directory, so it cannot empty a working checkout.
+`api/*.js` is still readable as a static file; the repo is public, so that is accepted. They run on Vercel's throwaway checkout and their output is
 never committed; the ORDER is asserted by `tests/test_served_bundle.cjs`. Until 2b44ac2 the buildCommand
 was just `npm run check` and the repo had no deploy-time build, which is the situation the WHY below
 describes.

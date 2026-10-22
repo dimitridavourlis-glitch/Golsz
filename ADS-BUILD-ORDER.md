@@ -1,97 +1,73 @@
 # GOLSZ — ATHLETE DIRECTION SYSTEM: BUILD ORDER
 
-## STATUS — updated 2026-10-13
+## STATUS — reconciled against the code 2026-10-22 (previous update 2026-10-13)
 
 Keep this section current. `SPEC-custom-pathway-stages.md` sat for two months
 saying "Nothing here is implemented yet" about a subsystem that had shipped,
-and that is how finished work gets rebuilt.
+and that is how finished work gets rebuilt. This block was itself nine days
+stale on 2026-10-22: the redesign and ~80 commits had landed under it.
 
-**DONE**
+**How this was established.** Read from the code and migration files at commit
+67df5cc, by name (the line numbers in §3 below have drifted by ~1,500; trust the
+identifiers). No test was run for this and no database was queried: every
+"applied" below comes from a migration or `supabase-schema.sql` header, not from
+the live database. `supabase-probe-migration-state.sql` answers that with one
+paste; use it before believing any "applied".
 
-- **Phase 0, the truth pass** (`e518ae5`) — all six items. `supabase-schema.sql`
-  gained `current_stage_id` / `full_access` / `metric_key`, the three columns
-  the client SELECTs and the file omitted; migration 141's reference to a
-  non-existent "144" corrected; `SPEC-custom-pathway-stages.md` marked shipped;
-  `test_schema_reference_current` now asserts column DEFINITIONS, not mentions.
-- **All four cheap defects** named in Phase 0:
-  - a striker was offered "Clean sheets" — the server's position gate was not
-    mirrored client-side (`e518ae5`)
-  - Reschedule was a dead button on an undated step (`f13d5a8`)
-  - `schoolsFact`'s `"replied"` branch could never fire — removed with its
-    block (`a45d1a5`)
-  - Scout proposed 200-char labels that storage silently cut to 120 (`a45d1a5`)
-- **Home, the brief's command centre** — five of six elements:
-  - NEXT ACTION + WHY + Done/Reschedule/Ask Scout/Drop — already existed
-  - GOAL — already existed
-  - BIGGEST BOTTLENECK (`f14a321`) — `weakest` / `leverKey` / `projectedWeak`
-    were computed every load and rendered nowhere
-  - PATHWAY PROGRESS (`f13d5a8`) — `PathwayStrip` was a finished component
-    with zero render sites
-  - TODAY and THIS WEEK (`f14a321`, `a45d1a5`) — real Monday-first week and
-    today fractions over dated steps only
-  - NEW OPPORTUNITY — **not built, blocked on data** (§2)
-- **46 lines of dead computation removed** from Home (`a45d1a5`) — the `doors`
-  block, rebuilt on every load since "THE REST OF THE APP" was removed.
+| Phase | State | What is real |
+|---|---|---|
+| 0 Truth pass | **DONE** | All six items, plus the four cheap defects. |
+| 1 Action data layer | **PARTIAL, different design** | `athlete_actions` (144), backfill (144b), live mirror `sync_athlete_actions()` (152, 155). `due_src` gates kept. **Not built:** `athlete_action_events`, the write RPCs, `api/_actions.js`, `sort_order`, `goal_id`. The jsonb `pathway_plan.milestones` is still the source of truth and the table is a mirror (152's header records why a client dual-write was rejected). |
+| 2 Reader cutover + fields | **PARTIAL** | `category`, `priority`, `reason`, `completed_at` live and editable; Scout can propose a category. **Not built:** the cutover (Plan, Home's next step and the counters still read jsonb), a `Rescheduled` state, Reschedule/Drop from Home (they still hand off to Plan), `description`/`goal_id`/`evidence_note` UI. Habits: option (a), untouched. |
+| 3 Requirements + bottleneck | **DONE (honest version)** | `api/_gap.js` plus client `evaluateGap`, diffed by `test_gap_engine`; wired to Home, Plan and Scout. Gap is per pathway, not per stage; the athlete's `main_gap` is not surfaced. |
+| 4 Home as command centre | **DONE except NEW OPPORTUNITY** | Bottleneck card, `PathwayStrip` mounted, TODAY / THIS WEEK week-scoped, dead `doors` block gone. Redesign (PRs #3 to #7) put a "Today" tile and "Show more" over the old zones. Check Plan's calendar header for a lifetime count beside "THIS WEEK". |
+| 5 Pathway per-stage fields | **PARTIAL** | `normalizeStage` (unknown keys survive rename), `status`, `target_date`, `blockers[]`, `evidence[]`; `resolveStageIndex`; `remapStagePositions`; `RoadMap` replaced `PathwayMap`. **Not built:** `removed_at` (stages are still deleted), any writer of `athlete_outcomes('pathway_rerouted')`, per-stage percentage. |
+| 6 Scout | **PARTIAL** | Availability, gap, and action history (done / missed / dropped) reach Scout; Scout can propose a category. **Not built:** parallel `getAthleteState` reads (still sequential), a server-computed "today" line (Scout is still told it has no date), a date/action digest in `responseCacheFingerprint`, new action kinds, readers for `athlete_schedule` / `athlete_diary_entries`, `measured_by` / `protocol` in the benchmark select. |
+| 7 Passport provenance | **PARTIAL** | Tier on benchmark readings; public Passport carries benchmarks with method and timeline behind opt-in flags (154). 160.1 extends that to `?public=<uuid>` and is **unapplied**. **Not built:** per-claim provenance for scalar columns, an evidence bucket, evidence attachment. |
+| 8 Progress + weekly loop | **PARTIAL** | `assessment_snapshots` (156), "LAST WEEK" (`weekReview`, computed client-side, not stored), reminders inside the existing cron (153), `dismiss_next_move` grant revoked (157). **Not built:** `weekly_reviews`, a weekly recalculation, a rescheduled count (no date-change log exists). |
+| 9 Opportunities | **NOT STARTED** | No `opportunities` migration, no `api/_match.js`. Meant to ship empty. |
+| 10 Multi-sport tables | **NOT STARTED, deferred** | Unchanged decision. `sports.pathway_enabled` still has no reader. |
 
-- **Phase 7, first slice — provenance on benchmark readings** (`b7c8943`,
-  corrected by the commit after it). Every reading on the Passport now carries
-  its tier, and the card states once, above the numbers, that the athlete
-  entered them. Four of the brief's seven states are NOT implemented and will
-  not be until an actor exists to do the verifying: no coach or club accounts,
-  no evidence bucket, no data provider. `benchmarkTier()` has no promoting code
-  path and `test_verification_ladder` runs the real function on inputs that
-  look like third-party verification to prove it.
-  **The correction is the lesson:** the first attempt added a fifth provenance
-  vocabulary — the precise failure mode §7 names — one commit after writing
-  §7. The client now holds a copy of `evidence_tiers` and the suite compares it
-  to `api/scout.js` byte for byte, so the two cannot drift.
-  Still unbuilt in Phase 7: migrations 149/150, evidence attachment, provenance
-  on the scalar Passport columns, and benchmarks in the public share payload.
+**Replaced by design, not forgotten.** Table-first actions with write RPCs and
+an event log became jsonb-authoritative with a SQL mirror. Six-state status
+became three (open, completed, dropped); upcoming / today / overdue are derived.
+Migration 151 is superseded: do not apply it (it breaks the sync, error 42P10).
+`dismiss_next_move` was retired, not wired.
 
-- **Migration 144 APPLIED** 2026-10-13, verified in place: 17 columns, 5 check
-  constraints, 4 indexes, 4 self-only policies, RLS on. Nothing reads the table
-  yet, which is the design. **The backfill (144b) is NOT run** — it writes live
-  rows, so it is the owner's. Production holds 4 pathway_plan rows, 2 with
-  steps, **2 steps in total**, so the backfill moves 2 rows.
-- **"Set current" fixed** (`b7c5e1f`) — `PathwayMap` called the
-  recruiting_status heuristic directly and ignored `current_stage_id`, so the
-  marker moved on Home and not on Plan, the screen the button is on. One
-  `resolveStageIndex()`, three callers. The test that existed to catch this
-  passed throughout: it matched one spelling of the rule, satisfied by a
-  correct copy a thousand lines from the broken one. It counts producers now.
+**Still blocked on data (§2), re-checked.** `BENCHMARK_BANDS` is still `[]`
+(`api/scout.js`), so no per-area capability score and no "you are below the
+level this requires". No opportunity catalogue, so no match percentage. No
+coach, club or provider verifier exists. The soccer metric list is unchanged.
 
-**NO LONGER BLOCKED — both ran on 2026-10-14.** 144b was run by the owner
-(actions=2, legacy=2, steps_without_id=0, empty_titles=0, verified by query),
-and 152 (`sync_athlete_actions`) was applied and verified in place: prosecdef
-true, search_path pinned, authenticated EXECUTE true, anon EXECUTE FALSE. The
-mirror was then proven end to end on the live signed-in account by ticking a
-step and un-ticking it, watching the row go open -> completed -> open with the
-completed_coherent CHECK holding on both transitions.
+**Migrations: the plan's §4 numbering did not hold.** 145 to 149 do not exist.
+What exists: 144 and 144b (actions), 150 (availability), 151 (superseded), 152
+(sync), 153 (reminders), 154 (Passport performance), 155 (sync category), 156
+(snapshots), 157 (revoke), 158 (access hardening), 159 (advisor cleanup), 160
+(Passport parity, append-only). 144 to 157 were applied by 2026-10-14 per their
+headers. **158**: 159's header says it ran, but nothing records it; the probe
+settles it. **160**: unapplied. Plan items with no file: events, outcomes
+extension, weekly-reviews, populations, opportunities, sport definitions.
 
-This section said the opposite for several hours after the migrations ran,
-which is exactly the failure this file's own header warns about: a planning
-doc that contradicts the database teaches the next reader to distrust both.
+**Stale cross-references to fix when next editing the files:** 150's header
+cites "athlete_outcomes (148)" but that table is migration 101; a comment above
+`weekReview` still says `assessment_snapshots` does not exist; 150's comment
+calls `athlete_outcomes` append-only until 160.2 makes it so.
 
-**HISTORIC — what was blocked**
-
-1. ~~Run `supabase-migration-144b-backfill.sql`.~~ Done 2026-10-14.
-2. Sign in to golsz.com in the browser pane. Home's BOTTLENECK, PATHWAY
-   PROGRESS, TODAY and THIS WEEK have never been seen to render; the gate is
-   `planKnown(plan) && featureUnlocked(plan, "readiness") && pathwayRow`. On
-   this codebase a signed-out check proves nothing — that lesson cost a day.
-
-**NOT STARTED** — everything in §3 from PHASE 1 onward. The unified Action
-Engine is the next dependency and the build order puts it at 3-4 weeks,
-because Home, Plan and Scout all read `pathway_plan.milestones` today and
-moving that jsonb to a real table means migrating live athlete data while
-three screens keep working.
-
-**NOT VERIFIED SIGNED IN.** Everything above passes 76 suites and is deployed,
-but no signed-in session has been available to look at Home since these
-landed. The bottleneck card's gate in particular — `planKnown(plan) &&
-featureUnlocked(plan, "readiness") && pathwayRow` — has never been seen to
-render. On this codebase a signed-out check proves nothing; that lesson cost a
-day when every signed-in athlete was served an error boundary.
+**Lessons the earlier status recorded, kept because they recur.**
+- A planning doc that contradicts the database teaches the next reader to
+  distrust both. The 2026-10-13 block said "blocked" for hours after 144b and 152
+  had run.
+- `benchmarkTier()` has no promoting code path: four of the brief's seven
+  verification states cannot exist until an actor exists to do the verifying.
+  The first attempt added a fifth provenance vocabulary one commit after writing §7
+  against it; the client now holds a copy of `evidence_tiers` and a suite compares
+  it to `api/scout.js` byte for byte.
+- A test that matched one spelling of a rule passed while a copy a thousand lines
+  away was broken ("Set current"). It counts producers now.
+- Never signed-in-verified: Home's bottleneck / progress / today / week tiles had
+  not been seen to render signed in as of 2026-10-13. A signed-out check proves
+  nothing on this codebase. **Not re-verified on 2026-10-22** (no signed-in
+  session in the reconciling pass).
 
 ---
 

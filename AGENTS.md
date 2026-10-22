@@ -29,8 +29,8 @@ in this folder at a time.
     start; commit and push when you stop, following the Git workflow section below.
 
 ## Project purpose
-GOLSZ: an AI sports-passport and pathway app for athletes aged 18+ (under-18s are managed profiles
-inside a parent's account). Live at golsz.com. An athlete records sport, club and dated benchmarks,
+GOLSZ: an AI sports-passport and pathway app for athletes aged 18+ (under-18s cannot register: managed
+profiles are switched off, `PARENT_ACCOUNTS_ENABLED = false`). Live at golsz.com. An athlete records sport, club and dated benchmarks,
 names a goal, gets a route of dated steps; the assistant **Scout** answers in that context.
 **The GitHub repo is PUBLIC: write nothing in code, docs, migrations or commits you would not
 publish.** Full detail: CLAUDE.md § What this is; README.md.
@@ -71,10 +71,10 @@ Serve over HTTP, not `file://`. Full detail: CLAUDE.md § Commands.
 ## Build commands
 - `npm run compile`: rebuilds `js/app.js` from the JSX in `golsz-app.html`. Run it after every JSX
   edit and commit `js/app.js` too; the gate fails if it is stale. Never hand-edit `js/app.js`.
-- `npm run split`, `npm run strip`: deploy-time only. They rewrite `golsz-app.html` (lift fr/es/el
+- `npm run split`, `npm run strip`, `npm run unpublish`: deploy-time only. They rewrite or delete files (`golsz-app.html`: lift fr/es/el
   into `js/i18n/`, delete the JSX source). Never run them here; never commit their output.
 - Vercel `buildCommand` (vercel.json): `npm run check && npm run split && npm run compile &&
-  npm run strip`, `outputDirectory: "."`. No JSON comments in vercel.json (strict schema).
+  npm run strip && npm run unpublish`, `outputDirectory: "."`. No JSON comments in vercel.json (strict schema).
 - Full detail: CLAUDE.md § THE DEPLOY GATE (vercel.json buildCommand).
 
 ## Test commands
@@ -135,8 +135,8 @@ node tests/test_<name>.cjs     # one suite
   GATE, monitoring), README.md (suite count, `STRIPE_PORTAL_LINK`: the link is correct), check.yml
   comments. Suite counts are quoted "as of 2026-10-22"; `node tests/run-all.cjs` prints the current one.
 - The two stale code comments (`tools/precompile.cjs`, `api/health-alert.js`) were fixed 2026-10-22.
-- Repo-root docs (CLAUDE.md, AGENTS.md, AI_HANDOFF.md, README.md, opencode.json) are served on
-  golsz.com (verified 2026-10-22): keep them free of anything private.
+- Repo-root docs were served on golsz.com (verified 2026-10-22). `tools/unpublish-internal.cjs` now removes
+  them at deploy time (never touches `api/`). Still keep them free of anything private: the repo is public.
 
 ## Environment variables (names only, never values)
 - Template `.env.example`; production values live in Vercel. Full list:
