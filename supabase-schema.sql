@@ -6624,3 +6624,44 @@ alter table ops_heartbeat enable row level security;
 -- The "toggles do nothing" and "owner can rewrite their history" statements
 -- above described the database BEFORE this run; they are no longer true.
 -- ============================================================
+
+
+-- ============================================================
+-- 161 — APPLIED 2026-10-22.
+--
+-- supabase-migration-161-admin-roles.sql was run in the Supabase SQL Editor on
+-- 2026-10-22. Afterwards, in production: 1 admin, 1 with role owner, none
+-- without a role, no non-admin with a role, is_admin_owner() present, the
+-- trigger enabled, and the stored protect_profile_columns() source hashing
+-- (sha256) to 826cb413d17621dedc4636b36e774fa72fde7da4782e7754d4839222886d5887,
+-- identical to the body in the file. Before the run the live function hashed
+-- to migration 126's body (7d136c64...), so nothing hand-edited was overwritten.
+--
+-- WHAT IT CHANGED:
+--   * profiles.admin_role ('owner' | 'moderator' | null); existing admins
+--     become owners.
+--   * is_admin_owner() (is_admin() and role = 'owner').
+--   * protect_profile_columns() gains two fenced insertions: a moderator's
+--     writes to is_admin, admin_role, plan, full_access, ai_unlimited and
+--     stripe_customer_id are reverted; admin_role follows is_admin; the last
+--     owner cannot be removed.
+--
+-- NOTE: api/admin-user-action.js and the Admin Panel on branch
+-- admin-mfa-roles read admin_role; `main` does not yet, and is unaffected
+-- (the only admin is an owner, as before).
+-- ============================================================
+
+
+-- ============================================================
+-- 162 — NOT YET APPLIED, as of 2026-10-22. RUN ONLY AFTER ENROLLING MFA.
+--
+-- supabase-migration-162-admin-requires-mfa.sql is written and waiting.
+--
+-- WHAT IT WILL CHANGE, once run: is_admin() additionally requires the
+-- session token's `aal` claim to be 'aal2' (a verified TOTP code this
+-- session). Every admin policy and admin_* RPC inherits it.
+--
+-- UNTIL IT IS RUN, the second factor is enforced by the Admin Panel gate and
+-- by api/admin-user-action.js, but NOT by the database: a password-only
+-- admin session still passes RLS. Re-read this section after applying.
+-- ============================================================

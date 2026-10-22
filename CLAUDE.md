@@ -1260,10 +1260,20 @@ you add another place that surfaces a Message button, it doesn't need any follow
   redeploy, re-run 026 with the new value (comments stripped from the function body: the probe's
   placeholder check reads the stored source). Everything else in the repo (this file, every
   migration) is public for the same reason — write nothing here you would not publish.
-- **No 2FA/MFA and no granular admin roles.** A security audit this session identified both as real gaps —
-  every admin has the exact same full `is_admin` flag (no reduced-scope roles), and there's no second factor
-  on login for anyone, admin or not. Deliberately deferred (not forgotten) in favor of shipping CSP, the
-  admin audit log, and signup bot protection first — see those sections above.
+- **Admin MFA and roles: built 2026-10-22 on branch `admin-mfa-roles`. Migration 161 is APPLIED in production
+  (2026-10-22); the code and migration 162 are not live until the branch is merged and the owner has enrolled.** Before: no second factor anywhere and every admin held the same full `is_admin`
+  power. Now: (1) migration 161 adds `profiles.admin_role` (`owner` | `moderator`; existing admins become
+  owners; a new admin is a moderator) and `is_admin_owner()`, and `protect_profile_columns()` reverts a
+  moderator's writes to `is_admin`, `admin_role`, `plan`, `full_access`, `ai_unlimited` and
+  `stripe_customer_id` and refuses to remove the last owner; (2) account deletion in
+  `api/admin-user-action.js` is owner-only; (3) the Admin Panel (`AdminMfa`, `adminMfaState`) fetches
+  nothing until the session is `aal2`, via Supabase Auth TOTP; the API also refuses an admin whose token
+  lacks `aal2` (`code: "mfa_required"`); (4) migration 162 makes `is_admin()` itself require `aal2`, run
+  ONLY after the owner has enrolled (it turns an unenrolled admin into an ordinary user). Until 161 runs,
+  the API and panel fall back to "every admin is an owner" (PostgREST rejects a whole select for one
+  unknown column). Not covered: the ~15 `admin_*` RPCs are still callable by any admin; MFA for athletes
+  (admins only); no MFA recovery code beyond the TOTP secret the owner saves and the SQL in 162's header.
+  Suites: `test_admin_mfa_roles.cjs`, `test_admin_user_action.cjs`. Owner steps: OWNER-RUNBOOK.md section 8.
 - **CORRECTION 2026-10-22: under-18s cannot register at all today.** Managed profiles are switched off
   (`PARENT_ACCOUNTS_ENABLED = false` in `golsz-app.html` AND `api/create-child-account.js`, which refuses every
   request since 2026-09-20) and, once migration 158 is applied, `handle_new_user()` rejects a missing or
