@@ -59,5 +59,19 @@ ck("the old English-unless-saved rule is gone", /var want = "en";\s*try \{\s*var
 ck("every language the picker can return has a dictionary (fr, es, el are in the source for the build to lift)",
    ["fr", "es", "el"].every((l) => new RegExp("\\n  " + l + ": \\{\\n").test(APP)), true);
 
+/* ---------- dates are shown in the athlete's language ---------- */
+// The athlete-facing app used to force US English in a few places ("OCT" on an
+// event in a French app) and leave others to the browser's own default. Only
+// the admin panel, which is English-only, may call toLocaleDateString bare.
+const adminStart = APP.indexOf("function AdminPanel({ onBack }) {");
+const adminEnd = APP.indexOf("\nfunction ", adminStart + 40);
+const outsideAdmin = APP.slice(0, adminStart) + APP.slice(adminEnd);
+ck("nothing outside the admin panel forces en-US", /toLocale\w*String?\("en-US"/.test(outsideAdmin) || /toLocale\w*\("en-US"/.test(outsideAdmin), false);
+ck("no athlete-facing toLocaleDateString() is called with no locale at all",
+   (outsideAdmin.match(/toLocaleDateString\(\)/g) || []).length, 0);
+ck("the Passport export date uses the app language", /passport_export_generated"\)\.replace\("\{date\}", new Date\(\)\.toLocaleDateString\(lang\)\)/.test(APP), true);
+ck("...and Passport has `lang` in scope to do so", /function Passport\([^)]*\) \{\s*\n\s*const \{ t, tv, lang \} = useLang\(\);/.test(APP), true);
+ck("an event's month label follows the document language (set by LangProvider)", /d\.toLocaleString\(document\.documentElement\.lang \|\| "en", \{ month: "short" \}\)/.test(APP), true);
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);

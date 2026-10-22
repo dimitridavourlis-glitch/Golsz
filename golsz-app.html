@@ -2984,7 +2984,7 @@ function SettingsButton({ openSignal }) {
                       {shareLinks && shareLinks.length === 0 && <div style={{ fontSize: 12, color: C.slate }}>{t("passport_no_links")}</div>}
                       {shareLinks && shareLinks.map((l) => (
                         <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.line}` }}>
-                          <span style={{ fontSize: 11.5, color: C.chalk, flex: 1, fontFamily: "'Space Mono', monospace" }}>{l.token.slice(0, 8)}… — {new Date(l.created_at).toLocaleDateString()}</span>
+                          <span style={{ fontSize: 11.5, color: C.chalk, flex: 1, fontFamily: "'Space Mono', monospace" }}>{l.token.slice(0, 8)}… — {new Date(l.created_at).toLocaleDateString(lang)}</span>
                           <button onClick={() => revokeShareLink(l.id)} style={{ ...iconBtn(C.amber), fontSize: 11, flexShrink: 0 }}>{t("passport_revoke_link")}</button>
                         </div>
                       ))}
@@ -3258,7 +3258,7 @@ function mapAthlete(row, name) {
 function mapEvent(row) {
   const d = new Date(row.event_date + "T00:00:00");
   return {
-    id: row.id, m: d.toLocaleString("en-US", { month: "short" }).toUpperCase(), d: String(d.getDate()).padStart(2, "0"),
+    id: row.id, m: d.toLocaleString(document.documentElement.lang || "en", { month: "short" }).toUpperCase(), d: String(d.getDate()).padStart(2, "0"),
     t: row.title, sport: row.sport || "", loc: row.location || "", lvl: row.level || "", spots: row.spots_available ?? "—",
   };
 }
@@ -6482,7 +6482,7 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved, onSignOut 
 }
 
 function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, onOpenAdmin, viewUserId, manageMode, onBack, onMessage, onViewProfile, plan, onUpgrade, focusSection, focusNonce, onSectionDone }) {
-  const { t, tv } = useLang();
+  const { t, tv, lang } = useLang();
   // Above every early return in this component. A hook below a state-gated
   // return is React #310, which took this app down once before.
   useFocusSection(focusSection, focusNonce, onSectionDone);
@@ -7187,7 +7187,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         )}
 
         <footer className="pp-foot">
-          <span>{t("passport_export_generated").replace("{date}", new Date().toLocaleDateString())}</span>
+          <span>{t("passport_export_generated").replace("{date}", new Date().toLocaleDateString(lang))}</span>
           <span>{t("passport_export_ref").replace("{ref}", String(p.id || "").slice(0, 8).toUpperCase())}</span>
         </footer>
       </div>
@@ -19136,7 +19136,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=3c829e14d4a89515";
+    var APP_SRC = "js/app.js?v=cc82fad5d9c26d6d";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
