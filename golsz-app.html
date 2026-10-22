@@ -3153,6 +3153,25 @@ function initials(name) {
 // any client-side validation entirely. Re-checking the scheme right
 // before rendering closes that gap regardless of how the value got
 // stored, instead of just trusting it was validated on the way in.
+// Makes a non-button element a real control for keyboard and screen-reader
+// users: it takes focus, announces as a button, and Enter or Space activates it.
+// Only the element ITSELF reacts to the key (e.target === e.currentTarget), so
+// pressing Enter on a button nested inside a clickable card does not also fire
+// the card. Prefer a real <button> where the markup allows; this is for the
+// cards and inline links whose layout or styling is already built.
+function asButton(onActivate) {
+  // A card whose handler was not passed is not interactive; do not announce it as a button.
+  if (typeof onActivate !== "function") return {};
+  return {
+    onClick: onActivate,
+    role: "button",
+    tabIndex: 0,
+    onKeyDown: (e) => {
+      if (e.target !== e.currentTarget) return;
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onActivate(e); }
+    },
+  };
+}
 function safeHref(url) {
   return typeof url === "string" && /^https?:\/\//i.test(url) ? url : null;
 }
@@ -3603,7 +3622,7 @@ function Feed({ onMessage, onViewProfile }) {
         return (
         <article key={key} style={card}>
           <div
-            onClick={() => p.authorId && onViewProfile && onViewProfile(p.authorId)}
+            {...asButton(() => p.authorId && onViewProfile && onViewProfile(p.authorId))}
             style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10, cursor: p.authorId ? "pointer" : "default" }}
           >
             <Avatar init={p.init} ring={C.lime} />
@@ -3997,7 +4016,7 @@ function Discover({ onMessage, onViewProfile }) {
       <div className="discover-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {results.map((p) => (
           <div key={p.id || p.n}
-            onClick={() => p.id && onViewProfile && onViewProfile(p.id)}
+            {...asButton(() => p.id && onViewProfile && onViewProfile(p.id))}
             style={{ ...card, margin: 0, padding: 12, cursor: p.id ? "pointer" : "default" }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -5724,7 +5743,7 @@ function PostsGrid({ viewUserId }) {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 3 }}>
           {posts.map((p) => (
-            <div key={p.id} onClick={() => setOpenPost(p)} style={{
+            <div key={p.id} {...asButton(() => setOpenPost(p))} style={{
               position: "relative", cursor: "pointer", borderRadius: 4, overflow: "hidden",
               aspectRatio: "1 / 1", background: C.turf, border: `1px solid ${C.line}`,
             }}>
@@ -6813,7 +6832,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
       )}
 
       {incomplete && (
-        <div onClick={() => setEditing(true)} style={{ background: C.limeWash, border: `1px solid ${C.limeBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+        <div {...asButton(() => setEditing(true))} style={{ background: C.limeWash, border: `1px solid ${C.limeBorder}`, borderRadius: 12, padding: "12px 14px", marginBottom: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
           <Pencil size={16} color={C.lime} />
           <div style={{ fontSize: 12.5, color: C.chalk, lineHeight: 1.4 }}>
             <b style={{ color: C.lime }}>{t("passport_finish_bold")}</b>{t("passport_finish_rest")}
@@ -7226,7 +7245,7 @@ function FollowListCard({ title, list, onViewProfile, emptyText }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {list.map((f) => (
             <div key={f.id}
-              onClick={() => onViewProfile && onViewProfile(f.id)}
+              {...asButton(() => onViewProfile && onViewProfile(f.id))}
               style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", cursor: onViewProfile ? "pointer" : "default" }}
             >
               <Avatar init={initials(f.name)} size={30} />
@@ -10769,7 +10788,7 @@ function PathNode({ Icon, label, sub, filled, current, onClick, size, color }) {
   const accent = color || C.lime;
   const d = size || 30;
   return (
-    <div onClick={onClick} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, minWidth: 0, cursor: onClick ? "pointer" : "default", flexShrink: 0 }}>
+    <div {...asButton(onClick)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, minWidth: 0, cursor: onClick ? "pointer" : "default", flexShrink: 0 }}>
       <div style={{
         width: d, height: d, borderRadius: 99, display: "flex", alignItems: "center", justifyContent: "center",
         background: filled ? (color ? C.amberWash : C.limeWash) : "transparent",
@@ -13298,7 +13317,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
                     {/* Scout creates most of these rows, so the athlete has to be able
                         to correct them. A wrong contact_email here is a drafted email
                         sent to nobody, with no way to fix it but delete and re-add. */}
-                    <div onClick={() => { setTDraft({ name: it.name || "", contact_name: it.contact_name || "", contact_email: it.contact_email || "" }); setEditingTarget(it.id); }}
+                    <div {...asButton(() => { setTDraft({ name: it.name || "", contact_name: it.contact_name || "", contact_email: it.contact_email || "" }); setEditingTarget(it.id); })}
                       title={t("targets_edit_hint")} style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk, cursor: "text" }}>{it.name}</div>
                 {(it.contact_name || it.contact_email) && <div style={{ fontSize: 11.5, color: C.slate }}>{[it.contact_name, it.contact_email].filter(Boolean).join(" · ")}</div>}
                   </>
@@ -13549,7 +13568,7 @@ function DevelopmentPlan({ viewUserId, manageId }) {
                 /* Scout writes most of these. If the athlete cannot reword one, a
                    clumsy phrasing is permanent unless they delete it — and deleting
                    loses the status they have already moved it through. */
-                <div onClick={() => { setDevDraft(it.goal || ""); setEditingDev(it.id); }} title={t("targets_edit_hint")} style={{ fontSize: 13, fontWeight: 700, color: C.chalk, textDecoration: it.status === "done" ? "line-through" : "none", opacity: it.status === "done" ? 0.6 : 1 , cursor: "text" }}>{it.goal}</div>
+                <div {...asButton(() => { setDevDraft(it.goal || ""); setEditingDev(it.id); })} title={t("targets_edit_hint")} style={{ fontSize: 13, fontWeight: 700, color: C.chalk, textDecoration: it.status === "done" ? "line-through" : "none", opacity: it.status === "done" ? 0.6 : 1 , cursor: "text" }}>{it.goal}</div>
               )}
             </div>
             <select value={it.status} onChange={(e) => updateItem(it.id, { status: e.target.value })} aria-label={t("a11y_status")} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "6px 8px", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
@@ -18542,7 +18561,7 @@ function Auth({ onDone, paidReturn }) {
                 )}
                 <button type="button" disabled={!email.trim() || busy} onClick={sendReset} style={{ width: "100%", background: C.lime, color: C.ink, border: "none", borderRadius: 12, padding: "14px", fontWeight: 800, fontSize: 15, cursor: (!email.trim() || busy) ? "default" : "pointer", opacity: (!email.trim() || busy) ? 0.45 : 1, fontFamily: "inherit" }}>{busy ? t("auth_sending") : t("auth_send_reset")}</button>
                 <div style={{ textAlign: "center", marginTop: 14, fontSize: 13, color: C.slate }}>
-                  <span onClick={() => { setForgotMode(false); setErr(""); }} style={{ color: C.lime, fontWeight: 700, cursor: "pointer" }}>{t("auth_back_to_login")}</span>
+                  <span {...asButton(() => { setForgotMode(false); setErr(""); })} style={{ color: C.lime, fontWeight: 700, cursor: "pointer" }}>{t("auth_back_to_login")}</span>
                 </div>
               </>
             )
@@ -18714,7 +18733,7 @@ function Auth({ onDone, paidReturn }) {
               )}
               {PARENT_ACCOUNTS_ENABLED && !requiresParentAccount && (
                 <div style={{ marginTop: 8, textAlign: "right" }}>
-                  <span onClick={() => { setMode("parent-signup"); setErr(""); }} style={{ color: C.slate, fontSize: 11.5, cursor: "pointer" }}>{t("auth_signing_up_for_minor")}</span>
+                  <span {...asButton(() => { setMode("parent-signup"); setErr(""); })} style={{ color: C.slate, fontSize: 11.5, cursor: "pointer" }}>{t("auth_signing_up_for_minor")}</span>
                 </div>
               )}
             </div>
@@ -18734,7 +18753,7 @@ function Auth({ onDone, paidReturn }) {
                 <div style={{ marginTop: 8, fontSize: 11.5, color: C.amber, lineHeight: 1.4 }}>{t("auth_athlete_18_notice")}</div>
               )}
               <div style={{ marginTop: 10, textAlign: "right" }}>
-                <span onClick={() => { setMode("signup"); setErr(""); }} style={{ color: C.slate, fontSize: 11.5, cursor: "pointer" }}>{t("auth_back_to_athlete_signup")}</span>
+                <span {...asButton(() => { setMode("signup"); setErr(""); })} style={{ color: C.slate, fontSize: 11.5, cursor: "pointer" }}>{t("auth_back_to_athlete_signup")}</span>
               </div>
             </div>
           )}
@@ -19136,7 +19155,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=cc82fad5d9c26d6d";
+    var APP_SRC = "js/app.js?v=34b335311b9c709c";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
