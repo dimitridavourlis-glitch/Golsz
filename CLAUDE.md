@@ -1251,9 +1251,14 @@ you add another place that surfaces a Message button, it doesn't need any follow
   "public" events as real GOLSZ listings), makes the shared-Passport RPCs honour `show_club`/`show_country`
   and hide banned users, rewrites `plan_config.live_features` to what is built, and sets Sonnet pricing to
   $2/$10. privacy.html already describes the post-144 behaviour. Its header lists the pre- and post-run checks.
-- **The push-webhook secret is still compromised.** It was committed in an earlier version of migration 026,
-  and this repository is PUBLIC on GitHub, so git history exposes it. Rotate `SUPABASE_WEBHOOK_SECRET` in
-  Vercel and re-run migration 026 with the new value. Everything else in the repo (this file, every
+- **The push-webhook secret was ROTATED 2026-10-22.** The old value was committed in an earlier version of
+  migration 026 and is still in this PUBLIC repository's git history, but it no longer opens anything. The new
+  value (256-bit, generated in the browser, never written to the repo) is in Vercel `SUPABASE_WEBHOOK_SECRET`
+  (Production) and in the body of `notify_send_push()`. Verified: /api/send-push answers 200 to the right secret
+  and 401 to a wrong, missing or one-character-off one, and the SHA-256 of the secret inside the database
+  function equals the SHA-256 of the one Vercel holds. To rotate again, repeat all of it: set the env var,
+  redeploy, re-run 026 with the new value (comments stripped from the function body: the probe's
+  placeholder check reads the stored source). Everything else in the repo (this file, every
   migration) is public for the same reason — write nothing here you would not publish.
 - **No 2FA/MFA and no granular admin roles.** A security audit this session identified both as real gaps —
   every admin has the exact same full `is_admin` flag (no reduced-scope roles), and there's no second factor

@@ -22,7 +22,7 @@ Paste `supabase-migration-160-passport-parity-and-append-only.sql` and run it on
 transaction and idempotent. Then run the probe again: rows 160.1 and 160.2 must read `true`.
 The file's own verification block (bottom of the file) has the manual checks.
 
-## 3. Rotate the push-webhook secret (the old one is in public git history)
+## 3. Rotate the push-webhook secret (DONE 2026-10-22 and verified; the text below is how to do it again)
 
 The old value is dead once rotated, so the history stops mattering. Do steps a to d within a
 couple of minutes: between b and c, new pushes are rejected (notifications only, nothing is lost

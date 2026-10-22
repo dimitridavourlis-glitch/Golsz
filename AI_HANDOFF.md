@@ -15,6 +15,11 @@ Last real feature work: Claude Code, 2026-10-21, a review-fix round after the re
 The five `redesign/phase-*` branches are fully merged into `main`.
 
 ## Last Completed Work
+- 2026-10-22 (OpenCode, production, owner present): rotated SUPABASE_WEBHOOK_SECRET. Generated in the browser
+  (never in the transcript or repo), set in Vercel (Production), redeployed (empty commit 9bdbd51), re-ran 026
+  with comments stripped. Verified: /api/send-push 200 for the right secret and 401 for wrong, missing and
+  one-character-off; SHA-256 of the secret in the DB function == SHA-256 of Vercel's. The SQL Editor snippet
+  was blanked; its server copy no longer resolves (could not confirm whether one was ever stored).
 - 2026-10-22 (OpenCode, production): probe read 158, 159 and 026 already true; 160.1 and 160.2 false.
   Ran migration 160 (whitespace/comment-stripped, verified statement-for-statement against the file and by
   SHA-1 in the editor; Supabase showed its "destructive operations" warning for `drop policy`, expected).
@@ -39,9 +44,7 @@ The five `redesign/phase-*` branches are fully merged into `main`.
 Admin MFA + admin roles: see "Remaining Tasks". Not on `main`.
 
 ## Remaining Tasks
-- OWNER (OWNER-RUNBOOK.md): rotate `SUPABASE_WEBHOOK_SECRET` and re-run 026 with the new value (never
-  commit it); one real Basic purchase. The browser pane was not signed in to Vercel, so the rotation
-  (a Vercel env var + redeploy, then 026 re-run) is waiting on that. Runbook steps 1, 2 and 5 are DONE.
+- OWNER (OWNER-RUNBOOK.md): one real Basic purchase. Runbook steps 1, 2, 3 and 5 are DONE.
 - OWNER: send LEGAL-REVIEW-BRIEF.md to counsel (run its three count queries first).
 - Admin MFA and roles (CLAUDE.md "No 2FA/MFA"): work lives on a feature branch if present, not `main`
   (a gate that can lock the only admin out must not ship before the owner has enabled TOTP).
@@ -69,7 +72,7 @@ catalog checks), i.e. nobody has loaded a `?public=<uuid>` link since 160.
 
 ## Known Problems
 - Payments live but no real purchase has completed; webhook signing secret unverified.
-- An old push-webhook secret is exposed in public git history until it is rotated.
+- The OLD push-webhook secret is still in public git history but was rotated 2026-10-22 (verified), so it is dead.
 - No MFA anywhere; every admin has the same full power (until the branch work merges).
 - Signup has NO bot protection: Supabase CAPTCHA is DISABLED (read in the dashboard 2026-10-22) and
   `TURNSTILE_SITE_KEY` is empty. They agree, so signup works and privacy.html ("not active") is accurate.
