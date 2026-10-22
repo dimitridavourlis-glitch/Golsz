@@ -155,7 +155,10 @@ node tests/test_<name>.cjs     # one suite
 - Payments live, but no real purchase yet: the Stripe webhook signing secret is unverified. Do not
   call payments working (CLAUDE.md § Current state).
 - Rotate `SUPABASE_WEBHOOK_SECRET` and re-run migration 026 (CLAUDE.md § Current state).
-- Deferred: MFA, granular admin roles; legal review of parental consent open.
+- Admin MFA (TOTP) and owner/moderator roles: built on branch `admin-mfa-roles` (migrations 161, 162), not on
+  `main`. 162 must be run only after the owner has enrolled (OWNER-RUNBOOK.md section 8). Legal review:
+  LEGAL-REVIEW-BRIEF.md (under-18 managed profiles are off; the live questions are French terms, Law 25,
+  health information, AI providers).
 - `ADS-BUILD-ORDER.md` status last updated 2026-10-13. Owner to confirm what remains.
 - Live detail: AI_HANDOFF.md.
 

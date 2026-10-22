@@ -69,10 +69,28 @@ async function getUserId(authHeader, supaUrl, serviceKey) {
 // An empty array is NOT undetermined: it means the lookup worked and this
 // account has no profile row. A valid session with no profile hitting an
 // admin endpoint is genuinely suspicious, so that keeps the alert.
-async function isAdmin(supaUrl, serviceKey, userId) {
-  const r = await fetch(`${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=is_admin`, {
+//
+// Returns null (not an admin), "owner" or "moderator" (migration 161).
+//
+// MIGRATION 161 MAY NOT HAVE RUN. PostgREST rejects a whole select for one
+// unknown column, so asking for admin_role before the column exists would
+// turn every admin action into a 503. On that one specific error the lookup
+// repeats without the column and the admin is treated as an owner, which is
+// exactly what every admin was before roles existed. Any other failure still
+// throws. A column that exists but is empty on an admin row is a MODERATOR:
+// when in doubt about a role, the lesser one.
+async function adminRoleOf(supaUrl, serviceKey, userId) {
+  const ask = (cols) => fetch(`${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=${cols}`, {
     headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
   });
+  let legacy = false;
+  let r = await ask("is_admin,admin_role");
+  if (r.status === 400) {
+    const detail = await r.text().catch(() => "");
+    if (!/admin_role/.test(detail)) throw new Error(`is_admin lookup failed: 400 ${detail.slice(0, 200)}`);
+    legacy = true;
+    r = await ask("is_admin");
+  }
   if (!r.ok) {
     const detail = await r.text().catch(() => "");
     throw new Error(`is_admin lookup failed: ${r.status} ${detail.slice(0, 200)}`);
@@ -80,7 +98,28 @@ async function isAdmin(supaUrl, serviceKey, userId) {
   let rows = null;
   try { rows = await r.json(); } catch { rows = null; }
   if (!Array.isArray(rows)) throw new Error("is_admin lookup returned a non-array body");
-  return !!(rows[0] && rows[0].is_admin);
+  const row = rows[0];
+  if (!row || !row.is_admin) return null;
+  if (legacy) return "owner";
+  return row.admin_role === "owner" ? "owner" : "moderator";
+}
+
+// The authenticator assurance level the CALLER's session reached, read from
+// the access token's own `aal` claim: "aal1" after a password, "aal2" after a
+// verified second factor. The token was already validated by Supabase Auth in
+// getUserId() above (GoTrue answered for this exact string), so reading its
+// payload here adds no trust assumption. Anything unreadable is null, and the
+// caller treats null as "not aal2": fail closed.
+function sessionAal(authHeader) {
+  try {
+    const token = String(authHeader || "").replace(/^Bearer\s+/i, "");
+    const part = token.split(".")[1];
+    if (!part) return null;
+    const claims = JSON.parse(Buffer.from(part.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"));
+    return claims && typeof claims.aal === "string" ? claims.aal : null;
+  } catch {
+    return null;
+  }
 }
 
 // Two things make an unchecked write here worse than it looks, and they are
@@ -239,19 +278,31 @@ export default async function handler(req, res) {
   // 503 and 403 are deliberately different answers. 403 means "we checked and
   // you may not"; 503 means "we could not check". Only the first is grounds
   // for alerting every admin.
-  let callerIsAdmin;
+  let callerRole;
   try {
-    callerIsAdmin = await isAdmin(supaUrl, serviceKey, callerId);
+    callerRole = await adminRoleOf(supaUrl, serviceKey, callerId);
   } catch (e) {
     await logError("api/admin-user-action.js", "Could not determine admin status", { detail: String(e), callerId });
     return res.status(503).json({ error: "Could not verify permissions right now. Try again." });
   }
-  if (!callerIsAdmin) {
+  if (!callerRole) {
     await alertAdmins(supaUrl, serviceKey, "Security alert", "A signed-in user attempted an admin action without permission.");
     return res.status(403).json({ error: "Admins only." });
   }
+  // A real admin on a password-only session is NOT an attack, so this is a
+  // plain refusal with no alert. It is also not "a missing check we can skip
+  // until everyone has enrolled": the token claim is the only thing that says
+  // a second factor happened.
+  if (sessionAal(req.headers.authorization) !== "aal2") {
+    return res.status(403).json({ error: "Verify your authenticator code to use admin actions.", code: "mfa_required" });
+  }
 
   const { action, targetId, billingAcknowledged, confirmDeleteChildren } = req.body || {};
+  // Deleting an account is irreversible and cascades through auth.users, so it
+  // is owner-only (migration 161). Ban and unban reverse; a moderator keeps them.
+  if (action === "delete" && callerRole !== "owner") {
+    return res.status(403).json({ error: "Only an owner can delete accounts.", code: "owner_required" });
+  }
   // targetId gets embedded directly into an Admin API URL path and a
   // PostgREST filter below — validating it's actually a UUID first (not
   // just "a string") closes off any path-traversal/filter-injection

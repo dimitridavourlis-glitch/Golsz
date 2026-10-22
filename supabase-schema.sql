@@ -6622,3 +6622,39 @@ alter table ops_heartbeat enable row level security;
 -- UNTIL IT IS RUN, both of the above remain true of the live database.
 -- Re-read this section after applying and replace it with what was done.
 -- ============================================================
+
+
+-- ============================================================
+-- 161 — NOT YET APPLIED, as of 2026-10-22.
+--
+-- supabase-migration-161-admin-roles.sql is written and waiting to be run.
+--
+-- WHAT IT WILL CHANGE, once run:
+--   * profiles.admin_role ('owner' | 'moderator' | null); existing admins
+--     become owners.
+--   * is_admin_owner() (is_admin() and role = 'owner').
+--   * protect_profile_columns() gains two fenced insertions: a moderator's
+--     writes to is_admin, admin_role, plan, full_access, ai_unlimited and
+--     stripe_customer_id are reverted; admin_role follows is_admin; the last
+--     owner cannot be removed.
+--
+-- UNTIL IT IS RUN, every admin is effectively an owner (today's behaviour),
+-- and api/admin-user-action.js and the Admin Panel fall back to that when
+-- the column does not exist. Re-read this section after applying and replace
+-- it with what was done.
+-- ============================================================
+
+
+-- ============================================================
+-- 162 — NOT YET APPLIED, as of 2026-10-22. RUN ONLY AFTER ENROLLING MFA.
+--
+-- supabase-migration-162-admin-requires-mfa.sql is written and waiting.
+--
+-- WHAT IT WILL CHANGE, once run: is_admin() additionally requires the
+-- session token's `aal` claim to be 'aal2' (a verified TOTP code this
+-- session). Every admin policy and admin_* RPC inherits it.
+--
+-- UNTIL IT IS RUN, the second factor is enforced by the Admin Panel gate and
+-- by api/admin-user-action.js, but NOT by the database: a password-only
+-- admin session still passes RLS. Re-read this section after applying.
+-- ============================================================

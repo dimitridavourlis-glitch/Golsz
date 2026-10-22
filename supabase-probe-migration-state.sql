@@ -16,7 +16,8 @@
 -- HOW TO RUN. Paste the whole file into the Supabase SQL Editor and run it
 -- once. It returns one row per check. Read the `applied` column:
 --   true   the marker for that migration is present in the live database
---   false  it is not: run that migration (in numeric order: 158, 159, 160, 161)
+--   false  it is not: run that migration (in numeric order: 158, 159, 160, 161;
+--          162 only after enrolling MFA, see its header)
 --
 -- ORDER MATTERS. 160 re-creates get_public_passport(uuid), a function 158
 -- also defines. Run 158 AFTER 160 and it silently overwrites 160.1 with the
@@ -105,6 +106,29 @@ with checks(ord, migration, check_name, applied, note) as (
                  and count(*) filter (where polcmd in ('w', 'd', '*')) = 0
                 from pg_policy where polrelid = 'public.athlete_outcomes'::regclass), false),
     'false means an owner can still rewrite or delete their own availability history'
+
+  -- 161 / 162 (admin roles, admin MFA) ----------------------------------
+  union all
+  select 50, '161.1', 'profiles.admin_role exists',
+    exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'profiles' and column_name = 'admin_role'),
+    'false means every admin is still an owner (today''s behaviour)'
+  union all
+  select 51, '161.2', 'is_admin_owner() exists',
+    exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+             where n.nspname = 'public' and p.proname = 'is_admin_owner'), ''
+  union all
+  select 52, '161.3', 'protect_profile_columns() pins owner-only columns and guards the last owner',
+    coalesce((select pg_get_functiondef(p.oid) like '%cannot remove the last owner%'
+                from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+               where n.nspname = 'public' and p.proname = 'protect_profile_columns' limit 1), false),
+    ''
+  union all
+  select 60, '162', 'is_admin() requires an aal2 (second-factor) session',
+    coalesce((select pg_get_functiondef(p.oid) like '%aal2%'
+                from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+               where n.nspname = 'public' and p.proname = 'is_admin' limit 1), false),
+    'RUN 162 ONLY AFTER ENROLLING MFA. false means the database does not yet check the second factor'
 
   -- 026 (push webhook) -------------------------------------------------
   union all

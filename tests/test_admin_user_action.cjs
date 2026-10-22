@@ -83,8 +83,25 @@ const NON_ADMIN = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 let calls = [];
 // token -> user id. A token that is not in here resolves to null, the same
 // way a forged or expired one would.
-const TOKENS = { "Bearer admin": ADMIN, "Bearer plain": NON_ADMIN };
-const ADMINS = new Set([ADMIN, OTHER_ADMIN]);
+// Tokens are JWT-shaped because the handler reads the `aal` claim out of the
+// caller's own access token: "aal2" only after a verified second factor. The
+// signature is never checked here (Supabase Auth validated the string; the
+// /auth/v1/user mock below stands in for that), so the payload is what matters.
+const MODERATOR = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+const mkJwt = (who, aal) => "Bearer h." + Buffer.from(JSON.stringify(aal === undefined ? { sub: who } : { sub: who, aal })).toString("base64url") + ".s";
+const ADMIN_TOKEN = mkJwt(ADMIN, "aal2");
+const ADMIN_AAL1 = mkJwt(ADMIN, "aal1");
+const ADMIN_NO_AAL = mkJwt(ADMIN, undefined);
+const MOD_TOKEN = mkJwt(MODERATOR, "aal2");
+const MOD_AAL1 = mkJwt(MODERATOR, "aal1");
+const TOKENS = { [ADMIN_TOKEN]: ADMIN, [ADMIN_AAL1]: ADMIN, [ADMIN_NO_AAL]: ADMIN, [MOD_TOKEN]: MODERATOR, [MOD_AAL1]: MODERATOR, "Bearer plain": NON_ADMIN };
+const ADMINS = new Set([ADMIN, OTHER_ADMIN, MODERATOR]);
+// Migration 161: who is an owner. An admin absent from here is an owner, which
+// is what every admin was before roles existed. A moderator must be listed.
+const ROLES = { [MODERATOR]: "moderator" };
+// Migration 161 not applied: the admin_role column does not exist, so PostgREST
+// rejects a select that names it with a 400 and the handler must fall back.
+let legacyColumn = false;
 let authApiOk = true;
 let rpcOk = true;
 // "ok" = a normal PATCH that matches the target row.
@@ -129,7 +146,15 @@ global.fetch = async (url, opts = {}) => {
       if (!billingLookupOk) return { ok: false, status: 503, json: async () => ({}), text: async () => "down" };
       return { ok: true, json: async () => [BILLING[m && m[1]] || { plan: "free", stripe_customer_id: null }] };
     }
-    return { ok: true, json: async () => [{ is_admin: ADMINS.has(m && m[1]) }] };
+    const askedRole = /select=is_admin,admin_role/.test(u);
+    if (askedRole && legacyColumn) {
+      return { ok: false, status: 400, text: async () => '{"code":"42703","message":"column profiles.admin_role does not exist"}',
+               json: async () => ({ code: "42703" }) };
+    }
+    const isAdm = ADMINS.has(m && m[1]);
+    const row = { is_admin: isAdm };
+    if (askedRole) row.admin_role = isAdm ? (ROLES[m[1]] || "owner") : null;
+    return { ok: true, json: async () => [row] };
   }
   if (u.includes("/auth/v1/admin/users/")) {
     return { ok: authApiOk, status: authApiOk ? 200 : 500, json: async () => ({}) };
@@ -176,7 +201,7 @@ const mkRes = () => {
   return r;
 };
 
-async function call({ auth = "Bearer admin", method = "POST", body = {}, origin } = {}) {
+async function call({ auth = ADMIN_TOKEN, method = "POST", body = {}, origin } = {}) {
   calls = [];
   pushes = [];
   const res = mkRes();
@@ -469,6 +494,66 @@ async function call({ auth = "Bearer admin", method = "POST", body = {}, origin 
     ck("an unreadable billing state fails CLOSED (503), never deletes", [r.status, r.authApi.length, r.rpcs.length], [503, 0, 0]);
     billingLookupOk = true;
     delete BILLING[TARGET];
+  }
+
+  console.log("\n-- SECOND FACTOR (migration 162's twin, in the API) --");
+  // A password-only admin session is a stolen-password admin session. The token
+  // carries `aal`; only "aal2" means a TOTP code was verified in this session.
+  r = await call({ auth: ADMIN_AAL1, body: { action: "ban", targetId: TARGET } });
+  ck("an admin on a password-only (aal1) session is refused", r.status, 403);
+  ck("...with a machine-readable mfa_required code", r.payload.code, "mfa_required");
+  ck("...and NOTHING reached the Supabase Admin API", [r.authApi.length, r.patches.length, r.audit.length], [0, 0, 0]);
+  ck("...and it is NOT reported as an attack: no security alert is pushed", r.pushes.length, 0);
+  r = await call({ auth: ADMIN_NO_AAL, body: { action: "ban", targetId: TARGET } });
+  ck("a token with no aal claim at all is refused too (fail closed)", [r.status, r.payload.code], [403, "mfa_required"]);
+  r = await call({ auth: "Bearer not.a-jwt", body: { action: "ban", targetId: TARGET } });
+  ck("a token that is not a JWT never reaches the action (it is not even a user)", [r.status, r.authApi.length], [401, 0]);
+  r = await call({ auth: ADMIN_TOKEN, body: { action: "ban", targetId: TARGET } });
+  ck("aal2 passes (positive control: the refusals above are about aal, not the harness)", r.status, 200);
+  r = await call({ auth: "Bearer plain", body: { action: "ban", targetId: TARGET } });
+  ck("a NON-admin is still 403 + alert, ahead of the aal check", [r.status, r.payload.code === undefined, r.pushes.length > 0], [403, true, true]);
+
+  console.log("\n-- ROLES (migration 161) --");
+  r = await call({ auth: MOD_TOKEN, body: { action: "ban", targetId: TARGET } });
+  ck("a moderator can ban", [r.status, r.authApi.length, r.patches.length], [200, 1, 1]);
+  r = await call({ auth: MOD_TOKEN, body: { action: "unban", targetId: TARGET } });
+  ck("...and unban", r.status, 200);
+  const sweptBefore = [sweptStorage.length, sweptCache.length];
+  r = await call({ auth: MOD_TOKEN, body: { action: "delete", targetId: TARGET } });
+  ck("a moderator cannot DELETE an account", [r.status, r.payload.code], [403, "owner_required"]);
+  ck("...and nothing was touched: no sweep, no RPC, no auth call, no audit row",
+     [r.authApi.length, r.rpcs.length, r.audit.length, sweptStorage.length - sweptBefore[0], sweptCache.length - sweptBefore[1]], [0, 0, 0, 0, 0]);
+  ck("...and it does not alert every admin (a moderator asking is not an attack)", r.pushes.length, 0);
+  r = await call({ auth: MOD_AAL1, body: { action: "delete", targetId: TARGET } });
+  ck("a moderator on aal1 is told to verify first, not told about roles", r.payload.code, "mfa_required");
+  r = await call({ auth: ADMIN_TOKEN, body: { action: "delete", targetId: TARGET } });
+  ck("an owner can delete (positive control)", [r.status, r.rpcs.length], [200, 1]);
+
+  console.log("\n-- 161 NOT APPLIED YET: the code must not outrun the database --");
+  // Deploying this handler before the owner runs the migration must not turn
+  // every admin action into a 503, which is what PostgREST's whole-select
+  // rejection would do. Today's behaviour (every admin an owner) is the fallback.
+  legacyColumn = true;
+  r = await call({ auth: ADMIN_TOKEN, body: { action: "ban", targetId: TARGET } });
+  ck("with no admin_role column an admin can still ban", r.status, 200);
+  r = await call({ auth: ADMIN_TOKEN, body: { action: "delete", targetId: TARGET } });
+  ck("...and, being today's all-powerful admin, still delete", r.status, 200);
+  r = await call({ auth: "Bearer plain", body: { action: "ban", targetId: TARGET } });
+  ck("...and a non-admin is still refused, still alerts", [r.status, r.pushes.length > 0], [403, true]);
+  legacyColumn = false;
+  {
+    // A 400 that is NOT about admin_role must still fail closed, not fall back.
+    const real = global.fetch;
+    global.fetch = async (url, opts) => {
+      if (/select=is_admin,admin_role/.test(String(url)) && String((opts || {}).method || "GET") === "GET") {
+        return { ok: false, status: 400, text: async () => '{"message":"something else is wrong"}', json: async () => ({}) };
+      }
+      return real(url, opts);
+    };
+    r = await call({ auth: ADMIN_TOKEN, body: { action: "delete", targetId: TARGET } });
+    global.fetch = real;
+    ck("an unrelated 400 on the lookup fails closed (503), never falls back to owner",
+       [r.status, r.authApi.length, r.rpcs.length], [503, 0, 0]);
   }
 
   console.log("\n-- this suite runs the shipping handler --");
