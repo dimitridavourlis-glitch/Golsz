@@ -71,6 +71,8 @@ let patchHttpStatus = 0;
 // models 163 not yet run (PostgREST answers 404 for an unknown relation).
 let pendingPlans = {};
 let pendingTableMissing = false;
+// Migration 164: the two billing-period columns on profiles.
+let billingColumnsMissing = false;
 
 global.fetch = async (url, opts = {}) => {
   const u = String(url);
@@ -95,6 +97,18 @@ global.fetch = async (url, opts = {}) => {
     if (patchHttpStatus) {
       return { ok: false, status: patchHttpStatus, text: async () => '{"message":"column does not exist"}',
                json: async () => ({ message: "column does not exist" }) };
+    }
+    // Billing-period writes (migration 164) are best-effort, return=minimal,
+    // and only ever carry these two columns. Applied to the stub so tests can
+    // read what ended up stored; `billingColumnsMissing` models 164 not run.
+    const BILLING_ONLY = body && Object.keys(body).length > 0 && Object.keys(body).every((k) => k === "current_period_end" || k === "cancel_at_period_end");
+    if (BILLING_ONLY) {
+      if (billingColumnsMissing) {
+        return { ok: false, status: 400, text: async () => '{"message":"column profiles.current_period_end does not exist"}', json: async () => ({}) };
+      }
+      const cust = /stripe_customer_id=eq\.([^&]+)/.exec(u);
+      if (cust) Object.values(profiles).filter((x) => x.stripe_customer_id === cust[1]).forEach((row) => Object.assign(row, body));
+      return { ok: true, status: 204, json: async () => { throw new SyntaxError("Unexpected end of JSON input"); }, text: async () => "" };
     }
     // The mock HONOURS Prefer, because the header is half the contract. With
     // `return=minimal` PostgREST answers 204 with an EMPTY BODY — r.ok is
@@ -190,8 +204,14 @@ async function post(event, opts = {}) {
   const sig = opts.sig !== undefined ? opts.sig : signWith(raw, opts.secrets || [SECRET], ts);
   const res = mkRes();
   await handler(mkReq(raw, sig), res);
-  const patches = calls.filter((c) => c.method === "PATCH" && c.url.includes("/rest/v1/profiles"));
+  const allPatches = calls.filter((c) => c.method === "PATCH" && c.url.includes("/rest/v1/profiles"));
+  // The date-only writes are a separate, best-effort concern from the plan
+  // logic every older assertion is about, so they are counted separately.
+  const isBilling = (c) => c.body && Object.keys(c.body).length > 0 && Object.keys(c.body).every((k) => k === "current_period_end" || k === "cancel_at_period_end");
+  const patches = allPatches.filter((c) => !isBilling(c));
+  const billingPatches = allPatches.filter(isBilling);
   return {
+    billingPatches,
     status: res.statusCode,
     payload: res.payload,
     patches,
@@ -605,6 +625,78 @@ const BASIC_PRICE = { id: process.env.STRIPE_PRICE_BASIC_EUR, currency: "eur", u
     r = await post(lateCheckout(PAYER));
     ck("table missing: the checkout event still links the customer and answers 200", [r.status, profiles[PAYER].stripe_customer_id], [200, LATE]);
     pendingTableMissing = false;
+  }
+
+  console.log("\n-- when the paid period ends, and whether it renews (migration 164) --");
+  // Settings could show a plan name and nothing else: no renewal date, no
+  // "cancels on" after a cancellation in Stripe's portal. The webhook now
+  // mirrors the period end and the cancel flag, as a SEPARATE best-effort
+  // write after the plan write, so it can never fail the plan logic.
+  {
+    const SEC = 1793000000;                                  // a fixed Unix time, 2026-10-26T..Z
+    const ISO = (n) => new Date(n * 1000).toISOString();
+    const sub = (extra, status = "active", type = "customer.subscription.updated") => ({
+      id: "evt_bp_" + Math.random().toString(16).slice(2), type,
+      data: { object: { customer: CUSTOMER, status, items: { data: [{ price: PRO_PRICE, ...(extra.item || {}) }] }, ...(extra.sub || {}) } },
+    });
+    billingColumnsMissing = false;
+    profiles = { [OWNER_ID]: { id: OWNER_ID, stripe_customer_id: CUSTOMER, plan: "pro", current_period_end: null, cancel_at_period_end: false } };
+
+    r = await post(sub({ sub: { current_period_end: SEC, cancel_at_period_end: false } }));
+    ck("a renewing subscription stores its period end (older Stripe API: on the subscription)",
+       [r.status, profiles[OWNER_ID].current_period_end, profiles[OWNER_ID].cancel_at_period_end], [200, ISO(SEC), false]);
+    ck("...as ONE extra, date-only write that does not touch the plan", [r.billingPatches.length, r.patches.length, Object.keys(r.billingPatches[0].body).sort()],
+       [1, 1, ["cancel_at_period_end", "current_period_end"]]);
+
+    profiles[OWNER_ID].current_period_end = null;
+    r = await post(sub({ item: { current_period_end: SEC + 86400 }, sub: { cancel_at_period_end: false } }));
+    ck("newer Stripe API versions put it on the first item: that is read too", profiles[OWNER_ID].current_period_end, ISO(SEC + 86400));
+
+    r = await post(sub({ sub: { current_period_end: SEC, cancel_at_period_end: true } }));
+    ck("a cancellation at period end is recorded, with the date access ends",
+       [profiles[OWNER_ID].cancel_at_period_end, profiles[OWNER_ID].current_period_end], [true, ISO(SEC)]);
+    ck("...and the plan is NOT downgraded early (they keep what they paid for)", [r.patch.plan, profiles[OWNER_ID].plan], ["pro", "pro"]);
+
+    r = await post(sub({ sub: { current_period_end: SEC + 999999, cancel_at: SEC + 5000, cancel_at_period_end: false } }));
+    ck("a cancellation scheduled for a specific moment ends access at THAT moment",
+       [profiles[OWNER_ID].cancel_at_period_end, profiles[OWNER_ID].current_period_end], [true, ISO(SEC + 5000)]);
+
+    r = await post(sub({ sub: { current_period_end: SEC, cancel_at_period_end: false } }));
+    ck("changing their mind (resuming) flips it back", [profiles[OWNER_ID].cancel_at_period_end, profiles[OWNER_ID].current_period_end], [false, ISO(SEC)]);
+
+    r = await post(sub({}));
+    ck("an event with no period information writes nothing extra", r.billingPatches.length, 0);
+
+    // Ending: cleared, so a lapsed athlete is not shown a renewal date.
+    profiles[OWNER_ID].cancel_at_period_end = true; profiles[OWNER_ID].current_period_end = ISO(SEC);
+    r = await post(sub({}, "canceled"));
+    ck("a cancelled subscription clears both", [profiles[OWNER_ID].cancel_at_period_end, profiles[OWNER_ID].current_period_end, profiles[OWNER_ID].plan], [false, null, "free"]);
+    profiles[OWNER_ID].plan = "pro"; profiles[OWNER_ID].cancel_at_period_end = true; profiles[OWNER_ID].current_period_end = ISO(SEC);
+    r = await post({ id: "evt_del2", type: "customer.subscription.deleted", data: { object: { customer: CUSTOMER } } });
+    ck("subscription.deleted clears both as well", [profiles[OWNER_ID].cancel_at_period_end, profiles[OWNER_ID].current_period_end, profiles[OWNER_ID].plan], [false, null, "free"]);
+
+    // The final event of a deleted account must not loop for three days.
+    profiles = {};
+    r = await post({ id: "evt_del3", type: "customer.subscription.deleted", data: { object: { customer: "cus_account_already_deleted" } } });
+    ck("subscription.deleted for a customer with no profile (account deleted) is a 200, not a retry loop", r.status, 200);
+    profiles = { [OWNER_ID]: { id: OWNER_ID, stripe_customer_id: CUSTOMER, plan: "pro" } };
+    patchHttpStatus = 400;
+    r = await post({ id: "evt_del4", type: "customer.subscription.deleted", data: { object: { customer: CUSTOMER } } });
+    ck("...but a real database failure on the same event is still a 500", r.status, 500);
+    patchHttpStatus = 0;
+
+    // The plan logic must be untouchable by this feature.
+    billingColumnsMissing = true;
+    profiles = { [OWNER_ID]: { id: OWNER_ID, stripe_customer_id: CUSTOMER, plan: "free" } };
+    r = await post(sub({ sub: { current_period_end: SEC, cancel_at_period_end: true } }));
+    ck("columns missing (164 not run): the plan still lands and the event is a 200", [r.status, profiles[OWNER_ID].plan], [200, "pro"]);
+    billingColumnsMissing = false;
+
+    // No billing write for a subscription we could not even find a profile for.
+    profiles = {}; pendingPlans = {};
+    r = await post(sub({ sub: { current_period_end: SEC, cancel_at_period_end: true } }));
+    ck("an unknown customer is still the 500 it was, and writes no dates", [r.status, r.billingPatches.length], [500, 0]);
+    pendingPlans = {};
   }
 
   console.log("\n-- this suite tests the shipping handler, not a copy --");

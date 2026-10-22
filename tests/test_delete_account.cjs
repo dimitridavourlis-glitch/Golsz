@@ -38,6 +38,7 @@ const CHILD = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 let calls = [];
 let billing = { plan: "free", stripe_customer_id: null };
 let billingOk = true;
+let cancelColumnMissing = false;
 let children = [];
 let rpcOk = true;
 let cacheOk = true;
@@ -56,7 +57,15 @@ global.fetch = async (url, opts = {}) => {
     return (opts.headers || {}).Authorization === "Bearer user" ? ok({ id: USER }) : bad(401);
   }
   if (method === "GET" && u.includes("/rest/v1/profiles?id=eq.") && u.includes("select=plan,stripe_customer_id")) {
-    return billingOk ? ok([billing]) : bad(503);
+    // Migration 164 not run: PostgREST rejects a select that names a missing column.
+    if (cancelColumnMissing && u.includes("cancel_at_period_end")) {
+      return { ok: false, status: 400, text: async () => '{"message":"column profiles.cancel_at_period_end does not exist"}', json: async () => ({}) };
+    }
+    // PostgREST returns only the columns that were asked for, so a query that
+    // does not name cancel_at_period_end must not receive it.
+    const row = { ...billing };
+    if (!u.includes("cancel_at_period_end")) delete row.cancel_at_period_end;
+    return billingOk ? ok([row]) : bad(503);
   }
   if (method === "GET" && u.includes("/rest/v1/parent_links")) {
     return ok(children.map((c) => ({ athlete_id: c.id })));
@@ -98,7 +107,7 @@ async function del(body = { confirm: true }) {
 
 function reset() {
   billing = { plan: "free", stripe_customer_id: null };
-  billingOk = true; children = []; rpcOk = true; cacheOk = true; listOk = true;
+  billingOk = true; cancelColumnMissing = false; children = []; rpcOk = true; cacheOk = true; listOk = true;
 }
 
 (async () => {
@@ -131,6 +140,42 @@ function reset() {
   r = await del();
   ck("an unreadable billing state is a 503, not a delete", [r.status, r.authDeletes.length], [503, 0]);
   ck("...and the cause is logged", r.errorLogs.some((m) => /Billing lookup failed/.test(m)), true);
+
+  console.log("\n-- 1b. a subscription that is set to END (migration 164) --");
+  // Someone who has cancelled in Stripe's portal still has a paid plan and a
+  // customer id until the period they paid for runs out, so they were locked
+  // out of deleting their account. Stripe will not charge them again, so the
+  // block protects nothing; the rest of the paid period is the only thing lost.
+  reset();
+  billing = { plan: "pro", stripe_customer_id: "cus_cancelling", cancel_at_period_end: true };
+  r = await del();
+  ck("a subscriber whose plan will NOT renew can delete their account", [r.status, r.authDeletes], [200, [USER]]);
+  reset();
+  billing = { plan: "pro", stripe_customer_id: "cus_renewing", cancel_at_period_end: false };
+  r = await del();
+  ck("control: a subscriber who WILL renew is still refused", [r.status, r.payload && r.payload.code, r.authDeletes.length], [409, "active_subscription", 0]);
+  reset();
+  billing = { plan: "pro", stripe_customer_id: "cus_old_row" };
+  r = await del();
+  ck("a missing flag is not a cancellation (only an explicit true counts)", [r.status, r.authDeletes.length], [409, 0]);
+  reset();
+  billing = { plan: "pro", stripe_customer_id: "cus_truthy", cancel_at_period_end: "true" };
+  r = await del();
+  ck("...and a truthy non-boolean is not one either", [r.status, r.authDeletes.length], [409, 0]);
+  // 164 not run yet: the code must not outrun the database.
+  reset();
+  cancelColumnMissing = true;
+  billing = { plan: "pro", stripe_customer_id: "cus_live", cancel_at_period_end: true };
+  r = await del();
+  ck("column missing: falls back to the old rule (an active subscriber is refused, not a 503)", [r.status, r.payload && r.payload.code], [409, "active_subscription"]);
+  billing = { plan: "free", stripe_customer_id: null };
+  r = await del();
+  ck("column missing: an ordinary account is still deleted", [r.status, r.authDeletes], [200, [USER]]);
+  reset();
+  billingOk = false;
+  billing = { plan: "pro", stripe_customer_id: "cus_x", cancel_at_period_end: true };
+  r = await del();
+  ck("a billing lookup that fails for any OTHER reason still fails closed", [r.status, r.authDeletes.length], [503, 0]);
 
   console.log("\n-- 2. the tables that do not cascade --");
   reset();

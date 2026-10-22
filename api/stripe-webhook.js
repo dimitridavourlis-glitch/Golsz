@@ -358,6 +358,45 @@ async function patchProfile(supaUrl, serviceKey, filterQuery, body) {
 // the failure stays loud), and the checkout path has already linked the
 // customer by the time it asks. A missing table (163 not yet run) is therefore
 // just today's behaviour, never a new way to fail an event.
+// WHEN THE PAID PERIOD ENDS, and whether it will renew (migration 164). This
+// is what lets Settings say "renews on ..." / "cancels on ..." and lets an
+// athlete who has already cancelled delete their account. It is a SEPARATE
+// best-effort write, after the plan write has succeeded, so it can never fail
+// or delay the plan logic above it: a missing column (164 not run) or a Stripe
+// field in a shape we do not recognise costs a date on a screen, not a plan.
+// `current_period_end` lives on the subscription in older Stripe API versions
+// and on its first item in newer ones; both are read.
+async function recordBillingPeriod(supaUrl, serviceKey, customerId, sub, item) {
+  try {
+    const cancelling = !!(sub.cancel_at_period_end || sub.cancel_at);
+    // When a cancellation is scheduled for a specific moment, access ends then.
+    const endSec = (cancelling && typeof sub.cancel_at === "number" && sub.cancel_at)
+      || (typeof sub.current_period_end === "number" ? sub.current_period_end : null)
+      || (item && typeof item.current_period_end === "number" ? item.current_period_end : null);
+    if (endSec === null && typeof sub.cancel_at_period_end !== "boolean") return; // nothing to record
+    const body = {
+      cancel_at_period_end: cancelling,
+      current_period_end: endSec === null ? null : new Date(endSec * 1000).toISOString(),
+    };
+    const r = await fetch(`${supaUrl}/rest/v1/profiles?stripe_customer_id=eq.${encodeURIComponent(customerId)}`, {
+      method: "PATCH",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) console.warn("GOLSZ stripe billing period not recorded", r.status);
+  } catch (e) { console.warn("GOLSZ stripe billing period failed", String(e)); }
+}
+async function clearBillingPeriod(supaUrl, serviceKey, customerId) {
+  try {
+    const r = await fetch(`${supaUrl}/rest/v1/profiles?stripe_customer_id=eq.${encodeURIComponent(customerId)}`, {
+      method: "PATCH",
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ cancel_at_period_end: false, current_period_end: null }),
+    });
+    if (!r.ok) console.warn("GOLSZ stripe billing period not cleared", r.status);
+  } catch (e) { console.warn("GOLSZ stripe billing period clear failed", String(e)); }
+}
+
 const STASHABLE_PLANS = ["starter", "pro", "elite"];
 async function stashPendingPlan(supaUrl, serviceKey, customerId, plan) {
   if (!customerId || !STASHABLE_PLANS.includes(plan)) return;
@@ -575,7 +614,18 @@ export default async function handler(req, res) {
     } else if (event.type === "customer.subscription.deleted") {
       const customerId = event.data.object.customer;
       if (customerId) {
-        await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, { plan: "free", payment_past_due: false });
+        try {
+          await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, { plan: "free", payment_past_due: false });
+          await clearBillingPeriod(supaUrl, serviceKey, customerId);
+        } catch (e) {
+          // A subscription ENDING for a customer nobody holds any more is the
+          // normal last event of a deleted account (the athlete cancelled, then
+          // deleted). There is nothing left to downgrade, and answering 500
+          // would only make Stripe replay it for three days. Every other
+          // failure still throws.
+          if (!(e && e.noMatch)) throw e;
+          console.warn("GOLSZ stripe subscription.deleted for a customer with no profile (account deleted?)", customerId);
+        }
       }
     } else if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
       // Syncs plan changes and recovers/flags the past-due state as the
@@ -597,6 +647,7 @@ export default async function handler(req, res) {
       if (customerId) {
         if (status === "canceled" || status === "unpaid" || status === "incomplete_expired") {
           await patchProfile(supaUrl, serviceKey, `stripe_customer_id=eq.${customerId}`, { plan: "free", payment_past_due: false });
+          await clearBillingPeriod(supaUrl, serviceKey, customerId);
         } else {
           const item = sub.items && sub.items.data && sub.items.data[0];
           const fields = readPriceFields(item && item.price);
@@ -617,6 +668,7 @@ export default async function handler(req, res) {
             if (e && e.noMatch && plan) await stashPendingPlan(supaUrl, serviceKey, customerId, plan);
             throw e;
           }
+          await recordBillingPeriod(supaUrl, serviceKey, customerId, sub, item);
         }
       }
     } else if (event.type === "invoice.payment_failed") {

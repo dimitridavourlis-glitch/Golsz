@@ -6684,3 +6684,19 @@ create table if not exists stripe_pending_plans (
   created_at  timestamptz not null default now()
 );
 alter table stripe_pending_plans enable row level security;
+
+
+-- ============================================================
+-- 164 — APPLIED 2026-10-22.
+--
+-- supabase-migration-164-billing-period.sql, run in the Supabase SQL Editor.
+-- When the current paid period ends and whether it will renew, mirrored from
+-- Stripe by api/stripe-webhook.js (a separate best-effort write after the plan
+-- write). Not on protect_profile_columns()'s allowlist, so an athlete cannot
+-- edit either. Read by Settings in a query of its own, and by
+-- api/delete-account.js, which lets a subscription that is set to END be
+-- deleted (falling back to the old rule when these columns do not exist).
+-- ============================================================
+
+alter table profiles add column if not exists current_period_end timestamptz;
+alter table profiles add column if not exists cancel_at_period_end boolean not null default false;

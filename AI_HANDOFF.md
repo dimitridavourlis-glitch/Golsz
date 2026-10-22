@@ -67,16 +67,18 @@ enrol/verify screens and a real aal2 token are unproven until the owner runs OWN
 - DONE from that backlog, in order: vercel.app -> golsz.com redirect (api excluded, push trigger posts there);
   shorter titles + manifest id/scope + honest sitemap lastmod; signup hardening (confirm-email on paid plans,
   password floor 8 in ONE constant AND in Supabase's own PASSWORD_MIN_LENGTH setting, signup errors mapped by
-  code to translated text, 4 hard-coded notices translated; `test_signup_hardening.cjs`).
+  code to translated text, 4 hard-coded notices translated; `test_signup_hardening.cjs`); first-visit language from
+  the browser (loader `pickLang`, remembered choice always wins; `test_language_default.cjs`); billing visibility
+  (migration 164 APPLIED: webhook mirrors period end + cancel flag as a separate best-effort write, Settings shows
+  "renews on / ends on", a subscription set to END may delete the account, a deleted account's final
+  subscription.deleted is a 200; `test_billing_visibility.cjs` + extended webhook/delete suites).
 - COMMERCIAL AUDIT BACKLOG (2026-10-22, not done; HIGH first). Needs owner/dashboard: Vercel Hobby is
   non-commercial -> move to Pro; Supabase plan/backups/PITR undocumented, do a restore drill; enable plan
   switching in the Stripe portal (config bpc_1UBZUwRtNFWlwsi4HXthKxbz) and drop the "email us to switch"
   route; confirm the Payment Link after-payment redirect is /golsz-app.html?checkout=success; external
   uptime probe + email alerts (health-alert is push-only, owner phone); define a real Elite benefit (it is
   Pro +5 questions/day); French marketing pages + default app language from navigator.language (Quebec);
-  legal entity name/address, then remove the visible "not reviewed" banners. Agent-doable: store
-  current_period_end / cancel_at_period_end and show them (needs a migration); allow account deletion once a
-  subscription is set to cancel; JSON-LD WebSite/SoftwareApplication; og tags on shared
+  legal entity name/address, then remove the visible "not reviewed" banners. Agent-doable: JSON-LD WebSite/SoftwareApplication; og tags on shared
   Passport links; minify js/app.js (1.18 MB) and self-host fonts/libs; keyboard-accessible span/div
   onClick controls; localise dates; "paid but no plan" list in the Admin Panel.
 - Agent-doable gaps from the ADS reconciliation (ADS-BUILD-ORDER.md STATUS): parallel `getAthleteState`

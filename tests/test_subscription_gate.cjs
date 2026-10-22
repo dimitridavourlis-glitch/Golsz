@@ -142,7 +142,11 @@ console.log("\n-- deleting an account: ACTIVE subscription, not \"ever paid\" --
 {
   const del = APP.slice(APP.indexOf("async function deleteAccount("), APP.indexOf("async function deleteAccount(") + 3500);
   ck("the client gate is an active subscription, not the bare customer id",
-     /if \(hasActiveSubscription\(currentPlan, stripeCustomerId\)\) \{\s*setDeleteErr\(t\("settings_delete_cancel_first"\)\);/.test(del), true);
+     /if \(hasActiveSubscription\(currentPlan, stripeCustomerId\) && !billing\.cancelling\) \{\s*setDeleteErr\(t\("settings_delete_cancel_first"\)\);/.test(del), true);
+  // The ONE exception: a subscription already set to end is not charged again
+  // (migration 164), and api/delete-account.js applies the same rule.
+  ck("...with one exception: a subscription already set to END does not block (the server agrees)",
+     /!billing\.cancelling/.test(del) && /me\.cancel_at_period_end !== true/.test(fs.readFileSync(REPO + "/api/delete-account.js", "utf8")), true);
   ck("...the old customer-id-only gate is gone", /if \(stripeCustomerId\) \{\s*setDeleteErr/.test(del), false);
   ck("...and the gate comes before the request",
      del.indexOf("hasActiveSubscription(") < del.indexOf('fetch("/api/delete-account"'), true);

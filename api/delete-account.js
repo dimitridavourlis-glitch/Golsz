@@ -127,13 +127,24 @@ export default async function handler(req, res) {
   // AND a plan that is not free (unknown counts as active) — never the id
   // alone, which the webhook keeps after a cancellation.
   try {
-    const billRes = await fetch(`${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=plan,stripe_customer_id`, {
+    // cancel_at_period_end (migration 164) says the subscription will not renew,
+    // so Stripe will not charge again and deleting the account strands nothing
+    // but the rest of a period the athlete has already paid for. PostgREST
+    // rejects a whole select for one unknown column, so when 164 has not run the
+    // lookup repeats without it and the old rule (any paid plan with a customer
+    // blocks) applies. Any other failure still fails closed below.
+    const askBilling = (cols) => fetch(`${supaUrl}/rest/v1/profiles?id=eq.${userId}&select=${cols}`, {
       headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey },
     });
+    let billRes = await askBilling("plan,stripe_customer_id,cancel_at_period_end");
+    if (billRes.status === 400) {
+      const detail = await billRes.text().catch(() => "");
+      if (/cancel_at_period_end/.test(detail)) billRes = await askBilling("plan,stripe_customer_id");
+    }
     if (!billRes.ok) throw new Error(`profiles billing lookup failed: ${billRes.status}`);
     const rows = await billRes.json();
     const me = Array.isArray(rows) ? rows[0] : null;
-    if (me && me.stripe_customer_id && me.plan !== "free") {
+    if (me && me.stripe_customer_id && me.plan !== "free" && me.cancel_at_period_end !== true) {
       return res.status(409).json({
         error: "You have an active subscription. Cancel it in Manage billing first — deleting your account does not stop Stripe charging you.",
         code: "active_subscription",
