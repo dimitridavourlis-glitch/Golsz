@@ -19125,11 +19125,35 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // onerror loads the app ANYWAY. Every lookup already falls back to
     // I18N.en, so a dictionary that fails to arrive means a working app in
     // English - never a blank screen, and never raw key names.
-    var want = "en";
-    try {
-      var saved = localStorage.getItem("golsz-lang");
-      if (saved === "fr" || saved === "es" || saved === "el") want = saved;
-    } catch (e) {}
+    // WHICH LANGUAGE, decided once and here. The app is four languages but
+    // used to start in English for everybody who had not already picked one,
+    // so a Quebec visitor met an English app next to a French-speaking
+    // operator. Order: a remembered choice always wins, then ?lang=, then the
+    // browser's own preference list in order (so "fr-CA" is French and
+    // ["de","es"] is Spanish), then English. The result is SAVED when nothing
+    // was, so LangProvider, the error boundary and the boot copy, which all
+    // read "golsz-lang", agree with the dictionary fetched below.
+    function pickLang() {
+      var supported = { en: 1, fr: 1, es: 1, el: 1 };
+      try {
+        var saved = localStorage.getItem("golsz-lang");
+        if (saved && supported.hasOwnProperty(saved)) return saved;
+      } catch (e) {}
+      try {
+        var q = /[?&]lang=([a-z]{2})(?![a-z])/i.exec(location.search);
+        if (q && supported.hasOwnProperty(q[1].toLowerCase())) return q[1].toLowerCase();
+      } catch (e) {}
+      try {
+        var prefs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language];
+        for (var i = 0; i < prefs.length; i++) {
+          var pref = String(prefs[i] || "").slice(0, 2).toLowerCase();
+          if (supported.hasOwnProperty(pref)) return pref;
+        }
+      } catch (e) {}
+      return "en";
+    }
+    var want = pickLang();
+    try { if (!localStorage.getItem("golsz-lang")) localStorage.setItem("golsz-lang", want); } catch (e) {}
     if (want === "en") { loadApp(); return; }
     var d = document.createElement("script");
     d.src = "js/i18n/" + want + ".js?v=" + BUILD;
