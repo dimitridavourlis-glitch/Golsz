@@ -6,7 +6,8 @@ Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
 OpenCode, 2026-10-22 (second session): unpublish step, migration probe, owner runbook, counsel brief,
-ADS-BUILD-ORDER reconciled. Before that: OpenCode comment fixes; Claude Code setup session.
+ADS-BUILD-ORDER reconciled; then, with the owner signed in to Supabase in the browser pane, ran the probe
+and migration 160 against PRODUCTION (the owner's explicit go-ahead). Before that: OpenCode comment fixes; Claude Code setup session.
 Last real feature work: Claude Code, 2026-10-21, a review-fix round after the redesign merge (5bfb860).
 
 ## Current Branch
@@ -14,6 +15,11 @@ Last real feature work: Claude Code, 2026-10-21, a review-fix round after the re
 The five `redesign/phase-*` branches are fully merged into `main`.
 
 ## Last Completed Work
+- 2026-10-22 (OpenCode, production): probe read 158, 159 and 026 already true; 160.1 and 160.2 false.
+  Ran migration 160 (whitespace/comment-stripped, verified statement-for-statement against the file and by
+  SHA-1 in the editor; Supabase showed its "destructive operations" warning for `drop policy`, expected).
+  Re-ran the probe: all 15 checks true. 160 file now also drops the new policy names first, so a second
+  run is harmless (it was claimed idempotent but was not). Ledger and CLAUDE.md updated.
 - 2026-10-22 (OpenCode): `tools/unpublish-internal.cjs` + `npm run unpublish`, last step of the Vercel
   buildCommand: removes root `*.md`, `opencode.json`, `supabase-*.sql`, `tests/`, `tools/`, `golsz-guard/`,
   `.github/`, `.claude/` from the served tree (they were all public URLs, verified live). Never touches
@@ -33,9 +39,9 @@ The five `redesign/phase-*` branches are fully merged into `main`.
 Admin MFA + admin roles: see "Remaining Tasks". Not on `main`.
 
 ## Remaining Tasks
-- OWNER, in order (OWNER-RUNBOOK.md): run the probe; run 158/159/160 as it says; rotate
-  `SUPABASE_WEBHOOK_SECRET` and re-run 026 with the new value (never commit it); one real Basic purchase;
-  check the Supabase CAPTCHA setting against the empty `TURNSTILE_SITE_KEY` (if CAPTCHA is on, signup is down).
+- OWNER (OWNER-RUNBOOK.md): rotate `SUPABASE_WEBHOOK_SECRET` and re-run 026 with the new value (never
+  commit it); one real Basic purchase; check the Supabase CAPTCHA setting against the empty
+  `TURNSTILE_SITE_KEY` (if CAPTCHA is on, signup is down). Runbook steps 1 and 2 are DONE.
 - OWNER: send LEGAL-REVIEW-BRIEF.md to counsel (run its three count queries first).
 - Admin MFA and roles (CLAUDE.md "No 2FA/MFA"): work lives on a feature branch if present, not `main`
   (a gate that can lock the only admin out must not ship before the owner has enabled TOTP).
@@ -56,13 +62,14 @@ Admin MFA + admin roles: see "Remaining Tasks". Not on `main`.
 - Adults only (18+) contract and pay; managed profiles for under-18s are switched off.
 
 ## Latest Test / Build Status
-2026-10-22 (OpenCode): `npm run check` 111/111 suites passed (5305 assertions) before the push.
-Not verified: the Vercel build of this push, CI, the live removal of the internal paths.
+2026-10-22 (OpenCode): `npm run check` 111/111 suites (5305 assertions) at b873772; that deploy was
+verified live (16 internal paths 404, site and functions up). Production DB: probe 15/15 true after 160.
+Not verified: CI. Not exercised against the live database: the shared-Passport behaviour itself (only
+catalog checks), i.e. nobody has loaded a `?public=<uuid>` link since 160.
 
 ## Known Problems
 - Payments live but no real purchase has completed; webhook signing secret unverified.
 - An old push-webhook secret is exposed in public git history until it is rotated.
-- Migration 160 not applied; 158's status unconfirmed (159's header implies it ran).
 - No MFA anywhere; every admin has the same full power (until the branch work merges).
 - Privacy policy says Turnstile is not active; Supabase CAPTCHA state unknown (owner-only fact).
 - `api/*.js` source is still readable as static files on golsz.com (deliberate: deleting `api/` at build

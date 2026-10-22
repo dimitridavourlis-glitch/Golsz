@@ -1242,8 +1242,9 @@ Feed/Discover/Passport's Message buttons no longer gate on `following`/`followed
 you add another place that surfaces a Message button, it doesn't need any follow-status check either.
 
 **Not yet built / known gaps:**
-- **Migration 158 (access hardening, 2026-10-09 audit; written as 144, renumbered when main took 144–157) must be run in the SQL Editor** before or with the
-  code from the same audit: it makes `public_profile_names` `security_invoker` (it had become a full member
+- **Migrations 158 and 160 are APPLIED (confirmed 2026-10-22 with `supabase-probe-migration-state.sql`; 159 too).**
+  158 (access hardening, 2026-10-09 audit; written as 144, renumbered when main took 144–157) made, with the
+  code from the same audit, `public_profile_names` `security_invoker` (it had become a full member
   directory for any signed-in account), makes `handle_new_user()` refuse a missing or under-18 date of birth
   (the 18+ rule had been client-only), stops a link's own initiator approving a `parent_links` row, limits
   storage listing to the owner's folder, keeps non-admin events private (Scout presented user-created
