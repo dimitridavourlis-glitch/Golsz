@@ -1353,3 +1353,33 @@ property". Rationale goes in this file instead.
 COST: a failing test blocks the deploy. That is the point. The suite is
 deterministic and needs no network and no secrets (check.yml proved that
 under `env -i`), so a failure means the code is broken.
+
+## Shared with OpenCode (added 2026-10-22)
+
+Claude Code and OpenCode take turns in this same folder. OpenCode loads AGENTS.md
+automatically, and this file and AI_HANDOFF.md through opencode.json. AGENTS.md is a
+summary of this file for OpenCode; this file stays authoritative. When a fact here changes,
+update the matching summary in AGENTS.md too.
+
+Shared rules (the same list is in AGENTS.md § Shared rules):
+
+1. Read CLAUDE.md, AGENTS.md and AI_HANDOFF.md before substantial work.
+2. Run `git status` before making changes (and `git fetch` to see whether origin moved).
+3. Never destroy another agent's uncommitted work: no `git reset --hard`, `git checkout -- .`,
+   `git restore .`, `git clean` or `git stash drop` on changes you did not make. Commit only
+   your own files (`git add <paths>`, then `git commit -- <paths>`).
+4. Never force push (`--force`, `--force-with-lease`) without the owner's explicit permission.
+5. Never commit secrets: .env files, API keys, tokens, private keys, credentials.
+   Document variable names only, never values. This repo is public.
+6. Never delete branches simply to resolve a conflict. Resolve it, or stop and ask the owner.
+7. Run the appropriate tests/build checks after substantial changes.
+8. Update AI_HANDOFF.md after meaningful development work: which agent, date, what changed,
+   test status, next step.
+9. Use descriptive Git commits: what changed and why.
+10. GitHub is the shared source of truth between Claude Code and OpenCode: fetch before you
+    start; commit and push when you stop. A push to main deploys production, so follow this
+    file's pre-push checks first.
+
+Current state, written by whichever agent worked last:
+
+@AI_HANDOFF.md

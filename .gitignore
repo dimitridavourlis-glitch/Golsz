@@ -22,3 +22,13 @@ _csp-test.html
 # Build output: tools/split-i18n.cjs lifts these out of golsz-app.html at
 # deploy time. The dictionaries themselves live in golsz-app.html.
 js/i18n/
+
+# Secrets: never commit (added 2026-10-22 for the Claude Code / OpenCode handoff)
+.env
+.env.*
+!.env.example
+.envrc
+*.pem
+*.key
+credentials.json
+secrets.json
