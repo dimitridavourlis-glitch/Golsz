@@ -102,6 +102,24 @@ const SITEMAP = read("sitemap.xml");
 const lastmods = [...SITEMAP.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)].map((m) => m[1]);
 ck("every sitemap entry has a valid ISO date", lastmods.length === 5 && lastmods.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(Date.parse(d))), true);
 
+/* ---------- the app page: unfurlable, not indexable ---------- */
+const ROBOTS = read("robots.txt");
+const robotsRules = ROBOTS.split("\n").filter((l) => !/^\s*#/.test(l));
+ck("robots.txt no longer forbids the app page (preview bots must be able to fetch a shared link)", robotsRules.some((l) => /Disallow:\s*\/golsz-app\.html/.test(l)), false);
+ck("...but still forbids /api/", robotsRules.some((l) => /Disallow:\s*\/api\//.test(l)), true);
+const APPHEAD = APP.slice(0, APP.indexOf("</head>"));
+ck("the app page keeps itself out of search with noindex", /<meta name="robots" content="noindex, follow" \/>/.test(APPHEAD), true);
+ck("...so noindex and a robots Disallow can never contradict each other (a Disallow would hide the noindex)",
+   /noindex/.test(APPHEAD) && !robotsRules.some((l) => /golsz-app/.test(l)), true);
+for (const t of ["og:title", "og:description", "og:image", "og:url", "twitter:card", "twitter:image"]) {
+  ck(`the app page carries ${t}`, new RegExp(`(?:property|name)="${t}"`).test(APPHEAD), true);
+}
+ck("its preview image is the real 1200x630 share image", /og:image" content="https:\/\/golsz\.com\/assets\/og-image\.png"/.test(APPHEAD) && fs.existsSync(path.join(REPO, "assets/og-image.png")), true);
+ck("the preview is generic: no athlete data can be in a page a bot fetches", !/\$\{|\{\{|<%/.test(APPHEAD.slice(APPHEAD.indexOf('name="description"'), APPHEAD.indexOf('name="twitter:image"') + 200)), true);
+const LDS = [...HOME.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
+ck("the home page declares both an Organization and a WebSite", LDS.map((j) => j["@type"]).sort(), ["Organization", "WebSite"]);
+ck("the WebSite points at the canonical host", LDS.find((j) => j["@type"] === "WebSite").url, "https://golsz.com/");
+
 /* ---------- admin link ---------- */
 ck("the knowledge source link goes through safeHref", /safeHref\(k\.source_url\)\s*\?\s*<a href=\{safeHref\(k\.source_url\)\}/.test(APP), true);
 ck("...and a non-http value is shown as text, not as a link", /<span style=\{\{ color: C\.slate \}\}>\{k\.source_url\}<\/span>/.test(APP), true);

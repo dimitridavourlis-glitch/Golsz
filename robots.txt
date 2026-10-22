@@ -7,11 +7,12 @@
 User-agent: *
 Allow: /
 
-# golsz-app.html is the signed-in React app, not a landing page. It renders
-# nothing without a Supabase session and its content is entirely behind auth,
-# so there is nothing here for a crawler to index — and indexing it would put
-# an empty shell in search results above the real marketing pages.
-Disallow: /golsz-app.html
+# golsz-app.html is the signed-in React app, not a landing page, and is kept out
+# of search by <meta name="robots" content="noindex"> in the page itself. It is
+# deliberately NOT disallowed here: a shared Passport link points at it, and
+# link-preview bots (Slack, iMessage, WhatsApp, LinkedIn) draw a card only if
+# they may fetch it. A robots.txt Disallow also hides the noindex tag from the
+# crawlers it is meant for, which is the wrong way round.
 
 # Serverless functions. Never a page.
 Disallow: /api/
