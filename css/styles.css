@@ -2060,111 +2060,150 @@ select {
      - motion is switched off wholesale under prefers-reduced-motion.
    ========================================================================== */
 
-.lx-hero { position: relative; overflow: hidden; padding: 4rem 0 3.5rem; }
-.lx-hero-fx {
-  position: absolute; inset: -25% -15% auto -15%; height: 130%; pointer-events: none; z-index: 0;
+.lx-hero { position: relative; overflow: hidden; background: #0A0F0D;
+  padding: clamp(3.5rem, 7vw, 6.75rem) 0 clamp(3rem, 5vw, 4.5rem); }
+/* The hero background is G1's own: two soft pools of light (gold low-left,
+   mint high-right) over near-black, static — the mock had no drift. London of
+   the two looks: #0A0F0D vs the page's --navy differ by 3 points of channel,
+   so the hero section edge is invisible rather than a seam. */
+.lx-hero-fx { position: absolute; inset: 0; pointer-events: none; z-index: 0;
   background:
-    radial-gradient(40% 46% at 18% 14%, rgba(212, 175, 55, 0.15), transparent 62%),
-    radial-gradient(34% 40% at 84% 32%, rgba(212, 175, 55, 0.09), transparent 64%);
-  animation: lx-drift 26s ease-in-out infinite alternate;
+    radial-gradient(700px 420px at 15% 88%, rgba(212, 175, 55, 0.16), transparent 60%),
+    radial-gradient(760px 460px at 88% 14%, rgba(143, 227, 201, 0.1), transparent 60%);
 }
-@keyframes lx-drift {
-  from { transform: translate3d(-2%, -1%, 0) scale(1); }
-  to   { transform: translate3d(3%, 2%, 0) scale(1.08); }
-}
-.lx-hero > .container { position: relative; z-index: 1; }
-.lx-hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.8rem, 3.5vw, 3.5rem); align-items: start; }
-@media (max-width: 980px) { .lx-hero-grid { grid-template-columns: 1fr; } }
+/* Mock G1 draws its content 1280px wide inside the 1440 frame; the page's
+   default container is 1180px, which wrapped the chip row. The hero alone
+   widens to match: 1280px of content + the container's 2×24px padding. */
+.lx-hero > .container { position: relative; z-index: 1; max-width: 1328px; }
+.lx-hero-center { display: flex; flex-direction: column; align-items: center; text-align: center; }
 
-.lx-kicker { display: inline-flex; align-items: center; gap: 0.55rem; font-family: var(--font-mono);
-  font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin: 0 0 1rem; }
-.lx-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); }
-.lx-h1 { font-size: clamp(2.2rem, 4.8vw, 3.6rem); line-height: 1.04; letter-spacing: -0.035em;
-  margin: 0 0 1rem; text-wrap: balance; }
-.lx-sub { font-size: 1.02rem; color: var(--ink-muted); max-width: 50ch; margin: 0 0 1.8rem; }
+.lx-h1 { font-size: clamp(2.5rem, 7vw, 5.2rem); line-height: 1.02; letter-spacing: -0.045em;
+  margin: 0 0 1.4rem; text-wrap: balance; }
+.lx-h1 em { font-style: normal; color: var(--gold-bright); }
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .lx-h1 em { background: linear-gradient(90deg, #EBCD73, #D4AF37 58%, #8fe3c9);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+}
+/* #AAB4BC is G1's sub-copy tone; measured 7.4:1 on #0A0F0D. */
+.lx-sub { font-size: clamp(1.05rem, 1.45vw, 1.3125rem); color: #AAB4BC; max-width: 56ch;
+  margin: 0 0 2.4rem; }
+
+.lx-cta { display: flex; align-items: center; justify-content: center; gap: 0.8rem; flex-wrap: wrap; }
+.btn-lg { padding: 0.95rem 1.7rem; font-size: 1rem; }
+/* G1's secondary action is an outlined pill, not a bare text link — the bare
+   link read as de-emphasised navigation rather than a co-equal CTA. */
+.lx-cta-ghost { display: inline-flex; align-items: center; padding: 0.95rem 1.7rem;
+  font-weight: 800; font-size: 1rem; border-radius: 999px; text-decoration: none;
+  border: 1px solid rgba(247, 244, 234, 0.3); color: var(--ink);
+  transition: border-color 0.18s ease, color 0.18s ease; }
+.lx-cta-ghost:hover { border-color: var(--gold); color: var(--gold-bright); }
+.lx-cta-ghost:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.lx-fine { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-faint); margin: 1.5rem 0 0; }
 
 /* ---------------------------------------------------------------- the ask */
-.lx-ask { margin-bottom: 1.8rem; }
-.lx-ask-label { display: block; font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.16em;
-  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 0.5rem; }
-.lx-ask-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.lx-ask { width: 100%; margin: 3.75rem 0 0; }
+.lx-ask-label { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--ink-faint); margin: 0 0 1.1rem; }
+.lx-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.62rem; }
+.lx-chip {
+  font-family: var(--font-body); font-weight: 700; font-size: 0.94rem;
+  color: #CDD5DB; background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 999px;
+  padding: 0.62rem 1.25rem; cursor: pointer;
+  min-height: 44px; display: inline-flex; align-items: center;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+.lx-chip:hover { color: var(--ink); border-color: var(--gold-border); }
+.lx-chip.is-on { color: #F3E3A6; background: rgba(212, 175, 55, 0.16); border-color: var(--gold);
+  box-shadow: 0 0 28px -6px rgba(212, 175, 55, 0.6); }
+.lx-chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.lx-own-toggle { display: none; font-family: var(--font-mono); font-size: 0.66rem;
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint);
+  background: none; border: 0; margin: 1.1rem auto 0; cursor: pointer; padding: 0.5rem 0.75rem; }
+.lx-own-toggle:hover { color: var(--gold-bright); }
+.lx-own-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* Free-text goals stay one click away in the designed hero, without hiding the
+   feature from anyone: without JavaScript the button is display:none and the
+   row below is simply visible; with JavaScript the row collapses behind it. */
+.lx-ask.is-live .lx-own { display: none; }
+.lx-ask.is-live .lx-own-toggle { display: inline-block; }
+.lx-own { margin: 1.2rem auto 0; max-width: 560px; }
+.lx-own-label { display: block; font-size: 0.78rem; line-height: 1.5;
+  color: var(--ink-faint); margin-bottom: 0.5rem; }
+.lx-own-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 .lx-input {
-  flex: 1 1 260px; min-width: 0;
+  flex: 1 1 220px; min-width: 0;
   background: var(--navy-deep); color: var(--ink);
-  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
-  padding: 0.85rem 1rem; font-family: var(--font-body); font-size: 1rem;
+  border: 1px solid var(--border-strong); border-radius: 999px;
+  padding: 0.7rem 1.1rem; font-family: var(--font-body); font-size: 1rem;
 }
 .lx-input::placeholder { color: var(--ink-faint); }
 .lx-input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-color: var(--gold); }
-.lx-ask-go { flex: 0 0 auto; }
-.lx-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.9rem; }
-.lx-chip {
-  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em;
-  color: var(--ink-muted); background: transparent;
-  border: 1px solid var(--border-strong); border-radius: 999px;
-  padding: 0.42rem 0.85rem; cursor: pointer;
-  /* 44px is the tap target the app holds itself to everywhere else; these
-     were 32px, and they are the first thing a phone visitor is invited to
-     touch. Centring keeps the pill looking the same size it did. */
-  min-height: 44px; display: inline-flex; align-items: center;
-  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
-}
-.lx-chip:hover { color: var(--ink); border-color: var(--gold-border); }
-.lx-chip.is-on { color: var(--gold-ink); background: var(--gold); border-color: var(--gold); font-weight: 700; }
-.lx-chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.lx-ask-go { flex: 0 0 auto; border-radius: 999px; }
 
-.lx-cta { display: flex; align-items: center; gap: 1.3rem; flex-wrap: wrap; }
-.btn-lg { padding: 0.95rem 1.7rem; font-size: 1rem; }
-.lx-cta-ghost { color: var(--ink); font-weight: 600; }
-.lx-fine { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.05em;
-  color: var(--ink-faint); margin: 1.1rem 0 0; }
-
-/* ------------------------------------------------------------ the output */
-.lx-out {
-  background: linear-gradient(165deg, var(--surface-raised), var(--charcoal));
-  border: 1px solid var(--border-strong); border-radius: var(--radius-lg);
-  padding: 1.5rem 1.5rem 1.3rem; box-shadow: var(--shadow);
-}
-.lx-out-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
-  padding-bottom: 0.9rem; margin-bottom: 1.1rem; border-bottom: 1px solid var(--border-strong); }
-.lx-out-tag { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.16em;
-  text-transform: uppercase; color: var(--ink-faint); }
-.lx-out-goal { font-weight: 700; color: var(--gold-bright); font-size: 1.05rem; text-align: right; }
-.lx-out.is-unknown .lx-out-goal { color: var(--ink-faint); font-style: italic; }
-
-.lx-route { list-style: none; margin: 0; padding: 0; position: relative; }
-/* Connector drawn PER STOP rather than as one line down the whole list.
-   A single line needs a fixed bottom offset to avoid overshooting the last
-   dot, and that offset is only correct for one route length — routes here run
-   from four to five stages with one- and two-line descriptions, so it
-   overshot on some and fell short on others. Each stop drawing its own
-   segment, with the last one suppressed, is correct for any route. */
-.lx-rstop::before { content: ""; position: absolute; left: 9px; top: 20px; bottom: -2px;
-  width: 2px; background: var(--border-strong); }
-.lx-rstop:last-child::before { display: none; }
-.lx-rstop {
-  position: relative; display: flex; gap: 0.9rem; padding: 0 0 1.05rem 0;
-  /* Visible by default; the class below is what animates it in. A stop that
-     is never animated is simply shown, never blank. */
-  opacity: 1; transform: none;
-  transition: opacity 0.4s ease, transform 0.4s ease;
-}
+/* --------------------------------------------------------- the route track
+   G1 in the approved mock: no card around it — the track sits directly on the
+   hero background, the fill line runs left to right through lit stops, the
+   destination is mint, and the honesty line sits under it as small mono text.
+   On a narrow screen the same list stacks top to bottom with each stop's
+   one-line description shown. One markup either way. */
+.lx-out { width: 100%; margin-top: 3.4rem; }
+.lx-route { list-style: none; margin: 0; padding: 0; display: flex; gap: 0; }
+.lx-rstop { position: relative; flex: 1 1 0; min-width: 0; text-align: center; padding: 0 0.6rem;
+  opacity: 1; transform: none; transition: opacity 0.4s ease, transform 0.4s ease; }
 .lx-route .lx-rstop:not(.is-in) { opacity: 0; transform: translateY(6px); }
-.lx-rdot { flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; margin-top: 1px;
-  background: var(--navy-deep); border: 2px solid var(--border-strong); position: relative; z-index: 1; }
-.lx-rstop.is-goal .lx-rdot { border-color: var(--gold); background: var(--gold);
-  box-shadow: 0 0 0 5px rgba(212, 175, 55, 0.14); }
-.lx-rstop b { display: block; font-size: 0.98rem; margin-bottom: 0.15rem; }
-.lx-rstop span { color: var(--ink-muted); font-size: 0.88rem; }
-.lx-rstop.is-goal b { color: var(--gold-bright); }
+/* The line between stops: each stop draws the segment to its right, so any
+   route length is correct and the last stop draws none. */
+.lx-rstop::before { content: ""; position: absolute; top: 14px; left: 50%; right: -50%; height: 4px;
+  border-radius: 2px; background: rgba(255, 255, 255, 0.1); }
+.lx-rstop:last-child::before { display: none; }
+/* Lit fill. G1's fill is one continuous gold→mint gradient across the track;
+   these per-stop segments each restart the gradient, so only the last stretch
+   (into the mint destination) may go to mint — the rest reads solid gold. */
+.lx-rstop.is-in::before { background: var(--gold);
+  box-shadow: 0 0 18px rgba(212, 175, 55, 0.55); }
+.lx-rstop.is-in:nth-last-child(2)::before {
+  background: linear-gradient(90deg, var(--gold), #8fe3c9); }
+.lx-rdot { display: block; position: relative; z-index: 1; width: 32px; height: 32px;
+  margin: 0 auto 12px; border-radius: 50%; background: #0A0F0D;
+  border: 3px solid rgba(255, 255, 255, 0.22); }
+.lx-rstop.is-in .lx-rdot { background: var(--gold); border-color: var(--gold);
+  box-shadow: 0 0 0 7px rgba(212, 175, 55, 0.18), 0 0 30px rgba(212, 175, 55, 0.7); }
+.lx-rstop.is-goal.is-in .lx-rdot { background: #8fe3c9; border-color: #8fe3c9;
+  box-shadow: 0 0 0 7px rgba(143, 227, 201, 0.18), 0 0 34px rgba(143, 227, 201, 0.7); }
+.lx-rstop b { display: block; font-size: 0.98rem; line-height: 1.3; color: #EAF0EE; }
+.lx-rstop span:not(.lx-rdot) { display: none; color: var(--ink-muted); font-size: 0.86rem; margin-top: 0.2rem; }
+.lx-rstop.is-goal b { color: #8fe3c9; }
+.lx-rstop-none { flex-basis: 100%; text-align: left; display: flex; gap: 0.9rem;
+  max-width: 640px; margin: 0 auto; }
+.lx-rstop-none::before { display: none; }
+.lx-rstop-none .lx-rdot { margin: 0; flex: 0 0 auto; background: var(--navy-deep);
+  border-color: rgba(255, 255, 255, 0.22); box-shadow: none; width: 20px; height: 20px; }
+.lx-rstop-none span:not(.lx-rdot) { display: block; }
 .lx-rstop-none b { color: var(--ink); }
 
-.lx-next { background: var(--navy-deep); border: 1px solid var(--border-strong);
-  border-left: 3px solid var(--gold); border-radius: var(--radius-sm); padding: 0.85rem 1rem; margin-top: 0.2rem; }
-.lx-next-tag { display: block; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.16em;
-  text-transform: uppercase; color: var(--gold); margin-bottom: 0.35rem; }
-.lx-next p { margin: 0; color: var(--ink-muted); font-size: 0.9rem; }
-.lx-out-cap { margin: 1.1rem 0 0; font-size: 0.78rem; color: var(--ink-faint); }
+@media (max-width: 760px) {
+  .lx-route { flex-direction: column; gap: 0; }
+  .lx-rstop { flex: none; display: flex; gap: 0.9rem; text-align: left; padding: 0 0 1.05rem; }
+  .lx-rstop::before { top: 26px; bottom: -2px; left: 15px; right: auto; width: 4px; height: auto; }
+  .lx-rstop.is-in:nth-last-child(2)::before { background: linear-gradient(180deg, var(--gold), #8fe3c9); }
+  .lx-rdot { flex: 0 0 auto; margin: 0; }
+  .lx-rstop b { padding-top: 4px; }
+  .lx-rstop span:not(.lx-rdot) { display: block; }
+  .lx-rstop-none { display: flex; margin: 0; }
+  .lx-out-cap { display: grid; gap: 0.2rem; }
+}
+
+/* The honesty line, exactly as G1 drew it: small mono, centred, understated —
+   route status first, the age gate and the "says so when it can't" sentence
+   beneath it. */
+.lx-out-cap { text-align: center; margin-top: clamp(2.5rem, 5vw, 4rem); }
+.lx-out-cap > span { display: block; font-family: var(--font-mono); font-size: 0.66rem;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); }
+.lx-out-cap > .lx-out-cap2 { text-transform: none; letter-spacing: 0.02em;
+  font-size: 0.76rem; margin-top: 0.55rem; }
 
 /* ------------------------------------------------------------------ tiles */
 .lx-band { padding: clamp(2.8rem, 5vw, 4.5rem) 0; background: var(--charcoal);
@@ -2188,8 +2227,7 @@ select {
 .lx-truth-more { color: var(--gold-bright); font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) {
-  .lx-hero-fx { animation: none; }
-  .lx-rstop, .lx-chip { transition: none; }
+  .lx-rstop, .lx-chip, .lx-cta-ghost { transition: none; }
   .lx-route .lx-rstop:not(.is-in) { opacity: 1; transform: none; }
 }
 

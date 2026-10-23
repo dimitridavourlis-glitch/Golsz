@@ -143,17 +143,18 @@
 
   var out      = $("[data-out]");
   var routeEl  = $("[data-route]");
-  var goalEl   = $("[data-out-goal]");
-  var nextEl   = $("[data-next]");
-  var nextText = $("[data-next-text]");
+  var capMain  = $("[data-cap-main]");
   var input    = $("[data-goal-input]");
   var form     = $("[data-ask]");
-  if (!out || !routeEl || !form) return;
+  if (!out || !routeEl || !form || !capMain) return;
 
   var timers = [];
   function clearTimers() { timers.forEach(clearTimeout); timers = []; }
 
-  function stopMarkup(stop, isGoal) {
+  var CAP_ROUTE  = "Standard route · not yours yet · no times, no odds";
+  var CAP_NONE   = "No preset route for that goal · GOLSZ says so rather than guess";
+
+  function stopMarkup(stop) {
     return '<span class="lx-rdot"></span><div><b>' + stop[0] + '</b><span>' + stop[1] + '</span></div>';
   }
 
@@ -164,18 +165,15 @@
     if (!route) {
       // The honest branch. No invented route, no nearest guess.
       out.classList.add("is-unknown");
-      goalEl.textContent = "not recognised";
+      capMain.textContent = CAP_NONE;
       routeEl.innerHTML = '<li class="lx-rstop is-in lx-rstop-none"><span class="lx-rdot"></span>' +
         '<div><b>GOLSZ doesn&rsquo;t have a preset route for that.</b>' +
         '<span>Rather than guess at one, Scout builds it with you from your sport, your level and what you have already done.</span></div></li>';
-      nextText.textContent = "Build a Passport and tell Scout the goal in your own words — it will say what it can and can't work out.";
-      nextEl.hidden = false;
       return;
     }
 
     out.classList.remove("is-unknown");
-    goalEl.textContent = route.name;
-    nextText.textContent = route.stall;
+    capMain.textContent = CAP_ROUTE;
 
     routeEl.innerHTML = route.stops.map(function (s, i) {
       return '<li class="lx-rstop' + (i === route.stops.length - 1 ? " is-goal" : "") + '">' + stopMarkup(s) + '</li>';
@@ -184,25 +182,35 @@
     var stops = routeEl.querySelectorAll(".lx-rstop");
     if (reduced) {
       each(".lx-rstop", function (li) { li.classList.add("is-in"); }, routeEl);
-      nextEl.hidden = false;
       return;
     }
 
-    nextEl.hidden = true;
     Array.prototype.forEach.call(stops, function (li, i) {
-      timers.push(setTimeout(function () { li.classList.add("is-in"); }, 90 + i * 170));
+      timers.push(setTimeout(function () { li.classList.add("is-in"); }, 90 + i * 260));
     });
-    timers.push(setTimeout(function () { nextEl.hidden = false; }, 90 + stops.length * 170 + 120));
   }
 
   function setActiveChip(key) {
     each("[data-goal]", function (b) { b.classList.toggle("is-on", b.getAttribute("data-goal") === key); });
   }
 
+  // With JS on, the free-text row collapses behind the chip-row button so the
+  // hero reads as designed; the button opens it and focuses the input. No JS:
+  // the row is simply visible and this button is display:none.
+  form.classList.add("is-live");
+  var ownToggle = $("[data-own-toggle]");
+  if (ownToggle) ownToggle.addEventListener("click", function () {
+    form.classList.remove("is-live");
+    ownToggle.setAttribute("aria-expanded", "true");
+    if (input) input.focus();
+  });
+
   each("[data-goal]", function (btn) {
     btn.addEventListener("click", function () {
       var key = btn.getAttribute("data-goal");
-      input.value = btn.textContent.trim();
+      if (input) input.value = btn.textContent.trim();
+      form.classList.add("is-live");
+      if (ownToggle) ownToggle.setAttribute("aria-expanded", "false");
       setActiveChip(key);
       render(key);
     });

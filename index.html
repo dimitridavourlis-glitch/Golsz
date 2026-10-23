@@ -120,59 +120,56 @@
        ========================================================= -->
   <section class="lx-hero" id="hero">
     <div class="lx-hero-fx" aria-hidden="true"></div>
-    <div class="container lx-hero-grid">
+    <div class="container lx-hero-center">
 
-      <div class="lx-hero-copy">
-        <p class="lx-kicker"><span class="lx-dot" aria-hidden="true"></span>Every goal has a path</p>
-        <h1 class="lx-h1">Tell us where you&rsquo;re trying to get to.</h1>
-        <p class="lx-sub">Name the goal and watch the route to it. Then build a Sports Passport, and Scout works that route around your sport, your level and what you have actually done.</p>
+      <h1 class="lx-h1">Your next level <em>has a map.</em></h1>
+      <p class="lx-sub">Choose where you want to go. See the stops on the way.</p>
 
-        <form class="lx-ask" data-ask autocomplete="off">
-          <label class="lx-ask-label" for="goal-input">Your goal</label>
-          <div class="lx-ask-row">
+      <div class="lx-cta">
+        <a href="golsz-app.html" class="btn btn-primary btn-lg">Build my Sports Passport <span aria-hidden="true">&rarr;</span></a>
+        <a href="about.html" class="lx-cta-ghost">See how it works</a>
+      </div>
+      <p class="lx-fine">Free to start &middot; No card required &middot; For athletes aged 18 and over</p>
+
+      <form class="lx-ask" data-ask autocomplete="off">
+        <p class="lx-ask-label" id="goal-label">Where do you want to go?</p>
+        <div class="lx-chips" data-chips role="group" aria-labelledby="goal-label">
+          <button class="lx-chip is-on" type="button" data-goal="ncaa">NCAA D1</button>
+          <button class="lx-chip" type="button" data-goal="usports">U Sports</button>
+          <button class="lx-chip" type="button" data-goal="juco">JUCO</button>
+          <button class="lx-chip" type="button" data-goal="academy">Academy place</button>
+          <button class="lx-chip" type="button" data-goal="european">European club</button>
+          <button class="lx-chip" type="button" data-goal="semipro">Semi-professional</button>
+          <button class="lx-chip" type="button" data-goal="pro">Pro contract</button>
+          <button class="lx-chip" type="button" data-goal="better">Get measurably better</button>
+        </div>
+        <!-- With JavaScript on, the free-text row collapses behind this button so
+             the hero reads exactly as designed. Without JavaScript the button is
+             hidden and the row below is simply visible. -->
+        <button class="lx-own-toggle" type="button" data-own-toggle
+                aria-expanded="false" aria-controls="own-row">Or type your own goal</button>
+        <div class="lx-own" id="own-row">
+          <label class="lx-own-label" for="goal-input">GOLSZ routes the goals it knows. Anything else gets an honest &ldquo;no preset route&rdquo;, never a guess.</label>
+          <div class="lx-own-row">
             <input class="lx-input" id="goal-input" name="goal" type="text" value="NCAA D1"
-                   placeholder="NCAA D1, a pro contract, an academy place&hellip;" data-goal-input>
-            <!-- Ghost, not primary. This button and "Build my Sports Passport"
-                 sit a few centimetres apart; two gold buttons of equal weight
-                 made the demo compete with the actual conversion CTA. -->
+                   placeholder="A pro contract, an academy place&hellip;" data-goal-input>
             <button class="btn btn-ghost lx-ask-go" type="submit">Show the route</button>
           </div>
-          <div class="lx-chips" data-chips>
-            <button class="lx-chip is-on" type="button" data-goal="ncaa">NCAA D1</button>
-            <button class="lx-chip" type="button" data-goal="usports">U Sports</button>
-            <button class="lx-chip" type="button" data-goal="juco">JUCO</button>
-            <button class="lx-chip" type="button" data-goal="academy">Academy place</button>
-            <button class="lx-chip" type="button" data-goal="european">European club</button>
-            <button class="lx-chip" type="button" data-goal="semipro">Semi-professional</button>
-            <button class="lx-chip" type="button" data-goal="pro">Pro contract</button>
-            <button class="lx-chip" type="button" data-goal="better">Get measurably better</button>
-          </div>
-        </form>
-
-        <div class="lx-cta">
-          <a href="golsz-app.html" class="btn btn-primary btn-lg">Build my Sports Passport <span aria-hidden="true">&rarr;</span></a>
-          <a href="about.html" class="lx-cta-ghost">See how it works <span aria-hidden="true">&rarr;</span></a>
         </div>
-        <p class="lx-fine">Free to start &middot; No card required &middot; For athletes aged 18 and over</p>
-      </div>
+      </form>
 
       <div class="lx-out" data-out aria-live="polite">
-        <div class="lx-out-head">
-          <span class="lx-out-tag">Standard route</span>
-          <span class="lx-out-goal" data-out-goal>NCAA D1</span>
-        </div>
         <ol class="lx-route" data-route>
           <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Club or school team</b><span>Regular competitive minutes at your level.</span></div></li>
           <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Verified benchmarks</b><span>Measured, dated, and recorded with how they were taken.</span></div></li>
           <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Summer showcase</b><span>An event where D1 staff actually attend.</span></div></li>
-          <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Target list &amp; outreach</b><span>Programmes matched to your level. You send the emails &mdash; Scout drafts them; you log who replied.</span></div></li>
+          <li class="lx-rstop is-in"><span class="lx-rdot"></span><div><b>Target list &amp; outreach</b><span>Programmes matched to your level, contacted directly.</span></div></li>
           <li class="lx-rstop is-in is-goal"><span class="lx-rdot"></span><div><b>NCAA D1 roster</b><span>The goal you named.</span></div></li>
         </ol>
-        <div class="lx-next" data-next>
-          <span class="lx-next-tag">Where most athletes stall</span>
-          <p data-next-text>Getting seen. Benchmarks without a showcase on the calendar is the most common dead end.</p>
-        </div>
-        <p class="lx-out-cap">This is the common route, not your route &mdash; GOLSZ hasn&rsquo;t met you yet. Scout builds the real one from your sport, your level and your dates, and says so when it doesn&rsquo;t have the data.</p>
+        <p class="lx-out-cap">
+          <span data-cap-main>Standard route &middot; not yours yet &middot; no times, no odds</span>
+          <span class="lx-out-cap2">Scout builds the real route from your Passport &mdash; and says so when it doesn&rsquo;t have the data.</span>
+        </p>
       </div>
 
     </div>
