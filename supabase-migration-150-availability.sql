@@ -24,10 +24,13 @@
 --   * It does not store an expected return date as a fact. expected_return is
 --     the ATHLETE'S OWN estimate and the column name says so; nothing may
 --     render it as a clinical prediction.
---   * It adds NO history table. athlete_outcomes (148) is already append-only,
---     dated, RLS'd and has zero writers — a reroute writes there, so pathway
---     history is never destroyed, which is the brief's explicit rule. This
---     migration only adds the outcome_type values that reroute needs.
+--   * It adds NO history table. athlete_outcomes (migration 101; this said
+--     "148", which does not exist) is dated and RLS'd and has zero writers —
+--     a reroute writes there, so pathway
+--     history is never destroyed, which is the brief's explicit rule. It was
+--     called append-only here, but was not until 160.2 replaced its `for all`
+--     policy with SELECT + INSERT. This migration only adds the outcome_type
+--     values that reroute needs.
 --
 -- NULL means NOT RECORDED and must never be backfilled to 'available'. An
 -- athlete who has never answered is not an athlete who said they are fit;
@@ -59,7 +62,7 @@ comment on column public.profiles.availability_expected_return is
   'The ATHLETE''S OWN estimate. Never render it as a clinical prediction or a commitment.';
 
 -- Rerouting writes history here rather than mutating the pathway, so a route
--- the athlete used to be on is never lost. 148 created the table; these are
+-- the athlete used to be on is never lost. 101 created the table; these are
 -- the two outcome types a reroute needs and the enum does not yet have.
 alter table public.athlete_outcomes drop constraint if exists athlete_outcomes_outcome_type_check;
 alter table public.athlete_outcomes add constraint athlete_outcomes_outcome_type_check

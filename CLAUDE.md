@@ -341,6 +341,15 @@ Relevant commands:
   Also scoped to `occupation = 'Player'` (or unset) since every profile gets an `athletes` row regardless of
   occupation, so a Coach/Scout/Physio's own athletes row (sport set, if they filled one in) shouldn't turn up
   in a search for real players.
+- **Scout knows the athlete's day (2026-10-28, ADS Phase 6 items 1-3 and 6).** The app sends `today` (its local
+  `isoDay()`) with each request; `resolveAthleteDay()` accepts it only as a real date within one day of the
+  server's UTC day, else uses UTC. `dayBuckets()` turns `pathway_plan.milestones` into Home's numbers (due today,
+  this week Monday-Sunday, late), by Home's rules (`suggestedDate` dates are never late; while resting only a
+  recovery step is), and `tests/test_scout_today.cjs` diffs it against HomeTab's real code. The TODAY FOR THEM
+  line tells the model to use only the dates it is given; new steps still carry `due_in_days`, now counted from
+  the same day. "Missed" uses that day and the resting rule. `responseCacheFingerprint` carries the day and a
+  step digest. `getAthleteState` reads run as one `Promise.all` round (they were sequential).
+  Benchmark lines carry `benchmarkProvenance()` (who measured it, and the recorded protocol).
 
 ### `api/stripe-webhook.js` (Vercel serverless function)
 
@@ -1260,8 +1269,9 @@ you add another place that surfaces a Message button, it doesn't need any follow
   redeploy, re-run 026 with the new value (comments stripped from the function body: the probe's
   placeholder check reads the stored source). Everything else in the repo (this file, every
   migration) is public for the same reason — write nothing here you would not publish.
-- **Admin MFA and roles: built 2026-10-22 on branch `admin-mfa-roles`. Migration 161 is APPLIED in production
-  (2026-10-22); the code and migration 162 are not live until the branch is merged and the owner has enrolled.** Before: no second factor anywhere and every admin held the same full `is_admin`
+- **Admin MFA and roles: built 2026-10-22, merged to `main` the same day (91d8203) and live. Migration 161 is
+  APPLIED in production (2026-10-22); migration 162 is NOT, and must not run until the owner has enrolled an
+  authenticator.** Before: no second factor anywhere and every admin held the same full `is_admin`
   power. Now: (1) migration 161 adds `profiles.admin_role` (`owner` | `moderator`; existing admins become
   owners; a new admin is a moderator) and `is_admin_owner()`, and `protect_profile_columns()` reverts a
   moderator's writes to `is_admin`, `admin_role`, `plan`, `full_access`, `ai_unlimited` and
@@ -1370,7 +1380,11 @@ you add another place that surfaces a Message button, it doesn't need any follow
   (tunable via `HEALTH_*`). It stamps `ops_heartbeat` (migration 127) on each successful run, and the daily
   Vercel cron `api/target-followup-reminders.js` pushes admins if that stamp is older than
   `HEARTBEAT_MAX_AGE_HOURS` (default 6) — so a dead monitor is noticed within a day. If the workflow call
-  itself fails, it opens a GitHub issue. Individual `error_log` entries stay passive (see the "Application
+  itself fails, it opens a GitHub issue.
+  **MEASURED 2026-10-28: GitHub does not run it every 15 minutes.** 60 runs from 10-18 to 10-28 were 2.1 to
+  7.5 hours apart (median 4.2 h; 4 gaps over 6 h), all green: GitHub delays and drops scheduled workflows. So
+  an outage can go unseen for hours, and a gap over `HEARTBEAT_MAX_AGE_HOURS` can raise a false "monitor
+  dead". The fix is a scheduler that keeps time (Vercel Pro cron, or the external uptime probe in the backlog). Individual `error_log` entries stay passive (see the "Application
   error log" section); only the count above pages anyone.
 - **Push notifications are fully wired (migration 026)** — `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
   `VAPID_SUBJECT`, and `SUPABASE_WEBHOOK_SECRET` are set as Vercel env vars, and the two triggers that call

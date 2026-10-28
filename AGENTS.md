@@ -150,17 +150,16 @@ node tests/test_<name>.cjs     # one suite
   `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_{BASIC,PRO,ELITE}_{CAD,USD,EUR}`, `VERCEL_*` (set by Vercel).
 
 ## Current unfinished work
-- Migration 160 written, not applied. Migration 158: CLAUDE.md says run it; supabase-schema.sql
-  says pending until the owner confirms it ran.
+Live detail: AI_HANDOFF.md, rewritten by whichever agent worked last. Standing items, as of 2026-10-28:
+- Migrations: everything through 164 is applied EXCEPT 162 (admin MFA enforcement), which must not run
+  until the owner has enrolled an authenticator (OWNER-RUNBOOK.md section 8). supabase-schema.sql marks it.
 - Payments live, but no real purchase yet: the Stripe webhook signing secret is unverified. Do not
   call payments working (CLAUDE.md § Current state).
-- Rotate `SUPABASE_WEBHOOK_SECRET` and re-run migration 026 (CLAUDE.md § Current state).
-- Admin MFA (TOTP) and owner/moderator roles: built on branch `admin-mfa-roles` (migrations 161, 162), not on
-  `main`. 162 must be run only after the owner has enrolled (OWNER-RUNBOOK.md section 8). Legal review:
-  LEGAL-REVIEW-BRIEF.md (under-18 managed profiles are off; the live questions are French terms, Law 25,
-  health information, AI providers).
-- `ADS-BUILD-ORDER.md` status last updated 2026-10-13. Owner to confirm what remains.
-- Live detail: AI_HANDOFF.md.
+- Legal review: LEGAL-REVIEW-BRIEF.md (under-18 managed profiles are off; the live questions are French
+  terms, Law 25, health information, AI providers).
+- `ADS-BUILD-ORDER.md` STATUS (updated 2026-10-28) says, phase by phase, what is built and what is not.
+- Done on 2026-10-22, no longer open: migrations 158/159/160 applied, `SUPABASE_WEBHOOK_SECRET` rotated
+  and 026 re-run, admin MFA/roles merged to `main`.
 
 ## Git workflow
 - Remote `origin` (GitHub, public), default branch `main`, one checkout (no extra worktrees).

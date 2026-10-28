@@ -1,6 +1,6 @@
 # GOLSZ — ATHLETE DIRECTION SYSTEM: BUILD ORDER
 
-## STATUS — reconciled against the code 2026-10-22 (previous update 2026-10-13)
+## STATUS — reconciled against the code 2026-10-22; Phase 6, Phase 7 and the migration list updated 2026-10-28
 
 Keep this section current. `SPEC-custom-pathway-stages.md` sat for two months
 saying "Nothing here is implemented yet" about a subsystem that had shipped,
@@ -22,8 +22,8 @@ paste; use it before believing any "applied".
 | 3 Requirements + bottleneck | **DONE (honest version)** | `api/_gap.js` plus client `evaluateGap`, diffed by `test_gap_engine`; wired to Home, Plan and Scout. Gap is per pathway, not per stage; the athlete's `main_gap` is not surfaced. |
 | 4 Home as command centre | **DONE except NEW OPPORTUNITY** | Bottleneck card, `PathwayStrip` mounted, TODAY / THIS WEEK week-scoped, dead `doors` block gone. Redesign (PRs #3 to #7) put a "Today" tile and "Show more" over the old zones. Check Plan's calendar header for a lifetime count beside "THIS WEEK". |
 | 5 Pathway per-stage fields | **PARTIAL** | `normalizeStage` (unknown keys survive rename), `status`, `target_date`, `blockers[]`, `evidence[]`; `resolveStageIndex`; `remapStagePositions`; `RoadMap` replaced `PathwayMap`. **Not built:** `removed_at` (stages are still deleted), any writer of `athlete_outcomes('pathway_rerouted')`, per-stage percentage. |
-| 6 Scout | **PARTIAL** | Availability, gap, and action history (done / missed / dropped) reach Scout; Scout can propose a category. **Not built:** parallel `getAthleteState` reads (still sequential), a server-computed "today" line (Scout is still told it has no date), a date/action digest in `responseCacheFingerprint`, new action kinds, readers for `athlete_schedule` / `athlete_diary_entries`, `measured_by` / `protocol` in the benchmark select. |
-| 7 Passport provenance | **PARTIAL** | Tier on benchmark readings; public Passport carries benchmarks with method and timeline behind opt-in flags (154). 160.1 extends that to `?public=<uuid>` and is **unapplied**. **Not built:** per-claim provenance for scalar columns, an evidence bucket, evidence attachment. |
+| 6 Scout | **PARTIAL** | Availability, gap, and action history (done / missed / dropped) reach Scout; Scout can propose a category. **Built 2026-10-28 (branch `scout-day-awareness`):** `getAthleteState` reads run as one `Promise.all` round (item 1); a server-computed TODAY FOR THEM line from the app's own local day, checked by `resolveAthleteDay` and bucketed by `dayBuckets` with Home's rules, diffed against Home by `test_scout_today` (item 2); "missed" uses that day and Home's resting rule; `due_in_days` counts from the same day; the athlete's day and a step digest in `responseCacheFingerprint` (item 3); `measured_by` / `protocol` in the benchmark select, tagged per reading (item 6). **Not built:** new action kinds (item 4), readers for `athlete_schedule` / `athlete_diary_entries` (item 5). |
+| 7 Passport provenance | **PARTIAL** | Tier on benchmark readings; public Passport carries benchmarks with method and timeline behind opt-in flags (154). 160.1 extends that to `?public=<uuid>` and is applied (2026-10-22). **Not built:** per-claim provenance for scalar columns, an evidence bucket, evidence attachment. |
 | 8 Progress + weekly loop | **PARTIAL** | `assessment_snapshots` (156), "LAST WEEK" (`weekReview`, computed client-side, not stored), reminders inside the existing cron (153), `dismiss_next_move` grant revoked (157). **Not built:** `weekly_reviews`, a weekly recalculation, a rescheduled count (no date-change log exists). |
 | 9 Opportunities | **NOT STARTED** | No `opportunities` migration, no `api/_match.js`. Meant to ship empty. |
 | 10 Multi-sport tables | **NOT STARTED, deferred** | Unchanged decision. `sports.pathway_enabled` still has no reader. |
@@ -43,15 +43,18 @@ coach, club or provider verifier exists. The soccer metric list is unchanged.
 What exists: 144 and 144b (actions), 150 (availability), 151 (superseded), 152
 (sync), 153 (reminders), 154 (Passport performance), 155 (sync category), 156
 (snapshots), 157 (revoke), 158 (access hardening), 159 (advisor cleanup), 160
-(Passport parity, append-only). 144 to 157 were applied by 2026-10-14 per their
-headers. **158**: 159's header says it ran, but nothing records it; the probe
-settles it. **160**: unapplied. Plan items with no file: events, outcomes
+(Passport parity, append-only), then 161 to 164 (admin roles, admin MFA,
+Stripe pending plans, billing period). 144 to 157 were applied by 2026-10-14
+per their headers; 158, 159 and 160 were confirmed applied on 2026-10-22 with
+the probe; 161, 163 and 164 were applied 2026-10-22. **162 is the only one not
+applied**, and must wait until the owner has enrolled an authenticator
+(OWNER-RUNBOOK.md section 8). Plan items with no file: events, outcomes
 extension, weekly-reviews, populations, opportunities, sport definitions.
 
-**Stale cross-references to fix when next editing the files:** 150's header
-cites "athlete_outcomes (148)" but that table is migration 101; a comment above
-`weekReview` still says `assessment_snapshots` does not exist; 150's comment
-calls `athlete_outcomes` append-only until 160.2 makes it so.
+**Stale cross-references, fixed 2026-10-28:** 150's header now cites migration
+101 for `athlete_outcomes` (it said "148") and says it was not append-only until
+160.2; the comment above `weekReview` now says `assessment_snapshots` exists
+(156) but is not read there.
 
 **Lessons the earlier status recorded, kept because they recur.**
 - A planning doc that contradicts the database teaches the next reader to
