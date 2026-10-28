@@ -8,9 +8,9 @@ Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 Claude Code, 2026-10-28. Picked up after OpenCode (last OpenCode work: the G1 landing hero, 2026-10-23).
 
 ## Current Branch
-`scout-day-awareness`, cut from `main` at 4fa247f. Committed locally; push and merge wait for the owner
-(a merge to `main` is a production deploy). `landing-glow-path` WAS merged (fast-forward, 2026-10-27) and is
-live: golsz.com `/api/geo` reports `4fa247ffb22b`.
+`main`. `scout-day-awareness` (af28c32) was fast-forwarded into `main` on 2026-10-28 at the owner's
+request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the push; check.yml green on
+22.x and 24.x. (`landing-glow-path` before it: merged 2026-10-27.)
 
 ## Last Completed Work
 - ADS Phase 6, items 1, 2, 3 and 6 (`api/scout.js`; one-line client change in `golsz-app.html` + `js/app.js`):
@@ -35,7 +35,6 @@ live: golsz.com `/api/geo` reports `4fa247ffb22b`.
 None in progress.
 
 ## Remaining Tasks
-- OWNER: review `scout-day-awareness`, then push + merge (deploys), or ask an agent to.
 - OWNER (OWNER-RUNBOOK.md): one real Basic purchase; send LEGAL-REVIEW-BRIEF.md to counsel.
 - OWNER: admin MFA, OWNER-RUNBOOK.md section 8: enrol an authenticator in the Admin Panel, test a
   password-only sign-in, THEN run migration 162 (an agent can run it once the owner confirms).
@@ -59,7 +58,7 @@ None in progress.
 
 ## Latest Test / Build Status
 2026-10-28 (Claude Code, branch scout-day-awareness): `npm run check` 120/120 suites (5785 assertions).
-NOT verified: a live Scout reply for a signed-in athlete (no signed-in session here). After deploy, ask
+Deployed. NOT verified: a live Scout reply for a signed-in athlete (no signed-in session here). Ask
 Scout "what should I do today?" and compare with Home's Today tile and THIS WEEK count.
 
 ## Known Problems
@@ -72,8 +71,8 @@ Scout "what should I do today?" and compare with Home's Today tile and THIS WEEK
 - The redesigned hero was checked by contrast maths only; nobody has run VoiceOver over it.
 
 ## Next Recommended Action
-Owner: approve pushing `scout-day-awareness` and merging it to `main`. Then check Scout's "today" answer
-signed in. Agents: ADS Phase 6 items 4-5 next.
+Owner: signed in, ask Scout "what should I do today?" and compare with Home's Today tile and THIS WEEK
+count (the one check no suite can make). Agents: ADS Phase 6 items 4-5 next.
 
 ---
 _How to update: overwrite the sections above (do not append a log); put the agent name
