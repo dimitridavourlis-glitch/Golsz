@@ -9555,7 +9555,11 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
         // retry:true asks the server to look for a finished reply under this
         // requestId even when the retry lands on a different instance than
         // the original did.
-        body: JSON.stringify({ messages: api, lang, conversationId, summary, requestId, retry: !!retryOf, athleteId: actingFor ? actingFor.id : null }),
+        // today is this device's calendar day, from isoDay() — the same day
+        // Home and Plan draw steps on — so Scout's TODAY FOR THEM line agrees
+        // with the screen. The server checks it is a real date within a day
+        // of its own clock and otherwise uses its own (resolveAthleteDay()).
+        body: JSON.stringify({ messages: api, lang, conversationId, summary, requestId, retry: !!retryOf, athleteId: actingFor ? actingFor.id : null, today: isoDay(new Date()) }),
       });
       // NOT res.json() BLIND.
       //
@@ -10660,8 +10664,9 @@ function weekStartFrom(date) {
 //   * No rescheduled count. Nothing records a date change — the old date is
 //     overwritten — so a moved step cannot be told from one that always had
 //     that date. An inferred number beside two real ones is worse than none.
-//   * No "what changed as a result". That needs a score history and there is
-//     none; assessment_snapshots does not exist.
+//   * No "what changed as a result". That needs a score history: migration
+//     156 (assessment_snapshots) now records one, but nothing reads it here
+//     yet, so this review still says nothing about change.
 //   * Nothing is scored, ranked or compared to a previous week.
 function weekReview(rows, now) {
   if (!Array.isArray(rows) || !rows.length) return null;
@@ -19187,7 +19192,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=a624acdc9af06bad";
+    var APP_SRC = "js/app.js?v=15d4828cb63019ba";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

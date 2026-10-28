@@ -37,7 +37,7 @@ const src = [
   // could share it — one answer to "what date is N days from now" instead of
   // two. It has to come along, or extraction throws inside its own try/catch
   // and every dated assertion below silently reads as "the model sent nothing".
-  lift("function dueFromOffset(n) {", "\nfunction extract"),
+  lift("function dueFromOffset(n, baseKey) {", "\nfunction extract"),
   lift("function extractSuggestedPathway(data", "\n// "),
   "module.exports = { extractSuggestedPathway, dueFromOffset };",
 ].join("\n");
@@ -244,7 +244,12 @@ for (const [name, idx] of [
   ck("the milestone shape declares the field", /"due_in_days": null/.test(SRC), true);
   ck("the prompt found its own rules block", P.length > 400, true);
   ck("it is stated as days from today, never a date", /WHOLE NUMBER OF\n?DAYS FROM TODAY/.test(P), true);
-  ck("the model is told it does not know today's date", /You are not told today's date/.test(P), true);
+  // 2026-10-28: Scout may now be told the athlete's day (TODAY FOR THEM), so
+  // "you are not told today's date" stopped being true. The rule that matters
+  // survives it: knowing the date is not licence to write one in this field.
+  ck("the model never writes a date here, even when it knows theirs",
+     /Never write a date in this field, even though the TODAY FOR THEM line\nmay tell you theirs/.test(P), true);
+  ck("...and the offset counts from that same day", /counted\nfrom that same day/.test(P), true);
   ck("the range is stated", /Range 1 to 730/.test(P), true);
   // The failure mode that matters most: a date on a step whose timing belongs
   // to somebody else is a deadline the athlete cannot meet by working harder.

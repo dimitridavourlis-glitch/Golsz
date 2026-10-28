@@ -105,7 +105,7 @@ eval(slice("const GOAL_TEXT_PATTERNS", "// Applies ONLY the derived pathway_type
 // and the app-assembled fallback share ONE answer to "what date is N days from
 // now". synthesizePathwayFromState calls it, so it has to be in scope here —
 // lifted, not stubbed, or the dates this suite exercises would be a copy.
-eval(slice("function dueFromOffset(n) {", "function extractSuggestedPathway", "offset resolver"));
+eval(slice("function dueFromOffset(n, baseKey) {", "function extractSuggestedPathway", "offset resolver"));
 // Same reasoning for labelsForMissing: synthesizePathwayFromState writes the
 // names of the athlete's Passport gaps into a step label that is PERSISTED,
 // and quality.missing holds dictionary keys. Imported from the module that

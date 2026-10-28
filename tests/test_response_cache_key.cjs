@@ -121,5 +121,25 @@ ck("...and does it BEFORE cacheKeyFor is called",
    SCOUT.indexOf("cacheFingerprint = scopeFingerprintToAthlete(cacheFingerprint, userId)")
      < SCOUT.indexOf("cacheKeyFor(classification.intent, latestText, faqLang, modelTier, cacheFingerprint)"), true);
 
+// ---- the day, and where their steps stand on it (2026-10-28) -------------
+// Scout is now told the athlete's date and Home's numbers for it (TODAY FOR
+// THEM). A reply built on "nothing is due today" must not be replayed
+// tomorrow, or an hour after the athlete ticked that step off.
+{
+  const DAY = { ...STATE, day: { key: "2026-10-28", source: "device" }, milestonesDone: 2, milestoneCount: 6,
+    dayBuckets: { todayDone: 0, todayTotal: 1, weekDone: 1, weekTotal: 3, lateCount: 1 } };
+  const base = key("free", "MLS contract", DAY);
+  ck("the same athlete on the same day still hits cache", key("free", "MLS contract", { ...DAY }), base);
+  ck("a new day is a new key", key("free", "MLS contract", { ...DAY, day: { key: "2026-10-29", source: "device" } }) === base, false);
+  ck("ticking a step off is a new key",
+     key("free", "MLS contract", { ...DAY, milestonesDone: 3, dayBuckets: { ...DAY.dayBuckets, todayDone: 1, weekDone: 2 } }) === base, false);
+  ck("moving a step onto today is a new key",
+     key("free", "MLS contract", { ...DAY, dayBuckets: { ...DAY.dayBuckets, todayTotal: 2 } }) === base, false);
+  ck("a step going late is a new key",
+     key("free", "MLS contract", { ...DAY, dayBuckets: { ...DAY.dayBuckets, lateCount: 2 } }) === base, false);
+  ck("the day is in the fingerprint itself", responseCacheFingerprint("free", "g", DAY).includes("|2026-10-28|"), true);
+  ck("a state with no day still builds a key", typeof responseCacheFingerprint("free", "g", STATE), "string");
+}
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);

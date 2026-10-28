@@ -1,7 +1,7 @@
 // A FAILED READ MUST NOT RENDER AS AN EMPTY ATHLETE.
 //
-// api/scout.js loads the athlete's context with eight sequential Supabase
-// reads. Every one of them used to sit in `try { ... } catch {}` with a
+// api/scout.js loads the athlete's context with eight Supabase reads (one
+// parallel round since 2026-10-28; they were sequential before). Every one of them used to sit in `try { ... } catch {}` with a
 // completely empty handler, and none of them checked r.ok. A PostgREST error
 // body is an OBJECT rather than an array, so each `Array.isArray(rows)` guard
 // turned a 500 into exactly the same result as a legitimately empty table.
@@ -75,31 +75,51 @@ ck("...and forbids asserting emptiness from them",
 // class of bug here is "the code ran and produced a confident wrong answer".
 (async () => {
   console.log("\n-- executed against a failing database --");
-  const body = LOADER.slice(LOADER.indexOf("const loadFailed = []"), LOADER.lastIndexOf("} catch (e) { loadFailed.push(\"athlete_benchmarks\")"));
-  const tail = LOADER.slice(LOADER.indexOf('} catch (e) { loadFailed.push("athlete_benchmarks"'));
-  const src = body + tail.slice(0, tail.indexOf("\n") + 1);
+  // The whole read round, from the declaration to its end marker. It used to
+  // stop at the benchmarks catch line; since the reads became one
+  // Promise.all, that line sits mid-array and only the marker closes it.
+  const END_MARK = "// ---- END OF THE READ ROUND ----";
+  const runFrom = SRC.indexOf("const loadFailed = []", loaderStart);
+  const runTo = SRC.indexOf(END_MARK, runFrom);
+  if (runFrom < 0 || runTo < 0) throw new Error("read round markers moved");
+  const src = SRC.slice(runFrom, runTo);
 
+  // `stub` answers each request; `delayMs` holds every answer open so reads
+  // that genuinely overlap are seen overlapping.
+  const exec = async (stub, delayMs = 0) => {
+    let inFlight = 0, maxInFlight = 0;
+    const urls = [];
+    const fetchStub = async (u) => {
+      urls.push(u);
+      inFlight++; maxInFlight = Math.max(maxInFlight, inFlight);
+      if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
+      inFlight--;
+      return stub(u);
+    };
+    const fn = new Function("fetch", "url", "userId", "headers", "console", "resolveSportSupportLevel", `
+      let athleteRow = null, sport = null, country = null, profileComplete = false;
+      let profileRow = null, allDevItems = [], allBenchmarks = [], targetsCount = 0, allTargets = [];
+      let hasPendingVerification = false, pathwayRow = null, questionsUsedToday = 0;
+      let pathwayCreated = false, baselineComplete = false, pathwayType = null, sportSupportLevel = null;
+      let pathwayTimeline = null, milestones = [], devItems = [], targets = [], benchmarks = [], actionRows = [];
+      return (async () => { ${src}
+        return { loadFailed, sport, profileComplete, pathwayCreated, targetsCount, sportSupportLevel };
+      })();
+    `);
+    const out = await fn(fetchStub, "https://x", "u1", {}, { error() {} }, (s, d) => d);
+    return { ...out, urls, maxInFlight };
+  };
   const run = async (ok) => {
-    const fetchStub = async () => ok
+    const res = await exec(() => ok
       ? { ok: true, status: 200, json: async () => [] }
       // PostgREST's real failure shape: 500 with an OBJECT body. This is the
       // detail that made Array.isArray() guards read an outage as emptiness.
-      : { ok: false, status: 500, json: async () => ({ code: "57014", message: "canceling statement" }) };
-    const fn = new Function("fetch", "url", "userId", "headers", "console", `
-      let athleteRow = null, sport = null, country = null, profileComplete = false;
-      let profileRow = null, allDevItems = [], allBenchmarks = [], targetsCount = 0;
-      let hasPendingVerification = false, pathwayRow = null, questionsUsedToday = 0;
-      let pathwayCreated = false, baselineComplete = false, pathwayType = null;
-      let pathwayTimeline = null, milestones = [], devItems = [], targets = [], benchmarks = [];
-      return (async () => { ${src}
-        return { loadFailed, sport, profileComplete, pathwayCreated, targetsCount };
-      })();
-    `);
-    return fn(fetchStub, "https://x", "u1", {}, { error() {} });
+      : { ok: false, status: 500, json: async () => ({ code: "57014", message: "canceling statement" }) });
+    return res;
   };
 
   const bad = await run(false);
-  ck("every failing table is reported", bad.loadFailed.sort(), TABLES.slice().sort());
+  ck("every failing table is reported", bad.loadFailed.slice().sort(), TABLES.slice().sort());
   ck("...and the loader still returns rather than throwing", typeof bad.sport, "object");
 
   const good = await run(true);
@@ -109,6 +129,29 @@ ck("...and forbids asserting emptiness from them",
   // produced identical state, and only one of them was the truth.
   ck("an outage and an empty account are now distinguishable",
      bad.loadFailed.length === good.loadFailed.length, false);
+
+  // A sorted copy would pass however the loader ordered them; the loader
+  // itself must hand them over in the fixed order.
+  ck("...in the fixed table order, whatever order the network answered in", bad.loadFailed, TABLES);
+
+  // ---- ONE ROUND, NOT TEN ----------------------------------------------------
+  // Positive control first: with every answer held open 15ms, a serial loader
+  // never has more than one read in flight. The parallel one must have all of
+  // them in flight at once.
+  console.log("\n-- the reads run as one round --");
+  const timed = await exec(() => ({ ok: true, status: 200, json: async () => [] }), 15);
+  ck("every independent read is in flight at the same moment (8 tables + action history)", timed.maxInFlight, 9);
+  ck("...and the instrument saw all nine requests", timed.urls.length, 9);
+  // The one dependent read: the sports lookup needs the sport the athletes
+  // read returns, so it runs after that read and is skipped without a sport.
+  ck("no sport, no sports lookup", timed.urls.some((u) => u.includes("/rest/v1/sports?")), false);
+  const withSport = await exec((u) => ({ ok: true, status: 200,
+    json: async () => (u.includes("/rest/v1/athletes?") ? [{ sport: "Soccer" }] : u.includes("/rest/v1/sports?") ? [{ support_level: "primary" }] : []) }), 5);
+  const iAth = withSport.urls.findIndex((u) => u.includes("/rest/v1/athletes?"));
+  const iSport = withSport.urls.findIndex((u) => u.includes("/rest/v1/sports?"));
+  ck("with a sport, the sports lookup runs", iSport >= 0, true);
+  ck("...after the athletes read it depends on", iSport > iAth, true);
+  ck("...and its answer still reaches sportSupportLevel", withSport.sportSupportLevel, "primary");
 
   console.log(`\n${p}/${p + f} passed`);
   process.exit(f ? 1 : 0);

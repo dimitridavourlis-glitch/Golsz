@@ -940,10 +940,18 @@ const RESPONSE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 // never found. Nothing is invalidated or deleted — stale entries just stop
 // matching and expire on their existing TTL.
 //
+// AND THE DAY (2026-10-28). Once Scout was told the athlete's date (the TODAY
+// FOR THEM line), a reply could depend on it — "nothing is due today" — while
+// nothing here varied by date, so yesterday's reply could be served today.
+// The athlete's day and a digest of their steps (done/total, today, this
+// week, late) now key it too: a new day, or a step ticked off an hour ago,
+// is a different key.
+//
 // Kept SEPARATE from athleteStateDigest(), which invalidates conversation
 // summaries. That belongs to the memory architecture and is not touched.
 function responseCacheFingerprint(plan, goalText, state) {
   const rd = state && state.readiness;
+  const dd = state && state.dayBuckets;
   return [
     String(plan || "free"),
     String(goalText || "").trim().toLowerCase().slice(0, 60),
@@ -953,6 +961,9 @@ function responseCacheFingerprint(plan, goalText, state) {
     rd && rd.performance && rd.performance.metricsTracked ? "b1" : "b0",
     rd && rd.development && rd.development.total ? "d1" : "d0",
     rd ? String(rd.composite) : "-",
+    state && state.day && state.day.key ? String(state.day.key) : "-",
+    `m${(state && state.milestonesDone) || 0}/${(state && state.milestoneCount) || 0}`,
+    dd ? `t${dd.todayDone}/${dd.todayTotal}w${dd.weekDone}/${dd.weekTotal}l${dd.lateCount}` : "-",
   ].join("|");
 }
 
@@ -2170,6 +2181,34 @@ const REQUIREMENT_TYPES = ["official_requirement"];
 // say why.
 const PROTOCOL_DIMENSIONS = ["timing_method", "distance_m", "start_type", "surface", "jump_protocol", "test_variant", "sex", "age_group"];
 
+// WHO MEASURED IT, AND HOW — the tag on each line of THEIR BENCHMARKS.
+//
+// Scout used to read metric, value, unit and date, and nothing else, so a
+// 10m a coach timed electronically and one the athlete typed in from memory
+// reached the model as the same kind of fact: "the record". measured_by
+// (migration 142) and protocol (114) were on the row the whole time.
+//
+// Terse on purpose: athleteBlock is re-billed as fresh input on every turn.
+// An absent measurer is said, not skipped — a missing tag would read as
+// "nothing to qualify", which is the opposite of what it means. Protocol keys
+// are limited to PROTOCOL_DIMENSIONS and values to a short plain token, so
+// only what the athlete actually recorded reaches the prompt, and nothing
+// else written into that jsonb does.
+const MEASURED_BY_TAG = { self: "self-recorded", coach: "coach-measured", official: "officially measured" };
+function benchmarkProvenance(row) {
+  const who = (row && MEASURED_BY_TAG[row.measured_by]) || "measurer not recorded";
+  const p = (row && row.protocol && typeof row.protocol === "object" && !Array.isArray(row.protocol)) ? row.protocol : {};
+  const how = [];
+  for (const dim of PROTOCOL_DIMENSIONS) {
+    const v = p[dim];
+    if (v == null || v === "") continue;
+    const val = String(v).slice(0, 32);
+    if (!/^[\p{L}\p{N} ._-]+$/u.test(val)) continue;
+    how.push(`${dim}=${val}`);
+  }
+  return how.length ? `${who}; ${how.join(", ")}` : who;
+}
+
 const PROTOCOL_INCOMPATIBILITIES = [
   { dimension: "timing_method", a: "hand", b: "electronic",
     severity: "material",
@@ -3168,14 +3207,82 @@ const PATHWAY_TYPE_SET = new Set([
 // handed a plan that is already late the moment they accept it. 730 is the
 // ceiling — beyond two years a date stops being a plan and becomes a
 // prediction about a fifteen-year-old's life.
-function dueFromOffset(n) {
+//
+// FROM THE ATHLETE'S DAY when the request carried one (baseKey, from
+// resolveAthleteDay below), else from the server's UTC day as before. Once
+// Scout is shown the athlete's date, "1 = tomorrow" has to mean THEIR
+// tomorrow: from the UTC day, a Canadian asking at 8pm was handed the day
+// after tomorrow.
+function dueFromOffset(n, baseKey) {
   if (!Number.isInteger(n) || n < 1 || n > 730) return null;
-  const d = new Date();
-  d.setUTCHours(0, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() + n);
+  const base = isDayKey(baseKey) ? baseKey : new Date().toISOString().slice(0, 10);
+  return shiftDayKey(base, n);
+}
+
+// A real calendar day written YYYY-MM-DD, and nothing else ("2026-02-30" is
+// not one: Date.parse would roll it into March).
+function isDayKey(k) {
+  if (typeof k !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(k)) return false;
+  const t = Date.parse(k + "T00:00:00Z");
+  return Number.isFinite(t) && new Date(t).toISOString().slice(0, 10) === k;
+}
+function shiftDayKey(key, days) {
+  const d = new Date(key + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
-function extractSuggestedPathway(data, existingStages) {
+
+// THE ATHLETE'S DAY, NOT THE SERVER'S.
+//
+// Home and Plan put steps on the DEVICE's local calendar day (isoDay() in
+// golsz-app.html), deliberately not UTC: for a Greek athlete after 21:00, or
+// a Canadian one after 19:00, the UTC day is already tomorrow. A Scout that
+// used the server's day would call "today" a day Home is not showing. So the
+// app sends its local day and the server accepts it only if it could be
+// true: a real calendar date no more than one day from the server's UTC day,
+// which covers every timezone on Earth (UTC-12 to UTC+14) and nothing else.
+// Anything else falls back to the UTC day, and source says which was used.
+function resolveAthleteDay(claimed, now) {
+  const utcKey = new Date(now == null ? Date.now() : now).toISOString().slice(0, 10);
+  if (isDayKey(claimed)) {
+    const diff = Math.round((Date.parse(claimed + "T00:00:00Z") - Date.parse(utcKey + "T00:00:00Z")) / 86400000);
+    if (Math.abs(diff) <= 1) return { key: claimed, source: "device" };
+  }
+  return { key: utcKey, source: "server" };
+}
+
+// TODAY, THIS WEEK, LATE — Home's three numbers, by Home's rules.
+//
+// Mirrors HomeTab in golsz-app.html (homeTodayKey, stepsLate, weekSteps,
+// todaySteps) and its canCallLate() / suggestedDate(), expression for
+// expression; tests/test_scout_today.cjs runs both on the same plans and
+// diffs them. Scout is handed these as RESULTS. "2 of 5 this week" is a
+// fact; asking a model to count dates against a calendar is a guess.
+//   - The week is Monday to Sunday (weekStartFrom()).
+//   - A date GOLSZ suggested (due_src "scout" or "retest") is never late:
+//     nobody agreed to it.
+//   - While they are resting (availability "out") only a recovery step can be
+//     late, exactly as Home pauses everything else.
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+function dayBuckets(milestones, todayKey, resting) {
+  const all = Array.isArray(milestones) ? milestones.filter((m) => m && typeof m === "object") : [];
+  const suggested = (m) => !!((m.due_src === "scout" || m.due_src === "retest") && m.due);
+  const canCallLate = (m) => !suggested(m) && (!resting || m.category === "recovery");
+  const dow = new Date(todayKey + "T00:00:00Z").getUTCDay();
+  const weekFrom = shiftDayKey(todayKey, -((dow + 6) % 7));
+  const weekTo = shiftDayKey(weekFrom, 6);
+  const todays = all.filter((m) => m.due === todayKey);
+  const week = all.filter((m) => m.due && m.due >= weekFrom && m.due <= weekTo);
+  const late = all.filter((m) => !m.done && m.due && canCallLate(m) && m.due < todayKey);
+  return {
+    today: todayKey, weekday: WEEKDAY_NAMES[dow], weekFrom, weekTo,
+    todayTotal: todays.length, todayDone: todays.filter((m) => m.done).length,
+    todayOpen: todays.filter((m) => !m.done).slice(0, 5).map((m) => String(m.label || "").slice(0, 200)),
+    weekTotal: week.length, weekDone: week.filter((m) => m.done).length,
+    lateCount: late.length,
+  };
+}
+function extractSuggestedPathway(data, existingStages, todayKey) {
   try {
     const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
     const clean = raw.replace(/```json|```/g, "").trim();
@@ -3228,10 +3335,11 @@ function extractSuggestedPathway(data, existingStages) {
     const target = stages.length ? stages : (Array.isArray(existingStages) ? existingStages.filter((x) => x && x.id) : []);
     // DATES ARRIVE AS AN OFFSET, NEVER AS A DATE.
     //
-    // The model is not told today's date — nothing in SYSTEM_PROMPT states it,
-    // and telling it would only move the arithmetic somewhere we cannot check.
-    // It sends a whole number of days from now and the server resolves it
-    // here, which buys three things that prompt rules alone cannot:
+    // The model may now be told the athlete's day (the TODAY FOR THEM line,
+    // 2026-10-28), but it still never sends a date: it sends a whole number
+    // of days from now and the server resolves it here, from that same day.
+    // That keeps the arithmetic where it can be checked, and buys three
+    // things that prompt rules alone cannot:
     //   - a date in the PAST is unrepresentable, not merely discouraged. An
     //     athlete cannot be handed a plan that is late the moment they accept
     //     it, which is the single worst thing this feature could do.
@@ -3260,7 +3368,7 @@ function extractSuggestedPathway(data, existingStages) {
     const milestones = rawMilestones.map((m) => {
       const i = m.stage_index;
       const filed = target.length && Number.isInteger(i) && i >= 0 && i < target.length;
-      const due = dueFromOffset(m.due_in_days);
+      const due = dueFromOffset(m.due_in_days, todayKey);
       // 120, NOT 200 — the number the rest of the app agrees on.
       // normalizeMilestone in golsz-app.html stores 120 (pinned by
       // test_pathway_milestones), and every input an athlete types a step
@@ -3342,7 +3450,7 @@ function athleteApprovedPathwayBuild(message) {
 //
 // Writes nothing about the goal. The athlete's wording is untouchable here
 // exactly as it is in autoFixPathwayType().
-function synthesizePathwayFromState({ pathwayType, readiness }) {
+function synthesizePathwayFromState({ pathwayType, readiness, today }) {
   if (!pathwayType || !PATHWAY_TYPE_SET.has(pathwayType)) return null;
   const rd = readiness;
   // THESE CARRY DATES, and until now they did not — which meant the path the
@@ -3365,7 +3473,7 @@ function synthesizePathwayFromState({ pathwayType, readiness }) {
   // so until they touch a step its date cannot mark them overdue, cannot count
   // as late, and cannot outrank a date they set themselves.
   const milestones = [];
-  const step = (label, days) => milestones.push({ label, done: false, due: dueFromOffset(days), due_src: "scout" });
+  const step = (label, days) => milestones.push({ label, done: false, due: dueFromOffset(days, today), due_src: "scout" });
   if (rd && rd.quality && Array.isArray(rd.quality.missing) && rd.quality.missing.length) {
     // THE ONLY ONE OF THE THREE THAT IS WRITTEN DOWN. This label goes into
     // pathway_plan.milestones on the athlete's tap and is read back from that
@@ -3403,7 +3511,7 @@ function synthesizePathwayFromState({ pathwayType, readiness }) {
 //
 // Plan gating is unchanged and is checked FIRST: Pathway is not part of
 // Free, and nothing here may hand a Free athlete a paid object.
-function resolveSuggestedPathway({ modelPathway, approved, plan, fullAccess, goalDefined, pathwayType, readiness, goalText }) {
+function resolveSuggestedPathway({ modelPathway, approved, plan, fullAccess, goalDefined, pathwayType, readiness, goalText, today }) {
   // Third argument, same as the client's own featureUnlocked call: a comped
   // account is not gated.
   if (!hasFeature(plan, "pathway_plan", fullAccess)) return { pathway: null, source: "gated" };
@@ -3432,7 +3540,7 @@ function resolveSuggestedPathway({ modelPathway, approved, plan, fullAccess, goa
   // No goal on record means there is nothing to build a route toward, and
   // inventing one would be exactly the silent-overwrite this forbids.
   if (!goalDefined) return { pathway: null, source: "no_goal" };
-  const synth = synthesizePathwayFromState({ pathwayType, readiness });
+  const synth = synthesizePathwayFromState({ pathwayType, readiness, today });
   if (!synth) return { pathway: null, source: "insufficient_state" };
   return { pathway: synth, source: "app" };
 }
@@ -3445,7 +3553,7 @@ function resolveSuggestedPathway({ modelPathway, approved, plan, fullAccess, goa
 // pre-existing behaviour rather than silently changing what an
 // unauthenticated request returns.
 function finalizeSuggestedPathway(data, ctx, incomingText, userPlan) {
-  const modelPathway = extractSuggestedPathway(data, ctx && ctx.existingStages);
+  const modelPathway = extractSuggestedPathway(data, ctx && ctx.existingStages, ctx && ctx.today);
   if (!ctx) return { pathway: userPlan === "free" ? null : modelPathway, source: modelPathway ? "model" : "not_requested" };
   const resolved = resolveSuggestedPathway({
     modelPathway,
@@ -3456,6 +3564,7 @@ function finalizeSuggestedPathway(data, ctx, incomingText, userPlan) {
     pathwayType: ctx.pathwayType,
     readiness: ctx.readiness,
     goalText: ctx.goalText,
+    today: ctx.today,
   });
   if (resolved.source === "app") {
     console.log("GOLSZ Plan assembled by the app after athlete approval — model emitted none:", JSON.stringify({ pathway_type: resolved.pathway.pathway_type, milestones: resolved.pathway.milestones.length }));
@@ -4436,8 +4545,9 @@ nothing.
 
 "due_in_days" puts a step on the athlete's calendar. It is a WHOLE NUMBER OF
 DAYS FROM TODAY (1 = tomorrow, 7 = a week from today, 30 = a month), never a
-date. You are not told today's date and must never write one — the server
-turns your offset into a real day.
+date. Never write a date in this field, even though the TODAY FOR THEM line
+may tell you theirs — the server turns your offset into a real day, counted
+from that same day.
 - Range 1 to 730. Null is the default, and null is honest.
 - Date ONLY a step the athlete can finish ALONE, on their own schedule: film a
   session, retest a benchmark, send an email, fill in a Passport section, book
@@ -5934,11 +6044,14 @@ async function getProfileMeta(userId) {
 // is for what the product actually holds. When the two disagree the record
 // wins, and Scout is told so explicitly.
 //
-// Five small parallel queries (one round of Promise.all, not serial), run
-// alongside getProfileMeta() at the call site, so this does not add real
-// latency per message. Every one fails soft: a table that errors returns
-// its empty value and Scout simply knows less, never breaks.
-async function getAthleteState(userId) {
+// Nine small queries in ONE round of Promise.all (plus the sports lookup,
+// which waits only on the athletes read), run alongside getProfileMeta() at
+// the call site, so this does not add real latency per message. Every one
+// fails soft: a table that errors returns its empty value, is named in
+// loadFailed, and Scout simply knows less, never breaks.
+// `day` is resolveAthleteDay()'s answer for this request: the athlete's own
+// calendar day when the app sent a believable one, else the UTC day.
+async function getAthleteState(userId, day) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!url || !key || !userId) return { profileComplete: false, pathwayCreated: false, baselineComplete: false, sportSupportLevel: null, sport: null, country: null, structuredSportKnowledge: false, pathwayType: null, pathwayTimeline: null, milestoneCount: 0, milestonesDone: 0, pathwayComplete: false, devItems: [], targets: [], benchmarks: [], readiness: null, questionsUsedToday: 0 };
@@ -5991,112 +6104,159 @@ async function getAthleteState(userId) {
   // failure is carried in loadFailed so the prompt can say "could not be
   // loaded" instead of rendering an outage as a fact about the athlete.
   const loadFailed = [];
-  try {
-    // Selects every field computeProfileQuality() checks — the same list
-    // HomeTab fetches, so the two cannot score different things.
-    const a = await fetch(url + "/rest/v1/athletes?id=eq." + userId + "&select=sport,country,position,club_name,grad_year,gpa,citizenship,recruiting_status,bio,highlights,timeline", { headers });
-    if (!a.ok) throw new Error("athletes " + a.status);
-    const aRows = await a.json();
-    athleteRow = Array.isArray(aRows) && aRows[0] ? aRows[0] : null;
-    sport = athleteRow ? athleteRow.sport : null;
-    country = athleteRow ? athleteRow.country : null;
-    profileComplete = !!sport;
-  } catch (e) { loadFailed.push("athletes"); console.error("GOLSZ scout context read failed:", "athletes", e && e.message); }
-  try {
-    const pr = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=full_name,occupation,avatar_url,identity_verified,availability_status,availability_since,availability_expected_return,availability_note", { headers });
-    if (!pr.ok) throw new Error("profiles " + pr.status);
-    const prRows = await pr.json();
-    profileRow = Array.isArray(prRows) && prRows[0] ? prRows[0] : null;
-  } catch (e) { loadFailed.push("profiles"); console.error("GOLSZ scout context read failed:", "profiles", e && e.message); }
-  // Newest request only, matching HomeTab: a previously denied request must
-  // not keep scoring 50 forever.
-  // Today's Scout usage. The ONLY thing that genuinely separates Elite from
-  // Pro is daily message volume — no feature in FEATURE_MIN_PLAN requires
-  // Elite — so an athlete actually running out of messages is the one
-  // honest Pro->Elite trigger. Read here rather than inferred, and it stays
-  // 0 on any failure so a metering hiccup can never invent a reason to sell.
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const u = await fetch(url + "/rest/v1/scout_daily_usage?user_id=eq." + userId + "&usage_date=eq." + today + "&select=questions_used", { headers });
-    if (!u.ok) throw new Error("scout_daily_usage " + u.status);
-    const uRows = await u.json();
-    questionsUsedToday = (Array.isArray(uRows) && uRows[0] && Number(uRows[0].questions_used)) || 0;
-  } catch (e) { loadFailed.push("scout_daily_usage"); console.error("GOLSZ scout context read failed:", "scout_daily_usage", e && e.message); }
-  try {
-    const v = await fetch(url + "/rest/v1/verification_requests?user_id=eq." + userId + "&select=status&order=created_at.desc&limit=1", { headers });
-    if (!v.ok) throw new Error("verification_requests " + v.status);
-    const vRows = await v.json();
-    hasPendingVerification = !!(Array.isArray(vRows) && vRows[0] && vRows[0].status === "pending");
-  } catch (e) { loadFailed.push("verification_requests"); console.error("GOLSZ scout context read failed:", "verification_requests", e && e.message); }
-  // The Plan, in full. milestones is jsonb; each entry is {label, done}.
-  try {
-    const p = await fetch(url + "/rest/v1/pathway_plan?user_id=eq." + userId + "&select=pathway_type,target_timeline,milestones,baseline_complete,stages,current_stage_id", { headers });
-    if (!p.ok) throw new Error("pathway_plan " + p.status);
-    const pRows = await p.json();
-    if (Array.isArray(pRows) && pRows[0]) {
-      pathwayRow = pRows[0];
-      pathwayCreated = true;
-      baselineComplete = !!pRows[0].baseline_complete;
-      pathwayType = pRows[0].pathway_type || null;
-      pathwayTimeline = pRows[0].target_timeline || null;
-      milestones = Array.isArray(pRows[0].milestones) ? pRows[0].milestones : [];
-    }
-  } catch (e) { loadFailed.push("pathway_plan"); console.error("GOLSZ scout context read failed:", "pathway_plan", e && e.message); }
-  // Development plan, target list and Passport benchmarks. Capped hard —
-  // these feed a prompt, not a report, and an athlete with 200 benchmarks
-  // must not blow the context budget.
+  // ONE ROUND, NOT TEN.
   //
-  // Two consumers, two shapes, ONE fetch. The readiness score needs every
-  // row (a "30% done" computed over a truncated page is simply a wrong
-  // number, and it would disagree with Home); the prompt needs a short list.
-  // So each query pulls the full set and the capped slice is taken after.
-  // 500 is a ceiling against a pathological account, not a page size.
-  try {
-    const d = await fetch(url + "/rest/v1/development_plan_items?user_id=eq." + userId + "&select=focus_area,goal,status&order=created_at.desc&limit=500", { headers });
-    if (!d.ok) throw new Error("development_plan_items " + d.status);
-    const dRows = await d.json();
-    if (Array.isArray(dRows)) { allDevItems = dRows; devItems = dRows.slice(0, 8); }
-  } catch (e) { loadFailed.push("development_plan_items"); console.error("GOLSZ scout context read failed:", "development_plan_items", e && e.message); }
-  try {
-    const t = await fetch(url + "/rest/v1/outreach_targets?user_id=eq." + userId + "&select=name,status&order=created_at.desc&limit=500", { headers });
-    if (!t.ok) throw new Error("outreach_targets " + t.status);
-    const tRows = await t.json();
-    // allTargets is the FULL list. `targets` below is sliced to 10 for the
-    // prompt, and asking the gap "has any target been contacted?" over a
-    // truncated list would answer about the first ten only.
-    if (Array.isArray(tRows)) { targetsCount = tRows.length; targets = tRows.slice(0, 10); allTargets = tRows; }
-  } catch (e) { loadFailed.push("outreach_targets"); console.error("GOLSZ scout context read failed:", "outreach_targets", e && e.message); }
-  // Passport performance data. Newest first, then de-duplicated per metric
-  // below so Scout sees each metric's CURRENT value rather than a history —
-  // "your 10m is 2.0s" must reflect the latest retest, not the first entry.
-  try {
-    const b = await fetch(url + "/rest/v1/athlete_benchmarks?user_id=eq." + userId + "&select=metric,metric_key,value,unit,recorded_date&order=recorded_date.desc&limit=500", { headers });
-    if (!b.ok) throw new Error("athlete_benchmarks " + b.status);
-    const bRows = await b.json();
-    if (Array.isArray(bRows)) {
-      // Full history feeds the performance sub-score, which counts metrics
-      // RETESTED (>= 2 entries) — de-duplicating first would zero that out.
-      allBenchmarks = bRows;
-      const seen = new Set();
-      for (const row of bRows) {
-        if (!row || !row.metric || seen.has(row.metric)) continue;
-        seen.add(row.metric);
-        benchmarks.push(row);
-        if (benchmarks.length >= 12) break;
+  // These reads were sequential awaits for months while the header above
+  // claimed "one round of Promise.all" — ten round trips to Supabase, in
+  // series, inside a handler that has SCOUT_BUDGET_MS to answer at all. None
+  // depends on another except the sports lookup, which needs the sport the
+  // athletes read returns, so it is chained INSIDE that task rather than
+  // given a round of its own. Each task keeps its own try/catch and names its
+  // own table, exactly as before; only the waiting changed.
+  await Promise.all([
+    (async () => {
+      try {
+        // Selects every field computeProfileQuality() checks — the same list
+        // HomeTab fetches, so the two cannot score different things.
+        const a = await fetch(url + "/rest/v1/athletes?id=eq." + userId + "&select=sport,country,position,club_name,grad_year,gpa,citizenship,recruiting_status,bio,highlights,timeline", { headers });
+        if (!a.ok) throw new Error("athletes " + a.status);
+        const aRows = await a.json();
+        athleteRow = Array.isArray(aRows) && aRows[0] ? aRows[0] : null;
+        sport = athleteRow ? athleteRow.sport : null;
+        country = athleteRow ? athleteRow.country : null;
+        profileComplete = !!sport;
+      } catch (e) { loadFailed.push("athletes"); console.error("GOLSZ scout context read failed:", "athletes", e && e.message); }
+      // Soft name lookup (not a foreign key — see migration 094) so an
+      // athlete's free-text sport that doesn't match a seeded row just comes
+      // back null, read as "secondary" by Scout, never an error.
+      if (sport) {
+        try {
+          const s = await fetch(url + "/rest/v1/sports?name=ilike." + encodeURIComponent(sport) + "&select=support_level", { headers });
+          const sRows = await s.json();
+          const declared = Array.isArray(sRows) && sRows[0] ? sRows[0].support_level : "secondary";
+          sportSupportLevel = resolveSportSupportLevel(sport, declared);
+        } catch { sportSupportLevel = resolveSportSupportLevel(sport, "secondary"); }
       }
-    }
-  } catch (e) { loadFailed.push("athlete_benchmarks"); console.error("GOLSZ scout context read failed:", "athlete_benchmarks", e && e.message); }
-  // Soft name lookup (not a foreign key — see migration 094) so an
-  // athlete's free-text sport that doesn't match a seeded row just comes
-  // back null, read as "secondary" by Scout, never an error.
-  if (sport) {
-    try {
-      const s = await fetch(url + "/rest/v1/sports?name=ilike." + encodeURIComponent(sport) + "&select=support_level", { headers });
-      const sRows = await s.json();
-      const declared = Array.isArray(sRows) && sRows[0] ? sRows[0].support_level : "secondary";
-      sportSupportLevel = resolveSportSupportLevel(sport, declared);
-    } catch { sportSupportLevel = resolveSportSupportLevel(sport, "secondary"); }
-  }
+    })(),
+    (async () => {
+      try {
+        const pr = await fetch(url + "/rest/v1/profiles?id=eq." + userId + "&select=full_name,occupation,avatar_url,identity_verified,availability_status,availability_since,availability_expected_return,availability_note", { headers });
+        if (!pr.ok) throw new Error("profiles " + pr.status);
+        const prRows = await pr.json();
+        profileRow = Array.isArray(prRows) && prRows[0] ? prRows[0] : null;
+      } catch (e) { loadFailed.push("profiles"); console.error("GOLSZ scout context read failed:", "profiles", e && e.message); }
+    })(),
+    (async () => {
+      // Today's Scout usage. The ONLY thing that genuinely separates Elite from
+      // Pro is daily message volume — no feature in FEATURE_MIN_PLAN requires
+      // Elite — so an athlete actually running out of messages is the one
+      // honest Pro->Elite trigger. Read here rather than inferred, and it stays
+      // 0 on any failure so a metering hiccup can never invent a reason to sell.
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const u = await fetch(url + "/rest/v1/scout_daily_usage?user_id=eq." + userId + "&usage_date=eq." + today + "&select=questions_used", { headers });
+        if (!u.ok) throw new Error("scout_daily_usage " + u.status);
+        const uRows = await u.json();
+        questionsUsedToday = (Array.isArray(uRows) && uRows[0] && Number(uRows[0].questions_used)) || 0;
+      } catch (e) { loadFailed.push("scout_daily_usage"); console.error("GOLSZ scout context read failed:", "scout_daily_usage", e && e.message); }
+    })(),
+    (async () => {
+      // Newest request only, matching HomeTab: a previously denied request must
+      // not keep scoring 50 forever.
+      try {
+        const v = await fetch(url + "/rest/v1/verification_requests?user_id=eq." + userId + "&select=status&order=created_at.desc&limit=1", { headers });
+        if (!v.ok) throw new Error("verification_requests " + v.status);
+        const vRows = await v.json();
+        hasPendingVerification = !!(Array.isArray(vRows) && vRows[0] && vRows[0].status === "pending");
+      } catch (e) { loadFailed.push("verification_requests"); console.error("GOLSZ scout context read failed:", "verification_requests", e && e.message); }
+    })(),
+    (async () => {
+      // The Plan, in full. milestones is jsonb; each entry is {label, done}.
+      try {
+        const p = await fetch(url + "/rest/v1/pathway_plan?user_id=eq." + userId + "&select=pathway_type,target_timeline,milestones,baseline_complete,stages,current_stage_id", { headers });
+        if (!p.ok) throw new Error("pathway_plan " + p.status);
+        const pRows = await p.json();
+        if (Array.isArray(pRows) && pRows[0]) {
+          pathwayRow = pRows[0];
+          pathwayCreated = true;
+          baselineComplete = !!pRows[0].baseline_complete;
+          pathwayType = pRows[0].pathway_type || null;
+          pathwayTimeline = pRows[0].target_timeline || null;
+          milestones = Array.isArray(pRows[0].milestones) ? pRows[0].milestones : [];
+        }
+      } catch (e) { loadFailed.push("pathway_plan"); console.error("GOLSZ scout context read failed:", "pathway_plan", e && e.message); }
+    })(),
+    (async () => {
+      // Development plan, target list and Passport benchmarks. Capped hard —
+      // these feed a prompt, not a report, and an athlete with 200 benchmarks
+      // must not blow the context budget.
+      //
+      // Two consumers, two shapes, ONE fetch. The readiness score needs every
+      // row (a "30% done" computed over a truncated page is simply a wrong
+      // number, and it would disagree with Home); the prompt needs a short list.
+      // So each query pulls the full set and the capped slice is taken after.
+      // 500 is a ceiling against a pathological account, not a page size.
+      try {
+        const d = await fetch(url + "/rest/v1/development_plan_items?user_id=eq." + userId + "&select=focus_area,goal,status&order=created_at.desc&limit=500", { headers });
+        if (!d.ok) throw new Error("development_plan_items " + d.status);
+        const dRows = await d.json();
+        if (Array.isArray(dRows)) { allDevItems = dRows; devItems = dRows.slice(0, 8); }
+      } catch (e) { loadFailed.push("development_plan_items"); console.error("GOLSZ scout context read failed:", "development_plan_items", e && e.message); }
+    })(),
+    (async () => {
+      try {
+        const t = await fetch(url + "/rest/v1/outreach_targets?user_id=eq." + userId + "&select=name,status&order=created_at.desc&limit=500", { headers });
+        if (!t.ok) throw new Error("outreach_targets " + t.status);
+        const tRows = await t.json();
+        // allTargets is the FULL list. `targets` below is sliced to 10 for the
+        // prompt, and asking the gap "has any target been contacted?" over a
+        // truncated list would answer about the first ten only.
+        if (Array.isArray(tRows)) { targetsCount = tRows.length; targets = tRows.slice(0, 10); allTargets = tRows; }
+      } catch (e) { loadFailed.push("outreach_targets"); console.error("GOLSZ scout context read failed:", "outreach_targets", e && e.message); }
+    })(),
+    (async () => {
+      // Passport performance data. Newest first, then de-duplicated per metric
+      // below so Scout sees each metric's CURRENT value rather than a history —
+      // "your 10m is 2.0s" must reflect the latest retest, not the first entry.
+      try {
+        const b = await fetch(url + "/rest/v1/athlete_benchmarks?user_id=eq." + userId + "&select=metric,metric_key,value,unit,recorded_date,measured_by,protocol&order=recorded_date.desc&limit=500", { headers });
+        if (!b.ok) throw new Error("athlete_benchmarks " + b.status);
+        const bRows = await b.json();
+        if (Array.isArray(bRows)) {
+          // Full history feeds the performance sub-score, which counts metrics
+          // RETESTED (>= 2 entries) — de-duplicating first would zero that out.
+          allBenchmarks = bRows;
+          const seen = new Set();
+          for (const row of bRows) {
+            if (!row || !row.metric || seen.has(row.metric)) continue;
+            seen.add(row.metric);
+            benchmarks.push(row);
+            if (benchmarks.length >= 12) break;
+          }
+        }
+      } catch (e) { loadFailed.push("athlete_benchmarks"); console.error("GOLSZ scout context read failed:", "athlete_benchmarks", e && e.message); }
+    })(),
+    (async () => {
+      // WHAT THEY ACTUALLY DID. Scout has always known what is OPEN and never
+      // what happened — so it could not say "you have done four of these" or
+      // notice a step that quietly went past. athlete_actions carries a real
+      // completed_at (the jsonb only started recording one on 2026-10-14) and is
+      // kept equal to the plan by sync_athlete_actions().
+      try {
+        const r = await fetch(url + "/rest/v1/athlete_actions?user_id=eq." + userId +
+          "&select=title,status,due_on,due_src,completed_at,category&order=updated_at.desc&limit=200", { headers });
+        if (!r.ok) throw new Error("athlete_actions " + r.status);
+        const rows = await r.json();
+        if (Array.isArray(rows)) actionRows = rows;
+      } catch (e) { console.error("GOLSZ action history load failed:", e && e.message); }
+    })(),
+  ]);
+  // The order the network answered in is not a fact about the athlete, so the
+  // failures are reported in a fixed one.
+  const READ_ORDER = ["athletes", "profiles", "scout_daily_usage", "verification_requests",
+    "pathway_plan", "development_plan_items", "outreach_targets", "athlete_benchmarks"];
+  loadFailed.sort((x, y) => READ_ORDER.indexOf(x) - READ_ORDER.indexOf(y));
+  // ---- END OF THE READ ROUND ----
   const milestoneCount = milestones.length;
   const milestonesDone = milestones.filter((m) => m && m.done).length;
 
@@ -6164,18 +6324,6 @@ async function getAthleteState(userId) {
   // the same functions. Scout is handed the RESULT, not the ingredients, so
   // it reports the athlete's score rather than forming a second opinion.
   // Fails soft to null: an athlete with no athletes row still gets a reply.
-  // WHAT THEY ACTUALLY DID. Scout has always known what is OPEN and never
-  // what happened — so it could not say "you have done four of these" or
-  // notice a step that quietly went past. athlete_actions carries a real
-  // completed_at (the jsonb only started recording one on 2026-10-14) and is
-  // kept equal to the plan by sync_athlete_actions().
-  try {
-    const r = await fetch(url + "/rest/v1/athlete_actions?user_id=eq." + userId +
-      "&select=title,status,due_on,due_src,completed_at&order=updated_at.desc&limit=200", { headers });
-    if (!r.ok) throw new Error("athlete_actions " + r.status);
-    const rows = await r.json();
-    if (Array.isArray(rows)) actionRows = rows;
-  } catch (e) { console.error("GOLSZ action history load failed:", e && e.message); }
 
   let readiness = null;
   try {
@@ -6207,13 +6355,20 @@ async function getAthleteState(userId) {
   // proposed and the athlete never acted on is not a deadline they missed —
   // nobody agreed to it — and telling them otherwise in conversation is the
   // same wrong as pushing it to their phone.
-  const todayKey = new Date().toISOString().slice(0, 10);
+  //
+  // THE ATHLETE'S DAY, and HOME'S RESTING RULE. This was the UTC day, so for a
+  // Greek athlete after 21:00 a step due today was already "missed" here while
+  // Home still drew it on today. And while they are resting (availability
+  // "out") Home calls nothing late except a recovery step; Scout raising the
+  // rest as missed told an injured athlete off for not training.
+  const todayKey = (day && isDayKey(day.key)) ? day.key : new Date().toISOString().slice(0, 10);
+  const resting = !!(profileRow && profileRow.availability_status === "out");
   const recentlyDone = actionRows
     .filter((a) => a && a.status === "completed" && a.completed_at)
     .sort((a, b) => String(b.completed_at).localeCompare(String(a.completed_at)))
     .slice(0, 8);
   const missedActions = actionRows
-    .filter((a) => a && a.status === "open" && a.due_on && !a.due_src && a.due_on < todayKey)
+    .filter((a) => a && a.status === "open" && a.due_on && !a.due_src && a.due_on < todayKey && (!resting || a.category === "recovery"))
     .slice(0, 8);
   const droppedCount = actionRows.filter((a) => a && a.status === "dropped").length;
   // FIRST NAME ONLY, and only when it looks like a name.
@@ -6230,8 +6385,12 @@ async function getAthleteState(userId) {
     const first = raw.split(/\s+/)[0] || "";
     if (first.length >= 2 && first.length <= 24 && !first.includes("@") && /^[\p{L}'’-]+$/u.test(first)) firstName = first;
   } catch {}
+  // Home's TODAY / THIS WEEK / late numbers, from the same jsonb Home reads.
+  const days = dayBuckets(milestones, todayKey, resting);
   return {
     firstName,
+    day: { key: todayKey, source: (day && day.key === todayKey && day.source) || "server" },
+    dayBuckets: days,
     // The requirement gap, as a RESULT. Scout reports it; it does not re-form
     // it. Same object Home and Plan render.
     gap,
@@ -6791,6 +6950,9 @@ export default async function handler(req, res) {
   // source text into the system prompt ("Respond in function Object() {...}")
   // and send "constructor" to the FAQ lookup as a language code.
   const langCode = (body && typeof body.lang === "string" && Object.prototype.hasOwnProperty.call(LANG_NAMES, body.lang)) ? body.lang : null;
+  // The athlete's calendar day, as the app's own clock has it (body.today,
+  // isoDay() on the device). Checked, never trusted: see resolveAthleteDay().
+  const athleteDay = resolveAthleteDay(body && body.today);
   const langName = langCode ? LANG_NAMES[langCode] : null;
   // Language-adjusted only — the specialist framing (Phase 2d) is layered
   // in below, once recommendedSpecialist is known from classification.
@@ -7034,7 +7196,7 @@ export default async function handler(req, res) {
     const [{ plan: ownPlan, isAdmin, aiUnlimited, fullAccess, goalDefined, goalText, goalSource }, parentMeta, athleteState, planKnowledge, authContext, capabilityKnowledge] = await Promise.all([
       getProfileMeta(userId),
       (actingReason === "parent_managed" && callerId) ? getProfileMeta(callerId) : Promise.resolve(null),
-      getAthleteState(userId),
+      getAthleteState(userId, athleteDay),
       getPlanKnowledge(),
       buildAuthoritativeContext(userId),
       getCapabilityKnowledge(),
@@ -7109,6 +7271,9 @@ export default async function handler(req, res) {
       // had just invented, so every step added to an EXISTING pathway landed
       // unfiled and showed up nowhere near the map it belonged to.
       existingStages: athleteState.stages || [],
+      // The athlete's day, so "due_in_days: 1" resolves to THEIR tomorrow —
+      // the same day the TODAY line below calls today.
+      today: athleteState.day ? athleteState.day.key : null,
     };
     athleteBlock = `\n\nATHLETE STATE (app-computed from real data, not your own inference — ground your guidance in this, never contradict it or claim a different plan/stage): ${athleteState.firstName ? `first_name="${athleteState.firstName}", ` : ""}profile_complete=${athleteState.profileComplete}, goal_defined=${goalDefined}${goalText ? ` ("${goalText.slice(0, 200)}")` : ""}, plan=${plan}, pathway_created=${athleteState.pathwayCreated}, baseline_complete=${athleteState.baselineComplete}, sport_support_level=${athleteState.sportSupportLevel || "unknown"}, golsz_structured_sport_knowledge=${athleteState.structuredSportKnowledge ? "yes" : "no"}, goal_authored_by_athlete=${goalSource === "athlete_edited" ? "yes" : "no"}, assessment_ready=${assessmentReady.sufficient_for_preliminary_assessment}${assessmentReady.missing_critical.length ? `, still_missing=${assessmentReady.missing_critical.join("/")}` : ""}.`;
     // SAY IT COULD NOT BE READ, rather than reporting the default.
@@ -7144,6 +7309,25 @@ export default async function handler(req, res) {
       if (athleteState.nextMilestone) {
         athleteBlock += `\nNEXT BY THE APP'S OWN RULE (earliest dated step not done, else the first undone one — this is what Home shows them): "${athleteState.nextMilestone.label}"${athleteState.nextMilestone.due ? ` due ${athleteState.nextMilestone.due}` : " (no date)"}. Do not nominate a different "next" step; theirs is on screen.`;
       }
+    }
+
+    // TODAY FOR THEM — their date, and Home's three numbers for it.
+    //
+    // ADS-BUILD-ORDER.md Phase 6 item 2. Scout used to be told it had no date
+    // at all, so "what should I do today", THIS WEEK 2/5 and "you are late on
+    // one" were literally uncomputable: it saw due dates with nothing to
+    // compare them to. The server works it out (dayBuckets(), Home's rules,
+    // diffed against Home by tests/test_scout_today.cjs) and hands over the
+    // results, terse, because athleteBlock is re-billed on every turn. The
+    // model is told to use only these dates and to do no calendar arithmetic
+    // of its own; new steps still carry an offset, never a date.
+    const dd = athleteState.dayBuckets;
+    if (athleteState.day && dd) {
+      athleteBlock += `\n\nTODAY FOR THEM: ${dd.weekday} ${dd.today} (${athleteState.day.source === "device" ? "their own calendar day" : "the server's day; theirs may differ by one"}). This week runs Monday ${dd.weekFrom} to Sunday ${dd.weekTo}.`;
+      if (athleteState.pathwayCreated) {
+        athleteBlock += ` Due today: ${dd.todayTotal ? `${dd.todayDone} of ${dd.todayTotal} done` : "nothing"}${dd.todayOpen.length ? `; still open today: ${dd.todayOpen.map((l) => `"${l}"`).join("; ")}` : ""}. This week: ${dd.weekTotal ? `${dd.weekDone} of ${dd.weekTotal} dated steps done` : "no dated steps"}. Late (dates they chose themselves that have passed${athleteState.availability && athleteState.availability.status === "out" ? "; while they rest only recovery steps count" : ""}): ${dd.lateCount}.`;
+      }
+      athleteBlock += ` These are the numbers Home shows them. Use only dates written in this context; never work out another date or weekday yourself.`;
     }
 
     // SECTIONS: theirs, or the sport's. Never conflated. Describing a default
@@ -7202,7 +7386,7 @@ export default async function handler(req, res) {
     // must read these rather than recall them from memory, so a benchmark
     // edited in the Passport is visible on the very next message.
     if (athleteState.benchmarks && athleteState.benchmarks.length) {
-      athleteBlock += `\n\nTHEIR BENCHMARKS (Passport, current value per metric — newer retests already replace older ones): ${athleteState.benchmarks.map((b) => `${b.metric} ${b.value}${b.unit ? b.unit : ""}${b.recorded_date ? ` (${String(b.recorded_date).slice(0, 10)})` : ""}`).join("; ")}. These are the record. If your memory of a number disagrees with this list, this list is right.`;
+      athleteBlock += `\n\nTHEIR BENCHMARKS (Passport, current value per metric — newer retests already replace older ones): ${athleteState.benchmarks.map((b) => `${b.metric} ${b.value}${b.unit ? b.unit : ""} (${b.recorded_date ? `${String(b.recorded_date).slice(0, 10)}; ` : ""}${benchmarkProvenance(b)})`).join("; ")}. These are the record. If your memory of a number disagrees with this list, this list is right. Each reading says who measured it: only a coach-measured or officially measured one was measured by someone else. A self-recorded one, or one whose measurer is not recorded, is the athlete's own entry — never describe it as verified, tested or confirmed by anyone.`;
     }
     if (athleteState.devItems && athleteState.devItems.length) {
       athleteBlock += `\n\nTHEIR DEVELOPMENT PLAN (live): ${athleteState.devItems.map((d) => `${d.focus_area}${d.goal ? ` — ${d.goal}` : ""}${d.status ? ` [${d.status}]` : ""}`).join("; ")}. Never re-suggest an item already on this list.`;
