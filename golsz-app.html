@@ -7581,6 +7581,7 @@ function AdminMfa({ mode, onDone, onBack }) {
             <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: C.slate, marginBottom: 6 }}>{t("admin_mfa_code_label")}</label>
             <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
               onKeyDown={(e) => { if (e.key === "Enter") verify(); }}
+              aria-label={t("admin_mfa_code_label")}
               inputMode="numeric" autoComplete="one-time-code" maxLength={6} style={input} />
             <button onClick={verify} disabled={busy || code.trim().length !== 6}
               style={{ ...primaryBtn, marginTop: 10, opacity: busy || code.trim().length !== 6 ? 0.6 : 1 }}>{t("admin_mfa_verify")}</button>
@@ -19192,7 +19193,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=15d4828cb63019ba";
+    var APP_SRC = "js/app.js?v=da8a60f79abf83e6";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
