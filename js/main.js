@@ -41,7 +41,12 @@
   // Prices are the reason this runs; the hero photograph is the optional part,
   // so the hero is now what hangs off the fetch rather than the other way
   // round.
+  //
+  // The call is a serverless cold start, so it only runs on a page that has a
+  // consumer for the answer (a price, a currency label or the hero); privacy,
+  // terms, contact and 404 make no request at all.
   function initRegion() {
+    if (!document.querySelector("[data-gz-price], [data-gz-currency-label], [data-gz-currency-short], [data-hero-region]")) return;
     fetch("/api/geo")
       .then(function (res) { return res.ok ? res.json() : null; })
       .then(function (data) {
