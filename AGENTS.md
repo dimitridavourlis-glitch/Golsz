@@ -111,7 +111,8 @@ node tests/test_<name>.cjs     # one suite
   `npm run check` in the Vercel build blocks the deploy; `check.yml` runs alongside, not before.
 - `npm run deploy` (check, then `npx vercel --prod --yes`) is an out-of-band CLI deploy only.
 - Schedules: Vercel cron `/api/target-followup-reminders` daily 13:00 UTC; `health-alert.yml`
-  every 15 min calls `/api/health-alert` (repo secret `CRON_SECRET`, variable `PROD_BASE_URL`).
+  every 15 min calls `/api/health-alert` (repo secret `CRON_SECRET`, variable `PROD_BASE_URL`). The endpoint also
+  pushes admins if its own check crashes.
 - `outputDirectory: "."`: assume any repo-root file can be served publicly.
 - Full detail: CLAUDE.md § THE DEPLOY GATE; § Current state.
 
