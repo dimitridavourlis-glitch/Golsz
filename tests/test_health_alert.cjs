@@ -6,6 +6,9 @@ const SRC = fs.readFileSync(REPO + "/api/health-alert.js", "utf8");
 const from = SRC.indexOf("export function shouldAlert");
 eval(SRC.slice(from, SRC.indexOf("\n}\n", from) + 3).replace("export function", "function"));
 
+const mf = SRC.indexOf("export function monitorFailurePush");
+eval(SRC.slice(mf, SRC.indexOf("\n}\n", mf) + 3).replace("export function", "function"));
+
 let p=0,f=0;
 const ck=(l,a,e)=>{const A=JSON.stringify(a),E=JSON.stringify(e);
   if(A===E){p++;console.log("PASS  "+l);}else{f++;console.log(`FAIL  ${l}\n   exp ${E}\n   got ${A}`);}};
@@ -41,5 +44,26 @@ const r = shouldAlert({ totalCalls: 10, failedCalls: 9, errorCount: 5 }, CFG);
 ck("both reasons are reported, not just the first", r.reasons.length, 2);
 ck("counts are in the text", /9\/10 Scout calls failed/.test(r.reasons[0]), true);
 ck("error count is in the text", /5 errors logged/.test(r.reasons[1]), true);
+
+console.log("\n-- the monitor crashing pushes admins, safely --");
+const bad = new TypeError("fetch failed https://abc.supabase.co/rest/v1 key eyJhbGciOiJIUzI1NiJ9.secret");
+const mp = monitorFailurePush(bad);
+ck("title names the monitor", /health monitor/.test(mp.title), true);
+ck("body has no URL", /https?:|supabase/i.test(mp.body), false);
+ck("body has no key-like text", /eyJ/.test(mp.body), false);
+ck("body has no error message", mp.body.includes(bad.message), false);
+ck("deterministic", JSON.stringify(monitorFailurePush(bad)), JSON.stringify(mp));
+ck("handles non-Error values", typeof monitorFailurePush(null).body, "string");
+
+console.log("\n-- handler source: where the push is and is not --");
+const hs = SRC.slice(SRC.indexOf("export default async function handler"));
+const catchAt = hs.lastIndexOf("} catch (e) {");
+const catchBlock = hs.slice(catchAt);
+const before = hs.slice(0, hs.indexOf("try {"));
+ck("catch block calls pushAdmins", /pushAdmins\(/.test(catchBlock), true);
+ck("catch push is in its own try/catch", /try \{[\s\S]*pushAdmins\([\s\S]*\} catch \(pushErr\)/.test(catchBlock), true);
+ck("500 returned after the push block", catchBlock.indexOf("status(500)") > catchBlock.indexOf("catch (pushErr)"), true);
+ck("500 body carries pushed", /status\(500\)\.json\(\{ error: String\(e\), pushed \}\)/.test(catchBlock), true);
+ck("no push on the 401 or not-configured paths", /pushAdmins/.test(before), false);
 
 console.log(`\n${p}/${p+f} passed`); process.exit(f?1:0);

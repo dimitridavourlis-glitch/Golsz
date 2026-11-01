@@ -37,6 +37,16 @@
 // closed (401) when CRON_SECRET is unset or the header doesn't match, so
 // the URL cannot be triggered by a random public request.
 //
+// WHEN THE CHECK ITSELF CRASHES, it pushes admins too (see the catch block in
+// handler()): a monitor that dies silently is the failure this file exists to
+// prevent. The body is a fixed sentence plus the error's constructor name
+// only (monitorFailurePush), never the error text, which can carry a Supabase
+// URL or key fragment. The push is best-effort and can never change the 500.
+// The 401 path does NOT push: anyone on the internet can trigger it, so a
+// push there would let a stranger page the admins. The "not configured" path
+// does not either: without SUPABASE_URL / SERVICE_KEY there is nothing to
+// send with.
+//
 // It also stamps a heartbeat on every successful run (ops_heartbeat,
 // migration 127) so that something else can notice when THIS job stops —
 // see stampHeartbeat() below and the watchdog in
@@ -79,6 +89,17 @@ export function shouldAlert({ totalCalls, failedCalls, errorCount }, cfg) {
   }
 
   return { alert: reasons.length > 0, reasons };
+}
+
+// Exported for tests: what to push when the check itself crashed. Never
+// includes the error's message; the constructor name is the most it says.
+export function monitorFailurePush(err) {
+  const name = err && err.constructor && typeof err.constructor.name === "string" ? err.constructor.name : "";
+  const kind = /^[A-Za-z0-9_]{1,40}$/.test(name) ? ` (${name})` : "";
+  return {
+    title: "GOLSZ: health monitor is failing",
+    body: `The health check crashed before it could finish${kind}. See the Vercel logs.`,
+  };
 }
 
 // DEAD-MAN'S SWITCH, HALF ONE: leave proof that this job ran.
@@ -271,6 +292,14 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, windowMinutes, totalCalls, failedCalls, errorCount, alert, reasons, pushed, heartbeat });
   } catch (e) {
     console.error("GOLSZ health-alert failed:", e);
-    return res.status(500).json({ error: String(e) });
+    // Best-effort: its own try/catch, so a push failure cannot replace the 500.
+    let pushed = 0;
+    try {
+      const { title, body } = monitorFailurePush(e);
+      pushed = await pushAdmins(supaUrl, serviceKey, title, body);
+    } catch (pushErr) {
+      console.error("GOLSZ health-alert failure push failed:", pushErr && pushErr.constructor && pushErr.constructor.name);
+    }
+    return res.status(500).json({ error: String(e), pushed });
   }
 }
