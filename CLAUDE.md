@@ -1380,7 +1380,8 @@ you add another place that surfaces a Message button, it doesn't need any follow
   (tunable via `HEALTH_*`). It stamps `ops_heartbeat` (migration 127) on each successful run, and the daily
   Vercel cron `api/target-followup-reminders.js` pushes admins if that stamp is older than
   `HEARTBEAT_MAX_AGE_HOURS` (default 6) — so a dead monitor is noticed within a day. If the workflow call
-  itself fails, it opens a GitHub issue.
+  itself fails, it opens a GitHub issue. If the check itself crashes, `api/health-alert.js` also pushes admins
+  from its catch block (fixed text plus the error's constructor name; GitHub holds no VAPID or service-role secret).
   **MEASURED 2026-10-28: GitHub does not run it every 15 minutes.** 60 runs from 10-18 to 10-28 were 2.1 to
   7.5 hours apart (median 4.2 h; 4 gaps over 6 h), all green: GitHub delays and drops scheduled workflows. So
   an outage can go unseen for hours, and a gap over `HEARTBEAT_MAX_AGE_HOURS` can raise a false "monitor

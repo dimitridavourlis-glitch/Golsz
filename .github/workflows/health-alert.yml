@@ -161,19 +161,16 @@ jobs:
         # scheduled workflow — on a quiet pre-launch repo, nobody who is
         # looking.
         #
-        # TODO(owner) — if you want the push path as well as (or instead of)
-        # the issue, the exact wiring is:
-        #   1. Add repo secrets VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY,
-        #      VAPID_SUBJECT, SUPABASE_URL, SUPABASE_SERVICE_KEY.
-        #   2. Prefer a new least-privilege Supabase key over the
-        #      service-role key if one can be scoped to read `profiles` and
-        #      `push_subscriptions` only.
-        #   3. Add `actions/setup-node` + `npm i web-push`, then a script
-        #      mirroring alertAdmins(): GET
-        #      profiles?is_admin=eq.true&select=id -> GET
-        #      push_subscriptions?user_id=in.(<ids>)&select=endpoint,p256dh,auth
-        #      -> webpush.sendNotification(..., JSON.stringify({title, body,
-        #      url: "/golsz-app.html?page=admin"})).
+        # Decided: the push path for "the check itself crashed" lives
+        # server-side, in the catch block of api/health-alert.js, using the
+        # VAPID and Supabase keys Vercel already holds. GitHub Actions
+        # deliberately holds no VAPID or Supabase (service-role) secret.
+        #
+        # Not covered by that push, and how it is caught instead: a host that
+        # is down or unreachable, and a 401 from a CRON_SECRET mismatch,
+        # never reach that code. This step's GitHub issue reports them, and
+        # the ops_heartbeat watchdog in api/target-followup-reminders.js
+        # pushes admins within a day.
         run: |
           set -euo pipefail
           TITLE="health-alert monitor is failing"
