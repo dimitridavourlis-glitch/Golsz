@@ -710,6 +710,13 @@ Relevant commands:
   `'unsafe-inline'` for the page's inline `<script>` blocks. This is an accepted, documented trade-off, not
   an oversight — the policy still meaningfully restricts which *origins* scripts/styles/images/connections
   can come from (cdnjs/jsdelivr/fonts/Supabase/Anthropic only).
+- **Cache rules (2026-11-01).** `/js/app.js` is `immutable` for a year because it is requested as
+  `app.js?v=<content hash>`. `/css/(.*)` and `/js/main.js` get `public, max-age=3600,
+  stale-while-revalidate=86400` and are deliberately NOT immutable: neither has a content hash, so a long
+  cache would serve stale CSS/JS after a deploy. One hour bounds the staleness; the revalidate window keeps
+  repeat opens instant. `/assets/(.*)` keeps its own day-long rule. Do not add JSON comments to
+  `vercel.json` (its schema rejects them). `tests/test_static_cache_headers.cjs` asserts all of this and
+  that the CSP is unchanged.
 
 ### Signup bot protection (honeypot)
 
