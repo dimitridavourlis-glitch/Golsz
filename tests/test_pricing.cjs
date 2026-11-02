@@ -164,8 +164,11 @@ const REGION_FN = /function initRegion\(\)[\s\S]*?\n  \}/.exec(MAIN);
 ck("initRegion is findable", !!REGION_FN, true);
 ck("...it performs the geo fetch", !!REGION_FN && /fetch\("\/api\/geo"\)/.test(REGION_FN[0]), true);
 ck("...it applies the currency", !!REGION_FN && /applyCurrency\(/.test(REGION_FN[0]), true);
-ck("...and is not gated on any element being present",
-   !!REGION_FN && /querySelector/.test(REGION_FN[0]), false);
+// Gated only on the existence of a CONSUMER of the answer (2026-11: privacy,
+// terms, contact and 404 no longer pay for a serverless call). The price
+// selectors must be in that guard, or the price swap silently turns off.
+ck("...and its only gate is 'does this page have a price/currency/hero consumer'",
+   !!REGION_FN && /querySelector\("\[data-gz-price\], \[data-gz-currency-label\], \[data-gz-currency-short\], \[data-hero-region\]"\)/.test(REGION_FN[0]), true);
 // The hero image may still be gated — it is decoration, and its absence costs
 // nobody a correct price.
 ck("the hero image is the part allowed to no-op", /function applyHeroImage\(region\)/.test(MAIN), true);
