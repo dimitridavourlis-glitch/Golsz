@@ -152,6 +152,7 @@ Relevant commands:
   CSS vars (`--lime-border`, `--amber-border`) exist specifically because `${C.lime}66`-style hex-alpha-suffix
   concatenation doesn't work once `C.lime` is a `var()` string (`var(--lime)66` isn't valid CSS) — use those
   instead of trying to append alpha digits to any `C.*` value.
+  `C.limeText` (`--lime-text`) is gold used as *text*: same as `--lime` in dark, a darker gold in light so 9-13px text clears 4.5:1; `PublicPassport` uses it for its gold text, and `tests/test_public_passport_contrast.cjs` checks every text/background pair there in both themes.
 - **Language (i18n) — English/French/Spanish/Greek, full app coverage.** `I18N` (a plain object of
   `{en, fr, es, el}` dictionaries, ~150 keys each) + `LangContext`/`LangProvider`/`useLang()` live right after
   `useTheme()`. `LangProvider` wraps the entire app once, at the `ReactDOM.createRoot(...).render(...)` call —

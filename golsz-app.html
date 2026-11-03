@@ -201,7 +201,7 @@ const Lock = svg('<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path
    a plain fixed hex, not a variable. Any NEW color added here should be a
    var() too, or it'll silently stay dark-mode-only when the page is light. */
 const C = {
-  pitch: "var(--pitch)", turf: "var(--turf)", card: "var(--card)", lime: "var(--lime)",
+  pitch: "var(--pitch)", turf: "var(--turf)", card: "var(--card)", lime: "var(--lime)", limeText: "var(--lime-text)",
   chalk: "var(--chalk)", slate: "var(--slate)", line: "var(--line)", line2: "var(--line2)",
   amber: "var(--amber)", body: "var(--body-text)", warnText: "var(--warn-text)",
   chalkSoft: "var(--chalk-soft)", limeRing: "var(--lime-ring)",
@@ -6191,7 +6191,7 @@ function PublicPassport({ userId, token }) {
             boxShadow: `0 0 0 1px ${C.pitch}, 0 20px 40px -20px #000`,
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: `1px dashed ${C.line2}`, background: C.passportStrip }}>
-              <span style={{ fontSize: 10, letterSpacing: "0.22em", fontWeight: 800, color: C.lime }}>DIGITAL SPORTS PASSPORT</span>
+              <span style={{ fontSize: 10, letterSpacing: "0.22em", fontWeight: 800, color: C.limeText }}>DIGITAL SPORTS PASSPORT</span>
               {p.country && <span style={{ fontSize: 9.5, color: C.slate, fontFamily: "'Space Mono', monospace" }}>{flagFor(p.country)} {p.country}</span>}
             </div>
             <div style={{ display: "flex", gap: 14, padding: 16 }}>
@@ -6199,7 +6199,7 @@ function PublicPassport({ userId, token }) {
                 width: 84, height: 100, borderRadius: 10, flexShrink: 0,
                 background: p.avatar_url ? undefined : `linear-gradient(135deg, ${C.turf}, ${C.line2})`,
                 border: `1px solid ${C.lime}`, display: "flex", alignItems: "center", justifyContent: "center",
-                overflow: "hidden", fontFamily: "'Space Mono', monospace", fontWeight: 800, fontSize: 34, color: C.lime,
+                overflow: "hidden", fontFamily: "'Space Mono', monospace", fontWeight: 800, fontSize: 34, color: C.limeText,
               }}>
                 {p.avatar_url ? <img src={p.avatar_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initials(p.full_name || "?")}
               </div>
@@ -6211,7 +6211,7 @@ function PublicPassport({ userId, token }) {
                   )}
                 </div>
                 {p.occupation && (
-                  <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.lime, border: `1px solid ${C.limeBorder}`, borderRadius: 999, padding: "2px 8px", display: "inline-block", marginTop: 4 }}>{p.occupation.toUpperCase()}</span>
+                  <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", color: C.limeText, border: `1px solid ${C.limeBorder}`, borderRadius: 999, padding: "2px 8px", display: "inline-block", marginTop: 4 }}>{p.occupation.toUpperCase()}</span>
                 )}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 10px", marginTop: 10, fontSize: 11.5 }}>
                   <div><span style={{ color: C.slate }}>{t("passport_sport")}: </span>{dash(p.sport ? tv(p.sport) : null)}</div>
@@ -6286,7 +6286,7 @@ function PublicPassport({ userId, token }) {
                         <div style={{ fontSize: 12.5, color: C.chalk, overflowWrap: "anywhere" }}>{b.metric}</div>
                         <div style={{ fontSize: 10, color: C.slate, marginTop: 2, lineHeight: 1.35 }}>{how || t("bench_method_none")}</div>
                       </div>
-                      <div style={{ fontFamily: "'Space Mono', monospace", fontWeight: 800, color: C.lime, fontSize: 13, whiteSpace: "nowrap" }}>
+                      <div style={{ fontFamily: "'Space Mono', monospace", fontWeight: 800, color: C.limeText, fontSize: 13, whiteSpace: "nowrap" }}>
                         {b.value}{b.unit ? ` ${b.unit}` : ""}
                       </div>
                       <div style={{ fontSize: 10.5, color: C.slate, whiteSpace: "nowrap" }}>{b.recorded_date}</div>
@@ -17462,6 +17462,12 @@ const CSS = `
        — a lifted neutral in the same warm family as --card, so the surface
        still separates from the page without introducing a second hue. */
     --pitch: #0A0A0A; --turf: #1C1E22; --card: #131519; --lime: #D4AF37;
+    /* --lime-text: gold as TEXT. Light --lime (#B58A1A) is ~3.2:1 on white and
+       lower on cream, below the 4.5:1 that 9-13px text needs, so PublicPassport's
+       gold text uses this instead and keeps --lime for borders and icons. Dark
+       is the same value as --lime, so dark mode is unchanged.
+       tests/test_public_passport_contrast.cjs checks it. */
+    --lime-text: #D4AF37;
     --chalk: #F7F4EA; --slate: #8B96A8; --line: rgba(247,244,234,0.08); --line2: rgba(247,244,234,0.16);
     /* Redesign, section 3.1. --chalk-soft is a secondary text tone that sits
        between --chalk and --slate: the redesign's sub-lines are too important
@@ -17492,6 +17498,7 @@ const CSS = `
   }
   html[data-theme="light"] {
     --pitch: #FDF9F2; --turf: #ECE8DC; --card: #FFFFFF; --lime: #B58A1A;
+    --lime-text: #7A5F10;
     --chalk: #0D1210; --slate: #415A77; --line: #ECE8DC; --line2: #E6C76A;
     --chalk-soft: #415A77; --lime-ring: rgba(181,138,26,0.25);
     --amber: #B58A1A; --body-text: #1B263B; --warn-text: #B58A1A; --msg-name: #415A77;
@@ -19216,7 +19223,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=4a624c199e22d57c";
+    var APP_SRC = "js/app.js?v=60c3caaf702c5830";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
