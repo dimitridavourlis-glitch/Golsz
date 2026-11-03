@@ -3396,53 +3396,55 @@ function Feed({ onMessage, onViewProfile }) {
   const [composeErr, setComposeErr] = useState("");
   const [savingEvent, setSavingEvent] = useState(null);
   const [sharedKey, setSharedKey] = useState(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   async function loadFeed() {
     if (!sb) return;
+    setLoadFailed(false);
     try {
       const { data: { user } } = await sb.auth.getUser();
       if (user) setUid(user.id);
 
       let blocked = [];
       if (user) {
-        const { data: blocks } = await sb.from("blocks").select("blocked_id").eq("blocker_id", user.id);
+        // must(): if this read fails silently, posts from people the athlete blocked would show.
+        const blocks = must(await sb.from("blocks").select("blocked_id").eq("blocker_id", user.id));
         blocked = (blocks || []).map((b) => b.blocked_id);
         setBlockedIds(blocked);
-        const [{ data: myFollows }, { data: myFollowers }] = await Promise.all([
+        const [myFollows, myFollowers] = await Promise.all([
           sb.from("follows").select("followed_id").eq("follower_id", user.id),
           sb.from("follows").select("follower_id").eq("followed_id", user.id),
-        ]);
+        ]).then((rs) => rs.map(soft));
         setFollowing(Object.fromEntries((myFollows || []).map((r) => [r.followed_id, true])));
         setFollowedBy(Object.fromEntries((myFollowers || []).map((r) => [r.follower_id, true])));
       }
 
-      const { data, error } = await sb
+      const data = must(await sb
         .from("posts")
         .select("id, author_id, kind, headline, body, image_url, likes_count, created_at")
         .order("created_at", { ascending: false })
-        .limit(30);
-      if (error) throw error;
+        .limit(30));
       const visible = (data || []).filter((row) => !blocked.includes(row.author_id));
       if (visible.length) {
         // profiles has no public-read policy (dob is sensitive), so names come
         // from the public_profile_names view instead of an embed through profiles.
         const authorIds = [...new Set(visible.map((p) => p.author_id))];
-        const [{ data: names }, { data: sports }] = await Promise.all([
+        const [names, sports] = await Promise.all([
           sb.from("public_profile_names").select("id, full_name").in("id", authorIds),
           sb.from("athletes").select("id, sport").in("id", authorIds),
-        ]);
+        ]).then((rs) => rs.map(soft));
         const nameById = Object.fromEntries((names || []).map((r) => [r.id, r.full_name]));
         const sportById = Object.fromEntries((sports || []).map((r) => [r.id, r.sport]));
         setPosts(visible.map((row) => mapPost(row, nameById[row.author_id], sportById[row.author_id])));
         if (user) {
           const ids = visible.map((p) => p.id);
-          const { data: mine } = await sb.from("post_likes").select("post_id").eq("profile_id", user.id).in("post_id", ids);
+          const mine = soft(await sb.from("post_likes").select("post_id").eq("profile_id", user.id).in("post_id", ids));
           if (mine) setLiked(Object.fromEntries(mine.map((r) => [r.post_id, true])));
         }
       } else {
         setPosts([]); // no real posts yet — honest empty state, no demo content
       }
-    } catch (e) { console.error("GOLSZ feed fetch error:", e); setPosts((p) => p || []); }
+    } catch (e) { console.error("GOLSZ feed fetch error:", e); setLoadFailed(true); }
   }
   useEffect(() => { loadFeed(); }, []);
 
@@ -3638,7 +3640,7 @@ function Feed({ onMessage, onViewProfile }) {
         </div>
       )}
 
-      {posts && posts.length > 0 && (
+      {!loadFailed && posts && posts.length > 0 && (
         <div style={{ position: "relative", marginBottom: 12, marginTop: 12 }}>
           <Search size={16} color={C.slate} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }} />
           <input
@@ -3653,10 +3655,11 @@ function Feed({ onMessage, onViewProfile }) {
         </div>
       )}
 
-      {posts === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
-      {posts && posts.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("feed_no_posts")}</div>}
-      {posts && posts.length > 0 && visiblePosts.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("feed_no_match")}</div>}
-      {visiblePosts && visiblePosts.map((p, i) => {
+      {loadFailed && <div style={{ padding: "20px 0" }}><LoadError onRetry={loadFeed} /></div>}
+      {!loadFailed && posts === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
+      {!loadFailed && posts && posts.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("feed_no_posts")}</div>}
+      {!loadFailed && posts && posts.length > 0 && visiblePosts.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("feed_no_match")}</div>}
+      {!loadFailed && visiblePosts && visiblePosts.map((p, i) => {
         const key = p.postId || i;
         const isLiked = !!liked[key];
         return (
@@ -3981,37 +3984,37 @@ function Discover({ onMessage, onViewProfile }) {
   const [uid, setUid] = useState(null);
   const [following, setFollowing] = useState({});
   const [followedBy, setFollowedBy] = useState({});
+  const [loadFailed, setLoadFailed] = useState(false);
 
-  useEffect(() => {
+  async function loadPlayers() {
     if (!sb) return;
-    (async () => {
-      try {
-        const { data: { user } } = await sb.auth.getUser();
-        if (user) {
-          setUid(user.id);
-          const [{ data: myFollows }, { data: myFollowers }] = await Promise.all([
-            sb.from("follows").select("followed_id").eq("follower_id", user.id),
-            sb.from("follows").select("follower_id").eq("followed_id", user.id),
-          ]);
-          setFollowing(Object.fromEntries((myFollows || []).map((r) => [r.followed_id, true])));
-          setFollowedBy(Object.fromEntries((myFollowers || []).map((r) => [r.follower_id, true])));
-        }
-        const { data, error } = await sb
-          .from("athletes")
-          .select("id, sport, position, gender, grad_year, country")
-          .limit(200);
-        if (error) throw error;
-        if (data && data.length) {
-          const ids = data.map((r) => r.id);
-          const { data: names } = await sb.from("public_profile_names").select("id, full_name").in("id", ids);
-          const nameById = Object.fromEntries((names || []).map((r) => [r.id, r.full_name]));
-          setPlayers(data.map((row) => mapAthlete(row, nameById[row.id])));
-        } else {
-          setPlayers([]); // no real athletes yet — honest empty state, no demo content
-        }
-      } catch (e) { console.error("GOLSZ discover fetch error:", e); setPlayers((p) => p || []); }
-    })();
-  }, []);
+    setLoadFailed(false);
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (user) {
+        setUid(user.id);
+        const [myFollows, myFollowers] = await Promise.all([
+          sb.from("follows").select("followed_id").eq("follower_id", user.id),
+          sb.from("follows").select("follower_id").eq("followed_id", user.id),
+        ]).then((rs) => rs.map(soft));
+        setFollowing(Object.fromEntries((myFollows || []).map((r) => [r.followed_id, true])));
+        setFollowedBy(Object.fromEntries((myFollowers || []).map((r) => [r.follower_id, true])));
+      }
+      const data = must(await sb
+        .from("athletes")
+        .select("id, sport, position, gender, grad_year, country")
+        .limit(200));
+      if (data && data.length) {
+        const ids = data.map((r) => r.id);
+        const names = soft(await sb.from("public_profile_names").select("id, full_name").in("id", ids));
+        const nameById = Object.fromEntries((names || []).map((r) => [r.id, r.full_name]));
+        setPlayers(data.map((row) => mapAthlete(row, nameById[row.id])));
+      } else {
+        setPlayers([]); // no real athletes yet — honest empty state, no demo content
+      }
+    } catch (e) { console.error("GOLSZ discover fetch error:", e); setLoadFailed(true); }
+  }
+  useEffect(() => { loadPlayers(); }, []);
 
   async function toggleFollow(id) {
     if (!sb || !uid || !id || id === uid) return;
@@ -4048,12 +4051,13 @@ function Discover({ onMessage, onViewProfile }) {
           }}
         />
       </div>
-      <div style={{ margin: "14px 2px 8px" }}>
+      {!loadFailed && <div style={{ margin: "14px 2px 8px" }}>
         <span style={{ fontSize: 11, color: C.slate, fontFamily: "'Space Mono', monospace" }}>
           {results.length} {results.length === 1 ? t("discover_count_one") : t("discover_count_other")}
         </span>
-      </div>
-      <div className="discover-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+      </div>}
+      {loadFailed && <div style={{ padding: "20px 0" }}><LoadError onRetry={loadPlayers} /></div>}
+      {!loadFailed && <div className="discover-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {results.map((p) => (
           <div key={p.id || p.n}
             {...asButton(() => p.id && onViewProfile && onViewProfile(p.id))}
@@ -4109,7 +4113,7 @@ function Discover({ onMessage, onViewProfile }) {
             {players.length === 0 ? t("discover_no_athletes") : t("discover_no_match")}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
@@ -4964,6 +4968,9 @@ function loginErrorKey(e) {
 // destructures only `data` loses the failure. must() turns that back into a
 // throw for the loader's catch: `const rows = must(await sb.from(...).select())`.
 function must(res) { if (res && res.error) throw res.error; return res ? res.data : null; }
+// For a secondary lookup the screen can show without (names, likes, follows):
+// returns the data or null, and logs the error instead of losing it.
+function soft(res) { if (res && res.error) console.error("GOLSZ secondary read failed:", res.error); return res ? res.data : null; }
 // A read that failed is not an empty list. Shown in place of the list (and of
 // anything that would write the list back) until a retry succeeds.
 function LoadError({ onRetry }) {
@@ -19346,7 +19353,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=124173614944634e";
+    var APP_SRC = "js/app.js?v=89139bcd5adc1c1d";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

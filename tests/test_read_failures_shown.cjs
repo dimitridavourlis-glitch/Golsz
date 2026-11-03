@@ -31,6 +31,8 @@ const ck = (l, a, e) => {
 
 const REGISTRY = [
   { component: "Events", loader: "load" },
+  { component: "Feed", loader: "loadFeed" },
+  { component: "Discover", loader: "loadPlayers" },
 ];
 
 const m = /<script[^>]*type=["']text\/babel(?:-deferred)?["'][^>]*>/.exec(HTML);
@@ -40,6 +42,8 @@ const CODE = HTML.slice(start, HTML.indexOf("</script>", start));
 if (CODE.length < 100000) throw new Error(`extracted only ${CODE.length} chars — extraction is wrong`);
 
 const parse = (code) => parser.parse(code, { sourceType: "script", plugins: ["jsx"] });
+// "nothing here yet" texts: the *_empty keys plus Feed's and Discover's own names for them
+const EMPTY_KEY = /_empty$|^feed_no_posts$|^feed_no_match$|^discover_no_athletes$|^discover_no_match$/;
 const FAILED_SETTER = /^set\w*(Load)?Failed$/;
 
 // Returns a list of problems (empty = fine) for one component/loader in an AST.
@@ -102,7 +106,7 @@ function audit(ast, component, loader) {
     JSXOpeningElement(pa) { if (pa.node.name.name === "LoadError") rendersError = true; },
     CallExpression(pa) {
       const a = pa.node.arguments[0];
-      if (pa.node.callee.name === "t" && a && a.type === "StringLiteral" && /_empty$/.test(a.value) && flag && !guarded(pa)) {
+      if (pa.node.callee.name === "t" && a && a.type === "StringLiteral" && EMPTY_KEY.test(a.value) && flag && !guarded(pa)) {
         problems.push(`"${a.value}" is shown without a !${flag} guard`);
       }
     },
@@ -130,6 +134,27 @@ ck("detector passes the fixed shape",
 const ast = parse(CODE);
 for (const { component, loader } of REGISTRY) {
   ck(`${component}.${loader}: failure shown with Retry, never as empty`, audit(ast, component, loader), []);
+}
+
+// ---- Feed: a failed blocks read must fail the load, or blocked people's posts would show ----
+{
+  let viaMust = false, readsBlocks = false;
+  traverse(ast, {
+    FunctionDeclaration(pa) {
+      if (!pa.node.id || pa.node.id.name !== "loadFeed") return;
+      pa.traverse({
+        StringLiteral(sp) {
+          if (sp.node.value !== "blocks") return;
+          readsBlocks = true;
+          for (let q = sp.parentPath; q && q !== pa; q = q.parentPath) {
+            if (q.isCallExpression() && q.node.callee.name === "must") { viaMust = true; break; }
+          }
+        },
+      });
+    },
+  });
+  ck("Feed.loadFeed reads blocks", readsBlocks, true);
+  ck("Feed.loadFeed: the blocks read goes through must()", viaMust, true);
 }
 
 // ---- must() ----

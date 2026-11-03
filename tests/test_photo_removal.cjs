@@ -79,7 +79,9 @@ ck("...and a failed cleanup does not fail the upload",
 // reload data that was never wrong.
 ck("every loadFailed reader clears the flag where the read starts",
    (APP.match(/\(async \(\) => \{\n(?:\s*\/\/[^\n]*\n)*\s*setLoadFailed\(false\);/g) || []).length, 5);
+// Plus Feed.loadFeed and Discover.loadPlayers, which are named functions that
+// clear the flag at their own top (asserted in test_read_failures_shown.cjs).
 ck("...and there are exactly five such readers",
-   (APP.match(/setLoadFailed\(true\); \}/g) || []).length, 5);
+   (APP.match(/setLoadFailed\(true\); \}/g) || []).length - 2, 5);
 
 console.log(`\n${p}/${p + f} passed`); process.exit(f ? 1 : 0);
