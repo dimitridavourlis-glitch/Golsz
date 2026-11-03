@@ -149,6 +149,15 @@ Relevant commands:
   `auth=anon-key` (signed out) or `auth=other` (a user token, which must never appear). A browser with no
   internet gets React/Supabase from `npm pack` copies cached in `~/.cache/golsz-preview-vendor`. Last run
   2026-11-03: all 16 combinations (a-d x 2 widths x 2 themes) read correctly, no horizontal scroll at 390px.
+  **`&fixture=crash`** (added 2026-11-03) lets the same tool prove the crash path: the lookup succeeds but the stub
+  wraps `React.createElement` so rendering the component named `PublicPassport` throws (works because terser keeps
+  function names; the UMD wrapper assigns `window.React` to an empty object and fills it later, so the stub
+  intercepts the later `createElement` assignment). The stub answers `POST /rest/v1/rpc/log_client_error` with 204
+  and the server prints `log_client_error auth=<kind> message=<text>`; `&reload=1` makes the page press Reload once.
+  Recorded run 2026-11-03: 390 and 1280 px, dark and light: the "Something went wrong. / Reload" screen shows (no
+  blank page, no sideways scroll), exactly one `log_client_error auth=anon-key message=fixture crash: PublicPassport
+  render failed` per page load, and with `&reload=1` a second line follows, so Reload reloads. NOT run: the Errors tab
+  itself (it needs an admin session; the RPC call is what is proven) and a real screen reader.
 - **Theming (dark/light background, Settings button)**: every color in `C` (`C.pitch`, `C.chalk`, `C.lime`,
   etc.) is a CSS custom property string (`"var(--pitch)"`, ...), not a hardcoded hex value — the actual hex
   values live in the `CSS` template string's `:root { ... }` (dark, default) and `html[data-theme="light"]
@@ -778,8 +787,25 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
   response shape, an unexpected null, etc.) unmounted the entire tree, leaving a blank screen with no
   recovery short of the person thinking to reload manually. The root render is now wrapped in an
   `ErrorBoundary` class component (right before the final `ReactDOM.createRoot(...).render(...)` call) that
-  shows a "Something went wrong — Reload" screen instead. It only logs to the console — no error-tracking
-  service (Sentry etc.) is wired up, see the known-gaps list below.
+  shows a "Something went wrong — Reload" screen instead. It also calls `reportClientError` ->
+  `log_client_error` (the admin Errors tab); no third-party tracker (Sentry etc.) is wired up. The screen is
+  inline-styled with FIXED dark colours, so it is readable in both themes and needs no `<style>{CSS}</style>`.
+  Recorded crash run 2026-11-03: see "Verifying the shared Passport" (`fixture=crash`).
+
+### Failures are shown, never an empty state; form field errors
+
+- **Read-failure rule: a failed read is `LoadError` (with Retry), never the empty state.** supabase-js resolves with
+  `{ error }` instead of throwing, so loaders wrap each read in `must(await sb...)` (throws into the loader's catch)
+  and use `soft()` only for secondary lookups the screen can do without. Home, GoalCard, Feed, Discover, Messages
+  (list and thread), Passport, PostsGrid, Events, Scout history, Settings privacy and verification status follow it.
+  **Register every new loader in `tests/test_read_failures_shown.cjs`**: its AST checks fail when a loader can show
+  "nothing here yet" after an error.
+- **`signupFieldErrors({...})`** returns `{ field: i18nKey }` for every reason sign-up / sign-in cannot be submitted
+  (including the under-18 refusal, shown under the date of birth); `Auth` derives `ok`, the messages and `submit()`'s
+  refusal from it. **`profileFieldErrors(form, isPlayer, now)`** does the same for `ProfileEditor` (name; Player-only
+  height 100-250 cm, weight 30-250 kg, GPA 0-5, graduation year 1950..this year+8; Coach team). Messages sit under
+  their field with `aria-invalid`/`aria-describedby`, in `C.limeText` (the amber failed 4.5:1 on the light sheet).
+  Suites: `test_signup_field_errors.cjs`, `test_profile_field_errors.cjs`. Browser runs 2026-11-03 (t7, t8) passed.
 
 ### `PostsGrid` — Instagram-style posts grid on the Passport
 

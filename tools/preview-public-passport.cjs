@@ -9,6 +9,12 @@
 //   fixture=b  the same athlete with club_name and country null (the athlete hid them)
 //   fixture=c  null, the banned / removed / revoked case  -> "This Passport isn't available..."
 //   fixture=d  first lookup is an HTTP 500 (error state + Try again), every later lookup succeeds
+//   fixture=crash  the lookup succeeds (fixture a data) but rendering the component named PublicPassport
+//              throws, so the root ErrorBoundary's "Something went wrong / Reload" screen shows. The
+//              server answers POST /rest/v1/rpc/log_client_error with 204 and prints
+//              "log_client_error auth=<kind> message=<text>" (anon-key expected: the visitor is signed out)
+//   &reload=1  with fixture=crash: the page presses "Reload" once (a sessionStorage flag stops a loop), so
+//              the server then prints a SECOND log_client_error line: the reload ran and crashed again
 //   &retry=1   with fixture=d: the page taps "Try again" itself once the error shows, so a screenshot
 //              taken afterwards shows the card the successful retry rendered
 //   theme=light|dark  sets localStorage["golsz-theme"] before the page's own theme script runs
@@ -81,7 +87,7 @@ const FULL = {
   avatar_url: null, identity_verified: false, verified_tier: "none", highlights: [], shows_benchmarks: true, benchmarks: BENCHMARKS,
   shows_timeline: false, timeline: [],
 };
-const FIXTURES = { a: FULL, b: { ...FULL, club_name: null, country: null }, c: null, d: FULL };
+const FIXTURES = { a: FULL, b: { ...FULL, club_name: null, country: null }, c: null, d: FULL, crash: FULL };
 
 // Runs first in <head>, before the theme script, the CDN libraries and the app.
 // Kept as a function so it is syntax-checked with this file, then serialised into the page.
@@ -89,10 +95,36 @@ function stub(cfg) {
   try { if (cfg.theme === "light" || cfg.theme === "dark") localStorage.setItem("golsz-theme", cfg.theme); } catch (e) { /* storage blocked */ }
   var realFetch = window.fetch.bind(window);
   var rpcCalls = 0;
-  function note(url, headers) {
+  function note(url, headers, extra) {
     var auth = headers.get("authorization") || "";
     var kind = !auth ? "none" : auth === "Bearer " + cfg.anonKey ? "anon-key" : "other";
-    try { navigator.sendBeacon("/__log", JSON.stringify({ url: url, auth: kind })); } catch (e) { /* ignore */ }
+    var entry = { url: url, auth: kind };
+    if (extra) entry.message = extra;
+    try { navigator.sendBeacon("/__log", JSON.stringify(entry)); } catch (e) { /* ignore */ }
+  }
+  if (cfg.fixture === "crash") {
+    // React arrives later as a UMD global: wrap createElement the moment it is assigned. terser keeps
+    // function names (keep_fnames), so the compiled PublicPassport still reports its name.
+    var realReact;
+    Object.defineProperty(window, "React", {
+      configurable: true,
+      get: function () { return realReact; },
+      set: function (r) {
+        realReact = r;
+        // The UMD wrapper assigns window.React to an EMPTY exports object and fills it afterwards, so
+        // intercept the later assignment of createElement instead of reading it now.
+        var create = r.createElement;
+        var wrapped = function (type) {
+          if (typeof type === "function" && type.name === "PublicPassport") throw new Error("fixture crash: PublicPassport render failed");
+          return create.apply(this, arguments);
+        };
+        Object.defineProperty(r, "createElement", {
+          configurable: true, enumerable: true,
+          get: function () { return create ? wrapped : undefined; },
+          set: function (fn) { create = fn; },
+        });
+      },
+    });
   }
   function json(status, body) {
     return new Response(body === undefined ? "" : JSON.stringify(body), { status: status, headers: { "content-type": "application/json" } });
@@ -104,10 +136,30 @@ function stub(cfg) {
       if (btn) { tapped = true; setTimeout(function () { btn.click(); }, 300); }
     }).observe(document, { childList: true, subtree: true });
   }
+  if (cfg.reload) {
+    var pressed = false;
+    try { pressed = sessionStorage.getItem("preview-reload") === "1"; } catch (e) { /* storage blocked */ }
+    new MutationObserver(function () {
+      var btn = !pressed && Array.prototype.filter.call(document.querySelectorAll("button"), function (b) { return b.textContent === "Reload"; })[0];
+      if (btn) {
+        pressed = true;
+        try { sessionStorage.setItem("preview-reload", "1"); } catch (e) { /* storage blocked */ }
+        setTimeout(function () { btn.click(); }, 500);
+      }
+    }).observe(document, { childList: true, subtree: true });
+  }
   window.fetch = function (input, init) {
     var req = new Request(input, init);
     var url = req.url;
     if (url.indexOf(cfg.supabaseUrl) !== 0) return realFetch(input, init);
+    if (url.indexOf("/rest/v1/rpc/log_client_error") !== -1) {
+      return req.clone().text().then(function (text) {
+        var message = "";
+        try { message = JSON.parse(text).p_message; } catch (e) { /* not JSON */ }
+        note(url, req.headers, message);
+        return new Response(null, { status: 204 });
+      });
+    }
     note(url, req.headers);
     if (url.indexOf("/rest/v1/rpc/get_public_passport_by_token") !== -1) {
       rpcCalls += 1;
@@ -137,7 +189,7 @@ function handler(req, res) {
   if (u.pathname === "/__log" && req.method === "POST") {
     let body = "";
     req.on("data", (c) => { body += c; });
-    req.on("end", () => { try { const entry = JSON.parse(body); log.push(entry); console.log("supabase request auth=" + entry.auth + " " + entry.url); } catch (e) { /* ignore */ } res.writeHead(204).end(); });
+    req.on("end", () => { try { const entry = JSON.parse(body); log.push(entry); console.log(entry.message !== undefined ? "log_client_error auth=" + entry.auth + " message=" + entry.message : "supabase request auth=" + entry.auth + " " + entry.url); } catch (e) { /* ignore */ } res.writeHead(204).end(); });
     return;
   }
   if (u.pathname === "/__requests") { res.writeHead(200, { "content-type": "application/json" }); return res.end(JSON.stringify(log)); }
@@ -156,7 +208,7 @@ function handler(req, res) {
       Object.assign(vendorFiles, local.files);
       const html = local.html;
       const fixture = FIXTURES.hasOwnProperty(u.searchParams.get("fixture")) ? u.searchParams.get("fixture") : "a";
-      const cfg = { ...constantsFrom(html), fixture, data: FIXTURES[fixture], theme: u.searchParams.get("theme") || "", retry: u.searchParams.get("retry") === "1" };
+      const cfg = { ...constantsFrom(html), fixture, data: FIXTURES[fixture], theme: u.searchParams.get("theme") || "", retry: u.searchParams.get("retry") === "1", reload: u.searchParams.get("reload") === "1" };
       res.writeHead(200, { "content-type": type, "cache-control": "no-store" });
       return res.end(pageWithStub(html, cfg));
     }

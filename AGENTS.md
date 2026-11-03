@@ -124,6 +124,10 @@ node tests/test_<name>.cjs     # one suite
   demo-data fallback. New strings need all four languages, appended at the END of each dictionary line.
 - Prices are mirrored in `api/_plan-catalog.js`, `PLANS` (golsz-app.html) and `CURRENCIES`
   (js/main.js); tests diff them. Enum `starter` displays as Basic: do not rename it.
+- A failed read is `LoadError` + Retry, never the empty state: wrap reads in `must()`, and register every new
+  loader in `tests/test_read_failures_shown.cjs`.
+- Form errors come from pure helpers, `signupFieldErrors` and `profileFieldErrors` (golsz-app.html), shown under the field.
+- Crash proof: `tools/preview-public-passport.cjs` `&fixture=crash` (+ `&reload=1`); run 2026-11-03 passed (CLAUDE.md).
 - The 18+ threshold lives in four places that must not drift (CLAUDE.md § Current state).
 - Full detail: CLAUDE.md § Architecture; README.md § Things that will bite you.
 

@@ -5,7 +5,7 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Claude Code (AVA job 144, task t8), 2026-11-03. Before that: Claude Code, 2026-10-28.
+Claude Code (AVA job 144, task t9), 2026-11-03. Before that: Claude Code, 2026-10-28.
 
 ## Current Branch
 `main`. `scout-day-awareness` (af28c32) was fast-forwarded into `main` on 2026-10-28 at the owner's
@@ -22,6 +22,11 @@ request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the
   (opacity 0.6), Retry re-enables them; VerificationRequest failure shows only LoadError + Retry. No sideways
   scroll anywhere. New chat after a failed restore was not clicked in the browser (button needs 2+ messages);
   the suite pins it.
+- Job 144 t9, crash run. `tools/preview-public-passport.cjs` `&fixture=crash` makes PublicPassport throw in an
+  in-memory copy; `&reload=1` presses Reload. Real browser, 390/1280 px, dark and light: "Something went wrong /
+  Reload" screen readable, no blank page; server printed one `log_client_error auth=anon-key` per load and a second
+  after Reload. Pinned in test_preview_public_passport.cjs (disk file unchanged). Not run: the admin Errors tab
+  itself (needs an admin session). Read-failure rule and field-error helpers now documented in CLAUDE.md/AGENTS.md.
 - Job 144 t8, Passport editor field errors (`profileFieldErrors`, golsz-app.html). Recorded browser run
   2026-11-03 (throwaway harness: a served in-memory copy mounts the real ProfileEditor with stubbed Supabase,
   presses Save, measures the DOM). 390 and 1280 px, dark and light, 3 cases: (a) empty name, (b) Player with
