@@ -598,6 +598,7 @@ const I18N = {
     editor_country_label: "COUNTRY", editor_country_ph: "e.g. Cyprus", editor_club_label: "CLUB / TEAM",
     editor_club_ph: "e.g. Toronto FC Academy", editor_status_label: "RECRUITING STATUS",
     editor_bio_label: "SCOUTING BIO", editor_bio_ph: "A few sentences a coach or scout should know.",
+    editor_height_range: "Height must be between 100 and 250 cm.", editor_weight_range: "Weight must be between 30 and 250 kg.", editor_gpa_range: "GPA must be between 0 and 5.", editor_grad_year_range: "Graduation year must be between 1950 and 8 years from now.",
     editor_save: "Save profile", editor_saving: "Saving…", editor_name_required: "Name can't be empty.",
     editor_sport_required: "Pick a sport to continue.", editor_locked_notice: "Finish your profile to unlock the rest of GOLSZ.",
     editor_team_required: "Tell us which team you're with.", editor_license_label: "LICENSE(S)", editor_license_ph: "e.g. UEFA A License",
@@ -976,6 +977,7 @@ const I18N = {
     editor_country_label: "PAYS", editor_country_ph: "ex. Chypre", editor_club_label: "CLUB / ÉQUIPE",
     editor_club_ph: "ex. Toronto FC Academy", editor_status_label: "STATUT DE RECRUTEMENT",
     editor_bio_label: "BIO DE RECRUTEMENT", editor_bio_ph: "Quelques phrases qu'un entraîneur ou recruteur devrait connaître.",
+    editor_height_range: "La taille doit être comprise entre 100 et 250 cm.", editor_weight_range: "Le poids doit être compris entre 30 et 250 kg.", editor_gpa_range: "La moyenne (GPA) doit être comprise entre 0 et 5.", editor_grad_year_range: "L'année de diplôme doit être comprise entre 1950 et dans 8 ans.",
     editor_save: "Enregistrer le profil", editor_saving: "Enregistrement…", editor_name_required: "Le nom ne peut pas être vide.",
     editor_sport_required: "Choisissez un sport pour continuer.", editor_locked_notice: "Terminez votre profil pour débloquer le reste de GOLSZ.",
     editor_team_required: "Indiquez avec quelle équipe vous êtes.", editor_license_label: "LICENCE(S)", editor_license_ph: "ex. Licence UEFA A",
@@ -1354,6 +1356,7 @@ const I18N = {
     editor_country_label: "PAÍS", editor_country_ph: "ej. Chipre", editor_club_label: "CLUB / EQUIPO",
     editor_club_ph: "ej. Toronto FC Academy", editor_status_label: "ESTADO DE RECLUTAMIENTO",
     editor_bio_label: "BIOGRAFÍA DEPORTIVA", editor_bio_ph: "Unas frases que un entrenador u ojeador debería saber.",
+    editor_height_range: "La estatura debe estar entre 100 y 250 cm.", editor_weight_range: "El peso debe estar entre 30 y 250 kg.", editor_gpa_range: "El promedio (GPA) debe estar entre 0 y 5.", editor_grad_year_range: "El año de graduación debe estar entre 1950 y dentro de 8 años.",
     editor_save: "Guardar perfil", editor_saving: "Guardando…", editor_name_required: "El nombre no puede estar vacío.",
     editor_sport_required: "Elige un deporte para continuar.", editor_locked_notice: "Termina tu perfil para desbloquear el resto de GOLSZ.",
     editor_team_required: "Indica con qué equipo estás.", editor_license_label: "LICENCIA(S)", editor_license_ph: "ej. Licencia UEFA A",
@@ -1732,6 +1735,7 @@ const I18N = {
     editor_country_label: "ΧΩΡΑ", editor_country_ph: "π.χ. Κύπρος", editor_club_label: "ΣΥΛΛΟΓΟΣ / ΟΜΑΔΑ",
     editor_club_ph: "π.χ. Toronto FC Academy", editor_status_label: "ΚΑΤΑΣΤΑΣΗ ΣΤΡΑΤΟΛΟΓΗΣΗΣ",
     editor_bio_label: "ΒΙΟΓΡΑΦΙΚΟ ΣΚΑΟΥΤΙΝΓΚ", editor_bio_ph: "Λίγες προτάσεις που πρέπει να ξέρει ένας προπονητής ή σκάουτ.",
+    editor_height_range: "Το ύψος πρέπει να είναι από 100 έως 250 εκ.", editor_weight_range: "Το βάρος πρέπει να είναι από 30 έως 250 κιλά.", editor_gpa_range: "Ο βαθμός (GPA) πρέπει να είναι από 0 έως 5.", editor_grad_year_range: "Το έτος αποφοίτησης πρέπει να είναι από 1950 έως 8 χρόνια από σήμερα.",
     editor_save: "Αποθήκευση προφίλ", editor_saving: "Αποθήκευση…", editor_name_required: "Το όνομα δεν μπορεί να είναι κενό.",
     editor_sport_required: "Επιλέξτε ένα άθλημα για να συνεχίσετε.", editor_locked_notice: "Ολοκληρώστε το προφίλ σας για να ξεκλειδώσετε το υπόλοιπο GOLSZ.",
     editor_team_required: "Πείτε μας με ποια ομάδα είστε.", editor_license_label: "ΑΔΕΙΑ/ΕΣ", editor_license_ph: "π.χ. Άδεια UEFA A",
@@ -6369,6 +6373,37 @@ function PublicPassport({ userId, token }) {
   );
 }
 
+// Every reason ProfileEditor cannot save, as { field: i18nKey }. Pure, so
+// save() refuses before moderation or the database and the tests can run it.
+// DECISION (bounds): wide enough for any real athlete, tight enough to reject a
+// typo such as 1.8 (metres typed into cm) or 7 (GPA on a 10 scale): height
+// 100-250 cm, weight 30-250 kg, GPA 0-5 (the input's own max), graduation year
+// 1950 to this year + 8. Empty numbers are fine (optional). The athletes
+// columns have no CHECK constraints; the bounds live here only and are
+// deliberately not a database rule (a wrong bound there would block saves).
+// The numeric fields only exist for a Player, so only a Player is checked.
+function profileFieldErrors(form, isPlayer, now = new Date()) {
+  const errs = {};
+  if (!String(form.full_name || "").trim()) errs.full_name = "editor_name_required";
+  if (!form.occupation) errs.occupation = "auth_occupation_required";
+  if (form.occupation !== "Parent") {
+    if (!form.sport) errs.sport = "editor_sport_required";
+    if (!isPlayer && !String(form.club_name || "").trim()) errs.club_name = "editor_team_required";
+  }
+  if (isPlayer) {
+    const outside = (v, lo, hi) => {
+      if (v === "" || v == null) return false;
+      const n = Number(v);
+      return !Number.isFinite(n) || n < lo || n > hi;
+    };
+    if (outside(form.height_cm, 100, 250)) errs.height_cm = "editor_height_range";
+    if (outside(form.weight_kg, 30, 250)) errs.weight_kg = "editor_weight_range";
+    if (outside(form.gpa, 0, 5)) errs.gpa = "editor_gpa_range";
+    if (outside(form.grad_year, 1950, now.getFullYear() + 8)) errs.grad_year = "editor_grad_year_range";
+  }
+  return errs;
+}
+
 // targetId (P0-4) is the athlete whose rows are written — the signed-in
 // user normally, an approved parent's managed under-18 child in manage mode.
 // It comes from Passport's editId, which is itself derived from actingFor;
@@ -6381,7 +6416,17 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved, onSignOut 
   const [form, setForm] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const [fieldErrs, setFieldErrs] = useState({});
+  const set = (k) => (e) => {
+    const v = e.target.value;
+    setForm((f) => ({ ...f, [k]: v }));
+    setFieldErrs((o) => { if (!o[k]) return o; const { [k]: _gone, ...rest } = o; return rest; });
+  };
+  // Props for a field with a message under it, and the message itself.
+  const errProps = (k) => (fieldErrs[k] ? { id: "editor-" + k, "aria-invalid": true, "aria-describedby": "editor-err-" + k } : { id: "editor-" + k });
+  const fieldError = (k) => (fieldErrs[k]
+    ? <div id={"editor-err-" + k} style={{ fontSize: 11.5, color: C.amber, marginTop: 5, lineHeight: 1.35 }}>{t(fieldErrs[k])}</div>
+    : null);
   // Escape closes the editor — a11y. Skipped when locked, since that mode
   // deliberately hides the close button (onboarding must be completed).
   useEffect(() => {
@@ -6404,11 +6449,13 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved, onSignOut 
   async function save() {
     if (!sb || busy) return;
     const name = (form.full_name || "").trim();
-    if (!name) { setErr(t("editor_name_required")); return; }
-    if (!form.occupation) { setErr(t("auth_occupation_required")); return; }
-    if (!isParent) {
-      if (!form.sport) { setErr(t("editor_sport_required")); return; }
-      if (!isPlayer && !(form.club_name || "").trim()) { setErr(t("editor_team_required")); return; }
+    const errs = profileFieldErrors(form, isPlayer);
+    if (Object.keys(errs).length) {
+      setFieldErrs(errs); setErr("");
+      const first = ["full_name", "occupation", "sport", "grad_year", "height_cm", "weight_kg", "gpa", "club_name"].find((k) => errs[k]);
+      const el = first && document.getElementById("editor-" + first);
+      if (el) el.focus();
+      return;
     }
     setBusy(true); setErr("");
     try {
@@ -6479,21 +6526,25 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved, onSignOut 
         )}
         {err && <div style={{ color: C.amber, fontSize: 12, marginBottom: 14 }}>{err}</div>}
 
-        {group(t("editor_name_label"), <input style={field} aria-label={t("editor_name_label")} value={form.full_name || ""} onChange={set("full_name")} placeholder={t("editor_name_ph")} />)}
+        {group(t("editor_name_label"), <><input style={field} {...errProps("full_name")} aria-label={t("editor_name_label")} value={form.full_name || ""} onChange={set("full_name")} placeholder={t("editor_name_ph")} />{fieldError("full_name")}</>)}
 
         {group(t("auth_occupation"), (
-          <select style={field} aria-label={t("auth_occupation")} value={form.occupation || ""} onChange={set("occupation")}>
-            <option value="">{t("editor_select")}</option>
-            {OCCUPATIONS.map((o) => <option key={o} value={o}>{tv(o)}</option>)}
-          </select>
+          <>
+            <select style={field} {...errProps("occupation")} aria-label={t("auth_occupation")} value={form.occupation || ""} onChange={set("occupation")}>
+              <option value="">{t("editor_select")}</option>
+              {OCCUPATIONS.map((o) => <option key={o} value={o}>{tv(o)}</option>)}
+            </select>
+            {fieldError("occupation")}
+          </>
         ))}
 
         {!isParent && row(<>
           <div><span style={label}>{t("editor_sport_label")}</span>
-            <select style={field} aria-label={t("editor_sport_label")} value={form.sport || ""} onChange={set("sport")}>
+            <select style={field} {...errProps("sport")} aria-label={t("editor_sport_label")} value={form.sport || ""} onChange={set("sport")}>
               <option value="">{t("editor_select")}</option>
               {(isPlayer ? SPORTS.filter((s) => s !== "All") : NON_PLAYER_SPORTS).map((s) => <option key={s} value={s}>{tv(s)}</option>)}
             </select>
+            {fieldError("sport")}
           </div>
           {isPlayer && !SPORTS_WITHOUT_POSITION.includes(form.sport) ? (
             <div><span style={label}>{positionLabelFor(form.sport, t)}</span>
@@ -6519,7 +6570,8 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved, onSignOut 
             </select>
           </div>
           <div><span style={label}>{t("editor_grad_year_label")}</span>
-            <input style={field} type="number" aria-label={t("editor_grad_year_label")} value={form.grad_year || ""} onChange={set("grad_year")} placeholder="2027" />
+            <input style={field} type="number" {...errProps("grad_year")} aria-label={t("editor_grad_year_label")} value={form.grad_year || ""} onChange={set("grad_year")} placeholder="2027" />
+            {fieldError("grad_year")}
           </div>
         </>)}
 
@@ -6535,10 +6587,12 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved, onSignOut 
 
         {isPlayer && row(<>
           <div><span style={label}>{t("editor_height_label")}</span>
-            <input style={field} type="number" aria-label={t("editor_height_label")} value={form.height_cm || ""} onChange={set("height_cm")} placeholder="180" />
+            <input style={field} type="number" step="any" {...errProps("height_cm")} aria-label={t("editor_height_label")} value={form.height_cm || ""} onChange={set("height_cm")} placeholder="180" />
+            {fieldError("height_cm")}
           </div>
           <div><span style={label}>{t("editor_weight_label")}</span>
-            <input style={field} type="number" aria-label={t("editor_weight_label")} value={form.weight_kg || ""} onChange={set("weight_kg")} placeholder="75" />
+            <input style={field} type="number" step="any" {...errProps("weight_kg")} aria-label={t("editor_weight_label")} value={form.weight_kg || ""} onChange={set("weight_kg")} placeholder="75" />
+            {fieldError("weight_kg")}
           </div>
         </>)}
 
@@ -6546,7 +6600,8 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved, onSignOut 
           const pref = SPORT_PREFERENCE[form.sport];
           return row(<>
             <div><span style={label}>{t("editor_gpa_label")}</span>
-              <input style={field} type="number" step="0.01" min="0" max="5" aria-label={t("editor_gpa_label")} value={form.gpa || ""} onChange={set("gpa")} placeholder="3.8" />
+              <input style={field} type="number" step="0.01" min="0" max="5" {...errProps("gpa")} aria-label={t("editor_gpa_label")} value={form.gpa || ""} onChange={set("gpa")} placeholder="3.8" />
+              {fieldError("gpa")}
             </div>
             {pref ? (
               <div><span style={label}>{prefLabelFor(form.sport, t)}</span>
@@ -6577,7 +6632,8 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved, onSignOut 
             <datalist id="country-options">{COUNTRIES.filter((c) => c !== "All").map((c) => <option key={c} value={c} />)}</datalist>
           </div>
           <div><span style={label}>{t("editor_club_label")}</span>
-            <input style={field} aria-label={t("editor_club_label")} value={form.club_name || ""} onChange={set("club_name")} placeholder={t("editor_club_ph")} />
+            <input style={field} {...errProps("club_name")} aria-label={t("editor_club_label")} value={form.club_name || ""} onChange={set("club_name")} placeholder={t("editor_club_ph")} />
+            {fieldError("club_name")}
           </div>
         </>)}
 
@@ -19290,7 +19346,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=ff2ee7ee6e9a1086";
+    var APP_SRC = "js/app.js?v=f41334f664e64fe6";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
