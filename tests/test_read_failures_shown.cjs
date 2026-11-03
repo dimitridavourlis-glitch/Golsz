@@ -214,7 +214,7 @@ for (const { component, loader, emptyKeys } of REGISTRY) {
 // ---- Passport: a failed load must not seed ProfileEditor with blanks, and must not
 // consume autoEdit (onboarding has to open after a successful Retry) ----
 {
-  let editorAt = -1, failReturnAt = -1, loadNode = null;
+  let editorAt = -1, failReturnAt = -1, failReturn = null, loadNode = null;
   const mustCalls = [], consumed = [];
   traverse(ast, {
     FunctionDeclaration(pa) {
@@ -225,13 +225,26 @@ for (const { component, loader, emptyKeys } of REGISTRY) {
         IfStatement(ip) {
           const t = ip.node.test;
           // top-level `if (loadFailed) return ...` in the component body
-          if (ip.parentPath.parentPath === pa && t.type === "Identifier" && t.name === "loadFailed") failReturnAt = ip.node.start;
+          if (ip.parentPath.parentPath === pa && t.type === "Identifier" && t.name === "loadFailed") { failReturnAt = ip.node.start; failReturn = ip; }
         },
       });
     },
   });
   ck("Passport has ProfileEditor", editorAt > 0, true);
   ck("Passport: ProfileEditor is only reachable past the `if (loadFailed) return` guard", failReturnAt > 0 && failReturnAt < editorAt, true);
+  // The failed state replaces the body, not the header: a viewed Passport
+  // (from a thread, Feed or Discover) must keep its Back button.
+  let failBack = false;
+  if (failReturn) failReturn.traverse({
+    LogicalExpression(lp) {
+      const { left, right } = lp.node;
+      if (lp.node.operator !== "&&" || left.type !== "Identifier" || left.name !== "viewingOther") return;
+      if (right.type !== "JSXElement" || right.openingElement.name.name !== "button") return;
+      failBack = right.openingElement.attributes.some((a) => a.name && a.name.name === "onClick" &&
+        a.value.expression && a.value.expression.type === "Identifier" && a.value.expression.name === "onBack");
+    },
+  });
+  ck("Passport: the loadFailed return keeps the onBack button when viewingOther", failBack, true);
   ck("Passport.load found", !!loadNode, true);
   if (loadNode) {
     loadNode.traverse({
