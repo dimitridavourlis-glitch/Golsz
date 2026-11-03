@@ -38,6 +38,8 @@ const REGISTRY = [
   { component: "Messages", loader: "loadThread", emptyKeys: [] }, // the empty text belongs to the list loader,
   { component: "Passport", loader: "load" },
   { component: "PostsGrid", loader: "load" },
+  { component: "HomeTab", loader: "reload" },
+  { component: "GoalCard", loader: "load" },
 ];
 
 const m = /<script[^>]*type=["']text\/babel(?:-deferred)?["'][^>]*>/.exec(HTML);
@@ -63,6 +65,8 @@ function audit(ast, component, loader, emptyKeys) {
   let load = null;
   comp.traverse({
     FunctionDeclaration(pa) { if (pa.node.id.name === loader && !load) load = pa; },
+    // `const reload = React.useCallback(async () => {...})`
+    VariableDeclarator(pa) { if (pa.node.id.name === loader && !load) load = pa; },
   });
   if (!load) return [`loader ${loader} not found in ${component}`];
 
@@ -312,6 +316,54 @@ for (const { component, loader, emptyKeys } of REGISTRY) {
   ck("Passport: Retry shows the skeleton (setLoaded(false)) before load()", /setLoaded\(false\);[\s\S]*load\(\)/.test(pr.body), true);
   const gr = retryOf("PostsGrid");
   ck("PostsGrid: Retry resets posts to null (loading, not the empty text) before load()", /setPosts\(null\);[\s\S]*load\(\)/.test(gr.body), true);
+}
+
+// ---- GoalCard: the edit button is hidden while the goal could not be read ----
+{
+  let guardedButtons = 0, buttons = 0;
+  traverse(ast, {
+    FunctionDeclaration(pa) {
+      if (!pa.node.id || pa.node.id.name !== "GoalCard") return;
+      pa.traverse({
+        JSXOpeningElement(jp) {
+          const a = jp.node.attributes.find((x) => x.name && x.name.name === "onClick");
+          if (jp.node.name.name !== "button" || !a || !a.value.expression || a.value.expression.name !== "startEdit") return;
+          buttons++;
+          for (let q = jp.parentPath; q && q !== pa; q = q.parentPath) {
+            const n = q.node;
+            if (n.type === "LogicalExpression" && n.operator === "&&" && CODE.slice(n.left.start, n.left.end).includes("!loadFailed")) { guardedButtons++; break; }
+            if (n.type === "ConditionalExpression" && CODE.slice(n.test.start, n.test.end).includes("!loadFailed")) { guardedButtons++; break; }
+          }
+        },
+      });
+    },
+  });
+  ck("GoalCard has edit buttons", buttons >= 2, true);
+  ck("GoalCard: every edit button is guarded by !loadFailed", guardedButtons, buttons);
+}
+
+// ---- HomeTab: homeReadFailures + what the loader does with it ----
+{
+  const m = /function homeReadFailures\([\s\S]*?\n\}\n/.exec(CODE);
+  if (!m) throw new Error("homeReadFailures() not found in golsz-app.html");
+  const core = /const HOME_CORE_READS = (\[[^\]]*\]);/.exec(CODE);
+  if (!core) throw new Error("HOME_CORE_READS not found in golsz-app.html");
+  const ctx = vm.runInNewContext(`(function(){ ${m[0]}; return { homeReadFailures, core: ${core[1]} }; })()`);
+  const ok = { data: [], error: null }, bad = { data: null, error: { message: "x" } };
+  const all = (over) => Object.assign({ profiles: ok, athletes: ok, pathway: ok, shares: ok, ticks: ok, benchmarks: ok }, over);
+  const r1 = ctx.homeReadFailures(all({ pathway: bad }), ctx.core);
+  ck("homeReadFailures: pathway error is core", r1.core, true);
+  ck("homeReadFailures: pathway error is listed", [...r1.failed], ["pathway"]);
+  const r2 = ctx.homeReadFailures(all({ shares: bad }), ctx.core);
+  ck("homeReadFailures: share tokens error is not core", r2.core, false);
+  ck("homeReadFailures: share tokens error is listed", [...r2.failed], ["shares"]);
+  ck("homeReadFailures: profiles and athletes are core", ["profiles", "athletes"].every((k) => ctx.homeReadFailures(all({ [k]: bad }), ctx.core).core), true);
+  const r3 = ctx.homeReadFailures(all({}), ctx.core);
+  ck("homeReadFailures: no errors, nothing failed", [r3.core, r3.failed.size], [false, 0]);
+  ck("homeReadFailures: a null result is not an error", ctx.homeReadFailures(all({ ticks: null }), ctx.core).failed.size, 0);
+  // the snapshot of the day is insert-only: it must not be written from a partial read
+  const reload = /const reload = React\.useCallback[\s\S]*?\}, \[actingFor\]\);/.exec(CODE);
+  ck("HomeTab.reload skips the daily snapshot when a read failed", /if \(!failed\.size\) \{\s*const snapScores/.test(reload ? reload[0] : ""), true);
 }
 
 // ---- must() ----

@@ -54,7 +54,7 @@ ck("...and says what it does NOT", /NOT athletic ability|not speed, not techniqu
   // window with it.
   const at = APP.indexOf('sb.from("assessment_snapshots")\n            .upsert(');
   ck("the write is in the loader", at > 0, true);
-  const loaderStart = APP.indexOf("const [{ data: prof }, { data: ath }, { data: reqs }");
+  const loaderStart = APP.indexOf("const [profRes, athRes, reqsRes");
   const loaderEnd = APP.indexOf("const composite = Math.round(", loaderStart);
   ck("...which is ABOVE where the composite is computed, so no hook is involved",
      at > loaderStart && at < loaderEnd, true);

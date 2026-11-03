@@ -240,7 +240,7 @@ ck("...while its strings remain in all four dictionaries",
      (APP.match(/statusTiles/g) || []).length, 4);
 
   // A score of zero is not a status.
-  ck("a zero Passport Strength is treated as empty", /empty: !composite,/.test(arr), true);
+  ck("a zero Passport Strength is treated as empty", /empty: !composite \|\| scoreInputsFailed,/.test(arr), true);
   // But an overdue count is worth showing even with nothing due today.
   ck("TODAY still shows when something is late", /empty: !todaySteps\.length && !stepsLate,/.test(arr), true);
 }

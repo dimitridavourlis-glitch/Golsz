@@ -4985,6 +4985,16 @@ function must(res) { if (res && res.error) throw res.error; return res ? res.dat
 // For a secondary lookup the screen can show without (names, likes, follows):
 // returns the data or null, and logs the error instead of losing it.
 function soft(res) { if (res && res.error) console.error("GOLSZ secondary read failed:", res.error); return res ? res.data : null; }
+// Which of a screen's parallel reads failed. `results` maps a name to the
+// { data, error } supabase-js resolved with; `coreKeys` names the reads the
+// screen cannot be shown without. core = any of those failed; failed = every
+// failed name (core included), so a secondary tile can hide itself.
+const HOME_CORE_READS = ["profiles", "athletes", "pathway"];
+function homeReadFailures(results, coreKeys) {
+  const failed = new Set();
+  for (const k of Object.keys(results)) if (results[k] && results[k].error) failed.add(k);
+  return { core: coreKeys.some((k) => failed.has(k)), failed };
+}
 // A read that failed is not an empty list. Shown in place of the list (and of
 // anything that would write the list back) until a retry succeeds.
 function LoadError({ onRetry }) {
@@ -11062,32 +11072,43 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan, flush, he
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [okMsg, setOkMsg] = useState("");
+  // A failed read is not an empty goal: with it unknown, the edit button is
+  // hidden so a save cannot overwrite the real goal with a new one.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
+
+  async function load(isAlive) {
+    if (!sb) { setLoaded(true); return; }
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) { if (isAlive()) setLoaded(true); return; }
+      const target = actingFor || user.id;
+      if (isAlive()) setUid(target);
+      // ONE READ. This used to fetch pathway_plan alongside the profile for
+      // a pathwayType that nothing here rendered - a second PostgREST
+      // request with its own RLS evaluation on every Plan and Home open,
+      // for a value that went into state and stopped. The category is drawn
+      // on the Road's goal node now, from PathwayPlan's own row.
+      const prof = must(await sb.from("profiles")
+        .select("goal_text, goal_source").eq("id", target).single());
+      if (!isAlive()) return;
+      setGoalText((prof && prof.goal_text) || "");
+      if (onGoalText) onGoalText((prof && prof.goal_text) || "");
+      setGoalSource((prof && prof.goal_source) || null);
+    } catch (e) {
+      console.error("GOLSZ goal load error:", e);
+      if (isAlive()) setLoadFailed(true);
+    }
+    if (isAlive()) setLoaded(true);
+  }
 
   useEffect(() => {
-    if (!sb) { setLoaded(true); return; }
     let alive = true;
-    (async () => {
-      try {
-        const { data: { user } } = await sb.auth.getUser();
-        if (!user) { if (alive) setLoaded(true); return; }
-        const target = actingFor || user.id;
-        if (alive) setUid(target);
-        // ONE READ. This used to fetch pathway_plan alongside the profile for
-        // a pathwayType that nothing here rendered - a second PostgREST
-        // request with its own RLS evaluation on every Plan and Home open,
-        // for a value that went into state and stopped. The category is drawn
-        // on the Road's goal node now, from PathwayPlan's own row.
-        const { data: prof } = await sb.from("profiles")
-          .select("goal_text, goal_source").eq("id", target).single();
-        if (!alive) return;
-        setGoalText((prof && prof.goal_text) || "");
-        if (onGoalText) onGoalText((prof && prof.goal_text) || "");
-        setGoalSource((prof && prof.goal_source) || null);
-      } catch (e) { console.error("GOLSZ goal load error:", e); }
-      if (alive) setLoaded(true);
-    })();
+    load(() => alive);
     return () => { alive = false; };
-  }, [actingFor]);
+  }, [actingFor, retryTick]);
+
+  function retryLoad() { setLoadFailed(false); setLoaded(false); setRetryTick((n) => n + 1); }
 
   function startEdit() { setDraft(goalText); setErr(""); setOkMsg(""); setEditing(true); }
 
@@ -11180,14 +11201,15 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan, flush, he
         {readOnly && (
           <span style={{ marginLeft: "auto", fontSize: 10.5, fontWeight: 800, letterSpacing: ".1em", color: C.slate, textTransform: "uppercase", flexShrink: 0 }}>{t("home_read_only_here")}</span>
         )}
-        {!editing && !readOnly && (
+        {!editing && !readOnly && !loadFailed && (
           <button onClick={startEdit} style={{ marginLeft: "auto", background: "none", border: "none", color: C.lime, fontSize: 11.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", padding: "4px 0", minHeight: 28 }}>
             {hasGoal ? t("goal_card_edit") : t("goal_card_set")}
           </button>
         )}
       </div>
 
-      {editing ? (
+      {loadFailed && <LoadError onRetry={retryLoad} />}
+      {!loadFailed && (editing ? (
         <div>
           <textarea value={draft} onChange={(e) => setDraft(e.target.value)} aria-label={t("goal_card_placeholder")} placeholder={t("goal_card_placeholder")} maxLength={300} style={inputStyle} />
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
@@ -11230,7 +11252,7 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan, flush, he
             <button onClick={startEdit} style={{ ...quietBtn, marginTop: 14 }}>{t("goal_card_set")}</button>
           )}
         </div>
-      )}
+      ))}
 
       {err && <div style={{ color: C.amber, fontSize: 11.5, marginTop: 8, lineHeight: 1.4 }}>{err}</div>}
       {okMsg && !err && <div style={{ color: C.lime, fontSize: 11.5, marginTop: 8 }}>{okMsg}</div>}
@@ -11428,6 +11450,12 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
   // whose Passport is live with three coaches. Unknown now says nothing
   // rather than saying the wrong thing.
   const [shareOpens, setShareOpens] = useState(null);
+  // A failed read is not "nothing due" or "0 results". loadFailed: a core read
+  // (profile, athlete, pathway) failed, so Home shows LoadError instead of the
+  // tiles. homeFailed: names of secondary reads that failed; only the tile each
+  // one feeds is hidden (see homeReadFailures).
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [homeFailed, setHomeFailed] = useState(() => new Set());
   const [devBusy, setDevBusy] = useState(null);
   const [devError, setDevError] = useState("");
   // Habit ids ticked TODAY (migration 141). A Set because the only questions
@@ -11476,7 +11504,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
         // parent — ticking on the parent's own plan is the bug the Plan tab
         // had until yesterday.
         setWhoId(who);
-        const [{ data: prof }, { data: ath }, { data: reqs }, { data: benchmarks }, { data: devItems }, { data: pathwayRow }, { data: targets }, { data: shareTokens }, { data: todayTicks }, { data: actionRows }, { data: lastSnap }] = await Promise.all([
+        const [profRes, athRes, reqsRes, benchmarksRes, devItemsRes, pathwayRes, targetsRes, shareRes, ticksRes, actionsRes, snapRes] = await Promise.all([
           sb.from("profiles").select("full_name, occupation, avatar_url, identity_verified, goal_defined, goal_text, created_at, plan").eq("id", who).single(),
           sb.from("athletes").select("sport, position, club_name, grad_year, gpa, citizenship, height_cm, weight_kg, country, recruiting_status, bio, highlights, timeline, scout_context").eq("id", who).single(),
           sb.from("verification_requests").select("status").eq("user_id", who).order("created_at", { ascending: false }).limit(1),
@@ -11511,6 +11539,17 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
             .eq("athlete_id", who).lt("taken_on", isoDay(new Date()))
             .order("taken_on", { ascending: false }).limit(1).maybeSingle(),
         ]);
+        const { core, failed } = homeReadFailures({
+          profiles: profRes, athletes: athRes, verification: reqsRes, benchmarks: benchmarksRes, dev: devItemsRes,
+          pathway: pathwayRes, targets: targetsRes, shares: shareRes, ticks: ticksRes, actions: actionsRes, snapshot: snapRes,
+        }, HOME_CORE_READS);
+        if (failed.size) console.error("GOLSZ home reads failed:", Array.from(failed).join(", "));
+        if (core) { setLoadFailed(true); setLoaded(true); return; }
+        setLoadFailed(false);
+        setHomeFailed(failed);
+        const prof = profRes.data, ath = athRes.data, reqs = reqsRes.data, benchmarks = benchmarksRes.data,
+          devItems = devItemsRes.data, pathwayRow = pathwayRes.data, targets = targetsRes.data,
+          shareTokens = shareRes.data, todayTicks = ticksRes.data, actionRows = actionsRes.data, lastSnap = snapRes.data;
         if (prof && prof.full_name) setName(prof.full_name);
         if (prof && prof.avatar_url) setAvatarUrl(prof.avatar_url);
         setAthlete(ath || null);
@@ -11549,7 +11588,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
         // it: changing a date overwrites the old one, so a moved step is
         // indistinguishable from one that always had that date. Inferring it
         // and showing the guess beside two real counts is the worst option.
-        setReview(weekReview(actionRows, new Date()));
+        setReview(actionsRes.error ? null : weekReview(actionRows, new Date()));
         setPrevScore(lastSnap && typeof lastSnap.composite === "number"
           ? { on: lastSnap.taken_on, composite: lastSnap.composite } : null);
         // Array or nothing: a failed read leaves it null and the tile falls
@@ -11571,7 +11610,9 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
         //
         // One row per athlete per day (the primary key), insert-only, so a
         // second load today is a no-op and today can never rewrite last month.
-        {
+        // Not when a read failed: the missing input scores 0, and a day's
+        // snapshot can never be rewritten.
+        if (!failed.size) {
           const snapScores = {
             profile_quality: (computeProfileQuality(ath, prof) || {}).score || 0,
             verification: isVerified ? 100 : pendingReq ? 50 : 0,
@@ -11679,9 +11720,16 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
         const followUpStatuses = new Set(["preparing", "contacted", "follow_up"]);
         const staleTargets = (targets || []).filter((tg) => followUpStatuses.has(tg.status) && new Date(tg.updated_at).getTime() < staleCutoff).length;
         setMonthly({ activeDevItems: (devItems || []).filter((i) => i.status === "active").length, staleTargets });
-      } catch (e) { console.error("GOLSZ home load error:", e); }
+      } catch (e) {
+        console.error("GOLSZ home load error:", e);
+        setLoadFailed(true);
+      }
       setLoaded(true);
   }, [actingFor]);
+
+  // Back to the skeleton, not straight into reload(): the screen must not
+  // keep showing the error while the retry is in flight.
+  function retryHome() { setLoadFailed(false); setLoaded(false); reload(); }
 
   useEffect(() => { reload(); }, [reload]);
 
@@ -11715,6 +11763,14 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
       </div>
     );
   }
+
+  if (loadFailed) {
+    return <div style={{ padding: "8px 16px 20px" }}><div style={card}><LoadError onRetry={retryHome} /></div></div>;
+  }
+
+  // A failed secondary read hides what it feeds instead of showing zero. The
+  // composite and the bottleneck are computed from these four, so they hide too.
+  const scoreInputsFailed = ["verification", "benchmarks", "dev", "targets"].some((k) => homeFailed.has(k));
 
   // Time-of-day greeting ("Good morning, Harry" — §5) — local device time,
   // no server round trip needed for something this low-stakes.
@@ -12052,7 +12108,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
         k: "strength", label: t("home_readiness_composite"),
         value: String(composite), colour: compositeColor, go: "profile",
         // A score of 0 on day one is not a status, it is a discouragement.
-        empty: !composite,
+        empty: !composite || scoreInputsFailed,
       },
       // TODAY REPLACED THE LIFETIME STEPS TILE.
       // Adding TODAY and THIS WEEK alongside it would have put six
@@ -12081,13 +12137,13 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
         colour: weekSteps.length && weekDone === weekSteps.length ? C.lime : C.chalk,
         go: "targets",
       },
-      canTargets && {
+      canTargets && !homeFailed.has("targets") && {
         k: "follow", label: t("home_status_follow_up"),
         value: monthly && monthly.staleTargets > 0 ? String(monthly.staleTargets) : "\u2014",
         empty: !(monthly && monthly.staleTargets > 0),
         colour: monthly && monthly.staleTargets > 0 ? C.lime : C.slate, go: "targets",
       },
-      canBenchmarks && {
+      canBenchmarks && !homeFailed.has("benchmarks") && {
         k: "bench", label: t("home_status_benchmark"),
         value: recentBenchmarks.length ? String(recentBenchmarks[0].value) : "\u2014",
         empty: !recentBenchmarks.length,
@@ -12139,14 +12195,14 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
             : (shareOpens.length ? t("tile_passport_shared") : t("tile_passport_unshared")),
         act: () => onNavigate("profile") },
       { k: "schools", icon: GraduationCap, label: t("tile_schools"),
-        sub: lockedFor("targets") || !targetRows.length ? null : t("tile_schools_n").replace("{n}", targetRows.length),
+        sub: lockedFor("targets") || homeFailed.has("targets") || !targetRows.length ? null : t("tile_schools_n").replace("{n}", targetRows.length),
         locked: lockedFor("targets"),
         act: () => onNavigate("targets", null, null, null, "gz-schools") },
       { k: "videos", icon: Video, label: t("tile_videos"),
         sub: clipCount ? t("tile_videos_n").replace("{n}", clipCount) : null,
         act: () => onNavigate("profile", null, null, null, "gz-highlights") },
       { k: "tests", icon: Timer, label: t("tile_tests"),
-        sub: lockedFor("benchmarks") ? null : (benchmarkTotal ? t("tile_tests_n").replace("{n}", benchmarkTotal) : null),
+        sub: lockedFor("benchmarks") || homeFailed.has("benchmarks") ? null : (benchmarkTotal ? t("tile_tests_n").replace("{n}", benchmarkTotal) : null),
         locked: lockedFor("benchmarks"),
         act: () => onNavigate("profile", null, null, null, "gz-benchmarks") },
     ];
@@ -12520,7 +12576,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
 
       {showMore && (
         <>
-      {!actingFor && devList.length > 0 && (
+      {!actingFor && devList.length > 0 && !homeFailed.has("ticks") && (
         <HomeZone label={t("home_dim_focus")} span={1}>
           <div>
           {devList.filter((d) => d.status !== "done").length === 0 ? (
@@ -12645,7 +12701,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
 
           Plan-gated with the rest of readiness, and hidden while the plan is
           unknown — never a lock, same rule as the status row below. */}
-      {planKnown(plan) && featureUnlocked(plan, "readiness") && pathwayRow && (
+      {planKnown(plan) && featureUnlocked(plan, "readiness") && pathwayRow && !scoreInputsFailed && (
         <HomeZone span={2}>
           <div style={{ ...card, margin: 0, borderColor: C.amberBorder }}>
             <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.amber, fontWeight: 800, marginBottom: 6 }}>
@@ -19402,7 +19458,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=d0d9570df0ef1342";
+    var APP_SRC = "js/app.js?v=5c84f5d12792bd73";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
