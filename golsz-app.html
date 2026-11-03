@@ -4251,14 +4251,16 @@ function Events() {
   const [myEvents, setMyEvents] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [uid, setUid] = useState(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   async function load() {
     // myEvents === null is the "Loading…" state, so every exit path has to
-    // resolve it — preview mode and a failed fetch both fall back to the
-    // honest empty state rather than spinning forever.
+    // resolve it — preview mode falls back to the honest empty state, and a
+    // failed fetch sets loadFailed (an error with Retry, never the empty text).
     if (!sb) { setMyEvents([]); return; }
+    setLoadFailed(false);
     try {
-      const { data: { user } } = await sb.auth.getUser();
+      const { user } = must(await sb.auth.getUser());
       if (user) setUid(user.id);
       const { data, error } = await sb
         .from("events")
@@ -4269,7 +4271,10 @@ function Events() {
         .limit(60);
       if (error) throw error;
       setMyEvents((data || []).map(mapEvent));
-    } catch (e) { console.error("GOLSZ events fetch error:", e); setMyEvents((l) => l || []); }
+    } catch (e) {
+      console.error("GOLSZ events fetch error:", e);
+      setLoadFailed(true);
+    }
   }
   useEffect(() => { load(); }, []);
 
@@ -4298,13 +4303,14 @@ function Events() {
         />
       )}
 
-      {myEvents === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
-      {myEvents && myEvents.length === 0 && (
+      {loadFailed && <LoadError onRetry={load} />}
+      {!loadFailed && myEvents === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
+      {!loadFailed && myEvents && myEvents.length === 0 && (
         <div style={{ color: C.slate, fontSize: 13, padding: "2px 2px 16px" }}>
           {t("events_empty")}
         </div>
       )}
-      {myEvents && myEvents.map((e) => <EventRow key={e.id} e={e} mine={true} onDelete={deleteEvent} />)}
+      {!loadFailed && myEvents && myEvents.map((e) => <EventRow key={e.id} e={e} mine={true} onDelete={deleteEvent} />)}
     </div>
   );
 }
@@ -4915,6 +4921,10 @@ function loginErrorKey(e) {
   if (isNetworkError(e)) return "err_network";
   return "err_generic";
 }
+// supabase-js resolves with { error } instead of throwing, so a loader that
+// destructures only `data` loses the failure. must() turns that back into a
+// throw for the loader's catch: `const rows = must(await sb.from(...).select())`.
+function must(res) { if (res && res.error) throw res.error; return res ? res.data : null; }
 // A read that failed is not an empty list. Shown in place of the list (and of
 // anything that would write the list back) until a retry succeeds.
 function LoadError({ onRetry }) {
@@ -19223,7 +19233,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=60c3caaf702c5830";
+    var APP_SRC = "js/app.js?v=1b65ab62b40cab00";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
