@@ -58,6 +58,12 @@ for (const k of ["full_name", "occupation", "sport", "grad_year", "height_cm", "
   ck(`${k} input has errProps and a message`, APP.includes(`errProps("${k}")`) && APP.includes(`fieldError("${k}")`), true);
 }
 
+// C.amber is #B58A1A in the light theme: 3.0:1 on the sheet (#FDF9F2), under 4.5:1 for 11.5px text.
+// C.limeText is the darker gold made for small text (5.8:1 light, 9.4:1 dark). Found in the browser run.
+ck("editor field messages use C.limeText, not C.amber", /id=\{"editor-err-" \+ k\} style=\{\{[^}]*color: C\.limeText/.test(APP), true);
+ck("sign-up field messages use C.limeText, not C.amber",
+  /id=\{"signup-err-" \+ f\} style=\{\{[^}]*color: C\.limeText/.test(APP) && /id="signup-err-pw" style=\{\{[^}]*color: C\.limeText/.test(APP), true);
+
 /* ---------- strings ---------- */
 const starts = ["en", "fr", "es", "el"].map((l) => APP.indexOf(`\n  ${l}: {`));
 const dicts = starts.map((x) => APP.slice(x, APP.indexOf("\n  },\n", x)));
