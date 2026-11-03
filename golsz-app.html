@@ -9568,6 +9568,9 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
     setConversationId(newScoutConvId());
     setSummary("");
     setShowHistory(false);
+    // A fresh chat replaces whatever failed to restore; leaving the error up
+    // would let its Retry swap this chat for the latest one.
+    setRestoreFailed(false);
   }
 
   async function loadHistoryList() {
@@ -9590,6 +9593,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   function openHistory() {
     if (showHistory) { setShowHistory(false); return; }
     setShowHistory(true);
+    setOpenFailed(false);
     loadHistoryList();
   }
 
@@ -9612,6 +9616,9 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
         if (summaryRow && summaryRow.summary) setSummary(summaryRow.summary);
       } catch (e) { console.error("GOLSZ scout summary load error:", e); }
       setShowHistory(false);
+      // The chosen conversation now owns the screen: the mount-restore error
+      // no longer describes it.
+      setRestoreFailed(false);
     } catch (e) { console.error("GOLSZ scout load conversation error:", e); setOpenFailed(true); }
   }
 
@@ -19496,7 +19503,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=58c3f144d40d93c4";
+    var APP_SRC = "js/app.js?v=b41bbea5b2dac002";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

@@ -13,6 +13,15 @@ request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the
 22.x and 24.x. (`landing-glow-path` before it: merged 2026-10-27.)
 
 ## Last Completed Work
+- Job 144 t6, Scout history / Settings privacy / VerificationRequest load errors. Recorded browser run
+  2026-11-03 (throwaway harness: served in-memory copy mounts the real component, stubbed Supabase fails the
+  chosen tables). 390 and 1280 px, dark and light: Scout restore failure shows LoadError above the greeting,
+  Retry clears it; after a failed restore, opening a chat from History removes the banner and shows THAT chat
+  (reviewer's bug, fixed: newChat/loadConversation now clear restoreFailed); History list failure shows
+  LoadError, not "no past chats"; Settings privacy failure shows LoadError, all 5 privacy toggles disabled
+  (opacity 0.6), Retry re-enables them; VerificationRequest failure shows only LoadError + Retry. No sideways
+  scroll anywhere. New chat after a failed restore was not clicked in the browser (button needs 2+ messages);
+  the suite pins it.
 - Job 144 t8, Passport editor field errors (`profileFieldErrors`, golsz-app.html). Recorded browser run
   2026-11-03 (throwaway harness: a served in-memory copy mounts the real ProfileEditor with stubbed Supabase,
   presses Save, measures the DOM). 390 and 1280 px, dark and light, 3 cases: (a) empty name, (b) Player with

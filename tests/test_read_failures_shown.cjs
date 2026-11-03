@@ -405,6 +405,27 @@ for (const { component, loader, emptyKeys } of REGISTRY) {
   ck("VerificationRequest: loadFailed is checked before the pending/form branches", !!m2, true);
 }
 
+// ---- Scout: once another conversation owns the screen, the mount-restore error must go,
+// or its Retry (restoreLatest) would replace the chat the athlete just chose ----
+{
+  const fns = {};
+  traverse(ast, {
+    FunctionDeclaration(pa) {
+      if (!pa.node.id || pa.node.id.name !== "Scout") return;
+      pa.traverse({
+        FunctionDeclaration(fp) { fns[fp.node.id.name] = fp.node; },
+      });
+    },
+  });
+  const clears = (node, setter) => !!node && CODE.slice(node.start, node.end).includes(`${setter}(false)`);
+  ck("Scout: newChat clears restoreFailed", clears(fns.newChat, "setRestoreFailed"), true);
+  const lc = fns.loadConversation;
+  const tryStmt = lc && lc.body.body.find((s) => s.type === "TryStatement");
+  ck("Scout: loadConversation clears restoreFailed on success (inside try, not catch)",
+    !!tryStmt && clears(tryStmt.block, "setRestoreFailed") && !clears(tryStmt.handler, "setRestoreFailed"), true);
+  ck("Scout: openHistory clears a stale openFailed", clears(fns.openHistory, "setOpenFailed"), true);
+}
+
 // ---- must() ----
 const src = /function must\(res\) \{[^\n]*\}/.exec(CODE);
 if (!src) throw new Error("must() not found in golsz-app.html");
