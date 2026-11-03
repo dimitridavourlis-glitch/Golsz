@@ -4356,6 +4356,13 @@ function Messages({ thread, setThread, onViewProfile }) {
   const [savingEvent, setSavingEvent] = useState(null);
   const [threadReqStatus, setThreadReqStatus] = useState(null); // 'pending_sent' | 'pending_received' | 'accepted' | null
   const [reportedThread, setReportedThread] = useState(false);
+  // A failed read is not an empty one. listFailed replaces the conversation list
+  // with <LoadError>; threadFailed does the same for an open thread AND hides the
+  // composer and the Accept/Decline banner, since without the request status the
+  // app cannot know which of the two is correct. Only a successful load clears
+  // them (the Realtime handler below deliberately never touches either).
+  const [listFailed, setListFailed] = useState(false);
+  const [threadFailed, setThreadFailed] = useState(false);
   const threadRef = useRef(thread);
   useEffect(() => { threadRef.current = thread; }, [thread]);
   useEffect(() => { setReportedThread(false); }, [thread]);
@@ -4396,14 +4403,15 @@ function Messages({ thread, setThread, onViewProfile }) {
       // that specific sender yet. Fetched alongside messages so each
       // conversation can be tagged as needing my decision ("request"),
       // still waiting on them, or already a normal open conversation.
-      const [{ data, error }, { data: reqs }] = await Promise.all([
+      const [msgRes, reqRes] = await Promise.all([
         sb.from("messages").select("id, sender_id, recipient_id, body, created_at, read_at")
           .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
           .order("created_at", { ascending: false })
           .limit(300),
         sb.from("message_requests").select("sender_id, recipient_id, status").or(`sender_id.eq.${uid},recipient_id.eq.${uid}`),
       ]);
-      if (error) throw error;
+      const data = must(msgRes);
+      const reqs = must(reqRes);
       const reqByCounterpart = new Map();
       for (const r of reqs || []) {
         const other = r.sender_id === uid ? r.recipient_id : r.sender_id;
@@ -4418,7 +4426,7 @@ function Messages({ thread, setThread, onViewProfile }) {
       // a hidden conversation ("delete conversation") stays hidden until a
       // new message arrives after it was hidden — same as most DM apps'
       // delete/archive-thread behavior, without destroying any messages.
-      const { data: hidden } = await sb.from("hidden_conversations").select("other_id, hidden_at").eq("user_id", uid);
+      const hidden = must(await sb.from("hidden_conversations").select("other_id, hidden_at").eq("user_id", uid));
       const hiddenAt = Object.fromEntries((hidden || []).map((h) => [h.other_id, h.hidden_at]));
       const ids = [...byCounterpart.keys()].filter((id) => {
         const h = hiddenAt[id];
@@ -4440,7 +4448,8 @@ function Messages({ thread, setThread, onViewProfile }) {
       // separate Requests inbox, just without a second screen to build.
       list.sort((a, b) => (b.isPendingReceived ? 1 : 0) - (a.isPendingReceived ? 1 : 0));
       setConversations(list);
-    } catch (e) { console.error("GOLSZ messages load error:", e); setConversations([]); }
+      setListFailed(false);
+    } catch (e) { console.error("GOLSZ messages load error:", e); setListFailed(true); }
   }
   useEffect(() => { if (uid) loadConversations(); }, [uid]);
 
@@ -4480,7 +4489,7 @@ function Messages({ thread, setThread, onViewProfile }) {
   async function loadThread(otherId) {
     if (!sb || !uid || !otherId) return;
     try {
-      const [{ data: ppl }, { data: msgs, error }, { data: reqRow }] = await Promise.all([
+      const [pplRes, msgRes, reqRes] = await Promise.all([
         sb.from("public_profile_names").select("id, full_name").eq("id", otherId).maybeSingle(),
         sb.from("messages").select("id, sender_id, recipient_id, body, created_at, read_at")
           .or(`and(sender_id.eq.${uid},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${uid})`)
@@ -4489,7 +4498,9 @@ function Messages({ thread, setThread, onViewProfile }) {
           .or(`and(sender_id.eq.${uid},recipient_id.eq.${otherId}),and(sender_id.eq.${otherId},recipient_id.eq.${uid})`)
           .maybeSingle(),
       ]);
-      if (error) throw error;
+      const ppl = soft(pplRes);
+      const msgs = must(msgRes);
+      const reqRow = must(reqRes);
       setCounterpart({ id: otherId, name: (ppl && ppl.full_name) || "GOLSZ User" });
       setThreadMsgs(msgs || []);
       setThreadReqStatus(
@@ -4498,14 +4509,15 @@ function Messages({ thread, setThread, onViewProfile }) {
         : reqRow.sender_id === otherId ? "pending_received"
         : "pending_sent"
       );
+      setThreadFailed(false);
       const unreadIds = (msgs || []).filter((m) => m.recipient_id === uid && !m.read_at).map((m) => m.id);
       if (unreadIds.length) {
         await sb.from("messages").update({ read_at: new Date().toISOString() }).in("id", unreadIds);
         loadConversations();
       }
-    } catch (e) { console.error("GOLSZ thread load error:", e); }
+    } catch (e) { console.error("GOLSZ thread load error:", e); setThreadFailed(true); }
   }
-  useEffect(() => { if (typeof thread === "string" && uid) loadThread(thread); }, [thread, uid]);
+  useEffect(() => { if (typeof thread === "string" && uid) { setThreadFailed(false); loadThread(thread); } }, [thread, uid]);
 
   async function send() {
     if (!sb || !uid || typeof thread !== "string" || !text.trim() || busy) return;
@@ -4580,7 +4592,8 @@ function Messages({ thread, setThread, onViewProfile }) {
             {reportedThread ? t("action_reported") : t("action_report")}
           </button>
         </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: 14 }}>
+        {threadFailed && <div style={{ padding: 14 }}><LoadError onRetry={() => loadThread(thread)} /></div>}
+        <div style={{ flex: 1, overflowY: "auto", padding: 14, display: threadFailed ? "none" : undefined }}>
           {threadMsgs.length === 0 && (
             <div style={{ textAlign: "center", color: C.slate, fontSize: 12.5, marginTop: 20 }}>
               {t("messages_say_hello_pre")}{name}{t("messages_say_hello_post")}
@@ -4617,7 +4630,7 @@ function Messages({ thread, setThread, onViewProfile }) {
           />
         )}
         {err && <div style={{ padding: "0 12px 8px", color: C.amber, fontSize: 11.5 }}>{err}</div>}
-        {threadReqStatus === "pending_received" ? (
+        {!threadFailed && (threadReqStatus === "pending_received" ? (
           <div style={{ padding: "12px", borderTop: `1px solid ${C.line}` }}>
             <div style={{ fontSize: 12.5, color: C.slate, marginBottom: 10, textAlign: "center" }}>
               {t("messages_request_banner_pre")}{name}{t("messages_request_banner_post")}
@@ -4651,7 +4664,7 @@ function Messages({ thread, setThread, onViewProfile }) {
               }}><Send size={16} /></button>
             </div>
           </>
-        )}
+        ))}
       </div>
     );
   }
@@ -4662,7 +4675,8 @@ function Messages({ thread, setThread, onViewProfile }) {
   return (
     <div style={{ padding: "8px 12px 16px" }}>
       <SectionTitle>{t("messages_title")}</SectionTitle>
-      {conversations && conversations.length > 0 && (
+      {listFailed && <LoadError onRetry={loadConversations} />}
+      {!listFailed && conversations && conversations.length > 0 && (
         <div style={{ position: "relative", marginBottom: 12 }}>
           <Search size={16} color={C.slate} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)" }} />
           <input
@@ -4676,16 +4690,16 @@ function Messages({ thread, setThread, onViewProfile }) {
           />
         </div>
       )}
-      {conversations === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
-      {conversations && conversations.length === 0 && (
+      {!listFailed && conversations === null && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
+      {!listFailed && conversations && conversations.length === 0 && (
         <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>
           {t("messages_empty")}
         </div>
       )}
-      {conversations && conversations.length > 0 && visibleConversations.length === 0 && (
+      {!listFailed && conversations && conversations.length > 0 && visibleConversations.length === 0 && (
         <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("messages_no_match")}</div>
       )}
-      {visibleConversations && visibleConversations.map((conv) => (
+      {!listFailed && visibleConversations && visibleConversations.map((conv) => (
         <div key={conv.id} style={{
           ...card, display: "flex", flexDirection: "column", gap: 8,
           border: `1px solid ${conv.isPendingReceived ? C.limeBorder : conv.unread ? C.line2 : C.line}`,
@@ -19353,7 +19367,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=89139bcd5adc1c1d";
+    var APP_SRC = "js/app.js?v=155c6741eb905e80";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

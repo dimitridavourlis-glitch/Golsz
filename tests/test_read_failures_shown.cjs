@@ -9,7 +9,8 @@
 //   (a) the loader's catch calls a set*Failed(true) / set*LoadFailed(true) setter
 //   (b) the catch does not write an empty array anywhere (`[]`, `l || []`)
 //   (c) the component renders <LoadError, and every element that uses an
-//       *_empty i18n key sits under a `!<failedFlag>` guard
+//       *_empty i18n key sits under a `!<failedFlag>` guard (an entry may scope
+//       this to its own `emptyKeys` when one component has two loaders)
 // plus a unit check of must(), evaluated from the source.
 // The detector is validated first against a known-broken and a known-good snippet.
 
@@ -33,6 +34,8 @@ const REGISTRY = [
   { component: "Events", loader: "load" },
   { component: "Feed", loader: "loadFeed" },
   { component: "Discover", loader: "loadPlayers" },
+  { component: "Messages", loader: "loadConversations" },
+  { component: "Messages", loader: "loadThread", emptyKeys: [] } // the empty text belongs to the list loader,
 ];
 
 const m = /<script[^>]*type=["']text\/babel(?:-deferred)?["'][^>]*>/.exec(HTML);
@@ -47,7 +50,7 @@ const EMPTY_KEY = /_empty$|^feed_no_posts$|^feed_no_match$|^discover_no_athletes
 const FAILED_SETTER = /^set\w*(Load)?Failed$/;
 
 // Returns a list of problems (empty = fine) for one component/loader in an AST.
-function audit(ast, component, loader) {
+function audit(ast, component, loader, emptyKeys) {
   const problems = [];
   let comp = null;
   traverse(ast, {
@@ -106,7 +109,7 @@ function audit(ast, component, loader) {
     JSXOpeningElement(pa) { if (pa.node.name.name === "LoadError") rendersError = true; },
     CallExpression(pa) {
       const a = pa.node.arguments[0];
-      if (pa.node.callee.name === "t" && a && a.type === "StringLiteral" && EMPTY_KEY.test(a.value) && flag && !guarded(pa)) {
+      if (pa.node.callee.name === "t" && a && a.type === "StringLiteral" && EMPTY_KEY.test(a.value) && (!emptyKeys || emptyKeys.includes(a.value)) && flag && !guarded(pa)) {
         problems.push(`"${a.value}" is shown without a !${flag} guard`);
       }
     },
@@ -132,8 +135,8 @@ ck("detector passes the fixed shape",
 
 // ---- the real components ----
 const ast = parse(CODE);
-for (const { component, loader } of REGISTRY) {
-  ck(`${component}.${loader}: failure shown with Retry, never as empty`, audit(ast, component, loader), []);
+for (const { component, loader, emptyKeys } of REGISTRY) {
+  ck(`${component}.${loader}: failure shown with Retry, never as empty`, audit(ast, component, loader, emptyKeys), []);
 }
 
 // ---- Feed: a failed blocks read must fail the load, or blocked people's posts would show ----
@@ -155,6 +158,55 @@ for (const { component, loader } of REGISTRY) {
   });
   ck("Feed.loadFeed reads blocks", readsBlocks, true);
   ck("Feed.loadFeed: the blocks read goes through must()", viaMust, true);
+}
+
+// ---- Messages: with the thread load failed, the composer and the Accept/Decline
+// banner must not render (the request status is unknown), and both reads go through must() ----
+{
+  let composer = false, composerGuarded = false, acceptBtn = false, acceptGuarded = false;
+  const underNotFailed = (pa) => {
+    for (let q = pa.parentPath; q; q = q.parentPath) {
+      const n = q.node;
+      if (n.type === "LogicalExpression" && n.operator === "&&" && n.left.type === "UnaryExpression"
+        && n.left.operator === "!" && n.left.argument.name === "threadFailed") return true;
+    }
+    return false;
+  };
+  traverse(ast, {
+    FunctionDeclaration(pa) {
+      if (!pa.node.id || pa.node.id.name !== "Messages") return;
+      pa.traverse({
+        JSXOpeningElement(jp) {
+          if (jp.node.name.name === "input" && jp.node.attributes.some((a) => a.name && a.name.name === "onKeyDown")) {
+            composer = true; composerGuarded = underNotFailed(jp);
+          }
+        },
+        CallExpression(cp) {
+          const a = cp.node.arguments[0];
+          // the first messages_accept in source order is the thread banner (the list's buttons come after)
+          if (cp.node.callee.name === "t" && a && a.value === "messages_accept" && !acceptBtn) {
+            acceptBtn = true; acceptGuarded = underNotFailed(cp);
+          }
+        },
+      });
+    },
+  });
+  ck("Messages thread composer exists", composer, true);
+  ck("Messages thread composer is guarded by !threadFailed", composerGuarded, true);
+  ck("Messages thread Accept/Decline banner exists", acceptBtn, true);
+  ck("Messages thread Accept/Decline banner is guarded by !threadFailed", acceptGuarded, true);
+  const mustCount = (name) => {
+    let n = 0;
+    traverse(ast, {
+      FunctionDeclaration(pa) {
+        if (!pa.node.id || pa.node.id.name !== name) return;
+        pa.traverse({ CallExpression(cp) { if (cp.node.callee.name === "must") n++; } });
+      },
+    });
+    return n;
+  };
+  ck("Messages.loadConversations: both reads go through must()", mustCount("loadConversations") >= 2, true);
+  ck("Messages.loadThread: both reads go through must()", mustCount("loadThread") >= 2, true);
 }
 
 // ---- must() ----
