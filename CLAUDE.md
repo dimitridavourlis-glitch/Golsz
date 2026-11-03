@@ -137,6 +137,18 @@ Relevant commands:
   The trap is that a top-level screen is any component rendered *outside* `GolszApp`'s tree — the no-login
   and pre-login surfaces, exactly the ones nobody logged in ever sees. If you add another, it needs
   `<style>{CSS}</style>` and it will not fail any test without it.
+- **Verifying the shared Passport** (`?share=<token>`, signed out): no unit test can show a coach's view, so
+  look at it. `tools/preview-public-passport.cjs` serves the repo and adds a fixture stub to an in-memory COPY
+  of `golsz-app.html` (never the file on disk, never the deployed build; `tests/test_preview_public_passport.cjs`
+  pins that). It answers `get_public_passport_by_token` locally, so nothing touches production. Open
+  `/golsz-app.html?share=fake-token&fixture=<a|b|c|d>&theme=<dark|light>` at 390px and 1280px. Fixtures:
+  **a** full athlete (club, country, 3 benchmarks with method and date); **b** the same with club and country
+  null (the athlete hid them: no Club label, no country); **c** null (banned, removed or revoked: "This Passport
+  isn't available"); **d** HTTP 500 first (error text + Try again), `&retry=1` taps it and shows the card.
+  `theme=` sets `localStorage["golsz-theme"]` before load. The server prints each Supabase request with
+  `auth=anon-key` (signed out) or `auth=other` (a user token, which must never appear). A browser with no
+  internet gets React/Supabase from `npm pack` copies cached in `~/.cache/golsz-preview-vendor`. Last run
+  2026-11-03: all 16 combinations (a-d x 2 widths x 2 themes) read correctly, no horizontal scroll at 390px.
 - **Theming (dark/light background, Settings button)**: every color in `C` (`C.pitch`, `C.chalk`, `C.lime`,
   etc.) is a CSS custom property string (`"var(--pitch)"`, ...), not a hardcoded hex value — the actual hex
   values live in the `CSS` template string's `:root { ... }` (dark, default) and `html[data-theme="light"]
@@ -152,6 +164,7 @@ Relevant commands:
   CSS vars (`--lime-border`, `--amber-border`) exist specifically because `${C.lime}66`-style hex-alpha-suffix
   concatenation doesn't work once `C.lime` is a `var()` string (`var(--lime)66` isn't valid CSS) — use those
   instead of trying to append alpha digits to any `C.*` value.
+  `C.limeText` (`--lime-text`) is gold used as *text*: same as `--lime` in dark, a darker gold in light so 9-13px text clears 4.5:1; `PublicPassport` uses it for its gold text, and `tests/test_public_passport_contrast.cjs` checks every text/background pair there in both themes.
 - **Language (i18n) — English/French/Spanish/Greek, full app coverage.** `I18N` (a plain object of
   `{en, fr, es, el}` dictionaries, ~150 keys each) + `LangContext`/`LangProvider`/`useLang()` live right after
   `useTheme()`. `LangProvider` wraps the entire app once, at the `ReactDOM.createRoot(...).render(...)` call —
