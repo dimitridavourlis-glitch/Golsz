@@ -5815,32 +5815,33 @@ function Benchmarks({ viewUserId, manageId }) {
 function PostsGrid({ viewUserId }) {
   const { t } = useLang();
   const [posts, setPosts] = useState([]);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [openPost, setOpenPost] = useState(null);
   const panelRef = useRef(null);
   useModalFocus(panelRef, !!openPost, () => setOpenPost(null));
 
-  useEffect(() => {
+  async function load() {
     if (!sb) return;
-    (async () => {
-      try {
-        const { data: { user } } = await sb.auth.getUser();
-        if (!user) return;
-        const targetId = viewUserId || user.id;
-        const { data, error } = await sb.from("posts")
-          .select("id, kind, headline, body, image_url, likes_count, created_at")
-          .eq("author_id", targetId)
-          .order("created_at", { ascending: false })
-          .limit(30);
-        if (error) throw error;
-        setPosts(data || []);
-      } catch (e) { console.error("GOLSZ posts grid load error:", e); setPosts([]); }
-    })();
-  }, [viewUserId]);
+    setLoadFailed(false);
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return;
+      const targetId = viewUserId || user.id;
+      const data = must(await sb.from("posts")
+        .select("id, kind, headline, body, image_url, likes_count, created_at")
+        .eq("author_id", targetId)
+        .order("created_at", { ascending: false })
+        .limit(30));
+      setPosts(data || []);
+    } catch (e) { console.error("GOLSZ posts grid load error:", e); setLoadFailed(true); }
+  }
+  useEffect(() => { load(); }, [viewUserId]);
 
   return (
     <div style={{ ...card }}>
       <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("passport_posts_title")}</div>
-      {posts.length === 0 ? (
+      {loadFailed && <LoadError onRetry={load} />}
+      {!loadFailed && (posts.length === 0 ? (
         <div style={{ fontSize: 12.5, color: C.slate }}>{t("passport_posts_empty")}</div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 3 }}>
@@ -5865,7 +5866,7 @@ function PostsGrid({ viewUserId }) {
             </div>
           ))}
         </div>
-      )}
+      ))}
 
       {/* Portaled to document.body for the same reason as the other
           modals — see ProfileEditor's comment above its own portal. */}
@@ -6691,7 +6692,11 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   // a separate table, so this one count-only query (own profile only, never
   // for a viewed passport) is the only addition. The Development count went
   // with its section, to Plan (2026-09-18).
+  // null = the count read failed: the tile is hidden, never shown as 0.
   const [benchmarkCount, setBenchmarkCount] = useState(0);
+  // A failed profile/athlete read is not a blank Passport: the body is replaced
+  // by an error with Retry, and ProfileEditor is never seeded from empty values.
+  const [loadFailed, setLoadFailed] = useState(false);
   // Real identity verification (profiles.identity_verified, migration 058) —
   // fetched for the owner only; a viewed-other Passport reads from
   // public_profile_names, which deliberately does not expose it.
@@ -6821,6 +6826,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
 
   async function load() {
     if (!sb) return;
+    setLoadFailed(false);
     try {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
@@ -6833,26 +6839,30 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         // profiles has no public-read policy (dob is sensitive), so the
         // viewed person's name comes from the public_profile_names view —
         // same pattern used in Feed/Discover/Messages.
-        const [{ data: nameRow }, { data: ath }] = await Promise.all([
+        // maybeSingle: no row and no error still means "no row"; an error throws.
+        const [nameRow, ath] = (await Promise.all([
           sb.from("public_profile_names").select("full_name, occupation, verified_tier, avatar_url").eq("id", viewUserId).maybeSingle(),
           sb.from("athletes").select("*").eq("id", viewUserId).maybeSingle(),
-        ]);
+        ])).map(must);
         setProfile(nameRow ? { full_name: nameRow.full_name, occupation: nameRow.occupation, verified_tier: nameRow.verified_tier, avatar_url: nameRow.avatar_url } : null);
         setAthlete(ath || null);
       } else {
-        const [{ data: prof }, { data: ath }] = await Promise.all([
-          sb.from("profiles").select("full_name, is_admin, occupation, verified_tier, plan, avatar_url, identity_verified").eq("id", selfId).single(),
-          sb.from("athletes").select("*").eq("id", selfId).single(),
-        ]);
+        const [prof, ath] = (await Promise.all([
+          sb.from("profiles").select("full_name, is_admin, occupation, verified_tier, plan, avatar_url, identity_verified").eq("id", selfId).maybeSingle(),
+          sb.from("athletes").select("*").eq("id", selfId).maybeSingle(),
+        ])).map(must);
         setProfile(prof || null);
         setAthlete(ath || null);
         setIdentityVerified(!!(prof && prof.identity_verified));
+        // Only here, after both reads succeeded: a failed load leaves autoEdit
+        // unconsumed so onboarding still opens after a successful Retry.
         if (autoEdit) { setEditing(true); onAutoEditConsumed && onAutoEditConsumed(); }
-        const { count: bCount } = await sb.from("athlete_benchmarks")
+        const { count: bCount, error: bErr } = await sb.from("athlete_benchmarks")
           .select("id", { count: "exact", head: true }).eq("user_id", selfId);
-        setBenchmarkCount(bCount || 0);
+        if (bErr) console.error("GOLSZ benchmark count read failed:", bErr);
+        setBenchmarkCount(bErr ? null : (bCount || 0));
       }
-    } catch (e) { console.error("GOLSZ passport load error:", e); }
+    } catch (e) { console.error("GOLSZ passport load error:", e); setLoadFailed(true); }
     finally { setLoaded(true); }
   }
   useEffect(() => { load(); }, [viewUserId]);
@@ -6876,9 +6886,11 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   // pinned on the Passport screen by a profile that is not theirs and that
   // they may not be able to complete. The lock is about the SIGNED-IN user.
   useEffect(() => {
-    if (!loaded || viewingOther || manageMode || !onProfileStatus) return;
+    // A failed load has no athlete row to judge: reporting "incomplete" would
+    // pin the athlete on this screen (mustFinishProfile) over a read error.
+    if (!loaded || loadFailed || viewingOther || manageMode || !onProfileStatus) return;
     onProfileStatus(!!(athlete && athlete.sport) || !!(profile && profile.occupation === "Parent"));
-  }, [loaded, athlete, profile, viewingOther, manageMode]);
+  }, [loaded, loadFailed, athlete, profile, viewingOther, manageMode]);
 
   // FOLLOW ON A VIEWED PASSPORT WAS NEVER WIRED UP. Two follows selects ran
   // on every open of someone else's Passport, into two useState values, read
@@ -6940,6 +6952,9 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   // question — Plan showed a paywall, GoalCard showed nothing, this showed text.
   // Three surfaces, three behaviours, none of them chosen. Same skeleton as the rest.
   if (!loaded) return <div style={{ padding: "8px 12px 20px" }}><SkeletonCard height={120} /><SkeletonCard height={220} /></div>;
+  // Before the editor and every Passport field below, so neither can render
+  // from rows that never loaded.
+  if (loadFailed) return <div style={{ padding: "8px 12px 20px" }}><div style={{ ...card }}><LoadError onRetry={load} /></div></div>;
 
   return (
     <div style={{ padding: "8px 12px 20px", background: C.passportWash }}>
@@ -7230,12 +7245,12 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           nothing here to reach. Three tiles, three sections still on this
           page. */}
       {!viewingOther && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, margin: "10px 0" }}>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${benchmarkCount === null ? 2 : 3}, 1fr)`, gap: 8, margin: "10px 0" }}>
           {[
             [ImageIcon, t("passport_strip_highlights"), Array.isArray(athlete && athlete.highlights) ? athlete.highlights.length : 0, "passport_strip_videos"],
-            [Flame, t("passport_strip_benchmarks"), benchmarkCount, "passport_strip_recorded"],
+            benchmarkCount === null ? null : [Flame, t("passport_strip_benchmarks"), benchmarkCount, "passport_strip_recorded"],
             [History, t("passport_strip_timeline"), Array.isArray(athlete && athlete.timeline) ? athlete.timeline.length : 0, "passport_strip_entries"],
-          ].map(([Icon, label, count, unitKey]) => (
+          ].filter(Boolean).map(([Icon, label, count, unitKey]) => (
             <div key={label} style={{ ...card, margin: 0, padding: "11px 6px", textAlign: "center" }}>
               <Icon size={16} color={C.lime} style={{ marginBottom: 5 }} />
               <div style={{ fontSize: 10, letterSpacing: "0.04em", color: C.chalk, fontWeight: 800 }}>{label}</div>
@@ -19367,7 +19382,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=155c6741eb905e80";
+    var APP_SRC = "js/app.js?v=e177adf5ab8ef20e";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

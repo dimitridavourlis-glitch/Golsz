@@ -35,7 +35,9 @@ const REGISTRY = [
   { component: "Feed", loader: "loadFeed" },
   { component: "Discover", loader: "loadPlayers" },
   { component: "Messages", loader: "loadConversations" },
-  { component: "Messages", loader: "loadThread", emptyKeys: [] } // the empty text belongs to the list loader,
+  { component: "Messages", loader: "loadThread", emptyKeys: [] }, // the empty text belongs to the list loader,
+  { component: "Passport", loader: "load" },
+  { component: "PostsGrid", loader: "load" },
 ];
 
 const m = /<script[^>]*type=["']text\/babel(?:-deferred)?["'][^>]*>/.exec(HTML);
@@ -207,6 +209,57 @@ for (const { component, loader, emptyKeys } of REGISTRY) {
   };
   ck("Messages.loadConversations: both reads go through must()", mustCount("loadConversations") >= 2, true);
   ck("Messages.loadThread: both reads go through must()", mustCount("loadThread") >= 2, true);
+}
+
+// ---- Passport: a failed load must not seed ProfileEditor with blanks, and must not
+// consume autoEdit (onboarding has to open after a successful Retry) ----
+{
+  let editorAt = -1, failReturnAt = -1, loadNode = null;
+  const mustCalls = [], consumed = [];
+  traverse(ast, {
+    FunctionDeclaration(pa) {
+      if (!pa.node.id || pa.node.id.name !== "Passport") return;
+      pa.traverse({
+        FunctionDeclaration(lp) { if (lp.node.id.name === "load" && lp.parentPath.parentPath === pa) loadNode = lp; },
+        JSXOpeningElement(jp) { if (jp.node.name.name === "ProfileEditor") editorAt = jp.node.start; },
+        IfStatement(ip) {
+          const t = ip.node.test;
+          // top-level `if (loadFailed) return ...` in the component body
+          if (ip.parentPath.parentPath === pa && t.type === "Identifier" && t.name === "loadFailed") failReturnAt = ip.node.start;
+        },
+      });
+    },
+  });
+  ck("Passport has ProfileEditor", editorAt > 0, true);
+  ck("Passport: ProfileEditor is only reachable past the `if (loadFailed) return` guard", failReturnAt > 0 && failReturnAt < editorAt, true);
+  ck("Passport.load found", !!loadNode, true);
+  if (loadNode) {
+    loadNode.traverse({
+      CallExpression(cp) {
+        const c = cp.node.callee;
+        if (c.type === "Identifier" && c.name === "onAutoEditConsumed") consumed.push(cp);
+        if (c.type === "MemberExpression" && c.property.name === "map" && cp.node.arguments[0] && cp.node.arguments[0].name === "must") mustCalls.push(cp);
+      },
+      LogicalExpression(lp) { if (lp.node.right.type === "CallExpression" && lp.node.right.callee.name === "onAutoEditConsumed") consumed.push(lp); },
+    });
+    const inCatch = (pa) => !!pa.findParent((q) => q.isCatchClause());
+    ck("Passport.load: onAutoEditConsumed is called", consumed.length > 0, true);
+    ck("Passport.load: onAutoEditConsumed is never in a catch", consumed.some(inCatch), false);
+    const lastMust = Math.max(...mustCalls.map((c) => c.node.end));
+    ck("Passport.load: onAutoEditConsumed comes after the must() reads", consumed.every((c) => c.node.start > lastMust), true);
+    // the profiles/public_profile_names and athletes reads each sit inside a Promise.all(...).map(must)
+    for (const table of ["profiles", "public_profile_names", "athletes"]) {
+      let viaMust = false;
+      loadNode.traverse({
+        StringLiteral(sp) {
+          if (sp.node.value !== table || !sp.parentPath.isCallExpression() || sp.parent.callee.property.name !== "from") return;
+          viaMust = viaMust || !!sp.findParent((q) => q.isCallExpression() && q.node.callee.type === "MemberExpression"
+            && q.node.callee.property.name === "map" && q.node.arguments[0] && q.node.arguments[0].name === "must");
+        },
+      });
+      ck(`Passport.load: the ${table} read goes through must()`, viaMust, true);
+    }
+  }
 }
 
 // ---- must() ----
