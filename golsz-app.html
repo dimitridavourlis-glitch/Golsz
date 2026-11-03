@@ -5814,34 +5814,39 @@ function Benchmarks({ viewUserId, manageId }) {
    ProfileEditor's modal elsewhere in this file. */
 function PostsGrid({ viewUserId }) {
   const { t } = useLang();
-  const [posts, setPosts] = useState([]);
+  // null = not loaded yet: the empty text only shows for a real, empty result.
+  const [posts, setPosts] = useState(sb ? null : []);
   const [loadFailed, setLoadFailed] = useState(false);
   const [openPost, setOpenPost] = useState(null);
   const panelRef = useRef(null);
   useModalFocus(panelRef, !!openPost, () => setOpenPost(null));
 
+  // loadFailed is cleared on success or by Retry (which shows "Loading…"),
+  // never at the start of a load, so the failure never flips to the empty text.
   async function load() {
     if (!sb) return;
-    setLoadFailed(false);
     try {
       const { data: { user } } = await sb.auth.getUser();
-      if (!user) return;
+      if (!user) { setPosts([]); return; }
       const targetId = viewUserId || user.id;
       const data = must(await sb.from("posts")
         .select("id, kind, headline, body, image_url, likes_count, created_at")
         .eq("author_id", targetId)
         .order("created_at", { ascending: false })
         .limit(30));
+      setLoadFailed(false);
       setPosts(data || []);
     } catch (e) { console.error("GOLSZ posts grid load error:", e); setLoadFailed(true); }
   }
   useEffect(() => { load(); }, [viewUserId]);
+  function retryLoad() { setLoadFailed(false); setPosts(null); load(); }
 
   return (
     <div style={{ ...card }}>
       <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 10 }}>{t("passport_posts_title")}</div>
-      {loadFailed && <LoadError onRetry={load} />}
-      {!loadFailed && (posts.length === 0 ? (
+      {loadFailed && <LoadError onRetry={retryLoad} />}
+      {!loadFailed && posts === null && <div style={{ fontSize: 12.5, color: C.slate }}>{t("loading")}</div>}
+      {!loadFailed && posts && (posts.length === 0 ? (
         <div style={{ fontSize: 12.5, color: C.slate }}>{t("passport_posts_empty")}</div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 3 }}>
@@ -6824,9 +6829,12 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     } finally { setAvatarBusy(false); }
   }
 
+  // loadFailed is cleared only once both reads succeed, never at the start:
+  // "loaded, not failed, no rows" renders a blank '—' Passport and lets the
+  // onProfileStatus effect report "incomplete", which locks every other tab
+  // (mustFinishProfile). Retry shows the skeleton instead, via setLoaded(false).
   async function load() {
     if (!sb) return;
-    setLoadFailed(false);
     try {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
@@ -6844,6 +6852,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           sb.from("public_profile_names").select("full_name, occupation, verified_tier, avatar_url").eq("id", viewUserId).maybeSingle(),
           sb.from("athletes").select("*").eq("id", viewUserId).maybeSingle(),
         ])).map(must);
+        setLoadFailed(false);
         setProfile(nameRow ? { full_name: nameRow.full_name, occupation: nameRow.occupation, verified_tier: nameRow.verified_tier, avatar_url: nameRow.avatar_url } : null);
         setAthlete(ath || null);
       } else {
@@ -6851,6 +6860,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           sb.from("profiles").select("full_name, is_admin, occupation, verified_tier, plan, avatar_url, identity_verified").eq("id", selfId).maybeSingle(),
           sb.from("athletes").select("*").eq("id", selfId).maybeSingle(),
         ])).map(must);
+        setLoadFailed(false);
         setProfile(prof || null);
         setAthlete(ath || null);
         setIdentityVerified(!!(prof && prof.identity_verified));
@@ -6866,6 +6876,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
     finally { setLoaded(true); }
   }
   useEffect(() => { load(); }, [viewUserId]);
+  function retryLoad() { setLoaded(false); load(); }
 
   // Keeps GolszApp's app-wide lock (see mustFinishProfile there) in sync
   // with the real, live state of this athlete's own profile — fires once
@@ -6954,7 +6965,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
   if (!loaded) return <div style={{ padding: "8px 12px 20px" }}><SkeletonCard height={120} /><SkeletonCard height={220} /></div>;
   // Before the editor and every Passport field below, so neither can render
   // from rows that never loaded.
-  if (loadFailed) return <div style={{ padding: "8px 12px 20px" }}><div style={{ ...card }}><LoadError onRetry={load} /></div></div>;
+  if (loadFailed) return <div style={{ padding: "8px 12px 20px" }}><div style={{ ...card }}><LoadError onRetry={retryLoad} /></div></div>;
 
   return (
     <div style={{ padding: "8px 12px 20px", background: C.passportWash }}>
@@ -19382,7 +19393,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=e177adf5ab8ef20e";
+    var APP_SRC = "js/app.js?v=995fe20f26ca9f22";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

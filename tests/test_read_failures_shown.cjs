@@ -259,7 +259,46 @@ for (const { component, loader, emptyKeys } of REGISTRY) {
       });
       ck(`Passport.load: the ${table} read goes through must()`, viaMust, true);
     }
+    // Clearing loadFailed while `loaded` stays true renders a blank '—' Passport and
+    // lets onProfileStatus report "incomplete", locking every tab (mustFinishProfile).
+    const clears = [];
+    loadNode.traverse({
+      CallExpression(cp) {
+        const a = cp.node.arguments[0];
+        if (cp.node.callee.name === "setLoadFailed" && a && a.type === "BooleanLiteral" && !a.value) clears.push(cp);
+      },
+    });
+    // each clear must follow a must() read in its own branch (the own and viewed-other branches each have one)
+    const afterOwnReads = (cp) => {
+      const block = cp.findParent((q) => q.isBlockStatement());
+      return mustCalls.some((m) => m.node.end < cp.node.start && m.node.start > block.node.start && m.node.end < block.node.end);
+    };
+    ck("Passport.load clears loadFailed", clears.length > 0, true);
+    ck("Passport.load: loadFailed is cleared only after the must() reads", clears.every(afterOwnReads), true);
   }
+  // Retry must go back to the skeleton (loaded = false), not straight into load().
+  const retryOf = (component) => {
+    let handler = null, body = null;
+    traverse(ast, {
+      FunctionDeclaration(pa) {
+        if (!pa.node.id || pa.node.id.name !== component) return;
+        pa.traverse({
+          JSXOpeningElement(jp) {
+            if (jp.node.name.name !== "LoadError") return;
+            const a = jp.node.attributes.find((x) => x.name && x.name.name === "onRetry");
+            handler = a && a.value.expression.name;
+          },
+        });
+        pa.traverse({ FunctionDeclaration(fp) { if (handler && fp.node.id.name === handler) body = CODE.slice(fp.node.body.start, fp.node.body.end); } });
+      },
+    });
+    return { handler, body: body || "" };
+  };
+  const pr = retryOf("Passport");
+  ck("Passport: Retry is not a bare load()", pr.handler !== "load" && !!pr.handler, true);
+  ck("Passport: Retry shows the skeleton (setLoaded(false)) before load()", /setLoaded\(false\);[\s\S]*load\(\)/.test(pr.body), true);
+  const gr = retryOf("PostsGrid");
+  ck("PostsGrid: Retry resets posts to null (loading, not the empty text) before load()", /setPosts\(null\);[\s\S]*load\(\)/.test(gr.body), true);
 }
 
 // ---- must() ----
