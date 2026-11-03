@@ -40,6 +40,11 @@ const REGISTRY = [
   { component: "PostsGrid", loader: "load" },
   { component: "HomeTab", loader: "reload" },
   { component: "GoalCard", loader: "load" },
+  { component: "Scout", loader: "restoreLatest" },
+  { component: "Scout", loader: "loadHistoryList", emptyKeys: [] },
+  { component: "Scout", loader: "loadConversation", emptyKeys: [] },
+  { component: "SettingsButton", loader: "loadPrivacy" },
+  { component: "VerificationRequest", loader: "load" },
 ];
 
 const m = /<script[^>]*type=["']text\/babel(?:-deferred)?["'][^>]*>/.exec(HTML);
@@ -364,6 +369,40 @@ for (const { component, loader, emptyKeys } of REGISTRY) {
   // the snapshot of the day is insert-only: it must not be written from a partial read
   const reload = /const reload = React\.useCallback[\s\S]*?\}, \[actingFor\]\);/.exec(CODE);
   ck("HomeTab.reload skips the daily snapshot when a read failed", /if \(!failed\.size\) \{\s*const snapScores/.test(reload ? reload[0] : ""), true);
+}
+
+// ---- Settings: while the privacy load has failed, the toggles show defaults, not the
+// athlete's real settings, so every toggle must be disabled and togglePrivacy must refuse ----
+{
+  let toggles = 0, disabledOnFail = 0, refuses = false;
+  traverse(ast, {
+    FunctionDeclaration(pa) {
+      if (!pa.node.id || pa.node.id.name !== "SettingsButton") return;
+      pa.traverse({
+        JSXOpeningElement(jp) {
+          const on = jp.node.attributes.find((x) => x.name && x.name.name === "onClick");
+          if (jp.node.name.name !== "button" || !on || !CODE.slice(on.start, on.end).includes("togglePrivacy(")) return;
+          toggles++;
+          const d = jp.node.attributes.find((x) => x.name && x.name.name === "disabled");
+          if (d && CODE.slice(d.start, d.end).includes("privacyLoadFailed")) disabledOnFail++;
+        },
+        FunctionDeclaration(fp) {
+          if (fp.node.id.name !== "togglePrivacy") return;
+          const first = fp.node.body.body[0];
+          refuses = !!first && CODE.slice(first.start, first.end).includes("privacyLoadFailed");
+        },
+      });
+    },
+  });
+  ck("Settings has a privacy toggle button", toggles >= 1, true);
+  ck("Settings: every privacy toggle is disabled while privacyLoadFailed", disabledOnFail, toggles);
+  ck("Settings: togglePrivacy refuses to save while privacyLoadFailed", refuses, true);
+}
+
+// ---- VerificationRequest: a failed read must not offer the request form ----
+{
+  const m2 = /\{loadFailed \? \(\s*<LoadError[\s\S]*?\) : pending \?/.exec(CODE);
+  ck("VerificationRequest: loadFailed is checked before the pending/form branches", !!m2, true);
 }
 
 // ---- must() ----

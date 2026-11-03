@@ -2112,19 +2112,25 @@ function SettingsButton({ openSignal }) {
   const [availBusy, setAvailBusy] = useState(false);
   const [privacyBusy, setPrivacyBusy] = useState(null);
   const [privacyErr, setPrivacyErr] = useState("");
+  // The load below failed. The toggles then show defaults, not the athlete's
+  // real settings, so they are disabled: tapping one would save the default
+  // over what is actually stored.
+  const [privacyLoadFailed, setPrivacyLoadFailed] = useState(false);
   const [occupation, setOccupation] = useState(null);
   const [shareLinks, setShareLinks] = useState(null);
   const [shareLinksOpen, setShareLinksOpen] = useState(false);
   const [shareErr, setShareErr] = useState("");
 
-  useEffect(() => {
-    if (!sb || !open || !uid) return;
-    (async () => {
+  async function loadPrivacy() {
+    if (!sb || !uid) return;
+    setPrivacyLoadFailed(false);
+    {
       try {
-        const [{ data: ath }, { data: prof }] = await Promise.all([
-          sb.from("athletes").select("scout_visible, show_club, show_country, show_benchmarks, show_timeline").eq("id", uid).single(),
+        // maybeSingle: a missing athletes row is an empty result, not a failure.
+        const [ath, prof] = (await Promise.all([
+          sb.from("athletes").select("scout_visible, show_club, show_country, show_benchmarks, show_timeline").eq("id", uid).maybeSingle(),
           sb.from("profiles").select("occupation, passport_public, availability_status, availability_since, availability_expected_return, availability_note").eq("id", uid).single(),
-        ]);
+        ])).map(must);
         // passport_public lives on profiles, not athletes, and is merged in
         // here so one panel can show every switch that decides who sees what.
         if (ath || prof) setPrivacy({ ...(ath || {}), passport_public: !!(prof && prof.passport_public) });
@@ -2137,9 +2143,13 @@ function SettingsButton({ openSignal }) {
           expected: prof.availability_expected_return || "",
           note: prof.availability_note || "",
         });
-      } catch (e) { console.error("GOLSZ settings privacy load error:", e); }
-    })();
-  }, [open, uid]);
+      } catch (e) {
+        console.error("GOLSZ settings privacy load error:", e);
+        setPrivacyLoadFailed(true);
+      }
+    }
+  }
+  useEffect(() => { if (open) loadPrivacy(); }, [open, uid]);
 
   // Optimistic, and put back on failure — the rule every write in this app
   // follows, and the one that matters most here. supabase-js RESOLVES with
@@ -2150,7 +2160,7 @@ function SettingsButton({ openSignal }) {
   // the list cannot silently write to the wrong table.
   const PRIVACY_TABLE = (col) => (col === "passport_public" ? "profiles" : "athletes");
   async function togglePrivacy(col, next) {
-    if (!sb || !uid || privacyBusy) return;
+    if (!sb || !uid || privacyBusy || privacyLoadFailed) return;
     const before = privacy;
     setPrivacyBusy(col); setPrivacyErr("");
     setPrivacy((a) => ({ ...(a || {}), [col]: next }));
@@ -2929,9 +2939,10 @@ function SettingsButton({ openSignal }) {
               </div>
             )}
 
-            {sb && uid && occupation === "Player" && privacy && (
+            {sb && uid && (privacyLoadFailed || (occupation === "Player" && privacy)) && (
               <div style={{ marginBottom: 18 }}>
                 <div style={{ fontSize: 9, letterSpacing: "0.16em", color: C.slate, fontWeight: 700, marginBottom: 8 }}>{t("privacy_section")}</div>
+                {privacyLoadFailed && <div style={{ marginBottom: 8 }}><LoadError onRetry={loadPrivacy} /></div>}
                 {[
                   // "Findable by scouts" (scout_visible) IS NOT LISTED WHILE
                   // DISCOVERY IS OFF. Its sub-label promises Scout can surface
@@ -2986,19 +2997,20 @@ function SettingsButton({ openSignal }) {
                   // reading them with the old rule would show an athlete a
                   // switch that says ON while their link shares nothing.
                   const defaultsOff = col === "show_benchmarks" || col === "show_timeline" || col === "passport_public";
-                  const on = defaultsOff ? privacy[col] === true : privacy[col] !== false;
+                  const cur = privacy || {};
+                  const on = defaultsOff ? cur[col] === true : cur[col] !== false;
                   return (
                     <div key={col} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", borderBottom: `1px solid ${C.line}` }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: C.chalk }}>{t(label)}</div>
                         <div style={{ fontSize: 11.5, color: C.slate, lineHeight: 1.4, marginTop: 2 }}>{t(sub)}</div>
                       </div>
-                      <button onClick={() => togglePrivacy(col, !on)} disabled={privacyBusy === col}
+                      <button onClick={() => togglePrivacy(col, !on)} disabled={privacyBusy === col || privacyLoadFailed}
                         aria-pressed={on} aria-label={t(label)}
-                        style={{ width: 52, height: 30, flexShrink: 0, borderRadius: 999, cursor: privacyBusy === col ? "wait" : "pointer",
+                        style={{ width: 52, height: 30, flexShrink: 0, borderRadius: 999, cursor: privacyBusy === col ? "wait" : privacyLoadFailed ? "not-allowed" : "pointer",
                           background: on ? C.lime : C.turf, border: `1px solid ${on ? C.lime : C.line2}`,
                           display: "flex", alignItems: "center", justifyContent: on ? "flex-end" : "flex-start",
-                          padding: 3, boxSizing: "border-box", opacity: privacyBusy === col ? 0.6 : 1 }}>
+                          padding: 3, boxSizing: "border-box", opacity: privacyBusy === col || privacyLoadFailed ? 0.6 : 1 }}>
                         <span style={{ width: 22, height: 22, borderRadius: "50%", background: on ? C.pitch : C.slate, display: "block" }} />
                       </button>
                     </div>
@@ -7573,21 +7585,29 @@ function VerificationRequest({ occupation }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [submitErr, setSubmitErr] = useState("");
+  // A failed read must not fall through to the request form: an athlete with a
+  // pending request would be offered a button that files a duplicate.
+  const [loadFailed, setLoadFailed] = useState(false);
 
   async function load() {
     if (!sb) return;
     try {
-      const { data: { user } } = await sb.auth.getUser();
+      const { user } = must(await sb.auth.getUser());
       if (!user) return;
       setUid(user.id);
-      const [{ data: prof }, { data: reqs }] = await Promise.all([
+      const [prof, reqs] = (await Promise.all([
         sb.from("profiles").select("identity_verified").eq("id", user.id).single(),
         sb.from("verification_requests").select("status").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
-      ]);
+      ])).map(must);
       setVerified(!!(prof && prof.identity_verified));
       setPending(!!(reqs && reqs[0] && reqs[0].status === "pending"));
-    } catch (e) { console.error("GOLSZ verification load error:", e); }
+      setLoadFailed(false);
+    } catch (e) {
+      console.error("GOLSZ verification load error:", e);
+      setLoadFailed(true);
+    }
   }
+  function retryLoad() { setLoadFailed(false); load(); }
   useEffect(() => { load(); }, []);
 
   async function submit() {
@@ -7618,7 +7638,9 @@ function VerificationRequest({ occupation }) {
         <BadgeCheck size={16} color={C.slate} />
         <span style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk }}>{t("verify_title")}</span>
       </div>
-      {pending ? (
+      {loadFailed ? (
+        <LoadError onRetry={retryLoad} />
+      ) : pending ? (
         <div style={{ fontSize: 12.5, color: C.slate }}>{t("verify_pending")}</div>
       ) : done ? (
         <div style={{ fontSize: 12.5, color: C.lime }}>{t("verify_submitted")}</div>
@@ -9384,6 +9406,12 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   // Which history row's delete is armed. One tap arms, the next deletes.
   const [armedDelete, setArmedDelete] = useState(null);
   const [history, setHistory] = useState(null);
+  // A failed read is not "no past chats" and not "a fresh chat": each of the
+  // three Scout loaders below sets its own flag and the screen shows LoadError.
+  const [restoreFailed, setRestoreFailed] = useState(false);
+  const [historyFailed, setHistoryFailed] = useState(false);
+  const [openFailed, setOpenFailed] = useState(false);
+  const lastOpenedRef = useRef(null);
   const [photo, setPhoto] = useState(null); // { dataUrl, mediaType, data } — one pending attachment
   const [photoErr, setPhotoErr] = useState("");
   const [modErr, setModErr] = useState("");
@@ -9429,8 +9457,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
   // nothing here, so no separate filtering is needed. Only the latest
   // conversation is loaded on mount — older ones are reachable via
   // History, not auto-flattened into one ever-growing chat like before.
-  useEffect(() => {
-    if (!sb) return;
+  async function restoreLatest() {
     // Clear first. Without this, switching between two managed athletes left
     // the previous child's transcript on screen until the fetch returned —
     // and a parent reading one child's conversation under the other child's
@@ -9439,7 +9466,8 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
     setLoaded(false);
     setSummary("");
     setBenchmarkSummary({});
-    (async () => {
+    setRestoreFailed(false);
+    {
       try {
         const { data: { user } } = await sb.auth.getUser();
         if (!user) { setMsgs([{ role: "assistant", text: t("scout_greeting") }]); return; }
@@ -9514,13 +9542,17 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
         }
       } catch (e) {
         console.error("GOLSZ scout history load error:", e);
+        // The greeting stays so the athlete can still ask something, but the
+        // error sits above it: a bare greeting reads as "my chat is gone".
         setMsgs((m) => m || [{ role: "assistant", text: t("scout_greeting") }]);
+        setRestoreFailed(true);
       } finally { setLoaded(true); }
-    })();
+    }
+  }
   // Keyed on the managed athlete: switching from one child to another (or
   // back to the parent's own account) must reload the whole conversation, not
   // leave the previous athlete's transcript on screen.
-  }, [actingFor && actingFor.id]);
+  useEffect(() => { if (sb) restoreLatest(); }, [actingFor && actingFor.id]);
 
   async function logTurn(role, text) {
     if (!sb || !uidRef.current) return;
@@ -9540,6 +9572,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
 
   async function loadHistoryList() {
     if (!sb || !uidRef.current) return;
+    setHistoryFailed(false);
     try {
       // NEWEST FIRST, so the 1000-row window is the most recent 1000 rows —
       // see scoutHistoryList().
@@ -9551,7 +9584,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
         .limit(1000);
       if (error) throw error;
       setHistory(scoutHistoryList(data));
-    } catch (e) { console.error("GOLSZ scout history list error:", e); setHistory([]); }
+    } catch (e) { console.error("GOLSZ scout history list error:", e); setHistory(null); setHistoryFailed(true); }
   }
 
   function openHistory() {
@@ -9562,6 +9595,8 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
 
   async function loadConversation(id) {
     if (!sb || !uidRef.current) return;
+    lastOpenedRef.current = id;
+    setOpenFailed(false);
     try {
       const { data, error } = await sb
         .from("scout_history").select("messages, created_at")
@@ -9577,7 +9612,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
         if (summaryRow && summaryRow.summary) setSummary(summaryRow.summary);
       } catch (e) { console.error("GOLSZ scout summary load error:", e); }
       setShowHistory(false);
-    } catch (e) { console.error("GOLSZ scout load conversation error:", e); }
+    } catch (e) { console.error("GOLSZ scout load conversation error:", e); setOpenFailed(true); }
   }
 
   async function deleteConversation(id) {
@@ -10224,7 +10259,9 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
           onAskElse={() => { setAddedScreen(null); newChat(); }} t={t} />
       ) : showHistory ? (
         <div style={{ flex: 1, overflowY: "auto", padding: "14px 12px 6px" }}>
-          {history === null && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
+          {openFailed && <div style={{ marginBottom: 12 }}><LoadError onRetry={() => loadConversation(lastOpenedRef.current)} /></div>}
+          {historyFailed && <LoadError onRetry={loadHistoryList} />}
+          {history === null && !historyFailed && <div style={{ color: C.slate, fontSize: 13 }}>{t("loading")}</div>}
           {history && history.length === 0 && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("scout_no_past")}</div>}
           {history && history.map((h) => (
             <div key={h.id} style={{
@@ -10260,6 +10297,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       ) : (
         <div style={{ flex: 1, overflowY: "auto", padding: "14px 12px 6px" }}>
           {!loaded && <div style={{ color: C.slate, fontSize: 13, textAlign: "center", padding: "30px 0" }}>{t("loading")}</div>}
+          {restoreFailed && <div style={{ marginBottom: 12 }}><LoadError onRetry={restoreLatest} /></div>}
           {msgs && msgs.length > 1 && msgs.map((m, i) => (
             <div key={i} className="msg" style={m.role === "user" ? bubbleUser : bubbleAgent}>
               {m.photo && <img src={m.photo} alt={t("alt_scout_photo")} style={{ display: "block", maxWidth: "100%", borderRadius: 10, marginBottom: m.text ? 6 : 0 }} />}
@@ -19458,7 +19496,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=5c84f5d12792bd73";
+    var APP_SRC = "js/app.js?v=58c3f144d40d93c4";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
