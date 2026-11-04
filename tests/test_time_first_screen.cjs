@@ -42,6 +42,8 @@ ok(DEFAULTS.rttMs === 150 && DEFAULTS.mbps === 1.6, "throttle defaults: 150 ms r
 ok(parseArgs([], {}).rttMs === 150 && parseArgs([], {}).mbps === 1.6, "no arguments: defaults");
 const o = parseArgs(["8123", "--rtt=300", "--mbps=0.8"], {});
 ok(o.port === 8123 && o.rttMs === 300 && o.mbps === 0.8, "port, --rtt and --mbps are configurable");
+ok(parseArgs(["--lang=fr"], {}).lang === "fr" && parseArgs(["--lang=xx\"<"], {}).lang === undefined, "--lang takes only a known language code");
+ok(same.html.includes('querySelector("#boot .m")') && same.html.includes("scrollWidth > de.clientWidth"), "timing script records the boot line and sideways overflow");
 ok(parseArgs([], { TIMING_RTT_MS: "50", TIMING_MBPS: "4" }).mbps === 4, "environment variables configure the throttle");
 ok(BUDGETS.homeLcpMs === 3000 && BUDGETS.appBootMs === 2500 && BUDGETS.appMountedMs === 5000, "budgets match the tool header");
 const header = fs.readFileSync(path.join(root, "tools", "time-first-screen.cjs"), "utf8");

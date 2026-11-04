@@ -13,6 +13,12 @@ request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the
 22.x and 24.x. (`landing-glow-path` before it: merged 2026-10-27.)
 
 ## Last Completed Work
+- AVA job 168 t3 (2026-11-04): visible "Loading…" line (`#boot .m`) under the boot bar. BOOT_COPY/bootCopy() moved
+  into a small inline script right after #boot (before the inert JSX block) so the saved language is set before
+  first paint; bootFailed() reuses it. tools/time-first-screen.cjs gained `--lang=<code>` and reports what the
+  painted boot screen showed. Recorded run (AVA browser, 150 ms / 1.6 Mbps, 390 + 1280 px): dark en "Loading…"
+  rgb(139,150,168), light en rgb(90,107,98), dark/light fr "Chargement…"; all 8: bootOverflow=0, bootGone=1 after
+  Auth mounted, no console errors. Not captured: a screenshot OF the boot screen (the tool shoots after mount).
 - AVA job 168 t4 (2026-11-04): home page budget. FINDING: index.html never shows the region hero photo (no
   `data-hero-region`; only the CSS/JS for about.html-style heroes mention assets/hero-*.jpg), so the JPEGs are not
   its LCP and were left alone (267-278 KB, unused on the home page). Only change: `defer` on js/main.js in

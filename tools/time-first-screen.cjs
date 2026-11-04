@@ -4,7 +4,7 @@
 // Not a test (it needs a real browser), so it lives outside tests/; tests/test_time_first_screen.cjs
 // pins the parts that keep it harmless. `npm run unpublish` removes tools/ from the served tree.
 //
-// Usage:  node tools/time-first-screen.cjs [port] [--rtt=<ms>] [--mbps=<megabits>] [--fail-app] [--theme=light]
+// Usage:  node tools/time-first-screen.cjs [port] [--rtt=<ms>] [--mbps=<megabits>] [--fail-app] [--theme=light] [--lang=fr|es|el]
 //   defaults: a free port (printed), 150 ms extra round trip, 1.6 Mbps down. Env: TIMING_RTT_MS, TIMING_MBPS.
 //   --fail-app makes /js/app.js answer 404 (the failure path: the page must show a Reload screen, not an endless loader).
 //   With AVA's browser tool (one page load per width, cold: nothing is cached, "cache-control: no-store"):
@@ -14,6 +14,9 @@
 //     fcp      first-contentful-paint        lcp   largest-contentful-paint (last candidate before the report)
 //     boot     the #boot loading screen is in the DOM and a frame has been drawn after it
 //     mounted  #boot left the DOM = the app's first screen (Auth for a new visitor) replaced it
+//   The app line also says what the boot screen showed once painted, and whether it left with #boot:
+//     bootText="Loading…" bootColor=rgb(...) bootOverflow=0|1 (page wider than the window) bootGone=1|0
+//   --lang=<code> saves golsz-lang first, as for a visitor who chose that language (fr reads "Chargement…").
 //   "-" means the page has no such moment (index.html has no #boot) or it never happened before the report.
 //
 // BUDGETS (a normal mobile connection, cold load; the numbers the speed work is held to):
@@ -76,6 +79,7 @@ function timingScript() {
     return realFetch(input, init);
   };
   var t = { fcp: null, lcp: null, boot: null, mounted: null };
+  var seen = null; // what the painted boot screen showed: its loading line, colour, sideways overflow
   var sent = false, sawBoot = false;
   function observe(type, onEntry) {
     try { new PerformanceObserver(function (list) { list.getEntries().forEach(onEntry); }).observe({ type: type, buffered: true }); } catch (e) { /* type unsupported */ }
@@ -87,6 +91,7 @@ function timingScript() {
     sent = true;
     var out = { page: location.pathname, width: window.innerWidth };
     Object.keys(t).forEach(function (k) { out[k] = t[k] === null ? null : Math.round(t[k]); });
+    if (seen) { out.seen = seen; seen.gone = t.mounted !== null && !document.querySelector("#boot .m"); }
     try { navigator.sendBeacon("/__timing", JSON.stringify(out)); } catch (e) { /* ignore */ }
   }
   function check() {
@@ -94,7 +99,11 @@ function timingScript() {
     if (boot && !sawBoot) {
       sawBoot = true;
       // Two frames: the first callback runs before the paint that shows #boot, the second after it.
-      requestAnimationFrame(function () { requestAnimationFrame(function () { t.boot = performance.now(); }); });
+      requestAnimationFrame(function () { requestAnimationFrame(function () {
+        t.boot = performance.now();
+        var line = document.querySelector("#boot .m"), de = document.documentElement;
+        if (line) seen = { text: line.textContent, color: getComputedStyle(line).color, overflow: de.scrollWidth > de.clientWidth };
+      }); });
     } else if (!boot && sawBoot && t.mounted === null) {
       t.mounted = performance.now();
       setTimeout(send, 500); // lets the last LCP candidate arrive
@@ -176,7 +185,8 @@ function makeHandler(opts) {
       req.on("end", () => {
         try {
           const m = JSON.parse(body), v = (x) => (typeof x === "number" ? x : "-");
-          console.log(`timing page=${m.page} width=${m.width} fcp=${v(m.fcp)} lcp=${v(m.lcp)} boot=${v(m.boot)} mounted=${v(m.mounted)}`);
+          const b = m.seen ? ` bootText=${JSON.stringify(m.seen.text)} bootColor=${String(m.seen.color).replace(/\s/g, "")} bootOverflow=${m.seen.overflow ? 1 : 0} bootGone=${m.seen.gone ? 1 : 0}` : "";
+          console.log(`timing page=${m.page} width=${m.width} fcp=${v(m.fcp)} lcp=${v(m.lcp)} boot=${v(m.boot)} mounted=${v(m.mounted)}${b}`);
         } catch (e) { /* malformed beacon */ }
         res.writeHead(204).end();
         release();
@@ -198,7 +208,9 @@ function makeHandler(opts) {
       if (!PAGES.has(rel)) return respond(req, res, 200, type, buf);
       const built = buildPage(buf.toString("utf8"), (i, version) => { const r = resolveFromCache(i, version); vendorFiles["/__vendor/" + i + ".js"] = r.file; return r; });
       // --theme=light: the page's own head script reads this key, as for a visitor who chose light.
-      const page = opts.light ? built.html.replace(/<head[^>]*>/i, (m) => m + '<script>try{localStorage.setItem("golsz-theme","light")}catch(e){}</script>') : built.html;
+      // --lang=<code>: likewise for golsz-lang, which the boot line and the app read.
+      const saves = (opts.light ? 'localStorage.setItem("golsz-theme","light");' : "") + (opts.lang ? 'localStorage.setItem("golsz-lang","' + opts.lang + '");' : "");
+      const page = saves ? built.html.replace(/<head[^>]*>/i, (m) => m + "<script>try{" + saves + "}catch(e){}</script>") : built.html;
       respond(req, res, 200, type, Buffer.from(page));
     });
   };
@@ -209,6 +221,8 @@ function parseArgs(argv, env) {
   argv.forEach((a) => {
     if (a === "--theme=light") { opts.light = true; return; }
     if (a === "--fail-app") { opts.failApp = true; return; }
+    const lang = /^--lang=(en|fr|es|el)$/.exec(a);
+    if (lang) { opts.lang = lang[1]; return; }
     const flag = /^--(rtt|mbps)=(\d+(?:\.\d+)?)$/.exec(a);
     if (flag) opts[flag[1] === "rtt" ? "rttMs" : "mbps"] = Number(flag[2]);
     else if (/^\d+$/.test(a)) opts.port = Number(a);

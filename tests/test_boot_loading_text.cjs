@@ -15,7 +15,25 @@ const want = { en: "Loading…", fr: "Chargement…", es: "Cargando…", el: "Φ
 for (const [l, txt] of Object.entries(want)) {
   ck(`BOOT_COPY.${l} has the loading string`, new RegExp(l + ': \\["[^"]+", "[^"]+", "' + txt + '"\\]').test(copy));
 }
-ck("the saved language is applied from bootCopy()[2]", /querySelector\("#boot \.m"\)[\s\S]{0,80}bootCopy\(\)\[2\]/.test(APP));
+const apply = /querySelector\("#boot \.m"\)[\s\S]{0,80}bootCopy\(\)\[2\]/.exec(APP);
+ck("the saved language is applied from bootCopy()[2]", !!apply);
+// The browser can paint #boot while it is still parsing the ~19,000-line inert JSX block, so the
+// translation must run before that block, right after #boot, or fr/es/el visitors see English first.
+const jsxAt = APP.indexOf('<script type="text/babel-deferred"');
+ck("BOOT_COPY is defined after #boot and before the JSX block",
+   APP.indexOf("var BOOT_COPY = {") > APP.indexOf('<div id="boot"') && APP.indexOf("var BOOT_COPY = {") < jsxAt);
+ck("the loading line is translated before the JSX block", !!apply && apply.index < jsxAt);
+ck("BOOT_COPY is defined once (bootFailed reuses it)", APP.split("var BOOT_COPY = {").length - 1, 1);
+
+// Run the early script against a fake DOM: each saved language gets its own line, unknown falls back.
+const early = (/var BOOT_COPY = \{[\s\S]*?(?=<\/script>)/.exec(APP) || [""])[0];
+for (const [saved, txt] of [[null, "Loading…"], ["fr", "Chargement…"], ["es", "Cargando…"], ["el", "Φόρτωση…"], ["xx", "Loading…"]]) {
+  const line = { textContent: "Loading…" };
+  const document = { querySelector: (q) => (q === "#boot .m" ? line : null) };
+  const localStorage = { getItem: () => saved };
+  new Function("document", "localStorage", early)(document, localStorage);
+  ck(`golsz-lang=${saved}: the line reads ${txt}`, line.textContent, txt);
+}
 
 function lum(hex) {
   const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
