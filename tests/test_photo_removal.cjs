@@ -79,7 +79,18 @@ ck("...and a failed cleanup does not fail the upload",
 // reload data that was never wrong.
 ck("every loadFailed reader clears the flag where the read starts",
    (APP.match(/\(async \(\) => \{\n(?:\s*\/\/[^\n]*\n)*\s*setLoadFailed\(false\);/g) || []).length, 5);
-ck("...and there are exactly five such readers",
-   (APP.match(/setLoadFailed\(true\); \}/g) || []).length, 5);
+// Plus the named loaders. Feed.loadFeed and Discover.loadPlayers clear the flag
+// at their own top, before the try. Passport.load and PostsGrid.load clear it
+// only once their must() reads have succeeded (their Retry shows a loading state
+// first; clearing at the top rendered a blank Passport and the empty-posts text
+// while the retry was in flight — test_read_failures_shown.cjs pins why).
+const NAMED = /async function load\w*\(\) \{\n\s*if \(!sb\) return;\n\s*setLoadFailed\(false\);\n\s*try \{/g;
+ck("Feed and Discover clear the flag at their top",
+   (APP.match(NAMED) || []).length, 2);
+const AFTER_READ = /(?:must\([\s\S]{0,400}?\)\)|\.map\(must\));\n\s*setLoadFailed\(false\);/g;
+ck("Passport (both branches) and PostsGrid clear it right after a successful must() read",
+   (APP.match(AFTER_READ) || []).length, 3);
+ck("...and there are exactly five IIFE readers besides the four named loaders",
+   (APP.match(/setLoadFailed\(true\); \}/g) || []).length - 4, 5);
 
 console.log(`\n${p}/${p + f} passed`); process.exit(f ? 1 : 0);

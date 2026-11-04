@@ -116,10 +116,10 @@ ck("...and reads the resting prop rather than its own query",
 // so the next person to touch that array finds out immediately.
 {
   const lines = APP.split("\n");
-  const i = lines.findIndex((l) => /data: shareTokens/.test(l) && /await Promise\.all/.test(l));
+  const i = lines.findIndex((l) => /shareRes/.test(l) && /await Promise\.all/.test(l));
   ck("Home's combined loader was found", i > -1, true);
   const m = i > -1 ? lines[i].match(/const \[(.*)\] = await/) : null;
-  const slots = m ? m[1].split(/,\s*(?=\{)/).map((x) => x.trim().replace(/[{}]/g, "").replace("data: ", "").trim()) : [];
+  const slots = m ? m[1].split(",").map((x) => x.trim()) : [];
   const q = [];
   for (let n = i; n > -1 && n < i + 70; n++) {
     const mm = (lines[n] || "").match(/sb\.from\("([a-z_]+)"\)/);
@@ -128,11 +128,11 @@ ck("...and reads the resting prop rather than its own query",
   ck("every destructured name has a query behind it", slots.length, q.length);
   // The pairs themselves, so a reorder is caught and not just a count change.
   const EXPECT = [
-    ["prof", "profiles"], ["ath", "athletes"], ["reqs", "verification_requests"],
-    ["benchmarks", "athlete_benchmarks"], ["devItems", "development_plan_items"],
-    ["pathwayRow", "pathway_plan"], ["targets", "outreach_targets"],
-    ["shareTokens", "passport_share_tokens"], ["todayTicks", "development_plan_ticks"],
-    ["actionRows", "athlete_actions"], ["lastSnap", "assessment_snapshots"],
+    ["profRes", "profiles"], ["athRes", "athletes"], ["reqsRes", "verification_requests"],
+    ["benchmarksRes", "athlete_benchmarks"], ["devItemsRes", "development_plan_items"],
+    ["pathwayRes", "pathway_plan"], ["targetsRes", "outreach_targets"],
+    ["shareRes", "passport_share_tokens"], ["ticksRes", "development_plan_ticks"],
+    ["actionsRes", "athlete_actions"], ["snapRes", "assessment_snapshots"],
   ];
   ck("...and each one is fed by the table it is named for",
      slots.map((sName, n) => sName + "<-" + (q[n] || "none")),

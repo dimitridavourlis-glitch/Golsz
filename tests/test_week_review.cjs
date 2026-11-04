@@ -110,7 +110,7 @@ ck("...nor does a missing one", weekReview([{ title: "No date", status: "complet
 }
 
 // ---- wired in, and reading the right table --------------------------------
-ck("Home computes it from the action rows", /setReview\(weekReview\(actionRows, new Date\(\)\)\);/.test(APP), true);
+ck("Home computes it from the action rows", /setReview\(actionsRes\.error \? null : weekReview\(actionRows, new Date\(\)\)\);/.test(APP), true);
 ck("...which come from athlete_actions",
    /sb\.from\("athlete_actions"\)\.select\("title, status, completed_at, due_on"\)\.eq\("user_id", who\)/.test(APP), true);
 // BY THE ARRAY'S REAL BOUNDS, not a character count. Written as a 2200-char
@@ -121,7 +121,7 @@ ck("...which come from athlete_actions",
   // Anchored on Home's own destructuring, which is unique, rather than on
   // "await Promise.all([" — that appears 22 times, and a fromIndex that picks
   // "the first one after HomeTab" is a guess dressed as a locator.
-  const open = APP.indexOf("const [{ data: prof }, { data: ath }, { data: reqs }");
+  const open = APP.indexOf("const [profRes, athRes, reqsRes");
   const close = APP.indexOf("\n        ]);", open);
   ck("Home's parallel load was located", open > 0 && close > open, true);
   const block = APP.slice(open, close);

@@ -5,7 +5,7 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Claude Code, 2026-10-28. Picked up after OpenCode (last OpenCode work: the G1 landing hero, 2026-10-23).
+Claude Code (AVA job 144, task t9), 2026-11-03. Before that: Claude Code, 2026-10-28.
 
 ## Current Branch
 `main`. `scout-day-awareness` (af28c32) was fast-forwarded into `main` on 2026-10-28 at the owner's
@@ -13,6 +13,31 @@ request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the
 22.x and 24.x. (`landing-glow-path` before it: merged 2026-10-27.)
 
 ## Last Completed Work
+- Job 144 t6, Scout history / Settings privacy / VerificationRequest load errors. Recorded browser run
+  2026-11-03 (throwaway harness: served in-memory copy mounts the real component, stubbed Supabase fails the
+  chosen tables). 390 and 1280 px, dark and light: Scout restore failure shows LoadError above the greeting,
+  Retry clears it; after a failed restore, opening a chat from History removes the banner and shows THAT chat
+  (reviewer's bug, fixed: newChat/loadConversation now clear restoreFailed); History list failure shows
+  LoadError, not "no past chats"; Settings privacy failure shows LoadError, all 5 privacy toggles disabled
+  (opacity 0.6), Retry re-enables them; VerificationRequest failure shows only LoadError + Retry. No sideways
+  scroll anywhere. New chat after a failed restore was not clicked in the browser (button needs 2+ messages);
+  the suite pins it.
+- Job 144 t9, crash run. `tools/preview-public-passport.cjs` `&fixture=crash` makes PublicPassport throw in an
+  in-memory copy; `&reload=1` presses Reload. Real browser, 390/1280 px, dark and light: "Something went wrong /
+  Reload" screen readable, no blank page; server printed one `log_client_error auth=anon-key` per load and a second
+  after Reload. Pinned in test_preview_public_passport.cjs (disk file unchanged). Not run: the admin Errors tab
+  itself (needs an admin session). Read-failure rule and field-error helpers now documented in CLAUDE.md/AGENTS.md.
+- Job 144 t8, Passport editor field errors (`profileFieldErrors`, golsz-app.html). Recorded browser run
+  2026-11-03 (throwaway harness: a served in-memory copy mounts the real ProfileEditor with stubbed Supabase,
+  presses Save, measures the DOM). 390 and 1280 px, dark and light, 3 cases: (a) empty name, (b) Player with
+  height 1.8, GPA 7, grad year 2099, (c) Coach with no team. All 12: each message directly under its field, not
+  clipped, no sideways scroll; focus on the first invalid field (name / grad year / club), below the sticky
+  Save bar; field has aria-invalid and aria-describedby pointing at the message, which is read when focus lands;
+  editing the field clears only its message. FOUND + FIXED: field messages (editor and sign-up) used C.amber,
+  3.0:1 on the light sheet; now C.limeText (5.8:1 light, 9.4:1 dark), pinned in test_profile_field_errors.cjs.
+  Not run: a real screen reader (VoiceOver); the sign-up form after the colour change (style-only change).
+  Seen in passing (pre-existing, unchanged): a legacy Coach shows "Select..." in the I am a... dropdown,
+  since OCCUPATIONS is ["Player"] only.
 - ADS Phase 6, items 1, 2, 3 and 6 (`api/scout.js`; one-line client change in `golsz-app.html` + `js/app.js`):
   - `getAthleteState` reads are one `Promise.all` round (they were ten sequential round trips while the
     header claimed parallel). The sports lookup stays chained after the athletes read; failures are still
@@ -24,12 +49,7 @@ request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the
   - "Missed" uses the athlete's day and Home's resting rule (resting: only recovery steps can be late).
   - `responseCacheFingerprint` carries the day and a step digest (no replaying yesterday's reply).
   - Benchmark lines carry who measured them and the recorded protocol (`benchmarkProvenance()`).
-- New suites: `test_scout_today.cjs` (diffs `dayBuckets` against HomeTab's real code on 640 plans) and
-  `test_scout_benchmark_provenance.cjs`. Extended: context_failures (concurrency check, validated against
-  the old serial code: 1 read in flight vs 9), response_cache_key, scout_pathway_filing.
-- Docs: stale facts fixed in this file, AGENTS.md (unfinished work), CLAUDE.md (MFA is merged; Scout's day;
-  measured health-alert cadence), ADS-BUILD-ORDER.md STATUS (Phase 6/7 rows, migration list), plus the
-  stale cross-references in migration 150's header and the `weekReview` comment.
+- Suites: `test_scout_today.cjs`, `test_scout_benchmark_provenance.cjs` (new), plus three extended.
 
 ## Current Work
 None in progress.
@@ -57,9 +77,9 @@ None in progress.
 - Scout never writes a date: it sends `due_in_days`; the server resolves it from the athlete's day.
 
 ## Latest Test / Build Status
-2026-10-28 (Claude Code, branch scout-day-awareness): `npm run check` 120/120 suites (5785 assertions).
-Deployed. NOT verified: a live Scout reply for a signed-in athlete (no signed-in session here). Ask
-Scout "what should I do today?" and compare with Home's Today tile and THIS WEEK count.
+2026-11-03 (Claude Code, job 144 t8): `npm run check` 129/129 suites (6026 assertions).
+Earlier, 2026-10-28: NOT verified, a live Scout reply for a signed-in athlete. Ask Scout "what should I do
+today?" and compare with Home's Today tile and THIS WEEK count.
 
 ## Known Problems
 - health-alert is NOT every 15 minutes: 60 runs (10-18..10-28) were 2.1-7.5 h apart, median 4.2 h, all

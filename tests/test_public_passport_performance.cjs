@@ -101,7 +101,7 @@ ck("rendering checks the flag, not just the data",
   ck("...and its copy exists in all four languages",
      (APP.match(/privacy_passport_public: "/g) || []).length, 4);
   ck("...and the older rows keep reading undefined as ON",
-     /const on = defaultsOff \? privacy\[col\] === true : privacy\[col\] !== false;/.test(APP), true);
+     /const on = defaultsOff \? cur\[col\] === true : cur\[col\] !== false;/.test(APP), true);
 }
 
 for (const k of ["privacy_show_benchmarks", "privacy_show_benchmarks_sub",

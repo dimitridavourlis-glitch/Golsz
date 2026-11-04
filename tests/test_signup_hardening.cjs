@@ -46,7 +46,7 @@ ck("a CAPTCHA failure reads as a verification problem", [signupErrorKey(E({ code
 ck("an existing account", [signupErrorKey(E({ code: "user_already_exists" })), signupErrorKey(E({ code: "email_exists" })), signupErrorKey(E({ message: "User already registered" }))],
    ["auth_email_already_registered", "auth_email_already_registered", "auth_email_already_registered"]);
 ck("a network failure", signupErrorKey(new TypeError("Failed to fetch")), "err_network");
-ck("anything unrecognised is the generic message, never the raw text", signupErrorKey(E({ message: "Database error saving new user" })), "err_generic");
+ck("anything unrecognised is the generic message, never the raw text", signupErrorKey(E({ message: "Something odd", code: "boom" })), "err_generic");
 ck("...and so is nothing at all", [signupErrorKey(null), signupErrorKey(undefined), signupErrorKey({})], ["err_generic", "err_generic", "err_generic"]);
 ck("the mapper never returns the error's own text", /return\s+e\.message|return\s+m\b/.test(map), false);
 
@@ -62,7 +62,7 @@ ck("verification refusals are a code and the server text goes to the console",
 ck("one constant, and it is 8", /const PASSWORD_MIN = 8;/.test(APP), true);
 ck("the settings change-password check uses it", /if \(!pw \|\| pw\.length < PASSWORD_MIN\) \{ setPwErr/.test(APP), true);
 ck("the reset-password check uses it", /if \(!pw \|\| pw\.length < PASSWORD_MIN\) \{ setErr/.test(APP), true);
-ck("the signup gate uses it", /isSignupLike \? pw\.length >= PASSWORD_MIN : pw\.trim\(\)/.test(APP), true);
+ck("the signup gate uses it", /if \(signup\) \{\s*if \(String\(pw \|\| ""\)\.length < PASSWORD_MIN\)/.test(APP), true);
 ck("the input's minLength uses it", /minLength=\{isSignupLike \? PASSWORD_MIN : undefined\}/.test(APP), true);
 ck("no literal 6 is left as a password length",
    !/pw\.length < 6|pw\.length >= 6|minLength=\{isSignupLike \? 6/.test(APP), true);
@@ -75,10 +75,11 @@ ck("the weak-password message also says 8", dicts.map((d) => /\b8\b/.test(grab(d
 /* ---------- confirm email, only when money is about to move ---------- */
 ck("it is needed only for a signup on a paid plan", /const confirmEmailNeeded = isSignup && \(PLANS\.find\(\(p\) => p\.id === plan\) \|\| PLANS\[0\]\)\.price > 0;/.test(APP), true);
 ck("the two addresses are compared case-insensitively and trimmed",
-   /email2\.trim\(\)\.toLowerCase\(\) === email\.trim\(\)\.toLowerCase\(\)/.test(APP), true);
-ck("the form cannot submit while they differ (it is part of `ok`)", /turnstileOk && emailsMatch &&/.test(APP), true);
+   /String\(email2 \|\| ""\)\.trim\(\)\.toLowerCase\(\) !== em\.toLowerCase\(\)/.test(APP), true);
+ck("the form cannot submit while they differ (signupFieldErrors reports it, and `ok` is derived from that)",
+   /confirmEmailNeeded && String\(email2 \|\| ""\)\.trim\(\)\.toLowerCase\(\) !== em\.toLowerCase\(\)\) errs\.email2 = "auth_err_email_mismatch"/.test(APP), true);
 ck("the field renders only when needed, with a mismatch alert",
-   /\{confirmEmailNeeded && \(/.test(APP) && /\{email2\.trim\(\) && !emailsMatch && \(/.test(APP) && /role="alert"[^>]*>\{t\("auth_err_email_mismatch"\)\}/.test(APP), true);
+   /\{confirmEmailNeeded && \(/.test(APP) && /\{fieldError\("email2"\)\}/.test(APP), true);
 ck("the state hook lives inside Auth, not another component", (() => {
   const a = APP.indexOf("function Auth(");
   const i = APP.indexOf('const [email2, setEmail2] = useState("");');
