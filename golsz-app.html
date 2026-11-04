@@ -4375,6 +4375,8 @@ function Messages({ thread, setThread, onViewProfile }) {
   // them (the Realtime handler below deliberately never touches either).
   const [listFailed, setListFailed] = useState(false);
   const [threadFailed, setThreadFailed] = useState(false);
+  // False from opening a thread until its first read lands: the "say hello" text is an empty state, not a loading one.
+  const [threadLoaded, setThreadLoaded] = useState(false);
   const threadRef = useRef(thread);
   useEffect(() => { threadRef.current = thread; }, [thread]);
   useEffect(() => { setReportedThread(false); }, [thread]);
@@ -4522,6 +4524,7 @@ function Messages({ thread, setThread, onViewProfile }) {
         : "pending_sent"
       );
       setThreadFailed(false);
+      setThreadLoaded(true);
       const unreadIds = (msgs || []).filter((m) => m.recipient_id === uid && !m.read_at).map((m) => m.id);
       if (unreadIds.length) {
         await sb.from("messages").update({ read_at: new Date().toISOString() }).in("id", unreadIds);
@@ -4529,7 +4532,7 @@ function Messages({ thread, setThread, onViewProfile }) {
       }
     } catch (e) { console.error("GOLSZ thread load error:", e); setThreadFailed(true); }
   }
-  useEffect(() => { if (typeof thread === "string" && uid) { setThreadFailed(false); loadThread(thread); } }, [thread, uid]);
+  useEffect(() => { if (typeof thread === "string" && uid) { setThreadFailed(false); setThreadLoaded(false); setThreadMsgs([]); loadThread(thread); } }, [thread, uid]);
 
   async function send() {
     if (!sb || !uid || typeof thread !== "string" || !text.trim() || busy) return;
@@ -4606,7 +4609,8 @@ function Messages({ thread, setThread, onViewProfile }) {
         </div>
         {threadFailed && <div style={{ padding: 14 }}><LoadError onRetry={() => loadThread(thread)} /></div>}
         <div style={{ flex: 1, overflowY: "auto", padding: 14, display: threadFailed ? "none" : undefined }}>
-          {threadMsgs.length === 0 && (
+          {!threadLoaded && !threadFailed && <div style={{ textAlign: "center", color: C.slate, fontSize: 12.5, marginTop: 20 }}>{t("loading")}</div>}
+          {threadLoaded && threadMsgs.length === 0 && (
             <div style={{ textAlign: "center", color: C.slate, fontSize: 12.5, marginTop: 20 }}>
               {t("messages_say_hello_pre")}{name}{t("messages_say_hello_post")}
             </div>
@@ -19503,7 +19507,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=b41bbea5b2dac002";
+    var APP_SRC = "js/app.js?v=5ebac64aa5fe9781";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
