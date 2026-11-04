@@ -13,6 +13,13 @@ request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the
 22.x and 24.x. (`landing-glow-path` before it: merged 2026-10-27.)
 
 ## Last Completed Work
+- AVA job 168 t4 (2026-11-04): home page budget. FINDING: index.html never shows the region hero photo (no
+  `data-hero-region`; only the CSS/JS for about.html-style heroes mention assets/hero-*.jpg), so the JPEGs are not
+  its LCP and were left alone (267-278 KB, unused on the home page). Only change: `defer` on js/main.js in
+  index.html (safe: its init waits for DOMContentLoaded, order after landing.js kept). Same tool, 150 ms / 1.6 Mbps,
+  cold, BEFORE the change (this machine, noisy: 648-760 in the t1 run) fcp=lcp 1596 / 1360 at 390 px; AFTER 1692 at
+  390 px, 804 at 1280 px; budget LCP <= 3000, FCP <= 2000: inside. tools/time-pages.cjs: all six pages ok.
+  No console errors, no overflow at 390/1280. Not run: real phone CPU, a hero-weight test (no image changed).
 - AVA job 168 t2 (2026-11-04): app libraries `defer`red, `js/app.js` preloaded, loader gated on DOMContentLoaded
   (`tests/test_boot_nonblocking.cjs`). AFTER figures (same tool, 150 ms / 1.6 Mbps, 390 px, signed out, one run;
   baseline in brackets): dark boot 827 [755], mounted 2916 [3717-3749], lcp 3028 [3840-3888]; light boot 477,
