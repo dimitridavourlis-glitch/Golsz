@@ -28,7 +28,7 @@ ok(Object.keys(same.files).length === 3 && !/cdnjs\.cloudflare|cdn\.jsdelivr/.te
 ok(scriptTags(same.html).every((t) => /crossorigin="anonymous"/.test(t) || !t.includes("/__vendor/")), "crossorigin attribute is kept");
 
 const mixed = buildPage(before.app, (i) => (i === 2 ? differing() : matching(i)));
-ok(integrities(mixed.html).length === 2 && /<script src="\/__vendor\/2\.js" crossorigin="anonymous">/.test(mixed.html), "integrity is dropped only on the tag whose bytes differ");
+ok(integrities(mixed.html).length === 2 && /<script src="\/__vendor\/2\.js" crossorigin="anonymous" defer>/.test(mixed.html), "integrity is dropped only on the tag whose bytes differ");
 
 ok(same.html.includes("PerformanceObserver") && same.html.includes("/__timing") && /^[\s\S]*?<head[^>]*><script async src="\/__hold">/.test(same.html), "served app copy carries the timing script, first in <head>");
 ok(same.html.includes("largest-contentful-paint") && same.html.includes("first-contentful-paint"), "timing script observes FCP and LCP");

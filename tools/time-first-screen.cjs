@@ -4,8 +4,9 @@
 // Not a test (it needs a real browser), so it lives outside tests/; tests/test_time_first_screen.cjs
 // pins the parts that keep it harmless. `npm run unpublish` removes tools/ from the served tree.
 //
-// Usage:  node tools/time-first-screen.cjs [port] [--rtt=<ms>] [--mbps=<megabits>]
+// Usage:  node tools/time-first-screen.cjs [port] [--rtt=<ms>] [--mbps=<megabits>] [--fail-app] [--theme=light]
 //   defaults: a free port (printed), 150 ms extra round trip, 1.6 Mbps down. Env: TIMING_RTT_MS, TIMING_MBPS.
+//   --fail-app makes /js/app.js answer 404 (the failure path: the page must show a Reload screen, not an endless loader).
 //   With AVA's browser tool (one page load per width, cold: nothing is cached, "cache-control: no-store"):
 //   "$AVA_BROWSER" --serve "node tools/time-first-screen.cjs 8765" --port 8765 /index.html /golsz-app.html --widths 390,1280
 //   The server prints one line per page load:
@@ -41,6 +42,9 @@
 //   /index.html      1280    552-648  =fcp   -       -
 //   /golsz-app.html   390    756    3840-3888  753-755  3717-3749   (budgets boot <= 2500, mounted <= 5000: inside)
 //   /golsz-app.html  1280    708-752  3836-3840  707-748  3697-3727
+// AFTER t2 (libraries deferred, js/app.js preloaded, loader gated on DOMContentLoaded; same settings, one run):
+//   /golsz-app.html   390 dark   fcp 904   lcp 3028   boot 827   mounted 2916
+//   /golsz-app.html   390 light  fcp 500   lcp 2668   boot 477   mounted 2548   (--theme=light)
 // What the numbers leave out: Google Fonts and the Supabase host are not reachable from the test browser (fonts
 // are non-blocking on the home page), and the browser runs at full CPU speed, so a real mid-range phone is
 // slower than this. The app's weight at the baseline: golsz-app.html 1.44 MB (423 KB gzipped), js/app.js
@@ -179,6 +183,8 @@ function makeHandler(opts) {
       });
       return;
     }
+    // --fail-app: js/app.js answers 404, to see the "Something stopped GOLSZ loading." screen.
+    if (opts.failApp && u.pathname === "/js/app.js") return respond(req, res, 404, "text/plain", Buffer.from("not found"));
     if (vendorFiles[u.pathname]) return respond(req, res, 200, MIME[".js"], fs.readFileSync(vendorFiles[u.pathname]));
     if (u.pathname.startsWith("/api/")) return respond(req, res, 404, "application/json", Buffer.from("{}"));
 
@@ -191,7 +197,9 @@ function makeHandler(opts) {
       const type = MIME[path.extname(file)] || "application/octet-stream";
       if (!PAGES.has(rel)) return respond(req, res, 200, type, buf);
       const built = buildPage(buf.toString("utf8"), (i, version) => { const r = resolveFromCache(i, version); vendorFiles["/__vendor/" + i + ".js"] = r.file; return r; });
-      respond(req, res, 200, type, Buffer.from(built.html));
+      // --theme=light: the page's own head script reads this key, as for a visitor who chose light.
+      const page = opts.light ? built.html.replace(/<head[^>]*>/i, (m) => m + '<script>try{localStorage.setItem("golsz-theme","light")}catch(e){}</script>') : built.html;
+      respond(req, res, 200, type, Buffer.from(page));
     });
   };
 }
@@ -199,6 +207,8 @@ function makeHandler(opts) {
 function parseArgs(argv, env) {
   const opts = { port: 0, rttMs: Number(env.TIMING_RTT_MS) || DEFAULTS.rttMs, mbps: Number(env.TIMING_MBPS) || DEFAULTS.mbps };
   argv.forEach((a) => {
+    if (a === "--theme=light") { opts.light = true; return; }
+    if (a === "--fail-app") { opts.failApp = true; return; }
     const flag = /^--(rtt|mbps)=(\d+(?:\.\d+)?)$/.exec(a);
     if (flag) opts[flag[1] === "rtt" ? "rttMs" : "mbps"] = Number(flag[2]);
     else if (/^\d+$/.test(a)) opts.port = Number(a);

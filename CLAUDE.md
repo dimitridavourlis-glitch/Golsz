@@ -114,6 +114,13 @@ Relevant commands:
   (`tools/strip-jsx.cjs`, removes the JSX source block from the served HTML) against a throwaway checkout.
   `split` and `strip` rewrite `golsz-app.html`, so do not run them in your working tree and never commit
   their output (the `tools/*.cjs` headers and `test_served_bundle.cjs` explain why).
+- **Boot order (2026-11-04).** The three CDN libraries in `<head>` carry `defer` (so the inline `#boot` logo paints
+  while they download) and `<link rel="preload" as="script">` fetches `js/app.js` in parallel; `tools/precompile.cjs`
+  stamps the same `?v=` hash into the preload and `APP_SRC` (its replace is global). The bottom loader's `compile()`
+  returns until `DOMContentLoaded` (or `readyState === "complete"`), because deferred scripts run just before that
+  event and `readyState` is already `"interactive"` while they still download. The two-rAF and 300 ms triggers, the
+  12 s watchdog and `bootFailed("load")` are unchanged. `tests/test_boot_nonblocking.cjs` pins all of it; measure with
+  `tools/time-first-screen.cjs` (`--fail-app` returns 404 for app.js, `--theme=light`).
 - Component tree lives under one `<script>` block: `Feed`, `Discover`, `Events`, `Messages`, `Passport`
   (the "Digital Sports Passport" profile UI), `Scout` (AI chat), assembled by `GolszApp` (bottom tab bar on
   mobile, sidebar nav on desktop — see "Responsive layout" below) and mounted via `Root`, which decides

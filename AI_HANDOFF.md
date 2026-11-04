@@ -13,6 +13,11 @@ request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the
 22.x and 24.x. (`landing-glow-path` before it: merged 2026-10-27.)
 
 ## Last Completed Work
+- AVA job 168 t2 (2026-11-04): app libraries `defer`red, `js/app.js` preloaded, loader gated on DOMContentLoaded
+  (`tests/test_boot_nonblocking.cjs`). AFTER figures (same tool, 150 ms / 1.6 Mbps, 390 px, signed out, one run;
+  baseline in brackets): dark boot 827 [755], mounted 2916 [3717-3749], lcp 3028 [3840-3888]; light boot 477,
+  mounted 2548. No console errors. `--fail-app` shows "Something stopped GOLSZ loading." + Reload; shared Passport
+  `fixture=a` at 390 px renders. Not run: 1280 px, real phone CPU.
 - AVA job 168 t1 (2026-11-04): `tools/time-first-screen.cjs` serves the repo at 150 ms RTT / 1.6 Mbps and prints
   `timing page=... fcp lcp boot mounted` per page load (run it with "$AVA_BROWSER" --serve, see its header).
   BEFORE figures (ms, 390 / 1280 px, two runs): home page LCP 648-760 / 552-648; app boot visible 755 / 748;

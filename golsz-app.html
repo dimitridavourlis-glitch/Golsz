@@ -40,6 +40,10 @@
      which is the one part of the load path that costs nothing to fix. -->
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
+     fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
+     with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
+<link rel="preload" as="script" href="js/app.js?v=5ebac64aa5fe9781" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -84,9 +88,13 @@
   @media (prefers-reduced-motion: reduce){#boot .b i{animation:none;width:100%;opacity:.5;}}
 </style>
 <script>try{if(localStorage.getItem("golsz-theme")==="light")document.documentElement.setAttribute("data-theme","light");}catch(e){}</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.min.js" integrity="sha384-fPWur1rx/DE6YtXP/x0MD6dd90RgnVsz5yX/DIg7CcVAnTBZsENWuIcpvVTM39ti" crossorigin="anonymous"></script>
+<!-- The three libraries are DEFERRED, not parser-blocking: the browser can paint the inline #boot logo
+     while they download. Deferred scripts run in order before DOMContentLoaded, and the loader at the
+     bottom of <body> waits for that event before it injects js/app.js, so React, ReactDOM and supabase
+     always exist when the app runs. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.min.js" integrity="sha384-fPWur1rx/DE6YtXP/x0MD6dd90RgnVsz5yX/DIg7CcVAnTBZsENWuIcpvVTM39ti" crossorigin="anonymous" defer></script>
 </head>
 <body>
 <!-- Without JavaScript the boot animation below would run for ever and say
@@ -19491,9 +19499,19 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   //
   // This does NOT make the compile faster. It makes the wait visible, which
   // was the entire point of the boot state and did not previously work.
-  var started = false;
+  //
+  // (Babel is gone now: the bundle is compiled ahead of time. The same rule still holds for the
+  // three libraries in <head>: they are `defer`red so the boot logo paints while they download,
+  // and <link rel="preload"> fetches js/app.js alongside them. See compile() below.)
+  var started = false, domReady = false;
+  // The libraries in <head> are deferred, so they have not necessarily run yet. They run, in order,
+  // just before DOMContentLoaded; a script injected earlier could run first and find no React.
+  // readyState "interactive" is NOT enough: it is already set while deferred scripts are still
+  // downloading. So compile() waits for DOMContentLoaded itself (or readyState "complete", for a
+  // page that has already finished). The rAF and 300 ms triggers below just call it again.
   function compile() {
     if (started) return;
+    if (document.readyState !== "complete" && !domReady) return;
     started = true;
     // THE APP IS ALREADY COMPILED. This used to hand 985,000 characters of JSX
     // to babel-standalone and block the main thread for ~1.8s; tools/precompile.cjs
@@ -19606,6 +19624,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
   // Background tabs never fire rAF. Without this the app would never boot in
   // one, which is strictly worse than the blank screen this replaces.
   setTimeout(compile, 300);
+  // The gate above: deferred libraries have run by now, so start the app.
+  document.addEventListener("DOMContentLoaded", function () { domReady = true; compile(); });
 })();
 </script>
 </body>
