@@ -43,6 +43,9 @@ publish.** Full detail: CLAUDE.md § What this is; README.md.
   that file, compiled at author time into `js/app.js`.
   The three CDN libraries in `<head>` are `defer`red and `js/app.js` is preloaded; the bottom loader waits for
   `DOMContentLoaded` before injecting it (`tests/test_boot_nonblocking.cjs`).
+  Speed budgets (simulated phone connection): home LCP 3000 ms, boot screen 2500 ms, first screen 5000 ms;
+  measure with `tools/time-first-screen.cjs` (CLAUDE.md "First-screen speed"). Real phone/cellular, signed-in
+  Home and production-edge CDN latency are UNVERIFIED.
 - Backend: Vercel serverless functions in `api/` and Supabase (Postgres + RLS, Auth, Realtime,
   Storage). Real Scout traffic goes through `api/scout.js`, which holds the AI key server-side.
 - Full detail: CLAUDE.md § Architecture (one subsection per file or feature).

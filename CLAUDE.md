@@ -121,6 +121,17 @@ Relevant commands:
   event and `readyState` is already `"interactive"` while they still download. The two-rAF and 300 ms triggers, the
   12 s watchdog and `bootFailed("load")` are unchanged. `tests/test_boot_nonblocking.cjs` pins all of it; measure with
   `tools/time-first-screen.cjs` (`--fail-app` returns 404 for app.js, `--theme=light`).
+- **First-screen speed (2026-11-04, AVA job 168).** Budgets, cold load on a simulated phone connection (150 ms
+  extra round trip, 1.6 Mbps, no CPU throttling): home page (`index.html`) LCP <= 3000 ms; app boot screen visible
+  <= 2500 ms; app first screen mounted (Auth, signed out) <= 5000 ms. Measure with
+  `"$AVA_BROWSER" --serve "node tools/time-first-screen.cjs 8765" --port 8765 /index.html /golsz-app.html --widths 390,1280`;
+  it prints `timing page=... fcp lcp boot mounted` per load (header of the tool lists `--lang`, `--theme`,
+  `--fail-app`, `--rtt`, `--mbps`). What keeps it fast: the three CDN scripts are `defer`red, `js/app.js` is
+  preloaded, the loader waits for `DOMContentLoaded` (see Boot order), and `index.html` loads `js/main.js` with
+  `defer`. Recorded: app boot 755 ms -> 477-827; mounted 3717-3749 -> 2548-2916; app LCP ~3.85 s -> 3.03 s; home
+  LCP 648-760 before, 804-1692 after (noisy machine, all inside budget). **Not measured (UNVERIFIED):** a real phone
+  on real cellular (CPU, radio), a signed-in Home with live data, CDN latency from the production edge.
+  The region hero JPEGs are not used on the home page, so they do not affect its LCP.
 - Component tree lives under one `<script>` block: `Feed`, `Discover`, `Events`, `Messages`, `Passport`
   (the "Digital Sports Passport" profile UI), `Scout` (AI chat), assembled by `GolszApp` (bottom tab bar on
   mobile, sidebar nav on desktop — see "Responsive layout" below) and mounted via `Root`, which decides

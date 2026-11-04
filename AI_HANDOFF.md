@@ -13,6 +13,12 @@ request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the
 22.x and 24.x. (`landing-glow-path` before it: merged 2026-10-27.)
 
 ## Last Completed Work
+- AVA job 168 t6 (2026-11-04): documented the first-screen speed budget (CLAUDE.md "First-screen speed", AGENTS.md,
+  this file) and added CHANGELOG.md. Budgets: home LCP 3000 ms, boot 2500 ms, first screen 5000 ms; run
+  `tools/time-first-screen.cjs` (header has the command). Before -> after (150 ms / 1.6 Mbps, 390 px): boot 755 ->
+  477-827 ms; mounted 3717-3749 -> 2548-2916 ms; app LCP ~3.85 s -> 3.03 s; home LCP 648-760 -> 804-1692 ms
+  (noisy machine; only change was `defer` on js/main.js). UNVERIFIED: a real phone on real cellular; a signed-in
+  Home with live data; CDN latency from the production edge.
 - AVA job 168 t3 (2026-11-04): visible "Loading…" line (`#boot .m`) under the boot bar. BOOT_COPY/bootCopy() moved
   into a small inline script right after #boot (before the inert JSX block) so the saved language is set before
   first paint; bootFailed() reuses it. tools/time-first-screen.cjs gained `--lang=<code>` and reports what the
