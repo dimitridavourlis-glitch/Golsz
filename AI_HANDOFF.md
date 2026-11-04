@@ -13,6 +13,12 @@ request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the
 22.x and 24.x. (`landing-glow-path` before it: merged 2026-10-27.)
 
 ## Last Completed Work
+- AVA job 168 t1 (2026-11-04): `tools/time-first-screen.cjs` serves the repo at 150 ms RTT / 1.6 Mbps and prints
+  `timing page=... fcp lcp boot mounted` per page load (run it with "$AVA_BROWSER" --serve, see its header).
+  BEFORE figures (ms, 390 / 1280 px, two runs): home page LCP 648-760 / 552-648; app boot visible 755 / 748;
+  app mounted (Auth screen) 3717-3749 / 3697-3727; app LCP ~3.85 s. All inside the budgets (home LCP 3000,
+  boot 2500, mounted 5000) in this simulation: no real phone CPU, no Google Fonts. supabase-js keeps no
+  integrity in the served copy (npm build differs from jsdelivr's); React/ReactDOM keep theirs.
 - Job 144 t6, Scout history / Settings privacy / VerificationRequest load errors. Recorded browser run
   2026-11-03 (throwaway harness: served in-memory copy mounts the real component, stubbed Supabase fails the
   chosen tables). 390 and 1280 px, dark and light: Scout restore failure shows LoadError above the greeting,
