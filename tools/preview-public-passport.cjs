@@ -54,22 +54,28 @@ const LIBS = [
 ];
 const VENDOR = process.env.PREVIEW_VENDOR_DIR || path.join(os.homedir(), ".cache", "golsz-preview-vendor");
 
+// The local copy of one library (npm pack, fetched on first use into VENDOR).
+function vendorFile(i, version) {
+  const lib = LIBS[i];
+  const dest = path.join(VENDOR, i + "-" + version + ".js");
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(VENDOR, { recursive: true });
+    const work = fs.mkdtempSync(path.join(VENDOR, "pack-"));
+    const tgz = execFileSync("npm", ["pack", lib.pkg(version), "--silent"], { cwd: work }).toString().trim().split("\n").pop();
+    execFileSync("tar", ["xzf", tgz, "package/" + lib.file], { cwd: work });
+    fs.copyFileSync(path.join(work, "package", lib.file), dest);
+    fs.rmSync(work, { recursive: true, force: true });
+  }
+  return dest;
+}
+
 // Rewrites each CDN <script> to /__vendor/<n>.js (dropping integrity, which is for the CDN's bytes) and
 // returns the files to serve, downloading them on first use.
 function localiseLibraries(html) {
   const files = {};
   LIBS.forEach((lib, i) => {
     html = html.replace(new RegExp('<script src="https://[^"]*' + lib.cdn.source + '"[^>]*></script>'), (tag, version) => {
-      const dest = path.join(VENDOR, i + "-" + version + ".js");
-      if (!fs.existsSync(dest)) {
-        fs.mkdirSync(VENDOR, { recursive: true });
-        const work = fs.mkdtempSync(path.join(VENDOR, "pack-"));
-        const tgz = execFileSync("npm", ["pack", lib.pkg(version), "--silent"], { cwd: work }).toString().trim().split("\n").pop();
-        execFileSync("tar", ["xzf", tgz, "package/" + lib.file], { cwd: work });
-        fs.copyFileSync(path.join(work, "package", lib.file), dest);
-        fs.rmSync(work, { recursive: true, force: true });
-      }
-      files["/__vendor/" + i + ".js"] = dest;
+      files["/__vendor/" + i + ".js"] = vendorFile(i, version);
       return '<script src="/__vendor/' + i + '.js"></script>';
     });
   });
@@ -223,4 +229,4 @@ if (require.main === module) {
   server.listen(want, "127.0.0.1", () => console.log("Shared Passport preview on http://127.0.0.1:" + server.address().port));
 }
 
-module.exports = { pageWithStub, FIXTURES };
+module.exports = { pageWithStub, FIXTURES, LIBS, MIME, vendorFile };
