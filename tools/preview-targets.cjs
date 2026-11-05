@@ -125,7 +125,9 @@ const FAIL_OF_METHOD = { GET: "select", POST: "insert", PATCH: "update", DELETE:
 const OP_OF_METHOD = { POST: "insert", PATCH: "update", DELETE: "delete" };
 
 // The stand-in database plus the handler for the app's Supabase calls (/__sb/rest/v1/<table>?<filters>).
-function createPreview() {
+// `localise` swaps the CDN script tags for local copies; it runs `npm pack` (network) when the vendor cache
+// is empty, so tests/test_preview_targets.cjs passes one that leaves the page alone and stays offline.
+function createPreview({ localise = localiseLibraries } = {}) {
   const state = { targets: seedTargets() };
   const vendorFiles = {};
 
@@ -209,7 +211,7 @@ function createPreview() {
       const type = MIME[path.extname(file)] || "application/octet-stream";
       res.setHeader("cache-control", "no-store");
       if (rel !== "/golsz-app.html") { res.writeHead(200, { "content-type": type }); return res.end(buf); }
-      const local = localiseLibraries(buf.toString("utf8"));
+      const local = localise(buf.toString("utf8"));
       Object.assign(vendorFiles, local.files);
       const reset = u.searchParams.get("reset");
       if (reset === "1") state.targets = [];

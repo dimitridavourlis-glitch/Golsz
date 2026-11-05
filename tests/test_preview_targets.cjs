@@ -5,6 +5,13 @@ const fs = require("fs");
 const http = require("http");
 const path = require("path");
 const vm = require("vm");
+// The suite runs in the deploy gate, which needs no network: record any child process (the vendor copy's
+// `npm pack`) instead of starting it. Patched before the tool is required, since it destructures these.
+const childProcess = require("child_process");
+const spawned = [];
+for (const fn of ["exec", "execFile", "execFileSync", "execSync", "spawn", "spawnSync", "fork"]) {
+  childProcess[fn] = (...args) => { spawned.push(fn + " " + String(args[0])); throw new Error("no child process in this suite"); };
+}
 const { createPreview, pageWithStub, stub, seedTargets, USER_ID } = require("../tools/preview-targets.cjs");
 
 const appPath = path.join(__dirname, "..", "golsz-app.html");
@@ -42,7 +49,8 @@ async function runStub(cfg, request) {
 }
 
 (async () => {
-  const preview = createPreview();
+  // The CDN libraries stay as they are: this suite checks the stub, the store and disk/host safety.
+  const preview = createPreview({ localise: (html) => ({ html, files: {} }) });
   const server = http.createServer(preview.handler);
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const port = server.address().port;
@@ -110,6 +118,7 @@ async function runStub(cfg, request) {
   ok(/^[\w-]+\.[\w-]+\.preview$/.test(JSON.parse(run.store["sb-proj-auth-token"]).access_token), "the token is an unsigned stand-in");
 
   ok(fs.readFileSync(appPath, "utf8") === before, "file on disk unchanged at the end");
+  ok(spawned.length === 0, "no child process (npm pack) was started: " + spawned.join("; "));
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);
 })();
