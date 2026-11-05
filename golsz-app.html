@@ -43,7 +43,7 @@
 <!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
      fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
      with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
-<link rel="preload" as="script" href="js/app.js?v=5ebac64aa5fe9781" />
+<link rel="preload" as="script" href="js/app.js?v=5bd30412f7f6b4d5" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -632,6 +632,7 @@ const I18N = {
     editor_bio_label: "SCOUTING BIO", editor_bio_ph: "A few sentences a coach or scout should know.",
     editor_height_range: "Height must be between 100 and 250 cm.", editor_weight_range: "Weight must be between 30 and 250 kg.", editor_gpa_range: "GPA must be between 0 and 5.", editor_grad_year_range: "Graduation year must be between 1950 and 8 years from now.",
     editor_save: "Save profile", editor_saving: "Saving…", editor_name_required: "Name can't be empty.",
+    target_err_name_required: "Add a name for this target.", target_err_too_long: "This is too long.", target_err_email_invalid: "Enter an email like name@club.com, or leave it blank.", target_delete_armed: "Tap again to delete", target_delete_armed_draft: "Tap again to delete it and its draft email", target_delete_aria: "Delete {name}. Tap again to confirm.", target_delete_aria_draft: "Delete {name} and its saved draft email. Tap again to confirm.",
     editor_sport_required: "Pick a sport to continue.", editor_locked_notice: "Finish your profile to unlock the rest of GOLSZ.",
     editor_team_required: "Tell us which team you're with.", editor_license_label: "LICENSE(S)", editor_license_ph: "e.g. UEFA A License",
     editor_looking_label: "LOOKING FOR PLAYERS",
@@ -1011,6 +1012,7 @@ const I18N = {
     editor_bio_label: "BIO DE RECRUTEMENT", editor_bio_ph: "Quelques phrases qu'un entraîneur ou recruteur devrait connaître.",
     editor_height_range: "La taille doit être comprise entre 100 et 250 cm.", editor_weight_range: "Le poids doit être compris entre 30 et 250 kg.", editor_gpa_range: "La moyenne (GPA) doit être comprise entre 0 et 5.", editor_grad_year_range: "L'année de diplôme doit être comprise entre 1950 et dans 8 ans.",
     editor_save: "Enregistrer le profil", editor_saving: "Enregistrement…", editor_name_required: "Le nom ne peut pas être vide.",
+    target_err_name_required: "Ajoutez un nom pour cette cible.", target_err_too_long: "Ce texte est trop long.", target_err_email_invalid: "Saisissez un e-mail du type nom@club.com, ou laissez vide.", target_delete_armed: "Touchez encore pour supprimer", target_delete_armed_draft: "Touchez encore pour la supprimer avec son brouillon d’e-mail", target_delete_aria: "Supprimer {name}. Touchez encore pour confirmer.", target_delete_aria_draft: "Supprimer {name} et son brouillon d’e-mail enregistré. Touchez encore pour confirmer.",
     editor_sport_required: "Choisissez un sport pour continuer.", editor_locked_notice: "Terminez votre profil pour débloquer le reste de GOLSZ.",
     editor_team_required: "Indiquez avec quelle équipe vous êtes.", editor_license_label: "LICENCE(S)", editor_license_ph: "ex. Licence UEFA A",
     editor_looking_label: "RECHERCHE DE JOUEURS",
@@ -1390,6 +1392,7 @@ const I18N = {
     editor_bio_label: "BIOGRAFÍA DEPORTIVA", editor_bio_ph: "Unas frases que un entrenador u ojeador debería saber.",
     editor_height_range: "La estatura debe estar entre 100 y 250 cm.", editor_weight_range: "El peso debe estar entre 30 y 250 kg.", editor_gpa_range: "El promedio (GPA) debe estar entre 0 y 5.", editor_grad_year_range: "El año de graduación debe estar entre 1950 y dentro de 8 años.",
     editor_save: "Guardar perfil", editor_saving: "Guardando…", editor_name_required: "El nombre no puede estar vacío.",
+    target_err_name_required: "Añade un nombre para este objetivo.", target_err_too_long: "Este texto es demasiado largo.", target_err_email_invalid: "Introduce un correo como nombre@club.com, o déjalo vacío.", target_delete_armed: "Toca de nuevo para eliminar", target_delete_armed_draft: "Toca de nuevo para eliminarlo con su borrador de correo", target_delete_aria: "Eliminar {name}. Toca de nuevo para confirmar.", target_delete_aria_draft: "Eliminar {name} y su borrador de correo guardado. Toca de nuevo para confirmar.",
     editor_sport_required: "Elige un deporte para continuar.", editor_locked_notice: "Termina tu perfil para desbloquear el resto de GOLSZ.",
     editor_team_required: "Indica con qué equipo estás.", editor_license_label: "LICENCIA(S)", editor_license_ph: "ej. Licencia UEFA A",
     editor_looking_label: "BUSCANDO JUGADORES",
@@ -1769,6 +1772,7 @@ const I18N = {
     editor_bio_label: "ΒΙΟΓΡΑΦΙΚΟ ΣΚΑΟΥΤΙΝΓΚ", editor_bio_ph: "Λίγες προτάσεις που πρέπει να ξέρει ένας προπονητής ή σκάουτ.",
     editor_height_range: "Το ύψος πρέπει να είναι από 100 έως 250 εκ.", editor_weight_range: "Το βάρος πρέπει να είναι από 30 έως 250 κιλά.", editor_gpa_range: "Ο βαθμός (GPA) πρέπει να είναι από 0 έως 5.", editor_grad_year_range: "Το έτος αποφοίτησης πρέπει να είναι από 1950 έως 8 χρόνια από σήμερα.",
     editor_save: "Αποθήκευση προφίλ", editor_saving: "Αποθήκευση…", editor_name_required: "Το όνομα δεν μπορεί να είναι κενό.",
+    target_err_name_required: "Προσθέστε ένα όνομα για αυτόν τον στόχο.", target_err_too_long: "Το κείμενο είναι πολύ μεγάλο.", target_err_email_invalid: "Εισαγάγετε email όπως name@club.com ή αφήστε το κενό.", target_delete_armed: "Πατήστε ξανά για διαγραφή", target_delete_armed_draft: "Πατήστε ξανά για διαγραφή μαζί με το πρόχειρο email", target_delete_aria: "Διαγραφή του {name}. Πατήστε ξανά για επιβεβαίωση.", target_delete_aria_draft: "Διαγραφή του {name} και του αποθηκευμένου πρόχειρου email. Πατήστε ξανά για επιβεβαίωση.",
     editor_sport_required: "Επιλέξτε ένα άθλημα για να συνεχίσετε.", editor_locked_notice: "Ολοκληρώστε το προφίλ σας για να ξεκλειδώσετε το υπόλοιπο GOLSZ.",
     editor_team_required: "Πείτε μας με ποια ομάδα είστε.", editor_license_label: "ΑΔΕΙΑ/ΕΣ", editor_license_ph: "π.χ. Άδεια UEFA A",
     editor_looking_label: "ΑΝΑΖΗΤΗΣΗ ΠΑΙΚΤΩΝ",
@@ -6487,6 +6491,42 @@ function profileFieldErrors(form, isPlayer, now = new Date()) {
     if (outside(form.grad_year, 1950, now.getFullYear() + 8)) errs.grad_year = "editor_grad_year_range";
   }
   return errs;
+}
+
+// Rules for an outreach target (a club or coach the athlete is pursuing).
+// Pure, so the form can refuse before the database and the tests can run them.
+// The database backstop (migration 165) repeats these lengths.
+const TARGET_LIMITS = { name: 120, contact_name: 120, contact_email: 200, notes: 2000, fit_reasoning: 2000, draft_email: 10000 };
+
+// Every reason a target cannot be saved, as { field: i18nKey }. A blank email
+// is fine (optional); a filled one must look like name@domain.tld.
+function targetFieldErrors(draft) {
+  const errs = {};
+  const val = (k) => String((draft && draft[k]) || "");
+  if (!val("name").trim()) errs.name = "target_err_name_required";
+  for (const k of Object.keys(TARGET_LIMITS)) {
+    if (!errs[k] && val(k).trim().length > TARGET_LIMITS[k]) errs[k] = "target_err_too_long";
+  }
+  const email = val("contact_email").trim();
+  if (email && !errs.contact_email && !/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)) errs.contact_email = "target_err_email_invalid";
+  return errs;
+}
+
+// True only when the target holds a draft email with something in it.
+function targetHasDraft(row) {
+  return !!(row && String(row.draft_email || "").trim());
+}
+
+// Wording for the second tap of a delete: the armed button label and the
+// aria text. Both name the draft when one exists, because deleting the target
+// deletes it too. t is the translator from useLang().
+function targetDeleteCopy(row, t) {
+  const draft = targetHasDraft(row);
+  const name = String((row && row.name) || "");
+  return {
+    label: t(draft ? "target_delete_armed_draft" : "target_delete_armed"),
+    aria: t(draft ? "target_delete_aria_draft" : "target_delete_aria").replace("{name}", name),
+  };
 }
 
 // targetId (P0-4) is the athlete whose rows are written — the signed-in
@@ -19549,7 +19589,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=5ebac64aa5fe9781";
+    var APP_SRC = "js/app.js?v=5bd30412f7f6b4d5";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
