@@ -6700,3 +6700,56 @@ alter table stripe_pending_plans enable row level security;
 
 alter table profiles add column if not exists current_period_end timestamptz;
 alter table profiles add column if not exists cancel_at_period_end boolean not null default false;
+
+
+-- ============================================================
+-- 165 — NOT YET APPLIED, as of 2026-11-05.
+--
+-- supabase-migration-165-outreach-target-limits.sql, run in the Supabase SQL
+-- Editor. Database backstop for outreach_targets: NOT VALID check constraints
+-- matching TARGET_LIMITS in golsz-app.html (non-blank name, character caps on
+-- every text column) and a BEFORE UPDATE trigger that sets updated_at. The
+-- client does not depend on it. The file header has the pre/post checks and
+-- the rollback SQL.
+-- ============================================================
+
+alter table outreach_targets drop constraint if exists outreach_targets_name_not_blank;
+alter table outreach_targets add constraint outreach_targets_name_not_blank
+  check (char_length(btrim(name)) > 0) not valid;
+
+alter table outreach_targets drop constraint if exists outreach_targets_name_len;
+alter table outreach_targets add constraint outreach_targets_name_len
+  check (char_length(name) <= 120) not valid;
+
+alter table outreach_targets drop constraint if exists outreach_targets_contact_name_len;
+alter table outreach_targets add constraint outreach_targets_contact_name_len
+  check (char_length(contact_name) <= 120) not valid;
+
+alter table outreach_targets drop constraint if exists outreach_targets_contact_email_len;
+alter table outreach_targets add constraint outreach_targets_contact_email_len
+  check (char_length(contact_email) <= 200) not valid;
+
+alter table outreach_targets drop constraint if exists outreach_targets_notes_len;
+alter table outreach_targets add constraint outreach_targets_notes_len
+  check (char_length(notes) <= 2000) not valid;
+
+alter table outreach_targets drop constraint if exists outreach_targets_fit_reasoning_len;
+alter table outreach_targets add constraint outreach_targets_fit_reasoning_len
+  check (char_length(fit_reasoning) <= 2000) not valid;
+
+alter table outreach_targets drop constraint if exists outreach_targets_draft_email_len;
+alter table outreach_targets add constraint outreach_targets_draft_email_len
+  check (char_length(draft_email) <= 10000) not valid;
+
+create or replace function outreach_targets_touch_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists outreach_targets_touch_updated_at on outreach_targets;
+create trigger outreach_targets_touch_updated_at
+  before update on outreach_targets
+  for each row execute function outreach_targets_touch_updated_at();
