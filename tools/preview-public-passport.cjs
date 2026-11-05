@@ -229,4 +229,4 @@ if (require.main === module) {
   server.listen(want, "127.0.0.1", () => console.log("Shared Passport preview on http://127.0.0.1:" + server.address().port));
 }
 
-module.exports = { pageWithStub, FIXTURES, LIBS, MIME, vendorFile };
+module.exports = { pageWithStub, FIXTURES, LIBS, MIME, vendorFile, localiseLibraries };
