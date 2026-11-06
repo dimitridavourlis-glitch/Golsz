@@ -43,7 +43,7 @@
 <!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
      fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
      with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
-<link rel="preload" as="script" href="js/app.js?v=f9203e015ddd9593" />
+<link rel="preload" as="script" href="js/app.js?v=f6193558da691b91" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -633,6 +633,7 @@ const I18N = {
     editor_height_range: "Height must be between 100 and 250 cm.", editor_weight_range: "Weight must be between 30 and 250 kg.", editor_gpa_range: "GPA must be between 0 and 5.", editor_grad_year_range: "Graduation year must be between 1950 and 8 years from now.",
     editor_save: "Save profile", editor_saving: "Saving…", editor_name_required: "Name can't be empty.",
     target_err_name_required: "Add a name for this target.", target_err_too_long: "This is too long.", target_err_email_invalid: "Enter an email like name@club.com, or leave it blank.", target_delete_armed: "Tap again to delete", target_delete_armed_draft: "Tap again to delete it and its draft email", target_delete_aria: "Delete {name}. Tap again to confirm.", target_delete_aria_draft: "Delete {name} and its saved draft email. Tap again to confirm.",
+    target_draft_save: "Save draft", target_status_unsaved: "Unsaved changes", target_status_saving: "Saving…", target_status_saved: "Saved", target_status_failed: "Not saved, try again", target_draft_to: "To: {email}", target_counter: "{n} / {max}",
     editor_sport_required: "Pick a sport to continue.", editor_locked_notice: "Finish your profile to unlock the rest of GOLSZ.",
     editor_team_required: "Tell us which team you're with.", editor_license_label: "LICENSE(S)", editor_license_ph: "e.g. UEFA A License",
     editor_looking_label: "LOOKING FOR PLAYERS",
@@ -1013,6 +1014,7 @@ const I18N = {
     editor_height_range: "La taille doit être comprise entre 100 et 250 cm.", editor_weight_range: "Le poids doit être compris entre 30 et 250 kg.", editor_gpa_range: "La moyenne (GPA) doit être comprise entre 0 et 5.", editor_grad_year_range: "L'année de diplôme doit être comprise entre 1950 et dans 8 ans.",
     editor_save: "Enregistrer le profil", editor_saving: "Enregistrement…", editor_name_required: "Le nom ne peut pas être vide.",
     target_err_name_required: "Ajoutez un nom pour cette cible.", target_err_too_long: "Ce texte est trop long.", target_err_email_invalid: "Saisissez un e-mail du type nom@club.com, ou laissez vide.", target_delete_armed: "Touchez encore pour supprimer", target_delete_armed_draft: "Touchez encore pour la supprimer avec son brouillon d’e-mail", target_delete_aria: "Supprimer {name}. Touchez encore pour confirmer.", target_delete_aria_draft: "Supprimer {name} et son brouillon d’e-mail enregistré. Touchez encore pour confirmer.",
+    target_draft_save: "Enregistrer le brouillon", target_status_unsaved: "Modifications non enregistrées", target_status_saving: "Enregistrement…", target_status_saved: "Enregistré", target_status_failed: "Non enregistré, réessaie", target_draft_to: "À : {email}", target_counter: "{n} / {max}",
     editor_sport_required: "Choisissez un sport pour continuer.", editor_locked_notice: "Terminez votre profil pour débloquer le reste de GOLSZ.",
     editor_team_required: "Indiquez avec quelle équipe vous êtes.", editor_license_label: "LICENCE(S)", editor_license_ph: "ex. Licence UEFA A",
     editor_looking_label: "RECHERCHE DE JOUEURS",
@@ -1393,6 +1395,7 @@ const I18N = {
     editor_height_range: "La estatura debe estar entre 100 y 250 cm.", editor_weight_range: "El peso debe estar entre 30 y 250 kg.", editor_gpa_range: "El promedio (GPA) debe estar entre 0 y 5.", editor_grad_year_range: "El año de graduación debe estar entre 1950 y dentro de 8 años.",
     editor_save: "Guardar perfil", editor_saving: "Guardando…", editor_name_required: "El nombre no puede estar vacío.",
     target_err_name_required: "Añade un nombre para este objetivo.", target_err_too_long: "Este texto es demasiado largo.", target_err_email_invalid: "Introduce un correo como nombre@club.com, o déjalo vacío.", target_delete_armed: "Toca de nuevo para eliminar", target_delete_armed_draft: "Toca de nuevo para eliminarlo con su borrador de correo", target_delete_aria: "Eliminar {name}. Toca de nuevo para confirmar.", target_delete_aria_draft: "Eliminar {name} y su borrador de correo guardado. Toca de nuevo para confirmar.",
+    target_draft_save: "Guardar borrador", target_status_unsaved: "Cambios sin guardar", target_status_saving: "Guardando…", target_status_saved: "Guardado", target_status_failed: "No se guardó, inténtalo de nuevo", target_draft_to: "Para: {email}", target_counter: "{n} / {max}",
     editor_sport_required: "Elige un deporte para continuar.", editor_locked_notice: "Termina tu perfil para desbloquear el resto de GOLSZ.",
     editor_team_required: "Indica con qué equipo estás.", editor_license_label: "LICENCIA(S)", editor_license_ph: "ej. Licencia UEFA A",
     editor_looking_label: "BUSCANDO JUGADORES",
@@ -1773,6 +1776,7 @@ const I18N = {
     editor_height_range: "Το ύψος πρέπει να είναι από 100 έως 250 εκ.", editor_weight_range: "Το βάρος πρέπει να είναι από 30 έως 250 κιλά.", editor_gpa_range: "Ο βαθμός (GPA) πρέπει να είναι από 0 έως 5.", editor_grad_year_range: "Το έτος αποφοίτησης πρέπει να είναι από 1950 έως 8 χρόνια από σήμερα.",
     editor_save: "Αποθήκευση προφίλ", editor_saving: "Αποθήκευση…", editor_name_required: "Το όνομα δεν μπορεί να είναι κενό.",
     target_err_name_required: "Προσθέστε ένα όνομα για αυτόν τον στόχο.", target_err_too_long: "Το κείμενο είναι πολύ μεγάλο.", target_err_email_invalid: "Εισαγάγετε email όπως name@club.com ή αφήστε το κενό.", target_delete_armed: "Πατήστε ξανά για διαγραφή", target_delete_armed_draft: "Πατήστε ξανά για διαγραφή μαζί με το πρόχειρο email", target_delete_aria: "Διαγραφή του {name}. Πατήστε ξανά για επιβεβαίωση.", target_delete_aria_draft: "Διαγραφή του {name} και του αποθηκευμένου πρόχειρου email. Πατήστε ξανά για επιβεβαίωση.",
+    target_draft_save: "Αποθήκευση πρόχειρου", target_status_unsaved: "Μη αποθηκευμένες αλλαγές", target_status_saving: "Αποθήκευση…", target_status_saved: "Αποθηκεύτηκε", target_status_failed: "Δεν αποθηκεύτηκε, δοκίμασε ξανά", target_draft_to: "Προς: {email}", target_counter: "{n} / {max}",
     editor_sport_required: "Επιλέξτε ένα άθλημα για να συνεχίσετε.", editor_locked_notice: "Ολοκληρώστε το προφίλ σας για να ξεκλειδώσετε το υπόλοιπο GOLSZ.",
     editor_team_required: "Πείτε μας με ποια ομάδα είστε.", editor_license_label: "ΑΔΕΙΑ/ΕΣ", editor_license_ph: "π.χ. Άδεια UEFA A",
     editor_looking_label: "ΑΝΑΖΗΤΗΣΗ ΠΑΙΚΤΩΝ",
@@ -6527,6 +6531,47 @@ function targetDeleteCopy(row, t) {
     label: t(draft ? "target_delete_armed_draft" : "target_delete_armed"),
     aria: t(draft ? "target_delete_aria_draft" : "target_delete_aria").replace("{name}", name),
   };
+}
+
+// A text box on a target that says whether its text is stored. onSave(text)
+// resolves true when saved, false when not; on false the typed text stays in
+// the box and the status asks for another try. explicitSave adds a Save
+// button (the draft email); every box still saves on blur when it changed.
+function TargetTextArea({ value, limit, label, minHeight, explicitSave, hint, onSave, style }) {
+  const { t } = useLang();
+  const [text, setText] = useState(value || "");
+  const [status, setStatus] = useState("idle");
+  const storedRef = useRef(value || "");
+  const savingRef = useRef(false);
+  const dirty = text !== storedRef.current;
+  async function save() {
+    if (savingRef.current || text === storedRef.current) return;
+    savingRef.current = true; setStatus("saving");
+    try {
+      const ok = await onSave(text);
+      if (ok) storedRef.current = text;
+      setStatus(ok ? "saved" : "failed");
+    } finally { savingRef.current = false; }
+  }
+  const shown = status === "saving" || status === "failed" ? status : dirty ? "unsaved" : status;
+  const statusKey = { saving: "target_status_saving", failed: "target_status_failed", unsaved: "target_status_unsaved", saved: "target_status_saved" }[shown];
+  return (
+    <div style={{ marginBottom: 8 }}>
+      {hint && <div style={{ fontSize: 11.5, color: C.slate, marginBottom: 4, overflowWrap: "anywhere" }}>{hint}</div>}
+      <textarea value={text} maxLength={limit} aria-label={label} placeholder={label}
+        onChange={(e) => { setText(e.target.value.slice(0, limit)); if (status !== "saving") setStatus("idle"); }}
+        onBlur={save}
+        style={{ width: "100%", minHeight, resize: "vertical", ...style }} />
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 4 }}>
+        {explicitSave && (
+          <button onClick={save} disabled={status === "saving" || !dirty}
+            style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "0 14px", minHeight: 44, fontSize: 12, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", opacity: status === "saving" || !dirty ? 0.6 : 1 }}>{t("target_draft_save")}</button>
+        )}
+        <span role="status" style={{ fontSize: 11.5, color: shown === "failed" ? C.limeText : C.slate }}>{statusKey ? t(statusKey) : ""}</span>
+        {text.length >= limit * 0.9 && <span style={{ fontSize: 11.5, color: C.slate, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{t("target_counter").replace("{n}", text.length).replace("{max}", limit)}</span>}
+      </div>
+    </div>
+  );
 }
 
 // targetId (P0-4) is the athlete whose rows are written — the signed-in
@@ -13797,12 +13842,13 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
             </div>
             {expandedId === it.id && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
-                <textarea defaultValue={it.fit_reasoning || ""} onBlur={(e) => updateTarget(it.id, { fit_reasoning: e.target.value })} aria-label={t("targets_fit_reasoning_ph")} placeholder={t("targets_fit_reasoning_ph")}
-                  style={{ width: "100%", minHeight: 40, resize: "vertical", marginBottom: 8, ...inputStyle }} />
-                <textarea defaultValue={it.notes || ""} onBlur={(e) => updateTarget(it.id, { notes: e.target.value })} aria-label={t("targets_notes_ph")} placeholder={t("targets_notes_ph")}
-                  style={{ width: "100%", minHeight: 50, resize: "vertical", marginBottom: 8, ...inputStyle }} />
-                <textarea defaultValue={it.draft_email || ""} onBlur={(e) => updateTarget(it.id, { draft_email: e.target.value })} aria-label={t("targets_draft_ph")} placeholder={t("targets_draft_ph")}
-                  style={{ width: "100%", minHeight: 80, resize: "vertical", ...inputStyle }} />
+                <TargetTextArea key={"fit" + it.id} value={it.fit_reasoning} limit={TARGET_LIMITS.fit_reasoning} label={t("targets_fit_reasoning_ph")} minHeight={40} style={inputStyle}
+                  onSave={(v) => updateTarget(it.id, { fit_reasoning: v }, true)} />
+                <TargetTextArea key={"notes" + it.id} value={it.notes} limit={TARGET_LIMITS.notes} label={t("targets_notes_ph")} minHeight={50} style={inputStyle}
+                  onSave={(v) => updateTarget(it.id, { notes: v }, true)} />
+                <TargetTextArea key={"draft" + it.id} value={it.draft_email} limit={TARGET_LIMITS.draft_email} label={t("targets_draft_ph")} minHeight={80} style={inputStyle} explicitSave
+                  hint={it.contact_email ? t("target_draft_to").replace("{email}", it.contact_email) : null}
+                  onSave={(v) => updateTarget(it.id, { draft_email: v }, true)} />
               </div>
             )}
           </div>
@@ -19650,7 +19696,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=f9203e015ddd9593";
+    var APP_SRC = "js/app.js?v=f6193558da691b91";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

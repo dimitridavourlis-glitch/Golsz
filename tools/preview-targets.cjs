@@ -15,6 +15,8 @@
 //                cannot click): add = fill "Montreal Impact Academy" and press Add; adddouble = the same, pressing
 //                Add twice at once; editbad / editgood = edit the first row's contact email to "coach@uni" /
 //                "coach@uni.edu" and press Save. Combine with &fail=update to see a refused edit.
+//                &drive=expand opens the first row's panel; draft = type a draft there and press Save draft; bigdraft =
+//                paste 10,001 characters into the draft box (no save). Combine draft with &fail=update.
 //   &theme=light|dark  sets localStorage["golsz-theme"] before the page's own theme script runs
 //   The server prints each write as   outreach_targets <insert|update|delete> id=<id> fields=<names>
 //   and GET /__store returns the current rows as JSON.
@@ -95,8 +97,27 @@ function stub(cfg) {
     var btnByText = function (text) {
       return Array.prototype.filter.call(document.querySelectorAll("#gz-schools button"), function (b) { return b.textContent.trim() === text; });
     };
+    var setText = function (el, v) {
+      Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set.call(el, v);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    // The first row's chevron button sits right after its status select.
+    var expandFirst = function () {
+      if (document.querySelector("#gz-schools textarea")) return true;
+      var sel = document.querySelector("#gz-schools select"); if (!sel || !sel.nextElementSibling) return false;
+      sel.nextElementSibling.click(); return !!document.querySelector("#gz-schools textarea");
+    };
+    var draftBox = function () { var a = document.querySelectorAll("#gz-schools textarea"); return a[2] || null; };
     var steps = [];
-    if (cfg.drive === "add" || cfg.drive === "adddouble") {
+    if (cfg.drive === "expand") {
+      steps = [expandFirst];
+    } else if (cfg.drive === "draft" || cfg.drive === "bigdraft") {
+      steps = [
+        expandFirst,
+        function () { var x = draftBox(); if (!x) return false; setText(x, cfg.drive === "bigdraft" ? new Array(10002).join("a") : "Hello Coach Rivera, I would love a trial."); return true; },
+        function () { var b = btnByText("Save draft")[0]; if (!b) return false; if (cfg.drive === "draft") b.click(); return true; },
+      ];
+    } else if (cfg.drive === "add" || cfg.drive === "adddouble") {
       steps = [
         function () { var b = btnByText("Add")[0]; if (!b) return false; b.click(); return true; },
         function () { var i = document.getElementById("target-add-name"); if (!i) return false; setVal(i, "Montreal Impact Academy"); return true; },
@@ -255,7 +276,7 @@ function createPreview({ localise = localiseLibraries } = {}) {
       if (reset === "1") state.targets = [];
       if (reset === "seed") state.targets = seedTargets();
       const failParam = u.searchParams.get("fail");
-      const cfg = { ...constantsFrom(local.html), userId: USER_ID, theme: u.searchParams.get("theme") || "", open: u.searchParams.get("open") === "schools" || !!u.searchParams.get("drive"), drive: ["add", "adddouble", "editbad", "editgood"].includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "", fail: Object.values(FAIL_OF_METHOD).includes(failParam) ? failParam : "" };
+      const cfg = { ...constantsFrom(local.html), userId: USER_ID, theme: u.searchParams.get("theme") || "", open: u.searchParams.get("open") === "schools" || !!u.searchParams.get("drive"), drive: ["add", "adddouble", "editbad", "editgood", "expand", "draft", "bigdraft"].includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "", fail: Object.values(FAIL_OF_METHOD).includes(failParam) ? failParam : "" };
       res.writeHead(200, { "content-type": type });
       res.end(pageWithStub(local.html, cfg));
     });

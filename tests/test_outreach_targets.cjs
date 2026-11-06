@@ -117,9 +117,29 @@ targets.traverse({
 });
 ck("err is rendered once, outside the showAddTarget branch", [errInAdd, errOutside], [0, 1]);
 
+/* ---------- TargetTextArea: draft save path ---------- */
+let ta = null;
+traverse(ast, { FunctionDeclaration(pa) { if (pa.node.id.name === "TargetTextArea" && !ta) ta = pa; } });
+ck("TargetTextArea found", !!ta, true);
+const saveFn = (() => { let r = null; ta.traverse({ FunctionDeclaration(pa) { if (pa.node.id.name === "save") r = pa; } }); return r; })();
+ck("save exists", !!saveFn, true);
+const saveSrc = CODE.slice(saveFn.node.start, saveFn.node.end);
+ck("save has a ref guard", /savingRef\.current \|\| [^)]*\) return/.test(saveSrc), true);
+let clears = 0;
+saveFn.traverse({ CallExpression(c) { const cal = c.node.callee, a0 = c.node.arguments[0]; if (cal.type === "Identifier" && cal.name === "setText") clears++; } });
+ck("save never touches the text (no setText in the error path)", clears, 0);
+ck("the failed status is set from the save result", /setStatus\(ok \? "saved" : "failed"\)/.test(saveSrc), true);
+const taSrc = CODE.slice(ta.node.start, ta.node.end);
+ck("Save is disabled while saving", /disabled=\{status === "saving"/.test(taSrc), true);
+ck("text is capped at the limit", /slice\(0, limit\)/.test(taSrc) && /maxLength=\{limit\}/.test(taSrc), true);
+ck("blur saves", /onBlur=\{save\}/.test(taSrc), true);
+const usesDraft = /<TargetTextArea key=\{"draft"[^>]*TARGET_LIMITS\.draft_email[\s\S]*?explicitSave/.test(CODE);
+ck("the draft box uses the draft limit and the Save button", usesDraft, true);
+
 /* ---------- i18n: every key in all four languages ---------- */
 const keys = ["target_err_name_required", "target_err_too_long", "target_err_email_invalid",
-  "target_delete_armed", "target_delete_armed_draft", "target_delete_aria", "target_delete_aria_draft", "targets_save_err"];
+  "target_delete_armed", "target_delete_armed_draft", "target_delete_aria", "target_delete_aria_draft", "targets_save_err",
+  "target_draft_save", "target_status_unsaved", "target_status_saving", "target_status_saved", "target_status_failed", "target_draft_to", "target_counter"];
 const usedKeys = new Set(src.match(/target_[a-z_]+/g).filter((k) => !k.startsWith("target_limits")));
 for (const k of usedKeys) ck(`helper key ${k} is in the list checked below`, keys.includes(k), true);
 const langs = ["en", "fr", "es", "el"];
