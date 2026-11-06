@@ -23,14 +23,20 @@
 //                "Schools & clubs" section itself. Combine these three with &fail=update.
 //                Delete (the seeded order: row 1 Northfield College Soccer holds a draft, row 2 Lakeside FC has none):
 //                arm = one tap on row 1's delete button; armplain = one tap on row 2's; delete = one tap on row 1's,
-//                then a second once its "Delete?" has been on screen for a second; deletedouble = a double tap on
+//                then a second once its armed word ("Delete?") has been on screen for a second; deletedouble = a double tap on
 //                row 1's (the second click stamped right after the first, handed over 150 ms later): it must
-//                delete nothing. Combine delete with &fail=delete.
+//                delete nothing. Combine delete with &fail=delete. armother = one tap on row 1's, then one on
+//                row 2's (row 1 must disarm); armwait = one tap on row 1's, then the capture waits 6.5 s (past
+//                the 6 s the row stays armed). look = press nothing, only wait for the list (for a plain reload).
 //   &theme=light|dark  sets localStorage["golsz-theme"] before the page's own theme script runs
-//   The server prints each write as   outreach_targets <insert|update|delete> id=<id> fields=<names>
+//   &lang=en|fr|es|el  sets localStorage["golsz-lang"] the same way (the delete drives work in every language;
+//                the add/edit/draft drives press buttons by their English words, so use those in English)
+//   The server prints each page load as   page <query>   and each write after it as
+//   outreach_targets <insert|update|delete> id=<id> fields=<names>
 //   (a refused one as   outreach_targets <op> answered HTTP 500 on purpose fields=<names>)
 //   and GET /__store returns the current rows as JSON. A drive marks its progress in the page title
-//   ("[drive 1/2]", then "[drive done]") and holds GET /__hold open until it is done (see the stub).
+//   ("[drive 1/2]", then "[drive done]") and holds GET /__hold open until it is done (see the stub). Done,
+//   the title ends "[drive done; rows: <name> {<armed word>} | ...; alerts: <line> | ...]": what the card showed.
 //
 // With AVA's browser tool: "$AVA_BROWSER" --serve "node tools/preview-targets.cjs 8766" --port 8766
 //   "/golsz-app.html?page=plan" "/golsz-app.html?page=plan&fail=select" --widths 390,1280
@@ -86,6 +92,7 @@ const ATHLETE = {
 // Kept as a function so it is syntax-checked with this file, then serialised into the page.
 function stub(cfg) {
   try { if (cfg.theme === "light" || cfg.theme === "dark") localStorage.setItem("golsz-theme", cfg.theme); } catch (e) { /* storage blocked */ }
+  try { if (cfg.lang) localStorage.setItem("golsz-lang", cfg.lang); } catch (e) { /* storage blocked */ }
   function b64(obj) { return btoa(JSON.stringify(obj)).replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_"); }
   var now = Math.floor(Date.now() / 1000);
   var user = { id: cfg.userId, aud: "authenticated", role: "authenticated", email: "marco@example.com", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
@@ -129,17 +136,36 @@ function stub(cfg) {
         b.click(); return true;
       };
     };
-    // Each row's delete button carries the title "Delete <name>", in row order.
-    var deleteButton = function (n) { return document.querySelectorAll('#gz-schools button[title^="Delete "]')[n] || null; };
+    // Row n's delete button follows its chevron, which follows its status select (found by place, not by
+    // its words, so the delete drives work in every &lang=). Armed, its X icon gives way to a word.
+    var deleteButton = function (n) {
+      var sel = document.querySelectorAll("#gz-schools select")[n];
+      return (sel && sel.nextElementSibling && sel.nextElementSibling.nextElementSibling) || null;
+    };
+    var armed = function (b) { return !!b && !b.querySelector("svg"); };
     var armedAt = 0;
     var steps = [];
     if (cfg.drive === "arm" || cfg.drive === "armplain") {
       steps = [function () { var b = deleteButton(cfg.drive === "arm" ? 0 : 1); if (!b) return false; b.click(); return true; }];
+    } else if (cfg.drive === "armother") {
+      steps = [
+        function () { var b = deleteButton(0); if (!b) return false; b.click(); return true; },
+        function () { var b = deleteButton(1); if (!armed(deleteButton(0)) || !b) return false; b.click(); return true; },
+      ];
+    } else if (cfg.drive === "armwait") {
+      steps = [
+        function () { var b = deleteButton(0); if (!b) return false; b.click(); armedAt = Date.now(); return true; },
+        function () { return Date.now() - armedAt >= 6500; },
+      ];
+    } else if (cfg.drive === "look") {
+      // Presses nothing: waits until the section is open (its rows are drawn with it), so a plain reload is
+      // captured with its list on screen rather than the loading skeleton.
+      steps = [function () { return !!document.querySelector('#gz-schools button[aria-expanded="true"]'); }];
     } else if (cfg.drive === "delete") {
       steps = [
         function () { var b = deleteButton(0); if (!b) return false; b.click(); armedAt = Date.now(); return true; },
         // A person reads the warning before the second tap: well past the double-tap window.
-        function () { var b = deleteButton(0); if (!b || b.textContent.trim() !== "Delete?" || Date.now() - armedAt < 1000) return false; b.click(); return true; },
+        function () { var b = deleteButton(0); if (!armed(b) || Date.now() - armedAt < 1000) return false; b.click(); return true; },
       ];
     } else if (cfg.drive === "deletedouble") {
       // A phone stamps a tap when it happens and a busy page handles it later, so the second click is made
@@ -187,19 +213,34 @@ function stub(cfg) {
     }
     // A browser that captures the page after its load event could catch a drive half done (the delete drive
     // waits a second between taps). An image started now delays that event (a fetch would not) and the server
-    // answers it only when /__release arrives, or after 20 s. The title says how far the drive got.
-    new Image().src = "/__hold";
+    // answers it only when /__release arrives, or after 20 s. Its URL is new on every page load: Chrome's
+    // in-memory image cache answered a repeated "/__hold" without asking the server, and the capture then
+    // landed mid-drive. The title says how far the drive got.
+    new Image().src = "/__hold?" + Date.now() + Math.random();
     var baseTitle = null;
     var mark = function (text) { if (baseTitle === null) baseTitle = document.title; document.title = baseTitle + " [" + text + "]"; };
+    // What the card shows, for the title: each row's name (with its delete button's word while armed), then
+    // every alert line, so a recorded run's JSON says what was on screen wherever the capture was scrolled.
+    var describe = function () {
+      var rows = Array.prototype.map.call(document.querySelectorAll("#gz-schools select"), function (sel, n) {
+        var name = sel.parentElement.firstElementChild.firstElementChild.textContent.trim();
+        var b = deleteButton(n);
+        return armed(b) ? name + " {" + b.textContent.trim() + "}" : name;
+      });
+      var alerts = Array.prototype.map.call(document.querySelectorAll("#gz-schools [role=alert]"), function (a) { return a.textContent.trim(); });
+      return "rows: " + (rows.join(" | ") || "none") + (alerts.length ? "; alerts: " + alerts.join(" | ") : "");
+    };
     var stepNo = 0;
     var timer = setInterval(function () {
       if (stepNo >= steps.length) {
         clearInterval(timer); mark("drive done");
-        // The card again: the Plan page's road scrolls itself to YOU ARE HERE when its data arrives, which can
-        // come after the scroll the open step made.
-        var card = document.getElementById("gz-schools"); if (card) card.scrollIntoView();
-        // Time for the last write's answer to reach the screen before the capture.
-        setTimeout(function () { fetch("/__release").catch(function () { /* the page was closed */ }); }, 500);
+        // Time for the last write's answer to reach the screen. Then the card again, just before the capture
+        // (the open step's scroll can come before the page has finished growing), and what it shows.
+        setTimeout(function () {
+          var card = document.getElementById("gz-schools"); if (card) card.scrollIntoView();
+          mark("drive done; " + describe());
+          fetch("/__release").catch(function () { /* the page was closed */ });
+        }, 500);
         return;
       }
       if (steps[stepNo]()) { stepNo++; mark("drive " + stepNo + "/" + steps.length); }
@@ -246,6 +287,7 @@ function constantsFrom(html) {
 }
 
 const FAIL_OF_METHOD = { GET: "select", POST: "insert", PATCH: "update", DELETE: "delete" };
+const LANGS = ["en", "fr", "es", "el"];
 const OP_OF_METHOD = { POST: "insert", PATCH: "update", DELETE: "delete" };
 
 // The stand-in database plus the handler for the app's Supabase calls (/__sb/rest/v1/<table>?<filters>).
@@ -314,7 +356,7 @@ function createPreview({ localise = localiseLibraries } = {}) {
   // A drive's open request (see the stub): answered by /__release, or after 20 s.
   const holds = new Map();
   function hold(res) {
-    const done = () => { if (!holds.delete(res)) return; clearTimeout(timer); send(res, 204); };
+    const done = () => { if (!holds.delete(res)) return; clearTimeout(timer); res.writeHead(204, { "cache-control": "no-store" }).end(); };
     const timer = setTimeout(done, 20000);
     holds.set(res, done);
     res.on("close", () => { holds.delete(res); clearTimeout(timer); });
@@ -351,11 +393,12 @@ function createPreview({ localise = localiseLibraries } = {}) {
       if (rel !== "/golsz-app.html") { res.writeHead(200, { "content-type": type }); return res.end(buf); }
       const local = localise(buf.toString("utf8"));
       Object.assign(vendorFiles, local.files);
+      console.log("page " + (u.search || "(no query)"));
       const reset = u.searchParams.get("reset");
       if (reset === "1") state.targets = [];
       if (reset === "seed") state.targets = seedTargets();
       const failParam = u.searchParams.get("fail");
-      const cfg = { ...constantsFrom(local.html), userId: USER_ID, theme: u.searchParams.get("theme") || "", open: u.searchParams.get("open") === "schools" || !!u.searchParams.get("drive"), drive: ["add", "adddouble", "editbad", "editgood", "expand", "draft", "bigdraft", "draftclose", "draftreopen", "draftsection", "arm", "armplain", "delete", "deletedouble"].includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "", fail: Object.values(FAIL_OF_METHOD).includes(failParam) ? failParam : "" };
+      const cfg = { ...constantsFrom(local.html), userId: USER_ID, theme: u.searchParams.get("theme") || "", lang: LANGS.includes(u.searchParams.get("lang")) ? u.searchParams.get("lang") : "", open: u.searchParams.get("open") === "schools" || !!u.searchParams.get("drive"), drive: ["add", "adddouble", "editbad", "editgood", "expand", "draft", "bigdraft", "draftclose", "draftreopen", "draftsection", "look", "arm", "armplain", "armother", "armwait", "delete", "deletedouble"].includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "", fail: Object.values(FAIL_OF_METHOD).includes(failParam) ? failParam : "" };
       res.writeHead(200, { "content-type": type });
       res.end(pageWithStub(local.html, cfg));
     });

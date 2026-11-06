@@ -266,7 +266,21 @@ ck("a closed section says it too (its note)", /<Collapsible label=\{t\("targets_
   ck("no armed wording bypasses targetDeleteCopy", /targets_delete_confirm|t\("target_delete_(armed|aria)/.test(targetsCode), false);
   ck("a refused delete shows target_delete_err on its row", /\{deleteFailedId === it\.id && <div role="alert"[^>]*>\{t\("target_delete_err"\)\}<\/div>\}/.test(targetsCode), true);
 
-  // The armed button is wider than the X, so the contact line gets narrower: the email breaks after its "@".
+  // Armed, the status select and chevron step aside (display:none, still in the DOM) so the armed word has
+  // their room; the delete button itself never does.
+  ck("asideWhileArmed hides only the armed row's controls", /const asideWhileArmed = \(id\) => \(armedTarget === id \? \{ display: "none" \} : null\);/.test(targetsCode), true);
+  const asideUsers = [];
+  targets.traverse({
+    CallExpression(pa) {
+      if (pa.node.callee.name !== "asideWhileArmed") return;
+      const el = pa.findParent((x) => x.isJSXOpeningElement());
+      asideUsers.push(el && el.node.name.name + (el.node.attributes.some((a) => a.name && a.name.name === "onClick" && /tapDelete/.test(CODE.slice(a.start, a.end))) ? ":delete" : ""));
+    },
+  });
+  ck("...used by the status select and the chevron button, not the delete button", asideUsers.sort(), ["button", "select"]);
+  ck("...each passed this row's id", (targetsCode.match(/\.\.\.asideWhileArmed\(it\.id\)/g) || []).length, 2);
+
+  // A wide status select (Greek, French) narrows the contact line: the email breaks after its "@".
   const mailJs = babel.transform(lift("function emailWithBreak(", "\n}\n"), { presets: ["react"] }).code;
   const el = (type, props, ...children) => ({ type, props: props || {}, children });
   const emailWithBreak = new Function("React", mailJs + "\nreturn emailWithBreak;")({ createElement: el });

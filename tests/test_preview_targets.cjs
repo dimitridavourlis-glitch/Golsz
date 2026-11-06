@@ -27,7 +27,7 @@ function call(port, method, url, { headers = {}, body } = {}) {
       res.on("end", () => {
         let parsed = null;
         try { parsed = JSON.parse(text); } catch (e) { /* a page, not JSON */ }
-        resolve({ status: res.statusCode, text, json: parsed });
+        resolve({ status: res.statusCode, headers: res.headers, text, json: parsed });
       });
     });
     req.on("error", reject);
@@ -103,10 +103,23 @@ async function runStub(cfg, request) {
   const failPage = await call(port, "GET", "/golsz-app.html?fail=select");
   ok(failPage.text.includes('"fail":"select"'), "fail=select reaches the page config");
   ok((await call(port, "GET", "/golsz-app.html?fail=bogus")).text.includes('"fail":""'), "an unknown fail value is ignored");
-  for (const d of ["arm", "armplain", "delete", "deletedouble"]) {
+  for (const d of ["look", "arm", "armplain", "armother", "armwait", "delete", "deletedouble"]) {
     ok((await call(port, "GET", "/golsz-app.html?drive=" + d)).text.includes('"drive":"' + d + '"'), "drive=" + d + " reaches the page config");
   }
   ok((await call(port, "GET", "/golsz-app.html?drive=bogus")).text.includes('"drive":""'), "an unknown drive value is ignored");
+  ok((await call(port, "GET", "/golsz-app.html?lang=fr")).text.includes('"lang":"fr"'), "lang=fr reaches the page config");
+  ok((await call(port, "GET", "/golsz-app.html?lang=xx")).text.includes('"lang":""'), "an unknown lang value is ignored");
+
+  // Each page load is printed before the writes it causes, so a recorded run can say which page did what.
+  const printed = [];
+  const realLog = console.log;
+  console.log = (...a) => { printed.push(a.join(" ")); };
+  try {
+    await call(port, "GET", "/golsz-app.html?page=plan&reset=seed&drive=arm");
+    await call(port, "DELETE", T + "?id=eq." + seedTargets()[0].id + "&user_id=eq." + USER_ID);
+  } finally { console.log = realLog; }
+  ok(printed[0] === "page ?page=plan&reset=seed&drive=arm", "a page load prints its query: " + printed[0]);
+  ok(printed[1] === "outreach_targets delete id=" + seedTargets()[0].id + " fields=", "...and the write after it follows it: " + printed[1]);
 
   // A drive's held request waits for /__release (so a capture cannot land mid-drive).
   let holdAnswered = false;
@@ -114,15 +127,19 @@ async function runStub(cfg, request) {
   await new Promise((r) => setTimeout(r, 50));
   ok(!holdAnswered, "/__hold stays open until released");
   ok((await call(port, "GET", "/__release")).status === 204, "/__release answers");
-  ok((await held).status === 204, "/__hold is answered once /__release arrives");
+  const heldRes = await held;
+  ok(heldRes.status === 204, "/__hold is answered once /__release arrives");
+  ok(heldRes.headers["cache-control"] === "no-store", "...with no-store, so Chrome cannot answer the next page's hold from its cache");
+  ok(/new Image\(\)\.src = "\/__hold\?" \+ Date\.now\(\)/.test(stub.toString()), "each page load asks for a new hold URL");
 
   // Static serving stays inside the repo.
   ok((await call(port, "GET", "/..%2f..%2fetc/passwd")).status !== 200, "no file outside the repo is served");
   server.close();
 
   // Nothing leaves for the real Supabase URL: fetches go to this server, sockets are inert, the session is local.
-  const cfg = { supabaseUrl: "https://proj.supabase.co", userId: USER_ID, theme: "", fail: "update" };
+  const cfg = { supabaseUrl: "https://proj.supabase.co", userId: USER_ID, theme: "", lang: "el", fail: "update" };
   const run = await runStub(cfg, { url: "https://proj.supabase.co/rest/v1/outreach_targets?id=eq.1", init: { method: "PATCH", body: "{}" } });
+  ok(run.store["golsz-lang"] === "el", "lang is stored under the key the app reads (golsz-lang)");
   ok(run.sent.length === 1 && run.sent[0].url === "http://127.0.0.1:1/__sb/rest/v1/outreach_targets?id=eq.1", "supabase fetch is rewritten to this server");
   ok(run.sent.every((s) => !(s.url || s.socket || "").includes("supabase.co")), "no request or socket targets the real Supabase host");
   ok(run.sent[0].init.headers.get("x-preview-fail") === "update", "the fail option travels as a header");
