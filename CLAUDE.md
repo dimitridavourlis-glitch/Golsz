@@ -893,7 +893,7 @@ warning, migration 165 and the preview tool below.
   `--widths` value, so with two widths each drive runs twice against one store:
   `"$AVA_BROWSER" --serve "node tools/preview-targets.cjs 8766 > node_modules/.cache/run.log 2>&1" --port 8766
   --widths 390 "/golsz-app.html?page=plan&theme=dark&reset=seed&drive=add" "/golsz-app.html?page=plan&theme=dark&drive=editgood" ...`
-- **Recorded runs.** 2026-11-06 (job 184 t7, run three times, each time on fresh servers, with the same results), 390
+- **Recorded runs.** 2026-11-06 (job 184 t7, run four times, each time on fresh servers, with the same results), 390
   and 1280 px, dark and light, one server each, 8 page loads in order: add, editgood, look, draft, expand, arm, delete,
   look. In all four the added row and its edited email came back after a reload, the saved draft came back in its
   box after a reload, the first tap showed "Delete?" and the draft warning and wrote nothing, the second tap deleted
