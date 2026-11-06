@@ -5,14 +5,37 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Claude Code (AVA job 184, task t5), 2026-11-06. Before that: Claude Code (AVA job 144), 2026-11-03.
+Claude Code (AVA job 184, task t6), 2026-11-06. Before that: Claude Code (AVA job 184, t5), same day.
 
 ## Current Branch
-`main`. `scout-day-awareness` (af28c32) was fast-forwarded into `main` on 2026-10-28 at the owner's
-request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the push; check.yml green on
-22.x and 24.x. (`landing-glow-path` before it: merged 2026-10-27.)
+`ava/184-an-athlete-can-track-target-clubs-or-coa` (AVA job 184, Targets; AVA commits each step, then merges).
+`main` last moved 2026-10-28: `scout-day-awareness` (af28c32) fast-forwarded and live.
 
 ## Last Completed Work
+- AVA job 184 t6 (2026-11-06; attempt 3 ran and recorded the browser check, code unchanged from 51b4ffc): two-tap
+  delete in Targets. Tap 1 arms the row: status select and chevron step aside, the X becomes `targetDeleteCopy`'s
+  "Delete?", and a target with a draft (`targetHasDraft`) also gets a visible role=alert line under the row. Tap 2,
+  500 ms or more later (`targetDeleteTap`), calls `removeTarget`, its only caller. Disarms after 6 s or when another
+  row is armed; a refused delete puts the row back in its place with an error line.
+  Recorded run: `tools/preview-targets.cjs` (port 8766) + AVA browser, one server per theme, pages in this order,
+  each at 390 then 1280 px. Title "[drive done; ...]" and server lines, identical in all 4 (390/1280 x dark/light):
+  1. reset=seed&drive=arm: "rows: Northfield College Soccer {Delete?} | Lakeside FC | Metro United Academy;
+     alerts: Delete this and its draft email? Tap again to confirm." Server: the page line only, no delete.
+  2. drive=armplain: "rows: Northfield College Soccer | Lakeside FC {Delete?} | Metro United Academy"; no alert.
+  3. reset=seed&drive=delete: "rows: Lakeside FC | Metro United Academy". Server, once per load:
+     `outreach_targets delete id=00000000-0000-4000-8000-000000000101 fields=`.
+  4. drive=look (plain reload): "rows: Lakeside FC | Metro United Academy" (still gone).
+  5. reset=seed&drive=delete&fail=delete: all three rows; "alerts: Couldn't delete this. It's still on your list.
+     Try again." Server: `outreach_targets delete answered HTTP 500 on purpose`. Console: only the app's own
+     "GOLSZ target delete error" line. No other page had a console error. Every page had one external request
+     refused by the sandbox proxy (the run has no internet; most likely the Google Fonts CSS at golsz-app.html:18031).
+  Also run (third server, both themes and widths, each from reset=seed; no delete logged): armother leaves only
+  "Lakeside FC {Delete?}", no alert; armwait (6.5 s): nothing armed; deletedouble: still armed, warning shown.
+  390 px: scrollWidth = innerWidth = 390 on every page. Screenshots of page 1 (390 dark, 390 light, 1280 light):
+  the warning is one unclipped line under the row; page 5 (390 dark): Northfield first again, status "Contacted",
+  X back, error under it. Low contrast: dark none; light only the 3.02:1 (10 px, 390) and 2.75:1 (button, 1280)
+  flags t5 lists as older than its step, on every page, armed or not.
+  NOT exercised: the real database/RLS (stand-in store); a real phone; a screen reader reading the alert.
 - AVA job 184 t5 (2026-11-06, attempt 3): the target's draft email has an explicit "Save draft" (blur still saves)
   with a status line (Unsaved changes / Saving… / Saved / Not saved, try again), a ref guard, Save disabled while
   saving, a cap at TARGET_LIMITS.draft_email with a counter near it, and a "To: <contact_email>" hint. Attempt 3
@@ -42,76 +65,12 @@ request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the
   one insert, reload shows one row, in all 4; fail=update keeps the form open with the typed "coach@uni.edu" (stored
   value rivera@example.edu) and shows "Couldn't save that. Your text is still here." (390 dark+light, 1280 dark+
   light). No horizontal scroll anywhere. NOT exercised: the real database/RLS (stand-in store only).
-- AVA job 168 t6 (2026-11-04): documented the first-screen speed budget (CLAUDE.md "First-screen speed", AGENTS.md,
-  this file) and added CHANGELOG.md. Budgets: home LCP 3000 ms, boot 2500 ms, first screen 5000 ms; run
-  `tools/time-first-screen.cjs` (header has the command). Before -> after (150 ms / 1.6 Mbps, 390 px): boot 755 ->
-  477-827 ms; mounted 3717-3749 -> 2548-2916 ms; app LCP ~3.85 s -> 3.03 s; home LCP 648-760 -> 804-1692 ms
-  (noisy machine; only change was `defer` on js/main.js). UNVERIFIED: a real phone on real cellular; a signed-in
-  Home with live data; CDN latency from the production edge.
-- AVA job 168 t3 (2026-11-04): visible "Loading…" line (`#boot .m`) under the boot bar. BOOT_COPY/bootCopy() moved
-  into a small inline script right after #boot (before the inert JSX block) so the saved language is set before
-  first paint; bootFailed() reuses it. tools/time-first-screen.cjs gained `--lang=<code>` and reports what the
-  painted boot screen showed. Recorded run (AVA browser, 150 ms / 1.6 Mbps, 390 + 1280 px): dark en "Loading…"
-  rgb(139,150,168), light en rgb(90,107,98), dark/light fr "Chargement…"; all 8: bootOverflow=0, bootGone=1 after
-  Auth mounted, no console errors. Not captured: a screenshot OF the boot screen (the tool shoots after mount).
-- AVA job 168 t4 (2026-11-04): home page budget. FINDING: index.html never shows the region hero photo (no
-  `data-hero-region`; only the CSS/JS for about.html-style heroes mention assets/hero-*.jpg), so the JPEGs are not
-  its LCP and were left alone (267-278 KB, unused on the home page). Only change: `defer` on js/main.js in
-  index.html (safe: its init waits for DOMContentLoaded, order after landing.js kept). Same tool, 150 ms / 1.6 Mbps,
-  cold, BEFORE the change (this machine, noisy: 648-760 in the t1 run) fcp=lcp 1596 / 1360 at 390 px; AFTER 1692 at
-  390 px, 804 at 1280 px; budget LCP <= 3000, FCP <= 2000: inside. tools/time-pages.cjs: all six pages ok.
-  No console errors, no overflow at 390/1280. Not run: real phone CPU, a hero-weight test (no image changed).
-- AVA job 168 t2 (2026-11-04): app libraries `defer`red, `js/app.js` preloaded, loader gated on DOMContentLoaded
-  (`tests/test_boot_nonblocking.cjs`). AFTER figures (same tool, 150 ms / 1.6 Mbps, 390 px, signed out, one run;
-  baseline in brackets): dark boot 827 [755], mounted 2916 [3717-3749], lcp 3028 [3840-3888]; light boot 477,
-  mounted 2548. No console errors. `--fail-app` shows "Something stopped GOLSZ loading." + Reload; shared Passport
-  `fixture=a` at 390 px renders. Not run: 1280 px, real phone CPU.
-- AVA job 168 t1 (2026-11-04): `tools/time-first-screen.cjs` serves the repo at 150 ms RTT / 1.6 Mbps and prints
-  `timing page=... fcp lcp boot mounted` per page load (run it with "$AVA_BROWSER" --serve, see its header).
-  BEFORE figures (ms, 390 / 1280 px, two runs): home page LCP 648-760 / 552-648; app boot visible 755 / 748;
-  app mounted (Auth screen) 3717-3749 / 3697-3727; app LCP ~3.85 s. All inside the budgets (home LCP 3000,
-  boot 2500, mounted 5000) in this simulation: no real phone CPU, no Google Fonts. supabase-js keeps no
-  integrity in the served copy (npm build differs from jsdelivr's); React/ReactDOM keep theirs.
-- Job 144 t6, Scout history / Settings privacy / VerificationRequest load errors. Recorded browser run
-  2026-11-03 (throwaway harness: served in-memory copy mounts the real component, stubbed Supabase fails the
-  chosen tables). 390 and 1280 px, dark and light: Scout restore failure shows LoadError above the greeting,
-  Retry clears it; after a failed restore, opening a chat from History removes the banner and shows THAT chat
-  (reviewer's bug, fixed: newChat/loadConversation now clear restoreFailed); History list failure shows
-  LoadError, not "no past chats"; Settings privacy failure shows LoadError, all 5 privacy toggles disabled
-  (opacity 0.6), Retry re-enables them; VerificationRequest failure shows only LoadError + Retry. No sideways
-  scroll anywhere. New chat after a failed restore was not clicked in the browser (button needs 2+ messages);
-  the suite pins it.
-- Job 144 t9, crash run. `tools/preview-public-passport.cjs` `&fixture=crash` makes PublicPassport throw in an
-  in-memory copy; `&reload=1` presses Reload. Real browser, 390/1280 px, dark and light: "Something went wrong /
-  Reload" screen readable, no blank page; server printed one `log_client_error auth=anon-key` per load and a second
-  after Reload. Pinned in test_preview_public_passport.cjs (disk file unchanged). Not run: the admin Errors tab
-  itself (needs an admin session). Read-failure rule and field-error helpers now documented in CLAUDE.md/AGENTS.md.
-- Job 144 t8, Passport editor field errors (`profileFieldErrors`, golsz-app.html). Recorded browser run
-  2026-11-03 (throwaway harness: a served in-memory copy mounts the real ProfileEditor with stubbed Supabase,
-  presses Save, measures the DOM). 390 and 1280 px, dark and light, 3 cases: (a) empty name, (b) Player with
-  height 1.8, GPA 7, grad year 2099, (c) Coach with no team. All 12: each message directly under its field, not
-  clipped, no sideways scroll; focus on the first invalid field (name / grad year / club), below the sticky
-  Save bar; field has aria-invalid and aria-describedby pointing at the message, which is read when focus lands;
-  editing the field clears only its message. FOUND + FIXED: field messages (editor and sign-up) used C.amber,
-  3.0:1 on the light sheet; now C.limeText (5.8:1 light, 9.4:1 dark), pinned in test_profile_field_errors.cjs.
-  Not run: a real screen reader (VoiceOver); the sign-up form after the colour change (style-only change).
-  Seen in passing (pre-existing, unchanged): a legacy Coach shows "Select..." in the I am a... dropdown,
-  since OCCUPATIONS is ["Player"] only.
-- ADS Phase 6, items 1, 2, 3 and 6 (`api/scout.js`; one-line client change in `golsz-app.html` + `js/app.js`):
-  - `getAthleteState` reads are one `Promise.all` round (they were ten sequential round trips while the
-    header claimed parallel). The sports lookup stays chained after the athletes read; failures are still
-    named per table, in a fixed order.
-  - Scout is told the athlete's day: the app sends `today` (its local `isoDay()`); `resolveAthleteDay()`
-    accepts it only as a real date within one day of UTC, else uses UTC. `dayBuckets()` gives Home's
-    numbers (due today, this week Mon-Sun, late) by Home's rules. New prompt line "TODAY FOR THEM"; the
-    model is told to use only dates in its context. `due_in_days` now counts from that same day.
-  - "Missed" uses the athlete's day and Home's resting rule (resting: only recovery steps can be late).
-  - `responseCacheFingerprint` carries the day and a step digest (no replaying yesterday's reply).
-  - Benchmark lines carry who measured them and the recorded protocol (`benchmarkProvenance()`).
-- Suites: `test_scout_today.cjs`, `test_scout_benchmark_provenance.cjs` (new), plus three extended.
+- Older entries (AVA jobs 144 and 168, ADS Phase 6) were trimmed 2026-11-06; their lasting facts are in CLAUDE.md
+  (First-screen speed, Boot order, Verifying the shared Passport, Failures are shown, Scout knows the athlete's day).
 
 ## Current Work
-None in progress.
+AVA job 184 (Targets): t1-t6 done on the branch; t7 (end-to-end run + docs), security review, regression and final
+verification still to run.
 
 ## Remaining Tasks
 - OWNER (OWNER-RUNBOOK.md): one real Basic purchase; send LEGAL-REVIEW-BRIEF.md to counsel.
@@ -136,7 +95,9 @@ None in progress.
 - Scout never writes a date: it sends `due_in_days`; the server resolves it from the athlete's day.
 
 ## Latest Test / Build Status
-2026-11-03 (Claude Code, job 144 t8): `npm run check` 129/129 suites (6026 assertions).
+2026-11-06 (job 184 t6): browser run above; via "$AVA_RUN", `node tests/run-all.cjs <name>`: outreach_targets
+270/270, preview_targets 49/49, compiled_artifact 14/14. Full `npm run check` not run by t6 (AVA runs it).
+2026-11-03 (job 144 t8): `npm run check` 129/129 suites (6026 assertions).
 Earlier, 2026-10-28: NOT verified, a live Scout reply for a signed-in athlete. Ask Scout "what should I do
 today?" and compare with Home's Today tile and THIS WEEK count.
 
@@ -148,10 +109,12 @@ today?" and compare with Home's Today tile and THIS WEEK count.
 - Signup has NO bot protection (Supabase CAPTCHA off, `TURNSTILE_SITE_KEY` empty; enable both together).
 - `api/*.js` source is readable as static files on golsz.com (deliberate; the repo is public anyway).
 - The redesigned hero was checked by contrast maths only; nobody has run VoiceOver over it.
+- Targets rows: the expand chevron (the button before the delete X) has no aria-label or aria-expanded. It was
+  like that on `main` before job 184; AVA's browser tool counts it as one unnamed icon button per row.
 
 ## Next Recommended Action
-Owner: signed in, ask Scout "what should I do today?" and compare with Home's Today tile and THIS WEEK
-count (the one check no suite can make). Agents: ADS Phase 6 items 4-5 next.
+AVA job 184: t7 (recorded end-to-end run and documentation). Owner: signed in, ask Scout "what should I do
+today?" and compare with Home's Today tile and THIS WEEK count. Agents: ADS Phase 6 items 4-5 next.
 
 ---
 _How to update: overwrite the sections above (do not append a log); put the agent name
