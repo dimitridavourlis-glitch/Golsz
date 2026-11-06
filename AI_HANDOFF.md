@@ -5,7 +5,7 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Claude Code (AVA job 144, task t9), 2026-11-03. Before that: Claude Code, 2026-10-28.
+Claude Code (AVA job 184, task t4), 2026-11-06. Before that: Claude Code (AVA job 144), 2026-11-03.
 
 ## Current Branch
 `main`. `scout-day-awareness` (af28c32) was fast-forwarded into `main` on 2026-10-28 at the owner's
@@ -13,6 +13,16 @@ request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the
 22.x and 24.x. (`landing-glow-path` before it: merged 2026-10-27.)
 
 ## Last Completed Work
+- AVA job 184 t4 (2026-11-06): Targets add/edit run `targetFieldErrors` (message under the field, aria-invalid/
+  aria-describedby, C.limeText); edit stays open until the update succeeds; card error line sits outside the Add
+  form; `addingRef` guard stops a double tap adding twice. Recorded run, `tools/preview-targets.cjs` + AVA browser,
+  390 and 1280 px, dark and light (one server per width/theme, store kept between page loads): reset=1, drive=add,
+  then a plain reload (`&open=schools`, no drive/reset) shows "Montreal Impact Academy" in all 4; drive=editbad
+  shows "Enter an email like name@club.com..." under the field and the server logged no write; drive=editgood then a
+  plain reload shows "coach@uni.edu" under the name in all 4 (one update logged each); drive=adddouble logged exactly
+  one insert, reload shows one row, in all 4; fail=update keeps the form open with the typed "coach@uni.edu" (stored
+  value rivera@example.edu) and shows "Couldn't save that. Your text is still here." (390 dark+light, 1280 dark+
+  light). No horizontal scroll anywhere. NOT exercised: the real database/RLS (stand-in store only).
 - AVA job 168 t6 (2026-11-04): documented the first-screen speed budget (CLAUDE.md "First-screen speed", AGENTS.md,
   this file) and added CHANGELOG.md. Budgets: home LCP 3000 ms, boot 2500 ms, first screen 5000 ms; run
   `tools/time-first-screen.cjs` (header has the command). Before -> after (150 ms / 1.6 Mbps, 390 px): boot 755 ->
