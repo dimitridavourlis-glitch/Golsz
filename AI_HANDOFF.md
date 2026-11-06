@@ -13,19 +13,25 @@ request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the
 22.x and 24.x. (`landing-glow-path` before it: merged 2026-10-27.)
 
 ## Last Completed Work
-- AVA job 184 t5 (2026-11-06): the target's draft email has an explicit "Save draft" (blur still saves) with a status
-  line (Unsaved changes / Saving… / Saved / Not saved, try again), a ref guard, Save disabled while saving, a cap
-  at TARGET_LIMITS.draft_email with a counter near it, and a "To: <contact_email>" hint. Recorded run,
-  `tools/preview-targets.cjs` + AVA browser, one server per combination (store kept between loads), 390/1280 x
-  dark/light, in order: reset=seed&drive=draft&fail=update shows "Not saved, try again" with "Hello Coach Rivera, I
-  would love a trial." still in the box (the stored draft was the seeded one); drive=draft shows "Saved", server
-  logged exactly one `update ... fields=draft_email,updated_at`; a plain reload with drive=expand (no typing) shows
-  the same text, all 4. drive=bigdraft (10,001 chars pasted) shows 10000 / 10000 and Unsaved changes, no sideways
-  scroll at 390 dark and light (and at 1280). The 1280 runs needed --wait 9: at --wait 4 one shot caught "Saving…"
-  and one caught the page still loading. The tool's keyboard probe tabs out of the bigdraft box, which blur-saves it
-  (one extra update in the log, as designed). Light theme: the tool flags the disabled Save button (2.75:1, disabled
-  controls are exempt) and 3.17:1 on 11-12 px text that was there before this step. NOT exercised: the real
-  database/RLS (stand-in store only).
+- AVA job 184 t5 (2026-11-06, attempt 3): the target's draft email has an explicit "Save draft" (blur still saves)
+  with a status line (Unsaved changes / Saving… / Saved / Not saved, try again), a ref guard, Save disabled while
+  saving, a cap at TARGET_LIMITS.draft_email with a counter near it, and a "To: <contact_email>" hint. Attempt 3
+  fixes the reviewer's finding: a box can close (chevron, another row, the section) while its blur-save is on the way,
+  and a failure then had nowhere to show. Now `TargetTextArea` hands unsaved text to `onKeep` once it is gone and no
+  save is pending; Targets keeps it in the module-level `TARGET_UNSAVED_TEXT` Map (survives a tab switch, not a
+  reload), names the target in a role=alert line on the card and in the closed section's `note` (new Collapsible
+  prop, shown only while closed), and the box starts from that text with "Not saved, try again" when reopened.
+  `updateTarget` now rolls back only the fields it wrote. Recorded run (`tools/preview-targets.cjs` + AVA browser,
+  one server per theme, pages in order), 390/1280 x dark/light, all with fail=update unless noted: drive=draftclose
+  shows "Your changes to Northfield College Soccer weren't saved. Open it and try again." on the card, row closed;
+  drive=draftreopen shows the typed text back in the box with "Not saved, try again"; drive=draftsection shows the
+  same line under the closed "Schools & clubs" row; drive=draft keeps the text with "Not saved, try again";
+  reset=seed&drive=draft (no fail) shows "Saved"; a reload with drive=expand shows the same text; drive=bigdraft
+  shows 10000 / 10000. Server logged each refused write as `update answered HTTP 500 on purpose
+  fields=draft_email,updated_at`. No sideways scroll anywhere. Light-theme contrast flags (3.17:1 gold fit line,
+  3.02:1 gold on the page background outside the card, 2.75:1 disabled button) were there before this step; the
+  new lines use --lime-text (about 6:1 on white). NOT exercised: the real database/RLS; a reload while text is
+  unsaved loses it (memory only).
 - AVA job 184 t4 (2026-11-06): Targets add/edit run `targetFieldErrors` (message under the field, aria-invalid/
   aria-describedby, C.limeText); edit stays open until the update succeeds; card error line sits outside the Add
   form; `addingRef` guard stops a double tap adding twice. Recorded run, `tools/preview-targets.cjs` + AVA browser,

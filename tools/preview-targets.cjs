@@ -17,8 +17,13 @@
 //                "coach@uni.edu" and press Save. Combine with &fail=update to see a refused edit.
 //                &drive=expand opens the first row's panel; draft = type a draft there and press Save draft; bigdraft =
 //                paste 10,001 characters into the draft box (no save). Combine draft with &fail=update.
+//                draftclose = type a draft, leave the box (blur: the save starts) and press the row's chevron in the
+//                same moment, so the box closes while its save is on the way; draftreopen = the same, then, once the
+//                card names the target, press the chevron again; draftsection = type, leave the box and close the
+//                "Schools & clubs" section itself. Combine these three with &fail=update.
 //   &theme=light|dark  sets localStorage["golsz-theme"] before the page's own theme script runs
 //   The server prints each write as   outreach_targets <insert|update|delete> id=<id> fields=<names>
+//   (a refused one as   outreach_targets <op> answered HTTP 500 on purpose fields=<names>)
 //   and GET /__store returns the current rows as JSON.
 //
 // With AVA's browser tool: "$AVA_BROWSER" --serve "node tools/preview-targets.cjs 8766" --port 8766
@@ -108,9 +113,28 @@ function stub(cfg) {
       sel.nextElementSibling.click(); return !!document.querySelector("#gz-schools textarea");
     };
     var draftBox = function () { var a = document.querySelectorAll("#gz-schools textarea"); return a[2] || null; };
+    var chevron = function () { var sel = document.querySelector("#gz-schools select"); return sel && sel.nextElementSibling; };
+    // A real tap blurs the box before its click lands; this does both in one go, so the save is still on the way.
+    var typeLeaveAndPress = function (pressed) {
+      return function () {
+        var x = draftBox(), b = pressed(); if (!x || !b) return false;
+        x.focus(); setText(x, "Hello Coach Rivera, I would love a trial.");
+        if (document.activeElement === x) x.blur(); else x.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+        b.click(); return true;
+      };
+    };
     var steps = [];
     if (cfg.drive === "expand") {
       steps = [expandFirst];
+    } else if (cfg.drive === "draftclose" || cfg.drive === "draftreopen") {
+      steps = [expandFirst, typeLeaveAndPress(chevron)];
+      if (cfg.drive === "draftreopen") {
+        steps.push(
+          function () { var a = document.querySelector("#gz-schools [role=alert]"); return !!a && a.textContent.indexOf("Northfield") >= 0; },
+          function () { var c = chevron(); if (!c) return false; c.click(); return true; });
+      }
+    } else if (cfg.drive === "draftsection") {
+      steps = [expandFirst, typeLeaveAndPress(function () { return document.querySelector('#gz-schools button[aria-expanded="true"]'); })];
     } else if (cfg.drive === "draft" || cfg.drive === "bigdraft") {
       steps = [
         expandFirst,
@@ -209,6 +233,9 @@ function createPreview({ localise = localiseLibraries } = {}) {
   function rest(req, res, table, params, body) {
     const failing = req.headers["x-preview-fail"];
     if (table === "outreach_targets" && failing && failing === FAIL_OF_METHOD[req.method]) {
+      let fields = "";
+      try { fields = body ? Object.keys(JSON.parse(body)).join(",") : ""; } catch (e) { /* not JSON: no field list */ }
+      console.log("outreach_targets " + failing + " answered HTTP 500 on purpose" + (fields ? " fields=" + fields : ""));
       return send(res, 500, { message: "preview: " + failing + " failed on purpose" });
     }
     if (table === "outreach_targets") return targets(req, res, params, body);
@@ -276,7 +303,7 @@ function createPreview({ localise = localiseLibraries } = {}) {
       if (reset === "1") state.targets = [];
       if (reset === "seed") state.targets = seedTargets();
       const failParam = u.searchParams.get("fail");
-      const cfg = { ...constantsFrom(local.html), userId: USER_ID, theme: u.searchParams.get("theme") || "", open: u.searchParams.get("open") === "schools" || !!u.searchParams.get("drive"), drive: ["add", "adddouble", "editbad", "editgood", "expand", "draft", "bigdraft"].includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "", fail: Object.values(FAIL_OF_METHOD).includes(failParam) ? failParam : "" };
+      const cfg = { ...constantsFrom(local.html), userId: USER_ID, theme: u.searchParams.get("theme") || "", open: u.searchParams.get("open") === "schools" || !!u.searchParams.get("drive"), drive: ["add", "adddouble", "editbad", "editgood", "expand", "draft", "bigdraft", "draftclose", "draftreopen", "draftsection"].includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "", fail: Object.values(FAIL_OF_METHOD).includes(failParam) ? failParam : "" };
       res.writeHead(200, { "content-type": type });
       res.end(pageWithStub(local.html, cfg));
     });
