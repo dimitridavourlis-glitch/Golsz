@@ -43,7 +43,7 @@
 <!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
      fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
      with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
-<link rel="preload" as="script" href="js/app.js?v=f4f442a3fadd82d1" />
+<link rel="preload" as="script" href="js/app.js?v=5e1bfdc7c912f2ad" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -481,7 +481,6 @@ const I18N = {
     plan_crumb_goal: "From Home · your goal", nav_targets: "Pathway/Plan", nav_plan: "Plan", plan_page_title: "MY PATHWAY", targets_title: "SCHOOLS & CLUBS", targets_edit_hint: "Tap to edit", targets_name_ph: "School or club name", targets_contact_name_ph: "Contact name", targets_contact_email_ph: "Contact email",
     targets_locked_teaser: "Upgrade to build your visual Pathway, set targets and track outreach — GOLSZ Scout will help you build the first list.",
     targets_add: "Add", targets_add_err: "Couldn't add that. Try again.", targets_save_err: "Couldn't save that. Your text is still here. Try again.", targets_empty: "No targets yet — add the first school or club you're pursuing.",
-    targets_delete_confirm: "Delete?", targets_delete_confirm_aria: "Tap again to delete {name} and its drafted email",
     targets_notes_ph: "Notes", targets_draft_ph: "Draft outreach email",
     targets_status_researching: "Researching", targets_status_preparing: "Preparing", targets_status_contacted: "Contacted", targets_status_responded: "Responded", targets_status_follow_up: "Follow up", targets_status_opportunity: "Opportunity", targets_fit_reasoning_ph: "Why this is a good fit (optional)",
     plan_starter_feat1: "8 AI Scout questions/day — no lifetime limit", plan_starter_feat2: "Everything in Free", plan_starter_feat3: "Personalized Pathway & benchmark tracking", plan_starter_feat4: "Target lists with outreach tracking & follow-up reminders, plus PDF Passport export",
@@ -632,7 +631,7 @@ const I18N = {
     editor_bio_label: "SCOUTING BIO", editor_bio_ph: "A few sentences a coach or scout should know.",
     editor_height_range: "Height must be between 100 and 250 cm.", editor_weight_range: "Weight must be between 30 and 250 kg.", editor_gpa_range: "GPA must be between 0 and 5.", editor_grad_year_range: "Graduation year must be between 1950 and 8 years from now.",
     editor_save: "Save profile", editor_saving: "Saving…", editor_name_required: "Name can't be empty.",
-    target_err_name_required: "Add a name for this target.", target_err_too_long: "This is too long.", target_err_email_invalid: "Enter an email like name@club.com, or leave it blank.", target_delete_armed: "Tap again to delete", target_delete_armed_draft: "Tap again to delete it and its draft email", target_delete_aria: "Delete {name}. Tap again to confirm.", target_delete_aria_draft: "Delete {name} and its saved draft email. Tap again to confirm.",
+    target_err_name_required: "Add a name for this target.", target_err_too_long: "This is too long.", target_err_email_invalid: "Enter an email like name@club.com, or leave it blank.", target_delete_armed: "Delete?", target_delete_armed_draft: "Delete this and its draft email? Tap again to confirm.", target_delete_aria: "Delete {name}. Tap again to confirm.", target_delete_aria_draft: "Delete {name} and its saved draft email. Tap again to confirm.", target_delete_err: "Couldn't delete this. It's still on your list. Try again.",
     target_draft_save: "Save draft", target_status_unsaved: "Unsaved changes", target_status_saving: "Saving…", target_status_saved: "Saved", target_status_failed: "Not saved, try again", target_draft_to: "To: {email}", target_counter: "{n} / {max}", target_unsaved: "Your changes to {name} weren't saved. Open it and try again.",
     editor_sport_required: "Pick a sport to continue.", editor_locked_notice: "Finish your profile to unlock the rest of GOLSZ.",
     editor_team_required: "Tell us which team you're with.", editor_license_label: "LICENSE(S)", editor_license_ph: "e.g. UEFA A License",
@@ -862,7 +861,6 @@ const I18N = {
     plan_crumb_goal: "Depuis l'Accueil · votre objectif", nav_targets: "Parcours/Plan", nav_plan: "Plan", plan_page_title: "MON PARCOURS", targets_title: "ÉCOLES & CLUBS", targets_edit_hint: "Toucher pour modifier", targets_name_ph: "Nom de l'école ou du club", targets_contact_name_ph: "Nom du contact", targets_contact_email_ph: "Email du contact",
     targets_locked_teaser: "Passez à un forfait supérieur pour construire votre Parcours visuel, définir des cibles et suivre vos démarches — GOLSZ Scout vous aide à créer la première liste.",
     targets_add: "Ajouter", targets_add_err: "Impossible d'ajouter. Réessayez.", targets_save_err: "Impossible d'enregistrer. Votre texte est toujours là. Réessayez.", targets_empty: "Aucune cible pour l'instant — ajoutez la première école ou le premier club visé.",
-    targets_delete_confirm: "Supprimer ?", targets_delete_confirm_aria: "Touchez à nouveau pour supprimer {name} et son e-mail préparé",
     targets_notes_ph: "Notes", targets_draft_ph: "Brouillon d'email de contact",
     targets_status_researching: "Recherche", targets_status_preparing: "Préparation", targets_status_contacted: "Contacté", targets_status_responded: "Répondu", targets_status_follow_up: "Relance", targets_status_opportunity: "Opportunité", targets_fit_reasoning_ph: "Pourquoi c'est un bon choix (facultatif)",
     plan_starter_feat1: "8 questions/jour avec Scout — sans limite à vie", plan_starter_feat2: "Tout ce qui est dans Free", plan_starter_feat3: "Parcours personnalisé & suivi des repères", plan_starter_feat4: "Listes de cibles avec suivi des prises de contact & rappels de relance, plus export PDF du Passeport",
@@ -1013,7 +1011,7 @@ const I18N = {
     editor_bio_label: "BIO DE RECRUTEMENT", editor_bio_ph: "Quelques phrases qu'un entraîneur ou recruteur devrait connaître.",
     editor_height_range: "La taille doit être comprise entre 100 et 250 cm.", editor_weight_range: "Le poids doit être compris entre 30 et 250 kg.", editor_gpa_range: "La moyenne (GPA) doit être comprise entre 0 et 5.", editor_grad_year_range: "L'année de diplôme doit être comprise entre 1950 et dans 8 ans.",
     editor_save: "Enregistrer le profil", editor_saving: "Enregistrement…", editor_name_required: "Le nom ne peut pas être vide.",
-    target_err_name_required: "Ajoutez un nom pour cette cible.", target_err_too_long: "Ce texte est trop long.", target_err_email_invalid: "Saisissez un e-mail du type nom@club.com, ou laissez vide.", target_delete_armed: "Touchez encore pour supprimer", target_delete_armed_draft: "Touchez encore pour la supprimer avec son brouillon d’e-mail", target_delete_aria: "Supprimer {name}. Touchez encore pour confirmer.", target_delete_aria_draft: "Supprimer {name} et son brouillon d’e-mail enregistré. Touchez encore pour confirmer.",
+    target_err_name_required: "Ajoutez un nom pour cette cible.", target_err_too_long: "Ce texte est trop long.", target_err_email_invalid: "Saisissez un e-mail du type nom@club.com, ou laissez vide.", target_delete_armed: "Supprimer ?", target_delete_armed_draft: "Supprimer cette cible et son brouillon d’e-mail ? Touchez encore pour confirmer.", target_delete_aria: "Supprimer {name}. Touchez encore pour confirmer.", target_delete_aria_draft: "Supprimer {name} et son brouillon d’e-mail enregistré. Touchez encore pour confirmer.", target_delete_err: "Impossible de supprimer. La cible est toujours dans votre liste. Réessayez.",
     target_draft_save: "Enregistrer le brouillon", target_status_unsaved: "Modifications non enregistrées", target_status_saving: "Enregistrement…", target_status_saved: "Enregistré", target_status_failed: "Non enregistré, réessaie", target_draft_to: "À : {email}", target_counter: "{n} / {max}", target_unsaved: "Vos modifications pour {name} n'ont pas été enregistrées. Ouvrez-la et réessayez.",
     editor_sport_required: "Choisissez un sport pour continuer.", editor_locked_notice: "Terminez votre profil pour débloquer le reste de GOLSZ.",
     editor_team_required: "Indiquez avec quelle équipe vous êtes.", editor_license_label: "LICENCE(S)", editor_license_ph: "ex. Licence UEFA A",
@@ -1243,7 +1241,6 @@ const I18N = {
     plan_crumb_goal: "Desde Inicio · tu objetivo", nav_targets: "Trayectoria/Plan", nav_plan: "Plan", plan_page_title: "MI TRAYECTORIA", targets_title: "ESCUELAS Y CLUBES", targets_edit_hint: "Toca para editar", targets_name_ph: "Nombre de la escuela o club", targets_contact_name_ph: "Nombre del contacto", targets_contact_email_ph: "Email del contacto",
     targets_locked_teaser: "Mejora tu plan para construir tu Camino visual, definir objetivos y hacer seguimiento — GOLSZ Scout te ayuda a crear la primera lista.",
     targets_add: "Añadir", targets_add_err: "No se pudo añadir. Inténtalo de nuevo.", targets_save_err: "No se pudo guardar. Tu texto sigue aquí. Inténtalo de nuevo.", targets_empty: "Aún no hay objetivos — añade la primera escuela o club que te interese.",
-    targets_delete_confirm: "¿Eliminar?", targets_delete_confirm_aria: "Toca de nuevo para eliminar {name} y su correo redactado",
     targets_notes_ph: "Notas", targets_draft_ph: "Borrador de email de contacto",
     targets_status_researching: "Investigando", targets_status_preparing: "Preparando", targets_status_contacted: "Contactado", targets_status_responded: "Respondido", targets_status_follow_up: "Seguimiento", targets_status_opportunity: "Oportunidad", targets_fit_reasoning_ph: "Por qué encaja bien (opcional)",
     plan_starter_feat1: "8 preguntas/día con Scout — sin límite de por vida", plan_starter_feat2: "Todo lo de Free", plan_starter_feat3: "Camino personalizado y seguimiento de marcas", plan_starter_feat4: "Listas de objetivos con seguimiento de contactos y recordatorios, más exportación PDF del Pasaporte",
@@ -1394,7 +1391,7 @@ const I18N = {
     editor_bio_label: "BIOGRAFÍA DEPORTIVA", editor_bio_ph: "Unas frases que un entrenador u ojeador debería saber.",
     editor_height_range: "La estatura debe estar entre 100 y 250 cm.", editor_weight_range: "El peso debe estar entre 30 y 250 kg.", editor_gpa_range: "El promedio (GPA) debe estar entre 0 y 5.", editor_grad_year_range: "El año de graduación debe estar entre 1950 y dentro de 8 años.",
     editor_save: "Guardar perfil", editor_saving: "Guardando…", editor_name_required: "El nombre no puede estar vacío.",
-    target_err_name_required: "Añade un nombre para este objetivo.", target_err_too_long: "Este texto es demasiado largo.", target_err_email_invalid: "Introduce un correo como nombre@club.com, o déjalo vacío.", target_delete_armed: "Toca de nuevo para eliminar", target_delete_armed_draft: "Toca de nuevo para eliminarlo con su borrador de correo", target_delete_aria: "Eliminar {name}. Toca de nuevo para confirmar.", target_delete_aria_draft: "Eliminar {name} y su borrador de correo guardado. Toca de nuevo para confirmar.",
+    target_err_name_required: "Añade un nombre para este objetivo.", target_err_too_long: "Este texto es demasiado largo.", target_err_email_invalid: "Introduce un correo como nombre@club.com, o déjalo vacío.", target_delete_armed: "¿Eliminar?", target_delete_armed_draft: "¿Eliminar este objetivo y su borrador de correo? Toca de nuevo para confirmar.", target_delete_aria: "Eliminar {name}. Toca de nuevo para confirmar.", target_delete_aria_draft: "Eliminar {name} y su borrador de correo guardado. Toca de nuevo para confirmar.", target_delete_err: "No se pudo eliminar. Sigue en tu lista. Inténtalo de nuevo.",
     target_draft_save: "Guardar borrador", target_status_unsaved: "Cambios sin guardar", target_status_saving: "Guardando…", target_status_saved: "Guardado", target_status_failed: "No se guardó, inténtalo de nuevo", target_draft_to: "Para: {email}", target_counter: "{n} / {max}", target_unsaved: "Tus cambios en {name} no se guardaron. Ábrelo y vuelve a intentarlo.",
     editor_sport_required: "Elige un deporte para continuar.", editor_locked_notice: "Termina tu perfil para desbloquear el resto de GOLSZ.",
     editor_team_required: "Indica con qué equipo estás.", editor_license_label: "LICENCIA(S)", editor_license_ph: "ej. Licencia UEFA A",
@@ -1624,7 +1621,6 @@ const I18N = {
     plan_crumb_goal: "Από την Αρχική · ο στόχος σου", nav_targets: "Πορεία/Πλάνο", nav_plan: "Πλάνο", plan_page_title: "ΤΟ ΜΟΝΟΠΑΤΙ ΜΟΥ", targets_title: "ΣΧΟΛΕΣ & ΣΥΛΛΟΓΟΙ", targets_edit_hint: "Πάτα για επεξεργασία", targets_name_ph: "Όνομα σχολής ή συλλόγου", targets_contact_name_ph: "Όνομα επαφής", targets_contact_email_ph: "Email επαφής",
     targets_locked_teaser: "Αναβάθμισε για να χτίσεις το οπτικό σου Μονοπάτι, να ορίσεις στόχους και να παρακολουθείς την προσέγγισή σου — ο GOLSZ Scout θα σε βοηθήσει να φτιάξεις την πρώτη λίστα.",
     targets_add: "Προσθήκη", targets_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", targets_save_err: "Δεν αποθηκεύτηκε. Το κείμενό σας είναι ακόμα εδώ. Δοκιμάστε ξανά.", targets_empty: "Δεν υπάρχουν στόχοι ακόμα — πρόσθεσε την πρώτη σχολή ή σύλλογο που σε ενδιαφέρει.",
-    targets_delete_confirm: "Διαγραφή;", targets_delete_confirm_aria: "Πάτησε ξανά για να διαγράψεις το {name} και το προσχέδιο email του",
     targets_notes_ph: "Σημειώσεις", targets_draft_ph: "Πρόχειρο email επικοινωνίας",
     targets_status_researching: "Έρευνα", targets_status_preparing: "Προετοιμασία", targets_status_contacted: "Επικοινώνησα", targets_status_responded: "Απάντησαν", targets_status_follow_up: "Παρακολούθηση", targets_status_opportunity: "Ευκαιρία", targets_fit_reasoning_ph: "Γιατί ταιριάζει καλά (προαιρετικό)",
     plan_starter_feat1: "8 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_starter_feat2: "Όλα όσα περιλαμβάνει το Free", plan_starter_feat3: "Προσωπικό Μονοπάτι & παρακολούθηση δεικτών", plan_starter_feat4: "Λίστες στόχων με παρακολούθηση επαφών & υπενθυμίσεις follow-up, συν εξαγωγή PDF Διαβατηρίου",
@@ -1775,7 +1771,7 @@ const I18N = {
     editor_bio_label: "ΒΙΟΓΡΑΦΙΚΟ ΣΚΑΟΥΤΙΝΓΚ", editor_bio_ph: "Λίγες προτάσεις που πρέπει να ξέρει ένας προπονητής ή σκάουτ.",
     editor_height_range: "Το ύψος πρέπει να είναι από 100 έως 250 εκ.", editor_weight_range: "Το βάρος πρέπει να είναι από 30 έως 250 κιλά.", editor_gpa_range: "Ο βαθμός (GPA) πρέπει να είναι από 0 έως 5.", editor_grad_year_range: "Το έτος αποφοίτησης πρέπει να είναι από 1950 έως 8 χρόνια από σήμερα.",
     editor_save: "Αποθήκευση προφίλ", editor_saving: "Αποθήκευση…", editor_name_required: "Το όνομα δεν μπορεί να είναι κενό.",
-    target_err_name_required: "Προσθέστε ένα όνομα για αυτόν τον στόχο.", target_err_too_long: "Το κείμενο είναι πολύ μεγάλο.", target_err_email_invalid: "Εισαγάγετε email όπως name@club.com ή αφήστε το κενό.", target_delete_armed: "Πατήστε ξανά για διαγραφή", target_delete_armed_draft: "Πατήστε ξανά για διαγραφή μαζί με το πρόχειρο email", target_delete_aria: "Διαγραφή του {name}. Πατήστε ξανά για επιβεβαίωση.", target_delete_aria_draft: "Διαγραφή του {name} και του αποθηκευμένου πρόχειρου email. Πατήστε ξανά για επιβεβαίωση.",
+    target_err_name_required: "Προσθέστε ένα όνομα για αυτόν τον στόχο.", target_err_too_long: "Το κείμενο είναι πολύ μεγάλο.", target_err_email_invalid: "Εισαγάγετε email όπως name@club.com ή αφήστε το κενό.", target_delete_armed: "Διαγραφή;", target_delete_armed_draft: "Διαγραφή αυτού του στόχου και του πρόχειρου email; Πατήστε ξανά για επιβεβαίωση.", target_delete_aria: "Διαγραφή του {name}. Πατήστε ξανά για επιβεβαίωση.", target_delete_aria_draft: "Διαγραφή του {name} και του αποθηκευμένου πρόχειρου email. Πατήστε ξανά για επιβεβαίωση.", target_delete_err: "Δεν διαγράφηκε. Είναι ακόμα στη λίστα σας. Δοκιμάστε ξανά.",
     target_draft_save: "Αποθήκευση πρόχειρου", target_status_unsaved: "Μη αποθηκευμένες αλλαγές", target_status_saving: "Αποθήκευση…", target_status_saved: "Αποθηκεύτηκε", target_status_failed: "Δεν αποθηκεύτηκε, δοκίμασε ξανά", target_draft_to: "Προς: {email}", target_counter: "{n} / {max}", target_unsaved: "Οι αλλαγές σας για {name} δεν αποθηκεύτηκαν. Ανοίξτε τον και δοκιμάστε ξανά.",
     editor_sport_required: "Επιλέξτε ένα άθλημα για να συνεχίσετε.", editor_locked_notice: "Ολοκληρώστε το προφίλ σας για να ξεκλειδώσετε το υπόλοιπο GOLSZ.",
     editor_team_required: "Πείτε μας με ποια ομάδα είστε.", editor_license_label: "ΑΔΕΙΑ/ΕΣ", editor_license_ph: "π.χ. Άδεια UEFA A",
@@ -6521,16 +6517,35 @@ function targetHasDraft(row) {
   return !!(row && String(row.draft_email || "").trim());
 }
 
-// Wording for the second tap of a delete: the armed button label and the
-// aria text. Both name the draft when one exists, because deleting the target
-// deletes it too. t is the translator from useLang().
+// Wording for an armed delete (after the first tap): the button's word, the
+// line shown on the row when the target holds a draft (deleting the target
+// deletes the draft too, so that has to be visible, not only in aria), and
+// what a screen reader hears. t is the translator from useLang().
 function targetDeleteCopy(row, t) {
   const draft = targetHasDraft(row);
   const name = String((row && row.name) || "");
   return {
-    label: t(draft ? "target_delete_armed_draft" : "target_delete_armed"),
+    label: t("target_delete_armed"),
+    warning: draft ? t("target_delete_armed_draft") : "",
     aria: t(draft ? "target_delete_aria_draft" : "target_delete_aria").replace("{name}", name),
   };
+}
+
+// How long an armed delete waits for its second tap: long enough to read the
+// draft warning, short enough that a row does not stay armed while the
+// athlete scrolls on.
+const TARGET_DELETE_ARM_MS = 6000;
+// A tap this soon after the arming one is the same double tap (or one tap
+// the phone reported twice), not a decision, so it deletes nothing.
+const TARGET_DELETE_DOUBLE_TAP_MS = 500;
+
+// What a tap on a target's delete button does: "arm" (no row armed, or a
+// different one), "wait" (the armed row, but within the double-tap window) or
+// "delete" (the armed row, once its warning has been on screen). armedAt and
+// tappedAt are the two taps' event time stamps (milliseconds, one clock).
+function targetDeleteTap(armedId, armedAt, id, tappedAt) {
+  if (!id || armedId !== id) return "arm";
+  return tappedAt - armedAt < TARGET_DELETE_DOUBLE_TAP_MS ? "wait" : "delete";
 }
 
 // The three text boxes in a target's open panel (see TargetTextArea).
@@ -13495,6 +13510,16 @@ function rosterSummary(t, items) {
   return t("home_door_schools_counts").replace("{n}", rows.length).replace("{c}", contacted);
 }
 
+// A target's email as one inline block: it moves to its own line whole when
+// that is enough, and only a row narrower than the email (an armed delete
+// widens the button beside it) breaks it, after the "@" (a <wbr>, which adds
+// nothing to copied text) rather than one letter from its end. overflowWrap on
+// the line is the fallback for a part longer than the row.
+function emailWithBreak(email) {
+  const s = String(email || ""), at = s.indexOf("@");
+  return at < 0 ? s : <span style={{ display: "inline-block" }}>{s.slice(0, at + 1)}<wbr />{s.slice(at + 1)}</span>;
+}
+
 function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened, resting, focusSection, focusNonce, onSectionDone }) {
   const { t } = useLang();
   // Above every early return, same reason as Passport.
@@ -13515,8 +13540,14 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
   const [targetsLoadFailed, setTargetsLoadFailed] = useState(false);
   const [targetsReloadKey, setTargetsReloadKey] = useState(0);
   // Which row's delete is armed — the same two-tap pattern as Scout's history:
-  // deleting a target also deletes the coach email drafted on it.
+  // deleting a target also deletes the coach email drafted on it. One row at
+  // a time, so arming another disarms this one. The ref holds when it was
+  // armed and the timer that disarms it (neither changes what is drawn).
   const [armedTarget, setArmedTarget] = useState(null);
+  const armRef = useRef({ at: 0, timer: null });
+  useEffect(() => () => clearTimeout(armRef.current.timer), []);
+  // The row whose delete was refused: it is back on the list, saying so.
+  const [deleteFailedId, setDeleteFailedId] = useState(null);
   const [name, setName] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -13672,12 +13703,49 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
     } finally { savingEditRef.current = false; }
   }
 
+  // TWO TAPS. Deleting a target also deletes the coach email drafted on it,
+  // and the button sits one thumb-width from the status select. The first tap
+  // arms the row and says what goes (on the row, in words, when there is a
+  // draft); a later tap on the armed row deletes it. targetDeleteTap decides,
+  // and this is the only caller of removeTarget. tappedAt is the click's own
+  // time stamp (when the tap happened), not the time this handler runs: the
+  // first tap re-renders the whole Plan page, and on a slow phone that delay
+  // would otherwise stretch one double tap into two separate taps.
+  function tapDelete(id, tappedAt) {
+    const step = targetDeleteTap(armedTarget, armRef.current.at, id, tappedAt);
+    if (step === "arm") armDelete(id, tappedAt);
+    if (step === "delete") { disarmDelete(); removeTarget(id); }
+  }
+  function armDelete(id, tappedAt) {
+    clearTimeout(armRef.current.timer);
+    armRef.current = { at: tappedAt, timer: setTimeout(() => setArmedTarget(null), TARGET_DELETE_ARM_MS) };
+    setArmedTarget(id);
+    setDeleteFailedId(null);
+  }
+  function disarmDelete() {
+    clearTimeout(armRef.current.timer);
+    setArmedTarget(null);
+  }
+
+  // The row leaves the list at once. If the delete is refused, that row alone
+  // goes back where it was (a copy of the whole list would also undo another
+  // row's change that landed meanwhile, see updateTarget) and says so on the
+  // row, where the athlete was looking.
   async function removeTarget(id) {
-    const before = items;
+    const at = items.findIndex((it) => it.id === id);
+    if (at < 0) return;
+    const row = items[at];
+    setDeleteFailedId(null);
     setItems((prev) => prev.filter((it) => it.id !== id));
     const { error } = await sb.from("outreach_targets").delete().eq("id", id).eq("user_id", actingFor || uid);
-    if (error) { console.error("GOLSZ target delete error:", error); setItems(before); setErr(t("targets_add_err")); }
-    else { setErr(""); TARGET_TEXT_FIELDS.forEach((f) => keepText(id, f, null)); }
+    if (error) {
+      console.error("GOLSZ target delete error:", error);
+      setItems((prev) => (prev.some((it) => it.id === id) ? prev : [...prev.slice(0, at), row, ...prev.slice(at)]));
+      setDeleteFailedId(id);
+      return;
+    }
+    setErr("");
+    TARGET_TEXT_FIELDS.forEach((f) => keepText(id, f, null));
   }
 
   // Loading is a skeleton here too, for the same reason it is on Home: a
@@ -13738,6 +13806,8 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
   // on the card, and as the section's note while it is closed, because the
   // box's own status line went with the box.
   const unsavedLines = targetsWithUnsavedText(items, kept).map((it) => ({ id: it.id, text: t("target_unsaved").replace("{name}", it.name || "") }));
+  // At most one row is armed, so one copy of its wording (targetDeleteCopy).
+  const armedCopy = targetDeleteCopy(items.find((it) => it.id === armedTarget), t);
   const next30 = [
     { key: "profile", done: !!(quality && quality.score >= 70), label: t("plan_next30_profile") },
     { key: "film", done: filmAdded, label: t("plan_next30_film") },
@@ -13821,7 +13891,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
         anchorId="gz-schools" revealSignal={focusSection === "gz-schools" ? focusNonce : 0}>
       <div style={{ ...card }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10, minHeight: 26 }}>
-          {!showAddTarget && <button onClick={() => setShowAddTarget(true)} style={{ ...iconBtn(C.lime), fontSize: 12 }}><Plus size={13} /> {t("targets_add")}</button>}
+          {!showAddTarget && <button onClick={() => setShowAddTarget(true)} style={{ ...iconBtn(C.limeText), fontSize: 12 }}><Plus size={13} /> {t("targets_add")}</button>}
         </div>
         {items.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
@@ -13898,27 +13968,30 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
                         to correct them. A wrong contact_email here is a drafted email
                         sent to nobody, with no way to fix it but delete and re-add. */}
                     <div {...asButton(() => { setTDraft({ name: it.name || "", contact_name: it.contact_name || "", contact_email: it.contact_email || "" }); setEditingTarget(it.id); setTErrs({}); setEditErr(""); })}
-                      title={t("targets_edit_hint")} style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk, cursor: "text" }}>{it.name}</div>
-                {(it.contact_name || it.contact_email) && <div style={{ fontSize: 11.5, color: C.slate }}>{[it.contact_name, it.contact_email].filter(Boolean).join(" · ")}</div>}
+                      title={t("targets_edit_hint")} style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk, cursor: "text", overflowWrap: "anywhere" }}>{it.name}</div>
+                {(it.contact_name || it.contact_email) && <div style={{ fontSize: 11.5, color: C.slate, overflowWrap: "anywhere" }}>{it.contact_name}{it.contact_name && it.contact_email ? " · " : null}{emailWithBreak(it.contact_email)}</div>}
                   </>
                 )}
-                {it.fit_reasoning && <div style={{ fontSize: 11, color: C.lime, marginTop: 2 }}>{it.fit_reasoning}</div>}
+                {it.fit_reasoning && <div style={{ fontSize: 11, color: C.limeText, marginTop: 2 }}>{it.fit_reasoning}</div>}
               </div>
               <select value={it.status} onChange={(e) => updateTarget(it.id, { status: e.target.value })} aria-label={t("a11y_status")} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "6px 8px", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
                 {TARGET_STATUSES.map((s) => <option key={s} value={s}>{t("targets_status_" + s)}</option>)}
               </select>
               <button onClick={() => setExpandedId(expandedId === it.id ? null : it.id)} style={{ ...iconBtn(C.slate), flexShrink: 0 }}>{expandedId === it.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>
-              {/* TWO TAPS. Deleting a target also deletes the coach email
-                  drafted on it, and this sat one thumb-width from the status
-                  select. First tap arms and says so; the second deletes; it
-                  disarms itself after four seconds. */}
-              <button onClick={() => { if (armedTarget === it.id) { setArmedTarget(null); removeTarget(it.id); } else { setArmedTarget(it.id); setTimeout(() => setArmedTarget((cur) => (cur === it.id ? null : cur)), 4000); } }}
-                aria-label={armedTarget === it.id ? t("targets_delete_confirm_aria").replace("{name}", it.name || "") : t("a11y_delete_named").replace("{name}", it.name || "")}
+              {/* Two taps (see tapDelete). Armed, the X becomes the word in
+                  the same place, so the second tap lands where the first did. */}
+              <button onClick={(e) => tapDelete(it.id, e.timeStamp)}
+                aria-label={armedTarget === it.id ? armedCopy.aria : t("a11y_delete_named").replace("{name}", it.name || "")}
                 title={t("a11y_delete_named").replace("{name}", it.name || "")}
-                style={deleteBtnStyle(armedTarget === it.id ? { border: `1px solid ${C.amber}`, color: C.warnText, fontSize: 10, fontWeight: 900, padding: "0 6px", margin: "0 -6px 0 0" } : null)}>
-                {armedTarget === it.id ? t("targets_delete_confirm") : <X size={14} />}
+                style={deleteBtnStyle(armedTarget === it.id ? { border: `1px solid ${C.amber}`, color: C.limeText, fontSize: 12, fontWeight: 900, padding: "0 8px", margin: "0 -6px 0 0" } : null)}>
+                {armedTarget === it.id ? armedCopy.label : <X size={14} />}
               </button>
             </div>
+            {/* Full width under the row, so a long sentence wraps instead of
+                squeezing the name. C.limeText: amber text fails 4.5:1 on the
+                light card. */}
+            {armedTarget === it.id && armedCopy.warning && <div role="alert" style={{ fontSize: 12, color: C.limeText, lineHeight: 1.45, marginTop: 6 }}>{armedCopy.warning}</div>}
+            {deleteFailedId === it.id && <div role="alert" style={{ fontSize: 12, color: C.limeText, lineHeight: 1.45, marginTop: 6 }}>{t("target_delete_err")}</div>}
             {expandedId === it.id && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
                 <TargetTextArea key={"fit" + it.id} {...textBox(it, "fit_reasoning")} label={t("targets_fit_reasoning_ph")} minHeight={40} />
@@ -19772,7 +19845,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=f4f442a3fadd82d1";
+    var APP_SRC = "js/app.js?v=5e1bfdc7c912f2ad";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

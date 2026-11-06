@@ -21,10 +21,16 @@
 //                same moment, so the box closes while its save is on the way; draftreopen = the same, then, once the
 //                card names the target, press the chevron again; draftsection = type, leave the box and close the
 //                "Schools & clubs" section itself. Combine these three with &fail=update.
+//                Delete (the seeded order: row 1 Northfield College Soccer holds a draft, row 2 Lakeside FC has none):
+//                arm = one tap on row 1's delete button; armplain = one tap on row 2's; delete = one tap on row 1's,
+//                then a second once its "Delete?" has been on screen for a second; deletedouble = a double tap on
+//                row 1's (the second click stamped right after the first, handed over 150 ms later): it must
+//                delete nothing. Combine delete with &fail=delete.
 //   &theme=light|dark  sets localStorage["golsz-theme"] before the page's own theme script runs
 //   The server prints each write as   outreach_targets <insert|update|delete> id=<id> fields=<names>
 //   (a refused one as   outreach_targets <op> answered HTTP 500 on purpose fields=<names>)
-//   and GET /__store returns the current rows as JSON.
+//   and GET /__store returns the current rows as JSON. A drive marks its progress in the page title
+//   ("[drive 1/2]", then "[drive done]") and holds GET /__hold open until it is done (see the stub).
 //
 // With AVA's browser tool: "$AVA_BROWSER" --serve "node tools/preview-targets.cjs 8766" --port 8766
 //   "/golsz-app.html?page=plan" "/golsz-app.html?page=plan&fail=select" --widths 390,1280
@@ -123,8 +129,29 @@ function stub(cfg) {
         b.click(); return true;
       };
     };
+    // Each row's delete button carries the title "Delete <name>", in row order.
+    var deleteButton = function (n) { return document.querySelectorAll('#gz-schools button[title^="Delete "]')[n] || null; };
+    var armedAt = 0;
     var steps = [];
-    if (cfg.drive === "expand") {
+    if (cfg.drive === "arm" || cfg.drive === "armplain") {
+      steps = [function () { var b = deleteButton(cfg.drive === "arm" ? 0 : 1); if (!b) return false; b.click(); return true; }];
+    } else if (cfg.drive === "delete") {
+      steps = [
+        function () { var b = deleteButton(0); if (!b) return false; b.click(); armedAt = Date.now(); return true; },
+        // A person reads the warning before the second tap: well past the double-tap window.
+        function () { var b = deleteButton(0); if (!b || b.textContent.trim() !== "Delete?" || Date.now() - armedAt < 1000) return false; b.click(); return true; },
+      ];
+    } else if (cfg.drive === "deletedouble") {
+      // A phone stamps a tap when it happens and a busy page handles it later, so the second click is made
+      // (stamped) right after the first and handed to the page 150 ms later, once the first has re-rendered it.
+      steps = [function () {
+        var b = deleteButton(0); if (!b) return false;
+        b.click();
+        var second = new MouseEvent("click", { bubbles: true, cancelable: true, view: window });
+        setTimeout(function () { b.dispatchEvent(second); }, 150);
+        return true;
+      }];
+    } else if (cfg.drive === "expand") {
       steps = [expandFirst];
     } else if (cfg.drive === "draftclose" || cfg.drive === "draftreopen") {
       steps = [expandFirst, typeLeaveAndPress(chevron)];
@@ -158,10 +185,24 @@ function stub(cfg) {
         function () { var b = btnByText("Save")[0]; if (!b) return false; b.click(); return true; },
       ];
     }
+    // A browser that captures the page after its load event could catch a drive half done (the delete drive
+    // waits a second between taps). An image started now delays that event (a fetch would not) and the server
+    // answers it only when /__release arrives, or after 20 s. The title says how far the drive got.
+    new Image().src = "/__hold";
+    var baseTitle = null;
+    var mark = function (text) { if (baseTitle === null) baseTitle = document.title; document.title = baseTitle + " [" + text + "]"; };
     var stepNo = 0;
     var timer = setInterval(function () {
-      if (stepNo >= steps.length) { clearInterval(timer); return; }
-      if (steps[stepNo]()) stepNo++;
+      if (stepNo >= steps.length) {
+        clearInterval(timer); mark("drive done");
+        // The card again: the Plan page's road scrolls itself to YOU ARE HERE when its data arrives, which can
+        // come after the scroll the open step made.
+        var card = document.getElementById("gz-schools"); if (card) card.scrollIntoView();
+        // Time for the last write's answer to reach the screen before the capture.
+        setTimeout(function () { fetch("/__release").catch(function () { /* the page was closed */ }); }, 500);
+        return;
+      }
+      if (steps[stepNo]()) { stepNo++; mark("drive " + stepNo + "/" + steps.length); }
     }, 100);
   }
 
@@ -270,9 +311,20 @@ function createPreview({ localise = localiseLibraries } = {}) {
     return wantsRows && op === "update" ? reply(req, res, 200, hit) : send(res, 204);
   }
 
+  // A drive's open request (see the stub): answered by /__release, or after 20 s.
+  const holds = new Map();
+  function hold(res) {
+    const done = () => { if (!holds.delete(res)) return; clearTimeout(timer); send(res, 204); };
+    const timer = setTimeout(done, 20000);
+    holds.set(res, done);
+    res.on("close", () => { holds.delete(res); clearTimeout(timer); });
+  }
+
   function handler(req, res) {
     const u = new URL(req.url, "http://127.0.0.1");
     if (u.pathname === "/__store") return send(res, 200, state.targets);
+    if (u.pathname === "/__hold") return hold(res);
+    if (u.pathname === "/__release") { [...holds.values()].forEach((done) => done()); return send(res, 204); }
     if (u.pathname.startsWith("/__sb/")) {
       let body = "";
       req.on("data", (c) => { body += c; });
@@ -303,7 +355,7 @@ function createPreview({ localise = localiseLibraries } = {}) {
       if (reset === "1") state.targets = [];
       if (reset === "seed") state.targets = seedTargets();
       const failParam = u.searchParams.get("fail");
-      const cfg = { ...constantsFrom(local.html), userId: USER_ID, theme: u.searchParams.get("theme") || "", open: u.searchParams.get("open") === "schools" || !!u.searchParams.get("drive"), drive: ["add", "adddouble", "editbad", "editgood", "expand", "draft", "bigdraft", "draftclose", "draftreopen", "draftsection"].includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "", fail: Object.values(FAIL_OF_METHOD).includes(failParam) ? failParam : "" };
+      const cfg = { ...constantsFrom(local.html), userId: USER_ID, theme: u.searchParams.get("theme") || "", open: u.searchParams.get("open") === "schools" || !!u.searchParams.get("drive"), drive: ["add", "adddouble", "editbad", "editgood", "expand", "draft", "bigdraft", "draftclose", "draftreopen", "draftsection", "arm", "armplain", "delete", "deletedouble"].includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "", fail: Object.values(FAIL_OF_METHOD).includes(failParam) ? failParam : "" };
       res.writeHead(200, { "content-type": type });
       res.end(pageWithStub(local.html, cfg));
     });

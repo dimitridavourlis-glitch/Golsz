@@ -103,6 +103,18 @@ async function runStub(cfg, request) {
   const failPage = await call(port, "GET", "/golsz-app.html?fail=select");
   ok(failPage.text.includes('"fail":"select"'), "fail=select reaches the page config");
   ok((await call(port, "GET", "/golsz-app.html?fail=bogus")).text.includes('"fail":""'), "an unknown fail value is ignored");
+  for (const d of ["arm", "armplain", "delete", "deletedouble"]) {
+    ok((await call(port, "GET", "/golsz-app.html?drive=" + d)).text.includes('"drive":"' + d + '"'), "drive=" + d + " reaches the page config");
+  }
+  ok((await call(port, "GET", "/golsz-app.html?drive=bogus")).text.includes('"drive":""'), "an unknown drive value is ignored");
+
+  // A drive's held request waits for /__release (so a capture cannot land mid-drive).
+  let holdAnswered = false;
+  const held = call(port, "GET", "/__hold").then((r) => { holdAnswered = true; return r; });
+  await new Promise((r) => setTimeout(r, 50));
+  ok(!holdAnswered, "/__hold stays open until released");
+  ok((await call(port, "GET", "/__release")).status === 204, "/__release answers");
+  ok((await held).status === 204, "/__hold is answered once /__release arrives");
 
   // Static serving stays inside the repo.
   ok((await call(port, "GET", "/..%2f..%2fetc/passwd")).status !== 200, "no file outside the repo is served");

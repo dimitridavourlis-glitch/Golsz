@@ -21,11 +21,14 @@ const src = [
   lift("function targetFieldErrors(", "\n}\n"),
   lift("function targetHasDraft(", "\n}\n"),
   lift("function targetDeleteCopy(", "\n}\n"),
+  lift("const TARGET_DELETE_ARM_MS = ", ";"),
+  lift("const TARGET_DELETE_DOUBLE_TAP_MS = ", ";"),
+  lift("function targetDeleteTap(", "\n}\n"),
   lift("const TARGET_TEXT_FIELDS = ", "];"),
   lift("function targetsWithUnsavedText(", "\n}\n"),
 ].join("\n");
-const { TARGET_LIMITS, targetFieldErrors, targetHasDraft, targetDeleteCopy, TARGET_TEXT_FIELDS, targetsWithUnsavedText } =
-  new Function(`${src}\nreturn { TARGET_LIMITS, targetFieldErrors, targetHasDraft, targetDeleteCopy, TARGET_TEXT_FIELDS, targetsWithUnsavedText };`)();
+const { TARGET_LIMITS, targetFieldErrors, targetHasDraft, targetDeleteCopy, TARGET_DELETE_ARM_MS, TARGET_DELETE_DOUBLE_TAP_MS, targetDeleteTap, TARGET_TEXT_FIELDS, targetsWithUnsavedText } =
+  new Function(`${src}\nreturn { TARGET_LIMITS, targetFieldErrors, targetHasDraft, targetDeleteCopy, TARGET_DELETE_ARM_MS, TARGET_DELETE_DOUBLE_TAP_MS, targetDeleteTap, TARGET_TEXT_FIELDS, targetsWithUnsavedText };`)();
 
 const err = (o) => targetFieldErrors({ name: "FC Nord", ...o });
 
@@ -61,9 +64,21 @@ const t = (k) => ({
   target_delete_armed: "ARMED", target_delete_armed_draft: "ARMED+DRAFT",
   target_delete_aria: "Delete {name}.", target_delete_aria_draft: "Delete {name} and draft.",
 })[k] || k;
-ck("copy without a draft", targetDeleteCopy({ name: "FC Nord", draft_email: "" }, t), { label: "ARMED", aria: "Delete FC Nord." });
-ck("copy with a draft names the draft", targetDeleteCopy({ name: "FC Nord", draft_email: "Hi" }, t), { label: "ARMED+DRAFT", aria: "Delete FC Nord and draft." });
-ck("copy for a null row does not throw", targetDeleteCopy(null, t), { label: "ARMED", aria: "Delete ." });
+ck("copy without a draft: the short word, no warning line", targetDeleteCopy({ name: "FC Nord", draft_email: "" }, t), { label: "ARMED", warning: "", aria: "Delete FC Nord." });
+ck("copy with a draft: the same word, plus a visible line that names the draft", targetDeleteCopy({ name: "FC Nord", draft_email: "Hi" }, t), { label: "ARMED", warning: "ARMED+DRAFT", aria: "Delete FC Nord and draft." });
+ck("a whitespace-only draft is no draft", targetDeleteCopy({ name: "FC Nord", draft_email: "  \n" }, t).warning, "");
+ck("copy for a null row does not throw", targetDeleteCopy(null, t), { label: "ARMED", warning: "", aria: "Delete ." });
+
+// The tap rule: only a tap on the armed row, after the double-tap window, deletes.
+ck("armed for about 6 s, long enough to read the warning", TARGET_DELETE_ARM_MS, 6000);
+ck("the double-tap window is well inside it", TARGET_DELETE_DOUBLE_TAP_MS, 500);
+ck("nothing armed: a tap arms", targetDeleteTap(null, 0, "a", 10000), "arm");
+ck("another row armed: a tap arms this one", targetDeleteTap("b", 0, "a", 10000), "arm");
+ck("the armed row, 150 ms later (one double tap): wait", targetDeleteTap("a", 1000, "a", 1150), "wait");
+ck("the armed row, 499 ms later: wait", targetDeleteTap("a", 1000, "a", 1499), "wait");
+ck("the armed row, 500 ms later: delete", targetDeleteTap("a", 1000, "a", 1500), "delete");
+ck("the armed row, 3 s later: delete", targetDeleteTap("a", 1000, "a", 4000), "delete");
+ck("no id never deletes", [targetDeleteTap(null, 0, null, 9e9), targetDeleteTap(undefined, 0, undefined, 9e9)], ["arm", "arm"]);
 
 // Which targets the card names as holding unsaved text in a closed box.
 ck("the three text fields", TARGET_TEXT_FIELDS, ["fit_reasoning", "notes", "draft_email"]);
@@ -215,6 +230,151 @@ ck("a closed section says it too (its note)", /<Collapsible label=\{t\("targets_
   })());
 }
 
+/* ---------- Targets: the two-tap delete ---------- */
+{
+  const babel = require("@babel/standalone");
+  const srcOf = (name) => CODE.slice(fn(name).node.start, fn(name).node.end);
+  ck("tapDelete, armDelete and disarmDelete exist", ["tapDelete", "armDelete", "disarmDelete"].every((n) => !!fn(n)), true);
+
+  // removeTarget is reachable only from the armed branch.
+  const removes = calls(targets, "removeTarget");
+  ck("removeTarget is called from exactly one place", removes.length, 1);
+  const rm = removes[0];
+  ck("...inside tapDelete", !!rm.findParent((x) => x.isFunctionDeclaration() && x.node.id.name === "tapDelete"), true);
+  const rmIf = rm.findParent((x) => x.isIfStatement());
+  ck("...behind if (step === \"delete\")", rmIf && CODE.slice(rmIf.node.test.start, rmIf.node.test.end), 'step === "delete"');
+  ck("...in its consequent, not an else", !!rmIf && rmIf.node.consequent.start <= rm.node.start && rm.node.end <= rmIf.node.consequent.end, true);
+  ck("step is targetDeleteTap of the armed row as drawn, at the tap's own time", /const step = targetDeleteTap\(armedTarget, armRef\.current\.at, id, tappedAt\);/.test(srcOf("tapDelete")), true);
+  ck("the button hands over the click's time stamp, not the time the handler ran", /onClick=\{\(e\) => tapDelete\(it\.id, e\.timeStamp\)\}/.test(CODE.slice(targets.node.start, targets.node.end)) && !/Date\.now/.test(srcOf("tapDelete") + srcOf("armDelete")), true);
+  const taps = calls(targets, "tapDelete");
+  ck("the delete button is the only caller of tapDelete", taps.length === 1 && !!taps[0].findParent((x) => x.isJSXAttribute() && x.node.name.name === "onClick"), true);
+
+  // The armed wording comes from targetDeleteCopy, and the draft warning is visible text.
+  const targetsCode = CODE.slice(targets.node.start, targets.node.end);
+  ck("armedCopy is targetDeleteCopy of the armed row", /const armedCopy = targetDeleteCopy\(items\.find\(\(it\) => it\.id === armedTarget\), t\);/.test(targetsCode), true);
+  ck("armed, the button shows armedCopy.label in the X's place", /\{armedTarget === it\.id \? armedCopy\.label : <X size=\{14\} \/>\}/.test(targetsCode), true);
+  ck("armed, its accessible name is armedCopy.aria", /aria-label=\{armedTarget === it\.id \? armedCopy\.aria : /.test(targetsCode), true);
+  let warnLine = null;
+  targets.traverse({
+    JSXExpressionContainer(pa) {
+      const s = CODE.slice(pa.node.start, pa.node.end);
+      if (/^\{armedTarget === it\.id && armedCopy\.warning && <div role="alert"[^>]*>\{armedCopy\.warning\}<\/div>\}$/.test(s)) warnLine = pa;
+    },
+  });
+  ck("an armed row with a draft shows armedCopy.warning as a role=alert line", !!warnLine, true);
+  ck("...on the row (inside items.map), not inside the button", !!warnLine && !!warnLine.findParent((x) => x.isCallExpression() && x.node.callee.type === "MemberExpression" && x.node.callee.property.name === "map") && !warnLine.findParent((x) => x.isJSXElement() && x.node.openingElement.name.name === "button"), true);
+  ck("no armed wording bypasses targetDeleteCopy", /targets_delete_confirm|t\("target_delete_(armed|aria)/.test(targetsCode), false);
+  ck("a refused delete shows target_delete_err on its row", /\{deleteFailedId === it\.id && <div role="alert"[^>]*>\{t\("target_delete_err"\)\}<\/div>\}/.test(targetsCode), true);
+
+  // The armed button is wider than the X, so the contact line gets narrower: the email breaks after its "@".
+  const mailJs = babel.transform(lift("function emailWithBreak(", "\n}\n"), { presets: ["react"] }).code;
+  const el = (type, props, ...children) => ({ type, props: props || {}, children });
+  const emailWithBreak = new Function("React", mailJs + "\nreturn emailWithBreak;")({ createElement: el });
+  const flat = (n) => (n == null ? "" : typeof n === "string" ? n : n.type === "wbr" ? "|" : n.children.map(flat).join(""));
+  ck("an email gets one break point, right after the @", flat(emailWithBreak("rivera@example.edu")), "rivera@|example.edu");
+  ck("...inside one inline block (whole on its own line when it fits)", emailWithBreak("rivera@example.edu").props.style, { display: "inline-block" });
+  ck("...and its text is unchanged (nothing added to a copy)", flat(emailWithBreak("rivera@example.edu")).replace("|", ""), "rivera@example.edu");
+  ck("no @: the text as it is; nothing: empty", [emailWithBreak("coach"), emailWithBreak(null)], ["coach", ""]);
+  ck("the contact line renders the email through it", /\{emailWithBreak\(it\.contact_email\)\}/.test(targetsCode), true);
+
+  // The real handlers, run as each render would see them, with a stand-in clock and timers.
+  const tapJs = babel.transform(["tapDelete", "armDelete", "disarmDelete"].map(srcOf).join("\n"), { presets: ["react"] }).code;
+  function tapHarness() {
+    const h = { armed: null, deleted: [], failedId: "x", now: 1000, timers: new Map(), ref: { current: { at: 0, timer: null } } };
+    let nextTimer = 1;
+    const env = {
+      setArmedTarget: (v) => { h.armed = v; },
+      setDeleteFailedId: (v) => { h.failedId = v; },
+      removeTarget: (id) => { h.deleted.push(id); },
+      setTimeout: (f, ms) => { const id = nextTimer++; h.timers.set(id, { f, at: h.now + ms }); return id; },
+      clearTimeout: (id) => { h.timers.delete(id); },
+    };
+    const names = ["armedTarget", "armRef", "targetDeleteTap", "TARGET_DELETE_ARM_MS", ...Object.keys(env)];
+    const make = new Function(...names, tapJs + "\nreturn tapDelete;");
+    // at: the tap's event time stamp; by default the moment it is handled.
+    h.tap = (id, at = h.now) => make(h.armed, h.ref, targetDeleteTap, TARGET_DELETE_ARM_MS, ...Object.values(env))(id, at);
+    h.wait = (ms) => { h.now += ms; for (const [id, tm] of [...h.timers]) if (tm.at <= h.now) { h.timers.delete(id); tm.f(); } };
+    return h;
+  }
+  {
+    const h = tapHarness();
+    h.tap("a");
+    ck("the first tap arms the row and deletes nothing", [h.armed, h.deleted], ["a", []]);
+    ck("...and clears an earlier refused-delete line", h.failedId, null);
+    h.wait(150); h.tap("a");
+    ck("a second tap 150 ms later (a double tap) deletes nothing and stays armed", [h.armed, h.deleted], ["a", []]);
+    h.wait(850); h.tap("a");
+    ck("a tap a second after arming deletes that row and disarms", [h.armed, h.deleted], [null, ["a"]]);
+    ck("...leaving no timer behind", h.timers.size, 0);
+  }
+  {
+    // A slow phone: the second tap of a double tap happened 150 ms after the first but is handled 900 ms
+    // later, after the re-render. Its own time stamp is what counts.
+    const h = tapHarness();
+    const first = h.now;
+    h.tap("a"); h.wait(900); h.tap("a", first + 150);
+    ck("a double tap handled late still deletes nothing", [h.armed, h.deleted], ["a", []]);
+  }
+  {
+    const h = tapHarness();
+    h.tap("a"); h.wait(5999);
+    ck("still armed just before 6 s", h.armed, "a");
+    h.wait(1);
+    ck("disarmed at 6 s", h.armed, null);
+    h.tap("a");
+    ck("after it disarms, a tap arms again, never deletes", [h.armed, h.deleted], ["a", []]);
+  }
+  {
+    const h = tapHarness();
+    h.tap("a"); h.wait(1000); h.tap("b");
+    ck("arming another row disarms the first and deletes nothing", [h.armed, h.deleted], ["b", []]);
+    h.wait(5500);
+    ck("the first row's timer does not cut the second row's 6 s short", h.armed, "b");
+    h.wait(500);
+    ck("the second row disarms at its own 6 s", h.armed, null);
+  }
+
+  // The real removeTarget against a stand-in database answer.
+  const rmJs = babel.transform(srcOf("removeTarget"), { presets: ["react"] }).code;
+  function rmHarness() {
+    const h = { state: [{ id: "a", name: "A" }, { id: "b", name: "B", draft_email: "Hi" }, { id: "c", name: "C" }], failedId: "x", errs: [], kept: [], sent: [] };
+    let answer; const reply = new Promise((r) => { answer = r; });
+    h.answer = answer;
+    const sbStub = { from: (table) => ({ delete: () => { const q = { eq: (k, v) => { h.sent.push([table, k, v]); return q; }, then: (a, b) => reply.then(a, b) }; return q; } }) };
+    const make = new Function("items", "setItems", "sb", "actingFor", "uid", "setErr", "setDeleteFailedId", "keepText", "TARGET_TEXT_FIELDS", "console", rmJs + "\nreturn removeTarget;");
+    h.run = (id) => make(h.state, (f) => { h.state = typeof f === "function" ? f(h.state) : f; }, sbStub, null, "u1",
+      (e) => h.errs.push(e), (v) => { h.failedId = v; }, (id2, field, v) => h.kept.push([id2, field, v]), TARGET_TEXT_FIELDS, { error() {} })(id);
+    return h;
+  }
+  pendingChecks.push((async () => {
+    {
+      const h = rmHarness();
+      const done = h.run("b");
+      ck("the row leaves the list at once", h.state.map((r) => r.id), ["a", "c"]);
+      h.state = h.state.map((r) => (r.id === "c" ? { ...r, status: "contacted" } : r));  // another row changes meanwhile
+      h.answer({ error: { message: "refused" } }); await done;
+      ck("a refused delete puts the row back in its place", h.state.map((r) => r.id), ["a", "b", "c"]);
+      ck("...with its draft", h.state[1].draft_email, "Hi");
+      ck("...without undoing another row's change", h.state[2].status, "contacted");
+      ck("...and marks that row, which shows the error", h.failedId, "b");
+      ck("...and keeps any text kept for its boxes", h.kept, []);
+    }
+    {
+      const h = rmHarness();
+      const done = h.run("b"); h.answer({ error: null }); await done;
+      ck("a stored delete leaves the row gone", h.state.map((r) => r.id), ["a", "c"]);
+      ck("...with no error mark", h.failedId, null);
+      ck("...and drops text kept for each of its boxes", h.kept, TARGET_TEXT_FIELDS.map((field) => ["b", field, null]));
+      ck("the delete is scoped to the row and its owner", h.sent, [["outreach_targets", "id", "b"], ["outreach_targets", "user_id", "u1"]]);
+    }
+    {
+      const h = rmHarness();
+      await h.run("gone");
+      ck("a row that is not on the list sends nothing", h.sent, []);
+    }
+  })());
+}
+
 /* ---------- TargetTextArea run with stand-in hooks ---------- */
 // The real component source, compiled as the app compiles it, run with a
 // minimal hook runtime: state re-renders at once, mount effects run after the
@@ -349,7 +509,7 @@ pendingChecks.push((async () => {
 
 /* ---------- i18n: every key in all four languages ---------- */
 const keys = ["target_err_name_required", "target_err_too_long", "target_err_email_invalid",
-  "target_delete_armed", "target_delete_armed_draft", "target_delete_aria", "target_delete_aria_draft", "targets_save_err",
+  "target_delete_armed", "target_delete_armed_draft", "target_delete_aria", "target_delete_aria_draft", "target_delete_err", "targets_save_err",
   "target_draft_save", "target_status_unsaved", "target_status_saving", "target_status_saved", "target_status_failed", "target_draft_to", "target_counter",
   "target_unsaved"];
 const usedKeys = new Set(src.match(/target_[a-z_]+/g).filter((k) => !k.startsWith("target_limits")));
@@ -361,7 +521,15 @@ langs.forEach((l, i) => {
   for (const k of keys) ck(`${l} has ${k}`, new RegExp(`\\b${k}: "[^"]+"`).test(block), true);
   ck(`${l} aria texts carry {name}`, ["target_delete_aria", "target_delete_aria_draft"].every((k) => new RegExp(`\\b${k}: "[^"]*\\{name\\}`).test(block)), true);
   ck(`${l} target_unsaved names the target`, /\btarget_unsaved: "[^"]*\{name\}/.test(block), true);
+  // The armed word replaces a 44px X inside a full row, so it stays one short word.
+  const word = (/\btarget_delete_armed: "([^"]+)"/.exec(block) || [])[1] || "";
+  const warning = (/\btarget_delete_armed_draft: "([^"]+)"/.exec(block) || [])[1] || "";
+  ck(`${l} armed word is short (${word})`, word.length > 0 && word.length <= 12, true);
+  ck(`${l} the draft warning is a sentence of its own`, warning.length > word.length + 10, true);
+  ck(`${l} the retired targets_delete_confirm keys are gone`, /\btargets_delete_confirm(_aria)?:/.test(block), false);
 });
+ck("en: a target with no draft says the short Delete?", /\btarget_delete_armed: "Delete\?"/.test(APP), true);
+ck("en: the draft warning names the draft and asks for a second tap", /\btarget_delete_armed_draft: "Delete this and its draft email\? Tap again to confirm\."/.test(APP), true);
 
 Promise.all(pendingChecks).then(() => {
   console.log(f ? `${p}/${p + f} passed, ${f} FAILED` : `${p}/${p} passed`);
