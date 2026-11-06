@@ -5,7 +5,7 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Claude Code (AVA job 184, task t7, attempt 2), 2026-11-06. Before that: Claude Code (job 184 t1-t6, t7 attempt 1).
+Claude Code (AVA job 184, task t7, attempt 3), 2026-11-06. Before that: Claude Code (job 184 t1-t6, t7 attempts 1-2).
 
 ## Current Branch
 `ava/184-an-athlete-can-track-target-clubs-or-coa` (AVA job 184, Targets; AVA commits each step, then merges).
@@ -14,8 +14,8 @@ Claude Code (AVA job 184, task t7, attempt 2), 2026-11-06. Before that: Claude C
 ## Last Completed Work
 - AVA job 184, Targets (Plan > "Schools & clubs"), t1-t6: rules in CLAUDE.md § Target clubs/coaches and outreach
   drafts. t7: this run, docs (CLAUDE.md, AGENTS.md, CHANGELOG.md); the preview's title now shows emails and drafts.
-- t7 recorded run, done twice (attempt 2 redid attempt 1 from scratch on fresh servers: identical results). AVA
-  browser + `tools/preview-targets.cjs`, one server per width and theme, 8 page loads in order from `reset=seed`.
+- t7 recorded run, done three times (attempts 2 and 3 redid it from scratch on fresh servers: identical results).
+  AVA browser + `tools/preview-targets.cjs`, one server per width and theme, 8 page loads in order from `reset=seed`.
   Titles, the same in all four (N = Northfield College Soccer <rivera@example.edu>, L = Lakeside FC, M = Metro United
   Academy, MIA = Montreal Impact Academy): 1 add: "MIA | N | L | M"; 2 editgood: "MIA <coach@uni.edu> | N | L | M";
   3 look (reload): the same; 4 draft: the same + `draft: "Hello Coach Rivera, I would love a trial." (Saved)`; 5 expand
@@ -25,19 +25,19 @@ Claude Code (AVA job 184, task t7, attempt 2), 2026-11-06. Before that: Claude C
 
   | 8 combinations | A: add, edit, reload | B: draft, save, reload, delete (warning + second tap), reload |
   |---|---|---|
-  | 390 dark | pass: new row and coach@uni.edu came back | pass: draft came back; deleted row stayed gone, N/L/M kept |
-  | 390 light | pass: the same | pass: the same |
-  | 1280 dark | pass: the same | pass: the same |
-  | 1280 light | pass: the same | pass: the same |
+  | 390 dark | pass: MIA + coach@uni.edu back on reload | pass: draft back on reload; MIA gone on reload, N/L/M kept |
+  | 390 light | pass: MIA + coach@uni.edu back on reload | pass: draft back on reload; MIA gone on reload, N/L/M kept |
+  | 1280 dark | pass: MIA + coach@uni.edu back on reload | pass: draft back on reload; MIA gone on reload, N/L/M kept |
+  | 1280 light | pass: MIA + coach@uni.edu back on reload | pass: draft back on reload; MIA gone on reload, N/L/M kept |
 
   All 32 loads: no console errors; one request refused by the sandbox proxy (no internet); at 390 px scrollWidth =
   innerWidth; contrast: dark none, light only the older 3.02:1 (10 px, 390) and 2.75:1 (button, 1280) of t5/t6.
-  Screenshots opened: 390 dark arm (warning on one unclipped line), 390 light reload (draft back under "To:
-  coach@uni.edu"), 1280 dark arm, 1280 light draft ("Saved"). Both widths and themes, fail=select: no rows,
-  "Couldn't load this. Check your connection and try again." + Retry (console: the app's own load-error line), but
-  the summary line says "No schools or clubs yet" (shot 1280 dark; Known Problems); fail=insert&drive=add: nothing
-  added, form open with the typed name, "Couldn't add that. Try again." (shot 390 light). NOT run in t7: fail=update/
-  delete, double taps, mid-save close (t4-t6 did); fr/es/el; real DB, RLS, migration 165; a real phone; screen reader.
+  Screenshots opened (attempt 3): 390 dark arm (warning on one unclipped line), 390 light expand (draft back under "To:
+  coach@uni.edu"), 1280 light draft ("Saved"), 1280 dark last reload (N/L/M only). Both widths and themes, fail=select:
+  no rows, "Couldn't load this. Check your connection and try again." + Retry (console: the app's own error line), but
+  the summary says "No schools or clubs yet" (shot 1280 dark; Known Problems); fail=insert&drive=add: nothing added,
+  form open with the typed name, "Couldn't add that. Try again." (shot 390 light). NOT run in t7: fail=update/delete,
+  double taps, mid-save close (t4-t6 did); fr/es/el; real DB, RLS, migration 165; a real phone; a screen reader.
 
 ## Current Work
 AVA job 184 (Targets): t1-t7 done on the branch; security review, regression and final verification still to run.
@@ -59,12 +59,11 @@ AVA job 184 (Targets): t1-t7 done on the branch; security review, regression and
 - 12-function Vercel ceiling (`_`-prefixed `api/` files are shared modules). Adults only. Scout sends `due_in_days`.
 
 ## Latest Test / Build Status
-2026-11-06 (job 184 t7 attempt 2): browser run above; via "$AVA_RUN", `node tests/run-all.cjs <name>`: outreach
+2026-11-06 (job 184 t7 attempt 3): browser run above; via "$AVA_RUN", `node tests/run-all.cjs <name>`: outreach
 270/270, preview_targets 49/49, migration_165 47/47. Full `npm run check` left to AVA. 2026-11-03: 129/129 suites.
 
 ## Known Problems
-- health-alert runs every 2.1-7.5 h (median 4.2 h over 60 runs, 10-18..10-28), not every 15 min: outages can go
-  unseen for hours, and a >6 h gap can raise a false "monitor dead" push.
+- health-alert runs every 2.1-7.5 h, not 15 min: outages can go unseen for hours; a >6 h gap fakes "monitor dead".
 - Payments live but no real purchase yet; webhook signing secret unverified. Admin MFA: owner not enrolled.
 - Signup has NO bot protection (Supabase CAPTCHA off, `TURNSTILE_SITE_KEY` empty; enable both together).
 - Not verified: a live Scout reply for a signed-in athlete (vs Home's Today tile); VoiceOver on the redesigned hero.
