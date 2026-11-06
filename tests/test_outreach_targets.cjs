@@ -63,9 +63,63 @@ ck("copy without a draft", targetDeleteCopy({ name: "FC Nord", draft_email: "" }
 ck("copy with a draft names the draft", targetDeleteCopy({ name: "FC Nord", draft_email: "Hi" }, t), { label: "ARMED+DRAFT", aria: "Delete FC Nord and draft." });
 ck("copy for a null row does not throw", targetDeleteCopy(null, t), { label: "ARMED", aria: "Delete ." });
 
+/* ---------- Targets component: add / edit behaviour (AST) ---------- */
+const parser = require("@babel/parser");
+let traverse = require("@babel/traverse");
+traverse = traverse.default || traverse;
+const m = /<script[^>]*type=["']text\/babel(?:-deferred)?["'][^>]*>/.exec(APP);
+const CODE = APP.slice(m.index + m[0].length, APP.indexOf("</script>", m.index + m[0].length));
+const ast = parser.parse(CODE, { sourceType: "script", plugins: ["jsx"] });
+let targets = null;
+traverse(ast, { FunctionDeclaration(pa) { if (pa.node.id.name === "Targets" && !targets) targets = pa; } });
+ck("Targets component found", !!targets, true);
+const fn = (name) => { let r = null; targets.traverse({ FunctionDeclaration(pa) { if (pa.node.id.name === name && !r) r = pa; } }); return r; };
+const calls = (pa, name) => { const out = []; pa.traverse({ CallExpression(c) { const cal = c.node.callee; if (cal.type === "Identifier" && cal.name === name) out.push(c); } }); return out; };
+
+// addTarget: a ref is set true before the first await
+const add = fn("addTarget");
+ck("addTarget exists", !!add, true);
+let firstAwait = Infinity, refSet = Infinity;
+add.traverse({
+  AwaitExpression(a) { firstAwait = Math.min(firstAwait, a.node.start); },
+  AssignmentExpression(a) {
+    const l = a.node.left;
+    if (l.type === "MemberExpression" && l.property.name === "current" && /Ref$/.test(l.object.name) && a.node.right.value === true) refSet = Math.min(refSet, a.node.start);
+  },
+});
+ck("addTarget sets a ref guard before its first await", refSet < firstAwait, true);
+ck("addTarget returns early when the ref guard is set", /addingRef\.current\) return/.test(CODE.slice(add.node.start, add.node.end)), true);
+
+// saveEdit: setEditingTarget(null) only inside an `if`, after the awaited update
+const save = fn("saveEdit");
+ck("saveEdit exists", !!save, true);
+const closes = calls(save, "setEditingTarget");
+ck("saveEdit closes the form exactly once", closes.length, 1);
+let awaitedUpdate = Infinity;
+save.traverse({ AwaitExpression(a) { awaitedUpdate = Math.min(awaitedUpdate, a.node.start); } });
+const close = closes[0];
+ck("the close comes after the awaited update", close.node.start > awaitedUpdate, true);
+const ifParent = close.findParent((x) => x.isIfStatement());
+ck("the close sits in an if on the update result", !!ifParent && ifParent.node.test.type === "Identifier", true);
+ck("saveEdit runs targetFieldErrors before writing", calls(save, "targetFieldErrors").length === 1 && calls(save, "targetFieldErrors")[0].node.start < awaitedUpdate, true);
+ck("saveEdit has a ref guard", /savingEditRef\.current\) return/.test(CODE.slice(save.node.start, save.node.end)), true);
+ck("the only other setEditingTarget(null) is Cancel", calls(targets, "setEditingTarget").filter((c) => c.node.arguments[0] && c.node.arguments[0].type === "NullLiteral").length, 2);
+
+// the err line is rendered outside the showAddTarget branch
+let errInAdd = 0, errOutside = 0;
+targets.traverse({
+  JSXExpressionContainer(pa) {
+    const e = pa.node.expression;
+    if (e.type !== "LogicalExpression" || e.left.type !== "Identifier" || e.left.name !== "err") return;
+    const inAdd = pa.findParent((x) => x.isLogicalExpression() && x.node.left.type === "Identifier" && x.node.left.name === "showAddTarget");
+    if (inAdd) errInAdd++; else errOutside++;
+  },
+});
+ck("err is rendered once, outside the showAddTarget branch", [errInAdd, errOutside], [0, 1]);
+
 /* ---------- i18n: every key in all four languages ---------- */
 const keys = ["target_err_name_required", "target_err_too_long", "target_err_email_invalid",
-  "target_delete_armed", "target_delete_armed_draft", "target_delete_aria", "target_delete_aria_draft"];
+  "target_delete_armed", "target_delete_armed_draft", "target_delete_aria", "target_delete_aria_draft", "targets_save_err"];
 const usedKeys = new Set(src.match(/target_[a-z_]+/g).filter((k) => !k.startsWith("target_limits")));
 for (const k of usedKeys) ck(`helper key ${k} is in the list checked below`, keys.includes(k), true);
 const langs = ["en", "fr", "es", "el"];

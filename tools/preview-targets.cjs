@@ -11,6 +11,10 @@
 //   &reset=1     empties the store (no targets: the empty state)
 //   &reset=seed  puts the three seeded rows back (the store starts with them)
 //   &open=schools  opens the "Schools & clubs" row and scrolls to it once (it is closed, below the fold)
+//   &drive=add|adddouble|editbad|editgood  also opens the card, then acts like a person would (the browser tool
+//                cannot click): add = fill "Montreal Impact Academy" and press Add; adddouble = the same, pressing
+//                Add twice at once; editbad / editgood = edit the first row's contact email to "coach@uni" /
+//                "coach@uni.edu" and press Save. Combine with &fail=update to see a refused edit.
 //   &theme=light|dark  sets localStorage["golsz-theme"] before the page's own theme script runs
 //   The server prints each write as   outreach_targets <insert|update|delete> id=<id> fields=<names>
 //   and GET /__store returns the current rows as JSON.
@@ -81,6 +85,40 @@ function stub(cfg) {
   var d = new Date();
   var today = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
   try { localStorage.setItem("golsz-checkin", cfg.userId + ":" + today); } catch (e) { /* storage blocked */ }
+
+  if (cfg.drive) {
+    // Acts on the page like a person: polls for each element, sets values through the native setter so React sees them.
+    var setVal = function (el, v) {
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set.call(el, v);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    var btnByText = function (text) {
+      return Array.prototype.filter.call(document.querySelectorAll("#gz-schools button"), function (b) { return b.textContent.trim() === text; });
+    };
+    var steps = [];
+    if (cfg.drive === "add" || cfg.drive === "adddouble") {
+      steps = [
+        function () { var b = btnByText("Add")[0]; if (!b) return false; b.click(); return true; },
+        function () { var i = document.getElementById("target-add-name"); if (!i) return false; setVal(i, "Montreal Impact Academy"); return true; },
+        function () {
+          var b = btnByText("Add")[0]; if (!b) return false;
+          b.click(); if (cfg.drive === "adddouble") b.click();
+          return true;
+        },
+      ];
+    } else {
+      steps = [
+        function () { var r = document.querySelector("#gz-schools [role=button][title]"); if (!r) return false; r.click(); return true; },
+        function () { var i = document.getElementById("target-edit-contact_email"); if (!i) return false; setVal(i, cfg.drive === "editbad" ? "coach@uni" : "coach@uni.edu"); return true; },
+        function () { var b = btnByText("Save")[0]; if (!b) return false; b.click(); return true; },
+      ];
+    }
+    var stepNo = 0;
+    var timer = setInterval(function () {
+      if (stepNo >= steps.length) { clearInterval(timer); return; }
+      if (steps[stepNo]()) stepNo++;
+    }, 100);
+  }
 
   if (cfg.open) {
     // The card is a closed row below the fold: open it and scroll to it once, so a screenshot shows it.
@@ -217,7 +255,7 @@ function createPreview({ localise = localiseLibraries } = {}) {
       if (reset === "1") state.targets = [];
       if (reset === "seed") state.targets = seedTargets();
       const failParam = u.searchParams.get("fail");
-      const cfg = { ...constantsFrom(local.html), userId: USER_ID, theme: u.searchParams.get("theme") || "", open: u.searchParams.get("open") === "schools", fail: Object.values(FAIL_OF_METHOD).includes(failParam) ? failParam : "" };
+      const cfg = { ...constantsFrom(local.html), userId: USER_ID, theme: u.searchParams.get("theme") || "", open: u.searchParams.get("open") === "schools" || !!u.searchParams.get("drive"), drive: ["add", "adddouble", "editbad", "editgood"].includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "", fail: Object.values(FAIL_OF_METHOD).includes(failParam) ? failParam : "" };
       res.writeHead(200, { "content-type": type });
       res.end(pageWithStub(local.html, cfg));
     });

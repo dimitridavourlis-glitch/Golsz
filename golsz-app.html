@@ -43,7 +43,7 @@
 <!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
      fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
      with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
-<link rel="preload" as="script" href="js/app.js?v=5bd30412f7f6b4d5" />
+<link rel="preload" as="script" href="js/app.js?v=f9203e015ddd9593" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -480,7 +480,7 @@ const I18N = {
     home_scout_ask_ph: "Ask Scout anything…",
     plan_crumb_goal: "From Home · your goal", nav_targets: "Pathway/Plan", nav_plan: "Plan", plan_page_title: "MY PATHWAY", targets_title: "SCHOOLS & CLUBS", targets_edit_hint: "Tap to edit", targets_name_ph: "School or club name", targets_contact_name_ph: "Contact name", targets_contact_email_ph: "Contact email",
     targets_locked_teaser: "Upgrade to build your visual Pathway, set targets and track outreach — GOLSZ Scout will help you build the first list.",
-    targets_add: "Add", targets_add_err: "Couldn't add that. Try again.", targets_empty: "No targets yet — add the first school or club you're pursuing.",
+    targets_add: "Add", targets_add_err: "Couldn't add that. Try again.", targets_save_err: "Couldn't save that. Your text is still here. Try again.", targets_empty: "No targets yet — add the first school or club you're pursuing.",
     targets_delete_confirm: "Delete?", targets_delete_confirm_aria: "Tap again to delete {name} and its drafted email",
     targets_notes_ph: "Notes", targets_draft_ph: "Draft outreach email",
     targets_status_researching: "Researching", targets_status_preparing: "Preparing", targets_status_contacted: "Contacted", targets_status_responded: "Responded", targets_status_follow_up: "Follow up", targets_status_opportunity: "Opportunity", targets_fit_reasoning_ph: "Why this is a good fit (optional)",
@@ -860,7 +860,7 @@ const I18N = {
     home_scout_ask_ph: "Demandez n'importe quoi à Scout…",
     plan_crumb_goal: "Depuis l'Accueil · votre objectif", nav_targets: "Parcours/Plan", nav_plan: "Plan", plan_page_title: "MON PARCOURS", targets_title: "ÉCOLES & CLUBS", targets_edit_hint: "Toucher pour modifier", targets_name_ph: "Nom de l'école ou du club", targets_contact_name_ph: "Nom du contact", targets_contact_email_ph: "Email du contact",
     targets_locked_teaser: "Passez à un forfait supérieur pour construire votre Parcours visuel, définir des cibles et suivre vos démarches — GOLSZ Scout vous aide à créer la première liste.",
-    targets_add: "Ajouter", targets_add_err: "Impossible d'ajouter. Réessayez.", targets_empty: "Aucune cible pour l'instant — ajoutez la première école ou le premier club visé.",
+    targets_add: "Ajouter", targets_add_err: "Impossible d'ajouter. Réessayez.", targets_save_err: "Impossible d'enregistrer. Votre texte est toujours là. Réessayez.", targets_empty: "Aucune cible pour l'instant — ajoutez la première école ou le premier club visé.",
     targets_delete_confirm: "Supprimer ?", targets_delete_confirm_aria: "Touchez à nouveau pour supprimer {name} et son e-mail préparé",
     targets_notes_ph: "Notes", targets_draft_ph: "Brouillon d'email de contact",
     targets_status_researching: "Recherche", targets_status_preparing: "Préparation", targets_status_contacted: "Contacté", targets_status_responded: "Répondu", targets_status_follow_up: "Relance", targets_status_opportunity: "Opportunité", targets_fit_reasoning_ph: "Pourquoi c'est un bon choix (facultatif)",
@@ -1240,7 +1240,7 @@ const I18N = {
     home_scout_ask_ph: "Pregúntale lo que sea a Scout…",
     plan_crumb_goal: "Desde Inicio · tu objetivo", nav_targets: "Trayectoria/Plan", nav_plan: "Plan", plan_page_title: "MI TRAYECTORIA", targets_title: "ESCUELAS Y CLUBES", targets_edit_hint: "Toca para editar", targets_name_ph: "Nombre de la escuela o club", targets_contact_name_ph: "Nombre del contacto", targets_contact_email_ph: "Email del contacto",
     targets_locked_teaser: "Mejora tu plan para construir tu Camino visual, definir objetivos y hacer seguimiento — GOLSZ Scout te ayuda a crear la primera lista.",
-    targets_add: "Añadir", targets_add_err: "No se pudo añadir. Inténtalo de nuevo.", targets_empty: "Aún no hay objetivos — añade la primera escuela o club que te interese.",
+    targets_add: "Añadir", targets_add_err: "No se pudo añadir. Inténtalo de nuevo.", targets_save_err: "No se pudo guardar. Tu texto sigue aquí. Inténtalo de nuevo.", targets_empty: "Aún no hay objetivos — añade la primera escuela o club que te interese.",
     targets_delete_confirm: "¿Eliminar?", targets_delete_confirm_aria: "Toca de nuevo para eliminar {name} y su correo redactado",
     targets_notes_ph: "Notas", targets_draft_ph: "Borrador de email de contacto",
     targets_status_researching: "Investigando", targets_status_preparing: "Preparando", targets_status_contacted: "Contactado", targets_status_responded: "Respondido", targets_status_follow_up: "Seguimiento", targets_status_opportunity: "Oportunidad", targets_fit_reasoning_ph: "Por qué encaja bien (opcional)",
@@ -1620,7 +1620,7 @@ const I18N = {
     home_scout_ask_ph: "Ρώτησε οτιδήποτε τον Scout…",
     plan_crumb_goal: "Από την Αρχική · ο στόχος σου", nav_targets: "Πορεία/Πλάνο", nav_plan: "Πλάνο", plan_page_title: "ΤΟ ΜΟΝΟΠΑΤΙ ΜΟΥ", targets_title: "ΣΧΟΛΕΣ & ΣΥΛΛΟΓΟΙ", targets_edit_hint: "Πάτα για επεξεργασία", targets_name_ph: "Όνομα σχολής ή συλλόγου", targets_contact_name_ph: "Όνομα επαφής", targets_contact_email_ph: "Email επαφής",
     targets_locked_teaser: "Αναβάθμισε για να χτίσεις το οπτικό σου Μονοπάτι, να ορίσεις στόχους και να παρακολουθείς την προσέγγισή σου — ο GOLSZ Scout θα σε βοηθήσει να φτιάξεις την πρώτη λίστα.",
-    targets_add: "Προσθήκη", targets_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", targets_empty: "Δεν υπάρχουν στόχοι ακόμα — πρόσθεσε την πρώτη σχολή ή σύλλογο που σε ενδιαφέρει.",
+    targets_add: "Προσθήκη", targets_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", targets_save_err: "Δεν αποθηκεύτηκε. Το κείμενό σας είναι ακόμα εδώ. Δοκιμάστε ξανά.", targets_empty: "Δεν υπάρχουν στόχοι ακόμα — πρόσθεσε την πρώτη σχολή ή σύλλογο που σε ενδιαφέρει.",
     targets_delete_confirm: "Διαγραφή;", targets_delete_confirm_aria: "Πάτησε ξανά για να διαγράψεις το {name} και το προσχέδιο email του",
     targets_notes_ph: "Σημειώσεις", targets_draft_ph: "Πρόχειρο email επικοινωνίας",
     targets_status_researching: "Έρευνα", targets_status_preparing: "Προετοιμασία", targets_status_contacted: "Επικοινώνησα", targets_status_responded: "Απάντησαν", targets_status_follow_up: "Παρακολούθηση", targets_status_opportunity: "Ευκαιρία", targets_fit_reasoning_ph: "Γιατί ταιριάζει καλά (προαιρετικό)",
@@ -13431,6 +13431,15 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
   const [contactEmail, setContactEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // Field messages ({ field: i18nKey }) for the Add form and the open edit
+  // form, and the failure text for a save that was refused by the database.
+  const [addErrs, setAddErrs] = useState({});
+  const [tErrs, setTErrs] = useState({});
+  const [editErr, setEditErr] = useState("");
+  // Refs, not state: state only changes on the next render, so a double tap
+  // would start two writes (same reasoning as Scout's sendingRef).
+  const addingRef = useRef(false);
+  const savingEditRef = useRef(false);
   const [expandedId, setExpandedId] = useState(null);
   const [editingTarget, setEditingTarget] = useState(null);
   const [tDraft, setTDraft] = useState({ name: "", contact_name: "", contact_email: "" });
@@ -13492,15 +13501,25 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
   function retryTargets() { setTargetsLoadFailed(false); setTargetsReloadKey((k) => k + 1); }
 
   async function addTarget() {
-    if (!sb || !uid || !name.trim() || busy) return;
-    setBusy(true); setErr("");
+    if (!sb || !uid || addingRef.current) return;
+    addingRef.current = true;
+    try {
+      const errs = targetFieldErrors({ name, contact_name: contactName, contact_email: contactEmail });
+      setAddErrs(errs);
+      if (Object.keys(errs).length) return;
+      setBusy(true); setErr("");
+      await insertTarget();
+    } finally { addingRef.current = false; setBusy(false); }
+  }
+
+  async function insertTarget() {
     try {
       const { data, error } = await sb.from("outreach_targets").insert({
         // The managed athlete, not the signed-in parent — otherwise the school
         // lands on the parent's account and the athlete never sees it.
-        user_id: actingFor || uid, name: name.trim().slice(0, 120),
-        contact_name: contactName.trim().slice(0, 120) || null,
-        contact_email: contactEmail.trim().slice(0, 200) || null,
+        user_id: actingFor || uid, name: name.trim().slice(0, TARGET_LIMITS.name),
+        contact_name: contactName.trim().slice(0, TARGET_LIMITS.contact_name) || null,
+        contact_email: contactEmail.trim().slice(0, TARGET_LIMITS.contact_email) || null,
       }).select("id, name, contact_name, contact_email, status, notes, draft_email, fit_reasoning, created_at").single();
       if (error) throw error;
       setItems((prev) => [data, ...prev]);
@@ -13508,7 +13527,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
       setShowAddTarget(false);
     } catch (e) {
       setErr(userErrorText(e, t, "targets_add_err"));
-    } finally { setBusy(false); }
+    }
   }
 
   // SNAPSHOT, THEN RESTORE. Both of these updated the screen and then dropped
@@ -13517,12 +13536,33 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
   // saved, and came back to the old text on the next load. That is the shape
   // that loses an athlete's actual outreach: they write to a coach, it does
   // not save, and nothing tells them.
-  async function updateTarget(id, updates) {
+  // Resolves true when the row was saved, false when it was rolled back.
+  async function updateTarget(id, updates, rowError = false) {
     const before = items;
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...updates } : it)));
     const { error } = await sb.from("outreach_targets").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id).eq("user_id", actingFor || uid);
-    if (error) { console.error("GOLSZ target update error:", error); setItems(before); setErr(t("targets_add_err")); }
-    else setErr("");
+    if (error) { console.error("GOLSZ target update error:", error); setItems(before); if (!rowError) setErr(t("targets_add_err")); return false; }
+    setErr("");
+    return true;
+  }
+
+  // The edit form stays open, with the athlete's text, until the write
+  // succeeds: closing it first threw away what they typed on a failure.
+  async function saveEdit(id) {
+    if (savingEditRef.current) return;
+    const errs = targetFieldErrors(tDraft);
+    setTErrs(errs);
+    const firstBad = ["name", "contact_name", "contact_email"].find((k) => errs[k]);
+    if (firstBad) { const el = document.getElementById("target-edit-" + firstBad); if (el) el.focus(); return; }
+    savingEditRef.current = true; setEditErr("");
+    try {
+      const saved = await updateTarget(id, {
+        name: tDraft.name.trim().slice(0, TARGET_LIMITS.name),
+        contact_name: tDraft.contact_name.trim().slice(0, TARGET_LIMITS.contact_name) || null,
+        contact_email: tDraft.contact_email.trim().slice(0, TARGET_LIMITS.contact_email) || null,
+      }, true);
+      if (saved) setEditingTarget(null); else setEditErr(t("targets_save_err"));
+    } finally { savingEditRef.current = false; }
   }
 
   async function removeTarget(id) {
@@ -13574,6 +13614,12 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
   }
 
   const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
+  const targetField = (errs, scope, k) => (errs[k]
+    ? { id: `target-${scope}-${k}`, "aria-invalid": true, "aria-describedby": `target-${scope}-err-${k}` }
+    : { id: `target-${scope}-${k}` });
+  const targetFieldError = (errs, scope, k) => (errs[k]
+    ? <div id={`target-${scope}-err-${k}`} style={{ fontSize: 11.5, color: C.limeText, marginTop: 4, lineHeight: 1.35 }}>{t(errs[k])}</div>
+    : null);
   const next30 = [
     { key: "profile", done: !!(quality && quality.score >= 70), label: t("plan_next30_profile") },
     { key: "film", done: filmAdded, label: t("plan_next30_film") },
@@ -13674,18 +13720,29 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
           // as a different kind of thing, and this is just this section's
           // own input.
           <div style={{ paddingBottom: 12, marginBottom: 4, borderBottom: `1px solid ${C.line}` }}>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <input autoFocus value={name} onChange={(e) => setName(e.target.value)} aria-label={t("targets_name_ph")} placeholder={t("targets_name_ph")} style={{ flex: "1 1 160px", ...inputStyle }} />
-              <input value={contactName} onChange={(e) => setContactName(e.target.value)} aria-label={t("targets_contact_name_ph")} placeholder={t("targets_contact_name_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
-              <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} aria-label={t("targets_contact_email_ph")} placeholder={t("targets_contact_email_ph")} type="email" style={{ flex: "1 1 140px", ...inputStyle }} />
-              <button onClick={addTarget} disabled={!name.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!name.trim() || busy) ? 0.5 : 1 }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-start" }}>
+              <div style={{ flex: "1 1 160px" }}>
+                <input autoFocus value={name} onChange={(e) => setName(e.target.value)} aria-label={t("targets_name_ph")} placeholder={t("targets_name_ph")} {...targetField(addErrs, "add", "name")} style={{ width: "100%", ...inputStyle }} />
+                {targetFieldError(addErrs, "add", "name")}
+              </div>
+              <div style={{ flex: "1 1 120px" }}>
+                <input value={contactName} onChange={(e) => setContactName(e.target.value)} aria-label={t("targets_contact_name_ph")} placeholder={t("targets_contact_name_ph")} {...targetField(addErrs, "add", "contact_name")} style={{ width: "100%", ...inputStyle }} />
+                {targetFieldError(addErrs, "add", "contact_name")}
+              </div>
+              <div style={{ flex: "1 1 140px" }}>
+                <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} aria-label={t("targets_contact_email_ph")} placeholder={t("targets_contact_email_ph")} type="email" {...targetField(addErrs, "add", "contact_email")} style={{ width: "100%", ...inputStyle }} />
+                {targetFieldError(addErrs, "add", "contact_email")}
+              </div>
+              <button onClick={addTarget} disabled={busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: busy ? 0.5 : 1 }}>
                 {busy ? "…" : t("targets_add")}
               </button>
-              <button onClick={() => setShowAddTarget(false)} style={{ ...iconBtn(C.slate), fontSize: 12.5 }}>{t("pathway_collapse")}</button>
+              <button onClick={() => { setShowAddTarget(false); setAddErrs({}); }} style={{ ...iconBtn(C.slate), fontSize: 12.5 }}>{t("pathway_collapse")}</button>
             </div>
-            {err && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 6 }}>{err}</div>}
           </div>
         )}
+        {/* Outside the Add form on purpose: an update or delete failure must
+            show with the form closed too. */}
+        {err && <div role="alert" style={{ fontSize: 11.5, color: C.limeText, marginBottom: 8 }}>{err}</div>}
 
         {targetsLoadFailed && <LoadError onRetry={retryTargets} />}
         {!targetsLoadFailed && items.length === 0 && <div style={{ fontSize: 12.5, color: C.slate, lineHeight: 1.55, padding: "6px 0 2px" }}>{t("targets_empty")}</div>}
@@ -13697,13 +13754,17 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
               <div style={{ flex: 1, minWidth: 0 }}>
                 {editingTarget === it.id ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <input value={tDraft.name} onChange={(e) => setTDraft((d) => ({ ...d, name: e.target.value }))} aria-label={t("targets_name_ph")} placeholder={t("targets_name_ph")} style={{ ...inputStyle, fontSize: 13 }} />
-                    <input value={tDraft.contact_name} onChange={(e) => setTDraft((d) => ({ ...d, contact_name: e.target.value }))} aria-label={t("targets_contact_name_ph")} placeholder={t("targets_contact_name_ph")} style={{ ...inputStyle, fontSize: 12 }} />
-                    <input value={tDraft.contact_email} onChange={(e) => setTDraft((d) => ({ ...d, contact_email: e.target.value }))} aria-label={t("targets_contact_email_ph")} placeholder={t("targets_contact_email_ph")} style={{ ...inputStyle, fontSize: 12 }} />
+                    {[["name", 13, "targets_name_ph"], ["contact_name", 12, "targets_contact_name_ph"], ["contact_email", 12, "targets_contact_email_ph"]].map(([k, fs, ph]) => (
+                      <div key={k}>
+                        <input value={tDraft[k]} onChange={(e) => { const v = e.target.value; setTDraft((d) => ({ ...d, [k]: v })); }} aria-label={t(ph)} placeholder={t(ph)} {...targetField(tErrs, "edit", k)} style={{ width: "100%", ...inputStyle, fontSize: fs }} />
+                        {targetFieldError(tErrs, "edit", k)}
+                      </div>
+                    ))}
+                    {editErr && <div role="alert" style={{ fontSize: 11.5, color: C.limeText, lineHeight: 1.35 }}>{editErr}</div>}
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => { if (tDraft.name.trim()) { updateTarget(it.id, { name: tDraft.name.trim(), contact_name: tDraft.contact_name.trim() || null, contact_email: tDraft.contact_email.trim() || null }); setEditingTarget(null); } }}
+                      <button onClick={() => saveEdit(it.id)}
                         style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "6px 12px", fontSize: 11.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>{t("form_save")}</button>
-                      <button onClick={() => setEditingTarget(null)}
+                      <button onClick={() => { setEditingTarget(null); setTErrs({}); setEditErr(""); }}
                         style={{ background: "transparent", color: C.slate, border: "none", borderRadius: 9, padding: "6px 12px", fontSize: 11.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>{t("goal_card_cancel")}</button>
                     </div>
                   </div>
@@ -13712,7 +13773,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
                     {/* Scout creates most of these rows, so the athlete has to be able
                         to correct them. A wrong contact_email here is a drafted email
                         sent to nobody, with no way to fix it but delete and re-add. */}
-                    <div {...asButton(() => { setTDraft({ name: it.name || "", contact_name: it.contact_name || "", contact_email: it.contact_email || "" }); setEditingTarget(it.id); })}
+                    <div {...asButton(() => { setTDraft({ name: it.name || "", contact_name: it.contact_name || "", contact_email: it.contact_email || "" }); setEditingTarget(it.id); setTErrs({}); setEditErr(""); })}
                       title={t("targets_edit_hint")} style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk, cursor: "text" }}>{it.name}</div>
                 {(it.contact_name || it.contact_email) && <div style={{ fontSize: 11.5, color: C.slate }}>{[it.contact_name, it.contact_email].filter(Boolean).join(" · ")}</div>}
                   </>
@@ -19589,7 +19650,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=5bd30412f7f6b4d5";
+    var APP_SRC = "js/app.js?v=f9203e015ddd9593";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
