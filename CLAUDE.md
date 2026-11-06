@@ -893,23 +893,27 @@ warning, migration 165 and the preview tool below.
   `--widths` value, so with two widths each drive runs twice against one store:
   `"$AVA_BROWSER" --serve "node tools/preview-targets.cjs 8766 > node_modules/.cache/run.log 2>&1" --port 8766
   --widths 390 "/golsz-app.html?page=plan&theme=dark&reset=seed&drive=add" "/golsz-app.html?page=plan&theme=dark&drive=editgood" ...`
-- **Recorded runs.** 2026-11-06 (job 184 t7), 390 and 1280 px, dark and light, one server each, 8 page loads in
-  order: add, editgood, look, draft, expand, arm, delete, look. In all four the added row and its edited email came
-  back after a reload, the saved draft came back in its box after a reload, the first tap showed "Delete?" and the
-  draft warning and wrote nothing, the second tap deleted that row only, and it stayed gone after a reload. No
-  sideways scroll at 390 px, no console errors. Earlier runs with the same tool (t4-t6, same day) covered the field
+- **Recorded runs.** 2026-11-06 (job 184 t7, run twice, each time on fresh servers, with the same results), 390 and
+  1280 px, dark and light, one server each, 8 page loads in order: add, editgood, look, draft, expand, arm, delete,
+  look. In all four the added row and its edited email came back after a reload, the saved draft came back in its
+  box after a reload, the first tap showed "Delete?" and the draft warning and wrote nothing, the second tap deleted
+  that row only, and it stayed gone after a reload. No sideways scroll at 390 px, no console errors. Earlier runs
+  with the same tool (t4-t6, same day) covered the field
   errors (`editbad`), `fail=update` (edit and draft), `fail=delete`, `adddouble`, `bigdraft`, a box closing mid-save
   (`draftclose`, `draftreopen`, `draftsection`), `armother`, `armwait` and `deletedouble`; AI_HANDOFF.md of that day
   (git history) has their details. t7 also ran, at both widths and themes, `fail=select` (no rows, "Couldn't load
-  this. Check your connection and try again." with Retry) and `fail=insert&drive=add` (nothing added, the form stays
-  open with the typed name, "Couldn't add that. Try again.").
+  this. Check your connection and try again." with Retry, but the section's summary line above it still read "No
+  schools or clubs yet", see below) and `fail=insert&drive=add` (nothing added, the form stays open with the typed
+  name, "Couldn't add that. Try again.").
 - **UNVERIFIED:** the real database: RLS, the PostgREST answers, and migration 165's caps and trigger (not applied;
   the preview's store knows none of them); a real phone; a screen reader reading the warning and status lines; any
   run in fr/es/el (the keys exist in all four languages, the suite checks that); Scout's `saveDraftedEmail` in a
-  browser. Known and older than job 184: the row's expand chevron has no `aria-label` or `aria-expanded`; in the
-  light theme the shared `LoadError` (every failed read in the app) draws its message in `--warn-text` and Retry in
-  `--lime`, both #B58A1A, measured 3.17:1 on the card (under 4.5:1; `--lime-text` clears it). By design, text kept
-  in `TARGET_UNSAVED_TEXT` is lost on a reload.
+  browser. Known and older than job 184: the section's summary line (`rosterSummary(t, items)`) says "No schools or
+  clubs yet" when the read failed (seen under `fail=select`, above the load error) and, by the code, while the list
+  is still loading, which breaks the read-failure rule; the row's expand chevron has no `aria-label` or
+  `aria-expanded`; in the light theme the shared `LoadError` (every failed read in the app) draws its message in
+  `--warn-text` and Retry in `--lime`, both #B58A1A, measured 3.17:1 on the card (under 4.5:1; `--lime-text` clears
+  it). By design, text kept in `TARGET_UNSAVED_TEXT` is lost on a reload.
 
 ### `PostsGrid` — Instagram-style posts grid on the Passport
 
