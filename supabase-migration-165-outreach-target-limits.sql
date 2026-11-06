@@ -1,7 +1,8 @@
 -- ============================================================
 -- 165 — outreach_targets: length limits + updated_at (database backstop)
 -- Mirrors TARGET_LIMITS in golsz-app.html so a direct REST call cannot store a
--- blank name or a huge text, and makes updated_at move on every update.
+-- blank name or a huge text, and makes updated_at move whenever a target's
+-- own content changes (not when only last_reminded_at is stamped).
 -- Additive only. The app does NOT depend on this file: targetFieldErrors()
 -- already enforces the same caps client-side. No RLS policy is touched.
 -- Constraints are NOT VALID: they check new and changed rows only, so rows
@@ -65,7 +66,16 @@ alter table outreach_targets add constraint outreach_targets_draft_email_len
 create or replace function outreach_targets_touch_updated_at()
 returns trigger language plpgsql as $$
 begin
-  new.updated_at := now();
+  -- updated_at means "the athlete last touched this target": Home's follow-up
+  -- count and api/target-followup-reminders.js both read it that way. The
+  -- nightly reminder writes only last_reminded_at, so a change to nothing but
+  -- bookkeeping columns keeps the old updated_at.
+  if (to_jsonb(new) - 'updated_at' - 'last_reminded_at')
+     is distinct from (to_jsonb(old) - 'updated_at' - 'last_reminded_at') then
+    new.updated_at := now();
+  else
+    new.updated_at := old.updated_at;
+  end if;
   return new;
 end;
 $$;

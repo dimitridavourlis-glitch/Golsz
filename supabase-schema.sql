@@ -6708,7 +6708,8 @@ alter table profiles add column if not exists cancel_at_period_end boolean not n
 -- supabase-migration-165-outreach-target-limits.sql, run in the Supabase SQL
 -- Editor. Database backstop for outreach_targets: NOT VALID check constraints
 -- matching TARGET_LIMITS in golsz-app.html (non-blank name, character caps on
--- every text column) and a BEFORE UPDATE trigger that sets updated_at. The
+-- every text column) and a BEFORE UPDATE trigger that sets updated_at when
+-- anything but last_reminded_at changes (the nightly reminder's stamp). The
 -- client does not depend on it. The file header has the pre/post checks and
 -- the rollback SQL.
 -- ============================================================
@@ -6744,7 +6745,16 @@ alter table outreach_targets add constraint outreach_targets_draft_email_len
 create or replace function outreach_targets_touch_updated_at()
 returns trigger language plpgsql as $$
 begin
-  new.updated_at := now();
+  -- updated_at means "the athlete last touched this target": Home's follow-up
+  -- count and api/target-followup-reminders.js both read it that way. The
+  -- nightly reminder writes only last_reminded_at, so a change to nothing but
+  -- bookkeeping columns keeps the old updated_at.
+  if (to_jsonb(new) - 'updated_at' - 'last_reminded_at')
+     is distinct from (to_jsonb(old) - 'updated_at' - 'last_reminded_at') then
+    new.updated_at := now();
+  else
+    new.updated_at := old.updated_at;
+  end if;
   return new;
 end;
 $$;

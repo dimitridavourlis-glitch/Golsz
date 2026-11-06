@@ -38,6 +38,20 @@ ck("name must not be blank", /outreach_targets_name_not_blank\s+check \(char_len
 // updated_at trigger.
 ck("BEFORE UPDATE trigger", /create trigger outreach_targets_touch_updated_at\s+before update on outreach_targets\s+for each row/.test(body), true);
 ck("trigger sets updated_at = now()", /new\.updated_at := now\(\)/.test(body), true);
+// The nightly reminder (api/target-followup-reminders.js) stamps only
+// last_reminded_at; that must not count as the athlete touching the target,
+// or Home's follow-up count drops to zero the night a reminder is sent.
+const fnBody = (src) => { const i = src.indexOf("create or replace function outreach_targets_touch_updated_at()"); return src.slice(i, src.indexOf("$$;", i)); };
+for (const [label, src] of [["migration", body], ["schema", SCHEMA]]) {
+  const fn = fnBody(src);
+  ck(`${label}: trigger compares rows without last_reminded_at`,
+    /\(to_jsonb\(new\) - 'updated_at' - 'last_reminded_at'\)\s+is distinct from \(to_jsonb\(old\) - 'updated_at' - 'last_reminded_at'\)/.test(fn), true);
+  ck(`${label}: bookkeeping-only update keeps old updated_at`, /else\s+new\.updated_at := old\.updated_at;/.test(fn), true);
+  ck(`${label}: no unconditional now() before the comparison`, fn.indexOf("new.updated_at := now()") > fn.indexOf("is distinct from"), true);
+}
+const reminder = read("api/target-followup-reminders.js");
+ck("the reminder's write to outreach_targets is last_reminded_at only",
+  /outreach_targets\?id=eq\.\$\{target\.id\}`, \{ last_reminded_at: [^,}]+\}/.test(reminder), true);
 
 // Rollback in the header covers every object created.
 const created = [...body.matchAll(/add constraint (\w+)/g)].map((m) => m[1]);
