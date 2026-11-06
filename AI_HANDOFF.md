@@ -5,7 +5,7 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Claude Code (AVA job 184, task t4), 2026-11-06. Before that: Claude Code (AVA job 144), 2026-11-03.
+Claude Code (AVA job 184, task t5), 2026-11-06. Before that: Claude Code (AVA job 144), 2026-11-03.
 
 ## Current Branch
 `main`. `scout-day-awareness` (af28c32) was fast-forwarded into `main` on 2026-10-28 at the owner's
@@ -13,6 +13,19 @@ request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the
 22.x and 24.x. (`landing-glow-path` before it: merged 2026-10-27.)
 
 ## Last Completed Work
+- AVA job 184 t5 (2026-11-06): the target's draft email has an explicit "Save draft" (blur still saves) with a status
+  line (Unsaved changes / Saving… / Saved / Not saved, try again), a ref guard, Save disabled while saving, a cap
+  at TARGET_LIMITS.draft_email with a counter near it, and a "To: <contact_email>" hint. Recorded run,
+  `tools/preview-targets.cjs` + AVA browser, one server per combination (store kept between loads), 390/1280 x
+  dark/light, in order: reset=seed&drive=draft&fail=update shows "Not saved, try again" with "Hello Coach Rivera, I
+  would love a trial." still in the box (the stored draft was the seeded one); drive=draft shows "Saved", server
+  logged exactly one `update ... fields=draft_email,updated_at`; a plain reload with drive=expand (no typing) shows
+  the same text, all 4. drive=bigdraft (10,001 chars pasted) shows 10000 / 10000 and Unsaved changes, no sideways
+  scroll at 390 dark and light (and at 1280). The 1280 runs needed --wait 9: at --wait 4 one shot caught "Saving…"
+  and one caught the page still loading. The tool's keyboard probe tabs out of the bigdraft box, which blur-saves it
+  (one extra update in the log, as designed). Light theme: the tool flags the disabled Save button (2.75:1, disabled
+  controls are exempt) and 3.17:1 on 11-12 px text that was there before this step. NOT exercised: the real
+  database/RLS (stand-in store only).
 - AVA job 184 t4 (2026-11-06): Targets add/edit run `targetFieldErrors` (message under the field, aria-invalid/
   aria-describedby, C.limeText); edit stays open until the update succeeds; card error line sits outside the Add
   form; `addingRef` guard stops a double tap adding twice. Recorded run, `tools/preview-targets.cjs` + AVA browser,
