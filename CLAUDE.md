@@ -825,6 +825,92 @@ Both found during a full app audit (browser crash-testing plus a systematic pass
   their field with `aria-invalid`/`aria-describedby`, in `C.limeText` (the amber failed 4.5:1 on the light sheet).
   Suites: `test_signup_field_errors.cjs`, `test_profile_field_errors.cjs`. Browser runs 2026-11-03 (t7, t8) passed.
 
+### Target clubs/coaches and outreach drafts (`Targets`, `outreach_targets`, migration 165)
+
+An athlete keeps a list of the clubs, schools and coaches they are pursuing and writes a draft email to each one. The
+list dates from migration 072; AVA job 184 (2026-11-06) added the field errors, the explicit draft save, the delete
+warning, migration 165 and the preview tool below.
+
+- **Where:** the Plan page (`?page=plan`), row "Schools & clubs" (`Collapsible`, anchor `#gz-schools`), drawn by
+  `Targets` in `golsz-app.html`. Gated by `FEATURE_MIN_PLAN.targets = "starter"` (Basic and up; Free sees
+  `FeatureLock`). Rows are written for `actingFor || uid`, and every update and delete also filters
+  `.eq("user_id", ...)`. Scout can save an email it drafted onto a chosen target too (`saveDraftedEmail`: replacing
+  a draft, or a draft it cannot see because the list did not load, takes a second tap).
+- **Table `outreach_targets`** (migration 072; 077 added `fit_reasoning` and the status set; 079 `last_reminded_at`):
+  `id`, `user_id` -> `profiles(id)` on delete cascade, `name` (not null), `contact_name`, `contact_email`, `status`
+  (`researching | preparing | contacted | responded | follow_up | opportunity`, default `researching`), `notes`,
+  `draft_email`, `fit_reasoning`, `created_at`, `updated_at`, `last_reminded_at`; index `(user_id, status)`. The draft
+  is a column on the target's own row (one draft per target), so deleting a target deletes its draft. RLS: four
+  policies, all `user_id = auth.uid() or is_parent_of(user_id)`; no admin read policy (the Analytics tab only gets
+  counts, from migration 073's `admin_analytics_counts()`). `api/target-followup-reminders.js`
+  (daily cron) pushes a reminder for a target whose `updated_at` is older than `TARGET_REMINDER_DAYS` (default 7)
+  and stamps `last_reminded_at`.
+- **`TARGET_LIMITS` and migration 165 are a pair.** `TARGET_LIMITS = { name: 120, contact_name: 120, contact_email:
+  200, notes: 2000, fit_reasoning: 2000, draft_email: 10000 }` (above `ProfileEditor`) is what the form enforces;
+  migration 165 repeats each cap as a NOT VALID check `outreach_targets_<column>_len` (new and changed rows only),
+  adds `outreach_targets_name_not_blank`, and a `BEFORE UPDATE` trigger `outreach_targets_touch_updated_at` that
+  moves `updated_at` only when something other than `updated_at`/`last_reminded_at` changed, so the reminder's own
+  stamp does not reset Home's follow-up count. `tests/test_migration_165.cjs` diffs every cap against
+  `TARGET_LIMITS`: change a cap in both, through a new migration. **165 is NOT YET APPLIED (2026-11-06)** and
+  `supabase-schema.sql` says so; its header has the pre-run check, the post-run check and the rollback SQL. The app
+  does not depend on it. Until it runs, the caps exist only in the client (a direct REST call can store more), and
+  `updated_at` is whatever the writer sends (the app sends the current time on every update).
+- **Rules** (pure, above `ProfileEditor`; `tests/test_outreach_targets.cjs` runs them, and the real handlers, from
+  the source): `targetFieldErrors(draft)` returns `{ field: i18nKey }` (name required, any field over its cap, a
+  filled contact email that is not name@domain.tld), shown under the field with `aria-invalid`/`aria-describedby` in
+  `C.limeText`; `targetHasDraft(row)`; `targetDeleteCopy(row, t)` (armed word, draft warning, screen-reader label);
+  `targetDeleteTap(armedId, armedAt, id, tappedAt)` returns `arm`, `wait` or `delete`; `TARGET_DELETE_ARM_MS = 6000`,
+  `TARGET_DELETE_DOUBLE_TAP_MS = 500`.
+- **Save rules.** Add: `addingRef` stops a double tap inserting twice; the form closes only once the insert succeeds.
+  Edit (tap the name): the form stays open, with what was typed, until the update succeeds (`saveEdit`).
+  `updateTarget` changes the screen first; if the write is refused it rolls back only the fields it wrote and
+  returns false. Failure lines are `role=alert` and sit outside the Add form, so they show with it closed.
+  `TargetTextArea` (fit reasoning, notes, draft email) saves on blur; the draft also has a **Save draft** button and
+  a status line (Unsaved changes / Saving… / Saved / Not saved, try again), stops at its cap (`maxLength`), shows a
+  counter from 90% of it and a "To: <contact_email>" hint. A box that closes while its save is still on the way
+  (chevron, another row, the section) hands the text that is not stored to `TARGET_UNSAVED_TEXT`, a module-level Map
+  (it survives a tab switch, not a reload): the card, and the closed section's `note`, name the target, and the box
+  reopens with that text and "Not saved, try again".
+- **Delete rules: two taps.** Tap 1 arms the row: the X becomes "Delete?", the status select and chevron step aside
+  (`display:none`, so the button keeps keyboard focus), and when the target holds a draft a visible `role=alert` line
+  says "Delete this and its draft email? Tap again to confirm." Tap 2 on the same row, at least 500 ms later (by the
+  click's own `timeStamp`), deletes: `tapDelete` is `removeTarget`'s only caller. The row disarms after 6 s or when
+  another row is armed. The row leaves the list at once; a refused delete puts it back in its place with "Couldn't
+  delete this. It's still on your list. Try again."
+- **Preview tool `tools/preview-targets.cjs`** (`node tools/preview-targets.cjs <port>`, then
+  `/golsz-app.html?page=plan`): the Plan page signed in as a stand-in athlete on plan `pro`, with Supabase replaced
+  by a store held in the server process (rows survive a reload, not a restart). The file on disk is never written
+  and nothing reaches the real project (`tests/test_preview_targets.cjs` pins both). Fixture rows (`reset=seed`, also
+  the start): Northfield College Soccer (Coach Rivera, rivera@example.edu, Contacted, holds a draft), Lakeside FC
+  (Researching, fit reasoning), Metro United Academy (Dana Lopez, Follow up). Options: `reset=1` (empty list),
+  `fail=select|insert|update|delete` (that call answers HTTP 500), `open=schools`, `theme=`, `lang=`, and `drive=`,
+  which acts like a person: `add`, `adddouble`, `editbad`, `editgood`, `expand`, `draft`, `bigdraft`, `draftclose`,
+  `draftreopen`, `draftsection`, `arm`, `armplain`, `armother`, `armwait`, `delete`, `deletedouble`, `look` (a plain
+  reload); the tool's header says what each does. When a drive is done the page title ends `[drive done; rows:
+  <name> <<email>> {<armed word>} | ...; draft: "<text>" (<status>); alerts: ...]`, the server prints `page <query>`
+  and then each write as `outreach_targets <op> id=<id> fields=<names>`, and `GET /__store` returns the rows. **Use
+  one server per width and theme for a flow that changes the store:** the browser tool loads every page at every
+  `--widths` value, so with two widths each drive runs twice against one store:
+  `"$AVA_BROWSER" --serve "node tools/preview-targets.cjs 8766 > node_modules/.cache/run.log 2>&1" --port 8766
+  --widths 390 "/golsz-app.html?page=plan&theme=dark&reset=seed&drive=add" "/golsz-app.html?page=plan&theme=dark&drive=editgood" ...`
+- **Recorded runs.** 2026-11-06 (job 184 t7), 390 and 1280 px, dark and light, one server each, 8 page loads in
+  order: add, editgood, look, draft, expand, arm, delete, look. In all four the added row and its edited email came
+  back after a reload, the saved draft came back in its box after a reload, the first tap showed "Delete?" and the
+  draft warning and wrote nothing, the second tap deleted that row only, and it stayed gone after a reload. No
+  sideways scroll at 390 px, no console errors. Earlier runs with the same tool (t4-t6, same day) covered the field
+  errors (`editbad`), `fail=update` (edit and draft), `fail=delete`, `adddouble`, `bigdraft`, a box closing mid-save
+  (`draftclose`, `draftreopen`, `draftsection`), `armother`, `armwait` and `deletedouble`; AI_HANDOFF.md of that day
+  (git history) has their details. t7 also ran, at both widths and themes, `fail=select` (no rows, "Couldn't load
+  this. Check your connection and try again." with Retry) and `fail=insert&drive=add` (nothing added, the form stays
+  open with the typed name, "Couldn't add that. Try again.").
+- **UNVERIFIED:** the real database: RLS, the PostgREST answers, and migration 165's caps and trigger (not applied;
+  the preview's store knows none of them); a real phone; a screen reader reading the warning and status lines; any
+  run in fr/es/el (the keys exist in all four languages, the suite checks that); Scout's `saveDraftedEmail` in a
+  browser. Known and older than job 184: the row's expand chevron has no `aria-label` or `aria-expanded`; in the
+  light theme the shared `LoadError` (every failed read in the app) draws its message in `--warn-text` and Retry in
+  `--lime`, both #B58A1A, measured 3.17:1 on the card (under 4.5:1; `--lime-text` clears it). By design, text kept
+  in `TARGET_UNSAVED_TEXT` is lost on a reload.
+
 ### `PostsGrid` — Instagram-style posts grid on the Passport
 
 - Same `viewUserId` convention as `Highlights` right above it in `golsz-app.html` (`null` = own profile) —
@@ -1315,6 +1401,9 @@ Feed/Discover/Passport's Message buttons no longer gate on `following`/`followed
 you add another place that surfaces a Message button, it doesn't need any follow-status check either.
 
 **Not yet built / known gaps:**
+- **Migration 165 (outreach_targets caps + `updated_at` trigger, AVA job 184) is NOT YET APPLIED (2026-11-06).**
+  Additive, and the app does not depend on it; run it in the SQL Editor once job 184 is on `main` (its header has
+  the pre/post checks and the rollback). See "Target clubs/coaches and outreach drafts".
 - **Migrations 158 and 160 are APPLIED (confirmed 2026-10-22 with `supabase-probe-migration-state.sql`; 159 too).**
   158 (access hardening, 2026-10-09 audit; written as 144, renumbered when main took 144–157) made, with the
   code from the same audit, `public_profile_names` `security_invoker` (it had become a full member

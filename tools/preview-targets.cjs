@@ -36,7 +36,8 @@
 //   (a refused one as   outreach_targets <op> answered HTTP 500 on purpose fields=<names>)
 //   and GET /__store returns the current rows as JSON. A drive marks its progress in the page title
 //   ("[drive 1/2]", then "[drive done]") and holds GET /__hold open until it is done (see the stub). Done,
-//   the title ends "[drive done; rows: <name> {<armed word>} | ...; alerts: <line> | ...]": what the card showed.
+//   the title ends "[drive done; rows: <name> <<email>> {<armed word>} | ...; draft: "<text>" (<status>);
+//   alerts: <line> | ...]": what the card showed (draft: only while a row's panel is open).
 //
 // With AVA's browser tool: "$AVA_BROWSER" --serve "node tools/preview-targets.cjs 8766" --port 8766
 //   "/golsz-app.html?page=plan" "/golsz-app.html?page=plan&fail=select" --widths 390,1280
@@ -219,16 +220,24 @@ function stub(cfg) {
     new Image().src = "/__hold?" + Date.now() + Math.random();
     var baseTitle = null;
     var mark = function (text) { if (baseTitle === null) baseTitle = document.title; document.title = baseTitle + " [" + text + "]"; };
-    // What the card shows, for the title: each row's name (with its delete button's word while armed), then
-    // every alert line, so a recorded run's JSON says what was on screen wherever the capture was scrolled.
+    // What the card shows, for the title: each row's name, the email shown under it as <email> and its delete
+    // button's word while armed as {word}; then the open draft box's text (cut at 60 characters) and status
+    // line; then every alert line, so a recorded run's JSON says what was on screen wherever the capture was
+    // scrolled, and a reload shows whether an edited email or a saved draft came back.
     var describe = function () {
       var rows = Array.prototype.map.call(document.querySelectorAll("#gz-schools select"), function (sel, n) {
-        var name = sel.parentElement.firstElementChild.firstElementChild.textContent.trim();
+        var info = sel.parentElement.firstElementChild;
+        var name = info.firstElementChild.textContent.trim();
+        // The contact line reads "<contact name> · <email>"; · is that middle dot.
+        var email = /[^\s·]+@[^\s·]+/.exec(info.textContent.slice(name.length));
         var b = deleteButton(n);
-        return armed(b) ? name + " {" + b.textContent.trim() + "}" : name;
+        return name + (email ? " <" + email[0] + ">" : "") + (armed(b) ? " {" + b.textContent.trim() + "}" : "");
       });
+      var box = draftBox(), status = box && box.parentElement.querySelector("[role=status]");
+      var text = box ? (box.value.length > 60 ? box.value.slice(0, 60) + "... (" + box.value.length + " characters)" : box.value) : "";
+      var draft = box ? '; draft: "' + text + '"' + (status && status.textContent ? " (" + status.textContent + ")" : "") : "";
       var alerts = Array.prototype.map.call(document.querySelectorAll("#gz-schools [role=alert]"), function (a) { return a.textContent.trim(); });
-      return "rows: " + (rows.join(" | ") || "none") + (alerts.length ? "; alerts: " + alerts.join(" | ") : "");
+      return "rows: " + (rows.join(" | ") || "none") + draft + (alerts.length ? "; alerts: " + alerts.join(" | ") : "");
     };
     var stepNo = 0;
     var timer = setInterval(function () {
