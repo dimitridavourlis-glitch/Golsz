@@ -53,7 +53,9 @@ publish.** Full detail: CLAUDE.md § What this is; README.md.
 ## Important directories
 - `api/`: 12 Vercel functions, Vercel's ceiling (adding one means removing one). `_`-prefixed
   files are shared modules, not functions.
-- `tests/`: `test_*.cjs`, `run-all.cjs`, `README.md`. `tools/`: the three build scripts.
+- `tests/`: `test_*.cjs`, `run-all.cjs`, `README.md`. `tools/`: the build scripts (`precompile`, `split-i18n`,
+  `strip-jsx`, `unpublish-internal`) and local preview and timing tools (`preview-public-passport`,
+  `preview-targets`, `time-first-screen`, `time-pages`).
   `js/`: `main.js`, `landing.js`, `app.js` (generated); `js/i18n/` is gitignored build output.
 - `golsz-guard/`: Claude Code plugin, four skills of project rules. Other agents: read
   `golsz-guard/skills/*/SKILL.md` before Supabase writes, measurements, athlete-facing claims.
@@ -133,6 +135,12 @@ node tests/test_<name>.cjs     # one suite
   loader in `tests/test_read_failures_shown.cjs`.
 - Form errors come from pure helpers, `signupFieldErrors` and `profileFieldErrors` (golsz-app.html), shown under the field.
 - Crash proof: `tools/preview-public-passport.cjs` `&fixture=crash` (+ `&reload=1`); run 2026-11-03 passed (CLAUDE.md).
+- Targets (Plan > "Schools & clubs", table `outreach_targets`): the caps in `TARGET_LIMITS` (golsz-app.html) are
+  repeated by migration 165's check constraints, and `tests/test_migration_165.cjs` diffs them: change both, through a
+  new migration. 165 is NOT YET APPLIED, so today the caps are client-side only. Deleting a target takes two taps and
+  warns when its draft email goes too. Browser runs: `tools/preview-targets.cjs` (stand-in store, seeded rows,
+  `drive=`/`fail=`/`reset=`), one server per width and theme; run 2026-11-06 passed. Rules, fixtures, what is
+  UNVERIFIED: CLAUDE.md § Target clubs/coaches and outreach drafts.
 - The 18+ threshold lives in four places that must not drift (CLAUDE.md § Current state).
 - Full detail: CLAUDE.md § Architecture; README.md § Things that will bite you.
 
@@ -163,6 +171,8 @@ node tests/test_<name>.cjs     # one suite
 Live detail: AI_HANDOFF.md, rewritten by whichever agent worked last. Standing items, as of 2026-10-28:
 - Migrations: everything through 164 is applied EXCEPT 162 (admin MFA enforcement), which must not run
   until the owner has enrolled an authenticator (OWNER-RUNBOOK.md section 8). supabase-schema.sql marks it.
+  165 (outreach_targets caps + `updated_at` trigger, AVA job 184, 2026-11-06) is NOT YET APPLIED: additive, the
+  app does not depend on it, run it once job 184 is on `main`.
 - Payments live, but no real purchase yet: the Stripe webhook signing secret is unverified. Do not
   call payments working (CLAUDE.md § Current state).
 - Legal review: LEGAL-REVIEW-BRIEF.md (under-18 managed profiles are off; the live questions are French

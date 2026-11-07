@@ -5,124 +5,73 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Claude Code (AVA job 144, task t9), 2026-11-03. Before that: Claude Code, 2026-10-28.
+Claude Code (AVA job 184, task t7, attempt 4), 2026-11-06. Before that: Claude Code (job 184 t1-t6, t7 attempts 1-3).
 
 ## Current Branch
-`main`. `scout-day-awareness` (af28c32) was fast-forwarded into `main` on 2026-10-28 at the owner's
-request and is live: golsz.com `/api/geo` reported `af28c32f5154` 64 s after the push; check.yml green on
-22.x and 24.x. (`landing-glow-path` before it: merged 2026-10-27.)
+`ava/184-an-athlete-can-track-target-clubs-or-coa` (AVA job 184, Targets; AVA commits each step, then merges).
+`main` last moved 2026-10-28: `scout-day-awareness` (af28c32) fast-forwarded and live.
 
 ## Last Completed Work
-- AVA job 168 t6 (2026-11-04): documented the first-screen speed budget (CLAUDE.md "First-screen speed", AGENTS.md,
-  this file) and added CHANGELOG.md. Budgets: home LCP 3000 ms, boot 2500 ms, first screen 5000 ms; run
-  `tools/time-first-screen.cjs` (header has the command). Before -> after (150 ms / 1.6 Mbps, 390 px): boot 755 ->
-  477-827 ms; mounted 3717-3749 -> 2548-2916 ms; app LCP ~3.85 s -> 3.03 s; home LCP 648-760 -> 804-1692 ms
-  (noisy machine; only change was `defer` on js/main.js). UNVERIFIED: a real phone on real cellular; a signed-in
-  Home with live data; CDN latency from the production edge.
-- AVA job 168 t3 (2026-11-04): visible "Loading…" line (`#boot .m`) under the boot bar. BOOT_COPY/bootCopy() moved
-  into a small inline script right after #boot (before the inert JSX block) so the saved language is set before
-  first paint; bootFailed() reuses it. tools/time-first-screen.cjs gained `--lang=<code>` and reports what the
-  painted boot screen showed. Recorded run (AVA browser, 150 ms / 1.6 Mbps, 390 + 1280 px): dark en "Loading…"
-  rgb(139,150,168), light en rgb(90,107,98), dark/light fr "Chargement…"; all 8: bootOverflow=0, bootGone=1 after
-  Auth mounted, no console errors. Not captured: a screenshot OF the boot screen (the tool shoots after mount).
-- AVA job 168 t4 (2026-11-04): home page budget. FINDING: index.html never shows the region hero photo (no
-  `data-hero-region`; only the CSS/JS for about.html-style heroes mention assets/hero-*.jpg), so the JPEGs are not
-  its LCP and were left alone (267-278 KB, unused on the home page). Only change: `defer` on js/main.js in
-  index.html (safe: its init waits for DOMContentLoaded, order after landing.js kept). Same tool, 150 ms / 1.6 Mbps,
-  cold, BEFORE the change (this machine, noisy: 648-760 in the t1 run) fcp=lcp 1596 / 1360 at 390 px; AFTER 1692 at
-  390 px, 804 at 1280 px; budget LCP <= 3000, FCP <= 2000: inside. tools/time-pages.cjs: all six pages ok.
-  No console errors, no overflow at 390/1280. Not run: real phone CPU, a hero-weight test (no image changed).
-- AVA job 168 t2 (2026-11-04): app libraries `defer`red, `js/app.js` preloaded, loader gated on DOMContentLoaded
-  (`tests/test_boot_nonblocking.cjs`). AFTER figures (same tool, 150 ms / 1.6 Mbps, 390 px, signed out, one run;
-  baseline in brackets): dark boot 827 [755], mounted 2916 [3717-3749], lcp 3028 [3840-3888]; light boot 477,
-  mounted 2548. No console errors. `--fail-app` shows "Something stopped GOLSZ loading." + Reload; shared Passport
-  `fixture=a` at 390 px renders. Not run: 1280 px, real phone CPU.
-- AVA job 168 t1 (2026-11-04): `tools/time-first-screen.cjs` serves the repo at 150 ms RTT / 1.6 Mbps and prints
-  `timing page=... fcp lcp boot mounted` per page load (run it with "$AVA_BROWSER" --serve, see its header).
-  BEFORE figures (ms, 390 / 1280 px, two runs): home page LCP 648-760 / 552-648; app boot visible 755 / 748;
-  app mounted (Auth screen) 3717-3749 / 3697-3727; app LCP ~3.85 s. All inside the budgets (home LCP 3000,
-  boot 2500, mounted 5000) in this simulation: no real phone CPU, no Google Fonts. supabase-js keeps no
-  integrity in the served copy (npm build differs from jsdelivr's); React/ReactDOM keep theirs.
-- Job 144 t6, Scout history / Settings privacy / VerificationRequest load errors. Recorded browser run
-  2026-11-03 (throwaway harness: served in-memory copy mounts the real component, stubbed Supabase fails the
-  chosen tables). 390 and 1280 px, dark and light: Scout restore failure shows LoadError above the greeting,
-  Retry clears it; after a failed restore, opening a chat from History removes the banner and shows THAT chat
-  (reviewer's bug, fixed: newChat/loadConversation now clear restoreFailed); History list failure shows
-  LoadError, not "no past chats"; Settings privacy failure shows LoadError, all 5 privacy toggles disabled
-  (opacity 0.6), Retry re-enables them; VerificationRequest failure shows only LoadError + Retry. No sideways
-  scroll anywhere. New chat after a failed restore was not clicked in the browser (button needs 2+ messages);
-  the suite pins it.
-- Job 144 t9, crash run. `tools/preview-public-passport.cjs` `&fixture=crash` makes PublicPassport throw in an
-  in-memory copy; `&reload=1` presses Reload. Real browser, 390/1280 px, dark and light: "Something went wrong /
-  Reload" screen readable, no blank page; server printed one `log_client_error auth=anon-key` per load and a second
-  after Reload. Pinned in test_preview_public_passport.cjs (disk file unchanged). Not run: the admin Errors tab
-  itself (needs an admin session). Read-failure rule and field-error helpers now documented in CLAUDE.md/AGENTS.md.
-- Job 144 t8, Passport editor field errors (`profileFieldErrors`, golsz-app.html). Recorded browser run
-  2026-11-03 (throwaway harness: a served in-memory copy mounts the real ProfileEditor with stubbed Supabase,
-  presses Save, measures the DOM). 390 and 1280 px, dark and light, 3 cases: (a) empty name, (b) Player with
-  height 1.8, GPA 7, grad year 2099, (c) Coach with no team. All 12: each message directly under its field, not
-  clipped, no sideways scroll; focus on the first invalid field (name / grad year / club), below the sticky
-  Save bar; field has aria-invalid and aria-describedby pointing at the message, which is read when focus lands;
-  editing the field clears only its message. FOUND + FIXED: field messages (editor and sign-up) used C.amber,
-  3.0:1 on the light sheet; now C.limeText (5.8:1 light, 9.4:1 dark), pinned in test_profile_field_errors.cjs.
-  Not run: a real screen reader (VoiceOver); the sign-up form after the colour change (style-only change).
-  Seen in passing (pre-existing, unchanged): a legacy Coach shows "Select..." in the I am a... dropdown,
-  since OCCUPATIONS is ["Player"] only.
-- ADS Phase 6, items 1, 2, 3 and 6 (`api/scout.js`; one-line client change in `golsz-app.html` + `js/app.js`):
-  - `getAthleteState` reads are one `Promise.all` round (they were ten sequential round trips while the
-    header claimed parallel). The sports lookup stays chained after the athletes read; failures are still
-    named per table, in a fixed order.
-  - Scout is told the athlete's day: the app sends `today` (its local `isoDay()`); `resolveAthleteDay()`
-    accepts it only as a real date within one day of UTC, else uses UTC. `dayBuckets()` gives Home's
-    numbers (due today, this week Mon-Sun, late) by Home's rules. New prompt line "TODAY FOR THEM"; the
-    model is told to use only dates in its context. `due_in_days` now counts from that same day.
-  - "Missed" uses the athlete's day and Home's resting rule (resting: only recovery steps can be late).
-  - `responseCacheFingerprint` carries the day and a step digest (no replaying yesterday's reply).
-  - Benchmark lines carry who measured them and the recorded protocol (`benchmarkProvenance()`).
-- Suites: `test_scout_today.cjs`, `test_scout_benchmark_provenance.cjs` (new), plus three extended.
+- AVA job 184, Targets (Plan > "Schools & clubs"), t1-t6: rules in CLAUDE.md § Target clubs/coaches and outreach
+  drafts. t7: this run, docs (CLAUDE.md, AGENTS.md, CHANGELOG.md); the preview's title now shows emails and drafts.
+- t7 recorded run, done four times (attempts 2, 3 and 4 redid it from scratch on fresh servers: identical results).
+  AVA browser + `tools/preview-targets.cjs`, one server per width and theme, 8 page loads in order from `reset=seed`.
+  Titles, the same in all four (N = Northfield College Soccer <rivera@example.edu>, L = Lakeside FC, M = Metro United
+  Academy, MIA = Montreal Impact Academy): 1 add: "MIA | N | L | M"; 2 editgood: "MIA <coach@uni.edu> | N | L | M";
+  3 look (reload): the same; 4 draft: the same + `draft: "Hello Coach Rivera, I would love a trial." (Saved)`; 5 expand
+  (reload, panel open): the same draft; 6 arm: "MIA <coach@uni.edu> {Delete?}" + alert "Delete this and its draft
+  email? Tap again to confirm."; 7 delete: "N | L | M"; 8 look (reload): "N | L | M". Server, each run: insert (1),
+  update name/contact (2), update draft_email (4), delete (7), all one id; 3/5/6/8 wrote nothing.
+
+  | 8 combinations | A: add, edit, reload | B: draft, save, reload, delete (warning + second tap), reload |
+  |---|---|---|
+  | 390 dark | pass: MIA + coach@uni.edu back on reload | pass: draft back on reload; MIA gone on reload, N/L/M kept |
+  | 390 light | pass: MIA + coach@uni.edu back on reload | pass: draft back on reload; MIA gone on reload, N/L/M kept |
+  | 1280 dark | pass: MIA + coach@uni.edu back on reload | pass: draft back on reload; MIA gone on reload, N/L/M kept |
+  | 1280 light | pass: MIA + coach@uni.edu back on reload | pass: draft back on reload; MIA gone on reload, N/L/M kept |
+
+  All 32 loads: no console errors; one request refused by the sandbox proxy (no internet); at 390 px scrollWidth =
+  innerWidth; contrast: dark none, light only the older 3.02:1 (10 px, 390) and 2.75:1 (button, 1280) of t5/t6.
+  Screenshots opened (attempt 4): 390 light arm (warning on one unclipped line), 1280 dark expand (draft back under "To:
+  coach@uni.edu"), 390 dark look after the edit (MIA <coach@uni.edu>), 1280 light last reload (N/L/M only). Both widths
+  and themes, fail=select: no rows, "Couldn't load this. Check your connection…" + Retry (console: the app's own error
+  line), but the summary says "No schools or clubs yet" (shot 1280 dark; Known Problems); fail=insert: nothing added,
+  form open with the typed name, "Couldn't add that. Try again." (shot 390 dark). NOT run in t7: fail=update/delete,
+  double taps, mid-save close (t4-t6 did); fr/es/el; real DB, RLS, migration 165; a real phone; a screen reader.
 
 ## Current Work
-None in progress.
+AVA job 184 (Targets): t1-t7 done on the branch; security review, regression and final verification still to run.
 
 ## Remaining Tasks
-- OWNER (OWNER-RUNBOOK.md): one real Basic purchase; send LEGAL-REVIEW-BRIEF.md to counsel.
-- OWNER: admin MFA, OWNER-RUNBOOK.md section 8: enrol an authenticator in the Admin Panel, test a
-  password-only sign-in, THEN run migration 162 (an agent can run it once the owner confirms).
-- OWNER/dashboard (commercial audit backlog): Vercel Hobby is non-commercial -> Pro (also fixes the monitor,
-  below); Supabase plan/backups/PITR + a restore drill; plan switching in the Stripe portal (config
-  bpc_1UBZUwRtNFWlwsi4HXthKxbz), then drop "email us to switch"; confirm the Payment Link redirect is
-  /golsz-app.html?checkout=success; external uptime probe + email alerts; a real Elite benefit; French
-  marketing pages (Quebec); legal entity name/address, then remove the "not reviewed" banners.
-- Agent-doable: ADS Phase 6 items 4 (new Scout action kinds: reschedule/drop/standalone) and 5 (readers for
-  `athlete_schedule` / `athlete_diary_entries`); Reschedule/Drop from Home; `removed_at` on stages;
-  self-host fonts + the two CDN libraries (CSP change); an admin RPC to list `stripe_pending_plans`.
+- Migration 165 is NOT YET APPLIED: once job 184 merges, run it in the SQL Editor (checks + rollback in its header).
+- OWNER: one real Basic purchase; send LEGAL-REVIEW-BRIEF.md to counsel; admin MFA (OWNER-RUNBOOK.md section 8:
+  enrol, test a password-only sign-in, THEN migration 162, which an agent can run once the owner confirms).
+- OWNER/dashboard: Vercel Hobby -> Pro (also fixes the monitor); Supabase backups/PITR + a restore drill; Stripe portal
+  plan switching (bpc_1UBZUwRtNFWlwsi4HXthKxbz), then drop "email us to switch"; Payment Link redirect
+  /golsz-app.html?checkout=success; uptime probe; a real Elite benefit; French marketing pages; legal entity details.
+- Agent-doable: ADS Phase 6 items 4-5; Reschedule/Drop from Home; `removed_at` on stages; self-host fonts + the CDN
+  libraries (CSP); an admin RPC for `stripe_pending_plans`; "Draft with Scout" on a target; Targets summary (below).
 
 ## Important Architecture Decisions
 - A push to `main` is a production deploy; the Vercel buildCommand (`npm run check` first) is the gate.
-- JSX is compiled at author time into committed `js/app.js` (`npm run compile`); split/strip/unpublish run
-  only on Vercel.
+- JSX is compiled at author time into committed `js/app.js` (`npm run compile`); split/strip/unpublish run on Vercel.
 - Migrations are numbered files run by hand; supabase-schema.sql records live state (`NOT YET APPLIED`).
-- 12-function Vercel ceiling: shared code goes in `_`-prefixed modules in `api/`.
-- Adults only (18+); managed profiles for under-18s are switched off.
-- Scout never writes a date: it sends `due_in_days`; the server resolves it from the athlete's day.
+- 12-function Vercel ceiling (`_`-prefixed `api/` files are shared modules). Adults only. Scout sends `due_in_days`.
 
 ## Latest Test / Build Status
-2026-11-03 (Claude Code, job 144 t8): `npm run check` 129/129 suites (6026 assertions).
-Earlier, 2026-10-28: NOT verified, a live Scout reply for a signed-in athlete. Ask Scout "what should I do
-today?" and compare with Home's Today tile and THIS WEEK count.
+2026-11-06 (job 184 t7 attempt 4): browser run above; via "$AVA_RUN", `node tests/run-all.cjs <name>`: outreach
+270/270, preview_targets 49/49, migration_165 47/47. Full `npm run check` left to AVA. 2026-11-03: 129/129 suites.
 
 ## Known Problems
-- health-alert is NOT every 15 minutes: 60 runs (10-18..10-28) were 2.1-7.5 h apart, median 4.2 h, all
-  green. Outages can go unseen for hours; a >6 h gap can raise a false "monitor dead" heartbeat push.
-- Payments live but no real purchase yet; webhook signing secret unverified.
-- Admin MFA: owner not enrolled; the Admin Panel shows the enrol screen; migration 162 must NOT run yet.
+- health-alert runs every 2.1-7.5 h, not 15 min: outages can go unseen for hours; a >6 h gap fakes "monitor dead".
+- Payments live but no real purchase yet; webhook signing secret unverified. Admin MFA: owner not enrolled.
 - Signup has NO bot protection (Supabase CAPTCHA off, `TURNSTILE_SITE_KEY` empty; enable both together).
-- `api/*.js` source is readable as static files on golsz.com (deliberate; the repo is public anyway).
-- The redesigned hero was checked by contrast maths only; nobody has run VoiceOver over it.
+- Not verified: a live Scout reply for a signed-in athlete (vs Home's Today tile); VoiceOver on the redesigned hero.
+- Older than job 184, Targets: the summary line says "No schools or clubs yet" on a failed read (and while loading);
+  the row chevron lacks aria-label/aria-expanded; light LoadError text + Retry (#B58A1A) are 3.17:1, under 4.5:1.
 
 ## Next Recommended Action
-Owner: signed in, ask Scout "what should I do today?" and compare with Home's Today tile and THIS WEEK
-count (the one check no suite can make). Agents: ADS Phase 6 items 4-5 next.
+AVA job 184: security review, regression, final verification; then migration 165. Agents: ADS Phase 6 items 4-5.
 
 ---
 _How to update: overwrite the sections above (do not append a log); put the agent name

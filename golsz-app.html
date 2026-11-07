@@ -43,7 +43,7 @@
 <!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
      fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
      with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
-<link rel="preload" as="script" href="js/app.js?v=5ebac64aa5fe9781" />
+<link rel="preload" as="script" href="js/app.js?v=0a2f59de1e1272b3" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -480,8 +480,7 @@ const I18N = {
     home_scout_ask_ph: "Ask Scout anything…",
     plan_crumb_goal: "From Home · your goal", nav_targets: "Pathway/Plan", nav_plan: "Plan", plan_page_title: "MY PATHWAY", targets_title: "SCHOOLS & CLUBS", targets_edit_hint: "Tap to edit", targets_name_ph: "School or club name", targets_contact_name_ph: "Contact name", targets_contact_email_ph: "Contact email",
     targets_locked_teaser: "Upgrade to build your visual Pathway, set targets and track outreach — GOLSZ Scout will help you build the first list.",
-    targets_add: "Add", targets_add_err: "Couldn't add that. Try again.", targets_empty: "No targets yet — add the first school or club you're pursuing.",
-    targets_delete_confirm: "Delete?", targets_delete_confirm_aria: "Tap again to delete {name} and its drafted email",
+    targets_add: "Add", targets_add_err: "Couldn't add that. Try again.", targets_save_err: "Couldn't save that. Your text is still here. Try again.", targets_empty: "No targets yet — add the first school or club you're pursuing.",
     targets_notes_ph: "Notes", targets_draft_ph: "Draft outreach email",
     targets_status_researching: "Researching", targets_status_preparing: "Preparing", targets_status_contacted: "Contacted", targets_status_responded: "Responded", targets_status_follow_up: "Follow up", targets_status_opportunity: "Opportunity", targets_fit_reasoning_ph: "Why this is a good fit (optional)",
     plan_starter_feat1: "8 AI Scout questions/day — no lifetime limit", plan_starter_feat2: "Everything in Free", plan_starter_feat3: "Personalized Pathway & benchmark tracking", plan_starter_feat4: "Target lists with outreach tracking & follow-up reminders, plus PDF Passport export",
@@ -632,6 +631,8 @@ const I18N = {
     editor_bio_label: "SCOUTING BIO", editor_bio_ph: "A few sentences a coach or scout should know.",
     editor_height_range: "Height must be between 100 and 250 cm.", editor_weight_range: "Weight must be between 30 and 250 kg.", editor_gpa_range: "GPA must be between 0 and 5.", editor_grad_year_range: "Graduation year must be between 1950 and 8 years from now.",
     editor_save: "Save profile", editor_saving: "Saving…", editor_name_required: "Name can't be empty.",
+    target_err_name_required: "Add a name for this target.", target_err_too_long: "This is too long.", target_err_email_invalid: "Enter an email like name@club.com, or leave it blank.", target_delete_armed: "Delete?", target_delete_armed_draft: "Delete this and its draft email? Tap again to confirm.", target_delete_aria: "Delete {name}. Tap again to confirm.", target_delete_aria_draft: "Delete {name} and its saved draft email. Tap again to confirm.", target_delete_err: "Couldn't delete this. It's still on your list. Try again.",
+    target_draft_save: "Save draft", target_status_unsaved: "Unsaved changes", target_status_saving: "Saving…", target_status_saved: "Saved", target_status_failed: "Not saved, try again", target_draft_to: "To: {email}", target_counter: "{n} / {max}", target_unsaved: "Your changes to {name} weren't saved. Open it and try again.",
     editor_sport_required: "Pick a sport to continue.", editor_locked_notice: "Finish your profile to unlock the rest of GOLSZ.",
     editor_team_required: "Tell us which team you're with.", editor_license_label: "LICENSE(S)", editor_license_ph: "e.g. UEFA A License",
     editor_looking_label: "LOOKING FOR PLAYERS",
@@ -859,8 +860,7 @@ const I18N = {
     home_scout_ask_ph: "Demandez n'importe quoi à Scout…",
     plan_crumb_goal: "Depuis l'Accueil · votre objectif", nav_targets: "Parcours/Plan", nav_plan: "Plan", plan_page_title: "MON PARCOURS", targets_title: "ÉCOLES & CLUBS", targets_edit_hint: "Toucher pour modifier", targets_name_ph: "Nom de l'école ou du club", targets_contact_name_ph: "Nom du contact", targets_contact_email_ph: "Email du contact",
     targets_locked_teaser: "Passez à un forfait supérieur pour construire votre Parcours visuel, définir des cibles et suivre vos démarches — GOLSZ Scout vous aide à créer la première liste.",
-    targets_add: "Ajouter", targets_add_err: "Impossible d'ajouter. Réessayez.", targets_empty: "Aucune cible pour l'instant — ajoutez la première école ou le premier club visé.",
-    targets_delete_confirm: "Supprimer ?", targets_delete_confirm_aria: "Touchez à nouveau pour supprimer {name} et son e-mail préparé",
+    targets_add: "Ajouter", targets_add_err: "Impossible d'ajouter. Réessayez.", targets_save_err: "Impossible d'enregistrer. Votre texte est toujours là. Réessayez.", targets_empty: "Aucune cible pour l'instant — ajoutez la première école ou le premier club visé.",
     targets_notes_ph: "Notes", targets_draft_ph: "Brouillon d'email de contact",
     targets_status_researching: "Recherche", targets_status_preparing: "Préparation", targets_status_contacted: "Contacté", targets_status_responded: "Répondu", targets_status_follow_up: "Relance", targets_status_opportunity: "Opportunité", targets_fit_reasoning_ph: "Pourquoi c'est un bon choix (facultatif)",
     plan_starter_feat1: "8 questions/jour avec Scout — sans limite à vie", plan_starter_feat2: "Tout ce qui est dans Free", plan_starter_feat3: "Parcours personnalisé & suivi des repères", plan_starter_feat4: "Listes de cibles avec suivi des prises de contact & rappels de relance, plus export PDF du Passeport",
@@ -1011,6 +1011,8 @@ const I18N = {
     editor_bio_label: "BIO DE RECRUTEMENT", editor_bio_ph: "Quelques phrases qu'un entraîneur ou recruteur devrait connaître.",
     editor_height_range: "La taille doit être comprise entre 100 et 250 cm.", editor_weight_range: "Le poids doit être compris entre 30 et 250 kg.", editor_gpa_range: "La moyenne (GPA) doit être comprise entre 0 et 5.", editor_grad_year_range: "L'année de diplôme doit être comprise entre 1950 et dans 8 ans.",
     editor_save: "Enregistrer le profil", editor_saving: "Enregistrement…", editor_name_required: "Le nom ne peut pas être vide.",
+    target_err_name_required: "Ajoutez un nom pour cette cible.", target_err_too_long: "Ce texte est trop long.", target_err_email_invalid: "Saisissez un e-mail du type nom@club.com, ou laissez vide.", target_delete_armed: "Supprimer ?", target_delete_armed_draft: "Supprimer cette cible et son brouillon d’e-mail ? Touchez encore pour confirmer.", target_delete_aria: "Supprimer {name}. Touchez encore pour confirmer.", target_delete_aria_draft: "Supprimer {name} et son brouillon d’e-mail enregistré. Touchez encore pour confirmer.", target_delete_err: "Impossible de supprimer. La cible est toujours dans votre liste. Réessayez.",
+    target_draft_save: "Enregistrer le brouillon", target_status_unsaved: "Modifications non enregistrées", target_status_saving: "Enregistrement…", target_status_saved: "Enregistré", target_status_failed: "Non enregistré, réessaie", target_draft_to: "À : {email}", target_counter: "{n} / {max}", target_unsaved: "Vos modifications pour {name} n'ont pas été enregistrées. Ouvrez-la et réessayez.",
     editor_sport_required: "Choisissez un sport pour continuer.", editor_locked_notice: "Terminez votre profil pour débloquer le reste de GOLSZ.",
     editor_team_required: "Indiquez avec quelle équipe vous êtes.", editor_license_label: "LICENCE(S)", editor_license_ph: "ex. Licence UEFA A",
     editor_looking_label: "RECHERCHE DE JOUEURS",
@@ -1238,8 +1240,7 @@ const I18N = {
     home_scout_ask_ph: "Pregúntale lo que sea a Scout…",
     plan_crumb_goal: "Desde Inicio · tu objetivo", nav_targets: "Trayectoria/Plan", nav_plan: "Plan", plan_page_title: "MI TRAYECTORIA", targets_title: "ESCUELAS Y CLUBES", targets_edit_hint: "Toca para editar", targets_name_ph: "Nombre de la escuela o club", targets_contact_name_ph: "Nombre del contacto", targets_contact_email_ph: "Email del contacto",
     targets_locked_teaser: "Mejora tu plan para construir tu Camino visual, definir objetivos y hacer seguimiento — GOLSZ Scout te ayuda a crear la primera lista.",
-    targets_add: "Añadir", targets_add_err: "No se pudo añadir. Inténtalo de nuevo.", targets_empty: "Aún no hay objetivos — añade la primera escuela o club que te interese.",
-    targets_delete_confirm: "¿Eliminar?", targets_delete_confirm_aria: "Toca de nuevo para eliminar {name} y su correo redactado",
+    targets_add: "Añadir", targets_add_err: "No se pudo añadir. Inténtalo de nuevo.", targets_save_err: "No se pudo guardar. Tu texto sigue aquí. Inténtalo de nuevo.", targets_empty: "Aún no hay objetivos — añade la primera escuela o club que te interese.",
     targets_notes_ph: "Notas", targets_draft_ph: "Borrador de email de contacto",
     targets_status_researching: "Investigando", targets_status_preparing: "Preparando", targets_status_contacted: "Contactado", targets_status_responded: "Respondido", targets_status_follow_up: "Seguimiento", targets_status_opportunity: "Oportunidad", targets_fit_reasoning_ph: "Por qué encaja bien (opcional)",
     plan_starter_feat1: "8 preguntas/día con Scout — sin límite de por vida", plan_starter_feat2: "Todo lo de Free", plan_starter_feat3: "Camino personalizado y seguimiento de marcas", plan_starter_feat4: "Listas de objetivos con seguimiento de contactos y recordatorios, más exportación PDF del Pasaporte",
@@ -1390,6 +1391,8 @@ const I18N = {
     editor_bio_label: "BIOGRAFÍA DEPORTIVA", editor_bio_ph: "Unas frases que un entrenador u ojeador debería saber.",
     editor_height_range: "La estatura debe estar entre 100 y 250 cm.", editor_weight_range: "El peso debe estar entre 30 y 250 kg.", editor_gpa_range: "El promedio (GPA) debe estar entre 0 y 5.", editor_grad_year_range: "El año de graduación debe estar entre 1950 y dentro de 8 años.",
     editor_save: "Guardar perfil", editor_saving: "Guardando…", editor_name_required: "El nombre no puede estar vacío.",
+    target_err_name_required: "Añade un nombre para este objetivo.", target_err_too_long: "Este texto es demasiado largo.", target_err_email_invalid: "Introduce un correo como nombre@club.com, o déjalo vacío.", target_delete_armed: "¿Eliminar?", target_delete_armed_draft: "¿Eliminar este objetivo y su borrador de correo? Toca de nuevo para confirmar.", target_delete_aria: "Eliminar {name}. Toca de nuevo para confirmar.", target_delete_aria_draft: "Eliminar {name} y su borrador de correo guardado. Toca de nuevo para confirmar.", target_delete_err: "No se pudo eliminar. Sigue en tu lista. Inténtalo de nuevo.",
+    target_draft_save: "Guardar borrador", target_status_unsaved: "Cambios sin guardar", target_status_saving: "Guardando…", target_status_saved: "Guardado", target_status_failed: "No se guardó, inténtalo de nuevo", target_draft_to: "Para: {email}", target_counter: "{n} / {max}", target_unsaved: "Tus cambios en {name} no se guardaron. Ábrelo y vuelve a intentarlo.",
     editor_sport_required: "Elige un deporte para continuar.", editor_locked_notice: "Termina tu perfil para desbloquear el resto de GOLSZ.",
     editor_team_required: "Indica con qué equipo estás.", editor_license_label: "LICENCIA(S)", editor_license_ph: "ej. Licencia UEFA A",
     editor_looking_label: "BUSCANDO JUGADORES",
@@ -1617,8 +1620,7 @@ const I18N = {
     home_scout_ask_ph: "Ρώτησε οτιδήποτε τον Scout…",
     plan_crumb_goal: "Από την Αρχική · ο στόχος σου", nav_targets: "Πορεία/Πλάνο", nav_plan: "Πλάνο", plan_page_title: "ΤΟ ΜΟΝΟΠΑΤΙ ΜΟΥ", targets_title: "ΣΧΟΛΕΣ & ΣΥΛΛΟΓΟΙ", targets_edit_hint: "Πάτα για επεξεργασία", targets_name_ph: "Όνομα σχολής ή συλλόγου", targets_contact_name_ph: "Όνομα επαφής", targets_contact_email_ph: "Email επαφής",
     targets_locked_teaser: "Αναβάθμισε για να χτίσεις το οπτικό σου Μονοπάτι, να ορίσεις στόχους και να παρακολουθείς την προσέγγισή σου — ο GOLSZ Scout θα σε βοηθήσει να φτιάξεις την πρώτη λίστα.",
-    targets_add: "Προσθήκη", targets_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", targets_empty: "Δεν υπάρχουν στόχοι ακόμα — πρόσθεσε την πρώτη σχολή ή σύλλογο που σε ενδιαφέρει.",
-    targets_delete_confirm: "Διαγραφή;", targets_delete_confirm_aria: "Πάτησε ξανά για να διαγράψεις το {name} και το προσχέδιο email του",
+    targets_add: "Προσθήκη", targets_add_err: "Δεν προστέθηκε. Δοκιμάστε ξανά.", targets_save_err: "Δεν αποθηκεύτηκε. Το κείμενό σας είναι ακόμα εδώ. Δοκιμάστε ξανά.", targets_empty: "Δεν υπάρχουν στόχοι ακόμα — πρόσθεσε την πρώτη σχολή ή σύλλογο που σε ενδιαφέρει.",
     targets_notes_ph: "Σημειώσεις", targets_draft_ph: "Πρόχειρο email επικοινωνίας",
     targets_status_researching: "Έρευνα", targets_status_preparing: "Προετοιμασία", targets_status_contacted: "Επικοινώνησα", targets_status_responded: "Απάντησαν", targets_status_follow_up: "Παρακολούθηση", targets_status_opportunity: "Ευκαιρία", targets_fit_reasoning_ph: "Γιατί ταιριάζει καλά (προαιρετικό)",
     plan_starter_feat1: "8 ερωτήσεις/ημέρα στον Scout — χωρίς όριο εφ' όρου ζωής", plan_starter_feat2: "Όλα όσα περιλαμβάνει το Free", plan_starter_feat3: "Προσωπικό Μονοπάτι & παρακολούθηση δεικτών", plan_starter_feat4: "Λίστες στόχων με παρακολούθηση επαφών & υπενθυμίσεις follow-up, συν εξαγωγή PDF Διαβατηρίου",
@@ -1769,6 +1771,8 @@ const I18N = {
     editor_bio_label: "ΒΙΟΓΡΑΦΙΚΟ ΣΚΑΟΥΤΙΝΓΚ", editor_bio_ph: "Λίγες προτάσεις που πρέπει να ξέρει ένας προπονητής ή σκάουτ.",
     editor_height_range: "Το ύψος πρέπει να είναι από 100 έως 250 εκ.", editor_weight_range: "Το βάρος πρέπει να είναι από 30 έως 250 κιλά.", editor_gpa_range: "Ο βαθμός (GPA) πρέπει να είναι από 0 έως 5.", editor_grad_year_range: "Το έτος αποφοίτησης πρέπει να είναι από 1950 έως 8 χρόνια από σήμερα.",
     editor_save: "Αποθήκευση προφίλ", editor_saving: "Αποθήκευση…", editor_name_required: "Το όνομα δεν μπορεί να είναι κενό.",
+    target_err_name_required: "Προσθέστε ένα όνομα για αυτόν τον στόχο.", target_err_too_long: "Το κείμενο είναι πολύ μεγάλο.", target_err_email_invalid: "Εισαγάγετε email όπως name@club.com ή αφήστε το κενό.", target_delete_armed: "Διαγραφή;", target_delete_armed_draft: "Διαγραφή αυτού του στόχου και του πρόχειρου email; Πατήστε ξανά για επιβεβαίωση.", target_delete_aria: "Διαγραφή του {name}. Πατήστε ξανά για επιβεβαίωση.", target_delete_aria_draft: "Διαγραφή του {name} και του αποθηκευμένου πρόχειρου email. Πατήστε ξανά για επιβεβαίωση.", target_delete_err: "Δεν διαγράφηκε. Είναι ακόμα στη λίστα σας. Δοκιμάστε ξανά.",
+    target_draft_save: "Αποθήκευση πρόχειρου", target_status_unsaved: "Μη αποθηκευμένες αλλαγές", target_status_saving: "Αποθήκευση…", target_status_saved: "Αποθηκεύτηκε", target_status_failed: "Δεν αποθηκεύτηκε, δοκίμασε ξανά", target_draft_to: "Προς: {email}", target_counter: "{n} / {max}", target_unsaved: "Οι αλλαγές σας για {name} δεν αποθηκεύτηκαν. Ανοίξτε τον και δοκιμάστε ξανά.",
     editor_sport_required: "Επιλέξτε ένα άθλημα για να συνεχίσετε.", editor_locked_notice: "Ολοκληρώστε το προφίλ σας για να ξεκλειδώσετε το υπόλοιπο GOLSZ.",
     editor_team_required: "Πείτε μας με ποια ομάδα είστε.", editor_license_label: "ΑΔΕΙΑ/ΕΣ", editor_license_ph: "π.χ. Άδεια UEFA A",
     editor_looking_label: "ΑΝΑΖΗΤΗΣΗ ΠΑΙΚΤΩΝ",
@@ -6487,6 +6491,143 @@ function profileFieldErrors(form, isPlayer, now = new Date()) {
     if (outside(form.grad_year, 1950, now.getFullYear() + 8)) errs.grad_year = "editor_grad_year_range";
   }
   return errs;
+}
+
+// Rules for an outreach target (a club or coach the athlete is pursuing).
+// Pure, so the form can refuse before the database and the tests can run them.
+// The database backstop (migration 165) repeats these lengths.
+const TARGET_LIMITS = { name: 120, contact_name: 120, contact_email: 200, notes: 2000, fit_reasoning: 2000, draft_email: 10000 };
+
+// Every reason a target cannot be saved, as { field: i18nKey }. A blank email
+// is fine (optional); a filled one must look like name@domain.tld.
+function targetFieldErrors(draft) {
+  const errs = {};
+  const val = (k) => String((draft && draft[k]) || "");
+  if (!val("name").trim()) errs.name = "target_err_name_required";
+  for (const k of Object.keys(TARGET_LIMITS)) {
+    if (!errs[k] && val(k).trim().length > TARGET_LIMITS[k]) errs[k] = "target_err_too_long";
+  }
+  const email = val("contact_email").trim();
+  if (email && !errs.contact_email && !/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email)) errs.contact_email = "target_err_email_invalid";
+  return errs;
+}
+
+// True only when the target holds a draft email with something in it.
+function targetHasDraft(row) {
+  return !!(row && String(row.draft_email || "").trim());
+}
+
+// Wording for an armed delete (after the first tap): the button's word, the
+// line shown on the row when the target holds a draft (deleting the target
+// deletes the draft too, so that has to be visible, not only in aria), and
+// what a screen reader hears. t is the translator from useLang().
+function targetDeleteCopy(row, t) {
+  const draft = targetHasDraft(row);
+  const name = String((row && row.name) || "");
+  return {
+    label: t("target_delete_armed"),
+    warning: draft ? t("target_delete_armed_draft") : "",
+    aria: t(draft ? "target_delete_aria_draft" : "target_delete_aria").replace("{name}", name),
+  };
+}
+
+// How long an armed delete waits for its second tap: long enough to read the
+// draft warning, short enough that a row does not stay armed while the
+// athlete scrolls on.
+const TARGET_DELETE_ARM_MS = 6000;
+// A tap this soon after the arming one is the same double tap (or one tap
+// the phone reported twice), not a decision, so it deletes nothing.
+const TARGET_DELETE_DOUBLE_TAP_MS = 500;
+
+// What a tap on a target's delete button does: "arm" (no row armed, or a
+// different one), "wait" (the armed row, but within the double-tap window) or
+// "delete" (the armed row, once its warning has been on screen). armedAt and
+// tappedAt are the two taps' event time stamps (milliseconds, one clock).
+function targetDeleteTap(armedId, armedAt, id, tappedAt) {
+  if (!id || armedId !== id) return "arm";
+  return tappedAt - armedAt < TARGET_DELETE_DOUBLE_TAP_MS ? "wait" : "delete";
+}
+
+// The three text boxes in a target's open panel (see TargetTextArea).
+const TARGET_TEXT_FIELDS = ["fit_reasoning", "notes", "draft_email"];
+
+// Text a target's box held when it closed that is not stored, by
+// "<target id>:<field>". At module scope because the Plan page itself
+// unmounts on a tab tap, and text whose save failed on the way out has to be
+// there, and named, when Plan opens again. Memory only: a reload clears it.
+const TARGET_UNSAVED_TEXT = new Map();
+
+// The targets holding text that is not stored in a box that is closed, so the
+// card can name them. kept is a Map like TARGET_UNSAVED_TEXT.
+function targetsWithUnsavedText(items, kept) {
+  return (items || []).filter((it) => it && TARGET_TEXT_FIELDS.some((f) => {
+    const key = it.id + ":" + f;
+    return kept.has(key) && kept.get(key) !== (it[f] || "");
+  }));
+}
+
+// A text box on a target that says whether its text is stored. value is what
+// the page holds as stored; onSave(text) resolves true when saved, false when
+// not; on false the typed text stays in the box and the status asks for
+// another try. explicitSave adds a Save button (the draft email); every box
+// still saves on blur when it changed.
+//
+// THE BOX CAN CLOSE BEFORE ITS SAVE ANSWERS. The tap on the row's chevron,
+// another row or the section header blurs it first, which starts the save,
+// and then removes it. So the page keeps the text of a closed box: once the
+// box is gone and no save is on the way, onKeep(text) hands over whatever is
+// not stored (null when nothing). It comes back as `kept` when the box opens
+// again, and the box takes it over (onKeep(null)).
+function TargetTextArea({ value, kept, limit, label, minHeight, explicitSave, hint, onSave, onKeep, style }) {
+  const { t } = useLang();
+  const stored = value || "";
+  const [text, setText] = useState(kept != null ? kept : stored);
+  const [status, setStatus] = useState(kept != null && kept !== stored ? "failed" : "idle");
+  const savingRef = useRef(false);
+  // Read after the box has gone, when no render updates them any more: from
+  // then on only the save's own answer says what is stored.
+  const closedRef = useRef(false);
+  const storedRef = useRef(stored);
+  const textRef = useRef(text);
+  const onKeepRef = useRef(onKeep);
+  storedRef.current = stored; textRef.current = text; onKeepRef.current = onKeep;
+  function reportIfClosed() {
+    if (closedRef.current && !savingRef.current) onKeepRef.current(textRef.current !== storedRef.current ? textRef.current : null);
+  }
+  useEffect(() => {
+    if (kept != null) onKeepRef.current(null);
+    return () => { closedRef.current = true; reportIfClosed(); };
+  }, []);
+  const dirty = text !== stored;
+  async function save() {
+    if (savingRef.current || text === stored) return;
+    savingRef.current = true; setStatus("saving");
+    const before = storedRef.current;
+    try {
+      const ok = await onSave(text);
+      storedRef.current = ok ? text : before;
+      setStatus(ok ? "saved" : "failed");
+    } finally { savingRef.current = false; reportIfClosed(); }
+  }
+  const shown = status === "saving" || status === "failed" ? status : dirty ? "unsaved" : status;
+  const statusKey = { saving: "target_status_saving", failed: "target_status_failed", unsaved: "target_status_unsaved", saved: "target_status_saved" }[shown];
+  return (
+    <div style={{ marginBottom: 8 }}>
+      {hint && <div style={{ fontSize: 11.5, color: C.slate, marginBottom: 4, overflowWrap: "anywhere" }}>{hint}</div>}
+      <textarea value={text} maxLength={limit} aria-label={label} placeholder={label}
+        onChange={(e) => { setText(e.target.value.slice(0, limit)); if (status !== "saving") setStatus("idle"); }}
+        onBlur={save}
+        style={{ width: "100%", minHeight, resize: "vertical", ...style }} />
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginTop: 4 }}>
+        {explicitSave && (
+          <button onClick={save} disabled={status === "saving" || !dirty}
+            style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "0 14px", minHeight: 44, fontSize: 12, fontWeight: 800, fontFamily: "inherit", cursor: "pointer", opacity: status === "saving" || !dirty ? 0.6 : 1 }}>{t("target_draft_save")}</button>
+        )}
+        <span role="status" style={{ fontSize: 11.5, color: shown === "failed" ? C.limeText : C.slate }}>{statusKey ? t(statusKey) : ""}</span>
+        {text.length >= limit * 0.9 && <span style={{ fontSize: 11.5, color: C.slate, marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{t("target_counter").replace("{n}", text.length).replace("{max}", limit)}</span>}
+      </div>
+    </div>
+  );
 }
 
 // targetId (P0-4) is the athlete whose rows are written — the signed-in
@@ -13321,8 +13462,12 @@ function BackupPlanCard({ athlete, loaded, actingFor, onSaved, quiet }) {
    not decoration here, it is the condition on which this component is allowed
    to exist: "5 on the list, 2 contacted" is a sentence you can read without
    opening anything. Children are passed as elements and only rendered when
-   open, so a closed section also costs no fetch. */
-function Collapsible({ label, summary, children, revealSignal, anchorId }) {
+   open, so a closed section also costs no fetch.
+
+   `note` is for what a closed section must not hide (Schools & clubs: changes
+   that were not saved). It shows only while closed; open, the section's own
+   content says it, and saying it twice is crowding. */
+function Collapsible({ label, summary, note, children, revealSignal, anchorId }) {
   const [open, setOpen] = useState(false);
   // A deep link has to arrive OPEN. Home's Schools tile points at a section
   // that lives inside one of these, and a link landing on a closed row is a
@@ -13346,6 +13491,7 @@ function Collapsible({ label, summary, children, revealSignal, anchorId }) {
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: "block", fontSize: summary ? 9.5 : 12, letterSpacing: "0.14em", fontWeight: 800, color: summary ? C.slate : C.chalk }}>{label}</span>
           {summary ? <span style={{ display: "block", fontSize: 13.5, color: C.chalk, marginTop: 4 }}>{summary}</span> : null}
+          {note && !open ? <span style={{ display: "block", fontSize: 12, color: C.limeText, marginTop: 4, lineHeight: 1.35 }}>{note}</span> : null}
         </span>
         {open ? <ChevronUp size={17} color={C.slate} /> : <ChevronDown size={17} color={C.slate} />}
       </button>
@@ -13362,6 +13508,16 @@ function rosterSummary(t, items) {
   if (!rows.length) return t("home_door_schools_empty");
   const contacted = rows.filter((x) => x && CONTACTED_STATUSES.indexOf(x.status) >= 0).length;
   return t("home_door_schools_counts").replace("{n}", rows.length).replace("{c}", contacted);
+}
+
+// A target's email as one inline block: it moves to its own line whole when
+// that is enough, and only a row narrower than the email (the status select
+// beside it is wide in some languages) breaks it, after the "@" (a <wbr>, which adds
+// nothing to copied text) rather than one letter from its end. overflowWrap on
+// the line is the fallback for a part longer than the row.
+function emailWithBreak(email) {
+  const s = String(email || ""), at = s.indexOf("@");
+  return at < 0 ? s : <span style={{ display: "inline-block" }}>{s.slice(0, at + 1)}<wbr />{s.slice(at + 1)}</span>;
 }
 
 function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened, resting, focusSection, focusNonce, onSectionDone }) {
@@ -13384,14 +13540,31 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
   const [targetsLoadFailed, setTargetsLoadFailed] = useState(false);
   const [targetsReloadKey, setTargetsReloadKey] = useState(0);
   // Which row's delete is armed — the same two-tap pattern as Scout's history:
-  // deleting a target also deletes the coach email drafted on it.
+  // deleting a target also deletes the coach email drafted on it. One row at
+  // a time, so arming another disarms this one. The ref holds when it was
+  // armed and the timer that disarms it (neither changes what is drawn).
   const [armedTarget, setArmedTarget] = useState(null);
+  const armRef = useRef({ at: 0, timer: null });
+  useEffect(() => () => clearTimeout(armRef.current.timer), []);
+  // The row whose delete was refused: it is back on the list, saying so.
+  const [deleteFailedId, setDeleteFailedId] = useState(null);
   const [name, setName] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // Field messages ({ field: i18nKey }) for the Add form and the open edit
+  // form, and the failure text for a save that was refused by the database.
+  const [addErrs, setAddErrs] = useState({});
+  const [tErrs, setTErrs] = useState({});
+  const [editErr, setEditErr] = useState("");
+  // Refs, not state: state only changes on the next render, so a double tap
+  // would start two writes (same reasoning as Scout's sendingRef).
+  const addingRef = useRef(false);
+  const savingEditRef = useRef(false);
   const [expandedId, setExpandedId] = useState(null);
+  // What this page renders of TARGET_UNSAVED_TEXT (that Map outlives the page).
+  const [kept, setKept] = useState(() => new Map(TARGET_UNSAVED_TEXT));
   const [editingTarget, setEditingTarget] = useState(null);
   const [tDraft, setTDraft] = useState({ name: "", contact_name: "", contact_email: "" });
   // Master UX/UI redesign §9 — "+ ADD TARGET rather than exposing a large
@@ -13452,15 +13625,25 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
   function retryTargets() { setTargetsLoadFailed(false); setTargetsReloadKey((k) => k + 1); }
 
   async function addTarget() {
-    if (!sb || !uid || !name.trim() || busy) return;
-    setBusy(true); setErr("");
+    if (!sb || !uid || addingRef.current) return;
+    addingRef.current = true;
+    try {
+      const errs = targetFieldErrors({ name, contact_name: contactName, contact_email: contactEmail });
+      setAddErrs(errs);
+      if (Object.keys(errs).length) return;
+      setBusy(true); setErr("");
+      await insertTarget();
+    } finally { addingRef.current = false; setBusy(false); }
+  }
+
+  async function insertTarget() {
     try {
       const { data, error } = await sb.from("outreach_targets").insert({
         // The managed athlete, not the signed-in parent — otherwise the school
         // lands on the parent's account and the athlete never sees it.
-        user_id: actingFor || uid, name: name.trim().slice(0, 120),
-        contact_name: contactName.trim().slice(0, 120) || null,
-        contact_email: contactEmail.trim().slice(0, 200) || null,
+        user_id: actingFor || uid, name: name.trim().slice(0, TARGET_LIMITS.name),
+        contact_name: contactName.trim().slice(0, TARGET_LIMITS.contact_name) || null,
+        contact_email: contactEmail.trim().slice(0, TARGET_LIMITS.contact_email) || null,
       }).select("id, name, contact_name, contact_email, status, notes, draft_email, fit_reasoning, created_at").single();
       if (error) throw error;
       setItems((prev) => [data, ...prev]);
@@ -13468,7 +13651,7 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
       setShowAddTarget(false);
     } catch (e) {
       setErr(userErrorText(e, t, "targets_add_err"));
-    } finally { setBusy(false); }
+    }
   }
 
   // SNAPSHOT, THEN RESTORE. Both of these updated the screen and then dropped
@@ -13477,20 +13660,92 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
   // saved, and came back to the old text on the next load. That is the shape
   // that loses an athlete's actual outreach: they write to a coach, it does
   // not save, and nothing tells them.
-  async function updateTarget(id, updates) {
-    const before = items;
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...updates } : it)));
+  // Resolves true when the row was saved, false when it was rolled back.
+  // The rollback restores only the fields this write changed: a copy of the
+  // whole list would also undo another box's save that landed meanwhile.
+  async function updateTarget(id, updates, rowError = false) {
+    const row = items.find((it) => it.id === id) || {};
+    const undo = Object.fromEntries(Object.keys(updates).map((k) => [k, row[k]]));
+    const patch = (fields) => setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...fields } : it)));
+    patch(updates);
     const { error } = await sb.from("outreach_targets").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", id).eq("user_id", actingFor || uid);
-    if (error) { console.error("GOLSZ target update error:", error); setItems(before); setErr(t("targets_add_err")); }
-    else setErr("");
+    if (error) { console.error("GOLSZ target update error:", error); patch(undo); if (!rowError) setErr(t("targets_add_err")); return false; }
+    setErr("");
+    return true;
   }
 
+  // TargetTextArea's onKeep: text a closed box holds that is not stored, or
+  // null. The card names those targets, and the box starts from the text when
+  // its row opens again.
+  function keepText(id, field, text) {
+    const key = id + ":" + field;
+    if (text == null ? !TARGET_UNSAVED_TEXT.has(key) : TARGET_UNSAVED_TEXT.get(key) === text) return;
+    if (text == null) TARGET_UNSAVED_TEXT.delete(key); else TARGET_UNSAVED_TEXT.set(key, text);
+    setKept(new Map(TARGET_UNSAVED_TEXT));
+  }
+
+  // The edit form stays open, with the athlete's text, until the write
+  // succeeds: closing it first threw away what they typed on a failure.
+  async function saveEdit(id) {
+    if (savingEditRef.current) return;
+    const errs = targetFieldErrors(tDraft);
+    setTErrs(errs);
+    const firstBad = ["name", "contact_name", "contact_email"].find((k) => errs[k]);
+    if (firstBad) { const el = document.getElementById("target-edit-" + firstBad); if (el) el.focus(); return; }
+    savingEditRef.current = true; setEditErr("");
+    try {
+      const saved = await updateTarget(id, {
+        name: tDraft.name.trim().slice(0, TARGET_LIMITS.name),
+        contact_name: tDraft.contact_name.trim().slice(0, TARGET_LIMITS.contact_name) || null,
+        contact_email: tDraft.contact_email.trim().slice(0, TARGET_LIMITS.contact_email) || null,
+      }, true);
+      if (saved) setEditingTarget(null); else setEditErr(t("targets_save_err"));
+    } finally { savingEditRef.current = false; }
+  }
+
+  // TWO TAPS. Deleting a target also deletes the coach email drafted on it,
+  // and the button sits one thumb-width from the status select. The first tap
+  // arms the row and says what goes (on the row, in words, when there is a
+  // draft); a later tap on the armed row deletes it. targetDeleteTap decides,
+  // and this is the only caller of removeTarget. tappedAt is the click's own
+  // time stamp (when the tap happened), not the time this handler runs: the
+  // first tap re-renders the whole Plan page, and on a slow phone that delay
+  // would otherwise stretch one double tap into two separate taps.
+  function tapDelete(id, tappedAt) {
+    const step = targetDeleteTap(armedTarget, armRef.current.at, id, tappedAt);
+    if (step === "arm") armDelete(id, tappedAt);
+    if (step === "delete") { disarmDelete(); removeTarget(id); }
+  }
+  function armDelete(id, tappedAt) {
+    clearTimeout(armRef.current.timer);
+    armRef.current = { at: tappedAt, timer: setTimeout(() => setArmedTarget(null), TARGET_DELETE_ARM_MS) };
+    setArmedTarget(id);
+    setDeleteFailedId(null);
+  }
+  function disarmDelete() {
+    clearTimeout(armRef.current.timer);
+    setArmedTarget(null);
+  }
+
+  // The row leaves the list at once. If the delete is refused, that row alone
+  // goes back where it was (a copy of the whole list would also undo another
+  // row's change that landed meanwhile, see updateTarget) and says so on the
+  // row, where the athlete was looking.
   async function removeTarget(id) {
-    const before = items;
+    const at = items.findIndex((it) => it.id === id);
+    if (at < 0) return;
+    const row = items[at];
+    setDeleteFailedId(null);
     setItems((prev) => prev.filter((it) => it.id !== id));
     const { error } = await sb.from("outreach_targets").delete().eq("id", id).eq("user_id", actingFor || uid);
-    if (error) { console.error("GOLSZ target delete error:", error); setItems(before); setErr(t("targets_add_err")); }
-    else setErr("");
+    if (error) {
+      console.error("GOLSZ target delete error:", error);
+      setItems((prev) => (prev.some((it) => it.id === id) ? prev : [...prev.slice(0, at), row, ...prev.slice(at)]));
+      setDeleteFailedId(id);
+      return;
+    }
+    setErr("");
+    TARGET_TEXT_FIELDS.forEach((f) => keepText(id, f, null));
   }
 
   // Loading is a skeleton here too, for the same reason it is on Home: a
@@ -13534,6 +13789,31 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
   }
 
   const inputStyle = { background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 9, color: C.chalk, padding: "9px 11px", fontSize: 12.5, fontFamily: "inherit", outline: "none", boxSizing: "border-box" };
+  const targetField = (errs, scope, k) => (errs[k]
+    ? { id: `target-${scope}-${k}`, "aria-invalid": true, "aria-describedby": `target-${scope}-err-${k}` }
+    : { id: `target-${scope}-${k}` });
+  const targetFieldError = (errs, scope, k) => (errs[k]
+    ? <div id={`target-${scope}-err-${k}`} style={{ fontSize: 11.5, color: C.limeText, marginTop: 4, lineHeight: 1.35 }}>{t(errs[k])}</div>
+    : null);
+  // What every text box on a target shares (see TargetTextArea). A successful
+  // save also drops text kept from an earlier close of the same box.
+  const textBox = (it, field) => ({
+    value: it[field], kept: kept.get(it.id + ":" + field), limit: TARGET_LIMITS[field], style: inputStyle,
+    onSave: async (v) => { const ok = await updateTarget(it.id, { [field]: v }, true); if (ok) keepText(it.id, field, null); return ok; },
+    onKeep: (v) => keepText(it.id, field, v),
+  });
+  // One line per target with text that is not stored in a closed box: shown
+  // on the card, and as the section's note while it is closed, because the
+  // box's own status line went with the box.
+  const unsavedLines = targetsWithUnsavedText(items, kept).map((it) => ({ id: it.id, text: t("target_unsaved").replace("{name}", it.name || "") }));
+  // At most one row is armed, so one copy of its wording (targetDeleteCopy).
+  const armedCopy = targetDeleteCopy(items.find((it) => it.id === armedTarget), t);
+  // While a row is armed, its status select and chevron step aside so the
+  // armed word (wider than the X, and longer still in French and Greek) has
+  // their room: beside them, a 375 px phone squeezed the name to about 45 px
+  // and broke it mid-word. display:none keeps both in the DOM, so React keeps
+  // the same button node, and a keyboard user's focus stays on it.
+  const asideWhileArmed = (id) => (armedTarget === id ? { display: "none" } : null);
   const next30 = [
     { key: "profile", done: !!(quality && quality.score >= 70), label: t("plan_next30_profile") },
     { key: "film", done: filmAdded, label: t("plan_next30_film") },
@@ -13613,10 +13893,11 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
           the list and how many have been contacted - the objection that kept it
           open was to an accordion that shows only a title, and that objection
           still stands. */}
-      <Collapsible label={t("targets_title")} summary={rosterSummary(t, items)} anchorId="gz-schools" revealSignal={focusSection === "gz-schools" ? focusNonce : 0}>
+      <Collapsible label={t("targets_title")} summary={rosterSummary(t, items)} note={unsavedLines.map((l) => l.text).join(" ")}
+        anchorId="gz-schools" revealSignal={focusSection === "gz-schools" ? focusNonce : 0}>
       <div style={{ ...card }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10, minHeight: 26 }}>
-          {!showAddTarget && <button onClick={() => setShowAddTarget(true)} style={{ ...iconBtn(C.lime), fontSize: 12 }}><Plus size={13} /> {t("targets_add")}</button>}
+          {!showAddTarget && <button onClick={() => setShowAddTarget(true)} style={{ ...iconBtn(C.limeText), fontSize: 12 }}><Plus size={13} /> {t("targets_add")}</button>}
         </div>
         {items.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
@@ -13634,16 +13915,32 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
           // as a different kind of thing, and this is just this section's
           // own input.
           <div style={{ paddingBottom: 12, marginBottom: 4, borderBottom: `1px solid ${C.line}` }}>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <input autoFocus value={name} onChange={(e) => setName(e.target.value)} aria-label={t("targets_name_ph")} placeholder={t("targets_name_ph")} style={{ flex: "1 1 160px", ...inputStyle }} />
-              <input value={contactName} onChange={(e) => setContactName(e.target.value)} aria-label={t("targets_contact_name_ph")} placeholder={t("targets_contact_name_ph")} style={{ flex: "1 1 120px", ...inputStyle }} />
-              <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} aria-label={t("targets_contact_email_ph")} placeholder={t("targets_contact_email_ph")} type="email" style={{ flex: "1 1 140px", ...inputStyle }} />
-              <button onClick={addTarget} disabled={!name.trim() || busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: (!name.trim() || busy) ? 0.5 : 1 }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-start" }}>
+              <div style={{ flex: "1 1 160px" }}>
+                <input autoFocus value={name} onChange={(e) => setName(e.target.value)} aria-label={t("targets_name_ph")} placeholder={t("targets_name_ph")} {...targetField(addErrs, "add", "name")} style={{ width: "100%", ...inputStyle }} />
+                {targetFieldError(addErrs, "add", "name")}
+              </div>
+              <div style={{ flex: "1 1 120px" }}>
+                <input value={contactName} onChange={(e) => setContactName(e.target.value)} aria-label={t("targets_contact_name_ph")} placeholder={t("targets_contact_name_ph")} {...targetField(addErrs, "add", "contact_name")} style={{ width: "100%", ...inputStyle }} />
+                {targetFieldError(addErrs, "add", "contact_name")}
+              </div>
+              <div style={{ flex: "1 1 140px" }}>
+                <input value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} aria-label={t("targets_contact_email_ph")} placeholder={t("targets_contact_email_ph")} type="email" {...targetField(addErrs, "add", "contact_email")} style={{ width: "100%", ...inputStyle }} />
+                {targetFieldError(addErrs, "add", "contact_email")}
+              </div>
+              <button onClick={addTarget} disabled={busy} style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "9px 14px", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit", opacity: busy ? 0.5 : 1 }}>
                 {busy ? "…" : t("targets_add")}
               </button>
-              <button onClick={() => setShowAddTarget(false)} style={{ ...iconBtn(C.slate), fontSize: 12.5 }}>{t("pathway_collapse")}</button>
+              <button onClick={() => { setShowAddTarget(false); setAddErrs({}); }} style={{ ...iconBtn(C.slate), fontSize: 12.5 }}>{t("pathway_collapse")}</button>
             </div>
-            {err && <div style={{ fontSize: 11.5, color: C.amber, marginTop: 6 }}>{err}</div>}
+          </div>
+        )}
+        {/* Outside the Add form on purpose: an update or delete failure must
+            show with the form closed too. */}
+        {err && <div role="alert" style={{ fontSize: 11.5, color: C.limeText, marginBottom: 8 }}>{err}</div>}
+        {unsavedLines.length > 0 && (
+          <div role="alert" style={{ fontSize: 11.5, color: C.limeText, marginBottom: 8, lineHeight: 1.35 }}>
+            {unsavedLines.map((l) => <div key={l.id}>{l.text}</div>)}
           </div>
         )}
 
@@ -13657,13 +13954,17 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
               <div style={{ flex: 1, minWidth: 0 }}>
                 {editingTarget === it.id ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <input value={tDraft.name} onChange={(e) => setTDraft((d) => ({ ...d, name: e.target.value }))} aria-label={t("targets_name_ph")} placeholder={t("targets_name_ph")} style={{ ...inputStyle, fontSize: 13 }} />
-                    <input value={tDraft.contact_name} onChange={(e) => setTDraft((d) => ({ ...d, contact_name: e.target.value }))} aria-label={t("targets_contact_name_ph")} placeholder={t("targets_contact_name_ph")} style={{ ...inputStyle, fontSize: 12 }} />
-                    <input value={tDraft.contact_email} onChange={(e) => setTDraft((d) => ({ ...d, contact_email: e.target.value }))} aria-label={t("targets_contact_email_ph")} placeholder={t("targets_contact_email_ph")} style={{ ...inputStyle, fontSize: 12 }} />
+                    {[["name", 13, "targets_name_ph"], ["contact_name", 12, "targets_contact_name_ph"], ["contact_email", 12, "targets_contact_email_ph"]].map(([k, fs, ph]) => (
+                      <div key={k}>
+                        <input value={tDraft[k]} onChange={(e) => { const v = e.target.value; setTDraft((d) => ({ ...d, [k]: v })); }} aria-label={t(ph)} placeholder={t(ph)} {...targetField(tErrs, "edit", k)} style={{ width: "100%", ...inputStyle, fontSize: fs }} />
+                        {targetFieldError(tErrs, "edit", k)}
+                      </div>
+                    ))}
+                    {editErr && <div role="alert" style={{ fontSize: 11.5, color: C.limeText, lineHeight: 1.35 }}>{editErr}</div>}
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => { if (tDraft.name.trim()) { updateTarget(it.id, { name: tDraft.name.trim(), contact_name: tDraft.contact_name.trim() || null, contact_email: tDraft.contact_email.trim() || null }); setEditingTarget(null); } }}
+                      <button onClick={() => saveEdit(it.id)}
                         style={{ background: C.lime, color: C.ink, border: "none", borderRadius: 9, padding: "6px 12px", fontSize: 11.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>{t("form_save")}</button>
-                      <button onClick={() => setEditingTarget(null)}
+                      <button onClick={() => { setEditingTarget(null); setTErrs({}); setEditErr(""); }}
                         style={{ background: "transparent", color: C.slate, border: "none", borderRadius: 9, padding: "6px 12px", fontSize: 11.5, fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>{t("goal_card_cancel")}</button>
                     </div>
                   </div>
@@ -13672,36 +13973,38 @@ function Targets({ plan, onUpgrade, actingFor, onNavigate, openDay, onDayOpened,
                     {/* Scout creates most of these rows, so the athlete has to be able
                         to correct them. A wrong contact_email here is a drafted email
                         sent to nobody, with no way to fix it but delete and re-add. */}
-                    <div {...asButton(() => { setTDraft({ name: it.name || "", contact_name: it.contact_name || "", contact_email: it.contact_email || "" }); setEditingTarget(it.id); })}
-                      title={t("targets_edit_hint")} style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk, cursor: "text" }}>{it.name}</div>
-                {(it.contact_name || it.contact_email) && <div style={{ fontSize: 11.5, color: C.slate }}>{[it.contact_name, it.contact_email].filter(Boolean).join(" · ")}</div>}
+                    <div {...asButton(() => { setTDraft({ name: it.name || "", contact_name: it.contact_name || "", contact_email: it.contact_email || "" }); setEditingTarget(it.id); setTErrs({}); setEditErr(""); })}
+                      title={t("targets_edit_hint")} style={{ fontSize: 13.5, fontWeight: 800, color: C.chalk, cursor: "text", overflowWrap: "anywhere" }}>{it.name}</div>
+                {(it.contact_name || it.contact_email) && <div style={{ fontSize: 11.5, color: C.slate, overflowWrap: "anywhere" }}>{it.contact_name}{it.contact_name && it.contact_email ? " · " : null}{emailWithBreak(it.contact_email)}</div>}
                   </>
                 )}
-                {it.fit_reasoning && <div style={{ fontSize: 11, color: C.lime, marginTop: 2 }}>{it.fit_reasoning}</div>}
+                {it.fit_reasoning && <div style={{ fontSize: 11, color: C.limeText, marginTop: 2 }}>{it.fit_reasoning}</div>}
               </div>
-              <select value={it.status} onChange={(e) => updateTarget(it.id, { status: e.target.value })} aria-label={t("a11y_status")} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "6px 8px", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
+              <select value={it.status} onChange={(e) => updateTarget(it.id, { status: e.target.value })} aria-label={t("a11y_status")} style={{ background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 8, color: C.chalk, padding: "6px 8px", fontSize: 11, fontFamily: "inherit", flexShrink: 0, ...asideWhileArmed(it.id) }}>
                 {TARGET_STATUSES.map((s) => <option key={s} value={s}>{t("targets_status_" + s)}</option>)}
               </select>
-              <button onClick={() => setExpandedId(expandedId === it.id ? null : it.id)} style={{ ...iconBtn(C.slate), flexShrink: 0 }}>{expandedId === it.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>
-              {/* TWO TAPS. Deleting a target also deletes the coach email
-                  drafted on it, and this sat one thumb-width from the status
-                  select. First tap arms and says so; the second deletes; it
-                  disarms itself after four seconds. */}
-              <button onClick={() => { if (armedTarget === it.id) { setArmedTarget(null); removeTarget(it.id); } else { setArmedTarget(it.id); setTimeout(() => setArmedTarget((cur) => (cur === it.id ? null : cur)), 4000); } }}
-                aria-label={armedTarget === it.id ? t("targets_delete_confirm_aria").replace("{name}", it.name || "") : t("a11y_delete_named").replace("{name}", it.name || "")}
+              <button onClick={() => setExpandedId(expandedId === it.id ? null : it.id)} style={{ ...iconBtn(C.slate), flexShrink: 0, ...asideWhileArmed(it.id) }}>{expandedId === it.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}</button>
+              {/* Two taps (see tapDelete). Armed, the X becomes the word in
+                  the same place (growing into the room asideWhileArmed
+                  clears), so the second tap lands where the first did. */}
+              <button onClick={(e) => tapDelete(it.id, e.timeStamp)}
+                aria-label={armedTarget === it.id ? armedCopy.aria : t("a11y_delete_named").replace("{name}", it.name || "")}
                 title={t("a11y_delete_named").replace("{name}", it.name || "")}
-                style={deleteBtnStyle(armedTarget === it.id ? { border: `1px solid ${C.amber}`, color: C.warnText, fontSize: 10, fontWeight: 900, padding: "0 6px", margin: "0 -6px 0 0" } : null)}>
-                {armedTarget === it.id ? t("targets_delete_confirm") : <X size={14} />}
+                style={deleteBtnStyle(armedTarget === it.id ? { border: `1px solid ${C.amber}`, color: C.limeText, fontSize: 12, fontWeight: 900, padding: "0 8px", margin: "0 -6px 0 0" } : null)}>
+                {armedTarget === it.id ? armedCopy.label : <X size={14} />}
               </button>
             </div>
+            {/* Full width under the row, so a long sentence wraps instead of
+                squeezing the name. C.limeText: amber text fails 4.5:1 on the
+                light card. */}
+            {armedTarget === it.id && armedCopy.warning && <div role="alert" style={{ fontSize: 12, color: C.limeText, lineHeight: 1.45, marginTop: 6 }}>{armedCopy.warning}</div>}
+            {deleteFailedId === it.id && <div role="alert" style={{ fontSize: 12, color: C.limeText, lineHeight: 1.45, marginTop: 6 }}>{t("target_delete_err")}</div>}
             {expandedId === it.id && (
               <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
-                <textarea defaultValue={it.fit_reasoning || ""} onBlur={(e) => updateTarget(it.id, { fit_reasoning: e.target.value })} aria-label={t("targets_fit_reasoning_ph")} placeholder={t("targets_fit_reasoning_ph")}
-                  style={{ width: "100%", minHeight: 40, resize: "vertical", marginBottom: 8, ...inputStyle }} />
-                <textarea defaultValue={it.notes || ""} onBlur={(e) => updateTarget(it.id, { notes: e.target.value })} aria-label={t("targets_notes_ph")} placeholder={t("targets_notes_ph")}
-                  style={{ width: "100%", minHeight: 50, resize: "vertical", marginBottom: 8, ...inputStyle }} />
-                <textarea defaultValue={it.draft_email || ""} onBlur={(e) => updateTarget(it.id, { draft_email: e.target.value })} aria-label={t("targets_draft_ph")} placeholder={t("targets_draft_ph")}
-                  style={{ width: "100%", minHeight: 80, resize: "vertical", ...inputStyle }} />
+                <TargetTextArea key={"fit" + it.id} {...textBox(it, "fit_reasoning")} label={t("targets_fit_reasoning_ph")} minHeight={40} />
+                <TargetTextArea key={"notes" + it.id} {...textBox(it, "notes")} label={t("targets_notes_ph")} minHeight={50} />
+                <TargetTextArea key={"draft" + it.id} {...textBox(it, "draft_email")} label={t("targets_draft_ph")} minHeight={80} explicitSave
+                  hint={it.contact_email ? t("target_draft_to").replace("{email}", it.contact_email) : null} />
               </div>
             )}
           </div>
@@ -19549,7 +19852,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=5ebac64aa5fe9781";
+    var APP_SRC = "js/app.js?v=0a2f59de1e1272b3";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

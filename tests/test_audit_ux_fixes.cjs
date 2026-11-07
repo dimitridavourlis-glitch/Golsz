@@ -337,10 +337,11 @@ console.log("\n-- 11. delete buttons are named, reachable, and Targets asks firs
   }
   ck("the shared style gives a 44px hit area", /minWidth: 44, minHeight: 44/.test(fn("deleteBtnStyle")), true);
   const tg = block(APP, "function Targets({");
+  // The tap rule itself (arm / wait / delete) is run in test_outreach_targets.cjs.
   ck("Targets deletes on the SECOND tap",
-     /if \(armedTarget === it\.id\) \{ setArmedTarget\(null\); removeTarget\(it\.id\); \} else \{ setArmedTarget\(it\.id\); setTimeout/.test(tg), true);
+     /onClick=\{\(e\) => tapDelete\(it\.id, e\.timeStamp\)\}/.test(tg) && /if \(step === "delete"\) \{ disarmDelete\(\); removeTarget\(id\); \}/.test(tg), true);
   ck("...and no longer on the first", /onClick=\{\(\) => removeTarget\(it\.id\)\}/.test(tg), false);
-  ck("...and says so when armed", /\{armedTarget === it\.id \? t\("targets_delete_confirm"\) : <X size=\{14\} \/>\}/.test(tg), true);
+  ck("...and says so when armed", /\{armedTarget === it\.id \? armedCopy\.label : <X size=\{14\} \/>\}/.test(tg), true);
   for (const comp of ["Highlights", "Timeline", "DevelopmentPlan"]) {
     const src = block(APP, "function " + comp + "({");
     ck(`${comp}: no unnamed padding:0 delete icon left`,
@@ -363,7 +364,7 @@ console.log("\n-- every new string exists in all four languages --");
   const order = Object.keys(idx).sort((a, b) => idx[a] - idx[b]);
   const segFor = (l) => { const i = order.indexOf(l); return APP.slice(idx[l], i + 1 < order.length ? idx[order[i + 1]] : APP.indexOf("\n};", idx[l])); };
   const keys = ["load_failed", "load_retry", "err_network", "err_generic", "a11y_delete_named",
-    "auth_err_invalid_login", "auth_err_unconfirmed", "targets_delete_confirm", "targets_delete_confirm_aria"];
+    "auth_err_invalid_login", "auth_err_unconfirmed", "target_delete_armed", "target_delete_aria"];
   for (const l of order) {
     const seg = segFor(l);
     ck(`${l} defines every new key`, keys.filter((k) => !new RegExp("[\\s,{]" + k + ': "').test(seg)), []);
