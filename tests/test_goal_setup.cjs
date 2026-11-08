@@ -397,6 +397,21 @@ const namedIds = (sb) => [...new Set([
   }
   ck("a sign-in with the sport on file: a save is a plain one", (await signedIn({ sport: "Soccer" })).byType("GoalSetup").length, 0);
   ck("a failed profile read is not taken for a new athlete", (await signedIn({ __error: { message: "network" } })).byType("GoalSetup").length, 0);
+  // Manage mode (a parent editing a managed athlete's Passport): GolszApp hands
+  // both layouts' Passport afterPassportSave, so Passport's own guard is what
+  // keeps that athlete's save from opening GoalSetup. The real editor's onSaved.
+  const passportSaves = async (manageMode) => {
+    const S = makeScope({ ...BASE(), sb: makeSb({ profiles: { full_name: "Ana Diaz", occupation: "Player" }, athletes: { sport: null } }) });
+    const saves = [];
+    const ui = mount(S.get("Passport"), { autoEdit: true, onAutoEditConsumed() {}, onProfileSaved: (s) => saves.push(s),
+      viewUserId: manageMode ? "child-1" : null, manageMode });
+    await settle();
+    const editor = ui.byType("ProfileEditor")[0];
+    if (!editor) return "no editor";
+    await editor.props.onSaved({ sport: "Soccer", occupation: "Player" });
+    return saves.length;
+  };
+  ck("Passport reports its own onboarding save, never a managed athlete's", [await passportSaves(false), await passportSaves(true)], [1, 0]);
 
   console.log("\n-- HomeTab: the 'set your goal' card, and never in place of LoadError --");
   const home = async (tables, props) => {
