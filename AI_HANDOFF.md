@@ -5,27 +5,32 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Claude Code (AVA job 199, task t1, attempt 3), 2026-11-08. Before that: Claude Code (job 184, Targets, all steps).
+Claude Code (AVA job 199, task t2, attempt 2), 2026-11-08. Before that: Claude Code (job 199 t1; job 184, Targets).
 
 ## Current Branch
 `ava/199-a-brand-new-athlete-goes-from-sign-up-to` (AVA job 199; AVA commits each step, then merges). Branched
 from 3188dc1, where job 184 (Targets) was merged as #14.
 
 ## Last Completed Work
-- AVA job 199 t1: `starterPathwaySteps({ sport, pathwayType, timeline, today, athlete, benchmarks, targets,
-  pathwayRow, t })` in golsz-app.html, next to normalizeMilestone/suggestedDate, with `starterTimelineDays()`, the
-  `STARTER_*` constants and ten `starter_step_*` keys in en/fr/es/el. Pure (no clock, randomness, network or AI):
-  5-8 steps in normalizeMilestone's shape with `due_src: "scout"` (never late until the athlete changes a step).
-  The first three fall in today's Monday-Sunday week, the first one today. Later steps come one a week, the retest
-  at least 14 days after the benchmark, and a check-in on the goal's timeline (12 weeks when there is no usable
-  date, never more than 540 days). Steps for evidence already on file are skipped by the gap engine's own rules. No
-  screen calls it yet: t2 does. Suite: `tests/test_starter_pathway.cjs`.
+- AVA job 199 t2: `GoalSetup` (golsz-app.html, above GolszApp) opens after the onboarding Passport save and from
+  Home's new `SetGoalCard` (sport, no steps). How it works: CLAUDE.md § Onboarding, "The goal step". Attempt 2 fixed
+  attempt 1's three red suites at the cause: GoalSetup now resolves `actingFor || user.id` like GoalCard (it read
+  `user.id`: parent_authorization), reads the whole pathway row (`stages, current_stage_id`: pathway_milestones),
+  and action_mirror counts it as the 5th syncing write path with its own success-branch check. Home offers the card
+  in manage mode too (GoalSetup writes the managed athlete's rows; the suite proves child-1, never u1).
+  Browser look 2026-11-08 (throwaway wrapper around tools/preview-targets.cjs, not committed): `?page=home` with no
+  pathway row at 390/1280, dark, shows the card; tapping it opens GoalSetup (fields 96/48/48 px, no dialog button
+  under 44 px, Soccer preselects "Professional pathway"); light theme, Build with an empty goal shows "Write your
+  goal first." under the field with aria-invalid and focus on it. No sideways scroll, no console errors. Not driven:
+  a successful build, the alert, Skip (t3/t4).
+- t1: `starterPathwaySteps()` (pure, 5-8 dated steps); suite `tests/test_starter_pathway.cjs`.
 - Job 184 (Targets) is merged; its recorded browser runs are in CLAUDE.md § Target clubs/coaches and outreach drafts.
 
 ## Current Work
-AVA job 199 (a new athlete gets from sign-up to a dated plan in one sitting): t1 done. Still to do: t2 (ask for the
-goal right after the Passport is saved), t3 (local rehearsal without the live database), t4 (browser run on phone
-and desktop), then the security review, regression run and final verification.
+AVA job 199 (a new athlete gets from sign-up to a dated plan in one sitting): t1, t2 done. Still to do: t3 (local
+rehearsal without the live database), t4 (browser run on phone and desktop), then the security review, regression
+run and final verification. Open for t4: on Free, Home's Today view still hides the Today/This Week NUMBER tiles
+(`canTargets`, they open the locked Plan page); the Today tile and the next-step card do show the steps.
 
 ## Remaining Tasks
 - Migration 165 (job 184, now merged) is NOT YET APPLIED as far as the repo records: run it in the SQL Editor
@@ -45,8 +50,10 @@ and desktop), then the security review, regression run and final verification.
 - 12-function Vercel ceiling (`_`-prefixed `api/` files are shared modules). Adults only. Scout sends `due_in_days`.
 
 ## Latest Test / Build Status
-2026-11-08 (job 199 t1 attempt 3), via "$AVA_RUN": `node tests/run-all.cjs starter_pathway` 56/56; `npm run compile`
-left js/app.js byte-identical (git status clean), then `compiled_artifact` 14/14. Full `npm run check` left to AVA.
+2026-11-08 (job 199 t2 attempt 2), via "$AVA_RUN" after `npm run compile`: goal_setup 91/91, action_mirror 56/56,
+parent_authorization 75/75, pathway_milestones 248/248, read_failures_shown 61/61, i18n_keys_resolve 4/4,
+compiled_artifact 14/14, launch_p0 104/104, starter_pathway 56/56, and 38 more suites that read GolszApp, Home or
+pathway_plan, all green; `node --check` on api/*.js, js/*.js, sw.js clean. Full `npm run check` left to AVA.
 2026-11-06 (job 184): outreach 270/270, preview_targets 49/49, migration_165 47/47. 2026-11-03: 129/129 suites.
 
 ## Known Problems
@@ -58,8 +65,8 @@ left js/app.js byte-identical (git status clean), then `compiled_artifact` 14/14
   the row chevron lacks aria-label/aria-expanded; light LoadError text + Retry (#B58A1A) are 3.17:1, under 4.5:1.
 
 ## Next Recommended Action
-AVA job 199 t2: after the Passport save, ask for the goal and write `starterPathwaySteps({ ..., today: isoDay(new
-Date()), t })` to pathway_plan.milestones. Then migration 165. Agents: ADS Phase 6 items 4-5.
+AVA job 199 t3: a local preview of the first visit (sign-up -> Passport -> GoalSetup -> Home) whose stand-in stores
+pathway_plan, so a built plan shows on Home. Then migration 165. Agents: ADS Phase 6 items 4-5.
 
 ---
 _How to update: overwrite the sections above (do not append a log); put the agent name

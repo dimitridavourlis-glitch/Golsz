@@ -33,6 +33,7 @@ for (const st of parser.parse(CODE, { sourceType: "script", plugins: ["jsx"] }).
   if ((st.type === "FunctionDeclaration" || st.type === "ClassDeclaration") && st.id) DECLS.set(st.id.name, st);
   if (st.type === "VariableDeclaration") for (const d of st.declarations) if (d.id.type === "Identifier") DECLS.set(d.id.name, st);
 }
+const goalSetupSrcOf = () => { const st = DECLS.get("GoalSetup"); return CODE.slice(st.start, st.end); };
 
 // ---- the stand-ins ------------------------------------------------------
 const TODAY = "2026-11-09";   // a Monday
@@ -139,7 +140,7 @@ function makeSb(tables, opts = {}) {
       return opts.updateError && opts.updateError(q) ? { data: null, error: opts.updateError(q) } : { data: null, error: null }; }
     if (q.op === "upsert") { log.upserts.push({ table: q.table, payload: q.payload, options: q.options });
       return { data: null, error: opts.upsertError ? opts.upsertError() : null }; }
-    log.reads.push(q.table);
+    log.reads.push({ table: q.table, filters: q.filters });
     calls[q.table] = (calls[q.table] || 0) + 1;
     const a = tables[q.table];
     const v = typeof a === "function" ? a(calls[q.table]) : a;
@@ -170,11 +171,11 @@ function makeSb(tables, opts = {}) {
 // ---- GoalSetup ------------------------------------------------------------
 const ATHLETE = { sport: "Soccer", club_name: null, recruiting_status: null, grad_year: null, gpa: null, highlights: [] };
 const RECORD = { profiles: { goal_text: "" }, athletes: ATHLETE, pathway_plan: null, athlete_benchmarks: [], outreach_targets: [] };
-async function openGoalSetup(tables, opts) {
+async function openGoalSetup(tables, opts, actingFor) {
   const sb = makeSb({ ...RECORD, ...tables }, opts);
   const S = makeScope({ ...BASE(), sb });
   const done = [], skipped = [];
-  const ui = mount(S.get("GoalSetup"), { isDesktop: false, onDone: () => done.push(1), onSkip: () => skipped.push(1) });
+  const ui = mount(S.get("GoalSetup"), { actingFor: actingFor || null, isDesktop: false, onDone: () => done.push(1), onSkip: () => skipped.push(1) });
   await settle();
   const field = (tag) => ui.find((n) => n.type === tag);
   return {
@@ -191,6 +192,12 @@ async function openGoalSetup(tables, opts) {
 }
 const GOAL = "  Play college   soccer in the US  ";
 const CLEAN_GOAL = "Play college soccer in the US";
+// Every athlete id the calls named: each read's and update's id / user_id
+// filter, and each upsert's user_id.
+const namedIds = (sb) => [...new Set([
+  ...[...sb.log.reads, ...sb.log.updates].flatMap((q) => q.filters.filter(([c]) => c === "id" || c === "user_id").map(([, v]) => v)),
+  ...sb.log.upserts.map((u) => u.payload.user_id),
+])];
 
 (async () => {
   console.log("-- GoalSetup opens on the athlete's own record --");
@@ -311,6 +318,20 @@ const CLEAN_GOAL = "Play college soccer in the US";
     ck("the action mirror is asked to catch up", g.sb.log.rpcs, ["sync_athlete_actions"]);
     ck("...and it goes Home once", g.done.length, 1);
     ck("GoalCard's writer is the one used (saveGoalText)", /const \{ error: goalError \} = await saveGoalText\(sb, uid, cleanGoalText\(goal\)\);/.test(APP), true);
+    ck("every read and write named the signed-in athlete, and no one else", namedIds(g.sb), ["u1"]);
+    ck("...and both pathway_plan reads took the whole row (stages and stage too)",
+       [...goalSetupSrcOf().matchAll(/from\("pathway_plan"\)\.select\("([^"]+)"\)\.eq\("user_id", (who|uid)\)\.maybeSingle\(\)/g)]
+         .map((m) => /\bstages\b/.test(m[1]) && /current_stage_id/.test(m[1])), [true, true]);
+  }
+
+  console.log("\n-- a parent managing an athlete: that athlete's plan, never the parent's --");
+  {
+    const g = await openGoalSetup({}, {}, "child-1");
+    g.type(GOAL, "ncaa", "");
+    ck("the build returns true", await g.buildButton().props.onClick(), true);
+    ck("every read and write named the managed athlete (child-1), none the signed-in parent (u1)", namedIds(g.sb), ["child-1"]);
+    ck("...the goal and the plan are theirs", [g.sb.log.updates.map((u) => u.filters), g.sb.log.upserts.map((u) => u.payload.user_id)],
+       [[[["id", "child-1"]]], ["child-1"]]);
   }
 
   console.log("\n-- GolszApp: after the onboarding save, and not after a plain one --");
@@ -327,6 +348,7 @@ const CLEAN_GOAL = "Play college soccer in the US";
     ck("the editor opening does not end onboarding", [passport().props.autoEdit, app.byType("GoalSetup").length], [false, 0]);
     passport().props.onProfileSaved({ sport: "Soccer", occupation: "Player" });
     ck("the onboarding save with a sport opens GoalSetup", app.byType("GoalSetup").length, 1);
+    ck("...for the signed-in athlete (no one is being managed)", app.byType("GoalSetup")[0].props.actingFor, null);
     ck("...over the Passport, which stays", !!passport(), true);
     app.byType("GoalSetup")[0].props.onSkip();
     ck("Skip for now: GoalSetup closes and Home opens", [app.byType("GoalSetup").length, app.byType("HomeTab").length], [0, 1]);
@@ -387,18 +409,22 @@ const CLEAN_GOAL = "Play college soccer in the US";
     ck("...and on Free the Today tile names the athlete's own step", JSON.stringify(h.ui.findAll((n) => n.type === "button")).includes("Ask Scout what to focus on this week"), true);
   }
   ck("no sport yet: no card (the Passport comes first)", (await home({ athletes: { ...ATHLETE, sport: null } })).ui.byType("SetGoalCard").length, 0);
-  ck("a parent managing an athlete: no card", (await home({}, { actingFor: "child-1" })).ui.byType("SetGoalCard").length, 0);
+  // GolszApp hands GoalSetup the same actingFor (asserted below), and GoalSetup
+  // writes only that athlete's rows (asserted above).
+  ck("a parent managing an athlete with no steps: the card shows for that athlete",
+     (await home({}, { actingFor: "child-1" })).ui.byType("SetGoalCard").length, 1);
   {
     const h = await home({ pathway_plan: { __error: { message: "network" } } });
     ck("a failed pathway read: LoadError, and no card", [h.ui.byType("LoadError").length, h.ui.byType("SetGoalCard").length], [1, 0]);
   }
 
   console.log("\n-- no plan gate, Scout's draft unchanged, every language --");
-  const goalSetupSrc = (() => { const st = DECLS.get("GoalSetup"); return CODE.slice(st.start, st.end); })();
+  const goalSetupSrc = goalSetupSrcOf();
   ck("GoalSetup checks no plan", /featureUnlocked|featureLocked|planKnown|FEATURE_MIN_PLAN/.test(goalSetupSrc), false);
-ck("...and is handed none", /^function GoalSetup\(\{ isDesktop, onDone, onSkip \}\)/.test(goalSetupSrc), true);
-  ck("GolszApp renders it in both layouts, gated only by goalSetupOpen",
-     (APP.match(/\{goalSetupOpen && <GoalSetup isDesktop=\{isDesktop\} onDone=\{finishGoalSetup\} onSkip=\{finishGoalSetup\} \/>\}/g) || []).length, 2);
+  ck("...and is handed none", /^function GoalSetup\(\{ actingFor, isDesktop, onDone, onSkip \}\)/.test(goalSetupSrc), true);
+  ck("GolszApp renders it in both layouts, gated only by goalSetupOpen, for the athlete being shown",
+     (APP.match(/\{goalSetupOpen && <GoalSetup actingFor=\{actingFor && actingFor\.id\} isDesktop=\{isDesktop\} onDone=\{finishGoalSetup\} onSkip=\{finishGoalSetup\} \/>\}/g) || []).length, 2);
+  ck("GoalSetup never scopes a query to user.id directly", /\.eq\("(user_id|id)", user\.id\)/.test(goalSetupSrc), false);
   ck("'Let Scout draft my steps' keeps its own gate", /\{onNavigate && featureUnlocked\(plan, "pathway_plan"\) && \(/.test(APP), true);
   const KEYS = ["goal_setup_title", "goal_setup_sub", "goal_setup_goal_label", "goal_setup_pathway_label", "goal_setup_timeline_label",
     "goal_setup_timeline_ph", "goal_setup_timeline_unread", "goal_setup_timeline_past", "goal_setup_build", "goal_setup_building",

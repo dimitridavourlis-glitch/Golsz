@@ -30,7 +30,7 @@ const ck = (l, a, e) => {
   else { f++; console.log(`FAIL  ${l}\n   exp ${E}\n   got ${A}`); }
 };
 
-// ---- the client half is one function and four calls -----------------------
+// ---- the client half is one function and five calls -----------------------
 const at = APP.indexOf("function syncActions(sb) {");
 ck("syncActions exists", at > 0, true);
 const body = APP.slice(at, APP.indexOf("\n}", at) + 2);
@@ -125,7 +125,10 @@ ck("...so reconciliation has exactly one implementation",
 // ---- every write of the jsonb syncs, and only on success -----------------
 {
   const calls = (APP.match(/syncActions\(sb\);/g) || []).length;
-  ck("four write paths sync", calls, 4);
+  // Plan's save, Home's tick, the retest, Scout's accept and, since job 199,
+  // GoalSetup's first plan. A new writer of the jsonb raises this count AND
+  // gets its own success-branch check below.
+  ck("five write paths sync", calls, 5);
 
   // Each one must sit on the SUCCESS branch. A sync after a failed write
   // would mirror a state the server rejected.
@@ -148,6 +151,14 @@ ck("...so reconciliation has exactly one implementation",
      /syncActions\(sb\);\s*\n\s*setRetestMsg\(t\("bench_retest_done"\)/.test(APP), true);
   ck("Scout's accept syncs after its upsert threw nothing",
      /syncActions\(sb\);\s*\n\s*setMsgs\(\(m\) => m\.map\(\(msg, i\) => \(i === msgIndex \? \{ \.\.\.msg, suggestedPathway: null/.test(APP), true);
+  // Read inside GoalSetup only, so a match elsewhere cannot stand in for it.
+  // A refused upsert throws into the catch that keeps the form; the sync is on
+  // the line after the throw, so it runs only for a write that was accepted.
+  const gsAt = APP.indexOf("function GoalSetup(");
+  const goalSetup = APP.slice(gsAt, APP.indexOf("\n}\n", gsAt));
+  ck("GoalSetup's first plan syncs after its upsert threw nothing",
+     gsAt > 0 && /\}, \{ onConflict: "user_id" \}\);\s*\n\s*if \(error\) throw error;\s*\n\s*syncActions\(sb\);/.test(goalSetup), true);
+  ck("...and only there, once", (goalSetup.match(/syncActions\(sb\);/g) || []).length, 1);
 }
 
 // ---- the function itself ---------------------------------------------------

@@ -255,6 +255,22 @@ Relevant commands:
   `page` state → `Passport`'s `autoEdit` prop, consumed once via `onAutoEditConsumed` so revisiting the tab
   later doesn't reopen it). Existing users with an incomplete profile (`!athletes.sport`) instead see a
   dismissible "Finish building your profile" banner — not force-interrupted.
+  **The goal step (AVA job 199, 2026-11-08).** `GolszApp` keeps two flags: `autoEdit` (opens the editor once)
+  and `onboarding` (lasts until the goal step is built or skipped; `shouldAskCheckin` waits for it). The
+  onboarding Passport save with a sport (`Passport`'s `onProfileSaved`, never in manage mode) opens
+  `GoalSetup`, a full-screen step inside GolszApp's tree: the goal sentence (saved by `saveGoalText`, the
+  writer GoalCard uses, with `cleanGoalText`/`goalTextError` as the one rule), a `PATHWAY_TYPES` select
+  preselected by `starterPathwayType(sport)` and an optional timeline (`goalSetupFieldErrors`). "Build my plan"
+  writes `starterPathwaySteps()` to `pathway_plan` in one upsert (`onConflict: "user_id"`, only
+  pathway_type/target_timeline/milestones/updated_at), then `syncActions(sb)`, then Home (remounted via
+  `planVersion` so it reads the new steps). No plan gate and no AI call. It resolves the athlete as
+  `actingFor || user.id` like GoalCard; `buildingRef` stops a double tap; a row that already has steps
+  (`planHasSteps`, checked when it opens and again right before the write) is never written over; a refused
+  write keeps the form with a `role=alert` line and Retry. Home shows `SetGoalCard` ("Set your goal to get your
+  plan") whenever the athlete has a sport and no steps (a skip, or a reload mid-way), opening the same step; a
+  failed pathway read is still `LoadError`. Home's Today tile and next-step card show the steps on every plan;
+  Reschedule/Drop (into the locked Plan page) and the Today/This Week number tiles stay Basic+ (`canTargets`).
+  Suite: `tests/test_goal_setup.cjs`.
 - **Follows** (migration 006): `follows(follower_id, followed_id)`, public read, insert/delete restricted to
   `follower_id = auth.uid()`. Feed and Discover both maintain their own `following` state/`toggleFollow()` —
   not shared, each fetches independently.

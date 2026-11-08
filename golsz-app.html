@@ -43,7 +43,7 @@
 <!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
      fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
      with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
-<link rel="preload" as="script" href="js/app.js?v=5f94c4c4db2b2002" />
+<link rel="preload" as="script" href="js/app.js?v=fd614ff49ebd63b0" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -12041,9 +12041,10 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
     return <div style={{ padding: "8px 16px 20px" }}><div style={card}><LoadError onRetry={retryHome} /></div></div>;
   }
 
-  // A sport and no steps: the card that opens GoalSetup, on every plan. Not for
-  // a parent managing an athlete: the goal is the athlete's own words.
-  const needsPlan = !!onSetGoal && !actingFor && profileComplete && !planHasSteps(pathwayRow);
+  // A sport and no steps: the card that opens GoalSetup, on every plan. Also in
+  // manage mode, where GolszApp hands GoalSetup the same actingFor, so the plan
+  // is written for the athlete this screen shows, as GoalCard and Plan do.
+  const needsPlan = !!onSetGoal && profileComplete && !planHasSteps(pathwayRow);
 
   // A failed secondary read hides what it feeds instead of showing zero. The
   // composite and the bottleneck are computed from these four, so they hide too.
@@ -17378,7 +17379,8 @@ function DailyCheckIn({ name, current, currentSince, sb, uid, isDesktop, onFinis
 //
 // A new athlete who leaves without steps they can act on does not come back.
 // GolszApp shows this right after the onboarding Passport save, and Home's
-// "Set your goal" card opens it for anyone with a sport and no steps. It asks
+// "Set your goal" card opens it for the athlete Home is showing when they have
+// a sport and no steps (in manage mode, the managed athlete: actingFor). It asks
 // for the goal in their own words, the pathway, and (optionally) when.
 // "Build my plan" saves the goal through saveGoalText (GoalCard's writer) and
 // writes starterPathwaySteps() to pathway_plan in one upsert. No AI call and no
@@ -17388,7 +17390,7 @@ function DailyCheckIn({ name, current, currentSince, sb, uid, isDesktop, onFinis
 // A plan that already has steps is never written over (a refresh, a second
 // device): the read when this opens, and the read again just before the write,
 // both go straight to Home instead.
-function GoalSetup({ isDesktop, onDone, onSkip }) {
+function GoalSetup({ actingFor, isDesktop, onDone, onSkip }) {
   const { t } = useLang();
   const panelRef = useRef(null);
   useModalFocus(panelRef, true, onSkip);
@@ -17413,16 +17415,22 @@ function GoalSetup({ isDesktop, onDone, onSkip }) {
     try {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) throw new Error("Not signed in.");
+      // Whose plan this is, resolved as GoalCard (whose writer this shares)
+      // and Home resolve it: the managed athlete while a parent is managing
+      // one, the signed-in athlete otherwise. Every read and write names it.
+      const who = actingFor || user.id;
+      // The pathway row is read whole, stages and stage included, like every
+      // read of it that carries milestones.
       const [prof, ath, row, benchmarks, targets] = (await Promise.all([
-        sb.from("profiles").select("goal_text").eq("id", user.id).maybeSingle(),
-        sb.from("athletes").select("sport, club_name, recruiting_status, grad_year, gpa, highlights").eq("id", user.id).maybeSingle(),
-        sb.from("pathway_plan").select("pathway_type, target_timeline, milestones").eq("user_id", user.id).maybeSingle(),
-        sb.from("athlete_benchmarks").select("metric_key").eq("user_id", user.id),
-        sb.from("outreach_targets").select("status").eq("user_id", user.id),
+        sb.from("profiles").select("goal_text").eq("id", who).maybeSingle(),
+        sb.from("athletes").select("sport, club_name, recruiting_status, grad_year, gpa, highlights").eq("id", who).maybeSingle(),
+        sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, stages, current_stage_id").eq("user_id", who).maybeSingle(),
+        sb.from("athlete_benchmarks").select("metric_key").eq("user_id", who),
+        sb.from("outreach_targets").select("status").eq("user_id", who),
       ])).map(must);
       if (!isAlive()) return;
       if (planHasSteps(row)) { onDone(); return; }
-      setUid(user.id);
+      setUid(who);
       setRecord({ athlete: ath, benchmarks, targets });
       // What is already on file is the starting point: a goal Scout heard, a
       // pathway chosen on Plan before any steps existed.
@@ -17440,7 +17448,7 @@ function GoalSetup({ isDesktop, onDone, onSkip }) {
     let alive = true;
     load(() => alive);
     return () => { alive = false; };
-  }, [retryTick]);
+  }, [actingFor, retryTick]);
   function retryLoad() { setLoadFailed(false); setLoaded(false); setRetryTick((n) => n + 1); }
 
   const edit = (k, setter) => (e) => {
@@ -17466,8 +17474,7 @@ function GoalSetup({ isDesktop, onDone, onSkip }) {
     try {
       // Again, right before writing: a plan made on another device since this
       // opened is kept as it is. Its stages and stage file the new steps.
-      const row = must(await sb.from("pathway_plan")
-        .select("milestones, stages, current_stage_id").eq("user_id", uid).maybeSingle());
+      const row = must(await sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, stages, current_stage_id").eq("user_id", uid).maybeSingle());
       if (planHasSteps(row)) { onDone(); return true; }
       const { error: goalError } = await saveGoalText(sb, uid, cleanGoalText(goal));
       if (goalError) throw goalError;
@@ -18159,7 +18166,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
       {showConversion && <GuidedAssessment uid={conversionUid} onDismiss={dismissConversion} />}
       {showEliteWelcome && profileComplete === false && !eliteWelcomeDismissed && <EliteWelcome onDismiss={() => setEliteWelcomeDismissed(true)} />}
       {upgradeUid && <UpgradeScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
-      {goalSetupOpen && <GoalSetup isDesktop={isDesktop} onDone={finishGoalSetup} onSkip={finishGoalSetup} />}
+      {goalSetupOpen && <GoalSetup actingFor={actingFor && actingFor.id} isDesktop={isDesktop} onDone={finishGoalSetup} onSkip={finishGoalSetup} />}
       {askCheckin && <DailyCheckIn name={firstName} current={availabilityStatus} currentSince={availabilitySince} sb={sb} uid={selfUid} isDesktop={isDesktop} onFinish={finishCheckin} onNavigate={go} />}
       </>
     );
@@ -18248,7 +18255,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
     {showConversion && <GuidedAssessment uid={conversionUid} onDismiss={dismissConversion} />}
       {showEliteWelcome && profileComplete === false && !eliteWelcomeDismissed && <EliteWelcome onDismiss={() => setEliteWelcomeDismissed(true)} />}
     {upgradeUid && <UpgradeScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
-    {goalSetupOpen && <GoalSetup isDesktop={isDesktop} onDone={finishGoalSetup} onSkip={finishGoalSetup} />}
+    {goalSetupOpen && <GoalSetup actingFor={actingFor && actingFor.id} isDesktop={isDesktop} onDone={finishGoalSetup} onSkip={finishGoalSetup} />}
     {askCheckin && <DailyCheckIn name={firstName} current={availabilityStatus} currentSince={availabilitySince} sb={sb} uid={selfUid} isDesktop={isDesktop} onFinish={finishCheckin} onNavigate={go} />}
     </>
   );
@@ -20321,7 +20328,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=5f94c4c4db2b2002";
+    var APP_SRC = "js/app.js?v=fd614ff49ebd63b0";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
