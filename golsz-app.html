@@ -43,7 +43,7 @@
 <!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
      fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
      with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
-<link rel="preload" as="script" href="js/app.js?v=0a2f59de1e1272b3" />
+<link rel="preload" as="script" href="js/app.js?v=d4ae845f68e60eb7" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -773,6 +773,7 @@ const I18N = {
     auth_err_rate_limited: "Too many sign-up attempts from this network. Please try again later.", auth_err_verification: "We couldn't verify that you're human. Please retry the challenge below and try again.", auth_err_weak_password: "Choose a password of at least 8 characters.", auth_err_email_invalid: "That email address doesn't look right. Check it and try again.", auth_confirm_email: "Confirm email address", auth_err_email_mismatch: "The two email addresses don't match.",
     auth_err_name_required: "Enter your full name.", auth_err_email_required: "Enter your email address.", auth_err_password_required: "Enter your password.", auth_err_dob_incomplete: "Enter your full date of birth: day, month and a four-digit year.", auth_err_dob_invalid: "That date of birth isn't a real date. Check the day, month and year.", auth_err_signup_refused: "We couldn't create the account. GOLSZ is for adults 18 and over — check your date of birth.",
     settings_billing_renews: "Your plan renews on {date}.", settings_billing_cancels: "Your plan ends on {date}. You keep full access until then.", settings_delete_forfeit: "Your subscription is set to end on {date}. Deleting your account now ends your access straight away, and the rest of the period you paid for is lost.",
+    starter_step_scout_week: "Ask Scout what to focus on this week", starter_step_benchmark: "Record a benchmark with the date and how it was measured", starter_step_highlight: "Add a highlight video link to your Passport", starter_step_targets: "Add 3 target clubs or coaches", starter_step_academics: "Add your graduation year and GPA to your Passport", starter_step_outreach: "Email your first target club or coach", starter_step_watch: "Watch athletes one level up ({stage}) and note one thing to work on", starter_step_share: "Share your Passport link with a coach", starter_step_retest: "Retest your benchmark the same way and compare", starter_step_review: "Review your progress toward {stage} with Scout",
   },
   fr: {
     loading: "Chargement…", yes: "Oui", no: "Non",
@@ -1153,6 +1154,7 @@ const I18N = {
     auth_err_rate_limited: "Trop de tentatives d'inscription depuis ce réseau. Veuillez réessayer plus tard.", auth_err_verification: "Nous n'avons pas pu vérifier que vous êtes un humain. Relancez le test ci-dessous et réessayez.", auth_err_weak_password: "Choisissez un mot de passe d'au moins 8 caractères.", auth_err_email_invalid: "Cette adresse e-mail semble incorrecte. Vérifiez-la et réessayez.", auth_confirm_email: "Confirmer l'adresse e-mail", auth_err_email_mismatch: "Les deux adresses e-mail ne correspondent pas.",
     auth_err_name_required: "Saisis ton nom complet.", auth_err_email_required: "Saisis ton adresse e-mail.", auth_err_password_required: "Saisis ton mot de passe.", auth_err_dob_incomplete: "Saisis ta date de naissance complète : jour, mois et année à quatre chiffres.", auth_err_dob_invalid: "Cette date de naissance n'existe pas. Vérifie le jour, le mois et l'année.", auth_err_signup_refused: "Nous n'avons pas pu créer le compte. GOLSZ est réservé aux adultes de 18 ans et plus — vérifie ta date de naissance.",
     settings_billing_renews: "Votre formule se renouvelle le {date}.", settings_billing_cancels: "Votre formule se termine le {date}. Vous gardez un accès complet jusque-là.", settings_delete_forfeit: "Votre abonnement prendra fin le {date}. Supprimer votre compte maintenant met fin immédiatement à votre accès, et le reste de la période déjà payée est perdu.",
+    starter_step_scout_week: "Demandez à Scout sur quoi vous concentrer cette semaine", starter_step_benchmark: "Enregistrez un repère avec la date et la façon dont il a été mesuré", starter_step_highlight: "Ajoutez à votre Passeport le lien d'une vidéo de vos temps forts", starter_step_targets: "Ajoutez 3 clubs ou entraîneurs cibles", starter_step_academics: "Ajoutez votre année de diplôme et votre moyenne à votre Passeport", starter_step_outreach: "Écrivez à votre premier club ou entraîneur cible", starter_step_watch: "Regardez des athlètes du niveau au-dessus ({stage}) et notez un point à travailler", starter_step_share: "Partagez le lien de votre Passeport avec un entraîneur", starter_step_retest: "Refaites votre test de la même façon et comparez", starter_step_review: "Faites le point avec Scout sur votre progression vers {stage}",
   },
   es: {
     loading: "Cargando…", yes: "Sí", no: "No",
@@ -1533,6 +1535,7 @@ const I18N = {
     auth_err_rate_limited: "Demasiados intentos de registro desde esta red. Inténtalo de nuevo más tarde.", auth_err_verification: "No pudimos comprobar que eres una persona. Vuelve a intentar la verificación de abajo y prueba otra vez.", auth_err_weak_password: "Elige una contraseña de al menos 8 caracteres.", auth_err_email_invalid: "Esa dirección de correo no parece correcta. Revísala e inténtalo de nuevo.", auth_confirm_email: "Confirmar correo electrónico", auth_err_email_mismatch: "Las dos direcciones de correo no coinciden.",
     auth_err_name_required: "Escribe tu nombre completo.", auth_err_email_required: "Escribe tu correo electrónico.", auth_err_password_required: "Escribe tu contraseña.", auth_err_dob_incomplete: "Escribe tu fecha de nacimiento completa: día, mes y año de cuatro cifras.", auth_err_dob_invalid: "Esa fecha de nacimiento no existe. Revisa el día, el mes y el año.", auth_err_signup_refused: "No pudimos crear la cuenta. GOLSZ es para adultos de 18 años o más — revisa tu fecha de nacimiento.",
     settings_billing_renews: "Tu plan se renueva el {date}.", settings_billing_cancels: "Tu plan termina el {date}. Mantienes el acceso completo hasta entonces.", settings_delete_forfeit: "Tu suscripción terminará el {date}. Si eliminas tu cuenta ahora, pierdes el acceso de inmediato y el resto del periodo que ya pagaste.",
+    starter_step_scout_week: "Pregunta a Scout en qué centrarte esta semana", starter_step_benchmark: "Registra una marca con la fecha y cómo se midió", starter_step_highlight: "Añade a tu Pasaporte el enlace de un vídeo con tus mejores jugadas", starter_step_targets: "Añade 3 clubes o entrenadores objetivo", starter_step_academics: "Añade a tu Pasaporte tu año de graduación y tu promedio", starter_step_outreach: "Escribe a tu primer club o entrenador objetivo", starter_step_watch: "Mira a deportistas un nivel por encima ({stage}) y anota algo que mejorar", starter_step_share: "Comparte el enlace de tu Pasaporte con un entrenador", starter_step_retest: "Vuelve a medir tu marca de la misma forma y compara", starter_step_review: "Revisa con Scout tu progreso hacia {stage}",
   },
   el: {
     loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
@@ -1913,6 +1916,7 @@ const I18N = {
     auth_err_rate_limited: "Πάρα πολλές προσπάθειες εγγραφής από αυτό το δίκτυο. Δοκιμάστε ξανά αργότερα.", auth_err_verification: "Δεν μπορέσαμε να επιβεβαιώσουμε ότι είστε άνθρωπος. Επαναλάβετε τον έλεγχο παρακάτω και δοκιμάστε ξανά.", auth_err_weak_password: "Επιλέξτε κωδικό τουλάχιστον 8 χαρακτήρων.", auth_err_email_invalid: "Η διεύθυνση email δεν φαίνεται σωστή. Ελέγξτε την και δοκιμάστε ξανά.", auth_confirm_email: "Επιβεβαίωση διεύθυνσης email", auth_err_email_mismatch: "Οι δύο διευθύνσεις email δεν ταιριάζουν.",
     auth_err_name_required: "Γράψε το πλήρες όνομά σου.", auth_err_email_required: "Γράψε τη διεύθυνση email σου.", auth_err_password_required: "Γράψε τον κωδικό σου.", auth_err_dob_incomplete: "Γράψε ολόκληρη την ημερομηνία γέννησής σου: ημέρα, μήνα και έτος με τέσσερα ψηφία.", auth_err_dob_invalid: "Αυτή η ημερομηνία γέννησης δεν υπάρχει. Έλεγξε την ημέρα, τον μήνα και το έτος.", auth_err_signup_refused: "Δεν μπορέσαμε να δημιουργήσουμε τον λογαριασμό. Το GOLSZ είναι για ενήλικες 18 ετών και άνω — έλεγξε την ημερομηνία γέννησής σου.",
     settings_billing_renews: "Το πλάνο σας ανανεώνεται στις {date}.", settings_billing_cancels: "Το πλάνο σας λήγει στις {date}. Διατηρείτε πλήρη πρόσβαση μέχρι τότε.", settings_delete_forfeit: "Η συνδρομή σας έχει οριστεί να λήξει στις {date}. Αν διαγράψετε τον λογαριασμό τώρα, η πρόσβασή σας τερματίζεται αμέσως και χάνεται το υπόλοιπο της περιόδου που έχετε πληρώσει.",
+    starter_step_scout_week: "Ρώτησε τον Scout σε τι να εστιάσεις αυτή τη βδομάδα", starter_step_benchmark: "Κατάγραψε έναν δείκτη με την ημερομηνία και τον τρόπο μέτρησης", starter_step_highlight: "Πρόσθεσε στο Διαβατήριό σου σύνδεσμο για βίντεο με στιγμιότυπα", starter_step_targets: "Πρόσθεσε 3 συλλόγους ή προπονητές στους Στόχους σου", starter_step_academics: "Πρόσθεσε στο Διαβατήριό σου το έτος αποφοίτησης και τον μέσο όρο σου", starter_step_outreach: "Στείλε email στον πρώτο σύλλογο ή προπονητή από τους Στόχους σου", starter_step_watch: "Δες αθλητές ένα επίπεδο πιο πάνω ({stage}) και σημείωσε κάτι να βελτιώσεις", starter_step_share: "Μοιράσου τον σύνδεσμο του Διαβατηρίου σου με έναν προπονητή", starter_step_retest: "Ξαναμέτρησε τον δείκτη σου με τον ίδιο τρόπο και σύγκρινε", starter_step_review: "Δες με τον Scout την πρόοδό σου προς {stage}",
   },
 };
 
@@ -14879,6 +14883,151 @@ function suggestedDate(m) {
   // moment the athlete acts on the step, which is what makes the date theirs.
   return !!(m && (m.due_src === "scout" || m.due_src === "retest") && m.due);
 }
+
+// A STARTER PLAN FROM A SPORT AND A GOAL: NO AI, NO NETWORK, NO CLOCK.
+//
+// A first visit has to end with steps the athlete can act on today, or they do
+// not come back. "Let Scout draft my steps" costs a model call per sign-up, so
+// the first plan is built from what GOLSZ already holds: the sport's ladder
+// (athleteStages), what the goal asks for (PATHWAY_KEY_EVIDENCE, read through
+// evaluateGap) and the athlete's own record.
+//
+// Every step is already in normalizeMilestone's shape, so it can be written to
+// pathway_plan.milestones as it is. Three land in today's Monday-Sunday week,
+// the first of them today, because Home's TODAY and THIS WEEK read exactly
+// that. The working steps after them come one a week, because the weeks right
+// after sign-up are when a plan becomes a habit or is forgotten. The last step,
+// a check-in, waits for the athlete's own timeline (twelve weeks without one).
+//
+// GOLSZ picked every one of these days, so due_src is "scout": suggestedDate()
+// keeps them off the late count until the athlete touches the step, the same
+// rule a Scout-drafted plan follows.
+//
+// Pure: `today` is the device's day (isoDay), labels come from `t` (passed in,
+// as toPassport takes it), and ids are built from the day and the step. The
+// same inputs give the same plan; tests/test_starter_pathway.cjs runs it
+// through normalizeMilestone and Home's own bucket code.
+const STARTER_DEFAULT_DAYS = 84;     // twelve weeks, when the timeline names no usable date
+const STARTER_MAX_DAYS = 540;        // just under 18 months: the check-in never lands further out
+const STARTER_RETEST_GAP_DAYS = 14;  // the same fortnight the Retest button schedules
+// Words a typed timeline can use, lower-cased and without accents, in the four
+// languages the app speaks. A season means the month it STARTS in, so the
+// check-in never lands after the moment the athlete named.
+const STARTER_TIMELINE_MONTHS = {
+  spring: 3, printemps: 3, primavera: 3, ανοιξη: 3,
+  summer: 6, ete: 6, verano: 6, καλοκαιρι: 6,
+  fall: 9, autumn: 9, automne: 9, otono: 9, φθινοπωρο: 9,
+  winter: 1, hiver: 1, invierno: 1, χειμωνας: 1, χειμωνα: 1,
+  january: 1, jan: 1, janvier: 1, janv: 1, enero: 1, ene: 1, ιανουαριος: 1, ιανουαριου: 1,
+  february: 2, feb: 2, fevrier: 2, fevr: 2, febrero: 2, φεβρουαριος: 2, φεβρουαριου: 2,
+  march: 3, mar: 3, mars: 3, marzo: 3, μαρτιος: 3, μαρτιου: 3,
+  april: 4, apr: 4, avril: 4, avr: 4, abril: 4, abr: 4, απριλιος: 4, απριλιου: 4,
+  may: 5, mai: 5, mayo: 5, μαιος: 5, μαιου: 5,
+  june: 6, jun: 6, juin: 6, junio: 6, ιουνιος: 6, ιουνιου: 6,
+  july: 7, jul: 7, juillet: 7, juil: 7, julio: 7, ιουλιος: 7, ιουλιου: 7,
+  august: 8, aug: 8, aout: 8, agosto: 8, ago: 8, αυγουστος: 8, αυγουστου: 8,
+  september: 9, sep: 9, sept: 9, septembre: 9, septiembre: 9, setiembre: 9, σεπτεμβριος: 9, σεπτεμβριου: 9,
+  october: 10, oct: 10, octobre: 10, octubre: 10, οκτωβριος: 10, οκτωβριου: 10,
+  november: 11, nov: 11, novembre: 11, noviembre: 11, νοεμβριος: 11, νοεμβριου: 11,
+  december: 12, dec: 12, decembre: 12, diciembre: 12, dic: 12, δεκεμβριος: 12, δεκεμβριου: 12,
+};
+
+// Days from today to the date a typed timeline names, or null when it names
+// none. "Fall 2027", "automne 2027", "2027-09", "2027-09-15" and "09/2027" all
+// read; a year with no month or season means its first day.
+function starterTimelineDays(timeline, todayMs) {
+  const text = String(timeline || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const iso = /(\d{4})-(\d{2})(?:-(\d{2}))?(?!\d)/.exec(text);
+  const slash = /(?:^|\D)(\d{1,2})\/(\d{4})(?!\d)/.exec(text);
+  const year = /(?:^|\D)(\d{4})(?!\d)/.exec(text);
+  let y, m = 1, d = 1;
+  if (iso) { y = +iso[1]; m = +iso[2]; d = iso[3] ? +iso[3] : 1; }
+  else if (slash) { y = +slash[2]; m = +slash[1]; }
+  else if (year) {
+    y = +year[1];
+    const word = text.split(/[^a-z\u03b1-\u03c9]+/)
+      .find((w) => Object.prototype.hasOwnProperty.call(STARTER_TIMELINE_MONTHS, w));
+    if (word) m = STARTER_TIMELINE_MONTHS[word];
+  } else return null;
+  if (!isRealDate(y, m, d)) return null;
+  return Math.round((Date.UTC(y, m - 1, d) - todayMs) / 86400000);
+}
+
+// `t` is required. `athlete`, `benchmarks` and `targets` (outreach_targets
+// rows) are optional: a step for evidence already on file is skipped.
+// `pathwayRow` is optional: an athlete who renamed their sections gets their
+// own section names and ids. Returns [] when `today` is not a real day.
+function starterPathwaySteps({ sport, pathwayType, timeline, today, athlete, benchmarks, targets, pathwayRow, t } = {}) {
+  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(today || ""));
+  if (!day || !isRealDate(+day[1], +day[2], +day[3])) return [];
+  const todayMs = Date.UTC(+day[1], +day[2] - 1, +day[3]);
+  const ath = { ...(athlete || {}), sport: sport || (athlete && athlete.sport) || null };
+  const benchRows = (benchmarks || []).filter(Boolean);
+  const targetRows = (targets || []).filter(Boolean);
+
+  // The section every step is filed under (where the athlete is now) and the
+  // one above it, which the check-in names. An unknown sport gets __default.
+  let stages = athleteStages(ath, pathwayRow);
+  if (!stages.length) stages = athleteStages(ath, null);
+  const at = Math.max(0, Math.min(stages.length - 1, resolveStageIndex(stages, pathwayRow && pathwayRow.current_stage_id, ath)));
+  const here = stages[at];
+  const nextName = stageLabel(stages[Math.min(at + 1, stages.length - 1)], t);
+
+  // "On file" by the gap engine's own rules, so a step is skipped exactly when
+  // WHAT YOUR GOAL ASKS FOR shows that evidence as present.
+  const onFile = gapFromRows([{ id: "starter", goal_type: "starter", key_evidence: ["film", "exposure"] }],
+    "starter", athlete, benchRows, targetRows).present;
+  // Academics only where GOLSZ knows the goal asks for them. For a sport with
+  // no PATHWAY_KEY_EVIDENCE row it does not guess (gap_sport_unsupported).
+  const goal = evaluateGap(ath.sport, pathwayType, athlete, benchRows, targetRows);
+  const steps = [
+    { key: "scout_week", category: "other" },
+    !benchRows.length && { key: "benchmark", category: "testing" },
+    onFile.indexOf("film") === -1 && { key: "highlight", category: "film" },
+    targetRows.length < 3 && { key: "targets", category: "recruiting" },
+    !!goal && goal.missing.some((k) => k === "grad_year" || k === "gpa") && { key: "academics", category: "academic" },
+    onFile.indexOf("exposure") === -1 && { key: "outreach", category: "outreach" },
+  ].filter(Boolean);
+  // Never fewer than five steps: a record that already holds all of the above
+  // still gets a week of real work, not two check-ins.
+  for (const filler of [{ key: "watch", category: "film" }, { key: "share", category: "outreach" }]) {
+    if (steps.length + 2 < 5) steps.push(filler);
+  }
+  steps.push({ key: "retest", category: "testing" }, { key: "review", category: "other" });
+
+  // Days from today. Monday-first, weekStartFrom's rule: dow 0 is Monday.
+  const dow = (new Date(todayMs).getUTCDay() + 6) % 7;
+  const named = starterTimelineDays(timeline, todayMs);
+  // A date already past says nothing usable about when, like an empty one.
+  const horizon = named !== null && named > 0 ? Math.min(named, STARTER_MAX_DAYS) : STARTER_DEFAULT_DAYS;
+  const offsets = [];
+  steps.forEach((s, i) => {
+    let o;
+    // Today, then two more before Sunday (all three today when today is Sunday).
+    if (i < 3) o = Math.min([0, 2, 4][i], 6 - dow);
+    else if (s.key === "review") o = Math.max(horizon, offsets[i - 1] + 7);
+    else {
+      // The Wednesday of each week after this one.
+      o = 7 * (i - 2) + 2 - dow;
+      if (s.key === "retest") {
+        const b = steps.findIndex((x) => x.key === "benchmark");
+        o = Math.max(o, (b === -1 ? 0 : offsets[b]) + STARTER_RETEST_GAP_DAYS);
+      }
+    }
+    offsets.push(o);
+  });
+
+  return steps.map((s, i) => ({
+    id: "starter-" + today + "-" + s.key,
+    label: t("starter_step_" + s.key).replace("{stage}", () => nextName).slice(0, 120),
+    done: false,
+    done_at: null,
+    category: s.category,
+    due: new Date(todayMs + offsets[i] * 86400000).toISOString().slice(0, 10),
+    stage: here.id,
+    due_src: "scout",
+  }));
+}
 // THE ORDER THE ROAD DRAWS, AND THE RULE "WHAT NOW" ALREADY USED.
 //
 // nextMilestone is a SELECTOR: it returns one step. The road needs the whole
@@ -19852,7 +20001,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=0a2f59de1e1272b3";
+    var APP_SRC = "js/app.js?v=d4ae845f68e60eb7";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
