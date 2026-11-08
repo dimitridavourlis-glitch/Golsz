@@ -256,7 +256,9 @@ Relevant commands:
   later doesn't reopen it). Existing users with an incomplete profile (`!athletes.sport`) instead see a
   dismissible "Finish building your profile" banner — not force-interrupted.
   **The goal step (AVA job 199, 2026-11-08).** `GolszApp` keeps two flags: `autoEdit` (opens the editor once)
-  and `onboarding` (lasts until the goal step is built or skipped; `shouldAskCheckin` waits for it). The
+  and `onboarding` (lasts until the goal step is built or skipped; `shouldAskCheckin` waits for it). `onboarding`
+  starts with a fresh sign-up OR when GolszApp's own profile-complete read finds no sport ("Confirm email" is on,
+  so a new athlete's first session is often a plain sign-in; a failed read does not count). The
   onboarding Passport save with a sport (`Passport`'s `onProfileSaved`, never in manage mode) opens
   `GoalSetup`, a full-screen step inside GolszApp's tree: the goal sentence (saved by `saveGoalText`, the
   writer GoalCard uses, with `cleanGoalText`/`goalTextError` as the one rule), a `PATHWAY_TYPES` select

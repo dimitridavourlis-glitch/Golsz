@@ -378,6 +378,25 @@ const namedIds = (sb) => [...new Set([
     app.byType("Passport")[0].props.onProfileSaved({ sport: "Tennis", occupation: null });
     ck("the desktop layout opens it too", app.byType("GoalSetup").length, 1);
   }
+  // "Confirm email" is on, so a new athlete's first session often starts with a
+  // plain sign-in (no startOnboarding). GolszApp's own profile check finding no
+  // sport is what makes that session's Passport save the onboarding one.
+  const signedIn = async (athletes) => {
+    const sb = makeSb({ athletes, profiles: { occupation: null, full_name: "Ana Diaz" } });
+    const S = makeScope({ ...BASE(), sb, useIsDesktop: () => false, setInterval: () => 0, clearInterval() {} });
+    S.get("window").location.search = "?page=profile";
+    const app = mount(S.get("GolszApp"), { onSignOut() {}, startOnboarding: false });
+    await settle();
+    app.byType("Passport")[0].props.onProfileSaved({ sport: "Soccer", occupation: "Player" });
+    return app;
+  };
+  {
+    const app = await signedIn({ sport: null });
+    ck("a sign-in that finds no sport: the save that adds one opens GoalSetup", app.byType("GoalSetup").length, 1);
+    ck("...and the daily check-in waits for it", app.byType("DailyCheckIn").length, 0);
+  }
+  ck("a sign-in with the sport on file: a save is a plain one", (await signedIn({ sport: "Soccer" })).byType("GoalSetup").length, 0);
+  ck("a failed profile read is not taken for a new athlete", (await signedIn({ __error: { message: "network" } })).byType("GoalSetup").length, 0);
 
   console.log("\n-- HomeTab: the 'set your goal' card, and never in place of LoadError --");
   const home = async (tables, props) => {
