@@ -268,9 +268,11 @@ Relevant commands:
   (`planHasSteps`, checked when it opens and again right before the write) is never written over; a refused
   write keeps the form with a `role=alert` line and Retry. Home shows `SetGoalCard` ("Set your goal to get your
   plan") whenever the athlete has a sport and no steps (a skip, or a reload mid-way), opening the same step; a
-  failed pathway read is still `LoadError`. Home's Today tile and next-step card show the steps on every plan;
-  Reschedule/Drop (into the locked Plan page) and the Today/This Week number tiles stay Basic+ (`canTargets`).
-  Suite: `tests/test_goal_setup.cjs`.
+  failed pathway read is still `LoadError`. Home shows the steps on every plan: the Today tile (its "N to do"
+  badge is `C.pitch`/`C.chalk`; `C.ink` under it drew black on black in light), the next-step card, and the
+  TODAY / THIS WEEK number tiles behind "Show my progress". Only the ways into Plan, which is locked below Basic,
+  check `canTargets`: Reschedule, Drop, and a tap on those two tiles (on Free they are plain cells, `go: null`).
+  Suite: `tests/test_goal_setup.cjs`. Browser run 2026-11-08 (job 199 t2 attempt 3): see AI_HANDOFF.md.
 - **Follows** (migration 006): `follows(follower_id, followed_id)`, public read, insert/delete restricted to
   `follower_id = auth.uid()`. Feed and Discover both maintain their own `following` state/`toggleFollow()` —
   not shared, each fetches independently.

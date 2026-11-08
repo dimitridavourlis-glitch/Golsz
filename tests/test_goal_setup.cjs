@@ -408,6 +408,47 @@ const namedIds = (sb) => [...new Set([
     ck("a plan with steps: no card", h.ui.byType("SetGoalCard").length, 0);
     ck("...and on Free the Today tile names the athlete's own step", JSON.stringify(h.ui.findAll((n) => n.type === "button")).includes("Ask Scout what to focus on this week"), true);
   }
+  // Behind the Today tile and "Show my progress", TODAY and THIS WEEK count the athlete's
+  // own steps on every plan. On Free (Plan locked) they only report; from Basic
+  // up they open Plan.
+  {
+    const step = (id, due) => ({ id, label: "Step " + id, done: false, due, due_src: "scout", category: "other", stage: "academy" });
+    const week = [step("s1", TODAY), step("s2", "2026-11-12"), step("s3", "2026-11-18")];   // today, Thursday, next week
+    for (const plan of ["free", "starter"]) {
+      const nav = [];
+      const h = await home({ pathway_plan: { pathway_type: "ncaa", milestones: week } }, { plan, onNavigate: (pg) => nav.push(pg) });
+      h.ui.findAll((n) => n.type === "button").find((b) => JSON.stringify(b).includes('"tile_today"')).props.onClick();
+      h.ui.findAll((n) => n.type === "button").find((b) => h.ui.textOf(b) === "home_more").props.onClick();
+      const cell = (k, label) => h.ui.find((n) => (n.type === "div" || n.type === "button") && n.props.key === k && h.ui.textOf(n).startsWith(label));
+      const today = cell("today", "home_week_today"), wk = cell("week", "home_week_title");
+      ck(`${plan}: the Today view shows TODAY 0/1 and THIS WEEK 0/2`, [today && h.ui.textOf(today), wk && h.ui.textOf(wk)], ["home_week_today0/1", "home_week_title0/2"]);
+      if (plan === "free") {
+        ck("...on Free both only report (no button into the locked Plan page)",
+           [today && today.type, wk && wk.type, !!(today && today.props.onClick), !!(wk && wk.props.onClick)], ["div", "div", false, false]);
+      } else {
+        for (const c of [today, wk]) if (c && c.props.onClick) c.props.onClick();
+        ck("...on Basic both are buttons that open Plan", [today && today.type, wk && wk.type, nav], ["button", "button", ["targets", "targets"]]);
+      }
+    }
+  }
+  // The Today tile's "N to do" badge is the first number a new plan puts on
+  // Home. It drew black on black in the light theme (C.ink ground, C.chalk text).
+  {
+    const h = await home({ pathway_plan: { pathway_type: "ncaa", milestones: [{ id: "b1", label: "Step b1", done: false, due: TODAY, due_src: "scout" }] } });
+    const badge = h.ui.find((n) => n.type === "span" && h.ui.textOf(n) === "tile_today_count");
+    const hexOf = (block, v) => (new RegExp("--" + v + ":\\s*(#[0-9A-Fa-f]{6})").exec(block) || [])[1];
+    const lightAt = APP.indexOf('html[data-theme="light"] {');
+    const blocks = { dark: APP.slice(APP.lastIndexOf(":root {", lightAt), lightAt), light: APP.slice(lightAt, APP.indexOf("}", lightAt)) };
+    const lum = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))).reduce((s, c, i) => s + c * [0.2126, 0.7152, 0.0722][i], 0);
+    const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+    const vars = badge && [badge.props.style.background, badge.props.style.color].map((s) => (/^var\(--([a-z-]+)\)$/.exec(s) || [])[1]);
+    ck("the Today badge's ground and text are both theme tokens", !!vars && vars.every(Boolean), true);
+    for (const th of ["dark", "light"]) {
+      const pair = vars && vars.map((v) => hexOf(blocks[th], v));
+      ck(`...and the count reads at 4.5:1 or more in the ${th} theme`, !!pair && pair.every(Boolean) && ratio(pair[0], pair[1]) >= 4.5, true);
+    }
+  }
   ck("no sport yet: no card (the Passport comes first)", (await home({ athletes: { ...ATHLETE, sport: null } })).ui.byType("SetGoalCard").length, 0);
   // GolszApp hands GoalSetup the same actingFor (asserted below), and GoalSetup
   // writes only that athlete's rows (asserted above).

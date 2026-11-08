@@ -43,7 +43,7 @@
 <!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
      fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
      with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
-<link rel="preload" as="script" href="js/app.js?v=fd614ff49ebd63b0" />
+<link rel="preload" as="script" href="js/app.js?v=99c171d1192371a8" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -12137,7 +12137,8 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
   // The athletes own stated next step outranks anything GOLSZ infers for them.
   // Not plan-gated: GoalSetup gives every plan a starter plan, so its steps are
   // shown and ticked here on Free too. Only the ways into Plan (Reschedule,
-  // Drop) check canTargets, because Plan itself is locked below Basic.
+  // Drop, a tap on the TODAY and THIS WEEK tiles) check canTargets, because
+  // Plan itself is locked below Basic.
   const pathwayNext = pathwayRow ? nextMilestone(pathwayRow.milestones) : null;
   const stepOverdue = !!(pathwayNext && pathwayNext.due && canCallLate(pathwayNext, resting) && pathwayNext.due < isoDay(new Date()));
   // TICKING IS THE ONE WRITE HOME DOES TO A STEP.
@@ -12398,24 +12399,28 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
       // the three and it already lives on Plan, which owns steps —
       // Home shows, the owning page holds the detail. The late count
       // moves here so nothing about overdue work is lost.
-      canTargets && {
+      // TODAY and THIS WEEK count the athlete's own steps, so they show on
+      // every plan: GoalSetup gives Free a starter plan too. Only the tap is
+      // plan-bound. Plan, where they lead, is locked below Basic, so there
+      // they carry no `go` and report without leading to a lock.
+      {
         k: "today", label: t("home_week_today"),
         value: todaySteps.length ? `${todayDone}/${todaySteps.length}` : "\u2014",
         empty: !todaySteps.length && !stepsLate,
         colour: stepsLate > 0 ? C.warnText
           : (todaySteps.length && todayDone === todaySteps.length ? C.lime : C.chalk),
         sub: stepsLate > 0 ? t("home_door_plan_late").replace("{n}", stepsLate) : null,
-        go: "targets",
+        go: canTargets ? "targets" : null,
       },
       // THIS WEEK, from the brief. Dash when nothing is dated inside
       // the week — a 0/0 would read as failure rather than as an
       // empty calendar.
-      canTargets && {
+      {
         k: "week", label: t("home_week_title"),
         value: weekSteps.length ? `${weekDone}/${weekSteps.length}` : "\u2014",
         empty: !weekSteps.length,
         colour: weekSteps.length && weekDone === weekSteps.length ? C.lime : C.chalk,
-        go: "targets",
+        go: canTargets ? "targets" : null,
       },
       canTargets && !homeFailed.has("targets") && {
         k: "follow", label: t("home_status_follow_up"),
@@ -12524,9 +12529,12 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
                 border: tile.gold && !tile.grey ? "none" : `2px solid ${C.line2}`,
                 cursor: "pointer", fontFamily: "inherit", display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center", gap: 7, textAlign: "center", boxSizing: "border-box" }}>
+              {/* Page ground and text, both from the theme: C.ink stays dark in
+                  the light theme while C.chalk turns dark, which drew the count
+                  black on black there (seen in job 199's browser run). */}
               {tile.badge ? (
                 <span style={{ position: "absolute", top: 10, right: 10, minHeight: 28, borderRadius: 99,
-                  background: C.ink, color: C.chalk, fontSize: 14, fontWeight: 800, padding: "4px 10px",
+                  background: C.pitch, color: C.chalk, fontSize: 14, fontWeight: 800, padding: "4px 10px",
                   display: "flex", alignItems: "center" }}>{tile.badge}</span>
               ) : null}
               {React.createElement(tile.icon, { size: 38,
@@ -13160,15 +13168,22 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
       {planKnown(plan) && statusTiles.length > 0 && (
         <HomeZone span={2}>
           <div style={{ display: "grid", gridTemplateColumns: `repeat(${statusTiles.length === 1 ? 1 : 2}, minmax(0, 1fr))`, gap: 1, background: C.line, borderRadius: 12, overflow: "hidden" }}>
-            {statusTiles.map((tile) => (
-              <button key={tile.k} onClick={() => onNavigate(tile.go)}
-                style={{ background: C.card, border: "none", padding: "13px 14px", textAlign: "left",
-                  cursor: "pointer", fontFamily: "inherit", minHeight: 76, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: "0.13em", textTransform: "uppercase", color: C.slate }}>{tile.label}</span>
-                <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.02em", color: tile.colour, marginTop: 5, lineHeight: 1, fontVariantNumeric: "tabular-nums", overflowWrap: "anywhere" }}>{tile.value}</span>
-                {tile.sub && <span style={{ fontSize: 10.5, color: C.slate, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tile.sub}</span>}
-              </button>
-            ))}
+            {statusTiles.map((tile) => {
+              const look = { background: C.card, border: "none", padding: "13px 14px", textAlign: "left",
+                fontFamily: "inherit", minHeight: 76, display: "flex", flexDirection: "column", justifyContent: "center" };
+              const body = (
+                <>
+                  <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: "0.13em", textTransform: "uppercase", color: C.slate }}>{tile.label}</span>
+                  <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.02em", color: tile.colour, marginTop: 5, lineHeight: 1, fontVariantNumeric: "tabular-nums", overflowWrap: "anywhere" }}>{tile.value}</span>
+                  {tile.sub && <span style={{ fontSize: 10.5, color: C.slate, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tile.sub}</span>}
+                </>
+              );
+              // A tile with no `go` only reports (its page is locked on this
+              // plan), so it is a plain cell, not a button that does nothing.
+              return tile.go
+                ? <button key={tile.k} onClick={() => onNavigate(tile.go)} style={{ ...look, cursor: "pointer" }}>{body}</button>
+                : <div key={tile.k} style={look}>{body}</div>;
+            })}
           </div>
         </HomeZone>
       )}
@@ -20328,7 +20343,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=fd614ff49ebd63b0";
+    var APP_SRC = "js/app.js?v=99c171d1192371a8";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

@@ -53,7 +53,9 @@ ck("...over dated steps only",
 {
   // An em dash, not 0/0 — a zero reads as failure rather than as an empty
   // calendar, which is the rule the rest of the status row already follows.
-  const tile = /k: "week",[\s\S]{0,400}?go: "targets",/.exec(APP);
+  // It leads to Plan where Plan is open, and on Free (Plan locked, but a
+  // starter plan from GoalSetup) it reports only: test_goal_setup renders both.
+  const tile = /k: "week",[\s\S]{0,400}?go: canTargets \? "targets" : null,/.exec(APP);
   ck("the week tile exists", !!tile, true);
   ck("...and shows a dash rather than 0/0 when nothing is dated",
      !!tile && /weekSteps\.length \? /.test(tile[0]) && /u2014/.test(tile[0]), true);

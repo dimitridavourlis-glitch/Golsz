@@ -5,7 +5,7 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Claude Code (AVA job 199, task t2, attempt 2), 2026-11-08. Before that: Claude Code (job 199 t1; job 184, Targets).
+Claude Code (AVA job 199, task t2, attempt 3), 2026-11-08. Before that: Claude Code (job 199 t1; job 184, Targets).
 
 ## Current Branch
 `ava/199-a-brand-new-athlete-goes-from-sign-up-to` (AVA job 199; AVA commits each step, then merges). Branched
@@ -13,24 +13,34 @@ from 3188dc1, where job 184 (Targets) was merged as #14.
 
 ## Last Completed Work
 - AVA job 199 t2: `GoalSetup` (golsz-app.html, above GolszApp) opens after the onboarding Passport save and from
-  Home's new `SetGoalCard` (sport, no steps). How it works: CLAUDE.md § Onboarding, "The goal step". Attempt 2 fixed
-  attempt 1's three red suites at the cause: GoalSetup now resolves `actingFor || user.id` like GoalCard (it read
-  `user.id`: parent_authorization), reads the whole pathway row (`stages, current_stage_id`: pathway_milestones),
-  and action_mirror counts it as the 5th syncing write path with its own success-branch check. Home offers the card
-  in manage mode too (GoalSetup writes the managed athlete's rows; the suite proves child-1, never u1).
-  Browser look 2026-11-08 (throwaway wrapper around tools/preview-targets.cjs, not committed): `?page=home` with no
-  pathway row at 390/1280, dark, shows the card; tapping it opens GoalSetup (fields 96/48/48 px, no dialog button
-  under 44 px, Soccer preselects "Professional pathway"); light theme, Build with an empty goal shows "Write your
-  goal first." under the field with aria-invalid and focus on it. No sideways scroll, no console errors. Not driven:
-  a successful build, the alert, Skip (t3/t4).
+  Home's new `SetGoalCard` (sport, no steps); CLAUDE.md § Onboarding, "The goal step". It resolves `actingFor ||
+  user.id`, reads the whole pathway row and is action_mirror's 5th syncing write path (attempt 2's fixes). Attempt 3:
+  TODAY / THIS WEEK number tiles show on Free too (plain cells, `go: null`; buttons into Plan from Basic up), and the
+  Today tile's "N to do" badge is `C.pitch` (it was `C.ink`: black on black in the light theme).
+- Browser run 2026-11-08 (t2 attempt 3), final bundle, plan FREE, AVA browser tool, one server per width and theme
+  (390 dark, 390 light, 1280 dark, 1280 light), six loads each in order. Throwaway wrapper (node_modules/.cache/
+  goal-flow.cjs, not committed; t3 builds the real tool) around tools/preview-targets.cjs that keeps `profiles` and
+  `pathway_plan` in memory. Same result in all four: (1) no plan: Home shows "Set your goal to get your plan";
+  (2) Set my goal, then Skip for now: back on Home with the card; (3) upsert answering HTTP 500: the form stays with
+  the goal, "professional" and "Fall 2027" still typed (fields 96/48/48 px, no dialog button under 44 px), alert
+  "Couldn't save your plan. Try again." with Retry; (4) build: GoalSetup closes, no card, Today tile "3 to do / Ask
+  Scout what to focus on this week"; server log: one `pathway_plan upsert on_conflict=user_id` with exactly
+  user_id, pathway_type, target_timeline, milestones, updated_at, 7 steps due 11-08 x3, 11-11, 11-18, 11-25,
+  2027-09-01, then `rpc sync_athlete_actions`; (5) Today view: MY NEXT STEP with Mark done, TODAY 0/3 and THIS
+  WEEK 0/3 as plain cells; (6) a reload keeps the plan. No sideways scroll anywhere; the only console error is the
+  app's own log of the intentional 500. Screenshots opened: 390 dark (card, refused save, Home, Today view), 390
+  light (Home: badge black on black before the fix, readable after), 1280 light (refused save). Light theme still
+  flags older gold-on-cream text: bottom-nav active label 10 px 3.02:1, a desktop button 2.75:1, Back and Hide on
+  the Today view 3.02:1. Scripted clicks also draw Chrome's default ring on the focused dialog panel, as on every
+  `tabindex=-1` dialog in the app; a real tap does not.
 - t1: `starterPathwaySteps()` (pure, 5-8 dated steps); suite `tests/test_starter_pathway.cjs`.
 - Job 184 (Targets) is merged; its recorded browser runs are in CLAUDE.md § Target clubs/coaches and outreach drafts.
 
 ## Current Work
 AVA job 199 (a new athlete gets from sign-up to a dated plan in one sitting): t1, t2 done. Still to do: t3 (local
 rehearsal without the live database), t4 (browser run on phone and desktop), then the security review, regression
-run and final verification. Open for t4: on Free, Home's Today view still hides the Today/This Week NUMBER tiles
-(`canTargets`, they open the locked Plan page); the Today tile and the next-step card do show the steps.
+run and final verification. Open for t4: the tiles view's "My goal: ..." line opens Plan, which is a FeatureLock on
+Free (older than this job; every new athlete now has a goal, so it is seen more often).
 
 ## Remaining Tasks
 - Migration 165 (job 184, now merged) is NOT YET APPLIED as far as the repo records: run it in the SQL Editor
@@ -50,10 +60,9 @@ run and final verification. Open for t4: on Free, Home's Today view still hides 
 - 12-function Vercel ceiling (`_`-prefixed `api/` files are shared modules). Adults only. Scout sends `due_in_days`.
 
 ## Latest Test / Build Status
-2026-11-08 (job 199 t2 attempt 2), via "$AVA_RUN" after `npm run compile`: goal_setup 91/91, action_mirror 56/56,
-parent_authorization 75/75, pathway_milestones 248/248, read_failures_shown 61/61, i18n_keys_resolve 4/4,
-compiled_artifact 14/14, launch_p0 104/104, starter_pathway 56/56, and 38 more suites that read GolszApp, Home or
-pathway_plan, all green; `node --check` on api/*.js, js/*.js, sw.js clean. Full `npm run check` left to AVA.
+2026-11-08 (job 199 t2 attempt 3), via "$AVA_RUN" after `npm run compile`: 72/72 suites that read GolszApp, Home,
+Passport or pathway_plan (4,531 assertions; goal_setup 98/98, home_command_centre 96/96, app_syntax 11/11,
+compiled_artifact 14/14), and `node --check` on api/*.js, js/*.js, sw.js. Full `npm run check` left to AVA.
 2026-11-06 (job 184): outreach 270/270, preview_targets 49/49, migration_165 47/47. 2026-11-03: 129/129 suites.
 
 ## Known Problems
