@@ -397,21 +397,45 @@ const namedIds = (sb) => [...new Set([
   }
   ck("a sign-in with the sport on file: a save is a plain one", (await signedIn({ sport: "Soccer" })).byType("GoalSetup").length, 0);
   ck("a failed profile read is not taken for a new athlete", (await signedIn({ __error: { message: "network" } })).byType("GoalSetup").length, 0);
+  // The editor Passport rendered, saved as a person saves it: the sport picked
+  // in its select, then Save. What reaches onProfileSaved is the app's own.
+  const saveInEditor = async (passportUi, sport) => {
+    const el = passportUi.byType("ProfileEditor")[0];
+    if (!el) return false;
+    const editor = mount(el.type, el.props);
+    editor.find((n) => n.type === "select" && n.props["aria-label"] === "editor_sport_label").props.onChange({ target: { value: sport } });
+    await editor.find((n) => n.type === "button" && editor.textOf(n) === "editor_save").props.onClick();
+    await settle();
+    return true;
+  };
+  {
+    // The whole hand-off, nothing built by this test: GolszApp's own props for
+    // Passport, Passport's own editor, the editor's own save.
+    const sb = makeSb({ profiles: { full_name: "Ana Diaz", occupation: "Player" }, athletes: { sport: null } });
+    const S = makeScope({ ...BASE(), sb, useIsDesktop: () => false, setInterval: () => 0, clearInterval() {} });
+    const app = mount(S.get("GolszApp"), { onSignOut() {}, startOnboarding: true });
+    await settle();
+    const passport = mount(S.get("Passport"), app.byType("Passport")[0].props);
+    await settle();
+    const before = app.byType("GoalSetup").length;
+    const saved = await saveInEditor(passport, "Soccer");
+    const stored = sb.log.updates.find((u) => u.table === "athletes");
+    ck("the onboarding editor's own save stores the sport", [saved, stored && stored.payload.sport], [true, "Soccer"]);
+    ck("...and, passed on by Passport, opens GoalSetup (closed before it)", [before, app.byType("GoalSetup").length], [0, 1]);
+  }
   // Manage mode (a parent editing a managed athlete's Passport): GolszApp hands
   // both layouts' Passport afterPassportSave, so Passport's own guard is what
-  // keeps that athlete's save from opening GoalSetup. The real editor's onSaved.
+  // keeps that athlete's save from opening GoalSetup.
   const passportSaves = async (manageMode) => {
     const S = makeScope({ ...BASE(), sb: makeSb({ profiles: { full_name: "Ana Diaz", occupation: "Player" }, athletes: { sport: null } }) });
     const saves = [];
     const ui = mount(S.get("Passport"), { autoEdit: true, onAutoEditConsumed() {}, onProfileSaved: (s) => saves.push(s),
       viewUserId: manageMode ? "child-1" : null, manageMode });
     await settle();
-    const editor = ui.byType("ProfileEditor")[0];
-    if (!editor) return "no editor";
-    await editor.props.onSaved({ sport: "Soccer", occupation: "Player" });
-    return saves.length;
+    return (await saveInEditor(ui, "Soccer")) ? saves : "no editor";
   };
-  ck("Passport reports its own onboarding save, never a managed athlete's", [await passportSaves(false), await passportSaves(true)], [1, 0]);
+  ck("Passport passes on what its editor saved, and never a managed athlete's save",
+     [await passportSaves(false), await passportSaves(true)], [[{ sport: "Soccer", occupation: "Player" }], []]);
 
   console.log("\n-- HomeTab: the 'set your goal' card, and never in place of LoadError --");
   const home = async (tables, props) => {

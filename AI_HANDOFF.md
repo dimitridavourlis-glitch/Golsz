@@ -5,7 +5,7 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Claude Code (AVA job 199, task t2-r1-1), 2026-11-08. Before that: Claude Code (job 199 t1, t2; job 184, Targets).
+Claude Code (AVA job 199, task t2-r1-1), 2026-11-09. Before that: Claude Code (job 199 t1, t2; job 184, Targets).
 
 ## Current Branch
 `ava/199-a-brand-new-athlete-goes-from-sign-up-to` (AVA job 199; AVA commits each step, then merges). Branched
@@ -36,8 +36,8 @@ from 3188dc1, where job 184 (Targets) was merged as #14.
 - t2-r1-1 (review of GoalSetup's build, saveGoalText, goalSetupFieldErrors and GolszApp's flags): one fix. A new
   athlete who signs in after confirming the email (no `startOnboarding`) never got GoalSetup after the Passport save;
   GolszApp's profile-complete read now sets `onboarding` when it finds no sport (not on a failed read). 4 new asserts.
-  Attempts 3-4: no code change; 1 assert pins that a managed athlete's Passport save never opens GoalSetup
-  (golsz-app.html:7277; it fails, 102/103, with `!manageMode` removed there).
+  Attempt 5 (test only): the editor's real save now drives Passport -> afterPassportSave -> GoalSetup; HEAD's
+  suite stayed 103/103 with `onSaved()` (6726) or `onProfileSaved()` (7277) emptied, the new one fails both.
 - t1: `starterPathwaySteps()` (pure, 5-8 dated steps); suite `tests/test_starter_pathway.cjs`.
 - Job 184 (Targets) is merged; its recorded browser runs are in CLAUDE.md § Target clubs/coaches and outreach drafts.
 
@@ -65,7 +65,7 @@ Free (older than this job; every new athlete now has a goal, so it is seen more 
 - 12-function Vercel ceiling (`_`-prefixed `api/` files are shared modules). Adults only. Scout sends `due_in_days`.
 
 ## Latest Test / Build Status
-2026-11-08 (job 199 t2-r1-1), via "$AVA_RUN" after `npm run compile`: goal_setup 103/103, action_mirror,
+2026-11-09 (job 199 t2-r1-1), via "$AVA_RUN" after `npm run compile`: goal_setup 105/105, action_mirror,
 pathway_milestones, parent_authorization, i18n, compiled_artifact and 13 more suites reading GolszApp (19/19).
 t2 attempt 3: 72/72 suites reading GolszApp, Home, Passport or pathway_plan. Full `npm run check` left to AVA.
 2026-11-06 (job 184): outreach 270/270, preview_targets 49/49, migration_165 47/47. 2026-11-03: 129/129 suites.

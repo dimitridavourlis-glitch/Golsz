@@ -274,7 +274,10 @@ Relevant commands:
   badge is `C.pitch`/`C.chalk`; `C.ink` under it drew black on black in light), the next-step card, and the
   TODAY / THIS WEEK number tiles behind "Show my progress". Only the ways into Plan, which is locked below Basic,
   check `canTargets`: Reschedule, Drop, and a tap on those two tiles (on Free they are plain cells, `go: null`).
-  Suite: `tests/test_goal_setup.cjs`. Browser run 2026-11-08 (job 199 t2 attempt 3): see AI_HANDOFF.md.
+  Suite: `tests/test_goal_setup.cjs` (it runs the editor's own save through Passport's `onSaved` into
+  `afterPassportSave`). Browser run 2026-11-08 (job 199 t2 attempt 3): see AI_HANDOFF.md. That run began at Home's
+  card, so **UNVERIFIED until t3/t4:** the Passport save -> GoalSetup hand-off in a browser, and the upsert
+  against the real database (RLS, PostgREST).
 - **Follows** (migration 006): `follows(follower_id, followed_id)`, public read, insert/delete restricted to
   `follower_id = auth.uid()`. Feed and Discover both maintain their own `following` state/`toggleFollow()` —
   not shared, each fetches independently.
