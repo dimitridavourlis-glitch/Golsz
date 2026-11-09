@@ -55,7 +55,7 @@ publish.** Full detail: CLAUDE.md § What this is; README.md.
   files are shared modules, not functions.
 - `tests/`: `test_*.cjs`, `run-all.cjs`, `README.md`. `tools/`: the build scripts (`precompile`, `split-i18n`,
   `strip-jsx`, `unpublish-internal`) and local preview and timing tools (`preview-public-passport`,
-  `preview-targets`, `time-first-screen`, `time-pages`).
+  `preview-targets`, `preview-onboarding`, `time-first-screen`, `time-pages`).
   `js/`: `main.js`, `landing.js`, `app.js` (generated); `js/i18n/` is gitignored build output.
 - `golsz-guard/`: Claude Code plugin, four skills of project rules. Other agents: read
   `golsz-guard/skills/*/SKILL.md` before Supabase writes, measurements, athlete-facing claims.
@@ -135,6 +135,14 @@ node tests/test_<name>.cjs     # one suite
   loader in `tests/test_read_failures_shown.cjs`.
 - Form errors come from pure helpers, `signupFieldErrors` and `profileFieldErrors` (golsz-app.html), shown under the field.
 - Crash proof: `tools/preview-public-passport.cjs` `&fixture=crash` (+ `&reload=1`); run 2026-11-03 passed (CLAUDE.md).
+- First visit (sign-up -> Passport editor -> GoalSetup -> Home, AVA job 199): `starterPathwaySteps()` (pure, 5-8 dated
+  `starter_step_*` milestones) writes a starter plan to `pathway_plan` (upsert `onConflict: "user_id"`, only
+  pathway_type/target_timeline/milestones/updated_at) via `GoalSetup` (no AI, no plan gate; `planHasSteps` never
+  overwrites; a refused save keeps the form with `role=alert` + Retry). `SetGoalCard` shows on Home for a sport with
+  no steps. Preview: `tools/preview-onboarding.cjs` (stand-in auth/store, `drive=signup|passport|goal|home|reloadmid|full`,
+  `fail=pathway` one-shot so Retry succeeds, `__store`). **UNVERIFIED (t4):** the required real-browser run at 390/1280,
+  dark/light (AVA browser broker unavailable in this agent env); live Supabase/RLS, real phone, screen reader, fr/es/el.
+  Detail: CLAUDE.md § First visit: sign-up to a dated plan.
 - Targets (Plan > "Schools & clubs", table `outreach_targets`): the caps in `TARGET_LIMITS` (golsz-app.html) are
   repeated by migration 165's check constraints, and `tests/test_migration_165.cjs` diffs them: change both, through a
   new migration. 165 is NOT YET APPLIED, so today the caps are client-side only. Deleting a target takes two taps and

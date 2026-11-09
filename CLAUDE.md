@@ -275,9 +275,52 @@ Relevant commands:
   TODAY / THIS WEEK number tiles behind "Show my progress". Only the ways into Plan, which is locked below Basic,
   check `canTargets`: Reschedule, Drop, and a tap on those two tiles (on Free they are plain cells, `go: null`).
   Suite: `tests/test_goal_setup.cjs` (it runs the editor's own save through Passport's `onSaved` into
-  `afterPassportSave`). Browser run 2026-11-08 (job 199 t2 attempt 3): see AI_HANDOFF.md. That run began at Home's
-  card, so **UNVERIFIED until t3/t4:** the Passport save -> GoalSetup hand-off in a browser, and the upsert
-  against the real database (RLS, PostgREST).
+  `afterPassportSave`). `tests/test_starter_pathway.cjs` covers the pure plan builder.
+
+### First visit: sign-up to a dated plan (AVA job 199)
+
+- **Flow.** A new adult signs up (`Auth`; sign-up sends the adult account through and `GolszApp` gets `startOnboarding`),
+  lands in the Passport tab with the profile editor auto-opened, fills the Passport and saves with a sport. The
+  onboarding save opens `GoalSetup`. "Build my plan" saves the goal (`saveGoalText`) and writes dated steps to
+  `pathway_plan`, then Home shows that athlete's own Today and This week items (their step labels), not an empty or
+  placeholder screen. A plain reload keeps the plan and shows the same Home. `SetGoalCard` appears on Home whenever
+  the athlete has a sport and no pathway steps (a skip, or a reload mid-way); tapping it opens the same `GoalSetup`.
+  `reloadmid` in the preview tool: Home shows the "set your goal" card, then completing `GoalSetup` lands on Home.
+- **`starterPathwaySteps({ sport, pathwayType, timeline, today, athlete, benchmarks, targets, pathwayRow, t })`**
+  (pure, `golsz-app.html`; suite `tests/test_starter_pathway.cjs`). Returns 5-8 dated milestone steps (each with an
+  `id`, translated `label` from `starter_step_*` in all four languages, `done`, `due` date, `category`, `stage`,
+  `due_src`). Skips steps whose evidence is already on file (benchmarks/highlights/targets/academics by the gap
+  engine's rules) and fills to at least five steps; places steps from today across the near term and ends with a
+  review by the timeline horizon (or a default). No I/O, no AI.
+- **`GoalSetup`** (full-screen, rendered by `GolszApp` over the app). Fields: goal (required, `cleanGoalText`/
+  `goalTextError`, same rule as GoalCard), `PATHWAY_TYPES` preselected by `starterPathwayType(sport)`, optional
+  timeline (`goalSetupFieldErrors` rejects an unreadable or past date). Resolves `actingFor || user.id`; reads the
+  pathway row whole on open and again right before the write (`planHasSteps` -> `onDone`, never overwrites). "Build
+  my plan" (`buildingRef` stops a double tap): saves the goal via `saveGoalText`, computes `starterPathwaySteps`,
+  upserts `pathway_plan` on `user_id` writing only `pathway_type`, `target_timeline`, `milestones`, `updated_at`,
+  then `syncActions(sb)` and Home (remounted via `planVersion`). No plan gate, no AI call. A refused save keeps the
+  form with the typed values and a `role="alert"` line plus Retry.
+- **Preview tool `tools/preview-onboarding.cjs`** (`node tools/preview-onboarding.cjs <port>`, then
+  `/golsz-app.html`). Stand-in auth (signUp/getSession/getUser) and an in-memory store for `profiles`, `athletes`,
+  `pathway_plan`, `outreach_targets`, `athlete_benchmarks`; every other table/RPC is empty. Nothing reaches the real
+  Supabase project; the stub is added to the served HTML in memory only; CDN libraries come from local vendor copies.
+  Drives: `signup` (lands in the Passport editor), `passport` (saves sport/position/club/country, lands on
+  `GoalSetup`), `goal` (builds the plan, lands on Home), `home` (signed-in capture of Home), `reloadmid` (Home shows
+  the "set your goal" card, then the goal drive completes), `full` (all three in one page). `fail=pathway` makes the
+  `pathway_plan` upsert answer HTTP 500 once; the stub clears the fail after that response so a Retry in the UI
+  succeeds on the same page. `__store` returns the written rows; `__hold`/`__release` let the browser tool wait for
+  a drive. Use one server per width and theme for a flow whose store must persist across page loads. Suite:
+  `tests/test_preview_onboarding.cjs`.
+- **UNVERIFIED (t4):** a recorded real-browser run (AVA browser / Chrome) at 390 and 1280 px, dark and light, proving
+  the ordered flow (signup -> Passport editor; passport -> GoalSetup; goal -> Home with Today >= 1 and This week >= 3
+  and step labels; plain reload same Home) plus `reloadmid` and `fail=pathway` with retry-succeeds. The AVA browser
+  broker (`$AVA_BROWSER`) was not available in this agent environment (Chrome cannot start in the agent sandbox, and
+  no broker script was present), so the page-title recordings and screenshots required by the acceptance criteria
+  were not produced here. The preview tool and its 24-test suite pass, and the app code/flow are covered by
+  `test_goal_setup.cjs` and `test_starter_pathway.cjs`. Still UNVERIFIED in general (older, unchanged): live
+  Supabase (RLS, PostgREST, the real upsert/auth), a real phone on cellular, a screen reader, and fr/es/el in a
+  browser.
+
 - **Follows** (migration 006): `follows(follower_id, followed_id)`, public read, insert/delete restricted to
   `follower_id = auth.uid()`. Feed and Discover both maintain their own `following` state/`toggleFollow()` —
   not shared, each fetches independently.

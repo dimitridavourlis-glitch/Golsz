@@ -5,18 +5,25 @@
 //
 // Usage:  node tools/preview-onboarding.cjs [port]        (default: a free port, printed)
 //   then open  http://127.0.0.1:<port>/golsz-app.html
-//   &fail=pathway     the pathway_plan upsert answers HTTP 500
-//   &today=YYYY-MM-DD overrides "today" for the stub (stored as data attribute for the app)
+//   &fail=pathway     the pathway_plan upsert answers HTTP 500 once; the stub clears the fail on a
+//                     500 so a Retry in the UI succeeds on the same page (form kept, alert shown,
+//                     nothing written on the first attempt).
+//   &today=YYYY-MM-DD overrides "today" for the stub (Date fixed, localStorage hint for the app)
 //   &theme=light|dark sets localStorage["golsz-theme"] before the page starts
 //   &lang=en|fr|es|el sets localStorage["golsz-lang"] the same way
-//   &drive=signup|passport|goal|full|reloadmid
-//     signup    fills sign-up as an adult and submits
-//     passport  fills sport, position, club, country and saves (starts signed in, no profile sport)
-//     goal      fills the goal and taps Build my plan (starts signed in, profile complete, no plan)
-//     full      all three in order
-//     reloadmid reloads between passport and goal
+//   &drive=signup|passport|goal|home|reloadmid|full
+//     signup    fills sign-up as an adult and submits; lands in the Passport editor
+//     passport  fills sport, position, club, country and saves (starts signed in, no profile sport);
+//               lands on GoalSetup
+//     goal      fills the goal and taps Build my plan (starts signed in, profile complete, no plan);
+//               lands on Home
+//     home      signed-in capture of Home (seeds session from server state; use after goal on same server)
+//     reloadmid athlete has sport but no pathway: Home shows the "set your goal" card, the drive taps
+//               "Set my goal", completes GoalSetup, and lands on Home
+//     full      signup -> passport -> goal in one page (ends on Home)
 //   When a drive finishes, the page title ends with:
-//     [drive done; screen: <name>; today: <n>; thisWeek: <n>; alerts: <...>]
+//     [drive done; screen: <name>; today: <n>; thisWeek: <n>; labels: <...>; alerts: <...>]
+//     reloadmid also records sawSetGoalCard=yes in the summary.
 //   The server prints each write as  <table> <insert|update|upsert|rpc> id=<id> fields=<names>
 //
 // WHAT IS STAND-IN: auth (signUp/getSession/getUser) answered locally; profiles, athletes,
@@ -71,7 +78,7 @@ function stub(cfg) {
   var session = { access_token: token, refresh_token: "preview", token_type: "bearer", expires_in: 86400, expires_at: now + 86400, user: user };
   var authKey = "sb-" + new URL(cfg.supabaseUrl).hostname.split(".")[0] + "-auth-token";
 
-  // Pre-seed session for drives that start signed in (passport, goal). signup/full start unauthenticated.
+  // Pre-seed session for drives that start signed in, or when the server says state already exists.
   if (cfg.seedSession) {
     try { localStorage.setItem(authKey, JSON.stringify(session)); } catch (e) {}
   } else {
@@ -103,13 +110,12 @@ function stub(cfg) {
   };
 
   function textOf(el) { return (el && (el.textContent || "") || "").replace(/\s+/g, " ").trim(); }
-  function all( sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
   function visible(el) { if (!el) return false; var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }
   function btnWithText(text, root) {
     return all("button, [role=button]", root).filter(function (b) { return visible(b) && textOf(b).indexOf(text) !== -1; });
   }
   function findInput(labelText) {
-    // Try label[for], then placeholder/aria-label contains
     var labels = all("label").filter(function (l) { return textOf(l).toLowerCase().indexOf(labelText.toLowerCase()) !== -1; });
     for (var i = 0; i < labels.length; i++) {
       if (labels[i].htmlFor) { var el = document.getElementById(labels[i].htmlFor); if (el) return el; }
@@ -120,6 +126,17 @@ function stub(cfg) {
     }
     return all("input, textarea").filter(function (i) { return ((i.placeholder||"") + " " + (i.getAttribute("aria-label")||"")).toLowerCase().indexOf(labelText.toLowerCase()) !== -1; })[0] || null;
   }
+  function hasGoalSetup() { return !!document.getElementById("goal-setup-goal") || btnWithText("Build my plan").length > 0; }
+  function hasSetGoalCard() {
+    var b = (document.body.textContent || "");
+    return b.indexOf("Set your goal to get your plan") !== -1 || btnWithText("Set my goal").length > 0;
+  }
+  function onHomeView() {
+    var b = (document.body.textContent || "");
+    // "TODAY"/"This week" tiles or next-step/home markers; avoid matching GoalSetup title.
+    if (hasGoalSetup()) return false;
+    return /TODAY|THIS WEEK|This week|MY NEXT STEP|Mark done|Do this next/i.test(b) || btnWithText("Today").length > 0;
+  }
 
   if (cfg.drive) {
     // Hold page load so browser captures wait for drive completion (same pattern as targets).
@@ -127,35 +144,61 @@ function stub(cfg) {
     var baseTitle = null;
     var mark = function (t) { if (baseTitle === null) baseTitle = document.title; document.title = baseTitle + " [" + t + "]"; };
     var done = false;
+    var sawSetGoalCard = false;
+    var failWas = cfg.fail; // remember: one-shot clear in fetch means retry can succeed
 
     function finishSummary() {
-      // Screen name: look for headings / key UI markers
       var screen = "unknown";
-      if (all("h1,h2,h3").some(function (h) { return /goal|plan|pathway/i.test(textOf(h)); }) && btnWithText("Build").length) screen = "GoalSetup";
-      else if (btnWithText("Today").length || btnWithText("This week").length || /TODAY|THIS WEEK/i.test(document.body.textContent)) screen = "Home";
-      else if (all("input,select,textarea").some(function (i) { return /sport/i.test((i.placeholder||"") + (i.id||"") + (i.name||"")); }) || btnWithText("Save").length) screen = "Passport";
-      else if (btnWithText("Sign up").length || btnWithText("Create").length || all("input[type=password]").length) screen = "Auth";
-      // Today / This week counts: look for number tiles near those labels
+      if (hasGoalSetup()) screen = "GoalSetup";
+      else if (onHomeView()) screen = "Home";
+      else if (btnWithText("Sign up").length || btnWithText("Create account").length || btnWithText("Start free").length || all("input[type=password]").length > 0) screen = "Auth";
+      else if (all("input,select,textarea").filter(visible).length > 2 || btnWithText("Save").length) screen = "Passport";
       var body = document.body.textContent || "";
-      var todayN = (body.match(/TODAY[\s\S]{0,40}?(\d+)/i) || body.match(/Today[\s\S]{0,40}?(\d+)/) || [])[1] || "?";
-      var weekN = (body.match(/THIS WEEK[\s\S]{0,40}?(\d+)/i) || body.match(/This week[\s\S]{0,40}?(\d+)/) || [])[1] || "?";
+      function countNear(res) { for (var i=0;i<res.length;i++){ var m=body.match(res[i]); if(m) return m[1]; } return "?"; }
+      // "3 to do", "TODAY 0/3", "TODAY\n3", "Today 3"
+      var todayN = countNear([/(\d+)\s*to do/i, /TODAY[\s\S]{0,30}?(\d+)\s*\/\s*\d+/i, /TODAY[\s\S]{0,20}?(\d+)/i, /Today[\s\S]{0,40}?(\d+)/]);
+      var weekN = countNear([/THIS WEEK[\s\S]{0,30}?(\d+)\s*\/\s*\d+/i, /THIS WEEK[\s\S]{0,20}?(\d+)/i, /This week[\s\S]{0,40}?(\d+)/i]);
+      // Step labels: visible elements whose text matches starter step phrasing
+      var labels = [];
+      var seen = {};
+      all("button,div,span,p,li,h2,h3,h4").forEach(function (el) {
+        if (!visible(el)) return;
+        var t = textOf(el);
+        if (t.length < 12 || t.length > 140) return;
+        if (/focus on this week|record a benchmark|highlight video|target clubs or coaches|graduation year and GPA|email your first target|watch athletes|share your passport|retest your benchmark|review your progress/i.test(t) && !/Build my plan|Set my goal|Set your goal|Mark done|Skip for|goal_setup/i.test(t)) {
+          var key = t.slice(0,60); if (!seen[key] && labels.length < 8) { seen[key]=1; labels.push(t); }
+        }
+      });
+      // fallback: any "Mark done" siblings / next-step text
+      if (!labels.length) {
+        all("div,span,p").forEach(function(el){ if(!visible(el)||el.children.length>3)return; var t=textOf(el); if(/Ask Scout what to focus|Record a benchmark|Add .*highlight|Add 3 target|graduation year|Email your first|Watch athletes|Share your Passport|Retest your benchmark|Review your progress/i.test(t) && t.length<140){ var k=t.slice(0,60); if(!seen[k]&&labels.length<6){seen[k]=1;labels.push(t);} } });
+      }
       var alerts = all("[role=alert]").map(function (a) { return textOf(a); }).filter(Boolean).join(" | ");
-      mark('drive done; screen: ' + screen + '; today: ' + todayN + '; thisWeek: ' + weekN + '; alerts: ' + (alerts || "none"));
+      var extra = sawSetGoalCard ? "; sawSetGoalCard=yes" : "";
+      if (cfg._failAlertSeen) extra += "; failAlert=yes; planCountAtFail=" + (cfg._planCountAtFail == null ? "?" : cfg._planCountAtFail) + "; goalKept=" + (cfg._goalKept ? "yes" : "no") + "; retryOk=" + (onHomeView() ? "yes" : "no");
+      mark('drive done; screen: ' + screen + '; today: ' + todayN + '; thisWeek: ' + weekN + extra + '; labels: ' + (labels.join(" || ") || "none") + '; alerts: ' + (alerts || "none"));
       fetch("/__release").catch(function () {});
     }
 
     var step = 0;
+    var settledAt = 0;
     var timer = setInterval(function () {
       if (done) { clearInterval(timer); return; }
       try {
+        if (cfg.drive === "home") {
+          if (onHomeView() || hasSetGoalCard()) {
+            if (!settledAt) settledAt = Date.now();
+            if (Date.now() - settledAt < 800) return;
+            done = true; setTimeout(finishSummary, 300);
+          }
+          return;
+        }
         if (cfg.drive === "signup" || (cfg.drive === "full" && step < 10)) {
-          // Sign up flow
           if (step === 0) {
-            // Switch to sign-up tab if there's a toggle
             var su = btnWithText("Sign up").concat(btnWithText("Create account")).concat(btnWithText("Get started"));
-            var toggle = su.filter(function (b) { return !/submit/i.test(b.type || ""); })[0];
-            if (toggle && !/password/i.test(document.body.innerHTML.slice(0,500))) { toggle.click(); step = 1; mark("drive 1"); return; }
-            step = 1; mark("drive 1");
+            var toggle = su.filter(function (b) { return b.type !== "submit"; })[0];
+            if (toggle) { toggle.click(); }
+            step = 1; mark("drive 1"); return;
           }
           if (step === 1) {
             var nameI = document.getElementById("signup-name") || findInput("name") || findInput("full");
@@ -164,10 +207,8 @@ function stub(cfg) {
             if (!emailI || !pwI) return;
             if (nameI) setNativeVal(nameI, "Test Athlete");
             setNativeVal(emailI, "test@example.com");
-            // email2 if present
             var e2 = document.getElementById("signup-email2"); if (e2) setNativeVal(e2, "test@example.com");
             setNativeVal(pwI, "Password123!");
-            // DOB fields
             var day = document.getElementById("signup-dob-day") || document.getElementById("signup-dob");
             var month = document.getElementById("signup-dob-month");
             var year = document.getElementById("signup-dob-year");
@@ -178,20 +219,32 @@ function stub(cfg) {
           if (step === 2) {
             var sub = btnWithText("Create account").concat(btnWithText("Sign up")).concat(btnWithText("Start free")).concat(btnWithText("Continue"));
             var b = sub.filter(function (x) { return x.type === "submit" || x.tagName === "BUTTON"; })[0];
-            if (b) { b.click(); step = cfg.drive === "full" ? 10 : 99; mark(cfg.drive === "full" ? "drive signup done" : "drive 3"); }
+            if (b) { b.click(); step = cfg.drive === "full" ? 3 : 3; mark("drive 3"); }
+            return;
+          }
+          if (step === 3) {
+            // Wait for landing in Passport editor (onboarding auto-edit). Detect editor/form fields.
+            var sportI = findInput("sport") || all('input[placeholder*="sport" i], select[id*="sport" i], input[id*="sport" i]').filter(visible)[0];
+            var editSave = btnWithText("Save").filter(visible);
+            var onPassport = sportI || (editSave.length && /passport|profile|sport|position/i.test(document.body.textContent));
+            if (onPassport) {
+              if (!settledAt) settledAt = Date.now();
+              if (Date.now() - settledAt < 500) return;
+              if (cfg.drive === "full") { step = 10; settledAt = 0; mark("drive signup->passport"); return; }
+              done = true; setTimeout(finishSummary, 300);
+            }
             return;
           }
         }
         if (cfg.drive === "passport" || (cfg.drive === "full" && step >= 10 && step < 20)) {
           if (step < 10) step = 10;
           if (step === 10) {
-            // Wait for passport editor / onboarding form
-            var sportI = findInput("sport") || all('input[placeholder*="sport" i], select[id*="sport" i]').filter(visible)[0];
+            var sportI2 = findInput("sport") || all('input[placeholder*="sport" i], select[id*="sport" i], input[id*="sport" i], input').filter(function(i){ return /sport/i.test((i.id||"")+(i.name||"")+(i.placeholder||"")+(i.getAttribute("aria-label")||"")); }).filter(visible)[0];
             var saveB = btnWithText("Save").concat(btnWithText("Continue")).concat(btnWithText("Next"));
-            if (!sportI && !saveB.length) return;
-            if (sportI) {
-              if (sportI.tagName === "SELECT") { sportI.value = "Soccer"; sportI.dispatchEvent(new Event("change",{bubbles:true})); }
-              else setNativeVal(sportI, "Soccer");
+            if (!sportI2 && !saveB.length) return;
+            if (sportI2) {
+              if (sportI2.tagName === "SELECT") { sportI2.value = "Soccer"; sportI2.dispatchEvent(new Event("change",{bubbles:true})); }
+              else setNativeVal(sportI2, "Soccer");
             }
             var pos = findInput("position"); if (pos) setNativeVal(pos, "Midfielder");
             var club = findInput("club"); if (club) setNativeVal(club, "Test FC");
@@ -200,12 +253,38 @@ function stub(cfg) {
           }
           if (step === 11) {
             var sb2 = btnWithText("Save").concat(btnWithText("Continue")).concat(btnWithText("Next")).concat(btnWithText("Done"))[0];
-            if (sb2) { sb2.click(); step = cfg.drive === "full" ? 20 : 99; mark(cfg.drive === "full" ? "drive passport done" : "drive passport saved"); }
+            if (sb2) { sb2.click(); step = 12; mark("drive passport saved"); }
+            return;
+          }
+          if (step === 12) {
+            // Land on GoalSetup after onboarding save
+            if (hasGoalSetup()) {
+              if (!settledAt) settledAt = Date.now();
+              if (Date.now() - settledAt < 400) return;
+              if (cfg.drive === "full") { step = 20; settledAt = 0; mark("drive passport->goal"); return; }
+              done = true; setTimeout(finishSummary, 300);
+            }
             return;
           }
         }
-        if (cfg.drive === "goal" || (cfg.drive === "full" && step >= 20 && step < 30)) {
-          if (step < 20) step = 20;
+        if (cfg.drive === "goal" || (cfg.drive === "full" && step >= 20 && step < 30) || cfg.drive === "reloadmid") {
+          if (cfg.drive === "goal" && step === 0) step = 20;
+          if (cfg.drive === "reloadmid" && step === 0) step = 18;
+          if (step === 18) {
+            // reloadmid: wait for Home with "set your goal" card
+            if (hasSetGoalCard()) {
+              sawSetGoalCard = true;
+              if (!settledAt) settledAt = Date.now();
+              if (Date.now() - settledAt < 500) return;
+              var openBtn = btnWithText("Set my goal")[0];
+              if (openBtn) { openBtn.click(); step = 19; settledAt = 0; mark("drive set-goal clicked"); }
+            }
+            return;
+          }
+          if (step === 19) {
+            if (hasGoalSetup()) { step = 20; settledAt = 0; }
+            return;
+          }
           if (step === 20) {
             var goalI = document.getElementById("goal-setup-goal") || findInput("goal") || all("textarea").filter(visible)[0];
             if (!goalI) return;
@@ -213,35 +292,31 @@ function stub(cfg) {
             step = 21; mark("drive goal filled"); return;
           }
           if (step === 21) {
-            var buildB = btnWithText("Build my plan").concat(btnWithText("Build")).concat(btnWithText("plan"))[0];
-            if (buildB) { buildB.click(); step = 99; mark("drive building"); }
+            var buildB = btnWithText("Build my plan").concat(btnWithText("Build"))[0];
+            if (buildB) { buildB.click(); step = 22; mark("drive building"); }
             return;
           }
-        }
-        if (cfg.drive === "reloadmid" || (cfg.drive === "full" && cfg.reloadMid)) {
-          // handled via separate logic below
-        }
-        if (step === 99) {
-          // Wait for Home (or done state)
-          var onHome = /TODAY|This week/i.test(document.body.textContent) || btnWithText("Mark done").length > 0 || all("[id*=home],[data-page=home]").length > 0;
-          if (onHome || step === 99) {
-            // give React a moment to settle
-            if (!cfg._settled) { cfg._settled = Date.now(); }
-            if (Date.now() - cfg._settled < 800) return;
-            done = true;
-            setTimeout(finishSummary, 400);
+          if (step === 22) {
+            var saveAlert = all("[role=alert]").filter(function(a){ return /couldn|impossible|no se pudo|δεν αποθηκεύτηκε|save.*plan|retry|réessay/i.test(textOf(a)); });
+            // fail=pathway: first show form-kept+alert (nothing written), then click Retry -> succeeds.
+            if (saveAlert.length && failWas === "pathway" && !cfg._failRetried) {
+              if (!settledAt) settledAt = Date.now();
+              if (Date.now() - settledAt < 700) return;
+              cfg._failRetried = true;
+              cfg._failAlertSeen = true;
+              var gi = document.getElementById("goal-setup-goal"); cfg._goalKept = gi ? gi.value : "";
+              try { cfg._planCountAtFail = -1; fetch("/__store").then(function(r){return r.json();}).then(function(s){ cfg._planCountAtFail = (s.pathway_plan||[]).length; }).catch(function(){ cfg._planCountAtFail = -1; }); } catch(e){}
+              // click Retry inside the alert (same handler as build; stub cleared cfg.fail so it succeeds)
+              var retryB = btnWithText("Retry", saveAlert[0].parentElement || document)[0] || btnWithText("Retry")[0] || btnWithText("Réessayer")[0];
+              if (retryB) { retryB.click(); mark("drive retry"); settledAt = 0; return; }
+            }
+            if (onHomeView() && !hasSetGoalCard()) {
+              if (!settledAt) settledAt = Date.now();
+              if (Date.now() - settledAt < 1000) return;
+              done = true; setTimeout(finishSummary, 400);
+            }
+            return;
           }
-        }
-        // Standalone passport/goal drives: kick off
-        if (cfg.drive === "passport" && step === 0) { step = 10; }
-        if (cfg.drive === "goal" && step === 0) { step = 20; }
-        if (cfg.drive === "reloadmid") {
-          // passport first, then reload, then goal
-          if (step === 0) step = 10;
-          if (step === 12) { step = 13; window.location.href = window.location.pathname + window.location.search.replace(/drive=reloadmid/, "drive=reloadmid2"); return; }
-        }
-        if (cfg.drive === "reloadmid2") {
-          if (step === 0) step = 20;
         }
       } catch (e) { /* keep trying */ }
     }, 200);
@@ -256,7 +331,11 @@ function stub(cfg) {
     var target = location.origin + "/__sb" + req.url.slice(cfg.supabaseUrl.length);
     var hasBody = req.method !== "GET" && req.method !== "HEAD";
     return (hasBody ? req.text() : Promise.resolve(undefined)).then(function (body) {
-      return realFetch(target, { method: req.method, headers: headers, body: body || undefined });
+      return realFetch(target, { method: req.method, headers: headers, body: body || undefined }).then(function (resp) {
+        // One-shot fail: after the first pathway 500, clear so a UI Retry succeeds.
+        if (!resp.ok && cfg.fail === "pathway" && req.url.indexOf("/rest/v1/pathway_plan") !== -1) { cfg.fail = ""; }
+        return resp;
+      });
     });
   };
   var RealSocket = window.WebSocket;
@@ -312,7 +391,6 @@ function createPreview({ localise = localiseLibraries } = {}) {
   function handleAuth(req, res, sub, body) {
     if (sub === "/auth/v1/signup" && req.method === "POST") {
       signedUp = true;
-      // Ensure profile/athlete rows exist in store
       if (!state.profiles.find(p => p.id === USER_ID)) state.profiles.push(defaultProfile());
       if (!state.athletes.find(a => a.id === USER_ID)) state.athletes.push(defaultAthlete());
       let input = {}; try { input = JSON.parse(body || "{}"); } catch(e){}
@@ -321,22 +399,14 @@ function createPreview({ localise = localiseLibraries } = {}) {
       console.log("auth signup email=" + (input.email || ""));
       return send(res, 200, { ...sessionObj(), session: sessionObj() });
     }
-    if (sub === "/auth/v1/token" && req.method === "POST") {
-      return send(res, 200, sessionObj());
-    }
+    if (sub === "/auth/v1/token" && req.method === "POST") return send(res, 200, sessionObj());
     if (sub === "/auth/v1/user" && req.method === "GET") {
-      // If not seeded/signed up and no auth header, return 401-like or user; for preview be permissive when session seeded
       const auth = req.headers["authorization"] || "";
       if (!auth && !signedUp) return send(res, 200, userObj()); // permissive for drive flows
       return send(res, 200, userObj());
     }
-    if (sub === "/auth/v1/user" && req.method === "PUT") {
-      return send(res, 200, userObj());
-    }
-    if (sub.startsWith("/auth/v1/logout") || sub.startsWith("/auth/v1/signout")) {
-      return send(res, 204);
-    }
-    // getSession is client-side from storage in supabase-js v2; but some flows may hit endpoints
+    if (sub === "/auth/v1/user" && req.method === "PUT") return send(res, 200, userObj());
+    if (sub.startsWith("/auth/v1/logout") || sub.startsWith("/auth/v1/signout")) return send(res, 204);
     if (sub.startsWith("/auth/v1/")) return send(res, 200, { user: userObj(), session: sessionObj() });
     return send(res, 200, {});
   }
@@ -358,7 +428,6 @@ function createPreview({ localise = localiseLibraries } = {}) {
     const eqId = params.get(idField) ? params.get(idField).replace(/^eq\./, "") : (row[idField] || row.user_id || row.id || USER_ID);
 
     if (req.method === "POST") {
-      // upsert detection: Prefer header with resolution=merge-duplicates or on_conflict param
       const isUpsert = /resolution=merge-duplicates/.test(req.headers.prefer || "") || params.has("on_conflict");
       const col = state[table] || (state[table] = []);
       const existing = col.find(r => String(r[idField]) === String(eqId));
@@ -392,7 +461,7 @@ function createPreview({ localise = localiseLibraries } = {}) {
   const holds = new Map();
   function hold(res) {
     const done = () => { if (!holds.delete(res)) return; clearTimeout(timer); res.writeHead(204, { "cache-control": "no-store" }).end(); };
-    const timer = setTimeout(done, 25000);
+    const timer = setTimeout(done, 45000);
     holds.set(res, done);
     res.on("close", () => { holds.delete(res); clearTimeout(timer); });
   }
@@ -412,7 +481,6 @@ function createPreview({ localise = localiseLibraries } = {}) {
         const sub = u.pathname.slice("/__sb".length);
         if (sub.startsWith("/auth/v1/")) return handleAuth(req, res, sub, body);
         if (sub.startsWith("/rest/v1/rpc/")) {
-          // All RPCs return empty/null - sync_athlete_actions and others Home calls
           const rpc = sub.replace("/rest/v1/rpc/", "").split("?")[0];
           console.log("rpc " + rpc);
           return send(res, 200, null);
@@ -438,19 +506,18 @@ function createPreview({ localise = localiseLibraries } = {}) {
       const local = localise(buf.toString("utf8"));
       Object.assign(vendorFiles, local.files);
       console.log("page " + (u.search || "(no query)"));
-      const drive = ["signup","passport","goal","full","reloadmid","reloadmid2"].includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "";
-      // Seed session for passport/goal standalone drives; full/signup start unauth; reloadmid2 continues signed in
-      const seedSession = drive === "passport" || drive === "goal" || drive === "reloadmid2";
-      // For passport drive, ensure athlete has no sport so onboarding triggers
-      if (drive === "passport" || drive === "full" || drive === "reloadmid") {
-        const a = state.athletes.find(x => x.id === USER_ID) || defaultAthlete();
-        if (drive === "passport") { a.sport = null; }
-        if (!state.athletes.find(x => x.id === USER_ID)) state.athletes.push(a);
-      }
-      // For goal drive, ensure profile complete, no pathway
-      if (drive === "goal") {
-        const a = state.athletes.find(x => x.id === USER_ID); if (a) { a.sport = "Soccer"; a.position = "Midfielder"; }
-      }
+      const drive = ["signup","passport","goal","home","full","reloadmid","reloadmid2"].includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "";
+      const hasPlan = state.pathway_plan.some(p => Array.isArray(p.milestones) && p.milestones.length);
+      const ath = state.athletes.find(x => x.id === USER_ID) || defaultAthlete();
+      if (!state.athletes.find(x => x.id === USER_ID)) state.athletes.push(ath);
+      // Seed session for signed-in drives, or for a plain/home reload when the server already has state.
+      const seedSession = drive === "passport" || drive === "goal" || drive === "home" || drive === "reloadmid" || drive === "reloadmid2" || (!drive && (hasPlan || signedUp || !!ath.sport));
+      if (drive === "passport" || drive === "full") { ath.sport = null; }
+      // reloadmid: profile complete (has sport) but no pathway -> SetGoalCard on Home.
+      if (drive === "reloadmid") { ath.sport = ath.sport || "Soccer"; ath.position = ath.position || "Midfielder"; state.pathway_plan = []; }
+      if (drive === "goal") { ath.sport = "Soccer"; ath.position = "Midfielder"; }
+      // home/plain reload with plan: ensure sport present
+      if ((drive === "home" || !drive) && hasPlan && !ath.sport) { ath.sport = "Soccer"; }
       const failParam = u.searchParams.get("fail");
       const cfg = {
         ...constantsFrom(local.html), userId: USER_ID,
