@@ -96,6 +96,20 @@ Relevant commands:
   were deleted on 2026-09-07 along with contact.html's waitlist form: they validated, showed "You're on
   the list.", and submitted nothing anywhere. Do not reintroduce a client-only success state — if a form
   is ever added back, give it a real backend before it ships.
+- **One look across the site and the sign-in screen (AVA job 199 design review, 2026-11-10).** `--navy` is the
+  app's `--pitch` (#0A0A0A; it was a green-tinted #0D1210, so every ratio recorded in `:root` is now a floor), the
+  header wordmark is the app's (Archivo weight 900, `font-stretch: 125%`), and `.btn-primary` is the app's submit
+  button: flat `--gold` on `--radius-btn` (12px), glow on hover only. `--ink-soft` is secondary reading text;
+  mono captions are 11px or more in `--ink-muted`. `.nav-links` has a desktop `margin-left` (`.nav-signin`'s auto
+  margin takes the free room, so without it the first link touches the logo). `body` is a 100vh flex column and
+  `body > main` grows, so a short page's footer reaches the bottom. `404.html` carries the shared header with
+  absolute links and, because it loads no script, its phone menu is a `<details class="nav-menu">`. The home
+  page's goal chips are capped (`.lx-chips` `max-width`) so they stay inside the header's edges; About's five-step
+  strip keeps each arrow inside the `.journey-step` that follows it. `Auth` (golsz-app.html): tabs, fields and the
+  submit button stay inside `AUTH_COLUMN` (440px), the card widens to 920px only while the plan cards are open on a
+  desktop, every field has a visible `<label>`, the chosen tab is a raised surface (gold is the submit button's),
+  and no text is under 11px. `tests/test_first_screen_design.cjs` pins all of it; it cannot see pixels, so look
+  again in a browser after a change (375 and 1280 px).
 - `index.html` is a single long page: How It Works, Features, and About are all sections on this one page
   (`#how-it-works`, `#features-section`, `#about-section`) rather than separate pages — an earlier
   consolidation collapsed a 5+ page site down to this plus Contact/Terms.

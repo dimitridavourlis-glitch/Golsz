@@ -7,6 +7,10 @@
 - If someone skips setting a goal or comes back before finishing, Home shows a clear "set your goal" card to pick up where they left off.
 - On the goal screen, people using a keyboard no longer see a browser outline around the whole screen; the field or button they are on is still outlined in gold.
 - The "page not found" page now has proper side margins on a phone, so its text and buttons line up under the logo instead of touching the screen edge.
+- The sign-up and log-in form is now one narrow column on a computer instead of stretching across the screen, each field has its name above it, and the small print is larger and easier to read on a phone.
+- The website and the app now share the same logo lettering, the same gold button and the same dark background, so moving from the home page to sign-up no longer feels like changing product.
+- The "page not found" page has the full menu, on a phone too, and its footer sits at the bottom of the screen.
+- On the home page the goal buttons line up with the rest of the page, and the small grey captions are larger and brighter. On the About page the five-step strip reads cleanly on a phone.
 
 ## 2026-11-06
 

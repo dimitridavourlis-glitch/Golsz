@@ -154,6 +154,10 @@ node tests/test_<name>.cjs     # one suite
   warns when its draft email goes too. Browser runs: `tools/preview-targets.cjs` (stand-in store, seeded rows,
   `drive=`/`fail=`/`reset=`), one server per width and theme; run 2026-11-06 passed. Rules, fixtures, what is
   UNVERIFIED: CLAUDE.md § Target clubs/coaches and outreach drafts.
+- Site and sign-in share one look (job 199 design review, 2026-11-10): `--navy` = the app's `--pitch`, one wordmark,
+  one flat-gold primary button (`--radius-btn`), captions 11px or more, the sign-in column capped at `AUTH_COLUMN`,
+  visible field labels, `404.html` with the shared header and a no-script `<details>` menu.
+  `tests/test_first_screen_design.cjs` pins it (CLAUDE.md § Static site).
 - The 18+ threshold lives in four places that must not drift (CLAUDE.md § Current state).
 - Full detail: CLAUDE.md § Architecture; README.md § Things that will bite you.
 

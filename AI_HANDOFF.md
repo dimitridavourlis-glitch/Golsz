@@ -5,7 +5,7 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-OpenCode (AVA job 199, final verification), 2026-11-10. Before that: OpenCode (t4), Claude Code (t1-t3).
+OpenCode (AVA job 199, final verification: design fixes), 2026-11-10. Before that: OpenCode (t4), Claude Code (t1-t3).
 
 ## Current Branch
 `ava/199-a-brand-new-athlete-goes-from-sign-up-to` (AVA job 199; AVA commits each step, then merges). Branched
@@ -52,9 +52,14 @@ from 3188dc1, where job 184 (Targets) was merged as #14.
   you feel today?" covers Home until the athlete answers or taps "Skip for today". Decide whether to skip it that day.
 
 ## Current Work
-AVA job 199 final verification: `404.html` had no side margins on a phone (an inline `padding` on its `.container`
-replaced the 24 px gutter; older than this job). Vertical padding is now on the section (`section-pad`), the gutter on
-the `.container` inside it. Seen fixed at 375 and 1280 px (headless Chromium); `test_commercial_polish.cjs` pins it.
+AVA job 199 final verification, second pass (OpenCode, 2026-11-10): the design review scored the first screens 66/100
+(bar 70) and listed 12 defects on the home page, About, 404 and the sign-up form. All 12 are changed; CLAUDE.md
+§ Static site ("One look across the site and the sign-in screen") lists what and why, and
+`tests/test_first_screen_design.cjs` pins it. Seen in headless Chromium 141 with Archivo and Space Mono served from
+local npm copies (so the widths are the real fonts'), 375 and 1280 px: home, About, 404 (menu closed and open), sign-up
+(dark, light, plans open), log-in. No sideways scroll on any. The first-visit drives were re-run after the change at
+390 dark and 1280 light: same results as the table above. NOT re-scored: only AVA's design judge can say it clears 70.
+Earlier in this step: `404.html` had no side margins on a phone (`test_commercial_polish.cjs` pins the fix).
 
 ## Remaining Tasks
 - Migration 165 (job 184, merged) NOT YET APPLIED: run in the SQL Editor (checks + rollback in its header).
@@ -70,10 +75,11 @@ the `.container` inside it. Seen fixed at 375 and 1280 px (headless Chromium); `
 - 12-function Vercel ceiling (`_`-prefixed `api/` are shared modules). Adults only.
 
 ## Latest Test / Build Status
-2026-11-10 (job 199 t4, try 5), in the agent's own shell (`$AVA_RUN` unset): `npm run compile` ok;
-`node tests/test_preview_onboarding.cjs` 94/94 (was 85); `node tests/test_goal_setup.cjs` 105/105;
-`node tests/test_compiled_artifact.cjs` 14/14. Final verification: `test_commercial_polish.cjs` 100/100 (was 96).
-Full `npm run check` left to AVA.
+2026-11-10 (final verification, second pass), in the agent's own shell (`$AVA_RUN` unset): `npm run compile` ok;
+`node tests/test_first_screen_design.cjs` 70/70 (new); the 31 suites that read the site's HTML/CSS or `Auth` all
+green, among them commercial_polish, legal_consistency, signup_field_errors, signup_hardening, ux_credibility,
+preview_onboarding, goal_setup, compiled_artifact, served_bundle. `test_unpublish_internal.cjs` needs a TMPDIR outside
+the repo (the agent's sandbox puts it inside): 52/52 with `TMPDIR=/private/tmp`. Full `npm run check` left to AVA.
 
 ## Known Problems
 - The run above is Chromium's headless shell, not Google Chrome, Safari or Firefox, and not AVA's browser tool.

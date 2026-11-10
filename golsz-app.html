@@ -43,7 +43,7 @@
 <!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
      fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
      with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
-<link rel="preload" as="script" href="js/app.js?v=0b7230a32a56418e" />
+<link rel="preload" as="script" href="js/app.js?v=c03df74a25a3890a" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -19187,6 +19187,11 @@ function signupHitExistingAccount(data) {
   return !!(data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
 }
 
+// The sign-in column: tabs, fields and the submit button never grow wider than
+// this, on any screen. The e-mail placeholder is an example, not the label.
+const AUTH_COLUMN = 440;
+const AUTH_EMAIL_EXAMPLE = "name@example.com";
+
 function Auth({ onDone, paidReturn }) {
   const isDesktop = useIsDesktop();
   const { t, currency, setCurrency } = useLang();
@@ -19399,11 +19404,15 @@ function Auth({ onDone, paidReturn }) {
     ? { "aria-invalid": true, "aria-describedby": "signup-err-" + f, onBlur: () => touch(f) }
     : { onBlur: () => touch(f) });
   const fieldError = (f) => (shownError(f)
-    ? <div id={"signup-err-" + f} style={{ fontSize: 11.5, color: C.limeText, marginTop: -6, marginBottom: 10, lineHeight: 1.35 }}>{t(shownError(f))}</div>
+    ? <div id={"signup-err-" + f} style={{ fontSize: 12.5, color: C.limeText, marginTop: -6, marginBottom: 10, lineHeight: 1.35 }}>{t(shownError(f))}</div>
     : null);
   const selected = PLANS.find((p) => p.id === plan) || PLANS[0];
   const field = { width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 12, color: C.chalk, padding: "13px 14px", fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 12, boxSizing: "border-box" };
   const dobField = { ...field, marginBottom: 0, textAlign: "center" };
+  // A visible name above each field. A placeholder alone disappears with the
+  // first key press, and 12.5px keeps it readable on a phone.
+  const fieldLabel = { display: "block", fontSize: 12.5, color: C.slate, fontWeight: 700, marginBottom: 6 };
+  const plansWide = isSignup && !forgotMode && isDesktop && plansOpen;
 
   async function submit() {
     if (busy || confirmPolling) return;
@@ -19711,16 +19720,23 @@ function Auth({ onDone, paidReturn }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "calc(28px + env(safe-area-inset-top, 0px)) 18px 28px", background: "radial-gradient(1100px 560px at 50% -12%, " + C.turf + ", " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
       <style>{CSS}</style>
-      <div style={{ width: "100%", maxWidth: (isSignup && !forgotMode && isDesktop) ? 920 : 430 }}>
+      {/* ONE NARROW COLUMN. The card used to be 920px on a desktop sign-up so
+          the three plan cards had room, which stretched every field and the
+          submit button to 880px while the plans were closed (the default).
+          Only the open plan grid gets the wide card now; the tabs and the
+          form keep the column width inside it. */}
+      <div style={{ width: "100%", maxWidth: plansWide ? 920 : AUTH_COLUMN }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <LogoMark size={56} style={{ marginBottom: 8 }} />
           <div style={{ fontWeight: 900, fontSize: 40, letterSpacing: "0.03em", fontStretch: "expanded" }}>GOLSZ<span style={{ color: C.lime }}>.</span></div>
-          <div style={{ fontSize: 10, letterSpacing: "0.3em", color: C.slate, fontWeight: 700, marginTop: 4 }}>{t("auth_tagline")}</div>
+          <div style={{ fontSize: 11, letterSpacing: "0.26em", color: C.slate, fontWeight: 700, marginTop: 4 }}>{t("auth_tagline")}</div>
         </div>
 
-        <div style={{ display: "flex", background: C.card, border: "1px solid " + C.line, borderRadius: 12, padding: 4, marginBottom: 16 }}>
+        {/* The chosen tab is a raised surface, not a gold block: gold is kept
+            for the one submit button below. aria-pressed says which is on. */}
+        <div style={{ display: "flex", background: C.card, border: "1px solid " + C.line, borderRadius: 12, padding: 4, margin: "0 auto 16px", maxWidth: AUTH_COLUMN }}>
           {[["signup", t("auth_signup")], ["login", t("auth_login")]].map(([m, l]) => (
-            <button type="button" key={m} onClick={() => { setMode(m); setErr(""); setNotice(""); }} style={{ flex: 1, padding: "10px", minHeight: 44, borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14, background: mode === m ? C.lime : "transparent", color: mode === m ? C.ink : C.slate }}>{l}</button>
+            <button type="button" key={m} aria-pressed={mode === m} onClick={() => { setMode(m); setErr(""); setNotice(""); }} style={{ flex: 1, padding: "10px", minHeight: 44, borderRadius: 9, border: "1px solid " + (mode === m ? C.line2 : "transparent"), cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14, background: mode === m ? C.turf : "transparent", color: mode === m ? C.chalk : C.slate }}>{l}</button>
           ))}
         </div>
 
@@ -19729,7 +19745,7 @@ function Auth({ onDone, paidReturn }) {
             resetSent ? (
               <>
                 <div style={{ background: C.limeWash, border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 14 }}>
-                  <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
+                  <div style={{ fontSize: 11, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
                   <div style={{ color: C.chalk, fontSize: 12.5, lineHeight: 1.4 }}>{t("auth_reset_sent_pre")}{email.trim()}{t("auth_reset_sent_post")}</div>
                 </div>
                 <button type="button" onClick={() => { setForgotMode(false); setResetSent(false); setErr(""); }} style={{ width: "100%", background: "transparent", border: `1px solid ${C.line2}`, color: C.chalk, borderRadius: 12, padding: "13px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>{t("auth_back_to_login")}</button>
@@ -19787,7 +19803,7 @@ function Auth({ onDone, paidReturn }) {
                   without a control. Geo is a guess; someone on a VPN, abroad,
                   or an expat needs to correct it BEFORE they pay, not after. */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-                <div style={{ fontSize: 10, letterSpacing: "0.16em", color: C.slate, fontWeight: 700 }}>{t("auth_choose_plan")}</div>
+                <div style={{ fontSize: 11, letterSpacing: "0.16em", color: C.slate, fontWeight: 700 }}>{t("auth_choose_plan")}</div>
                 <div style={{ display: "flex", gap: 4 }}>
                   {SUPPORTED_CURRENCIES.map((cur) => (
                     <button key={cur} type="button" onClick={() => setCurrency(cur)}
@@ -19795,7 +19811,7 @@ function Auth({ onDone, paidReturn }) {
                       aria-label={t("settings_currency") + " " + cur.toUpperCase()}
                       style={{
                         minHeight: 44, minWidth: 52, padding: "6px 10px", borderRadius: 9, cursor: "pointer",
-                        fontFamily: "inherit", fontSize: 11.5, fontWeight: 700,
+                        fontFamily: "inherit", fontSize: 12, fontWeight: 700,
                         background: currency === cur ? C.limeWash : C.turf,
                         color: currency === cur ? C.lime : C.slate,
                         border: `1px solid ${currency === cur ? C.lime : C.line2}`,
@@ -19813,7 +19829,7 @@ function Auth({ onDone, paidReturn }) {
                       borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 10,
                     }}>
                       {pl.id === "pro" && (
-                        <span style={{ position: "absolute", top: -10, left: 14, background: C.lime, color: C.ink, fontSize: 9, fontWeight: 800, letterSpacing: "0.06em", padding: "3px 9px", borderRadius: 999 }}>{t("auth_most_popular")}</span>
+                        <span style={{ position: "absolute", top: -10, left: 14, background: C.lime, color: C.ink, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", padding: "3px 9px", borderRadius: 999 }}>{t("auth_most_popular")}</span>
                       )}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <span style={{ fontSize: 15, fontWeight: 800, color: C.chalk }}>{pl.name}</span>
@@ -19827,7 +19843,7 @@ function Auth({ onDone, paidReturn }) {
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
                         {t(`plan_${pl.id}_tag`) && (
-                          <div style={{ fontSize: 11.5, color: C.slate, fontStyle: "italic" }}>{t(`plan_${pl.id}_tag`)}</div>
+                          <div style={{ fontSize: 12, color: C.slate, fontStyle: "italic" }}>{t(`plan_${pl.id}_tag`)}</div>
                         )}
                         {pl.featKeys.map((fk) => (
                           <div key={fk} style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12, color: C.body, lineHeight: 1.35 }}>
@@ -19852,7 +19868,7 @@ function Auth({ onDone, paidReturn }) {
               Every button inside carries an explicit type, checked before this
               wrapper went on: inside a form an untyped button submits, which
               would have turned "choose a plan" into "create the account". */}
-          <form onSubmit={(e) => { e.preventDefault(); submit(); }}>
+          <form onSubmit={(e) => { e.preventDefault(); submit(); }} style={{ maxWidth: AUTH_COLUMN, margin: "0 auto" }}>
           {isSignupLike && (
             <input
               value={website} onChange={(e) => setWebsite(e.target.value)}
@@ -19860,17 +19876,21 @@ function Auth({ onDone, paidReturn }) {
               style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
             />
           )}
-          {isSignupLike && <input id="signup-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" aria-label={isParentSignup ? t("auth_your_name") : t("auth_full_name")} placeholder={isParentSignup ? t("auth_your_name") : t("auth_full_name")} style={field} {...errProps("name")} />}
+          {isSignupLike && <label htmlFor="signup-name" style={fieldLabel}>{isParentSignup ? t("auth_your_name") : t("auth_full_name")}</label>}
+          {isSignupLike && <input id="signup-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" aria-label={isParentSignup ? t("auth_your_name") : t("auth_full_name")} style={field} {...errProps("name")} />}
           {fieldError("name")}
-          <input id="signup-email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" aria-label={isParentSignup ? t("auth_your_email") : t("auth_email")} placeholder={isParentSignup ? t("auth_your_email") : t("auth_email")} type="email" style={field} {...errProps("email")} />
+          <label htmlFor="signup-email" style={fieldLabel}>{isParentSignup ? t("auth_your_email") : t("auth_email")}</label>
+          <input id="signup-email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" aria-label={isParentSignup ? t("auth_your_email") : t("auth_email")} placeholder={AUTH_EMAIL_EXAMPLE} type="email" style={field} {...errProps("email")} />
           {fieldError("email")}
           {confirmEmailNeeded && (
             <>
-              <input id="signup-email2" value={email2} onChange={(e) => setEmail2(e.target.value)} autoComplete="off" inputMode="email" aria-label={t("auth_confirm_email")} placeholder={t("auth_confirm_email")} type="email" style={field} {...errProps("email2")} />
+              <label htmlFor="signup-email2" style={fieldLabel}>{t("auth_confirm_email")}</label>
+              <input id="signup-email2" value={email2} onChange={(e) => setEmail2(e.target.value)} autoComplete="off" inputMode="email" aria-label={t("auth_confirm_email")} type="email" style={field} {...errProps("email2")} />
               {fieldError("email2")}
             </>
           )}
-          <input id="signup-pw" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete={isSignupLike ? "new-password" : "current-password"} aria-label={t("auth_password")} placeholder={t("auth_password")} type="password" minLength={isSignupLike ? PASSWORD_MIN : undefined} style={{ ...field, marginBottom: isSignupLike ? 4 : 4 }} {...errProps("pw")} />
+          <label htmlFor="signup-pw" style={fieldLabel}>{t("auth_password")}</label>
+          <input id="signup-pw" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete={isSignupLike ? "new-password" : "current-password"} aria-label={t("auth_password")} type="password" minLength={isSignupLike ? PASSWORD_MIN : undefined} style={{ ...field, marginBottom: isSignupLike ? 4 : 4 }} {...errProps("pw")} />
           {!isSignupLike && <div style={{ marginBottom: 6 }}>{fieldError("pw")}</div>}
           {/* THE RULE, BEFORE IT IS BROKEN. Six characters was enforced only
               on submit, so the first a new athlete heard of it was their
@@ -19879,8 +19899,8 @@ function Auth({ onDone, paidReturn }) {
               rejections. It reuses the existing message rather than inventing
               a second wording of the same rule, which is how the two drift. */}
           {isSignupLike && (shownError("pw")
-            ? <div id="signup-err-pw" style={{ fontSize: 11.5, color: C.limeText, marginBottom: 12, lineHeight: 1.35 }}>{t(shownError("pw"))}</div>
-            : <div style={{ fontSize: 10.5, color: C.slate, marginBottom: 12, lineHeight: 1.35 }}>{t("reset_pw_min_len")}</div>)}
+            ? <div id="signup-err-pw" style={{ fontSize: 12.5, color: C.limeText, marginBottom: 12, lineHeight: 1.35 }}>{t(shownError("pw"))}</div>
+            : <div style={{ fontSize: 12, color: C.slate, marginBottom: 12, lineHeight: 1.35 }}>{t("reset_pw_min_len")}</div>)}
           {!isSignupLike && (
             <div style={{ textAlign: "right", marginBottom: 10 }}>
               {/* A button, not a span: a span is unreachable by keyboard and
@@ -19893,7 +19913,7 @@ function Auth({ onDone, paidReturn }) {
 
           {isSignup && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("auth_dob")}</div>
+              <div style={fieldLabel}>{t("auth_dob")}</div>
               <div style={{ display: "flex", gap: 8 }} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) touch("dob"); }}>
                 <input id="signup-dob" aria-invalid={shownError("dob") ? true : undefined} aria-describedby={shownError("dob") ? "signup-err-dob" : undefined} value={dobDay} onChange={(e) => setDobDay(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} aria-label={t("auth_dob") + " — " + t("a11y_day")} placeholder="DD" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
                 <input value={dobMonth} onChange={(e) => setDobMonth(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} aria-invalid={shownError("dob") ? true : undefined} aria-describedby={shownError("dob") ? "signup-err-dob" : undefined} aria-label={t("auth_dob") + " — " + t("a11y_month")} placeholder="MM" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
@@ -19918,11 +19938,11 @@ function Auth({ onDone, paidReturn }) {
                 </div>
               )}
               {shownError("dob") && shownError("dob") !== "auth_under18_notice" && (
-                <div id="signup-err-dob" style={{ marginTop: 8, fontSize: 11.5, color: C.amber, lineHeight: 1.35 }}>{t(shownError("dob"))}</div>
+                <div id="signup-err-dob" style={{ marginTop: 8, fontSize: 12.5, color: C.amber, lineHeight: 1.35 }}>{t(shownError("dob"))}</div>
               )}
               {PARENT_ACCOUNTS_ENABLED && !requiresParentAccount && (
                 <div style={{ marginTop: 8, textAlign: "right" }}>
-                  <span {...asButton(() => { setMode("parent-signup"); setErr(""); })} style={{ color: C.slate, fontSize: 11.5, cursor: "pointer" }}>{t("auth_signing_up_for_minor")}</span>
+                  <span {...asButton(() => { setMode("parent-signup"); setErr(""); })} style={{ color: C.slate, fontSize: 12, cursor: "pointer" }}>{t("auth_signing_up_for_minor")}</span>
                 </div>
               )}
             </div>
@@ -19930,29 +19950,29 @@ function Auth({ onDone, paidReturn }) {
 
           {isParentSignup && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("auth_athlete_info")}</div>
+              <div style={fieldLabel}>{t("auth_athlete_info")}</div>
               <input value={childName} onChange={(e) => setChildName(e.target.value)} aria-label={t("auth_athlete_name")} placeholder={t("auth_athlete_name")} style={field} />
-              <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("auth_athlete_dob")}</div>
+              <div style={fieldLabel}>{t("auth_athlete_dob")}</div>
               <div style={{ display: "flex", gap: 8 }}>
                 <input value={childDobDay} onChange={(e) => setChildDobDay(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} aria-label={t("auth_athlete_dob") + " — " + t("a11y_day")} placeholder="DD" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
                 <input value={childDobMonth} onChange={(e) => setChildDobMonth(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} aria-label={t("auth_athlete_dob") + " — " + t("a11y_month")} placeholder="MM" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
                 <input value={childDobYear} onChange={(e) => setChildDobYear(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} aria-label={t("auth_athlete_dob") + " — " + t("a11y_year")} placeholder="YYYY" inputMode="numeric" maxLength={4} style={{ ...dobField, flex: 1.4 }} />
               </div>
               {childDobOk && !childAgeOk && (
-                <div style={{ marginTop: 8, fontSize: 11.5, color: C.amber, lineHeight: 1.4 }}>{t("auth_athlete_18_notice")}</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: C.amber, lineHeight: 1.4 }}>{t("auth_athlete_18_notice")}</div>
               )}
               <div style={{ marginTop: 10, textAlign: "right" }}>
-                <span {...asButton(() => { setMode("signup"); setErr(""); })} style={{ color: C.slate, fontSize: 11.5, cursor: "pointer" }}>{t("auth_back_to_athlete_signup")}</span>
+                <span {...asButton(() => { setMode("signup"); setErr(""); })} style={{ color: C.slate, fontSize: 12, cursor: "pointer" }}>{t("auth_back_to_athlete_signup")}</span>
               </div>
             </div>
           )}
 
           {isSignupLike && TURNSTILE_SITE_KEY && <TurnstileWidget onToken={setTurnstileToken} />}
-          {showErrors && fieldErrors.verify && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 10, lineHeight: 1.35 }}>{t(fieldErrors.verify)}</div>}
+          {showErrors && fieldErrors.verify && <div style={{ fontSize: 12, color: C.amber, marginBottom: 10, lineHeight: 1.35 }}>{t(fieldErrors.verify)}</div>}
 
           {notice && (
             <div style={{ background: C.limeWash, border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
-              <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
+              <div style={{ fontSize: 11, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
               <div style={{ color: C.chalk, fontSize: 12.5, lineHeight: 1.4 }}>{notice}</div>
             </div>
           )}
@@ -19962,7 +19982,7 @@ function Auth({ onDone, paidReturn }) {
               user may not be looking at. */}
           {err && (
             <div role="alert" style={{ background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
-              <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignupLike ? t("auth_couldnt_signup") : t("auth_couldnt_login")}</div>
+              <div style={{ fontSize: 11, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignupLike ? t("auth_couldnt_signup") : t("auth_couldnt_login")}</div>
               <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
               {unconfirmedEmail && !resendSent && (
                 <button type="button" onClick={resendConfirmation} disabled={resendBusy} style={{
@@ -19995,7 +20015,7 @@ function Auth({ onDone, paidReturn }) {
               Québec voids an external clause that was not expressly brought
               to the consumer's attention (C.c.Q. art. 1435). */}
           {isSignupLike && (
-            <div style={{ textAlign: "center", marginBottom: 12, fontSize: 12, color: C.slate, lineHeight: 1.5 }}>
+            <div style={{ textAlign: "center", marginBottom: 12, fontSize: 12.5, color: C.slate, lineHeight: 1.5 }}>
               {t("auth_legal_pre")}
               <a href="terms.html" target="_blank" rel="noopener noreferrer" style={{ color: C.lime, fontWeight: 700, textDecoration: "underline" }}>{t("auth_legal_terms")}</a>
               {t("auth_legal_mid")}
@@ -20008,13 +20028,13 @@ function Auth({ onDone, paidReturn }) {
           </form>
 
           {isSignup && selected.price > 0 && (
-            <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: C.slate }}>{t("auth_secure_checkout")}</div>
+            <div style={{ textAlign: "center", marginTop: 10, fontSize: 12, color: C.slate }}>{t("auth_secure_checkout")}</div>
           )}
           {/* Only while prices are on screen. With the grid collapsed this
               announced the currency of nothing, under a form whose button
               says the account is free. */}
           {isSignup && plansOpen && (
-            <div style={{ textAlign: "center", marginTop: 6, fontSize: 11, color: C.slate }}>{t("prices_currency_note").replace("{currency}", currency.toUpperCase())}</div>
+            <div style={{ textAlign: "center", marginTop: 6, fontSize: 12, color: C.slate }}>{t("prices_currency_note").replace("{currency}", currency.toUpperCase())}</div>
           )}
 
           <div style={{ textAlign: "center", marginTop: 14, fontSize: 13, color: C.slate }}>
@@ -20355,7 +20375,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=0b7230a32a56418e";
+    var APP_SRC = "js/app.js?v=c03df74a25a3890a";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");
