@@ -105,6 +105,25 @@ ck("the Sign up / Log in tabs were found", tab.length > 100, true);
 ck("the chosen tab is a quiet raised surface, not a second gold button", [/C\.lime/.test(tab), /background: mode === m \? C\.turf : "transparent"/.test(tab)], [false, true]);
 ck("...and says which one is on without colour", /aria-pressed=\{mode === m\}/.test(tab), true);
 
+// THE FORM STAYS PUT WHEN THE WEB FONT ARRIVES. The screen is drawn in the
+// fallback font first. Its text is wider, so the "See plans" button used to
+// sit on a second row and jump back up beside the sentence when Archivo
+// loaded: a layout shift of 0.23 on a phone (budget 0.10), 2026-11-10. The
+// row's own style is read here, not the words around it.
+const planRow = (authSlice.match(/<div style=\{\{([^}]*)\}\}>\s*<div style=\{\{([^}]*)\}\}>\s*\{plan === "free"\s*\? t\("auth_plan_summary_free"\)[\s\S]*?<button type="button" onClick=\{\(\) => setPlansOpen\(\(v\) => !v\)\}[^>]*?style=\{\{([^}]*)\}\}/) || []);
+ck("the plan summary row was found", planRow.length, 4);
+ck("the row is one line of flex that never wraps its button under the sentence", [/display: "flex"/.test(planRow[1] || ""), /flexWrap/.test(planRow[1] || "")], [true, false]);
+ck("...the sentence takes the room that is left and wraps inside it", /flex: "1 1 0", minWidth: 0/.test(planRow[2] || ""), true);
+ck("...and the button keeps its size and its one line", [/flexShrink: 0/.test(planRow[3] || ""), /whiteSpace: "nowrap"/.test(planRow[3] || ""), /minHeight: 44/.test(planRow[3] || "")], [true, true, true]);
+const authLine = Number((APP.match(/const AUTH_LINE = ([0-9.]+);/) || [])[1]);
+ck("the sign-in screen has one line height that is a number, not the font's own", authLine >= 1.1 && authLine <= 1.5, true);
+for (const name of ["field", "fieldLabel"]) {
+  ck(`${name} uses it, so a line is the same height in the fallback font and in Archivo`,
+     new RegExp("const " + name + " = \\{[^}]*lineHeight: AUTH_LINE").test(authSlice), true);
+}
+ck("the wordmark and the tagline state their line height too",
+   [/fontSize: 40, lineHeight: [0-9.]+,[^}]*fontStretch: "expanded"/.test(authSlice), /fontSize: 11, lineHeight: AUTH_LINE,[^}]*\}\}>\{t\("auth_tagline"\)\}/.test(authSlice)], [true, true]);
+
 /* ---------- home page ---------- */
 console.log("-- home page --");
 ck("the goal chips are capped so they stay inside the header's edges", /max-width:\s*\d+rem/.test(rule(".lx-chips")) && /margin:\s*0 auto/.test(rule(".lx-chips")), true);

@@ -43,6 +43,9 @@ publish.** Full detail: CLAUDE.md § What this is; README.md.
   that file, compiled at author time into `js/app.js`.
   The three CDN libraries in `<head>` are `defer`red and `js/app.js` is preloaded; the bottom loader waits for
   `DOMContentLoaded` before injecting it (`tests/test_boot_nonblocking.cjs`).
+  The web fonts load from `<head>` too (non-blocking, same address as the `@import` in `CSS`), so the first screen
+  is not redrawn when they arrive; layout shift budget 0.10 (`time-first-screen.cjs` prints `cls=`, `--late-font=<ms>`
+  is its positive control; CLAUDE.md "The first screen holds still").
   Speed budgets (simulated phone connection): home LCP 3000 ms, boot screen 2500 ms, first screen 5000 ms;
   measure with `tools/time-first-screen.cjs` (CLAUDE.md "First-screen speed"). Real phone/cellular, signed-in
   Home and production-edge CDN latency are UNVERIFIED.

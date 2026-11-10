@@ -146,6 +146,29 @@ Relevant commands:
   LCP 648-760 before, 804-1692 after (noisy machine, all inside budget). **Not measured (UNVERIFIED):** a real phone
   on real cellular (CPU, radio), a signed-in Home with live data, CDN latency from the production edge.
   The region hero JPEGs are not used on the home page, so they do not affect its LCP.
+- **The first screen holds still (layout shift, 2026-11-10, AVA job 199).** Budget: layout shift (CLS) <= 0.10 on
+  either page. AVA's speed check measured 0.23 on `/golsz-app.html` at phone size. Cause: the web fonts were only
+  found when the app mounted (the `@import` in `CSS`), so the sign-up screen was drawn in the fallback font and
+  redrawn in Archivo a moment later. The fallback's text is wider, so "See plans" sat on a second row
+  (`flexWrap`) and jumped back up to the right, and every line changed height. Two fixes, both needed:
+  (1) `golsz-app.html`'s `<head>` now loads the Google Fonts stylesheet itself, the way `index.html` does
+  (preconnect, `rel="preload" as="style"`, then `media="print"` switched on by `onload`, so it never blocks the
+  first paint). The boot screen's "Loading…" line is set in Archivo, which makes the browser fetch the font file
+  before the app mounts. The address must stay the `@import`'s, character for character (one download);
+  `tests/test_boot_nonblocking.cjs` pins it. The `@import` stays for a `<head>` load that failed.
+  (2) `Auth` no longer moves when a font does arrive late: the plan summary row has no `flexWrap` (the sentence is
+  `flex: "1 1 0"` and wraps inside its own column, the button is `nowrap`), and `AUTH_LINE` (1.2) is the line height
+  of its fields, labels and tagline (`line-height: normal` comes from the font, so it changed with it).
+  `tests/test_first_screen_design.cjs` pins these. Measured (Chromium 141 headless shell, 375 px, 4x slower CPU,
+  fast-4G throttle, Archivo served from an npm copy): before 0.232; after 0.000 with the font in before mount, 0.042
+  with the font file held back 8 s; 1280 px 0.000 and 0.0005. To measure again:
+  `tools/time-first-screen.cjs` now prints `cls=<score>` and `shifted=[...]` (the elements that moved) on each
+  timing line. A browser with no internet never gets the web font, so use `--late-font=<ms>` as the positive
+  control: it answers the font stylesheet late with a stand-in (the name Archivo on this Mac's Arial Narrow).
+  Recorded with `--late-font=6000`: sign-up screen 0.052, home page 0.015; with the plan row put back to
+  `flexWrap`, 0.164. The stand-in is not Archivo, so those are not production's numbers.
+  **UNVERIFIED:** the real Google Fonts files and their arrival time on a real phone; Safari and Firefox (neither
+  reports layout shift); the signed-in screens (Home, Passport) with a late font.
 - Component tree lives under one `<script>` block: `Feed`, `Discover`, `Events`, `Messages`, `Passport`
   (the "Digital Sports Passport" profile UI), `Scout` (AI chat), assembled by `GolszApp` (bottom tab bar on
   mobile, sidebar nav on desktop — see "Responsive layout" below) and mounted via `Root`, which decides

@@ -5,7 +5,7 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-OpenCode (AVA job 199, final verification: design fixes), 2026-11-10. Before that: OpenCode (t4), Claude Code (t1-t3).
+OpenCode (AVA job 199, final verification: layout shift on the sign-up screen), 2026-11-10. Before that: OpenCode (t4), Claude Code (t1-t3).
 
 ## Current Branch
 `ava/199-a-brand-new-athlete-goes-from-sign-up-to` (AVA job 199; AVA commits each step, then merges). Branched
@@ -52,14 +52,17 @@ from 3188dc1, where job 184 (Targets) was merged as #14.
   you feel today?" covers Home until the athlete answers or taps "Skip for today". Decide whether to skip it that day.
 
 ## Current Work
-AVA job 199 final verification, second pass (OpenCode, 2026-11-10): the design review scored the first screens 66/100
-(bar 70) and listed 12 defects on the home page, About, 404 and the sign-up form. All 12 are changed; CLAUDE.md
-§ Static site ("One look across the site and the sign-in screen") lists what and why, and
-`tests/test_first_screen_design.cjs` pins it. Seen in headless Chromium 141 with Archivo and Space Mono served from
-local npm copies (so the widths are the real fonts'), 375 and 1280 px: home, About, 404 (menu closed and open), sign-up
-(dark, light, plans open), log-in. No sideways scroll on any. The first-visit drives were re-run after the change at
-390 dark and 1280 light: same results as the table above. NOT re-scored: only AVA's design judge can say it clears 70.
-Earlier in this step: `404.html` had no side margins on a phone (`test_commercial_polish.cjs` pins the fix).
+AVA job 199 final verification, third pass (OpenCode, 2026-11-10): AVA's speed check found the sign-up screen
+jumping (layout shift 0.23 on `/golsz-app.html` at phone size, budget 0.10). Cause and fix are in CLAUDE.md
+"The first screen holds still": the web fonts now load from `<head>` (they were found only at mount, so the screen
+was redrawn in Archivo a moment after it appeared), and `Auth`'s plan row and line heights no longer depend on
+which font is on screen. Reproduced first (0.232, Chromium 141 headless shell, 375 px, 4x slower CPU, Archivo from
+an npm copy), then 0.000 with the font in before mount and 0.042 with it held back 8 s. `tools/time-first-screen.cjs`
+now prints `cls=` and has `--late-font=<ms>` as its positive control (old plan row 0.164, new 0.052, stand-in font).
+The first-visit drives were re-run after the change (390 dark: signup, full, goal; 1280 light: full): same results
+as the table above. Second pass, same day: the design review's 12 defects on the home page, About, 404 and the
+sign-up form (CLAUDE.md "One look across the site and the sign-in screen"; `tests/test_first_screen_design.cjs`).
+NOT re-scored: only AVA's design judge can say it clears 70, and only AVA's speed check has the real Google Fonts.
 
 ## Remaining Tasks
 - Migration 165 (job 184, merged) NOT YET APPLIED: run in the SQL Editor (checks + rollback in its header).
@@ -75,16 +78,15 @@ Earlier in this step: `404.html` had no side margins on a phone (`test_commercia
 - 12-function Vercel ceiling (`_`-prefixed `api/` are shared modules). Adults only.
 
 ## Latest Test / Build Status
-2026-11-10 (final verification, second pass), in the agent's own shell (`$AVA_RUN` unset): `npm run compile` ok;
-`node tests/test_first_screen_design.cjs` 70/70 (new); the 31 suites that read the site's HTML/CSS or `Auth` all
-green, among them commercial_polish, legal_consistency, signup_field_errors, signup_hardening, ux_credibility,
-preview_onboarding, goal_setup, compiled_artifact, served_bundle. `test_unpublish_internal.cjs` needs a TMPDIR outside
-the repo (the agent's sandbox puts it inside): 52/52 with `TMPDIR=/private/tmp`. Full `npm run check` left to AVA.
+2026-11-10 (final verification, third pass), in the agent's own shell (`$AVA_RUN` unset), with `TMPDIR=/private/tmp`
+(`test_unpublish_internal.cjs` needs a TMPDIR outside the repo): `npm run compile` ok; `npm run check` 140/140 suites,
+6,883 assertions. Changed suites: boot_nonblocking 24/24, first_screen_design 78/78, time_first_screen 26/26.
 
 ## Known Problems
 - The run above is Chromium's headless shell, not Google Chrome, Safari or Firefox, and not AVA's browser tool.
 - health-alert runs every 2.1-7.5 h, not 15 min. Payments live but no real purchase; webhook secret unverified.
 - Admin MFA: owner not enrolled. Signup has NO bot protection (Supabase CAPTCHA off, `TURNSTILE_SITE_KEY` empty).
+- UNVERIFIED (layout shift): the real Google Fonts files on a real phone; Safari/Firefox; signed-in screens.
 - UNVERIFIED (first visit): the web fonts (Archivo, Space Mono; the widths measured are the fallback font's), live
   Supabase (RLS/PostgREST/real upsert+auth), a real phone on cellular, a screen reader, fr/es/el in a browser. Also
   "My goal..." line on Free opens the locked Plan (older than job 199).

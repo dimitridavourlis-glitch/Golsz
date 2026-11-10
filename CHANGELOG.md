@@ -10,6 +10,7 @@
 - The sign-up and log-in form is now one narrow column on a computer instead of stretching across the screen, each field has its name above it, and the small print is larger and easier to read on a phone.
 - The website and the app now share the same logo lettering, the same gold button and the same dark background, so moving from the home page to sign-up no longer feels like changing product.
 - The "page not found" page has the full menu, on a phone too, and its footer sits at the bottom of the screen.
+- The sign-up screen no longer jumps a moment after it appears. The lettering used to load late and push "See plans" and the form around under your thumb; it now loads while the logo is showing, and the form keeps its place either way.
 - On the home page the goal buttons line up with the rest of the page, and the small grey captions are larger and brighter. On the About page the five-step strip reads cleanly on a phone.
 
 ## 2026-11-06

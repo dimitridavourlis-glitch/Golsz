@@ -40,10 +40,21 @@
      which is the one part of the load path that costs nothing to fix. -->
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<!-- THE WEB FONTS START LOADING HERE, while the boot screen is up. They used to be found only when
+     the app mounted (the @import in its CSS), so the first screen was drawn in the fallback font and
+     redrawn in Archivo a moment later, which moved the sign-up form under the visitor's thumb
+     (layout shift 0.23 on a phone, 2026-11-10). media="print" keeps the stylesheet from blocking the
+     first paint; onload switches it on, and the boot screen's Archivo line makes the browser fetch the
+     font file. The address is the same as the @import's, character for character, so that one is
+     answered from the cache (tests/test_boot_nonblocking.cjs pins both). -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100,400..900;125,400..900&family=Space+Mono:wght@400;700&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100,400..900;125,400..900&family=Space+Mono:wght@400;700&display=swap" media="print" onload="this.media='all'" />
 <!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
      fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
      with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
-<link rel="preload" as="script" href="js/app.js?v=c03df74a25a3890a" />
+<link rel="preload" as="script" href="js/app.js?v=16b738fed6a9afd3" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -19191,6 +19202,10 @@ function signupHitExistingAccount(data) {
 // this, on any screen. The e-mail placeholder is an example, not the label.
 const AUTH_COLUMN = 440;
 const AUTH_EMAIL_EXAMPLE = "name@example.com";
+// The sign-in screen is the first thing a new visitor sees, and it is drawn before the web font
+// has arrived. "normal" line height is taken from the font, so every line changed height when
+// Archivo replaced the fallback and the form below moved. A number keeps each line the same height.
+const AUTH_LINE = 1.2;
 
 function Auth({ onDone, paidReturn }) {
   const isDesktop = useIsDesktop();
@@ -19407,11 +19422,11 @@ function Auth({ onDone, paidReturn }) {
     ? <div id={"signup-err-" + f} style={{ fontSize: 12.5, color: C.limeText, marginTop: -6, marginBottom: 10, lineHeight: 1.35 }}>{t(shownError(f))}</div>
     : null);
   const selected = PLANS.find((p) => p.id === plan) || PLANS[0];
-  const field = { width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 12, color: C.chalk, padding: "13px 14px", fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 12, boxSizing: "border-box" };
+  const field = { width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 12, color: C.chalk, padding: "13px 14px", fontSize: 15, lineHeight: AUTH_LINE, fontFamily: "inherit", outline: "none", marginBottom: 12, boxSizing: "border-box" };
   const dobField = { ...field, marginBottom: 0, textAlign: "center" };
   // A visible name above each field. A placeholder alone disappears with the
   // first key press, and 12.5px keeps it readable on a phone.
-  const fieldLabel = { display: "block", fontSize: 12.5, color: C.slate, fontWeight: 700, marginBottom: 6 };
+  const fieldLabel = { display: "block", fontSize: 12.5, lineHeight: AUTH_LINE, color: C.slate, fontWeight: 700, marginBottom: 6 };
   const plansWide = isSignup && !forgotMode && isDesktop && plansOpen;
 
   async function submit() {
@@ -19728,8 +19743,8 @@ function Auth({ onDone, paidReturn }) {
       <div style={{ width: "100%", maxWidth: plansWide ? 920 : AUTH_COLUMN }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <LogoMark size={56} style={{ marginBottom: 8 }} />
-          <div style={{ fontWeight: 900, fontSize: 40, letterSpacing: "0.03em", fontStretch: "expanded" }}>GOLSZ<span style={{ color: C.lime }}>.</span></div>
-          <div style={{ fontSize: 11, letterSpacing: "0.26em", color: C.slate, fontWeight: 700, marginTop: 4 }}>{t("auth_tagline")}</div>
+          <div style={{ fontWeight: 900, fontSize: 40, lineHeight: 1.1, letterSpacing: "0.03em", fontStretch: "expanded" }}>GOLSZ<span style={{ color: C.lime }}>.</span></div>
+          <div style={{ fontSize: 11, lineHeight: AUTH_LINE, letterSpacing: "0.26em", color: C.slate, fontWeight: 700, marginTop: 4 }}>{t("auth_tagline")}</div>
         </div>
 
         {/* The chosen tab is a raised surface, not a gold block: gold is kept
@@ -19780,8 +19795,13 @@ function Auth({ onDone, paidReturn }) {
               {/* One line instead of a wall. It names the current choice so
                   nothing is hidden, and carries the only fact that matters to
                   someone who has not decided yet: this costs nothing to start. */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: plansOpen ? 10 : 0 }}>
-                <div style={{ fontSize: 12.5, color: C.slate, minWidth: 0 }}>
+              {/* NO flexWrap HERE. With it, the button sat on a second row while the
+                  fallback font was on screen (its text is wider) and jumped back up to
+                  the right when Archivo arrived: a layout shift of 0.23 on a phone,
+                  measured 2026-11-10. Now the sentence wraps inside its own column and
+                  the button stays where it is, in every font and language. */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: plansOpen ? 10 : 0 }}>
+                <div style={{ flex: "1 1 0", minWidth: 0, fontSize: 12.5, lineHeight: AUTH_LINE, color: C.slate }}>
                   {plan === "free"
                     ? t("auth_plan_summary_free")
                     : t("auth_plan_summary_paid").replace("{plan}", selected.name).replace("{price}", planPrice(selected.id, currency))}
@@ -19790,7 +19810,7 @@ function Auth({ onDone, paidReturn }) {
                   aria-expanded={plansOpen}
                   style={{ background: "none", border: "none", color: C.lime, fontSize: 12.5, fontWeight: 800,
                     fontFamily: "inherit", cursor: "pointer", padding: "10px 4px", minHeight: 44,
-                    display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+                    display: "flex", alignItems: "center", gap: 5, flexShrink: 0, whiteSpace: "nowrap" }}>
                   {plansOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                   {plansOpen ? t("auth_hide_plans") : t("auth_see_plans")}
                 </button>
@@ -20375,7 +20395,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=c03df74a25a3890a";
+    var APP_SRC = "js/app.js?v=16b738fed6a9afd3";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

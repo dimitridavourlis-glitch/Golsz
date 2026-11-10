@@ -4,25 +4,36 @@
 // Not a test (it needs a real browser), so it lives outside tests/; tests/test_time_first_screen.cjs
 // pins the parts that keep it harmless. `npm run unpublish` removes tools/ from the served tree.
 //
-// Usage:  node tools/time-first-screen.cjs [port] [--rtt=<ms>] [--mbps=<megabits>] [--fail-app] [--theme=light] [--lang=fr|es|el]
+// Usage:  node tools/time-first-screen.cjs [port] [--rtt=<ms>] [--mbps=<megabits>] [--fail-app] [--theme=light] [--lang=fr|es|el] [--late-font=<ms>]
 //   defaults: a free port (printed), 150 ms extra round trip, 1.6 Mbps down. Env: TIMING_RTT_MS, TIMING_MBPS.
 //   --fail-app makes /js/app.js answer 404 (the failure path: the page must show a Reload screen, not an endless loader).
 //   With AVA's browser tool (one page load per width, cold: nothing is cached, "cache-control: no-store"):
 //   "$AVA_BROWSER" --serve "node tools/time-first-screen.cjs 8765" --port 8765 /index.html /golsz-app.html --widths 390,1280
 //   The server prints one line per page load:
-//   timing page=/golsz-app.html width=390 fcp=<ms> lcp=<ms> boot=<ms> mounted=<ms>
+//   timing page=/golsz-app.html width=390 fcp=<ms> lcp=<ms> boot=<ms> mounted=<ms> cls=<score>
 //     fcp      first-contentful-paint        lcp   largest-contentful-paint (last candidate before the report)
 //     boot     the #boot loading screen is in the DOM and a frame has been drawn after it
 //     mounted  #boot left the DOM = the app's first screen (Auth for a new visitor) replaced it
+//     cls      layout shift: how far things moved after they were first drawn (the browser's own score, shifts
+//              that follow a tap or key left out). shifted=[...] names the first elements that moved.
 //   The app line also says what the boot screen showed once painted, and whether it left with #boot:
 //     bootText="Loading…" bootColor=rgb(...) bootOverflow=0|1 (page wider than the window) bootGone=1|0
 //   --lang=<code> saves golsz-lang first, as for a visitor who chose that language (fr reads "Chargement…").
 //   "-" means the page has no such moment (index.html has no #boot) or it never happened before the report.
+//   --late-font=<ms> is the POSITIVE CONTROL for cls. A web font that arrives after the first screen is drawn
+//   redraws its text, and that is what moves a layout. A browser with no internet never gets the web font, so
+//   cls would read 0 whatever the layout does. With this flag the Google Fonts address (in the page and in
+//   js/app.js) is answered here, <ms> after it is asked for, with a stand-in: the name Archivo given to this
+//   machine's Arial Narrow, narrower than the fallback font as Archivo is. Pick <ms> past "mounted" (6000 is
+//   enough). The stand-in is not Archivo, so the score is not production's: it shows whether the screen holds
+//   still. Recorded 2026-11-10, 375 px, Chromium 141, 4x slower CPU, --late-font=6000: the sign-up screen 0.052;
+//   with its plan row put back to flexWrap (the defect AVA measured at 0.23 with the real fonts) 0.164.
 //
 // BUDGETS (a normal mobile connection, cold load; the numbers the speed work is held to):
 //   home page (index.html)       LCP     <= 3000 ms
 //   app boot screen visible      boot    <= 2500 ms
 //   app first screen mounted     mounted <= 5000 ms
+//   layout shift, either page    cls     <= 0.10
 //
 // WHAT IS SIMULATED: every response waits the extra round trip, then streams at the given rate. Text
 // (html/js/css/json/svg) is gzipped first, as the host does (it would use brotli, a little smaller, so
@@ -64,7 +75,11 @@ const { LIBS, MIME, vendorFile } = require("./preview-public-passport.cjs");
 
 const ROOT = path.resolve(__dirname, "..");
 const DEFAULTS = { rttMs: 150, mbps: 1.6 };
-const BUDGETS = { homeLcpMs: 3000, appBootMs: 2500, appMountedMs: 5000 };
+const BUDGETS = { homeLcpMs: 3000, appBootMs: 2500, appMountedMs: 5000, cls: 0.1 };
+// --late-font: every Google Fonts stylesheet address, and what is served in its place.
+const FONT_SHEET_URL = /https:\/\/fonts\.googleapis\.com\/css2\?[^"')\s]+/g;
+const LATE_FONT_PATH = "/__late-font.css";
+const LATE_FONT_CSS = '@font-face{font-family:"Archivo";font-weight:100 900;font-stretch:62% 125%;src:local("Arial Narrow"),local("Courier New");}';
 const PAGES = new Set(["/index.html", "/golsz-app.html"]);
 const HOLD_MAX_MS = 40000;
 const GZIP_TYPES = /^(text\/|application\/json|image\/svg)/;
@@ -86,10 +101,44 @@ function timingScript() {
   }
   observe("paint", function (e) { if (e.name === "first-contentful-paint") t.fcp = e.startTime; });
   observe("largest-contentful-paint", function (e) { t.lcp = e.startTime; });
+  var cls = 0, shifted = [];
+  observe("layout-shift", function (e) {
+    if (e.hadRecentInput) return;
+    cls += e.value;
+    (e.sources || []).forEach(function (s) {
+      var el = s.node && (s.node.nodeType === 1 ? s.node : s.node.parentElement);
+      if (el && shifted.length < 4) shifted.push(el.tagName.toLowerCase() + " " + (el.textContent || "").trim().slice(0, 24));
+    });
+  });
+  // The <head> font stylesheet (media=print, switched on by onload). The report waits until it has loaded
+  // or failed and the fonts it asked for are in, so a late font's redraw is inside cls. Listening from
+  // the first line of <head>: a load that fails at once (no internet) would otherwise be missed.
+  var fontSheetSettled = false, onFontSheet = null;
+  function sheetEvent(e) {
+    var el = e.target;
+    if (!el || el.tagName !== "LINK" || el.rel !== "stylesheet" || !el.getAttribute("onload")) return;
+    fontSheetSettled = true;
+    if (onFontSheet) onFontSheet();
+  }
+  document.addEventListener("load", sheetEvent, true);
+  document.addEventListener("error", sheetEvent, true);
+  function afterFonts(fn) {
+    // Not document.fonts.ready: it stays pending until the load event, which /__hold keeps back.
+    // 500 ms lets the switched-on stylesheet ask for its fonts (and the last LCP candidate arrive), then
+    // the poll waits for them, and 300 ms more lets the redraw be counted.
+    var go = function () {
+      onFontSheet = null;
+      setTimeout(function wait() {
+        if (document.fonts && document.fonts.status === "loading") { setTimeout(wait, 100); return; }
+        setTimeout(fn, 300);
+      }, 500);
+    };
+    if (fontSheetSettled || !document.querySelector('link[rel="stylesheet"][onload]')) go(); else onFontSheet = go;
+  }
   function send() {
     if (sent) return;
     sent = true;
-    var out = { page: location.pathname, width: window.innerWidth };
+    var out = { page: location.pathname, width: window.innerWidth, cls: Math.round(cls * 1000) / 1000, shifted: shifted };
     Object.keys(t).forEach(function (k) { out[k] = t[k] === null ? null : Math.round(t[k]); });
     if (seen) { out.seen = seen; seen.gone = t.mounted !== null && !document.querySelector("#boot .m"); }
     try { navigator.sendBeacon("/__timing", JSON.stringify(out)); } catch (e) { /* ignore */ }
@@ -106,13 +155,13 @@ function timingScript() {
       }); });
     } else if (!boot && sawBoot && t.mounted === null) {
       t.mounted = performance.now();
-      setTimeout(send, 500); // lets the last LCP candidate arrive
+      afterFonts(send);
     }
   }
   new MutationObserver(check).observe(document, { childList: true, subtree: true });
   // A page without #boot is done once nothing new (resource, LCP candidate) has arrived for 1.5 s.
   var dcl = false, settle;
-  function bump() { if (sawBoot || sent || !dcl) return; clearTimeout(settle); settle = setTimeout(send, 1500); }
+  function bump() { if (sawBoot || sent || !dcl) return; clearTimeout(settle); settle = setTimeout(function () { afterFonts(send); }, 1500); }
   observe("resource", bump);
   observe("largest-contentful-paint", bump);
   document.addEventListener("DOMContentLoaded", function () { dcl = true; bump(); });
@@ -137,6 +186,9 @@ function buildPage(html, resolve) {
   const tag = '<script async src="/__hold"></script><script>(' + timingScript.toString() + ")();</script>";
   return { html: html.replace(/<head[^>]*>/i, (m) => m + tag), files };
 }
+
+// --late-font: points every Google Fonts stylesheet address in `text` at the stand-in, one address per `n`. Pure: no I/O.
+function lateFont(text, n) { return text.replace(FONT_SHEET_URL, LATE_FONT_PATH + "?n=" + n); }
 
 function resolveFromCache(i, version) {
   const file = vendorFile(i, version);
@@ -165,6 +217,7 @@ function sendThrottled(res, status, headers, body, opts) {
 function makeHandler(opts) {
   const vendorFiles = {};
   const holds = new Set();
+  let lateFontCount = 0;
   const release = () => { holds.forEach((res) => res.end()); holds.clear(); };
   const respond = (req, res, status, type, buf) => {
     const headers = { "content-type": type, "cache-control": "no-store" };
@@ -186,7 +239,8 @@ function makeHandler(opts) {
         try {
           const m = JSON.parse(body), v = (x) => (typeof x === "number" ? x : "-");
           const b = m.seen ? ` bootText=${JSON.stringify(m.seen.text)} bootColor=${String(m.seen.color).replace(/\s/g, "")} bootOverflow=${m.seen.overflow ? 1 : 0} bootGone=${m.seen.gone ? 1 : 0}` : "";
-          console.log(`timing page=${m.page} width=${m.width} fcp=${v(m.fcp)} lcp=${v(m.lcp)} boot=${v(m.boot)} mounted=${v(m.mounted)}${b}`);
+          const moved = Array.isArray(m.shifted) && m.shifted.length ? ` shifted=${JSON.stringify(m.shifted)}` : "";
+          console.log(`timing page=${m.page} width=${m.width} fcp=${v(m.fcp)} lcp=${v(m.lcp)} boot=${v(m.boot)} mounted=${v(m.mounted)} cls=${v(m.cls)}${moved}${b}`);
         } catch (e) { /* malformed beacon */ }
         res.writeHead(204).end();
         release();
@@ -196,6 +250,14 @@ function makeHandler(opts) {
     // --fail-app: js/app.js answers 404, to see the "Something stopped GOLSZ loading." screen.
     if (opts.failApp && u.pathname === "/js/app.js") return respond(req, res, 404, "text/plain", Buffer.from("not found"));
     if (vendorFiles[u.pathname]) return respond(req, res, 200, MIME[".js"], fs.readFileSync(vendorFiles[u.pathname]));
+    // --late-font: the stand-in font stylesheet, answered late (see the header). It may be cached, as
+    // Google's is: switching the <link> from media=print to all asks for it again, and a second wait
+    // would put the redraw after the report. Each served page and bundle gets its own address (?n=),
+    // so the next page load waits again.
+    if (opts.lateFontMs !== undefined && u.pathname === LATE_FONT_PATH) {
+      setTimeout(() => sendThrottled(res, 200, { "content-type": MIME[".css"], "cache-control": "max-age=3600" }, Buffer.from(LATE_FONT_CSS), opts), opts.lateFontMs);
+      return;
+    }
     if (u.pathname.startsWith("/api/")) return respond(req, res, 404, "application/json", Buffer.from("{}"));
 
     let rel = decodeURIComponent(u.pathname);
@@ -205,6 +267,7 @@ function makeHandler(opts) {
     fs.readFile(file, (err, buf) => {
       if (err) { res.writeHead(404).end("not found"); return; }
       const type = MIME[path.extname(file)] || "application/octet-stream";
+      if (opts.lateFontMs !== undefined && (PAGES.has(rel) || rel === "/js/app.js")) buf = Buffer.from(lateFont(buf.toString("utf8"), ++lateFontCount));
       if (!PAGES.has(rel)) return respond(req, res, 200, type, buf);
       const built = buildPage(buf.toString("utf8"), (i, version) => { const r = resolveFromCache(i, version); vendorFiles["/__vendor/" + i + ".js"] = r.file; return r; });
       // --theme=light: the page's own head script reads this key, as for a visitor who chose light.
@@ -223,6 +286,8 @@ function parseArgs(argv, env) {
     if (a === "--fail-app") { opts.failApp = true; return; }
     const lang = /^--lang=(en|fr|es|el)$/.exec(a);
     if (lang) { opts.lang = lang[1]; return; }
+    const late = /^--late-font=(\d+)$/.exec(a);
+    if (late) { opts.lateFontMs = Number(late[1]); return; }
     const flag = /^--(rtt|mbps)=(\d+(?:\.\d+)?)$/.exec(a);
     if (flag) opts[flag[1] === "rtt" ? "rttMs" : "mbps"] = Number(flag[2]);
     else if (/^\d+$/.test(a)) opts.port = Number(a);
@@ -236,4 +301,4 @@ if (require.main === module) {
   server.listen(opts.port, "127.0.0.1", () => console.log(`First-screen timing on http://127.0.0.1:${server.address().port} (rtt ${opts.rttMs} ms, ${opts.mbps} Mbps)`));
 }
 
-module.exports = { buildPage, parseArgs, DEFAULTS, BUDGETS };
+module.exports = { buildPage, parseArgs, lateFont, DEFAULTS, BUDGETS, LATE_FONT_PATH };
