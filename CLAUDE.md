@@ -286,6 +286,9 @@ Relevant commands:
   placeholder screen. A plain reload keeps the plan and shows the same Home. `SetGoalCard` appears on Home whenever
   the athlete has a sport and no pathway steps (a skip, or a reload mid-way); tapping it opens the same `GoalSetup`.
   `reloadmid` in the preview tool: Home shows the "set your goal" card, then completing `GoalSetup` lands on Home.
+  Between "Build my plan" and Home the daily check-in ("How do you feel today?", `DailyCheckIn`) covers the screen:
+  `shouldAskCheckin` waits only while `onboarding` is true, so it asks the moment the goal step ends, and the athlete
+  taps an answer or "Skip for today" before seeing the plan (seen 2026-11-10 when the drives were executed).
 - **`starterPathwaySteps({ sport, pathwayType, timeline, today, athlete, benchmarks, targets, pathwayRow, t })`**
   (pure, `golsz-app.html`; suite `tests/test_starter_pathway.cjs`). Returns 5-8 dated milestone steps (each with an
   `id`, translated `label` from `starter_step_*` in all four languages, `done`, `due` date, `category`, `stage`,
@@ -302,24 +305,37 @@ Relevant commands:
   form with the typed values and a `role="alert"` line plus Retry.
 - **Preview tool `tools/preview-onboarding.cjs`** (`node tools/preview-onboarding.cjs <port>`, then
   `/golsz-app.html`). Stand-in auth (signUp/getSession/getUser) and an in-memory store for `profiles`, `athletes`,
-  `pathway_plan`, `outreach_targets`, `athlete_benchmarks`; every other table/RPC is empty. Nothing reaches the real
-  Supabase project; the stub is added to the served HTML in memory only; CDN libraries come from local vendor copies.
-  Drives: `signup` (lands in the Passport editor), `passport` (saves sport/position/club/country, lands on
-  `GoalSetup`), `goal` (builds the plan, lands on Home), `home` (signed-in capture of Home), `reloadmid` (Home shows
-  the "set your goal" card, then the goal drive completes), `full` (all three in one page). `fail=pathway` makes the
-  `pathway_plan` upsert answer HTTP 500 once; the stub clears the fail after that response so a Retry in the UI
-  succeeds on the same page. `__store` returns the written rows; `__hold`/`__release` let the browser tool wait for
-  a drive. Use one server per width and theme for a flow whose store must persist across page loads. Suite:
-  `tests/test_preview_onboarding.cjs`.
-- **UNVERIFIED (t4):** a recorded real-browser run (AVA browser / Chrome) at 390 and 1280 px, dark and light, proving
-  the ordered flow (signup -> Passport editor; passport -> GoalSetup; goal -> Home with Today >= 1 and This week >= 3
-  and step labels; plain reload same Home) plus `reloadmid` and `fail=pathway` with retry-succeeds. The AVA browser
-  broker (`$AVA_BROWSER`) was not available in this agent environment (Chrome cannot start in the agent sandbox, and
-  no broker script was present), so the page-title recordings and screenshots required by the acceptance criteria
-  were not produced here. The preview tool and its 24-test suite pass, and the app code/flow are covered by
-  `test_goal_setup.cjs` and `test_starter_pathway.cjs`. Still UNVERIFIED in general (older, unchanged): live
-  Supabase (RLS, PostgREST, the real upsert/auth), a real phone on cellular, a screen reader, and fr/es/el in a
-  browser.
+  `pathway_plan`, `outreach_targets`, `athlete_benchmarks`; any other table starts empty and keeps what the app writes;
+  reads honour column filters, `order` and `limit`, and an upsert matches on its `on_conflict` columns (without them
+  Home's "latest snapshot before today" read failed and the app logged it). Nothing reaches the real Supabase project;
+  the stub is added to the served HTML in memory only; CDN libraries come from local vendor copies.
+  Drives (each acts like a person, on English labels, and puts the store where it starts): `signup` (a brand-new
+  account, store reset; must land in the Passport editor), `passport` (signed in, no sport: the app opens the locked
+  editor itself; fills and saves; must land on `GoalSetup`), `goal` (signed in, sport, no plan: a new page load does
+  not reopen `GoalSetup`, so it opens it from Home's set-goal card; builds; must land on Home), `home` (a plain reload
+  of whatever the store holds), `today` (the same, staying in the Today view for a screenshot), `reloadmid` (the goal
+  drive, failing unless Home showed the set-goal card first), `full` (signup, passport and goal in ONE page, the only
+  drive in which `GoalSetup` opens from the Passport save). When the daily check-in covers Home (it does right after
+  the plan is built, and on the day's first open) the drive taps "Skip for today" first and says `checkin: skipped`.
+  A drive ending on Home taps the Today tile and "Show my progress" and reads the TODAY and THIS WEEK cells. The
+  title then ends `[drive done; path: <screens in order>; screen: ...; today: <done>/<total>; thisWeek:
+  <done>/<total>; badge: <"N to do">; next: <step>; labels: <n>/<all> on screen (...); goalSetupFrom: ...; scroll:
+  <scrollWidth>/<innerWidth>; goalSetupScroll: ...; todayViewScroll: ...; alerts: ...]`; a stuck drive says `[drive
+  FAILED: timed out waiting for <what>; ...]`. `fail=pathway` refuses the first `pathway_plan` write only (the page
+  stops asking after it), so Retry succeeds; the title adds `failAlert="..."; formKept; goalKept; plansAtFail;
+  goalTextAtFail; retry`. The goal sentence is saved before the plan, so after a refused plan write the goal is
+  already stored (`goalTextAtFail=saved`) and no `pathway_plan` row exists. `__store` returns the rows. Use one server
+  per width and theme. Suite: `tests/test_preview_onboarding.cjs` (the pure rules `homeCounts`, `labelsShown`,
+  `driveTitle`, `seedsSession`, each drive's starting store, the one-shot failure, and that every selector and label
+  the drives use is still in `golsz-app.html`).
+- **UNVERIFIED (t4): the real-browser run.** Not done at 390 or 1280 px, dark or light: no page titles from Chrome,
+  no screenshots, no `scrollWidth`/`innerWidth` measurement. Cause: AVA starts its browser broker (`$AVA_BROWSER`,
+  `$AVA_RUN`) only for Claude Code sessions; the three t4 attempts ran in OpenCode, where Chrome cannot start. What WAS
+  run (2026-11-10): the same drives against the real `js/app.js` in jsdom (a DOM without layout or paint, not a
+  browser), at a phone and a desktop width setting; every drive finished, in the order Auth -> Passport editor ->
+  GoalSetup -> Home, with TODAY 0/1 and THIS WEEK 0/3; AI_HANDOFF.md of that day has the titles. Also UNVERIFIED
+  (older, unchanged): live Supabase (RLS, PostgREST, the real upsert/auth), a real phone on cellular, a screen reader,
+  and fr/es/el in a browser.
 
 - **Follows** (migration 006): `follows(follower_id, followed_id)`, public read, insert/delete restricted to
   `follower_id = auth.uid()`. Feed and Discover both maintain their own `following` state/`toggleFollow()` —

@@ -139,9 +139,11 @@ node tests/test_<name>.cjs     # one suite
   `starter_step_*` milestones) writes a starter plan to `pathway_plan` (upsert `onConflict: "user_id"`, only
   pathway_type/target_timeline/milestones/updated_at) via `GoalSetup` (no AI, no plan gate; `planHasSteps` never
   overwrites; a refused save keeps the form with `role=alert` + Retry). `SetGoalCard` shows on Home for a sport with
-  no steps. Preview: `tools/preview-onboarding.cjs` (stand-in auth/store, `drive=signup|passport|goal|home|reloadmid|full`,
-  `fail=pathway` one-shot so Retry succeeds, `__store`). **UNVERIFIED (t4):** the required real-browser run at 390/1280,
-  dark/light (AVA browser broker unavailable in this agent env); live Supabase/RLS, real phone, screen reader, fr/es/el.
+  no steps. Preview: `tools/preview-onboarding.cjs` (stand-in auth/store, `drive=signup|passport|goal|home|today|reloadmid|full`,
+  one-shot `fail=pathway`, `__store`; the title reports the screens in order, TODAY/THIS WEEK as done/total and
+  scrollWidth/innerWidth). After the plan is built the daily check-in covers Home until answered or skipped.
+  **UNVERIFIED (t4):** the real-browser run at 390/1280, dark/light (AVA gives OpenCode sessions no browser tool; the
+  drives were only run in jsdom, which has no layout); live Supabase/RLS, real phone, screen reader, fr/es/el.
   Detail: CLAUDE.md § First visit: sign-up to a dated plan.
 - Targets (Plan > "Schools & clubs", table `outreach_targets`): the caps in `TARGET_LIMITS` (golsz-app.html) are
   repeated by migration 165's check constraints, and `tests/test_migration_165.cjs` diffs them: change both, through a
