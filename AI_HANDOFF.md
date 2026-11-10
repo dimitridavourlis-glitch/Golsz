@@ -5,7 +5,7 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-OpenCode (AVA job 199, task t4), 2026-11-09. Before that: Claude Code (job 199 t1, t2, t2-r1, t3).
+OpenCode (AVA job 199, task t4, second try), 2026-11-10: no code or tool change, browser run still not possible (below). Before that: Claude Code (job 199 t1, t2, t2-r1, t3).
 
 ## Current Branch
 `ava/199-a-brand-new-athlete-goes-from-sign-up-to` (AVA job 199; AVA commits each step, then merges). Branched
@@ -22,6 +22,8 @@ from 3188dc1, where job 184 (Targets) was merged as #14.
 - Browser run (AVA browser / `$AVA_BROWSER`) — **NOT RECORDED here: broker unavailable** in this agent environment
   (`$AVA_BROWSER` unset, no broker script under the agent TMPDIR; Chrome cannot start in the sandbox, confirmed:
   `ava.visual.run` -> "Chrome stopped"). No page titles/screenshots were produced; do not treat as passed.
+  Checked again 2026-11-10: `$AVA_BROWSER` and `$AVA_RUN` are both unset in an OpenCode session. The preview server
+  itself starts and answers 200 here; only the browser is missing. Run this step in a session that has the browser tool.
 
   | 4 combinations (one server per width/theme, store persists) | A: signup->Passport editor, passport->GoalSetup, goal->Home (Today>=1, This week>=3, step labels), plain reload same Home | B: reloadmid; fail=pathway (form kept, alert, nothing written; retry succeeds) |
   |---|---|---|
@@ -61,7 +63,7 @@ on `tools/preview-onboarding.cjs` ok. No JSX/app code changed (no `npm run compi
 (broker unavailable). Full `npm run check` left to AVA.
 
 ## Known Problems
-- t4 browser acceptance criteria (real titles/screenshots at 390/1280, dark/light) unverified: `$AVA_BROWSER` broker missing in this env; Chrome blocked in sandbox.
+- t4 browser acceptance criteria (real titles/screenshots at 390/1280, dark/light) unverified: `$AVA_BROWSER` and `$AVA_RUN` are unset in OpenCode sessions (seen 11-09 and 11-10); Chrome blocked in sandbox.
 - health-alert runs every 2.1-7.5 h, not 15 min. Payments live but no real purchase; webhook secret unverified.
 - Admin MFA: owner not enrolled. Signup has NO bot protection (Supabase CAPTCHA off, `TURNSTILE_SITE_KEY` empty).
 - UNVERIFIED (first visit): live Supabase (RLS/PostgREST/real upsert+auth), a real phone on cellular, a screen reader,
