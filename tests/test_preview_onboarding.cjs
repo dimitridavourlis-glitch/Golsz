@@ -13,7 +13,7 @@ const spawned = [];
 for (const fn of ["exec", "execFile", "execFileSync", "execSync", "spawn", "spawnSync", "fork"]) {
   childProcess[fn] = (...args) => { spawned.push(fn + " " + String(args[0])); throw new Error("no child process in this suite"); };
 }
-const { createPreview, stubCall, homeCounts, labelsShown, driveTitle, seedsSession, DRIVES, USER_ID } = require("../tools/preview-onboarding.cjs");
+const { createPreview, stubCall, homeCounts, labelsShown, driveTitle, scrollBoxes, worstScroll, seedsSession, DRIVES, USER_ID } = require("../tools/preview-onboarding.cjs");
 
 const appPath = path.join(__dirname, "..", "golsz-app.html");
 const hash = (s) => crypto.createHash("sha256").update(s).digest("hex");
@@ -197,9 +197,31 @@ async function runStub(cfg, requests, respond = () => new Response("[]")) {
   ok(labelsShown(stepLabels, "MY NEXT STEP Ask Scout what to   focus on this week Mark done").join() === "Ask Scout what to focus on this week", "labelsShown finds a stored label in the screen's text, whatever the spacing");
   ok(labelsShown(stepLabels, "TODAY 0/1 THIS WEEK 0/3").length === 0 && labelsShown(null, "x").length === 0, "labelsShown finds nothing that is not there");
 
-  const homeTitle = driveTitle({ path: ["Auth", "Passport editor", "GoalSetup", "Home"], screen: "Home", counts, badge: "1 to do", next: "Record a benchmark", labels: ["Record a benchmark"], labelTotal: 7, goalSetupFrom: "the Passport save", scroll: "390/390", goalSetupScroll: "390/390", todayViewScroll: "390/390", alerts: "", error: "" });
+  const homeTitle = driveTitle({ path: ["Auth", "Passport editor", "GoalSetup", "Home"], screen: "Home", counts, badge: "1 to do", next: "Record a benchmark", labels: ["Record a benchmark"], labelTotal: 7, goalSetupFrom: "the Passport save", scroll: "390/390 (document)", goalSetupScroll: "390/390 (document)", todayViewScroll: "390/390 (document)", alerts: "", error: "" });
   ok(homeTitle.startsWith("drive done; path: Auth > Passport editor > GoalSetup > Home; screen: Home; today: 0/3; thisWeek: 0/4; badge: 1 to do; next: Record a benchmark; labels: 1/7 on screen (Record a benchmark)"), "driveTitle: the order of screens, both counts, the badge and the labels: " + homeTitle);
-  ok(homeTitle.endsWith("goalSetupFrom: the Passport save; scroll: 390/390; goalSetupScroll: 390/390; todayViewScroll: 390/390; alerts: none"), "driveTitle: scrollWidth/innerWidth for Home, GoalSetup and the Today view");
+  ok(homeTitle.endsWith("goalSetupFrom: the Passport save; scroll: 390/390 (document); goalSetupScroll: 390/390 (document); todayViewScroll: 390/390 (document); alerts: none"), "driveTitle: the worst box for Home, GoalSetup and the Today view");
+  ok(driveTitle({ path: ["Home"], screen: "Home", scroll: "2032/390 (main)", overflow: true }).includes("scroll: 2032/390 (main); overflow=on purpose; alerts: none"), "driveTitle: a run with the wide bar says so");
+
+  // The scroll reading. Neither screen scrolls in the document: Home is inside <main overflow-y:auto>,
+  // GoalSetup inside a fixed sheet. A reading of the document alone says 390/390 on a screen that
+  // scrolls sideways, so the boxes around the screen are measured too and the worst one is reported.
+  const el = (tagName, o) => ({ tagName, id: "", className: "", scrollWidth: 390, clientWidth: 390, parentElement: null, overflow: "visible", ...o });
+  const docEl = el("HTML", {});
+  const win = { innerWidth: 390, document: { documentElement: docEl }, getComputedStyle: (e) => ({ overflowX: e.overflow, overflowY: e.overflow }) };
+  const body = el("BODY", { parentElement: docEl });
+  const shell = el("DIV", { className: "app-shell", parentElement: body });
+  const main = el("MAIN", { parentElement: shell, overflow: "auto" });
+  const homeEl = el("DIV", { className: "gz-home wide", parentElement: main });
+  ok(scrollBoxes(homeEl, win).map((b) => b.name).join() === "document,div.gz-home,main", "scrollBoxes: the document, the screen itself and the boxes around it that scroll; not the ones that do not");
+  ok(worstScroll(scrollBoxes(homeEl, win)) === "390/390 (document)", "worstScroll: a screen that fits reads as the document's own pair");
+  main.scrollWidth = 2032;
+  ok(docEl.scrollWidth === 390 && worstScroll(scrollBoxes(homeEl, win)) === "2032/390 (main)", "a sideways scroll inside <main> is reported although the document still reads 390/390");
+  main.scrollWidth = 390;
+  const sheet = el("DIV", { parentElement: body, overflow: "auto", scrollWidth: 2040 });
+  const dialog = el("DIV", { id: "goal-panel", parentElement: sheet, scrollWidth: 2040 });
+  ok(worstScroll(scrollBoxes(dialog, win)) === "2040/390 (div#goal-panel)", "the same for GoalSetup's sheet (the first of two equal boxes is named)");
+  ok(worstScroll(scrollBoxes(null, win)) === "390/390 (document)" && worstScroll([]) === "none" && worstScroll([{ name: "hidden", scrollWidth: 50, clientWidth: 0 }]) === "none", "worstScroll: no screen element means the document alone; a box with no width is not a reading");
+  ok(worstScroll([{ name: "document", scrollWidth: 1280, clientWidth: 1280 }, { name: "main", scrollWidth: 1039, clientWidth: 1040 }]) === "1280/1280 (document)", "worstScroll compares the overrun, not the width");
   const failTitle = driveTitle({ path: ["GoalSetup", "Home"], screen: "Home", fail: { alert: "Couldn't save your plan. Try again.", formKept: true, goalKept: true, plansAtFail: 0, goalTextAtFail: "saved" }, scroll: "390/390", error: "" });
   ok(failTitle.includes('failAlert="Couldn\'t save your plan. Try again."; formKept=yes; goalKept=yes; plansAtFail=0; goalTextAtFail=saved; retry=ok'), "driveTitle: the fail=pathway facts: " + failTitle);
   const stuck = driveTitle({ path: ["Auth"], screen: "Auth", scroll: "390/390", error: "the Passport editor after sign-up" });
@@ -220,6 +242,12 @@ async function runStub(cfg, requests, respond = () => new Response("[]")) {
   ]) {
     ok(call0.includes(inTool) && before.includes(inApp), "the drive's " + inTool + " still matches the app (" + inApp + ")");
   }
+
+  // The positive control: &overflow=1 reaches the page, and only then does the drive add the bar.
+  const widePage = (await call(port, "GET", "/golsz-app.html?drive=home&overflow=1")).text;
+  const plainPage = (await call(port, "GET", "/golsz-app.html?drive=home&overflow=2")).text;
+  ok(widePage.includes('"overflow":true') && plainPage.includes('"overflow":false'), "overflow=1 (and nothing else) asks the page for the wide bar");
+  ok(/if \(!cfg\.overflow \|\|/.test(call0) && call0.includes("width:2000px") && call0.includes("rules.worstScroll(rules.scrollBoxes(root, window))"), "the page adds the bar only when asked, and measures the screen's boxes with the two rules above");
 
   server.close();
   ok(hash(fs.readFileSync(appPath, "utf8")) === beforeHash, "golsz-app.html unchanged at the end");

@@ -5,68 +5,62 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-OpenCode (AVA job 199, task t4, fourth try), 2026-11-10. Before that: OpenCode (t4, tries 1-3), Claude Code (t1-t3).
+OpenCode (AVA job 199, task t4, fifth try), 2026-11-10. Before that: OpenCode (t4, tries 1-4), Claude Code (t1-t3).
 
 ## Current Branch
 `ava/199-a-brand-new-athlete-goes-from-sign-up-to` (AVA job 199; AVA commits each step, then merges). Branched
 from 3188dc1, where job 184 (Targets) was merged as #14.
 
 ## Last Completed Work
-- AVA job 199 t4, fourth try. **The real-browser run is still NOT done** (first table). Cause, found on try 3: AVA
-  starts its browser broker (`$AVA_BROWSER`, `$AVA_RUN`) only in its Claude Code engine (`ava/engine/claude_cli.py`);
-  its OpenCode engine starts none, and Chrome cannot start in the sandbox. All four t4 tries ran in OpenCode; on try
-  4 both variables were again empty, so nothing was run. Try 4 only corrected two sentences (CLAUDE.md's Flow
-  bullet, CHANGELOG.md) that said Home lists the Today and This week items by name; it names the next step and counts.
-- Instead, the drives were executed for the first time, against the real `js/app.js`, in jsdom (a DOM with no layout
-  or paint: NOT a browser, no screenshots, no scroll widths). The tool as committed could not have produced the
-  proof, so `tools/preview-onboarding.cjs` was rewritten: the old sign-up drive never filled the date of birth (wrong
-  ids) and never left Auth; the old title read stray digits ("today: 7; thisWeek: 4" with no plan) and now reads the
-  TODAY and THIS WEEK cells as done/total after opening the Today view and "Show my progress"; the stand-in ignored
-  `lt`/`order`/`limit`/`on_conflict`, which made the app log "GOLSZ home reads failed: snapshot"; a stuck drive now
-  ends `[drive FAILED: timed out waiting for <what>]`; the title carries `scroll: <scrollWidth>/<innerWidth>` (last
-  screen, GoalSetup, Today view); `reloadmid2` is gone, `today` is new, each drive sets the store it starts from.
-- Seen while executing the flow (app behaviour, not changed): an unfinished Passport keeps its editor open by itself
-  (`editing || incomplete`); GoalSetup opens from the Passport save only within one page (`drive=full`), after a
-  reload it opens from Home's set-goal card (what `drive=goal` does); with `fail=pathway` the goal sentence is
-  already saved when the plan write is refused (it is written first), no `pathway_plan` row exists, Retry writes it.
+- AVA job 199 t4, fifth try: **the first visit ran in a real browser engine**, at 390 and 1280 px, dark and light.
+  `$AVA_BROWSER`/`$AVA_RUN` were empty again (AVA sets them only for Claude Code), so the run used the new
+  `tools/run-onboarding-chrome.cjs`: headless Chromium over a DevTools pipe, one fresh preview server and browser
+  profile per width and theme. Google Chrome starts in the OpenCode sandbox but its page loads hang; Playwright's
+  `chromium_headless_shell` (Chromium 141.0.7390.37, already on this Mac) works with `--no-sandbox`. Tries 1-4 never
+  tested that and wrote "Chrome cannot start".
+- The scroll reading was blind and is fixed: it measured the document, but Home scrolls inside `<main>` and GoalSetup
+  inside a fixed sheet. It now measures the document, the screen and every box around it that scrolls or clips
+  (`scrollBoxes`, `worstScroll`) and names the worst. `&overflow=1` is the positive control (a 2000 px bar).
+- Defect found and fixed in `golsz-app.html` (+ `npm run compile`): after a key press, GoalSetup's sheet showed the
+  browser's default focus ring around the whole screen. Its panel now has `outline: "none"`; fields and buttons keep
+  the gold ring. The table below was run after the fix.
+
+  Recorded run 2026-11-10, per row: `node tools/run-onboarding-chrome.cjs --width <w> --theme <t> --no-sandbox --chrome
+  <headless_shell>`, pages in order. Titles were the same in all four rows; W is the row's width.
+
+  | Page (in order) | Title ended (all 4: 390 dark, 390 light, 1280 dark, 1280 light) | Scroll readings | Console errors |
+  |---|---|---|---|
+  | `drive=signup` | `path: Auth > Passport editor; screen: Passport editor` | `W/W (document)` | none |
+  | `drive=passport` | `path: Passport editor > GoalSetup; screen: GoalSetup; goalSetupFrom: the Passport save` | GoalSetup `W/W (document)` | none |
+  | `drive=goal` | `path: Daily check-in > Home (set-goal card) > GoalSetup > Home; today: 0/1; thisWeek: 0/3; badge: 1 to do; next: Ask Scout what to focus on this week; labels: 1/7 on screen; checkin: skipped` | Home, GoalSetup, Today view: each `W/W (document)` | none |
+  | `drive=home` (reload) | `path: Home; today: 0/1; thisWeek: 0/3`, same badge and step | Home, Today view `W/W (document)` | none |
+  | `drive=reloadmid` | `path: Home (set-goal card) > GoalSetup > Home; sawSetGoalCard=yes; today: 0/1; thisWeek: 0/3` | all three `W/W (document)` | none |
+  | `drive=goal&fail=pathway` | `failAlert="Couldn't save your plan. Try again."; formKept=yes; goalKept=yes; plansAtFail=0; goalTextAtFail=saved; retry=ok`, then Home 0/1, 0/3 | all three `W/W (document)` | only the app's own `GOLSZ goal setup save error` |
+  | `drive=full` | `path: Auth > Passport editor > GoalSetup > Home; goalSetupFrom: the Passport save; today: 0/1; thisWeek: 0/3` | all three `W/W (document)` | none |
+  | `drive=today` | `path: Home; today: 0/1; thisWeek: 0/3` (stays in the Today view) | `W/W (document)` | none |
+  | `drive=goal&overflow=1` (control) | `drive done; ...; overflow=on purpose` | 390: `2016/390 (div.gz-home)`, `2020/390 (div)`, `2012/390 (div.gz-home)`; 1280: `2016/976`, `2020/480`, `2012/976` | none |
+
+  The runner's own reading on each page's last screen: document 390/390 (1280/1280) and 0 elements past the window's
+  edge on every page; on the control page 1 element past the edge while the document still read 390/390 (so the old
+  reading could not have seen it). `drive=full` alone in a fresh profile (390 dark): `Auth > Passport editor > GoalSetup >
+  Daily check-in > Home`, 0/1, 0/3. Screenshots opened: GoalSetup 390 dark, 390 light, 1280 dark, 1280 light; Home 390
+  dark, 390 light, 1280 light; Today view 390 dark. They read correctly, nothing clipped. The only failed request on
+  every page was the Google Fonts stylesheet (no internet): text was drawn in the system fallback font.
+- With `fail=pathway` the goal sentence is already saved when the plan write is refused (it is written first); no
+  `pathway_plan` row exists; Retry writes it.
 - **For the owner (product):** right after "Build my plan", and on the day's first open, the daily check-in "How do
-  you feel today?" covers Home until the athlete answers or taps "Skip for today". One tap, not a dead end, but it
-  sits between a new athlete and the plan they just built. Decide whether to skip it that day.
-
-  Real browser (the acceptance criteria), AVA browser + `tools/preview-onboarding.cjs`, one server per width and theme:
-
-  | 4 combinations | A: signup -> passport -> goal -> home (reload) | B: reloadmid; goal&fail=pathway |
-  |---|---|---|
-  | 390 dark | UNVERIFIED: not run (no browser tool) | UNVERIFIED: not run |
-  | 390 light | UNVERIFIED: not run (no browser tool) | UNVERIFIED: not run |
-  | 1280 dark | UNVERIFIED: not run (no browser tool) | UNVERIFIED: not run |
-  | 1280 light | UNVERIFIED: not run (no browser tool) | UNVERIFIED: not run |
-
-  jsdom execution, 2026-11-10 (same drives, one server per row, pages in order; "390"/"1280" only pick the phone or
-  desktop shell; `scroll` read 0/390 and 0/1280 because jsdom has no layout, so it proves nothing about overflow):
-
-  | jsdom, 2 runs | A: titles, in order | B: titles |
-  |---|---|---|
-  | phone shell, dark | signup: `path: Auth > Passport editor`. passport: `Passport editor > GoalSetup; goalSetupFrom: the Passport save`. goal: `Daily check-in > Home (set-goal card) > GoalSetup > Home; today: 0/1; thisWeek: 0/3; badge: 1 to do; next: Ask Scout what to focus on this week; labels: 1/7 on screen; checkin: skipped`. home: `Home; today: 0/1; thisWeek: 0/3`, same badge and step | reloadmid: `Home (set-goal card) > GoalSetup > Home; sawSetGoalCard=yes; today: 0/1; thisWeek: 0/3`. fail: `failAlert="Couldn't save your plan. Try again."; formKept=yes; goalKept=yes; plansAtFail=0; goalTextAtFail=saved; retry=ok`, then Home 0/1, 0/3 |
-  | desktop shell, light | the same four titles, word for word | the same two titles |
-
-  Both rows also ran `drive=full`: `Auth > Passport editor > GoalSetup > (Daily check-in >) Home; goalSetupFrom: the
-  Passport save; today: 0/1; thisWeek: 0/3`. Console: nothing, except the app's own "GOLSZ goal setup save error"
-  line in the fail run. Home shows one step label (the next step), on the Today tile and in the Today view.
+  you feel today?" covers Home until the athlete answers or taps "Skip for today". Decide whether to skip it that day.
 
 ## Current Work
-AVA job 199 t4: tool, tests and docs done; the real-browser run is open. Then security review, regression, final.
+AVA job 199 t4 done in this session. Next: security review, regression, final verification.
 
 ## Remaining Tasks
-- Run t4's browser proof in a session that has `$AVA_BROWSER` (Claude Code). Per width (390, 1280) and theme, a
-  fresh server: `"$AVA_BROWSER" --serve "node tools/preview-onboarding.cjs <port>" --port <port> --widths <w>` then, in
-  order, `/golsz-app.html?theme=<t>&drive=` signup, passport, goal, home, reloadmid, `goal&fail=pathway`, full, today.
-  Record titles, console errors and the three `scroll` pairs (equal at 390); open the passport (GoalSetup) and home shots.
 - Migration 165 (job 184, merged) NOT YET APPLIED: run in the SQL Editor (checks + rollback in its header).
 - OWNER: one real Basic purchase; send LEGAL-REVIEW-BRIEF.md to counsel; admin MFA (OWNER-RUNBOOK.md section 8).
 - OWNER/dashboard: Vercel Hobby->Pro (monitor); backups/PITR+restore drill; portal plan switching; checkout redirect;
   uptime probe; Elite benefit; French marketing; legal entity. Agent-doable: ADS Phase 6 4-5; Reschedule/Drop from
-  Home; `removed_at` on stages; self-host fonts+CDN libs (CSP); admin RPC for `stripe_pending_plans`; Targets summary.
+  Home; `removed_at` on stages; self-host fonts+CDN libs (CSP); admin RPC for `stripe_pending_plans`; Targets summary;
+  the browser's default focus ring on the other dialogs' panels (Settings, Passport editor: `useModalFocus`).
 
 ## Important Architecture Decisions
 - Push to `main` = production deploy; Vercel buildCommand (`npm run check` first) is the gate.
@@ -74,21 +68,20 @@ AVA job 199 t4: tool, tests and docs done; the real-browser run is open. Then se
 - 12-function Vercel ceiling (`_`-prefixed `api/` are shared modules). Adults only.
 
 ## Latest Test / Build Status
-2026-11-10 (job 199 t4, try 3): `node tests/test_preview_onboarding.cjs` -> 85/85 (was 24; 7 hand-made mutants of
-the new rules each fail it). `node --check tools/preview-onboarding.cjs` ok. No app code changed, so no `npm run compile`.
-Run in the agent's own shell (`$AVA_RUN` unset). Try 4 changed docs only and ran no suite. Full `npm run check` left to AVA.
+2026-11-10 (job 199 t4, try 5), in the agent's own shell (`$AVA_RUN` unset): `npm run compile` ok;
+`node tests/test_preview_onboarding.cjs` 94/94 (was 85); `node tests/test_goal_setup.cjs` 105/105;
+`node tests/test_compiled_artifact.cjs` 14/14. Full `npm run check` left to AVA.
 
 ## Known Problems
-- t4's browser criteria (titles, console, 390 px scroll widths, screenshots) are unmet: no browser tool in OpenCode.
-- jsdom is not in the repo (scratch install under `.ava-tmp/`, ignored): the drive run above is not repeatable by a suite.
+- The run above is Chromium's headless shell, not Google Chrome, Safari or Firefox, and not AVA's browser tool.
 - health-alert runs every 2.1-7.5 h, not 15 min. Payments live but no real purchase; webhook secret unverified.
 - Admin MFA: owner not enrolled. Signup has NO bot protection (Supabase CAPTCHA off, `TURNSTILE_SITE_KEY` empty).
-- UNVERIFIED (first visit): live Supabase (RLS/PostgREST/real upsert+auth), a real phone on cellular, a screen reader,
-  fr/es/el in a browser. Also "My goal..." line on Free opens the locked Plan (older than job 199).
+- UNVERIFIED (first visit): the web fonts (Archivo, Space Mono; the widths measured are the fallback font's), live
+  Supabase (RLS/PostgREST/real upsert+auth), a real phone on cellular, a screen reader, fr/es/el in a browser. Also
+  "My goal..." line on Free opens the locked Plan (older than job 199).
 
 ## Next Recommended Action
-Give t4 to a Claude Code session (it has the browser tool) and run the commands under Remaining Tasks; put the real
-titles and scroll widths in the first table. Then security review, regression and final verification for job 199.
+Security review, regression and final verification for job 199. To repeat the browser run: the command above the table.
 
 ---
 _How to update: overwrite the sections above (do not append a log); put the agent name

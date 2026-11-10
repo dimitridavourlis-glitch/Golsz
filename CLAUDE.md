@@ -323,22 +323,41 @@ Relevant commands:
   A drive ending on Home taps the Today tile and "Show my progress" and reads the TODAY and THIS WEEK cells. The
   title then ends `[drive done; path: <screens in order>; screen: ...; today: <done>/<total>; thisWeek:
   <done>/<total>; badge: <"N to do">; next: <step>; labels: <n>/<all> on screen (...); goalSetupFrom: ...; scroll:
-  <scrollWidth>/<innerWidth>; goalSetupScroll: ...; todayViewScroll: ...; alerts: ...]`; a stuck drive says `[drive
-  FAILED: timed out waiting for <what>; ...]`. `fail=pathway` refuses the first `pathway_plan` write only (the page
+  <width>/<room> (<box>); goalSetupScroll: ...; todayViewScroll: ...; alerts: ...]`; a stuck drive says `[drive
+  FAILED: timed out waiting for <what>; ...]`. The three scroll readings (Home's tiles, GoalSetup, the Today view)
+  name the worst of: the document (`scrollWidth`/`innerWidth`), the screen's own element and every box around it that
+  scrolls or clips (`scrollWidth`/`clientWidth`; rules `scrollBoxes`, `worstScroll`). Neither screen scrolls in the
+  document (Home is inside `<main>`, GoalSetup inside a fixed sheet), so the document alone reads 390/390 even when
+  the screen scrolls sideways; a screen that fits reads `390/390 (document)`. `&overflow=1` is the positive control:
+  it puts a 2000 px bar into each screen before measuring, and the readings must then differ. `fail=pathway` refuses the first `pathway_plan` write only (the page
   stops asking after it), so Retry succeeds; the title adds `failAlert="..."; formKept; goalKept; plansAtFail;
   goalTextAtFail; retry`. The goal sentence is saved before the plan, so after a refused plan write the goal is
   already stored (`goalTextAtFail=saved`) and no `pathway_plan` row exists. `__store` returns the rows. Use one server
   per width and theme. Suite: `tests/test_preview_onboarding.cjs` (the pure rules `homeCounts`, `labelsShown`,
-  `driveTitle`, `seedsSession`, each drive's starting store, the one-shot failure, and that every selector and label
+  `driveTitle`, `scrollBoxes`, `worstScroll`, `seedsSession`, each drive's starting store, the one-shot failure, and that every selector and label
   the drives use is still in `golsz-app.html`).
-- **UNVERIFIED (t4): the real-browser run.** Not done at 390 or 1280 px, dark or light: no page titles from Chrome,
-  no screenshots, no `scrollWidth`/`innerWidth` measurement. Cause: AVA starts its browser broker (`$AVA_BROWSER`,
-  `$AVA_RUN`) only for Claude Code sessions; the three t4 attempts ran in OpenCode, where Chrome cannot start. What WAS
-  run (2026-11-10): the same drives against the real `js/app.js` in jsdom (a DOM without layout or paint, not a
-  browser), at a phone and a desktop width setting; every drive finished, in the order Auth -> Passport editor ->
-  GoalSetup -> Home, with TODAY 0/1 and THIS WEEK 0/3; AI_HANDOFF.md of that day has the titles. Also UNVERIFIED
-  (older, unchanged): live Supabase (RLS, PostgREST, the real upsert/auth), a real phone on cellular, a screen reader,
-  and fr/es/el in a browser.
+- **Runner `tools/run-onboarding-chrome.cjs`** (`node tools/run-onboarding-chrome.cjs --width 390 --theme dark`):
+  for a session with no browser tool. One run starts a fresh preview server and a fresh headless Chrome profile, opens
+  the drives in order (signup, passport, goal, home, reloadmid, `goal&fail=pathway`, full, today, `goal&overflow=1`)
+  and prints one JSON line per page: the drive's result, console errors, failed requests, its own reading of the last
+  screen (`doc` = document scrollWidth/innerWidth, `pastEdge` = visible elements past the window's edge) and a
+  screenshot under `node_modules/.cache/onboarding-run`. `--chrome PATH` picks the binary; `--no-sandbox` is needed
+  inside an agent's sandbox. Chrome talks over a pipe and cannot reach the internet. In AVA's OpenCode sandbox Google
+  Chrome starts but its page loads hang; Playwright's `chromium_headless_shell` (in `~/Library/Caches/ms-playwright`) works.
+- **Recorded run 2026-11-10** (Chromium 141 headless shell through the runner, 390x844 and 1280x800, dark and light,
+  one server each; not AVA's browser tool, which OpenCode sessions do not get). The same in all four: signup `Auth >
+  Passport editor`; passport `Passport editor > GoalSetup` (from the Passport save); goal `Daily check-in > Home
+  (set-goal card) > GoalSetup > Home`, TODAY 0/1, THIS WEEK 0/3, badge "1 to do", next step "Ask Scout what to focus
+  on this week"; home (a reload) the same Home; reloadmid saw the set-goal card, then Home; `fail=pathway`: "Couldn't
+  save your plan. Try again.", form and goal kept, 0 plan rows, Retry lands on Home; full `Auth > Passport editor >
+  GoalSetup > Home` (in a fresh profile the check-in sits before Home). No console errors except the app's own "goal
+  setup save error" in the fail run. Every scroll reading was `<width>/<width> (document)` with 0 elements past the
+  edge; at 390 px with `overflow=1` they read 2016/390, 2020/390 and 2012/390 while the document still read 390/390.
+  AI_HANDOFF.md of that day has the table. Found and fixed: after a key press GoalSetup's sheet showed the browser's
+  default focus ring around the whole screen (`outline: "none"` on its panel; the other dialogs still do this).
+- **UNVERIFIED.** The web fonts (Archivo, Space Mono): the run had no internet, so text was drawn in the system
+  fallback font and the widths are that font's. Google Chrome itself, Safari, Firefox. Live Supabase (RLS, PostgREST,
+  the real upsert/auth), a real phone on cellular, a screen reader, and fr/es/el in a browser.
 
 - **Follows** (migration 006): `follows(follower_id, followed_id)`, public read, insert/delete restricted to
   `follower_id = auth.uid()`. Feed and Discover both maintain their own `following` state/`toggleFollow()` —

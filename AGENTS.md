@@ -55,7 +55,7 @@ publish.** Full detail: CLAUDE.md § What this is; README.md.
   files are shared modules, not functions.
 - `tests/`: `test_*.cjs`, `run-all.cjs`, `README.md`. `tools/`: the build scripts (`precompile`, `split-i18n`,
   `strip-jsx`, `unpublish-internal`) and local preview and timing tools (`preview-public-passport`,
-  `preview-targets`, `preview-onboarding`, `time-first-screen`, `time-pages`).
+  `preview-targets`, `preview-onboarding`, `run-onboarding-chrome`, `time-first-screen`, `time-pages`).
   `js/`: `main.js`, `landing.js`, `app.js` (generated); `js/i18n/` is gitignored build output.
 - `golsz-guard/`: Claude Code plugin, four skills of project rules. Other agents: read
   `golsz-guard/skills/*/SKILL.md` before Supabase writes, measurements, athlete-facing claims.
@@ -140,10 +140,13 @@ node tests/test_<name>.cjs     # one suite
   pathway_type/target_timeline/milestones/updated_at) via `GoalSetup` (no AI, no plan gate; `planHasSteps` never
   overwrites; a refused save keeps the form with `role=alert` + Retry). `SetGoalCard` shows on Home for a sport with
   no steps. Preview: `tools/preview-onboarding.cjs` (stand-in auth/store, `drive=signup|passport|goal|home|today|reloadmid|full`,
-  one-shot `fail=pathway`, `__store`; the title reports the screens in order, TODAY/THIS WEEK as done/total and
-  scrollWidth/innerWidth). After the plan is built the daily check-in covers Home until answered or skipped.
-  **UNVERIFIED (t4):** the real-browser run at 390/1280, dark/light (AVA gives OpenCode sessions no browser tool; the
-  drives were only run in jsdom, which has no layout); live Supabase/RLS, real phone, screen reader, fr/es/el.
+  one-shot `fail=pathway`, `overflow=1` (positive control), `__store`; the title reports the screens in order,
+  TODAY/THIS WEEK as done/total and the worst scroll box of each screen, `390/390 (document)` when it fits).
+  `tools/run-onboarding-chrome.cjs --width <w> --theme <t>` runs the drives in headless Chrome when there is no
+  browser tool. After the plan is built the daily check-in covers Home until answered or skipped.
+  Run 2026-11-10 (Chromium 141 headless shell, 390/1280, dark/light) passed: CLAUDE.md has it.
+  **UNVERIFIED:** the web fonts (no internet in the run, fallback font), Google Chrome/Safari/Firefox, live
+  Supabase/RLS, real phone, screen reader, fr/es/el.
   Detail: CLAUDE.md § First visit: sign-up to a dated plan.
 - Targets (Plan > "Schools & clubs", table `outreach_targets`): the caps in `TARGET_LIMITS` (golsz-app.html) are
   repeated by migration 165's check constraints, and `tests/test_migration_165.cjs` diffs them: change both, through a

@@ -11,6 +11,9 @@
 //   &theme=light|dark sets localStorage["golsz-theme"] before the page starts
 //   &lang=en|fr|es|el sets localStorage["golsz-lang"] the same way (the drives read English labels:
 //                     use lang= without drive=)
+//   &overflow=1       with a drive: puts a 2000 px wide bar into GoalSetup, Home and the Today view
+//                     before each is measured. The three scroll readings must then show a box wider
+//                     than its room: the proof that the reading can see a sideways scroll
 //   &drive=signup|passport|goal|home|today|reloadmid|full   acts like a person, then reports:
 //     signup    a brand-new visitor (the store is reset): fills sign-up as an adult and submits;
 //               must land in the Passport editor
@@ -29,7 +32,12 @@
 //     [drive done; path: <screens in order>; screen: <last screen>; today: <done>/<total>;
 //      thisWeek: <done>/<total>; badge: <the Today tile's "N to do">; next: <its step>;
 //      labels: <n>/<all> on screen (<the stored step labels seen>); goalSetupFrom: <...>;
-//      scroll: <scrollWidth>/<innerWidth>; goalSetupScroll: ...; todayViewScroll: ...; alerts: <...>]
+//      scroll: <width>/<room> (<box>); goalSetupScroll: ...; todayViewScroll: ...; alerts: <...>]
+//   The three scroll readings are for Home's tiles, GoalSetup and the Today view. Neither screen
+//   scrolls in the document (Home is inside <main>, GoalSetup inside a fixed full-screen sheet), so
+//   each reading measures the document (scrollWidth/innerWidth), the screen's own element and every
+//   box around it that scrolls or clips (scrollWidth/clientWidth), and names the worst one. A
+//   screen that fits reads e.g. "390/390 (document)".
 //   and with fail=pathway also  failAlert="<text>"; formKept; goalKept; plansAtFail=<pathway_plan
 //   rows>; goalTextAtFail (the goal sentence is saved before the plan, so it is "saved"); retry.
 //   When the daily check-in ("How do you feel today?") covers Home, the drive taps "Skip for
@@ -119,8 +127,36 @@ function driveTitle(f) {
   if (f.scroll) parts.push("scroll: " + f.scroll);
   if (f.goalSetupScroll) parts.push("goalSetupScroll: " + f.goalSetupScroll);
   if (f.todayViewScroll) parts.push("todayViewScroll: " + f.todayViewScroll);
+  if (f.overflow) parts.push("overflow=on purpose");
   parts.push("alerts: " + (f.alerts || "none"));
   return parts.join("; ");
+}
+
+// Where a too-wide screen would scroll sideways, as boxes for worstScroll: the document
+// (scrollWidth against the window's innerWidth), the screen's own element, and each box around it
+// that scrolls or clips (Home's <main>, GoalSetup's fixed sheet). `win` is the page's window.
+function scrollBoxes(root, win) {
+  const doc = win.document.documentElement;
+  const boxes = [{ name: "document", scrollWidth: doc.scrollWidth, clientWidth: win.innerWidth }];
+  for (let el = root; el && el !== doc; el = el.parentElement) {
+    const cs = win.getComputedStyle(el);
+    if (el !== root && cs.overflowX === "visible" && cs.overflowY === "visible") continue;
+    const cls = typeof el.className === "string" ? el.className.split(/\s+/)[0] : "";
+    boxes.push({ name: el.tagName.toLowerCase() + (el.id ? "#" + el.id : cls ? "." + cls : ""), scrollWidth: el.scrollWidth, clientWidth: el.clientWidth });
+  }
+  return boxes;
+}
+
+// Of the boxes measured for one screen ({ name, scrollWidth, clientWidth }), the one whose content
+// runs furthest past its own room, as "<scrollWidth>/<clientWidth> (<name>)". The first box wins a
+// tie, and the page lists the document first, so a screen that fits reads "390/390 (document)".
+function worstScroll(boxes) {
+  let worst = null;
+  (boxes || []).forEach((b) => {
+    if (!b || !(b.clientWidth > 0)) return;
+    if (!worst || b.scrollWidth - b.clientWidth > worst.scrollWidth - worst.clientWidth) worst = b;
+  });
+  return worst ? worst.scrollWidth + "/" + worst.clientWidth + " (" + worst.name + ")" : "none";
 }
 
 // Whether the page starts signed in. Sign-up (and full) start signed out; the other drives are an
@@ -132,7 +168,7 @@ function seedsSession(drive, store) {
   return !!(store && (store.hasPlan || store.signedUp || store.hasSport));
 }
 
-const PAGE_RULES = { homeCounts, labelsShown, driveTitle };
+const PAGE_RULES = { homeCounts, labelsShown, driveTitle, scrollBoxes, worstScroll };
 const DRIVES = ["signup", "passport", "goal", "home", "today", "reloadmid", "full"];
 
 // Runs first in <head>, before the theme script, the CDN libraries and the app.
@@ -270,7 +306,16 @@ function stub(cfg, rules) {
     checkinSkip().click();
     await until(function () { return !checkinSkip(); }, "the daily check-in to close after 'Skip for today'");
   }
-  function scrollNow() { return document.documentElement.scrollWidth + "/" + window.innerWidth; }
+  // &overflow=1 (the positive control): a bar far wider than any screen, inside the screen measured.
+  function widen(root) {
+    if (!cfg.overflow || !root || one("[data-preview-overflow]", root)) return;
+    var bar = document.createElement("div");
+    bar.setAttribute("data-preview-overflow", "");
+    bar.style.cssText = "width:2000px;height:1px;flex:none";
+    root.appendChild(bar);
+    facts.overflow = true;
+  }
+  function scrollNow(root) { widen(root); return rules.worstScroll(rules.scrollBoxes(root, window)); }
 
   async function signup() {
     await until(authForm, "the sign-up form");
@@ -319,7 +364,7 @@ function stub(cfg, rules) {
     if (needCard && !facts.sawSetGoalCard) { facts.sawSetGoalCard = false; throw new Error("Home's 'set your goal' card before GoalSetup"); }
     reached("GoalSetup");
     var field = await until(function () { return one("#goal-setup-goal"); }, "GoalSetup's goal field");
-    facts.goalSetupScroll = scrollNow();
+    facts.goalSetupScroll = scrollNow(goalSetup());
     type(field, GOAL);
     await pause(150);
     withText("button", "Build my plan", goalSetup())[0].click();
@@ -344,7 +389,7 @@ function stub(cfg, rules) {
     var spans = tileSpans();
     facts.badge = tileBadge();
     facts.next = spans.filter(function (s) { return s !== "Today" && s !== facts.badge; })[0] || "";
-    facts.scroll = scrollNow();
+    facts.scroll = scrollNow(home());
     var plan = ((await store()).pathway_plan || [])[0];
     var labels = ((plan && plan.milestones) || []).map(function (m) { return m && m.label; }).filter(Boolean);
     var seen = textOf(home());
@@ -355,7 +400,7 @@ function stub(cfg, rules) {
     if (toggle.getAttribute("aria-expanded") !== "true") toggle.click();
     await until(function () { return cells().length; }, "", 3000).catch(function () {});
     facts.counts = rules.homeCounts(cells());
-    facts.todayViewScroll = scrollNow();
+    facts.todayViewScroll = scrollNow(home());
     seen += " " + textOf(home());
     facts.labels = rules.labelsShown(labels, seen);
     facts.labelTotal = labels.length;
@@ -374,7 +419,7 @@ function stub(cfg, rules) {
   function finish(err) {
     facts.error = err ? String(err.message || err) : "";
     facts.screen = screenName();
-    if (!facts.scroll) facts.scroll = scrollNow();
+    if (!facts.scroll) facts.scroll = scrollNow(goalSetup() || editor() || home());
     facts.alerts = all("[role=alert]").filter(visible).map(textOf).filter(Boolean).join(" | ");
     document.title = document.title + " [" + rules.driveTitle(facts) + "]";
     realFetch("/__release").catch(function () {});
@@ -603,6 +648,7 @@ function createPreview({ localise = localiseLibraries } = {}) {
         lang: LANGS.includes(u.searchParams.get("lang")) ? u.searchParams.get("lang") : "",
         today: /^\d{4}-\d{2}-\d{2}$/.test(u.searchParams.get("today") || "") ? u.searchParams.get("today") : "",
         fail: failParam === "pathway" ? "pathway" : "",
+        overflow: u.searchParams.get("overflow") === "1",
         drive, seedSession,
       };
       res.writeHead(200, { "content-type": type });
@@ -618,4 +664,4 @@ if (require.main === module) {
   server.listen(Number(process.argv[2]) || 0, "127.0.0.1", () => console.log("Onboarding preview on http://127.0.0.1:" + server.address().port + "/golsz-app.html"));
 }
 
-module.exports = { createPreview, pageWithStub, stubCall, stub, homeCounts, labelsShown, driveTitle, seedsSession, DRIVES, USER_ID, defaultProfile, defaultAthlete };
+module.exports = { createPreview, pageWithStub, stubCall, stub, homeCounts, labelsShown, driveTitle, scrollBoxes, worstScroll, seedsSession, DRIVES, USER_ID, defaultProfile, defaultAthlete };
