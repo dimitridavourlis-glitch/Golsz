@@ -5,7 +5,7 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-OpenCode (AVA job 199, task t4, fifth try), 2026-11-10. Before that: OpenCode (t4, tries 1-4), Claude Code (t1-t3).
+OpenCode (AVA job 199, final verification), 2026-11-10. Before that: OpenCode (t4), Claude Code (t1-t3).
 
 ## Current Branch
 `ava/199-a-brand-new-athlete-goes-from-sign-up-to` (AVA job 199; AVA commits each step, then merges). Branched
@@ -52,7 +52,9 @@ from 3188dc1, where job 184 (Targets) was merged as #14.
   you feel today?" covers Home until the athlete answers or taps "Skip for today". Decide whether to skip it that day.
 
 ## Current Work
-AVA job 199 t4 done in this session. Next: security review, regression, final verification.
+AVA job 199 final verification: `404.html` had no side margins on a phone (an inline `padding` on its `.container`
+replaced the 24 px gutter; older than this job). Vertical padding is now on the section (`section-pad`), the gutter on
+the `.container` inside it. Seen fixed at 375 and 1280 px (headless Chromium); `test_commercial_polish.cjs` pins it.
 
 ## Remaining Tasks
 - Migration 165 (job 184, merged) NOT YET APPLIED: run in the SQL Editor (checks + rollback in its header).
@@ -70,7 +72,8 @@ AVA job 199 t4 done in this session. Next: security review, regression, final ve
 ## Latest Test / Build Status
 2026-11-10 (job 199 t4, try 5), in the agent's own shell (`$AVA_RUN` unset): `npm run compile` ok;
 `node tests/test_preview_onboarding.cjs` 94/94 (was 85); `node tests/test_goal_setup.cjs` 105/105;
-`node tests/test_compiled_artifact.cjs` 14/14. Full `npm run check` left to AVA.
+`node tests/test_compiled_artifact.cjs` 14/14. Final verification: `test_commercial_polish.cjs` 100/100 (was 96).
+Full `npm run check` left to AVA.
 
 ## Known Problems
 - The run above is Chromium's headless shell, not Google Chrome, Safari or Firefox, and not AVA's browser tool.

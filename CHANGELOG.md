@@ -6,6 +6,7 @@
 - Home then shows the next step from that plan by name, with its date, and how many steps are due today and this week, so the first visit ends with something to act on instead of an empty screen.
 - If someone skips setting a goal or comes back before finishing, Home shows a clear "set your goal" card to pick up where they left off.
 - On the goal screen, people using a keyboard no longer see a browser outline around the whole screen; the field or button they are on is still outlined in gold.
+- The "page not found" page now has proper side margins on a phone, so its text and buttons line up under the logo instead of touching the screen edge.
 
 ## 2026-11-06
 

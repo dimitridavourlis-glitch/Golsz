@@ -41,6 +41,18 @@ ck("every link and asset on it is absolute (it is served at arbitrary paths)", r
 ck("it carries the stylesheet", /href="\/css\/styles\.css"/.test(NF), true);
 ck("and a way home, to the app and to support", /href="\/"/.test(NF) && /golsz-app\.html/.test(NF) && /hello@golsz\.com/.test(NF), true);
 ck("it loads no scripts (nothing to break on a missing page)", /<script/.test(NF), false);
+// .container carries the page's side margins (padding: 0 24px). An inline
+// padding on the same element replaced them, and on a phone the 404 text sat
+// flush against the screen edge while the header above it was inset.
+const containerRule = (CSS.match(/(?:^|\n)\.container\s*\{([^}]*)\}/) || [])[1] || "";
+ck("the stylesheet's .container still carries the side margins", /padding:\s*0\s+24px/.test(containerRule), true);
+const nfMain = (NF.match(/<main[\s\S]*<\/main>/) || [""])[0];
+const nfContainers = [...nfMain.matchAll(/<[a-z]+\b[^>]*class="[^"]*\bcontainer\b[^"]*"[^>]*>/g)].map((m) => m[0]);
+ck("its main content sits in a .container", nfContainers.length >= 1, true);
+ck("...and no .container on it overrides that padding inline",
+   nfContainers.filter((tag) => /style="[^"]*\bpadding(?:-left|-right|-inline)?\s*:/.test(tag)), []);
+ck("its heading, text and buttons are inside that .container, not beside it",
+   /class="container"[^>]*>(?:(?!<\/div>)[\s\S])*<h1[\s\S]*class="btn btn-primary"[\s\S]*hello@golsz\.com/.test(nfMain), true);
 
 /* ---------- icons ---------- */
 const size = (f) => fs.statSync(path.join(REPO, f)).size;
