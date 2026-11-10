@@ -5,16 +5,18 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-OpenCode (AVA job 199, task t4, third try), 2026-11-10. Before that: OpenCode (t4, tries 1-2), Claude Code (t1-t3).
+OpenCode (AVA job 199, task t4, fourth try), 2026-11-10. Before that: OpenCode (t4, tries 1-3), Claude Code (t1-t3).
 
 ## Current Branch
 `ava/199-a-brand-new-athlete-goes-from-sign-up-to` (AVA job 199; AVA commits each step, then merges). Branched
 from 3188dc1, where job 184 (Targets) was merged as #14.
 
 ## Last Completed Work
-- AVA job 199 t4, third try. **The real-browser run is still NOT done** (first table). Cause, found this time: AVA
+- AVA job 199 t4, fourth try. **The real-browser run is still NOT done** (first table). Cause, found on try 3: AVA
   starts its browser broker (`$AVA_BROWSER`, `$AVA_RUN`) only in its Claude Code engine (`ava/engine/claude_cli.py`);
-  its OpenCode engine starts none, and Chrome cannot start in the sandbox. All three t4 tries ran in OpenCode.
+  its OpenCode engine starts none, and Chrome cannot start in the sandbox. All four t4 tries ran in OpenCode; on try
+  4 both variables were again empty, so nothing was run. Try 4 only corrected two sentences (CLAUDE.md's Flow
+  bullet, CHANGELOG.md) that said Home lists the Today and This week items by name; it names the next step and counts.
 - Instead, the drives were executed for the first time, against the real `js/app.js`, in jsdom (a DOM with no layout
   or paint: NOT a browser, no screenshots, no scroll widths). The tool as committed could not have produced the
   proof, so `tools/preview-onboarding.cjs` was rewritten: the old sign-up drive never filled the date of birth (wrong
@@ -74,7 +76,7 @@ AVA job 199 t4: tool, tests and docs done; the real-browser run is open. Then se
 ## Latest Test / Build Status
 2026-11-10 (job 199 t4, try 3): `node tests/test_preview_onboarding.cjs` -> 85/85 (was 24; 7 hand-made mutants of
 the new rules each fail it). `node --check tools/preview-onboarding.cjs` ok. No app code changed, so no `npm run compile`.
-Run in the agent's own shell (`$AVA_RUN` unset). Full `npm run check` left to AVA.
+Run in the agent's own shell (`$AVA_RUN` unset). Try 4 changed docs only and ran no suite. Full `npm run check` left to AVA.
 
 ## Known Problems
 - t4's browser criteria (titles, console, 390 px scroll widths, screenshots) are unmet: no browser tool in OpenCode.

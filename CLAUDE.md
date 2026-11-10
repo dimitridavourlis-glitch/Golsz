@@ -282,8 +282,11 @@ Relevant commands:
 - **Flow.** A new adult signs up (`Auth`; sign-up sends the adult account through and `GolszApp` gets `startOnboarding`),
   lands in the Passport tab with the profile editor auto-opened, fills the Passport and saves with a sport. The
   onboarding save opens `GoalSetup`. "Build my plan" saves the goal (`saveGoalText`) and writes dated steps to
-  `pathway_plan`, then Home shows that athlete's own Today and This week items (their step labels), not an empty or
-  placeholder screen. A plain reload keeps the plan and shows the same Home. `SetGoalCard` appears on Home whenever
+  `pathway_plan`, then Home shows that athlete's own plan, not an empty or placeholder screen: the Today tile and the
+  Today view name the next dated step (one label, the athlete's own), and TODAY and THIS WEEK appear as done/total
+  counts behind "Show my progress" (0/1 and 0/3 in the recorded run). This week's other steps are counted, not listed
+  by name, on Home; their names are on the Plan page (locked below Basic). Whether Home should list them is an open
+  product question. A plain reload keeps the plan and shows the same Home. `SetGoalCard` appears on Home whenever
   the athlete has a sport and no pathway steps (a skip, or a reload mid-way); tapping it opens the same `GoalSetup`.
   `reloadmid` in the preview tool: Home shows the "set your goal" card, then completing `GoalSetup` lands on Home.
   Between "Build my plan" and Home the daily check-in ("How do you feel today?", `DailyCheckIn`) covers the screen:
