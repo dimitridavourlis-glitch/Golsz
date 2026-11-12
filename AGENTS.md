@@ -57,7 +57,7 @@ publish.** Full detail: CLAUDE.md § What this is; README.md.
 - `api/`: 12 Vercel functions, Vercel's ceiling (adding one means removing one). `_`-prefixed
   files are shared modules, not functions.
 - `tests/`: `test_*.cjs`, `run-all.cjs`, `README.md`, and `_`-prefixed helpers that suites share (not run on their
-  own: `_catalog-bridge.cjs`, `_day_parity.cjs`). `tools/`: the build scripts (`precompile`, `split-i18n`,
+  own: `_catalog-bridge.cjs`, `_day_parity.cjs`, `_app_mount.cjs`: the app's components run in Node with stand-in hooks). `tools/`: the build scripts (`precompile`, `split-i18n`,
   `strip-jsx`, `unpublish-internal`) and local preview and timing tools (`preview-public-passport`,
   `preview-targets`, `preview-onboarding`, `run-onboarding-chrome`, `time-first-screen`, `time-pages`).
   `js/`: `main.js`, `landing.js`, `app.js` (generated); `js/i18n/` is gitignored build output.

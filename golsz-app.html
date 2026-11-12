@@ -54,7 +54,7 @@
 <!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
      fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
      with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
-<link rel="preload" as="script" href="js/app.js?v=2e93ef9690568d27" />
+<link rel="preload" as="script" href="js/app.js?v=2182758c4516bafe" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -788,6 +788,9 @@ const I18N = {
     starter_step_scout_week: "Ask Scout what to focus on this week", starter_step_benchmark: "Record a benchmark with the date and how it was measured", starter_step_highlight: "Add a highlight video link to your Passport", starter_step_targets: "Add 3 target clubs or coaches", starter_step_academics: "Add your graduation year and GPA to your Passport", starter_step_outreach: "Email your first target club or coach", starter_step_watch: "Watch athletes one level up ({stage}) and note one thing to work on", starter_step_share: "Share your Passport link with a coach", starter_step_retest: "Retest your benchmark the same way and compare", starter_step_review: "Review your progress toward {stage} with Scout",
     goal_setup_title: "What are you aiming for?", goal_setup_sub: "Name your goal and GOLSZ gives you your first steps, each with a date.", goal_setup_goal_label: "Your goal", goal_setup_pathway_label: "Pathway", goal_setup_timeline_label: "When (optional)", goal_setup_timeline_ph: "e.g. Fall 2027", goal_setup_timeline_unread: "Write a season or a month and a year, for example Fall 2027.", goal_setup_timeline_past: "That date has passed. Pick a later one or leave this empty.", goal_setup_build: "Build my plan", goal_setup_building: "Building your plan…", goal_setup_save_err: "Couldn't save your plan. Try again.", goal_setup_skip: "Skip for now",
     home_set_goal_title: "Set your goal to get your plan", home_set_goal_sub: "Name your goal and GOLSZ dates your first steps, starting today.",
+    scout_today_title: "FROM YOUR PLAN", scout_today_none: "Nothing is due today.", scout_today_more: "and {n} more",
+    scout_today_say_steps: "Today: {steps}.", scout_today_say_done: "Today: {done} of {total} done.", scout_today_say_week: "This week: {done} of {total} done.",
+    scout_today_unavailable: "Your plan couldn't be read just now. Home shows today's steps.",
   },
   fr: {
     loading: "Chargement…", yes: "Oui", no: "Non",
@@ -1172,6 +1175,9 @@ const I18N = {
     starter_step_scout_week: "Demandez à Scout sur quoi vous concentrer cette semaine", starter_step_benchmark: "Enregistrez un repère avec la date et la façon dont il a été mesuré", starter_step_highlight: "Ajoutez à votre Passeport le lien d'une vidéo de vos temps forts", starter_step_targets: "Ajoutez 3 clubs ou entraîneurs cibles", starter_step_academics: "Ajoutez votre année de diplôme et votre moyenne à votre Passeport", starter_step_outreach: "Écrivez à votre premier club ou entraîneur cible", starter_step_watch: "Regardez des athlètes du niveau au-dessus ({stage}) et notez un point à travailler", starter_step_share: "Partagez le lien de votre Passeport avec un entraîneur", starter_step_retest: "Refaites votre test de la même façon et comparez", starter_step_review: "Faites le point avec Scout sur votre progression vers {stage}",
     goal_setup_title: "Quel est votre objectif ?", goal_setup_sub: "Indiquez votre objectif et GOLSZ vous donne vos premières étapes, chacune avec une date.", goal_setup_goal_label: "Votre objectif", goal_setup_pathway_label: "Parcours", goal_setup_timeline_label: "Quand (facultatif)", goal_setup_timeline_ph: "ex. automne 2027", goal_setup_timeline_unread: "Indiquez une saison ou un mois et une année, par exemple automne 2027.", goal_setup_timeline_past: "Cette date est passée. Choisissez-en une plus tardive ou laissez vide.", goal_setup_build: "Créer mon plan", goal_setup_building: "Création de votre plan…", goal_setup_save_err: "Impossible d'enregistrer votre plan. Réessayez.", goal_setup_skip: "Passer pour l'instant",
     home_set_goal_title: "Fixez votre objectif pour obtenir votre plan", home_set_goal_sub: "Indiquez votre objectif et GOLSZ date vos premières étapes, à partir d'aujourd'hui.",
+    scout_today_title: "D'APRÈS TON PLAN", scout_today_none: "Rien n'est prévu aujourd'hui.", scout_today_more: "et {n} de plus",
+    scout_today_say_steps: "Aujourd'hui : {steps}.", scout_today_say_done: "Aujourd'hui : {done} sur {total} faites.", scout_today_say_week: "Cette semaine : {done} sur {total} faites.",
+    scout_today_unavailable: "Ton plan n'a pas pu être lu pour l'instant. L'accueil affiche les étapes du jour.",
   },
   es: {
     loading: "Cargando…", yes: "Sí", no: "No",
@@ -1556,6 +1562,9 @@ const I18N = {
     starter_step_scout_week: "Pregunta a Scout en qué centrarte esta semana", starter_step_benchmark: "Registra una marca con la fecha y cómo se midió", starter_step_highlight: "Añade a tu Pasaporte el enlace de un vídeo con tus mejores jugadas", starter_step_targets: "Añade 3 clubes o entrenadores objetivo", starter_step_academics: "Añade a tu Pasaporte tu año de graduación y tu promedio", starter_step_outreach: "Escribe a tu primer club o entrenador objetivo", starter_step_watch: "Mira a deportistas un nivel por encima ({stage}) y anota algo que mejorar", starter_step_share: "Comparte el enlace de tu Pasaporte con un entrenador", starter_step_retest: "Vuelve a medir tu marca de la misma forma y compara", starter_step_review: "Revisa con Scout tu progreso hacia {stage}",
     goal_setup_title: "¿Qué quieres conseguir?", goal_setup_sub: "Escribe tu objetivo y GOLSZ te da tus primeros pasos, cada uno con fecha.", goal_setup_goal_label: "Tu objetivo", goal_setup_pathway_label: "Trayectoria", goal_setup_timeline_label: "Cuándo (opcional)", goal_setup_timeline_ph: "ej. otoño 2027", goal_setup_timeline_unread: "Escribe una estación o un mes y un año, por ejemplo otoño 2027.", goal_setup_timeline_past: "Esa fecha ya pasó. Elige una posterior o deja esto vacío.", goal_setup_build: "Crear mi plan", goal_setup_building: "Creando tu plan…", goal_setup_save_err: "No se pudo guardar tu plan. Inténtalo de nuevo.", goal_setup_skip: "Saltar por ahora",
     home_set_goal_title: "Fija tu objetivo para tener tu plan", home_set_goal_sub: "Escribe tu objetivo y GOLSZ pone fecha a tus primeros pasos, desde hoy.",
+    scout_today_title: "SEGÚN TU PLAN", scout_today_none: "Hoy no hay nada pendiente.", scout_today_more: "y {n} más",
+    scout_today_say_steps: "Hoy: {steps}.", scout_today_say_done: "Hoy: {done} de {total} hechos.", scout_today_say_week: "Esta semana: {done} de {total} hechos.",
+    scout_today_unavailable: "No se pudo leer tu plan ahora mismo. Inicio muestra los pasos de hoy.",
   },
   el: {
     loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
@@ -1940,6 +1949,9 @@ const I18N = {
     starter_step_scout_week: "Ρώτησε τον Scout σε τι να εστιάσεις αυτή τη βδομάδα", starter_step_benchmark: "Κατάγραψε έναν δείκτη με την ημερομηνία και τον τρόπο μέτρησης", starter_step_highlight: "Πρόσθεσε στο Διαβατήριό σου σύνδεσμο για βίντεο με στιγμιότυπα", starter_step_targets: "Πρόσθεσε 3 συλλόγους ή προπονητές στους Στόχους σου", starter_step_academics: "Πρόσθεσε στο Διαβατήριό σου το έτος αποφοίτησης και τον μέσο όρο σου", starter_step_outreach: "Στείλε email στον πρώτο σύλλογο ή προπονητή από τους Στόχους σου", starter_step_watch: "Δες αθλητές ένα επίπεδο πιο πάνω ({stage}) και σημείωσε κάτι να βελτιώσεις", starter_step_share: "Μοιράσου τον σύνδεσμο του Διαβατηρίου σου με έναν προπονητή", starter_step_retest: "Ξαναμέτρησε τον δείκτη σου με τον ίδιο τρόπο και σύγκρινε", starter_step_review: "Δες με τον Scout την πρόοδό σου προς {stage}",
     goal_setup_title: "Ποιος είναι ο στόχος σου;", goal_setup_sub: "Γράψε τον στόχο σου και το GOLSZ σου δίνει τα πρώτα σου βήματα, το καθένα με ημερομηνία.", goal_setup_goal_label: "Ο στόχος σου", goal_setup_pathway_label: "Πορεία", goal_setup_timeline_label: "Πότε (προαιρετικό)", goal_setup_timeline_ph: "π.χ. Φθινόπωρο 2027", goal_setup_timeline_unread: "Γράψε εποχή ή μήνα και έτος, για παράδειγμα Φθινόπωρο 2027.", goal_setup_timeline_past: "Αυτή η ημερομηνία έχει περάσει. Διάλεξε μια μεταγενέστερη ή άφησέ το κενό.", goal_setup_build: "Φτιάξε το πλάνο μου", goal_setup_building: "Φτιάχνουμε το πλάνο σου…", goal_setup_save_err: "Δεν αποθηκεύτηκε το πλάνο σου. Δοκίμασε ξανά.", goal_setup_skip: "Παράλειψη για τώρα",
     home_set_goal_title: "Όρισε τον στόχο σου για να πάρεις το πλάνο σου", home_set_goal_sub: "Γράψε τον στόχο σου και το GOLSZ βάζει ημερομηνίες στα πρώτα σου βήματα, από σήμερα.",
+    scout_today_title: "ΑΠΟ ΤΟ ΠΛΑΝΟ ΣΟΥ", scout_today_none: "Δεν έχεις τίποτα για σήμερα.", scout_today_more: "και {n} ακόμη",
+    scout_today_say_steps: "Σήμερα: {steps}.", scout_today_say_done: "Σήμερα: {done} από {total} έγιναν.", scout_today_say_week: "Αυτή τη βδομάδα: {done} από {total} έγιναν.",
+    scout_today_unavailable: "Το πλάνο σου δεν διαβάστηκε αυτή τη στιγμή. Η Αρχική δείχνει τα σημερινά βήματα.",
   },
 };
 
@@ -9317,6 +9329,111 @@ function ScoutActionCard({ icon, title, sub, cta, onTap, locked, lockPlan, onUpg
   );
 }
 
+/* ============ FROM YOUR PLAN (AVA job 216) ============
+   A question about today's steps ("What should I do today?", the What's next
+   button) comes back with today_card: what Home shows for the day, worked out
+   by todayCard() in api/scout.js from the same plan by Home's rules. It is
+   drawn under Scout's answer so the two can never quietly disagree.
+
+   scoutTodayLines() is the one place that decides what the card says. The
+   labels and the late line are Home's own words (home_week_today,
+   home_week_title, home_door_plan_late), so the same thing has the same name
+   on both screens. scoutTodaySentence() says it in words, from those lines,
+   for the bubble that replaces an answer the server's plan check refused
+   (today_override). A card whose numbers do not add up is not used at all:
+   nothing is guessed in its place. A step with no name, or past the server's
+   twenty, is counted in "and N more", never left out.
+   tests/test_scout_today_card.cjs runs both against Home's code. */
+function scoutTodayLines(card, t) {
+  const count = (n) => Number.isInteger(n) && n >= 0;
+  if (!card || typeof card !== "object"
+      || !["todayTotal", "todayDone", "todayOpenMore", "weekTotal", "weekDone", "lateCount"].every((k) => count(card[k]))
+      || !Array.isArray(card.todayOpen) || !card.todayOpen.every((label) => typeof label === "string")
+      || card.todayDone > card.todayTotal || card.weekDone > card.weekTotal
+      || card.todayOpen.length + card.todayOpenMore !== card.todayTotal - card.todayDone) return null;
+  const steps = card.todayOpen.filter((label) => label.trim());
+  const more = card.todayOpenMore + card.todayOpen.length - steps.length;
+  const lines = [
+    { k: "today", label: t("home_week_today"), done: card.todayDone, total: card.todayTotal,
+      value: card.todayTotal ? `${card.todayDone}/${card.todayTotal}` : null,
+      empty: card.todayTotal ? null : t("scout_today_none"),
+      steps, more: more ? t("scout_today_more").replace("{n}", more) : null },
+    { k: "week", label: t("home_week_title"), done: card.weekDone, total: card.weekTotal,
+      value: card.weekTotal ? `${card.weekDone}/${card.weekTotal}` : null,
+      empty: card.weekTotal ? null : t("home_week_empty") },
+  ];
+  if (card.lateCount > 0) lines.push({ k: "late", text: t("home_door_plan_late").replace("{n}", card.lateCount) });
+  if (card.resting === true) lines.push({ k: "rest", text: `${t("resting_banner_strong")} ${t("resting_banner")}` });
+  return lines;
+}
+
+// 'Today: "Film the session". This week: 0 of 3 done.' Step names are put in
+// with a function, so a "$&" or "$$" in a name is printed as typed.
+function scoutTodaySentence(card, t) {
+  const lines = scoutTodayLines(card, t);
+  if (!lines) return null;
+  const [today, week] = lines;
+  const named = today.steps.map((label) => `"${label}"`).join(", ") + (today.more ? ` ${today.more}` : "");
+  const todayPart = today.steps.length ? t("scout_today_say_steps").replace("{steps}", () => named)
+    : today.total ? t("scout_today_say_done").replace("{done}", today.done).replace("{total}", today.total)
+    : today.empty;
+  const weekPart = week.total ? t("scout_today_say_week").replace("{done}", week.done).replace("{total}", week.total)
+    : week.empty;
+  return `${todayPart} ${weekPart}`;
+}
+
+// Read-only, so no button: steps are ticked off on Home and Plan. Same shape as
+// ScoutActionCard, with Home's Today icon (Pause while they rest, as on Home).
+// Capped in width so on a desktop each number stays next to its label.
+function ScoutTodayCard({ card, t }) {
+  const lines = scoutTodayLines(card, t);
+  if (!lines) return null;
+  return (
+    <div style={{ marginLeft: 38, marginTop: 10, maxWidth: 440, background: C.card, border: `3px solid ${C.lime}`,
+      borderRadius: 24, padding: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ width: 36, height: 36, borderRadius: 12, flexShrink: 0, background: C.limeWash,
+          display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {card.resting === true ? <Pause size={20} color={C.lime} /> : <Sun size={20} color={C.lime} />}
+        </span>
+        <span style={{ minWidth: 0, fontSize: 13, fontWeight: 800, letterSpacing: "0.08em", lineHeight: 1.3,
+          color: C.limeText, overflowWrap: "anywhere" }}>{t("scout_today_title")}</span>
+      </div>
+      {lines.map((line) => (line.label ? (
+        <div key={line.k} style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.line}` }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+            <span style={{ minWidth: 0, fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", color: C.chalkSoft,
+              overflowWrap: "anywhere" }}>{line.label}</span>
+            {line.value ? (
+              <span style={{ flexShrink: 0, fontSize: 20, fontWeight: 800, color: C.chalk,
+                fontVariantNumeric: "tabular-nums" }}>{line.value}</span>
+            ) : null}
+          </div>
+          {line.empty ? <div style={{ fontSize: 15, color: C.chalkSoft, lineHeight: 1.4, marginTop: 4 }}>{line.empty}</div> : null}
+          {line.steps && line.steps.length ? (
+            <ul style={{ listStyle: "none", margin: "8px 0 0", padding: 0 }}>
+              {line.steps.map((label, k) => (
+                <li key={k} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: k ? 8 : 0 }}>
+                  {/* Hollow, as an open step's dot is on Home and Plan (StatusRow);
+                      centred on the first line of the name. */}
+                  <span aria-hidden="true" style={{ width: 8, height: 8, flexShrink: 0, marginTop: 8, borderRadius: "50%",
+                    border: `2px solid ${C.line2}`, boxSizing: "border-box" }} />
+                  <span style={{ minWidth: 0, fontSize: 17, fontWeight: 700, lineHeight: 1.35, color: C.chalk,
+                    overflowWrap: "anywhere" }}>{label}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {line.more ? <div style={{ fontSize: 15, color: C.chalkSoft, lineHeight: 1.4, marginTop: 8 }}>{line.more}</div> : null}
+        </div>
+      ) : (
+        <div key={line.k} style={{ marginTop: 12, fontSize: 15, lineHeight: 1.4,
+          fontWeight: line.k === "late" ? 800 : 400, color: line.k === "late" ? C.limeText : C.chalkSoft }}>{line.text}</div>
+      )))}
+    </div>
+  );
+}
+
 /* ============ IT LANDED ============
    Shown ONLY after the write resolved with no error - never optimistically.
    The brief says "after upsert", but only the road is an upsert; schools and
@@ -10062,6 +10179,15 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
         updates = parsed.profile_updates || null;
         contextUpdates = parsed.scout_context_updates || null;
       } catch { /* server already gave us reply_text */ }
+      // THE TODAY ANSWER (AVA job 216). A question about today's steps comes
+      // back with today_card, which ScoutTodayCard draws under the reply.
+      // today_override means the server's plan check found a date, step or
+      // count in the reply that is not in the athlete's plan, or could not
+      // check it: that reply is neither shown nor saved. The sentence built
+      // from the card takes its place below, and that sentence is what logTurn
+      // writes. With no usable card (today_unavailable: the plan could not be
+      // read) the bubble says so instead, and nothing is guessed.
+      const todayCard = data.today_card && typeof data.today_card === "object" ? data.today_card : null;
       // THE SERVER'S NULL IS A DECISION, NOT AN ACCIDENT. deriveReplyText
       // returns nothing on purpose when the model ran out of budget
       // mid-tool-loop and the only text available is its own scratchpad —
@@ -10075,6 +10201,8 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       if (data.reply_unavailable) {
         showFailure({ text: t("scout_connection_dropped"), retry: true, upgrade: false });
         return;
+      } else if (data.today_override) {
+        reply = scoutTodaySentence(todayCard, t) || t("scout_today_unavailable");
       } else if (data.stop_reason === "refusal") {
         // A decline is a real answer — shown in their language, kept in the
         // transcript, and not offered as something to send again.
@@ -10099,7 +10227,11 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
       // actions") are already server-validated/capped — attached straight
       // to this specific message so the "add these" buttons render right
       // under the reply that generated them, not as a separate object.
-      setMsgs((m) => [...m, { role: "assistant", at: Date.now(), text: reply, suggestedTargets: data.suggested_targets || null, suggestedDevItems: data.suggested_dev_items || null, suggestedPathway: data.suggested_pathway || null, draftedEmail: data.drafted_email || null }]);
+      // The offers of a reply that was replaced go with it: an "Add these
+      // steps" card under words the athlete never saw would be unexplained.
+      const offers = data.today_override ? {} : data;
+      setMsgs((m) => [...m, { role: "assistant", at: Date.now(), text: reply, suggestedTargets: offers.suggested_targets || null, suggestedDevItems: offers.suggested_dev_items || null, suggestedPathway: offers.suggested_pathway || null, draftedEmail: offers.drafted_email || null,
+        todayCard, todayOverride: !!data.today_override, todayUnavailable: !!data.today_unavailable }]);
       // The question and its answer are written together, in order, now that
       // there is an answer. Chained so the user row is created first.
       const answered = reply;
@@ -10523,6 +10655,13 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
             <div key={i} className="msg" style={m.role === "user" ? bubbleUser : bubbleAgent}>
               {m.photo && <img src={m.photo} alt={t("alt_scout_photo")} style={{ display: "block", maxWidth: "100%", borderRadius: 10, marginBottom: m.text ? 6 : 0 }} />}
               {m.text && <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>}
+              {/* Home's numbers for today, under the answer they belong to. When
+                  the plan could not be read there are none: one line says so and
+                  where today's steps are. A replaced answer already says it. */}
+              {m.todayCard ? <ScoutTodayCard card={m.todayCard} t={t} />
+                : m.todayUnavailable && !m.todayOverride ? (
+                  <div style={{ marginTop: 8, fontSize: 14, lineHeight: 1.45, color: C.chalkSoft }}>{t("scout_today_unavailable")}</div>
+                ) : null}
               {m.retryable && (
                 <button
                   onClick={() => retryFailed(i)}
@@ -20405,7 +20544,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=2e93ef9690568d27";
+    var APP_SRC = "js/app.js?v=2182758c4516bafe";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

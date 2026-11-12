@@ -5,72 +5,55 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-OpenCode (AVA job 199, final verification: layout shift on the sign-up screen), 2026-11-10. Before that: OpenCode (t4), Claude Code (t1-t3).
+Claude Code (AVA job 216 t3: the "From your plan" card in Scout), 2026-11-12. Earlier job 216 steps (t1, t2, t4) were
+Claude Code too and did not update this file. Before job 216: OpenCode (job 199, final verification), 2026-11-10.
 
 ## Current Branch
-`ava/199-a-brand-new-athlete-goes-from-sign-up-to` (AVA job 199; AVA commits each step, then merges). Branched
-from 3188dc1, where job 184 (Targets) was merged as #14.
+`ava/216-scout-s-what-should-i-do-today-agrees-wi` (AVA job 216; AVA commits each step, then merges). Branched from
+0b8e891, where job 199 (sign-up to a dated plan) was merged as #15.
 
 ## Last Completed Work
-- AVA job 199 t4, fifth try: **the first visit ran in a real browser engine**, at 390 and 1280 px, dark and light.
-  `$AVA_BROWSER`/`$AVA_RUN` were empty again (AVA sets them only for Claude Code), so the run used the new
-  `tools/run-onboarding-chrome.cjs`: headless Chromium over a DevTools pipe, one fresh preview server and browser
-  profile per width and theme. Google Chrome starts in the OpenCode sandbox but its page loads hang; Playwright's
-  `chromium_headless_shell` (Chromium 141.0.7390.37, already on this Mac) works with `--no-sandbox`. Tries 1-4 never
-  tested that and wrote "Chrome cannot start".
-- The scroll reading was blind and is fixed: it measured the document, but Home scrolls inside `<main>` and GoalSetup
-  inside a fixed sheet. It now measures the document, the screen and every box around it that scrolls or clips
-  (`scrollBoxes`, `worstScroll`) and names the worst. `&overflow=1` is the positive control (a 2000 px bar).
-- Defect found and fixed in `golsz-app.html` (+ `npm run compile`): after a key press, GoalSetup's sheet showed the
-  browser's default focus ring around the whole screen. Its panel now has `outline: "none"`; fields and buttons keep
-  the gold ring. The table below was run after the fix.
-
-  Recorded run 2026-11-10, per row: `node tools/run-onboarding-chrome.cjs --width <w> --theme <t> --no-sandbox --chrome
-  <headless_shell>`, pages in order. Titles were the same in all four rows; W is the row's width.
-
-  | Page (in order) | Title ended (all 4: 390 dark, 390 light, 1280 dark, 1280 light) | Scroll readings | Console errors |
-  |---|---|---|---|
-  | `drive=signup` | `path: Auth > Passport editor; screen: Passport editor` | `W/W (document)` | none |
-  | `drive=passport` | `path: Passport editor > GoalSetup; screen: GoalSetup; goalSetupFrom: the Passport save` | GoalSetup `W/W (document)` | none |
-  | `drive=goal` | `path: Daily check-in > Home (set-goal card) > GoalSetup > Home; today: 0/1; thisWeek: 0/3; badge: 1 to do; next: Ask Scout what to focus on this week; labels: 1/7 on screen; checkin: skipped` | Home, GoalSetup, Today view: each `W/W (document)` | none |
-  | `drive=home` (reload) | `path: Home; today: 0/1; thisWeek: 0/3`, same badge and step | Home, Today view `W/W (document)` | none |
-  | `drive=reloadmid` | `path: Home (set-goal card) > GoalSetup > Home; sawSetGoalCard=yes; today: 0/1; thisWeek: 0/3` | all three `W/W (document)` | none |
-  | `drive=goal&fail=pathway` | `failAlert="Couldn't save your plan. Try again."; formKept=yes; goalKept=yes; plansAtFail=0; goalTextAtFail=saved; retry=ok`, then Home 0/1, 0/3 | all three `W/W (document)` | only the app's own `GOLSZ goal setup save error` |
-  | `drive=full` | `path: Auth > Passport editor > GoalSetup > Home; goalSetupFrom: the Passport save; today: 0/1; thisWeek: 0/3` | all three `W/W (document)` | none |
-  | `drive=today` | `path: Home; today: 0/1; thisWeek: 0/3` (stays in the Today view) | `W/W (document)` | none |
-  | `drive=goal&overflow=1` (control) | `drive done; ...; overflow=on purpose` | 390: `2016/390 (div.gz-home)`, `2020/390 (div)`, `2012/390 (div.gz-home)`; 1280: `2016/976`, `2020/480`, `2012/976` | none |
-
-  The runner's own reading on each page's last screen: document 390/390 (1280/1280) and 0 elements past the window's
-  edge on every page; on the control page 1 element past the edge while the document still read 390/390 (so the old
-  reading could not have seen it). `drive=full` alone in a fresh profile (390 dark): `Auth > Passport editor > GoalSetup >
-  Daily check-in > Home`, 0/1, 0/3. Screenshots opened: GoalSetup 390 dark, 390 light, 1280 dark, 1280 light; Home 390
-  dark, 390 light, 1280 light; Today view 390 dark. They read correctly, nothing clipped. The only failed request on
-  every page was the Google Fonts stylesheet (no internet): text was drawn in the system fallback font.
-- With `fail=pathway` the goal sentence is already saved when the plan write is refused (it is written first); no
-  `pathway_plan` row exists; Retry writes it.
-- **For the owner (product):** right after "Build my plan", and on the day's first open, the daily check-in "How do
-  you feel today?" covers Home until the athlete answers or taps "Skip for today". Decide whether to skip it that day.
+- Job 216, "Scout's what should I do today? agrees with Home" (CLAUDE.md, under `api/scout.js`):
+  - t1: pure helpers in `api/scout.js` (`isTodayQuestion`, `pickNextMilestone`, `todayCard`, `datesInContext`,
+    `checkReplyAgainstPlan`); suites `test_scout_today_answer`, helper `tests/_day_parity.cjs`.
+  - t2: the handler. A today question gets `today_card`; a reply naming a date, step or count not in the plan gets
+    `today_override` (text untouched; only the kind is logged, `scout_today_guard`); an unreadable plan gets
+    `today_unavailable`. Suite `test_scout_today_handler`.
+  - t4: at the daily limit the bubble says "0 of N left today. More tomorrow." and the text box closes. Suite
+    `test_scout_limit_path`.
+  - t3 (this step), `golsz-app.html` + `js/app.js`: `ScoutTodayCard` under the reply; `scoutTodaySentence` in place
+    of an overridden reply, and that sentence is what scout_history keeps; the offers that came with a replaced reply
+    are dropped; `scout_today_unavailable` when there is no card. 7 new keys in en/fr/es/el. Suite
+    `test_scout_today_card` (139). The mount harness moved verbatim from `test_scout_limit_path` into
+    `tests/_app_mount.cjs`; `_day_parity.cjs` now also exports `runHome`.
+- Browser look 2026-11-12 (AVA's browser tool, Chrome). This is a look, not t6's recorded run: a throwaway server in
+  `node_modules/.cache` (deleted after) wrapped `tools/preview-onboarding.cjs`'s stand-in Supabase (signed in, plan
+  pro), answered `/api/scout` with a card from `api/scout.js`'s own `dayBuckets`/`todayCard`, and typed "What should I
+  do today?" in the page. Seven answers (keeps to the plan 0/1 + 0/3; replaced; 2 late; resting; 4 open with long
+  names; nothing due; plan unreadable) x 375/1280 x dark/light = 28 loads: every one finished, 0 console errors,
+  scroll 375/375 and 1280/1280, the only failed request the Google Fonts stylesheet (no internet, fallback font).
+  Screenshots opened: dark 375 (keeps to plan, replaced, late), dark 1280 (replaced, keeps to plan), light 375 (late,
+  resting, long names, nothing due, unreadable). All read correctly: the replaced one shows `Today: "Ask Scout what
+  to focus on this week". This week: 0 of 3 done.` and nothing of the invented date. Found and fixed: at 1280 the
+  card stretched to ~660 px, each number far from its label; it is now capped at 440 px.
+- The tool's contrast/small-text flags were the same on the unreadable-plan page (no card): older Scout parts, the
+  9.5 px timestamps (3.76:1 dark, 3.1:1 light) and light-theme reply chips (12 px, 3.02:1). Not changed here.
 
 ## Current Work
-AVA job 199 final verification, third pass (OpenCode, 2026-11-10): AVA's speed check found the sign-up screen
-jumping (layout shift 0.23 on `/golsz-app.html` at phone size, budget 0.10). Cause and fix are in CLAUDE.md
-"The first screen holds still": the web fonts now load from `<head>` (they were found only at mount, so the screen
-was redrawn in Archivo a moment after it appeared), and `Auth`'s plan row and line heights no longer depend on
-which font is on screen. Reproduced first (0.232, Chromium 141 headless shell, 375 px, 4x slower CPU, Archivo from
-an npm copy), then 0.000 with the font in before mount and 0.042 with it held back 8 s. `tools/time-first-screen.cjs`
-now prints `cls=` and has `--late-font=<ms>` as its positive control (old plan row 0.164, new 0.052, stand-in font).
-The first-visit drives were re-run after the change (390 dark: signup, full, goal; 1280 light: full): same results
-as the table above. Second pass, same day: the design review's 12 defects on the home page, About, 404 and the
-sign-up form (CLAUDE.md "One look across the site and the sign-in screen"; `tests/test_first_screen_design.cjs`).
-NOT re-scored: only AVA's design judge can say it clears 70, and only AVA's speed check has the real Google Fonts.
+Job 216: t5 (rehearse Home and Scout side by side without live services), t6 (recorded run, phone and desktop),
+then security review, regression and final verification.
 
 ## Remaining Tasks
+- Job 216, saved for later: keep the card when a chat is reopened from History (scout_history keeps text only);
+  list this week's other steps by name on Home (open product question from job 199).
+- OWNER (product, from job 199): right after "Build my plan", and on the day's first open, the daily check-in covers
+  Home until the athlete answers or taps "Skip for today". Decide whether to skip it that day.
 - Migration 165 (job 184, merged) NOT YET APPLIED: run in the SQL Editor (checks + rollback in its header).
 - OWNER: one real Basic purchase; send LEGAL-REVIEW-BRIEF.md to counsel; admin MFA (OWNER-RUNBOOK.md section 8).
 - OWNER/dashboard: Vercel Hobby->Pro (monitor); backups/PITR+restore drill; portal plan switching; checkout redirect;
   uptime probe; Elite benefit; French marketing; legal entity. Agent-doable: ADS Phase 6 4-5; Reschedule/Drop from
   Home; `removed_at` on stages; self-host fonts+CDN libs (CSP); admin RPC for `stripe_pending_plans`; Targets summary;
-  the browser's default focus ring on the other dialogs' panels (Settings, Passport editor: `useModalFocus`).
+  the default focus ring on the other dialogs' panels; Scout's timestamp and light-theme chip contrast (above).
 
 ## Important Architecture Decisions
 - Push to `main` = production deploy; Vercel buildCommand (`npm run check` first) is the gate.
@@ -78,21 +61,20 @@ NOT re-scored: only AVA's design judge can say it clears 70, and only AVA's spee
 - 12-function Vercel ceiling (`_`-prefixed `api/` are shared modules). Adults only.
 
 ## Latest Test / Build Status
-2026-11-10 (final verification, third pass), in the agent's own shell (`$AVA_RUN` unset), with `TMPDIR=/private/tmp`
-(`test_unpublish_internal.cjs` needs a TMPDIR outside the repo): `npm run compile` ok; `npm run check` 140/140 suites,
-6,883 assertions. Changed suites: boot_nonblocking 24/24, first_screen_design 78/78, time_first_screen 26/26.
+2026-11-12 (job 216 t3), all through `$AVA_RUN`: `npm run compile` ok; `node --check` on api/*.js, js/*.js, sw.js ok;
+`test_scout_today_card` 139/139; all 18 Scout suites (1,263 assertions); the 32 suites that pin code this step
+touched (home_tiles, goal_setup, compiled_artifact, app_syntax, i18n_keys_resolve, ux_credibility, ...) all pass.
+Eleven broken copies of golsz-app.html (one per rule: override, late at 0, numbers, card kept, hex, `$&`, offers,
+repeated line, blank names, gold as C.lime, a card that does not add up) each fail it. Full `npm run check`: AVA's run.
 
 ## Known Problems
-- The run above is Chromium's headless shell, not Google Chrome, Safari or Firefox, and not AVA's browser tool.
 - health-alert runs every 2.1-7.5 h, not 15 min. Payments live but no real purchase; webhook secret unverified.
 - Admin MFA: owner not enrolled. Signup has NO bot protection (Supabase CAPTCHA off, `TURNSTILE_SITE_KEY` empty).
-- UNVERIFIED (layout shift): the real Google Fonts files on a real phone; Safari/Firefox; signed-in screens.
-- UNVERIFIED (first visit): the web fonts (Archivo, Space Mono; the widths measured are the fallback font's), live
-  Supabase (RLS/PostgREST/real upsert+auth), a real phone on cellular, a screen reader, fr/es/el in a browser. Also
-  "My goal..." line on Free opens the locked Plan (older than job 199).
+- UNVERIFIED (job 216 card): the real model and live Supabase; Safari, Firefox; a screen reader; fr/es/el in a browser
+  (the suite checks the dictionaries); the web fonts. Job 199: real fonts and live Supabase on a real phone.
 
 ## Next Recommended Action
-Security review, regression and final verification for job 199. To repeat the browser run: the command above the table.
+Job 216 t5 (a committed preview of Home and Scout side by side, which replaces this step's throwaway server) and t6.
 
 ---
 _How to update: overwrite the sections above (do not append a log); put the agent name

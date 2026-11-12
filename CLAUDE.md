@@ -532,7 +532,7 @@ Relevant commands:
   step digest. `getAthleteState` reads run as one `Promise.all` round (they were sequential).
   Benchmark lines carry `benchmarkProvenance()` (who measured it, and the recorded protocol).
 - **Scout's "what should I do today?" agrees with Home (AVA job 216; t1 built the helpers, t2 wires them into the
-  handler).** Pure helpers beside `dayBuckets()`, no I/O, no AI: `isTodayQuestion(text)` (fixed en/fr/es/el
+  handler, t3 shows the card in the app).** Pure helpers beside `dayBuckets()`, no I/O, no AI: `isTodayQuestion(text)` (fixed en/fr/es/el
   patterns, never the classifier, so a classifier timeout cannot change it; the "What's next for me?" button,
   `scout_big_next`, counts); `pickNextMilestone()` (Home's `nextMilestone` rule: a date the athlete chose before one
   GOLSZ suggested, earliest first, then undated in list order; `getAthleteState` uses it, it had taken the earliest
@@ -543,6 +543,22 @@ Relevant commands:
   not Home's pair (each "today"/"week" word belongs to the count nearest to it). `tests/test_scout_today_answer.cjs`
   diffs them against HomeTab's code through `tests/_day_parity.cjs` (shared with `test_scout_today.cjs`) and runs
   every reply check on a twin built to break it.
+  **The app side (t3): the "From your plan" card.** `Scout.send()` keeps `today_card`, `today_override` and
+  `today_unavailable` on the assistant message; `ScoutTodayCard` draws the card under the reply (read-only, no
+  button, ScoutActionCard's shape capped at 440px): FROM YOUR PLAN, TODAY done/total with each open step due today by
+  name (one with no name, or past the server's 20, is counted in "and N more"), THIS WEEK done/total, a late line
+  only above 0, Home's resting words while resting, and "Nothing is due today." / Home's empty-week line. The labels
+  and the late line are Home's own keys (`home_week_today`, `home_week_title`, `home_door_plan_late`).
+  `scoutTodayLines(card, t)` decides every line and refuses a card whose numbers do not add up (then nothing is drawn
+  and nothing guessed); `scoutTodaySentence(card, t)` says the same in words ('Today: "<step>". This week: 0 of 3
+  done.'). With `today_override` that sentence replaces the reply in the bubble and is what `logTurn` saves, and the
+  offers (schools, steps, email) that came with the replaced reply are dropped; with no usable card the bubble says
+  `scout_today_unavailable` instead. `today_unavailable` alone adds that line under the model's reply. A chat reopened
+  from History has no card (scout_history keeps text only). `tests/test_scout_today_card.cjs` lifts both helpers,
+  checks them in all four languages, compares the card on `_day_parity`'s generated plans with Home's own TODAY and
+  THIS WEEK tile code (`runHome`) and `todayCard()`, draws the card (theme colours only, 4.5:1 in both themes) and
+  drives the real Scout component against the real handler; its harness, `tests/_app_mount.cjs`, is shared with
+  `test_scout_limit_path.cjs`.
 
 ### `api/stripe-webhook.js` (Vercel serverless function)
 

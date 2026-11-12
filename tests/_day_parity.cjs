@@ -1,8 +1,9 @@
 // THE SERVER'S DAY AND HOME'S DAY, EACH LIFTED OUT OF ITS OWN SOURCE.
 //
-// Shared by tests/test_scout_today.cjs (dayBuckets against Home's numbers)
-// and tests/test_scout_today_answer.cjs (todayCard and pickNextMilestone
-// against Home's Today tile). Not a suite: run-all.cjs only runs test_*.cjs.
+// Shared by tests/test_scout_today.cjs (dayBuckets against Home's numbers),
+// tests/test_scout_today_answer.cjs (todayCard and pickNextMilestone against
+// Home's Today tile) and tests/test_scout_today_card.cjs (the app's "From your
+// plan" card against Home's tiles). Not a suite: run-all.cjs only runs test_*.cjs.
 // Both sides are read out of api/scout.js and golsz-app.html at run time; a
 // copy of either would only prove the copy agrees with itself.
 const REPO = require("path").join(__dirname, "..");
@@ -60,4 +61,6 @@ const plansAround = (key) => Array.from({ length: 40 }, () => Array.from({ lengt
 // Mondays, Sundays, mid-week, a month end, a year end, a leap day.
 const DAYS = [[2026, 10, 26], [2026, 10, 28], [2026, 11, 1], [2026, 10, 31], [2026, 12, 31], [2027, 1, 3], [2028, 2, 29], [2027, 3, 29]];
 
-module.exports = { between, S, HOME_BLOCK, homeAt, homeTileAt, plansAround, DAYS };
+// runHome is exported for tests/test_scout_today_card.cjs, which reads Home's
+// TODAY and THIS WEEK tiles with their own expressions in that same scope.
+module.exports = { between, S, HOME_BLOCK, runHome, homeAt, homeTileAt, plansAround, DAYS };
