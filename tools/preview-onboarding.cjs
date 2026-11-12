@@ -98,7 +98,8 @@
 //
 // WHAT IS STAND-IN: auth (signUp/getSession/getUser) answered locally; profiles, athletes,
 // pathway_plan, outreach_targets, athlete_benchmarks stored in the server process; any other
-// table starts empty and keeps what the app (or the Scout handler) writes to it; reads honour
+// table starts empty and keeps what the app (or the Scout handler) writes to it; an insert without
+// created_at gets one, later than the last (Postgres's default now()); reads honour
 // column filters, order and limit; sync_athlete_actions and the other RPCs Home calls return
 // empty. Nothing is sent to the real Supabase project or to Anthropic. The stand-in knows nothing
 // about real RLS/limits and the model is a script: it proves the SCREEN and the handler's own
@@ -405,7 +406,11 @@ function stub(cfg, rules) {
   // The page keeps "loading" until the drive is done, so a screenshot shows its last screen.
   new Image().src = "/__hold?" + Date.now() + Math.random();
 
-  var STEP_MS = 12000;
+  // How long a step may take before the drive gives up and says FAILED. It checks where the person
+  // lands, not how fast (tools/time-first-screen.cjs measures speed): steps take under a second, but
+  // on a busy Mac sign-up once reached the Passport editor after 12-14 s. A broken step is
+  // still reported well inside the runner's 60 s per page and the server's 45 s hold.
+  var STEP_MS = 30000;
   var GOAL = "Play college soccer in the US";
   var failing = cfg.fail === "pathway";
   var facts = { path: [] };
@@ -768,6 +773,12 @@ function createPreview({ localise = localiseLibraries } = {}) {
   function filtered(rows, params) {
     return rows.filter((r) => [...params].every(([k, v]) => NOT_COLUMNS.includes(k) || matches(r[k], v)));
   }
+  // Postgres stamps created_at (default now()) on an insert that leaves it out, and the app orders
+  // by it: Scout reopens its latest conversation newest first and turns it back into reading order,
+  // so unstamped rows (all equal) came back with the answer above the question. Each stamp is later
+  // than the one before, as two inserts' now() are, even inside one millisecond.
+  let lastStampMs = 0;
+  function createdAt() { lastStampMs = Math.max(Date.now(), lastStampMs + 1); return new Date(lastStampMs).toISOString(); }
   function ordered(rows, params) {
     let out = rows.slice();
     const order = (params.get("order") || "").split(",")[0];
@@ -839,6 +850,7 @@ function createPreview({ localise = localiseLibraries } = {}) {
         return reply(req, res, 200, [existing]);
       }
       const made = { ...row, id: row.id || crypto.randomUUID() };
+      if (made.created_at === undefined) made.created_at = createdAt();
       if (table === "pathway_plan" && !made.updated_at) made.updated_at = new Date().toISOString();
       col.push(made);
       console.log(table + " insert id=" + (made.id || eqId) + " fields=" + Object.keys(row).join(","));

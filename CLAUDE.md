@@ -346,6 +346,8 @@ Relevant commands:
 - **Preview tool `tools/preview-onboarding.cjs`** (`node tools/preview-onboarding.cjs <port>`, then
   `/golsz-app.html`). Stand-in auth (signUp/getSession/getUser) and an in-memory store for `profiles`, `athletes`,
   `pathway_plan`, `outreach_targets`, `athlete_benchmarks`; any other table starts empty and keeps what the app writes;
+  an insert without `created_at` gets one, later than the last, as Postgres's `default now()` does (without it a Scout
+  chat reopened from the store showed the answer above the question);
   reads honour column filters, `order` and `limit`, and an upsert matches on its `on_conflict` columns (without them
   Home's "latest snapshot before today" read failed and the app logged it). Nothing reaches the real Supabase project;
   the stub is added to the served HTML in memory only; CDN libraries come from local vendor copies.
@@ -375,8 +377,10 @@ Relevant commands:
   the drives use is still in `golsz-app.html`).
 - **Runner `tools/run-onboarding-chrome.cjs`** (`node tools/run-onboarding-chrome.cjs --width 390 --theme dark`):
   for a session with no browser tool. One run starts a fresh preview server and a fresh headless Chrome profile, opens
-  the drives in order (signup, passport, goal, home, reloadmid, `goal&fail=pathway`, full, today, `goal&overflow=1`)
-  and prints one JSON line per page: the drive's result, console errors, failed requests, its own reading of the last
+  the drives in order (signup, passport, goal, home, reloadmid, `goal&fail=pathway`, full, today, `goal&overflow=1`,
+  then job 216's Scout pages: `scouttoday&model=honest`, `scoutinvent` with `date`, `step` and `count`, `scoutlimit`,
+  `scoutlast`) and prints one JSON line per page: the drive's result, `ms` (how long the page took; a drive step gives
+  up after 30 s, `STEP_MS`, so a slow step shows here), console errors, failed requests, its own reading of the last
   screen (`doc` = document scrollWidth/innerWidth, `pastEdge` = visible elements past the window's edge) and a
   screenshot under `node_modules/.cache/onboarding-run`. `--chrome PATH` picks the binary; `--no-sandbox` is needed
   inside an agent's sandbox. Chrome talks over a pipe and cannot reach the internet. In AVA's OpenCode sandbox Google
@@ -559,6 +563,19 @@ Relevant commands:
   THIS WEEK tile code (`runHome`) and `todayCard()`, draws the card (theme colours only, 4.5:1 in both themes) and
   drives the real Scout component against the real handler; its harness, `tests/_app_mount.cjs`, is shared with
   `test_scout_limit_path.cjs`.
+  **The rehearsal (t5): Home and Scout side by side, no live service.** `tools/preview-onboarding.cjs` answers
+  `/api/scout` with the REAL handler (its default export, given Vercel's `req.body` and `res.status().json()`) in the
+  preview's own process. Its Supabase calls go to the page's in-memory store (`SUPABASE_URL` is a stand-in `.invalid`
+  address) and its Anthropic calls to a scripted model, `&model=honest|date|step|count`: honest quotes the steps and
+  counts the handler's TODAY FOR THEM line gives; the others make up one date, step or count. `&limit=1` and `&last=1`
+  make `reserve_scout_question` refuse the question or allow it as the day's last. Drives `scouttoday` (it builds the
+  plan first when the store has none), `scoutinvent` (default `step`), `scoutlimit` and `scoutlast` read Home's TODAY
+  and THIS WEEK cells, ask Scout "What should I do today?" and start the title with `home today`, `home week`,
+  `card today`, `card week`, `card steps`, `override`, `usage`, `limitCard` and `reply` (`replaced` when the bubble shows
+  the plan's sentence instead). The server prints `scout <status> model=<script> ... calls: <n> store, <n> model, <n>
+  refused` per question; anything but the stand-ins is refused. Questions reach the handler `SCOUT_SPACING_MS` (3.2 s)
+  apart, past its 3 s rate limit. Suite: `tests/test_preview_onboarding.cjs`. Recorded run 2026-11-13 (390 and 1280 px,
+  dark): AI_HANDOFF.md of that day.
 
 ### `api/stripe-webhook.js` (Vercel serverless function)
 

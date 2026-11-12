@@ -13,6 +13,9 @@
 // Prints one JSON line per page:
 //   drive         the page's query
 //   result        what the drive wrote after the page title (see preview-onboarding.cjs), or "no drive result"
+//   ms            how long that took from navigation (to the load event for a page with no drive), read
+//                 every 250 ms. A drive waits up to 30 s for each step, so a slow step that still lands
+//                 shows here, not as a failure
 //   consoleErrors uncaught exceptions and console.error calls
 //   failedRequests requests that did not load (web fonts fail where there is no internet)
 //   doc           document scrollWidth/innerWidth, read by this runner on the last screen
@@ -135,6 +138,7 @@ async function openPage(chrome, url, shotFile, hasDrive) {
     seen = await read().catch(() => ({}));
     if (hasDrive ? /\[drive (done|FAILED)/.test(seen.title || "") : loaded) break;
   }
+  const ms = Date.now() - t0;
   await sleep(1200);
   seen = await read();
   const shot = await chrome.send("Page.captureScreenshot", { format: "png" }, sessionId);
@@ -142,7 +146,7 @@ async function openPage(chrome, url, shotFile, hasDrive) {
   chrome.listeners.splice(chrome.listeners.indexOf(onMessage), 1);
   await chrome.send("Target.closeTarget", { targetId });
   const m = /\[(drive (?:done|FAILED).*)\]\s*$/.exec(seen.title || "");
-  return { result: m ? m[1] : "no drive result", consoleErrors, failedRequests, doc: seen.doc, pastEdge: seen.pastEdge, firstPast: seen.firstPast };
+  return { result: m ? m[1] : "no drive result", ms, consoleErrors, failedRequests, doc: seen.doc, pastEdge: seen.pastEdge, firstPast: seen.firstPast };
 }
 
 async function main() {

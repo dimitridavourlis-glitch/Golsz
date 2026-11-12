@@ -264,6 +264,13 @@ async function runStub(cfg, requests, respond = () => new Response("[]")) {
   ok(call0.includes('"What should I do today?"') && S.isTodayQuestion("What should I do today?"), "the scout drives ask what api/scout.js's own rule calls a today question");
   const runner = fs.readFileSync(path.join(__dirname, "..", "tools", "run-onboarding-chrome.cjs"), "utf8");
   ok(SCOUT_DRIVES.every((d) => runner.includes('"drive=' + d)), "tools/run-onboarding-chrome.cjs runs every scout drive");
+  // A stuck step says FAILED in the title before the server answers the hold image on its own (the
+  // page then finishes loading, and the browser tool takes its picture) and before the runner stops
+  // reading the title.
+  const tool = fs.readFileSync(path.join(__dirname, "..", "tools", "preview-onboarding.cjs"), "utf8");
+  const stepMs = Number(/var STEP_MS = (\d+);/.exec(call0)[1]), holdMs = Number(/const timer = setTimeout\(done, (\d+)\);/.exec(tool)[1]);
+  const driveWaitMs = Number(/const DRIVE_WAIT_MS = (\d+);/.exec(runner)[1]);
+  ok(stepMs < holdMs && stepMs < driveWaitMs, "a step gives up (STEP_MS " + stepMs + ") before the hold is answered (" + holdMs + ") and before the runner stops waiting (" + driveWaitMs + ")");
 
   // The positive control: &overflow=1 reaches the page, and only then does the drive add the bar.
   const widePage = (await call(port, "GET", "/golsz-app.html?drive=home&overflow=1")).text;
@@ -465,6 +472,25 @@ async function runStub(cfg, requests, respond = () => new Response("[]")) {
     const seen = { today: lines[0].value || "none", week: lines[1].value || "none", steps: lines[0].steps, more: lines[0].more || "" };
     ok(cardSentence(seen) === appCard.scoutTodaySentence(c, en), "cardSentence is the app's sentence for the card on screen: " + cardSentence(seen));
   }
+
+  // ==== Scout: a conversation reopened from the store reads in order ====
+  // Scout reopens its latest conversation newest first by created_at and turns it back into reading
+  // order (latestScoutConversation, from golsz-app.html). Postgres stamps created_at on insert; while
+  // the store did not, the answer came back above the question. Both turns here land in one millisecond.
+  const latestScoutConversation = new Function(between(before, "function latestScoutConversation(", "\nfunction scoutHistoryList(") + "\nreturn latestScoutConversation;")();
+  const hs = await fresh();
+  const logTurn = (row) => call(hs.port, "POST", SB + "/scout_history", { headers: { "content-type": "application/json" }, body: JSON.stringify({ user_id: USER_ID, ...row }) });
+  const clock = Date.now, frozenAt = Date.now();
+  Date.now = () => frozenAt;
+  for (const role of ["user", "assistant"]) await logTurn({ conversation_id: "c1", messages: [{ role, content: "a " + role + " turn" }] });
+  Date.now = clock;
+  await logTurn({ conversation_id: "c0", messages: [{ role: "user", content: "an older question" }], created_at: "2026-01-02T00:00:00.000Z" });
+  const reopened = await call(hs.port, "GET", SB + "/scout_history?select=conversation_id,messages,created_at&user_id=eq." + USER_ID + "&order=created_at.desc&limit=1000");
+  const stamps = reopened.json.map((r) => r.created_at);
+  ok(new Set(stamps).size === 3 && stamps.join() === [...stamps].sort().reverse().join() && stamps[2] === "2026-01-02T00:00:00.000Z",
+    "an insert without created_at gets one, each later than the last inside one millisecond; one that brings its own keeps it: " + stamps.join());
+  ok(latestScoutConversation(reopened.json).turns.map((m) => m.role).join() === "user,assistant", "Scout's own restore reads the store's conversation back in order: the question, then the answer");
+  hs.sv.close();
 
   server.close();
   ok(hash(fs.readFileSync(appPath, "utf8")) === beforeHash, "golsz-app.html unchanged at the end");

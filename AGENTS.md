@@ -144,6 +144,8 @@ node tests/test_<name>.cjs     # one suite
   pathway_type/target_timeline/milestones/updated_at) via `GoalSetup` (no AI, no plan gate; `planHasSteps` never
   overwrites; a refused save keeps the form with `role=alert` + Retry). `SetGoalCard` shows on Home for a sport with
   no steps. Preview: `tools/preview-onboarding.cjs` (stand-in auth/store, `drive=signup|passport|goal|home|today|reloadmid|full`,
+  and job 216's `scouttoday|scoutinvent|scoutlimit|scoutlast`: `/api/scout` runs the real handler against the store and a
+  scripted model, `&model=honest|date|step|count`, `&limit=1`, `&last=1`; the title starts with Home's and the card's counts;
   one-shot `fail=pathway`, `overflow=1` (positive control), `__store`; the title reports the screens in order,
   TODAY/THIS WEEK as done/total and the worst scroll box of each screen, `390/390 (document)` when it fits).
   `tools/run-onboarding-chrome.cjs --width <w> --theme <t>` runs the drives in headless Chrome when there is no
