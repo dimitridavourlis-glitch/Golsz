@@ -195,7 +195,7 @@ console.log("\n-- datesInContext: every day the model was given --");
 const stepsFor = new Function("milestones", "pickNextMilestone", "stageNameOf",
   between(SCOUT, "  const undone = milestones.filter((m) => m && !m.done);", "\n\n  // ---- FILM:", "getAthleteState's steps") +
   "\nreturn { openMilestones, openMilestonesTruncated, nextMilestone };");
-const PLAN_LINES = between(SCOUT, "    athleteBlock += `\\n\\nTHEIR PLAN (the Plan tab, live)", "\n\n    // SECTIONS: theirs, or the sport's.", "the plan and today lines");
+const PLAN_LINES = between(SCOUT, "    athleteBlock += `\\n\\nTHEIR PLAN (the Plan tab, live)", "\n\n    // THE TODAY ANSWER (AVA job 216).", "the plan and today lines");
 const planLines = new Function("athleteState", `let athleteBlock = "";\n${PLAN_LINES}\nreturn athleteBlock;`);
 const contextFor = (plan, key, pick = S.pickNextMilestone) => planLines({
   pathwayType: "ncaa", pathwayTimeline: null, pathwayComplete: true, pathwayCreated: true,
@@ -319,6 +319,12 @@ pair("no dates at all", "Film both matches, then rest well tonight.",
 pair("the whole plan's count, when the model was given it", "2 of 7 steps done overall.", "3 of 7 steps done overall.",
      [{ kind: "count", text: "3 of 7" }], { allowedCounts: [[2, 7]] });
 ck("  ...and flagged when it was not given", check("2 of 7 steps done overall.").ok, false);
+// A pair the model was given elsewhere is never this week's or today's count:
+// "2 of 7 this week" is held to Home's week whatever else is true.
+pair("...but never as this week's", "2 of 7 steps done overall.", "2 of 7 steps done this week.",
+     [{ kind: "count", text: "2 of 7" }], { allowedCounts: [[2, 7]] });
+pair("...nor as today's", "2 of 7 steps done overall.", "Today: 2 of 7 steps done.",
+     [{ kind: "count", text: "2 of 7" }], { allowedCounts: [[2, 7]] });
 pair("a count that is not about the plan", "You hit 8 of 10 shots in training.", "You finished 8 of 10 steps in training.",
      [{ kind: "count", text: "8 of 10" }]);
 

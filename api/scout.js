@@ -3403,6 +3403,19 @@ function isTodayQuestion(text) {
   return TODAY_QUESTION_PATTERNS.some((re) => re.test(q));
 }
 
+// THE QUESTION AS THEY TYPED IT. Scout.send() in golsz-app.html sends the
+// latest turn as "<LABEL>: <their words>" (ATHLETE, or their occupation in
+// capitals), after a "LATEST RECORDED BENCHMARKS: {...}" line when they have
+// benchmarks. The whole-message patterns above ("What's next for me?") only
+// match their words, so the handler hands isTodayQuestion this. Text without
+// the label comes back as it is.
+const CLIENT_TURN = /^(?:LATEST RECORDED BENCHMARKS: [^\n]*\n+)?[A-Z]+: ([\s\S]*)$/;
+function typedQuestion(text) {
+  if (typeof text !== "string") return "";
+  const m = CLIENT_TURN.exec(text);
+  return m ? m[1] : text;
+}
+
 // EVERY DAY THE MODEL WAS GIVEN: each real YYYY-MM-DD in its context, sorted.
 // This is checkReplyAgainstPlan's allowedDates.
 function datesInContext(text) {
@@ -3440,7 +3453,10 @@ function datesInContext(text) {
 //             stretch of the clause (from the count before it to the count
 //             after it) names steps: "8 of 10 shots" is not about the plan.
 //             allowedCounts adds pairs the model was also given, such as the
-//             whole plan's done/total. A year-less "20/10" with N > M is no
+//             whole plan's done/total, for a count that names neither: "3 of
+//             7 this week" is held to the week's pair even when the whole plan
+//             is 3 of 7, or a true pair from elsewhere in the prompt would pass
+//             as the week Home shows. A year-less "20/10" with N > M is no
 //             count and could be an interval, so it is not read as a date
 //             either; "3/4 of" is a fraction.
 // Quoted text and plan labels are blanked before dates, weekdays and counts
@@ -3613,13 +3629,23 @@ function checkReplyAgainstPlan(replyText, { allowedDates = [], labels = [], card
       const to = next && next.clause === c.clause ? next.start : (c.clause < clauseEnds.length ? clauseEnds[c.clause] : work.length);
       if (!COUNT_PLAN_WORD.test(work.slice(from, to))) return;   // not about the plan
     }
-    const pairs = (c.named.size === 1 ? [c.named.has("today") ? todayPair : weekPair] : [todayPair, weekPair]).concat(extraPairs);
+    const pairs = c.named.size === 1 ? [c.named.has("today") ? todayPair : weekPair]
+      : c.named.size === 2 ? [todayPair, weekPair] : [todayPair, weekPair].concat(extraPairs);
     if (pairs.some((p) => p && p[0] === c.n && p[1] === c.total)) return;
     if (c.slash && daysMeant([{ y: null, mo: c.total, d: c.n }, { y: null, mo: c.n, d: c.total }]).length) return;   // 3/11, a plan day
     flag("count", orig.slice(c.start, c.end));
   });
   return { ok: reasons.length === 0, reasons };
 }
+
+// WHAT THE MODEL IS TOLD WHEN THEY ASK ABOUT TODAY. The handler adds one of
+// these to the TODAY FOR THEM line. The first is the contract the answer is
+// then held to (checkReplyAgainstPlan): step names exactly as written and the
+// only thing in quotes, this week as Home's "N of M". The second is for a plan
+// that could not be read, so the model says so instead of guessing. This file
+// holds Scout's only prompt; the app keeps no copy to update alongside it.
+const TODAY_ANSWER_RULE = `THEY ARE ASKING WHAT TO DO TODAY OR THIS WEEK. Name each step still open today exactly as it is written above, in double quotes, and give this week as "N of M" from the numbers above. Use double quotes for step names and nothing else, and name no date, weekday, step or count for their plan that is not written in this context.`;
+const TODAY_PLAN_UNREAD_RULE = `THEY ARE ASKING WHAT TO DO TODAY OR THIS WEEK, AND THEIR PLAN COULD NOT BE LOADED THIS REQUEST. You do not know which steps are due today or this week: say plainly that you could not load their plan just now, and name no step, date or count from it.`;
 function extractSuggestedPathway(data, existingStages, todayKey) {
   try {
     const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
@@ -6727,6 +6753,12 @@ async function getAthleteState(userId, day) {
     firstName,
     day: { key: todayKey, source: (day && day.key === todayKey && day.source) || "server" },
     dayBuckets: days,
+    // The rule dayBuckets and "missed" were given, for the today card.
+    resting,
+    // Every step name they have, the plan's and the action log's (the prompt
+    // quotes both): what a today answer may put in quotes.
+    stepLabels: milestones.filter((m) => m && typeof m === "object" && m.label).map((m) => String(m.label).slice(0, 200))
+      .concat(actionRows.map((a) => a && a.title).filter((t) => typeof t === "string" && t)),
     // The requirement gap, as a RESULT. Scout reports it; it does not re-form
     // it. Same object Home and Plan render.
     gap,
@@ -7209,6 +7241,47 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, ba
   return { ok: true, data, toolBudgetExhausted };
 }
 
+// THE TODAY ANSWER, HELD TO THE PLAN (AVA job 216).
+//
+// Runs on every reply sent for a today question (the handler's todayAnswer,
+// whose fields are checkReplyAgainstPlan's options): the fast-model (Haiku)
+// reply, the deep reply with its tool loop and forced no-tools answer, and
+// both failovers. It runs before the replay entry is written, so a retry gets
+// the same card. It adds:
+//   today_card         what Home shows for the day (todayCard()), or null,
+//                      with today_unavailable, when their plan could not be read.
+//   today_override     the reply names a date, weekday, step or count that is
+//                      not in the plan, or the check itself failed (an
+//                      unchecked answer is not vouched for, and is not lost
+//                      either). reply_text is left exactly as it was; the app
+//                      shows the card in its place.
+// Only the kinds of disagreement are logged. The reply, and the pieces of it
+// the check quotes back, are the athlete's conversation and are written nowhere.
+async function finishTodayAnswer(data, ctx) {
+  if (!data || !ctx) return;
+  data.today_card = ctx.card;
+  if (ctx.unavailable) data.today_unavailable = true;
+  let reasons;
+  try {
+    ({ reasons } = checkReplyAgainstPlan(data.reply_text, ctx));
+  } catch (e) {
+    console.error("GOLSZ scout today check threw:", e && e.name, e && e.message);
+    reasons = [{ kind: "check_failed" }];
+  }
+  if (!reasons.length) return;
+  data.today_override = true;
+  const detail = {
+    kinds: [...new Set(reasons.map((r) => r.kind))],
+    reasons: reasons.length,
+    plan_unavailable: !!ctx.unavailable,
+    lang: ctx.lang,
+    model: typeof data.model === "string" ? data.model : null,
+    request_id: ctx.requestId || null,
+  };
+  console.warn("GOLSZ scout today answer disagrees with the plan:", JSON.stringify(detail));
+  await logError("scout_today_guard", `Scout's today answer failed the plan check (${detail.kinds.join(", ")})`, detail);
+}
+
 export default async function handler(req, res) {
   // Handler-entry timestamp for scout_routing_log.response_time_ms (082) —
   // measured from here rather than just around the model call, so it
@@ -7408,6 +7481,10 @@ export default async function handler(req, res) {
   // cache entry and to stamp any entry written this turn.
   let stateDigest = null;
   let cacheFingerprint = null; // athlete state the response cache must key on
+  // A today question about their plan (THE TODAY ANSWER, below): the card its
+  // reply carries and what that reply is checked against. Null for any other
+  // question. Per request, like everything here, never module state.
+  let todayAnswer = null;
   if (process.env.SUPABASE_URL) {
     // The athlete this conversation is ABOUT — normally the caller, or a
     // linked under-18 child when a parent is managing them. body.athleteId is
@@ -7738,6 +7815,38 @@ export default async function handler(req, res) {
         athleteBlock += ` Due today: ${dd.todayTotal ? `${dd.todayDone} of ${dd.todayTotal} done` : "nothing"}${dd.todayOpen.length ? `; still open today: ${dd.todayOpen.map((l) => `"${l}"`).join("; ")}${dd.todayOpenMore ? ` and ${dd.todayOpenMore} more not named here` : ""}` : ""}. This week: ${dd.weekTotal ? `${dd.weekDone} of ${dd.weekTotal} dated steps done` : "no dated steps"}. Late (dates they chose themselves that have passed${athleteState.availability && athleteState.availability.status === "out" ? "; while they rest only recovery steps count" : ""}): ${dd.lateCount}.`;
       }
       athleteBlock += ` These are the numbers Home shows them. Use only dates written in this context; never work out another date or weekday yourself.`;
+    }
+
+    // THE TODAY ANSWER (AVA job 216). "What should I do today?" from an
+    // athlete whose plan has steps is answered from the line above and held to
+    // it: no FAQ answer and no cached reply (neither knows their steps), the
+    // rule added to that line, then finishTodayAnswer() on the reply. When the
+    // plan could not be read the model is told so, and the reply carries
+    // today_unavailable instead of a card. A plan with no steps gets neither:
+    // Home shows its "set your goal" card there. The question is spotted by
+    // isTodayQuestion (fixed patterns, never the classifier) in what they typed.
+    if (athleteState.day && dd && isTodayQuestion(typedQuestion(incomingText))) {
+      const planUnread = (athleteState.loadFailed || []).includes("pathway_plan");
+      if (planUnread || athleteState.pathwayComplete) {
+        // Not `rd`: that const is declared further down this block.
+        const rdy = athleteState.readiness;
+        todayAnswer = {
+          card: planUnread ? null : todayCard(dd, athleteState.nextMilestone, athleteState.resting),
+          unavailable: planUnread,
+          labels: athleteState.stepLabels,
+          // The other pairs this prompt states: the whole plan, and Passport
+          // Strength's development items, milestones and overall score.
+          allowedCounts: [[athleteState.milestonesDone, athleteState.milestoneCount]].concat(rdy ? [
+            [rdy.development.done, rdy.development.total],
+            [rdy.pathway.milestonesDone, rdy.pathway.milestonesTotal],
+            [rdy.composite, 100],
+          ] : []),
+          allowedDates: [],   // set once the whole prompt is built
+          lang: langCode || "en",
+          requestId,
+        };
+        athleteBlock += ` ${planUnread ? TODAY_PLAN_UNREAD_RULE : TODAY_ANSWER_RULE}`;
+      }
     }
 
     // SECTIONS: theirs, or the sport's. Never conflated. Describing a default
@@ -8073,6 +8182,14 @@ A newer source always beats an older one at the same level. If memory says one t
     // Concatenation of the two IS the old single string, byte for byte. Kept
     // for token estimation and anything that wants the whole prompt.
     const systemPrompt = systemStatic + systemDynamic;
+    // Every day the answer may name: those in this athlete's prompt and in the
+    // conversation (a date they wrote is theirs, not invented). Not the static
+    // prefix, which is the same for everyone and states no fact about them.
+    if (todayAnswer) {
+      const said = conversation.map((m) => (typeof m.content === "string" ? m.content
+        : Array.isArray(m.content) ? m.content.map((b) => (b && b.type === "text" ? b.text : "")).join("\n") : "")).join("\n");
+      todayAnswer.allowedDates = datesInContext(`${systemDynamic}\n${said}`);
+    }
     // REVERTED from the "context as a leading user turn" experiment. Moving
     // per-athlete state into the messages array made the model treat the
     // exchange as a free-flowing conversation and answer in PROSE, with no
@@ -8092,7 +8209,9 @@ A newer source always beats an older one at the same level. If memory says one t
     // ---- Database path: a real $0-AI-cost answer, matched by MEANING (not
     // exact wording) inside the classification call above, before any real
     // answering model runs. ----
-    const faqMatch = shouldUseFaqMatch(classification, conversation)
+    // Never for a today question about their plan: a stored answer cannot
+    // know their steps, so the model answers it whatever the classifier matched.
+    const faqMatch = !todayAnswer && shouldUseFaqMatch(classification, conversation)
       ? faqList.find((f) => f.id === classification.faq_id)
       : null;
     if (faqMatch) {
@@ -8113,7 +8232,8 @@ A newer source always beats an older one at the same level. If memory says one t
       await recordRequestSpend();
       return res.status(200).json(payload);
     }
-    await logFaqMiss(classification, latestUserText(conversation));
+    // Nor is it a gap in the FAQ: no stored answer could fill it.
+    if (!todayAnswer) await logFaqMiss(classification, latestUserText(conversation));
 
     // ---- Free-plan tool block (brief §12: "Do NOT permit FREE accounts to
     // perform: deep web research, large school searches... other high-cost
@@ -8277,10 +8397,12 @@ A newer source always beats an older one at the same level. If memory says one t
     let cacheKey = null;
     // A question about a PHOTO is never cache-eligible: the key is built from
     // the text alone, so "what do you think of this?" with a new photo would
-    // otherwise be answered about the last one.
+    // otherwise be answered about the last one. Nor is a today question about
+    // their plan, for the reason the FAQ path above skips it.
     if (classification && CACHE_ELIGIBLE_INTENTS.has(classification.intent)
         && classification.is_correction !== true
         && sanitized.imageCount === 0
+        && !todayAnswer
         && !(isReplyToScout(conversation) && isShortReactive(latestText))) {
       cacheKey = cacheKeyFor(classification.intent, latestText, faqLang, modelTier, cacheFingerprint);
       const cached = await getCachedResponse(cacheKey);
@@ -8391,6 +8513,7 @@ A newer source always beats an older one at the same level. If memory says one t
         data.suggested_dev_items = extractSuggestedDevItems(data);
         { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
         data.drafted_email = extractDraftedEmail(data);
+        await finishTodayAnswer(data, todayAnswer);
         // Keyed by requestId so a client-side timeout retry can recover this
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache.
@@ -8494,6 +8617,7 @@ A newer source always beats an older one at the same level. If memory says one t
         data.suggested_dev_items = extractSuggestedDevItems(data);
         { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
         data.drafted_email = extractDraftedEmail(data);
+        await finishTodayAnswer(data, todayAnswer);
         // Keyed by requestId so a client-side timeout retry can recover this
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache. Written
@@ -8561,6 +8685,7 @@ A newer source always beats an older one at the same level. If memory says one t
             data.suggested_dev_items = extractSuggestedDevItems(data);
             { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
             data.drafted_email = extractDraftedEmail(data);
+            await finishTodayAnswer(data, todayAnswer);
             // Never cached, same reasoning as the Haiku fallback: a degraded
             // reply must not be served back to a different athlete later.
             return res.status(200).json(data);
@@ -8628,6 +8753,7 @@ A newer source always beats an older one at the same level. If memory says one t
     data.suggested_dev_items = extractSuggestedDevItems(data);
     { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
     data.drafted_email = extractDraftedEmail(data);
+    await finishTodayAnswer(data, todayAnswer);
     // Keyed by requestId so a client-side timeout retry can recover this
     // exact reply rather than re-asking the athlete (and re-charging them).
     // Short TTL: this is crash recovery, not a semantic cache. Written last,

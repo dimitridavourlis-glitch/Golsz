@@ -18,7 +18,7 @@ const between = (src, a, b, label) => {
 
 // ---- the server helpers, lifted ------------------------------------------
 const S = new Function(between(SCOUT, "function dueFromOffset(n, baseKey) {", "\nfunction extractSuggestedPathway", "day helpers") +
-  "\nreturn { dueFromOffset, isDayKey, shiftDayKey, resolveAthleteDay, dayBuckets, pickNextMilestone, todayCard, isTodayQuestion, datesInContext, checkReplyAgainstPlan };")();
+  "\nreturn { dueFromOffset, isDayKey, shiftDayKey, resolveAthleteDay, dayBuckets, pickNextMilestone, todayCard, isTodayQuestion, typedQuestion, datesInContext, checkReplyAgainstPlan };")();
 
 // ---- Home's code, lifted -------------------------------------------------
 // The helpers HomeTab calls and its block from homeTodayKey to todayDone, run
