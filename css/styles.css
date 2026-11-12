@@ -28,7 +28,13 @@
      These now track the app: --surface = its --card, --surface-raised = its
      --turf, --ink-muted = its --slate exactly. Only the seven definitions
      changed; all 175 call sites were already going through the variables. */
-  --navy: #0D1210;
+  /* 2026-11-10: --navy was #0D1210, a green-tinted near-black, while the app
+     behind "Start free" sits on #0A0A0A (its --pitch). The two read as two
+     products. --navy is now the app's value. It is darker, and every text
+     colour here is lighter than it, so each ratio recorded in this block
+     against the old ground is a floor, not a ceiling. --gold-ink (text ON
+     gold, the app's C.ink) is a separate token and did not move. */
+  --navy: #0A0A0A;
   --navy-deep: #090C0A;
   --charcoal: #131519;
   --surface: #131519;
@@ -52,6 +58,9 @@
      #8A8680 at 5.22:1 instead. Both re-measured, not eyeballed. */
   --ink-muted: #8B96A8;
   --ink-faint: #8A8680;
+  /* Secondary reading text (a sentence under a heading): between --ink and
+     --ink-muted, 9.4:1 on --navy. Was a raw #AAB4BC in the hero. */
+  --ink-soft: #AAB4BC;
   /* Re-audited against --surface-raised (#263349), which was added after the
      note above and is not covered by it: --ink-muted measures 4.19:1 there
      and --ink-faint 3.89:1, both under the 4.5:1 body-text minimum. NEITHER
@@ -87,6 +96,8 @@
   --amber: #B58A1A;
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   --radius-sm: 8px;
+  /* Buttons share the app's 12px corner (its submit buttons). */
+  --radius-btn: 12px;
   --radius-md: 14px;
   --radius-lg: 22px;
   --container: 1180px;
@@ -128,7 +139,14 @@ body {
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* A column the height of the window, with <main> taking the spare room, so
+     the footer of a short page (404, contact) sits at the bottom of the
+     window instead of leaving a strip of page background under it. */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
+body > main { flex: 1 0 auto; }
 
 h1, h2, h3, h4 {
   font-family: var(--font-display);
@@ -258,7 +276,7 @@ textarea:focus-visible,
   font-weight: 700;
   font-size: 0.95rem;
   padding: 14px 26px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-btn);
   border: 1px solid transparent;
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
@@ -267,13 +285,17 @@ textarea:focus-visible,
 .btn:hover { transform: translateY(-2px); text-decoration: none; }
 .btn:active { transform: translateY(0); }
 
+/* ONE PRIMARY BUTTON, SITE AND APP. This was a gold gradient with a resting
+   glow on an 8px corner; the app's own primary button is flat gold on a 12px
+   corner, so "Start free" changed shape between the page and the form it
+   opens. Flat here too; the glow is kept as hover feedback only. */
 .btn-primary {
-  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  background: var(--gold);
   color: var(--gold-ink);
-  box-shadow: 0 10px 30px rgba(212, 175, 55, 0.25);
 }
 .btn-primary:hover {
-  box-shadow: 0 14px 36px rgba(212, 175, 55, 0.38);
+  background: var(--gold-bright);
+  box-shadow: 0 10px 28px rgba(212, 175, 55, 0.28);
 }
 
 .btn-ghost {
@@ -288,6 +310,13 @@ textarea:focus-visible,
 
 .btn-block { width: 100%; }
 
+/* 404 page. Its text takes its colours from the tokens (it used opacity on
+   --ink-muted, which read as dim grey), and its two buttons share one row. */
+.nf-title { margin: 0 0 1rem; }
+.nf-lede { color: var(--ink-soft); margin: 0 0 2rem; }
+.nf-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 2rem; }
+.nf-help { color: var(--ink-soft); margin: 0; }
+
 /* ==========================================================================
    Header / Nav
    ========================================================================== */
@@ -296,7 +325,8 @@ textarea:focus-visible,
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(10, 22, 40, 0.82);
+  /* --navy at 82%. It was a navy blue (10, 22, 40) left from the old palette. */
+  background: rgba(10, 10, 10, 0.82);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
@@ -309,11 +339,15 @@ textarea:focus-visible,
   height: 76px;
 }
 
+/* The wordmark is the app's: Archivo at its widest and heaviest
+   (assets/golsz-logo.svg). The font link on every page already loads that
+   width (wdth 125). */
 .logo {
   font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.35rem;
-  letter-spacing: 0.02em;
+  font-weight: 900;
+  font-stretch: 125%;
+  font-size: 1.3rem;
+  letter-spacing: 0.03em;
   color: var(--ink);
   display: inline-flex;
   align-items: center;
@@ -403,12 +437,31 @@ textarea:focus-visible,
 }
 .mobile-panel .btn { margin-top: 10px; }
 
+/* 404.html loads no script, so its menu is a <details class="nav-menu">:
+   the summary IS the .nav-toggle button and the panel opens under the
+   header. Hidden from 1080px up, like the button on the other pages. */
+.nav-menu > summary { list-style: none; cursor: pointer; }
+.nav-menu > summary::-webkit-details-marker { display: none; }
+.nav-menu > summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.nav-menu:not([open]) .mobile-panel { display: none; }
+.nav-menu[open] .mobile-panel {
+  display: flex;
+  position: absolute;
+  left: 0; right: 0; top: 100%;
+  padding: 8px 24px 20px;
+  background: var(--navy-deep);
+  border-bottom: 1px solid var(--border);
+}
+@media (min-width: 1080px) { .nav-menu { display: none; } }
+
 /* .nav-signin is the quiet half of the pair; .nav-cta ("Start free") is the
    single primary action repeated down the page. Both collapse into the
    mobile panel below 1080px, which carries its own copies. */
 .nav-signin { display: none; font-weight: 600; }
 @media (min-width: 1080px) {
-  .nav-links { display: flex; }
+  /* .nav-signin's auto margin takes all the free room in the row, which left
+     the first link touching the logo. This is the gap between the two. */
+  .nav-links { display: flex; margin-left: 2.5rem; }
   .nav-cta { display: inline-flex; }
   .nav-signin { display: inline-flex; align-items: center; margin-left: auto; margin-right: 1.1rem; }
   .nav-toggle { display: none; }
@@ -1996,18 +2049,21 @@ select {
 .bm-delta { margin-left: auto; font-family: var(--font-mono); font-size: 0.78rem; color: var(--gold); white-space: nowrap; }
 
 /* --- Journey strip: ATHLETE -> PASSPORT -> SCOUT -> PLAN -> PROGRESS --- */
+/* Five steps, one style: three used to be gold and two grey with nothing
+   saying why. Each arrow travels with the step AFTER it (.journey-step does
+   not break), so a wrapped row on a phone never ends on a dangling arrow. */
 .journey {
   display: flex; flex-wrap: wrap; justify-content: center;
-  gap: 0.5rem 0.65rem; align-items: center;
+  gap: 0.6rem 0.65rem; align-items: center;
   padding: 1.4rem 0 0;
 }
+.journey-step { display: inline-flex; align-items: center; gap: 0.65rem; white-space: nowrap; }
 .journey b {
-  font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.12em;
-  text-transform: uppercase; color: var(--ink-muted); font-weight: 700;
-  border: 1px solid var(--border-strong); border-radius: 999px; padding: 6px 13px;
+  font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--gold-bright); font-weight: 700;
+  border: 1px solid var(--gold-border); border-radius: 999px; padding: 6px 13px;
 }
-.journey b.is-hot { color: var(--gold-bright); border-color: var(--gold-border); }
-.journey i { color: var(--ink-faint); font-style: normal; }
+.journey i { color: var(--ink-muted); font-style: normal; }
 
 /* --- Goal chips --- */
 .goal-chips { display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 1.3rem; }
@@ -2060,12 +2116,12 @@ select {
      - motion is switched off wholesale under prefers-reduced-motion.
    ========================================================================== */
 
-.lx-hero { position: relative; overflow: hidden; background: #0A0F0D;
+.lx-hero { position: relative; overflow: hidden; background: var(--navy);
   padding: clamp(3.5rem, 7vw, 6.75rem) 0 clamp(3rem, 5vw, 4.5rem); }
 /* The hero background is G1's own: two soft pools of light (gold low-left,
-   mint high-right) over near-black, static — the mock had no drift. London of
-   the two looks: #0A0F0D vs the page's --navy differ by 3 points of channel,
-   so the hero section edge is invisible rather than a seam. */
+   mint high-right) over near-black, static — the mock had no drift. The ground
+   is the page's own --navy (it was its own hex, #0A0F0D, 3 channel points
+   away), so the hero's edge cannot become a seam. */
 .lx-hero-fx { position: absolute; inset: 0; pointer-events: none; z-index: 0;
   background:
     radial-gradient(700px 420px at 15% 88%, rgba(212, 175, 55, 0.16), transparent 60%),
@@ -2085,7 +2141,7 @@ select {
     -webkit-background-clip: text; background-clip: text; color: transparent; }
 }
 /* #AAB4BC is G1's sub-copy tone; measured 7.4:1 on #0A0F0D. */
-.lx-sub { font-size: clamp(1.05rem, 1.45vw, 1.3125rem); color: #AAB4BC; max-width: 56ch;
+.lx-sub { font-size: clamp(1.05rem, 1.45vw, 1.3125rem); color: var(--ink-soft); max-width: 56ch;
   margin: 0 0 2.4rem; }
 
 .lx-cta { display: flex; align-items: center; justify-content: center; gap: 0.8rem; flex-wrap: wrap; }
@@ -2098,14 +2154,22 @@ select {
   transition: border-color 0.18s ease, color 0.18s ease; }
 .lx-cta-ghost:hover { border-color: var(--gold); color: var(--gold-bright); }
 .lx-cta-ghost:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-.lx-fine { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--ink-faint); margin: 1.5rem 0 0; }
+/* The mono captions on this page were 0.66rem (10.5px) in --ink-faint: under
+   the 11px floor for a caption on a phone, and dim. They are 0.72-0.75rem in
+   --ink-muted now, with a little less tracking so they wrap no sooner. */
+.lx-fine { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em;
+  line-height: 1.7; text-transform: uppercase; color: var(--ink-muted); margin: 1.5rem 0 0;
+  text-wrap: balance; }
 
 /* ---------------------------------------------------------------- the ask */
 .lx-ask { width: 100%; margin: 3.75rem 0 0; }
-.lx-ask-label { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.18em;
-  text-transform: uppercase; color: var(--ink-faint); margin: 0 0 1.1rem; }
-.lx-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.62rem; }
+.lx-ask-label { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-muted); margin: 0 0 1.1rem; }
+/* The eight chips in one row were wider than the header's container, so the
+   row stuck out past the logo and the "Start free" button. Capped, they wrap
+   into two centred rows on a desktop and stay inside the shared edges. */
+.lx-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.62rem;
+  max-width: 46rem; margin: 0 auto; }
 .lx-chip {
   font-family: var(--font-body); font-weight: 700; font-size: 0.94rem;
   color: #CDD5DB; background: rgba(255, 255, 255, 0.05);
@@ -2119,8 +2183,8 @@ select {
   box-shadow: 0 0 28px -6px rgba(212, 175, 55, 0.6); }
 .lx-chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
-.lx-own-toggle { display: none; font-family: var(--font-mono); font-size: 0.66rem;
-  letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-faint);
+.lx-own-toggle { display: none; font-family: var(--font-mono); font-size: 0.72rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-muted);
   background: none; border: 0; margin: 1.1rem auto 0; cursor: pointer; padding: 0.5rem 0.75rem; }
 .lx-own-toggle:hover { color: var(--gold-bright); }
 .lx-own-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
@@ -2200,10 +2264,12 @@ select {
    route status first, the age gate and the "says so when it can't" sentence
    beneath it. */
 .lx-out-cap { text-align: center; margin-top: clamp(2.5rem, 5vw, 4rem); }
-.lx-out-cap > span { display: block; font-family: var(--font-mono); font-size: 0.66rem;
-  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); }
-.lx-out-cap > .lx-out-cap2 { text-transform: none; letter-spacing: 0.02em;
-  font-size: 0.76rem; margin-top: 0.55rem; }
+.lx-out-cap > span { display: block; font-family: var(--font-mono); font-size: 0.72rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-muted); }
+/* A whole sentence, so it is set as reading text (the UI typeface, 15px),
+   not as a mono caption. */
+.lx-out-cap > .lx-out-cap2 { font-family: var(--font-body); text-transform: none; letter-spacing: 0;
+  font-size: 0.94rem; line-height: 1.55; color: var(--ink-soft); margin-top: 0.6rem; }
 
 /* ------------------------------------------------------------------ tiles */
 .lx-band { padding: clamp(2.8rem, 5vw, 4.5rem) 0; background: var(--charcoal);

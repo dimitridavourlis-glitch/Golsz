@@ -283,7 +283,10 @@ ck("the Plan card no longer substitutes the pathway category for the goal",
 // The raw error still goes to console.error right above this line.
 ck("a save failure is surfaced to the athlete, not just the console",
    /setErr\(userErrorText\(e, t, "goal_card_save_err"\)\)/.test(APP), true);
-ck("empty input is rejected", /if \(!clean\) \{ setErr\(t\("goal_card_required"\)\); return; \}/.test(APP), true);
+// The rule moved into goalTextError(), which GoalSetup shares (one rule, one
+// writer); tests/test_goal_setup.cjs runs it.
+ck("empty input is rejected", /if \(!clean\) return "goal_card_required";/.test(APP), true);
+ck("...and GoalCard still refuses before writing", /const problem = goalTextError\(clean\);\s*if \(problem\) \{ setErr\(t\(problem\)\); return; \}/.test(APP), true);
 ck("a meaningless one-word goal is rejected", /clean\.length < 8/.test(APP), true);
 ck("input is length-capped before it reaches the database", /\.slice\(0, 300\)/.test(APP.slice(APP.indexOf("function GoalCard"), APP.indexOf("function PathwayStrip"))), true);
 

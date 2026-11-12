@@ -40,10 +40,21 @@
      which is the one part of the load path that costs nothing to fix. -->
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<!-- THE WEB FONTS START LOADING HERE, while the boot screen is up. They used to be found only when
+     the app mounted (the @import in its CSS), so the first screen was drawn in the fallback font and
+     redrawn in Archivo a moment later, which moved the sign-up form under the visitor's thumb
+     (layout shift 0.23 on a phone, 2026-11-10). media="print" keeps the stylesheet from blocking the
+     first paint; onload switches it on, and the boot screen's Archivo line makes the browser fetch the
+     font file. The address is the same as the @import's, character for character, so that one is
+     answered from the cache (tests/test_boot_nonblocking.cjs pins both). -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100,400..900;125,400..900&family=Space+Mono:wght@400;700&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100,400..900;125,400..900&family=Space+Mono:wght@400;700&display=swap" media="print" onload="this.media='all'" />
 <!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
      fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
      with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
-<link rel="preload" as="script" href="js/app.js?v=0a2f59de1e1272b3" />
+<link rel="preload" as="script" href="js/app.js?v=16b738fed6a9afd3" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -773,6 +784,9 @@ const I18N = {
     auth_err_rate_limited: "Too many sign-up attempts from this network. Please try again later.", auth_err_verification: "We couldn't verify that you're human. Please retry the challenge below and try again.", auth_err_weak_password: "Choose a password of at least 8 characters.", auth_err_email_invalid: "That email address doesn't look right. Check it and try again.", auth_confirm_email: "Confirm email address", auth_err_email_mismatch: "The two email addresses don't match.",
     auth_err_name_required: "Enter your full name.", auth_err_email_required: "Enter your email address.", auth_err_password_required: "Enter your password.", auth_err_dob_incomplete: "Enter your full date of birth: day, month and a four-digit year.", auth_err_dob_invalid: "That date of birth isn't a real date. Check the day, month and year.", auth_err_signup_refused: "We couldn't create the account. GOLSZ is for adults 18 and over — check your date of birth.",
     settings_billing_renews: "Your plan renews on {date}.", settings_billing_cancels: "Your plan ends on {date}. You keep full access until then.", settings_delete_forfeit: "Your subscription is set to end on {date}. Deleting your account now ends your access straight away, and the rest of the period you paid for is lost.",
+    starter_step_scout_week: "Ask Scout what to focus on this week", starter_step_benchmark: "Record a benchmark with the date and how it was measured", starter_step_highlight: "Add a highlight video link to your Passport", starter_step_targets: "Add 3 target clubs or coaches", starter_step_academics: "Add your graduation year and GPA to your Passport", starter_step_outreach: "Email your first target club or coach", starter_step_watch: "Watch athletes one level up ({stage}) and note one thing to work on", starter_step_share: "Share your Passport link with a coach", starter_step_retest: "Retest your benchmark the same way and compare", starter_step_review: "Review your progress toward {stage} with Scout",
+    goal_setup_title: "What are you aiming for?", goal_setup_sub: "Name your goal and GOLSZ gives you your first steps, each with a date.", goal_setup_goal_label: "Your goal", goal_setup_pathway_label: "Pathway", goal_setup_timeline_label: "When (optional)", goal_setup_timeline_ph: "e.g. Fall 2027", goal_setup_timeline_unread: "Write a season or a month and a year, for example Fall 2027.", goal_setup_timeline_past: "That date has passed. Pick a later one or leave this empty.", goal_setup_build: "Build my plan", goal_setup_building: "Building your plan…", goal_setup_save_err: "Couldn't save your plan. Try again.", goal_setup_skip: "Skip for now",
+    home_set_goal_title: "Set your goal to get your plan", home_set_goal_sub: "Name your goal and GOLSZ dates your first steps, starting today.",
   },
   fr: {
     loading: "Chargement…", yes: "Oui", no: "Non",
@@ -1153,6 +1167,9 @@ const I18N = {
     auth_err_rate_limited: "Trop de tentatives d'inscription depuis ce réseau. Veuillez réessayer plus tard.", auth_err_verification: "Nous n'avons pas pu vérifier que vous êtes un humain. Relancez le test ci-dessous et réessayez.", auth_err_weak_password: "Choisissez un mot de passe d'au moins 8 caractères.", auth_err_email_invalid: "Cette adresse e-mail semble incorrecte. Vérifiez-la et réessayez.", auth_confirm_email: "Confirmer l'adresse e-mail", auth_err_email_mismatch: "Les deux adresses e-mail ne correspondent pas.",
     auth_err_name_required: "Saisis ton nom complet.", auth_err_email_required: "Saisis ton adresse e-mail.", auth_err_password_required: "Saisis ton mot de passe.", auth_err_dob_incomplete: "Saisis ta date de naissance complète : jour, mois et année à quatre chiffres.", auth_err_dob_invalid: "Cette date de naissance n'existe pas. Vérifie le jour, le mois et l'année.", auth_err_signup_refused: "Nous n'avons pas pu créer le compte. GOLSZ est réservé aux adultes de 18 ans et plus — vérifie ta date de naissance.",
     settings_billing_renews: "Votre formule se renouvelle le {date}.", settings_billing_cancels: "Votre formule se termine le {date}. Vous gardez un accès complet jusque-là.", settings_delete_forfeit: "Votre abonnement prendra fin le {date}. Supprimer votre compte maintenant met fin immédiatement à votre accès, et le reste de la période déjà payée est perdu.",
+    starter_step_scout_week: "Demandez à Scout sur quoi vous concentrer cette semaine", starter_step_benchmark: "Enregistrez un repère avec la date et la façon dont il a été mesuré", starter_step_highlight: "Ajoutez à votre Passeport le lien d'une vidéo de vos temps forts", starter_step_targets: "Ajoutez 3 clubs ou entraîneurs cibles", starter_step_academics: "Ajoutez votre année de diplôme et votre moyenne à votre Passeport", starter_step_outreach: "Écrivez à votre premier club ou entraîneur cible", starter_step_watch: "Regardez des athlètes du niveau au-dessus ({stage}) et notez un point à travailler", starter_step_share: "Partagez le lien de votre Passeport avec un entraîneur", starter_step_retest: "Refaites votre test de la même façon et comparez", starter_step_review: "Faites le point avec Scout sur votre progression vers {stage}",
+    goal_setup_title: "Quel est votre objectif ?", goal_setup_sub: "Indiquez votre objectif et GOLSZ vous donne vos premières étapes, chacune avec une date.", goal_setup_goal_label: "Votre objectif", goal_setup_pathway_label: "Parcours", goal_setup_timeline_label: "Quand (facultatif)", goal_setup_timeline_ph: "ex. automne 2027", goal_setup_timeline_unread: "Indiquez une saison ou un mois et une année, par exemple automne 2027.", goal_setup_timeline_past: "Cette date est passée. Choisissez-en une plus tardive ou laissez vide.", goal_setup_build: "Créer mon plan", goal_setup_building: "Création de votre plan…", goal_setup_save_err: "Impossible d'enregistrer votre plan. Réessayez.", goal_setup_skip: "Passer pour l'instant",
+    home_set_goal_title: "Fixez votre objectif pour obtenir votre plan", home_set_goal_sub: "Indiquez votre objectif et GOLSZ date vos premières étapes, à partir d'aujourd'hui.",
   },
   es: {
     loading: "Cargando…", yes: "Sí", no: "No",
@@ -1533,6 +1550,9 @@ const I18N = {
     auth_err_rate_limited: "Demasiados intentos de registro desde esta red. Inténtalo de nuevo más tarde.", auth_err_verification: "No pudimos comprobar que eres una persona. Vuelve a intentar la verificación de abajo y prueba otra vez.", auth_err_weak_password: "Elige una contraseña de al menos 8 caracteres.", auth_err_email_invalid: "Esa dirección de correo no parece correcta. Revísala e inténtalo de nuevo.", auth_confirm_email: "Confirmar correo electrónico", auth_err_email_mismatch: "Las dos direcciones de correo no coinciden.",
     auth_err_name_required: "Escribe tu nombre completo.", auth_err_email_required: "Escribe tu correo electrónico.", auth_err_password_required: "Escribe tu contraseña.", auth_err_dob_incomplete: "Escribe tu fecha de nacimiento completa: día, mes y año de cuatro cifras.", auth_err_dob_invalid: "Esa fecha de nacimiento no existe. Revisa el día, el mes y el año.", auth_err_signup_refused: "No pudimos crear la cuenta. GOLSZ es para adultos de 18 años o más — revisa tu fecha de nacimiento.",
     settings_billing_renews: "Tu plan se renueva el {date}.", settings_billing_cancels: "Tu plan termina el {date}. Mantienes el acceso completo hasta entonces.", settings_delete_forfeit: "Tu suscripción terminará el {date}. Si eliminas tu cuenta ahora, pierdes el acceso de inmediato y el resto del periodo que ya pagaste.",
+    starter_step_scout_week: "Pregunta a Scout en qué centrarte esta semana", starter_step_benchmark: "Registra una marca con la fecha y cómo se midió", starter_step_highlight: "Añade a tu Pasaporte el enlace de un vídeo con tus mejores jugadas", starter_step_targets: "Añade 3 clubes o entrenadores objetivo", starter_step_academics: "Añade a tu Pasaporte tu año de graduación y tu promedio", starter_step_outreach: "Escribe a tu primer club o entrenador objetivo", starter_step_watch: "Mira a deportistas un nivel por encima ({stage}) y anota algo que mejorar", starter_step_share: "Comparte el enlace de tu Pasaporte con un entrenador", starter_step_retest: "Vuelve a medir tu marca de la misma forma y compara", starter_step_review: "Revisa con Scout tu progreso hacia {stage}",
+    goal_setup_title: "¿Qué quieres conseguir?", goal_setup_sub: "Escribe tu objetivo y GOLSZ te da tus primeros pasos, cada uno con fecha.", goal_setup_goal_label: "Tu objetivo", goal_setup_pathway_label: "Trayectoria", goal_setup_timeline_label: "Cuándo (opcional)", goal_setup_timeline_ph: "ej. otoño 2027", goal_setup_timeline_unread: "Escribe una estación o un mes y un año, por ejemplo otoño 2027.", goal_setup_timeline_past: "Esa fecha ya pasó. Elige una posterior o deja esto vacío.", goal_setup_build: "Crear mi plan", goal_setup_building: "Creando tu plan…", goal_setup_save_err: "No se pudo guardar tu plan. Inténtalo de nuevo.", goal_setup_skip: "Saltar por ahora",
+    home_set_goal_title: "Fija tu objetivo para tener tu plan", home_set_goal_sub: "Escribe tu objetivo y GOLSZ pone fecha a tus primeros pasos, desde hoy.",
   },
   el: {
     loading: "Φόρτωση…", yes: "Ναι", no: "Όχι",
@@ -1913,6 +1933,9 @@ const I18N = {
     auth_err_rate_limited: "Πάρα πολλές προσπάθειες εγγραφής από αυτό το δίκτυο. Δοκιμάστε ξανά αργότερα.", auth_err_verification: "Δεν μπορέσαμε να επιβεβαιώσουμε ότι είστε άνθρωπος. Επαναλάβετε τον έλεγχο παρακάτω και δοκιμάστε ξανά.", auth_err_weak_password: "Επιλέξτε κωδικό τουλάχιστον 8 χαρακτήρων.", auth_err_email_invalid: "Η διεύθυνση email δεν φαίνεται σωστή. Ελέγξτε την και δοκιμάστε ξανά.", auth_confirm_email: "Επιβεβαίωση διεύθυνσης email", auth_err_email_mismatch: "Οι δύο διευθύνσεις email δεν ταιριάζουν.",
     auth_err_name_required: "Γράψε το πλήρες όνομά σου.", auth_err_email_required: "Γράψε τη διεύθυνση email σου.", auth_err_password_required: "Γράψε τον κωδικό σου.", auth_err_dob_incomplete: "Γράψε ολόκληρη την ημερομηνία γέννησής σου: ημέρα, μήνα και έτος με τέσσερα ψηφία.", auth_err_dob_invalid: "Αυτή η ημερομηνία γέννησης δεν υπάρχει. Έλεγξε την ημέρα, τον μήνα και το έτος.", auth_err_signup_refused: "Δεν μπορέσαμε να δημιουργήσουμε τον λογαριασμό. Το GOLSZ είναι για ενήλικες 18 ετών και άνω — έλεγξε την ημερομηνία γέννησής σου.",
     settings_billing_renews: "Το πλάνο σας ανανεώνεται στις {date}.", settings_billing_cancels: "Το πλάνο σας λήγει στις {date}. Διατηρείτε πλήρη πρόσβαση μέχρι τότε.", settings_delete_forfeit: "Η συνδρομή σας έχει οριστεί να λήξει στις {date}. Αν διαγράψετε τον λογαριασμό τώρα, η πρόσβασή σας τερματίζεται αμέσως και χάνεται το υπόλοιπο της περιόδου που έχετε πληρώσει.",
+    starter_step_scout_week: "Ρώτησε τον Scout σε τι να εστιάσεις αυτή τη βδομάδα", starter_step_benchmark: "Κατάγραψε έναν δείκτη με την ημερομηνία και τον τρόπο μέτρησης", starter_step_highlight: "Πρόσθεσε στο Διαβατήριό σου σύνδεσμο για βίντεο με στιγμιότυπα", starter_step_targets: "Πρόσθεσε 3 συλλόγους ή προπονητές στους Στόχους σου", starter_step_academics: "Πρόσθεσε στο Διαβατήριό σου το έτος αποφοίτησης και τον μέσο όρο σου", starter_step_outreach: "Στείλε email στον πρώτο σύλλογο ή προπονητή από τους Στόχους σου", starter_step_watch: "Δες αθλητές ένα επίπεδο πιο πάνω ({stage}) και σημείωσε κάτι να βελτιώσεις", starter_step_share: "Μοιράσου τον σύνδεσμο του Διαβατηρίου σου με έναν προπονητή", starter_step_retest: "Ξαναμέτρησε τον δείκτη σου με τον ίδιο τρόπο και σύγκρινε", starter_step_review: "Δες με τον Scout την πρόοδό σου προς {stage}",
+    goal_setup_title: "Ποιος είναι ο στόχος σου;", goal_setup_sub: "Γράψε τον στόχο σου και το GOLSZ σου δίνει τα πρώτα σου βήματα, το καθένα με ημερομηνία.", goal_setup_goal_label: "Ο στόχος σου", goal_setup_pathway_label: "Πορεία", goal_setup_timeline_label: "Πότε (προαιρετικό)", goal_setup_timeline_ph: "π.χ. Φθινόπωρο 2027", goal_setup_timeline_unread: "Γράψε εποχή ή μήνα και έτος, για παράδειγμα Φθινόπωρο 2027.", goal_setup_timeline_past: "Αυτή η ημερομηνία έχει περάσει. Διάλεξε μια μεταγενέστερη ή άφησέ το κενό.", goal_setup_build: "Φτιάξε το πλάνο μου", goal_setup_building: "Φτιάχνουμε το πλάνο σου…", goal_setup_save_err: "Δεν αποθηκεύτηκε το πλάνο σου. Δοκίμασε ξανά.", goal_setup_skip: "Παράλειψη για τώρα",
+    home_set_goal_title: "Όρισε τον στόχο σου για να πάρεις το πλάνο σου", home_set_goal_sub: "Γράψε τον στόχο σου και το GOLSZ βάζει ημερομηνίες στα πρώτα σου βήματα, από σήμερα.",
   },
 };
 
@@ -6710,7 +6733,8 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved, onSignOut 
         bio: (form.bio || "").trim().slice(0, 600) || null,
       }).eq("id", writeId);
       if (e2) throw e2;
-      onSaved();
+      // What was stored, for GolszApp: a first save with a sport leads to the goal.
+      onSaved({ sport: form.sport || null, occupation: form.occupation || null });
     } catch (e) {
       console.error("GOLSZ profile save error:", e);
       setErr(userErrorText(e, t, "editor_save_err"));
@@ -6882,7 +6906,7 @@ function ProfileEditor({ initial, targetId, locked, onClose, onSaved, onSignOut 
   );
 }
 
-function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, onOpenAdmin, viewUserId, manageMode, onBack, onMessage, onViewProfile, plan, onUpgrade, focusSection, focusNonce, onSectionDone }) {
+function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, onProfileSaved, onOpenAdmin, viewUserId, manageMode, onBack, onMessage, onViewProfile, plan, onUpgrade, focusSection, focusNonce, onSectionDone }) {
   const { t, tv, lang } = useLang();
   // Above every early return in this component. A hook below a state-gated
   // return is React #310, which took this app down once before.
@@ -7251,6 +7275,9 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
         </div>
       )}
 
+      {/* GolszApp hears of a save only after the reload, so the editor has
+          closed (and its focus trap with it) before anything opens on top.
+          Not in manage mode: that save is the child's, not the signed-in user's. */}
       {(editing || incomplete) && (
         <ProfileEditor
           initial={editorInitial()}
@@ -7258,7 +7285,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
           locked={incomplete}
           onSignOut={onSignOut}
           onClose={() => setEditing(false)}
-          onSaved={() => { setEditing(false); load(); }}
+          onSaved={async (saved) => { setEditing(false); await load(); if (onProfileSaved && !manageMode) onProfileSaved(saved); }}
         />
       )}
 
@@ -11336,40 +11363,13 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan, flush, he
 
   async function save() {
     if (busy) return;
-    // Sanitize before validating so a whitespace-only entry is caught as
-    // empty rather than saved as " ".
-    const clean = draft.replace(/\s+/g, " ").trim().slice(0, 300);
-    if (!clean) { setErr(t("goal_card_required")); return; }
-    // Short enough to be meaningless ("D1", "pro") gives Scout and the
-    // pathway classifier nothing to work with, and would sit on the Passport
-    // looking like a real goal.
-    if (clean.length < 8) { setErr(t("goal_card_too_short")); return; }
+    const clean = cleanGoalText(draft);
+    const problem = goalTextError(clean);
+    if (problem) { setErr(t(problem)); return; }
     if (!sb || !uid) { setErr(t("goal_card_save_err")); return; }
     setBusy(true); setErr(""); setOkMsg("");
     try {
-      // goal_defined is derived from the text in the same write, exactly as
-      // api/scout.js's persistProfileUpdates() does it — the two writers must
-      // never disagree about what "defined" means. goal_source marks this as
-      // the athlete's own words, which is what stops Scout overwriting it
-      // later (applyGoalAuthorship in api/scout.js).
-      let { error } = await sb.from("profiles").update({
-        goal_text: clean,
-        goal_defined: true,
-        goal_source: "athlete_edited",
-        goal_updated_at: new Date().toISOString(),
-      }).eq("id", uid);
-      // Migrations in this project are applied by hand, so code can reach
-      // production before its SQL does. Without this, an athlete typing their
-      // goal on that day would get "couldn't save" for a column problem that
-      // has nothing to do with them. PostgREST reports an unknown column as
-      // PGRST204; retry with just the columns that have always existed.
-      // The goal is saved either way — it simply isn't marked as
-      // athlete-authored until 113 lands, which fails toward Scout being
-      // allowed to update it rather than toward losing the athlete's words.
-      if (error && (error.code === "PGRST204" || /goal_source|goal_updated_at/.test(error.message || ""))) {
-        console.warn("GOLSZ goal authorship columns missing (migration 113 not applied) — saving without them.");
-        ({ error } = await sb.from("profiles").update({ goal_text: clean, goal_defined: true }).eq("id", uid));
-      }
+      const { error } = await saveGoalText(sb, uid, clean);
       if (error) throw error;
       setGoalText(clean);
       setGoalSource("athlete_edited");
@@ -11502,6 +11502,52 @@ function GoalCard({ actingFor, onSaved, compact, readOnly, onOpenPlan, flush, he
   );
 }
 
+// THE GOAL SENTENCE: ONE RULE FOR WHAT IT MAY BE, ONE WRITER THAT STORES IT.
+// GoalCard (Plan) and GoalSetup (the first visit) both save the goal, and both
+// go through these three, so the two screens cannot disagree about what a goal
+// is or how it is stored.
+function cleanGoalText(draft) {
+  // Sanitized before it is checked, so a whitespace-only entry is caught as
+  // empty rather than saved as " ".
+  return String(draft == null ? "" : draft).replace(/\s+/g, " ").trim().slice(0, 300);
+}
+// An i18n key, or null when the sentence can be saved.
+function goalTextError(clean) {
+  if (!clean) return "goal_card_required";
+  // Short enough to be meaningless ("D1", "pro") gives Scout and the pathway
+  // classifier nothing to work with, and would sit on the Passport looking
+  // like a real goal.
+  if (clean.length < 8) return "goal_card_too_short";
+  return null;
+}
+// Resolves with supabase-js's { error }, never throws for a refused write.
+// goal_defined is derived from the text in the same write, exactly as
+// api/scout.js's persistProfileUpdates() does it: the two writers must never
+// disagree about what "defined" means. goal_source marks this as the athlete's
+// own words, which is what stops Scout overwriting it later
+// (applyGoalAuthorship in api/scout.js).
+async function saveGoalText(sb, uid, clean) {
+  let { error } = await sb.from("profiles").update({
+    goal_text: clean,
+    goal_defined: true,
+    goal_source: "athlete_edited",
+    goal_updated_at: new Date().toISOString(),
+  }).eq("id", uid);
+  // Migrations in this project are applied by hand, so code can reach
+  // production before its SQL does. Without this, an athlete typing their
+  // goal on that day would get "couldn't save" for a column problem that has
+  // nothing to do with them. PostgREST reports an unknown column as PGRST204;
+  // retry with just the columns that have always existed. The goal is saved
+  // either way: it simply isn't marked as athlete-authored until 113 lands,
+  // which fails toward Scout being allowed to update it rather than toward
+  // losing the athlete's words.
+  if (error && (error.code === "PGRST204" || /goal_source|goal_updated_at/.test(error.message || ""))) {
+    console.warn("GOLSZ goal authorship columns missing (migration 113 not applied) — saving without them.");
+    ({ error } = await sb.from("profiles").update({ goal_text: clean, goal_defined: true }).eq("id", uid));
+  }
+  return { error };
+}
+
 // Renders only when Plan was reached from a card that REPORTED the thing
 // rather than owned it. A tab press passes no origin, so this stays absent —
 // which is the point: it marks a hand-off, not a location.
@@ -11613,7 +11659,23 @@ function HomeZone({ label, children, last, node, span }) {
   );
 }
 
-function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip, onBetter }) {
+// NO STEPS YET IS AN INVITATION, NEVER A BLANK TODAY. An athlete with a sport
+// and no dated steps (they skipped the goal step, or reloaded in the middle of
+// it) gets this at the top of Home, and it opens the same GoalSetup the first
+// visit shows. It is not the read-failure state: the pathway read is one of
+// Home's core reads, so a failed one shows LoadError before Home gets here.
+function SetGoalCard({ onOpen }) {
+  const { t } = useLang();
+  return (
+    <div style={{ ...card, borderLeft: `3px solid ${C.lime}`, marginBottom: 16 }}>
+      <div style={{ fontSize: 20, fontWeight: 800, color: C.chalk, lineHeight: 1.2 }}>{t("home_set_goal_title")}</div>
+      <div style={{ fontSize: 15, color: C.chalkSoft, lineHeight: 1.45, marginTop: 8 }}>{t("home_set_goal_sub")}</div>
+      <button onClick={onOpen} style={{ ...primaryBtn, marginTop: 16, fontSize: 15 }}>{t("goal_card_set")}</button>
+    </div>
+  );
+}
+
+function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip, onBetter, onSetGoal }) {
   const { t, tv, lang } = useLang();
   const [loaded, setLoaded] = useState(!sb);
   // "tiles" is the Phase 2 entrance; "today" is the screen Home used to be,
@@ -11990,6 +12052,11 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
     return <div style={{ padding: "8px 16px 20px" }}><div style={card}><LoadError onRetry={retryHome} /></div></div>;
   }
 
+  // A sport and no steps: the card that opens GoalSetup, on every plan. Also in
+  // manage mode, where GolszApp hands GoalSetup the same actingFor, so the plan
+  // is written for the athlete this screen shows, as GoalCard and Plan do.
+  const needsPlan = !!onSetGoal && profileComplete && !planHasSteps(pathwayRow);
+
   // A failed secondary read hides what it feeds instead of showing zero. The
   // composite and the bottleneck are computed from these four, so they hide too.
   const scoreInputsFailed = ["verification", "benchmarks", "dev", "targets"].some((k) => homeFailed.has(k));
@@ -12079,8 +12146,11 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
   const canBenchmarks = featureUnlocked(plan, "benchmarks");
   const canTargets = featureUnlocked(plan, "targets");
   // The athletes own stated next step outranks anything GOLSZ infers for them.
-  // canTargets gates it, so Free — and plan-not-yet-known — never lands here.
-  const pathwayNext = canTargets && pathwayRow ? nextMilestone(pathwayRow.milestones) : null;
+  // Not plan-gated: GoalSetup gives every plan a starter plan, so its steps are
+  // shown and ticked here on Free too. Only the ways into Plan (Reschedule,
+  // Drop, a tap on the TODAY and THIS WEEK tiles) check canTargets, because
+  // Plan itself is locked below Basic.
+  const pathwayNext = pathwayRow ? nextMilestone(pathwayRow.milestones) : null;
   const stepOverdue = !!(pathwayNext && pathwayNext.due && canCallLate(pathwayNext, resting) && pathwayNext.due < isoDay(new Date()));
   // TICKING IS THE ONE WRITE HOME DOES TO A STEP.
   // Plan owns milestones — it is a jsonb array on one row, so two screens
@@ -12340,24 +12410,28 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
       // the three and it already lives on Plan, which owns steps —
       // Home shows, the owning page holds the detail. The late count
       // moves here so nothing about overdue work is lost.
-      canTargets && {
+      // TODAY and THIS WEEK count the athlete's own steps, so they show on
+      // every plan: GoalSetup gives Free a starter plan too. Only the tap is
+      // plan-bound. Plan, where they lead, is locked below Basic, so there
+      // they carry no `go` and report without leading to a lock.
+      {
         k: "today", label: t("home_week_today"),
         value: todaySteps.length ? `${todayDone}/${todaySteps.length}` : "\u2014",
         empty: !todaySteps.length && !stepsLate,
         colour: stepsLate > 0 ? C.warnText
           : (todaySteps.length && todayDone === todaySteps.length ? C.lime : C.chalk),
         sub: stepsLate > 0 ? t("home_door_plan_late").replace("{n}", stepsLate) : null,
-        go: "targets",
+        go: canTargets ? "targets" : null,
       },
       // THIS WEEK, from the brief. Dash when nothing is dated inside
       // the week — a 0/0 would read as failure rather than as an
       // empty calendar.
-      canTargets && {
+      {
         k: "week", label: t("home_week_title"),
         value: weekSteps.length ? `${weekDone}/${weekSteps.length}` : "\u2014",
         empty: !weekSteps.length,
         colour: weekSteps.length && weekDone === weekSteps.length ? C.lime : C.chalk,
-        go: "targets",
+        go: canTargets ? "targets" : null,
       },
       canTargets && !homeFailed.has("targets") && {
         k: "follow", label: t("home_status_follow_up"),
@@ -12456,6 +12530,8 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
         ) : null}
         <div style={{ fontSize: 18, color: C.chalkSoft, marginTop: name ? 6 : 0, marginBottom: 18 }}>{t("home_tiles_sub")}</div>
 
+        {needsPlan && <SetGoalCard onOpen={onSetGoal} />}
+
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
           {TILES.map((tile) => (
             <button key={tile.k} onClick={tile.locked ? onUpgrade : tile.act}
@@ -12464,9 +12540,12 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
                 border: tile.gold && !tile.grey ? "none" : `2px solid ${C.line2}`,
                 cursor: "pointer", fontFamily: "inherit", display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center", gap: 7, textAlign: "center", boxSizing: "border-box" }}>
+              {/* Page ground and text, both from the theme: C.ink stays dark in
+                  the light theme while C.chalk turns dark, which drew the count
+                  black on black there (seen in job 199's browser run). */}
               {tile.badge ? (
                 <span style={{ position: "absolute", top: 10, right: 10, minHeight: 28, borderRadius: 99,
-                  background: C.ink, color: C.chalk, fontSize: 14, fontWeight: 800, padding: "4px 10px",
+                  background: C.pitch, color: C.chalk, fontSize: 14, fontWeight: 800, padding: "4px 10px",
                   display: "flex", alignItems: "center" }}>{tile.badge}</span>
               ) : null}
               {React.createElement(tile.icon, { size: 38,
@@ -12512,6 +12591,7 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
           <ChevronLeft size={18} /> {t("home_today_back")}
         </button>
       )}
+      {needsPlan && <SetGoalCard onOpen={onSetGoal} />}
       {(name || (athlete && (athlete.sport || athlete.club_name))) && (
         // ONE identity block, not a greeting stacked on top of a separate
         // profile row. The greeting is the eyebrow, the name is the
@@ -12681,15 +12761,17 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
                   until the athlete places it, which keeps the app's rule that
                   a day on a step is the athlete's own unless marked
                   otherwise. */}
-              <button onClick={() => onNavigate("targets", null, null, pathwayNext.due || isoDay(new Date()))}
-                style={{ background: "none", border: "none", color: C.slate, fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, padding: "9px 10px", minHeight: 42, cursor: "pointer", letterSpacing: "0.01em" }}>
-                {t("home_step_reschedule")}
-              </button>
+              {canTargets && (
+                <button onClick={() => onNavigate("targets", null, null, pathwayNext.due || isoDay(new Date()))}
+                  style={{ background: "none", border: "none", color: C.slate, fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, padding: "9px 10px", minHeight: 42, cursor: "pointer", letterSpacing: "0.01em" }}>
+                  {t("home_step_reschedule")}
+                </button>
+              )}
               <button onClick={() => onNavigate("scout", null, t("home_step_ask_seed").replace("{step}", pathwayNext.label))}
                 style={{ background: "none", border: "none", color: C.slate, fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, padding: "9px 10px", minHeight: 42, cursor: "pointer", letterSpacing: "0.01em" }}>
                 {t("home_step_ask")}
               </button>
-              {stepOverdue && (
+              {canTargets && stepOverdue && (
                 <button onClick={() => onNavigate("targets", null, null, pathwayNext.due || null)}
                   style={{ background: "none", border: "none", color: C.warnText, fontFamily: "inherit", fontSize: 12.5, fontWeight: 800, padding: "9px 10px", minHeight: 42, cursor: "pointer" }}>
                   {t("home_step_drop")}
@@ -13097,15 +13179,22 @@ function HomeTab({ onNavigate, plan, onUpgrade, actingFor, resting, checkinChip,
       {planKnown(plan) && statusTiles.length > 0 && (
         <HomeZone span={2}>
           <div style={{ display: "grid", gridTemplateColumns: `repeat(${statusTiles.length === 1 ? 1 : 2}, minmax(0, 1fr))`, gap: 1, background: C.line, borderRadius: 12, overflow: "hidden" }}>
-            {statusTiles.map((tile) => (
-              <button key={tile.k} onClick={() => onNavigate(tile.go)}
-                style={{ background: C.card, border: "none", padding: "13px 14px", textAlign: "left",
-                  cursor: "pointer", fontFamily: "inherit", minHeight: 76, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: "0.13em", textTransform: "uppercase", color: C.slate }}>{tile.label}</span>
-                <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.02em", color: tile.colour, marginTop: 5, lineHeight: 1, fontVariantNumeric: "tabular-nums", overflowWrap: "anywhere" }}>{tile.value}</span>
-                {tile.sub && <span style={{ fontSize: 10.5, color: C.slate, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tile.sub}</span>}
-              </button>
-            ))}
+            {statusTiles.map((tile) => {
+              const look = { background: C.card, border: "none", padding: "13px 14px", textAlign: "left",
+                fontFamily: "inherit", minHeight: 76, display: "flex", flexDirection: "column", justifyContent: "center" };
+              const body = (
+                <>
+                  <span style={{ fontSize: 8.5, fontWeight: 900, letterSpacing: "0.13em", textTransform: "uppercase", color: C.slate }}>{tile.label}</span>
+                  <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.02em", color: tile.colour, marginTop: 5, lineHeight: 1, fontVariantNumeric: "tabular-nums", overflowWrap: "anywhere" }}>{tile.value}</span>
+                  {tile.sub && <span style={{ fontSize: 10.5, color: C.slate, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tile.sub}</span>}
+                </>
+              );
+              // A tile with no `go` only reports (its page is locked on this
+              // plan), so it is a plain cell, not a button that does nothing.
+              return tile.go
+                ? <button key={tile.k} onClick={() => onNavigate(tile.go)} style={{ ...look, cursor: "pointer" }}>{body}</button>
+                : <div key={tile.k} style={look}>{body}</div>;
+            })}
           </div>
         </HomeZone>
       )}
@@ -14878,6 +14967,183 @@ function suggestedDate(m) {
   // and it may not call anyone late. touchedMilestone clears either value the
   // moment the athlete acts on the step, which is what makes the date theirs.
   return !!(m && (m.due_src === "scout" || m.due_src === "retest") && m.due);
+}
+
+// A STARTER PLAN FROM A SPORT AND A GOAL: NO AI, NO NETWORK, NO CLOCK.
+//
+// A first visit has to end with steps the athlete can act on today, or they do
+// not come back. "Let Scout draft my steps" costs a model call per sign-up, so
+// the first plan is built from what GOLSZ already holds: the sport's ladder
+// (athleteStages), what the goal asks for (PATHWAY_KEY_EVIDENCE, read through
+// evaluateGap) and the athlete's own record.
+//
+// Every step is already in normalizeMilestone's shape, so it can be written to
+// pathway_plan.milestones as it is. Three land in today's Monday-Sunday week,
+// the first of them today, because Home's TODAY and THIS WEEK read exactly
+// that. The working steps after them come one a week, because the weeks right
+// after sign-up are when a plan becomes a habit or is forgotten. The last step,
+// a check-in, waits for the athlete's own timeline (twelve weeks without one).
+//
+// GOLSZ picked every one of these days, so due_src is "scout": suggestedDate()
+// keeps them off the late count until the athlete touches the step, the same
+// rule a Scout-drafted plan follows.
+//
+// Pure: `today` is the device's day (isoDay), labels come from `t` (passed in,
+// as toPassport takes it), and ids are built from the day and the step. The
+// same inputs give the same plan; tests/test_starter_pathway.cjs runs it
+// through normalizeMilestone and Home's own bucket code.
+const STARTER_DEFAULT_DAYS = 84;     // twelve weeks, when the timeline names no usable date
+const STARTER_MAX_DAYS = 540;        // just under 18 months: the check-in never lands further out
+const STARTER_RETEST_GAP_DAYS = 14;  // the same fortnight the Retest button schedules
+// Words a typed timeline can use, lower-cased and without accents, in the four
+// languages the app speaks. A season means the month it STARTS in, so the
+// check-in never lands after the moment the athlete named.
+const STARTER_TIMELINE_MONTHS = {
+  spring: 3, printemps: 3, primavera: 3, ανοιξη: 3,
+  summer: 6, ete: 6, verano: 6, καλοκαιρι: 6,
+  fall: 9, autumn: 9, automne: 9, otono: 9, φθινοπωρο: 9,
+  winter: 1, hiver: 1, invierno: 1, χειμωνας: 1, χειμωνα: 1,
+  january: 1, jan: 1, janvier: 1, janv: 1, enero: 1, ene: 1, ιανουαριος: 1, ιανουαριου: 1,
+  february: 2, feb: 2, fevrier: 2, fevr: 2, febrero: 2, φεβρουαριος: 2, φεβρουαριου: 2,
+  march: 3, mar: 3, mars: 3, marzo: 3, μαρτιος: 3, μαρτιου: 3,
+  april: 4, apr: 4, avril: 4, avr: 4, abril: 4, abr: 4, απριλιος: 4, απριλιου: 4,
+  may: 5, mai: 5, mayo: 5, μαιος: 5, μαιου: 5,
+  june: 6, jun: 6, juin: 6, junio: 6, ιουνιος: 6, ιουνιου: 6,
+  july: 7, jul: 7, juillet: 7, juil: 7, julio: 7, ιουλιος: 7, ιουλιου: 7,
+  august: 8, aug: 8, aout: 8, agosto: 8, ago: 8, αυγουστος: 8, αυγουστου: 8,
+  september: 9, sep: 9, sept: 9, septembre: 9, septiembre: 9, setiembre: 9, σεπτεμβριος: 9, σεπτεμβριου: 9,
+  october: 10, oct: 10, octobre: 10, octubre: 10, οκτωβριος: 10, οκτωβριου: 10,
+  november: 11, nov: 11, novembre: 11, noviembre: 11, νοεμβριος: 11, νοεμβριου: 11,
+  december: 12, dec: 12, decembre: 12, diciembre: 12, dic: 12, δεκεμβριος: 12, δεκεμβριου: 12,
+};
+
+// Days from today to the date a typed timeline names, or null when it names
+// none. "Fall 2027", "automne 2027", "2027-09", "2027-09-15" and "09/2027" all
+// read; a year with no month or season means its first day.
+function starterTimelineDays(timeline, todayMs) {
+  const text = String(timeline || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const iso = /(\d{4})-(\d{2})(?:-(\d{2}))?(?!\d)/.exec(text);
+  const slash = /(?:^|\D)(\d{1,2})\/(\d{4})(?!\d)/.exec(text);
+  const year = /(?:^|\D)(\d{4})(?!\d)/.exec(text);
+  let y, m = 1, d = 1;
+  if (iso) { y = +iso[1]; m = +iso[2]; d = iso[3] ? +iso[3] : 1; }
+  else if (slash) { y = +slash[2]; m = +slash[1]; }
+  else if (year) {
+    y = +year[1];
+    const word = text.split(/[^a-z\u03b1-\u03c9]+/)
+      .find((w) => Object.prototype.hasOwnProperty.call(STARTER_TIMELINE_MONTHS, w));
+    if (word) m = STARTER_TIMELINE_MONTHS[word];
+  } else return null;
+  if (!isRealDate(y, m, d)) return null;
+  return Math.round((Date.UTC(y, m - 1, d) - todayMs) / 86400000);
+}
+
+// `t` is required. `athlete`, `benchmarks` and `targets` (outreach_targets
+// rows) are optional: a step for evidence already on file is skipped.
+// `pathwayRow` is optional: an athlete who renamed their sections gets their
+// own section names and ids. Returns [] when `today` is not a real day.
+function starterPathwaySteps({ sport, pathwayType, timeline, today, athlete, benchmarks, targets, pathwayRow, t } = {}) {
+  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(today || ""));
+  if (!day || !isRealDate(+day[1], +day[2], +day[3])) return [];
+  const todayMs = Date.UTC(+day[1], +day[2] - 1, +day[3]);
+  const ath = { ...(athlete || {}), sport: sport || (athlete && athlete.sport) || null };
+  const benchRows = (benchmarks || []).filter(Boolean);
+  const targetRows = (targets || []).filter(Boolean);
+
+  // The section every step is filed under (where the athlete is now) and the
+  // one above it, which the check-in names. An unknown sport gets __default.
+  let stages = athleteStages(ath, pathwayRow);
+  if (!stages.length) stages = athleteStages(ath, null);
+  const at = Math.max(0, Math.min(stages.length - 1, resolveStageIndex(stages, pathwayRow && pathwayRow.current_stage_id, ath)));
+  const here = stages[at];
+  const nextName = stageLabel(stages[Math.min(at + 1, stages.length - 1)], t);
+
+  // "On file" by the gap engine's own rules, so a step is skipped exactly when
+  // WHAT YOUR GOAL ASKS FOR shows that evidence as present.
+  const onFile = gapFromRows([{ id: "starter", goal_type: "starter", key_evidence: ["film", "exposure"] }],
+    "starter", athlete, benchRows, targetRows).present;
+  // Academics only where GOLSZ knows the goal asks for them. For a sport with
+  // no PATHWAY_KEY_EVIDENCE row it does not guess (gap_sport_unsupported).
+  const goal = evaluateGap(ath.sport, pathwayType, athlete, benchRows, targetRows);
+  const steps = [
+    { key: "scout_week", category: "other" },
+    !benchRows.length && { key: "benchmark", category: "testing" },
+    onFile.indexOf("film") === -1 && { key: "highlight", category: "film" },
+    targetRows.length < 3 && { key: "targets", category: "recruiting" },
+    !!goal && goal.missing.some((k) => k === "grad_year" || k === "gpa") && { key: "academics", category: "academic" },
+    onFile.indexOf("exposure") === -1 && { key: "outreach", category: "outreach" },
+  ].filter(Boolean);
+  // Never fewer than five steps: a record that already holds all of the above
+  // still gets a week of real work, not two check-ins.
+  for (const filler of [{ key: "watch", category: "film" }, { key: "share", category: "outreach" }]) {
+    if (steps.length + 2 < 5) steps.push(filler);
+  }
+  steps.push({ key: "retest", category: "testing" }, { key: "review", category: "other" });
+
+  // Days from today. Monday-first, weekStartFrom's rule: dow 0 is Monday.
+  const dow = (new Date(todayMs).getUTCDay() + 6) % 7;
+  const named = starterTimelineDays(timeline, todayMs);
+  // A date already past says nothing usable about when, like an empty one.
+  const horizon = named !== null && named > 0 ? Math.min(named, STARTER_MAX_DAYS) : STARTER_DEFAULT_DAYS;
+  const offsets = [];
+  steps.forEach((s, i) => {
+    let o;
+    // Today, then two more before Sunday (all three today when today is Sunday).
+    if (i < 3) o = Math.min([0, 2, 4][i], 6 - dow);
+    else if (s.key === "review") o = Math.max(horizon, offsets[i - 1] + 7);
+    else {
+      // The Wednesday of each week after this one.
+      o = 7 * (i - 2) + 2 - dow;
+      if (s.key === "retest") {
+        const b = steps.findIndex((x) => x.key === "benchmark");
+        o = Math.max(o, (b === -1 ? 0 : offsets[b]) + STARTER_RETEST_GAP_DAYS);
+      }
+    }
+    offsets.push(o);
+  });
+
+  return steps.map((s, i) => ({
+    id: "starter-" + today + "-" + s.key,
+    label: t("starter_step_" + s.key).replace("{stage}", () => nextName).slice(0, 120),
+    done: false,
+    done_at: null,
+    category: s.category,
+    due: new Date(todayMs + offsets[i] * 86400000).toISOString().slice(0, 10),
+    stage: here.id,
+    due_src: "scout",
+  }));
+}
+// A pathway_plan row that already holds steps. GoalSetup never writes over
+// one, and Home offers GoalSetup only to an athlete without one.
+function planHasSteps(row) {
+  return !!(row && Array.isArray(row.milestones) && row.milestones.length > 0);
+}
+// The pathway GoalSetup preselects, read from the sport's own ladder
+// (athleteStages, the only reader of SPORT_PATHWAY_STAGES): US college where
+// it is a rung, a professional route where the ladder has one, development
+// otherwise. Only a preselection: the athlete picks.
+function starterPathwayType(sport) {
+  const ids = athleteStages({ sport }, null).map((s) => s.id);
+  if (ids.some((id) => id.indexOf("ncaa") !== -1)) return "ncaa";
+  if (ids.some((id) => /professional|^pro_/.test(id))) return "professional";
+  return "development";
+}
+// GoalSetup's fields, as { field: i18nKey } like targetFieldErrors(). The goal
+// follows GoalCard's rule. The timeline is optional, but one that is typed must
+// name a date starterPathwaySteps can read and that has not passed: otherwise
+// the plan's check-in would quietly ignore what the athlete said.
+function goalSetupFieldErrors({ goal, timeline }, today) {
+  const errs = {};
+  const goalErr = goalTextError(cleanGoalText(goal));
+  if (goalErr) errs.goal = goalErr;
+  const when = String(timeline == null ? "" : timeline).trim();
+  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(today || ""));
+  if (when && day) {
+    const days = starterTimelineDays(when, Date.UTC(+day[1], +day[2] - 1, +day[3]));
+    if (days === null) errs.timeline = "goal_setup_timeline_unread";
+    else if (days <= 0) errs.timeline = "goal_setup_timeline_past";
+  }
+  return errs;
 }
 // THE ORDER THE ROAD DRAWS, AND THE RULE "WHAT NOW" ALREADY USED.
 //
@@ -17135,6 +17401,220 @@ function DailyCheckIn({ name, current, currentSince, sb, uid, isDesktop, onFinis
   );
 }
 
+// THE FIRST PLAN, IN THE SAME SITTING AS THE PASSPORT.
+//
+// A new athlete who leaves without steps they can act on does not come back.
+// GolszApp shows this right after the onboarding Passport save, and Home's
+// "Set your goal" card opens it for the athlete Home is showing when they have
+// a sport and no steps (in manage mode, the managed athlete: actingFor). It asks
+// for the goal in their own words, the pathway, and (optionally) when.
+// "Build my plan" saves the goal through saveGoalText (GoalCard's writer) and
+// writes starterPathwaySteps() to pathway_plan in one upsert. No AI call and no
+// plan gate: every athlete gets this plan, and "Let Scout draft my steps" on
+// Plan is unchanged.
+//
+// A plan that already has steps is never written over (a refresh, a second
+// device): the read when this opens, and the read again just before the write,
+// both go straight to Home instead.
+function GoalSetup({ actingFor, isDesktop, onDone, onSkip }) {
+  const { t } = useLang();
+  const panelRef = useRef(null);
+  useModalFocus(panelRef, true, onSkip);
+  const [loaded, setLoaded] = useState(!sb);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
+  const [uid, setUid] = useState(null);
+  // What starterPathwaySteps reads besides the form: the athlete row, their
+  // benchmarks and targets (steps for evidence on file are skipped).
+  const [record, setRecord] = useState(null);
+  const [goal, setGoal] = useState("");
+  const [pathwayType, setPathwayType] = useState(PATHWAY_TYPES[0]);
+  const [timeline, setTimeline] = useState("");
+  const [fieldErrs, setFieldErrs] = useState({});
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  // A ref, not `busy`: two taps inside one render both still read busy as false.
+  const buildingRef = useRef(false);
+
+  async function load(isAlive) {
+    if (!sb) return;
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) throw new Error("Not signed in.");
+      // Whose plan this is, resolved as GoalCard (whose writer this shares)
+      // and Home resolve it: the managed athlete while a parent is managing
+      // one, the signed-in athlete otherwise. Every read and write names it.
+      const who = actingFor || user.id;
+      // The pathway row is read whole, stages and stage included, like every
+      // read of it that carries milestones.
+      const [prof, ath, row, benchmarks, targets] = (await Promise.all([
+        sb.from("profiles").select("goal_text").eq("id", who).maybeSingle(),
+        sb.from("athletes").select("sport, club_name, recruiting_status, grad_year, gpa, highlights").eq("id", who).maybeSingle(),
+        sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, stages, current_stage_id").eq("user_id", who).maybeSingle(),
+        sb.from("athlete_benchmarks").select("metric_key").eq("user_id", who),
+        sb.from("outreach_targets").select("status").eq("user_id", who),
+      ])).map(must);
+      if (!isAlive()) return;
+      if (planHasSteps(row)) { onDone(); return; }
+      setUid(who);
+      setRecord({ athlete: ath, benchmarks, targets });
+      // What is already on file is the starting point: a goal Scout heard, a
+      // pathway chosen on Plan before any steps existed.
+      setGoal((prof && prof.goal_text) || "");
+      setPathwayType(row && PATHWAY_TYPES.indexOf(row.pathway_type) !== -1 ? row.pathway_type : starterPathwayType(ath && ath.sport));
+      setTimeline((row && row.target_timeline) || "");
+      setLoadFailed(false);
+    } catch (e) {
+      console.error("GOLSZ goal setup load error:", e);
+      if (isAlive()) setLoadFailed(true);
+    }
+    if (isAlive()) setLoaded(true);
+  }
+  useEffect(() => {
+    let alive = true;
+    load(() => alive);
+    return () => { alive = false; };
+  }, [actingFor, retryTick]);
+  function retryLoad() { setLoadFailed(false); setLoaded(false); setRetryTick((n) => n + 1); }
+
+  const edit = (k, setter) => (e) => {
+    setter(e.target.value);
+    setFieldErrs((o) => { if (!o[k]) return o; const { [k]: _gone, ...rest } = o; return rest; });
+  };
+
+  // True once the athlete is on their way to Home with a plan, false when
+  // nothing they asked for was written (the form keeps what they typed).
+  async function build() {
+    if (buildingRef.current) return false;
+    const today = isoDay(new Date());
+    const errs = goalSetupFieldErrors({ goal, timeline }, today);
+    if (Object.keys(errs).length) {
+      setFieldErrs(errs);
+      const el = document.getElementById("goal-setup-" + (errs.goal ? "goal" : "timeline"));
+      if (el) el.focus();
+      return false;
+    }
+    if (!sb || !uid || !record) { setSaveFailed(true); return false; }
+    buildingRef.current = true;
+    setBusy(true); setSaveFailed(false);
+    try {
+      // Again, right before writing: a plan made on another device since this
+      // opened is kept as it is. Its stages and stage file the new steps.
+      const row = must(await sb.from("pathway_plan").select("pathway_type, target_timeline, milestones, stages, current_stage_id").eq("user_id", uid).maybeSingle());
+      if (planHasSteps(row)) { onDone(); return true; }
+      const { error: goalError } = await saveGoalText(sb, uid, cleanGoalText(goal));
+      if (goalError) throw goalError;
+      const when = timeline.trim().slice(0, 100);
+      const milestones = starterPathwaySteps({
+        sport: record.athlete && record.athlete.sport, pathwayType, timeline: when, today,
+        athlete: record.athlete, benchmarks: record.benchmarks, targets: record.targets, pathwayRow: row, t,
+      });
+      // Only these columns: a row that exists without steps keeps its notes,
+      // stages and stage.
+      const { error } = await sb.from("pathway_plan").upsert({
+        user_id: uid, pathway_type: pathwayType, target_timeline: when || null,
+        milestones, updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id" });
+      if (error) throw error;
+      syncActions(sb);
+      onDone();
+      return true;
+    } catch (e) {
+      console.error("GOLSZ goal setup save error:", e);
+      setSaveFailed(true);
+      return false;
+    } finally {
+      buildingRef.current = false;
+      setBusy(false);
+    }
+  }
+
+  const wrap = {
+    position: "fixed", inset: 0, zIndex: 60, background: C.pitch, overflowY: "auto",
+    display: "flex", justifyContent: "center", alignItems: isDesktop ? "center" : "stretch",
+  };
+  const panel = {
+    width: "100%", maxWidth: 480, boxSizing: "border-box", padding: "28px 20px 32px",
+    display: "flex", flexDirection: "column", minHeight: isDesktop ? 0 : "100%",
+    // The sheet takes focus when it opens (useModalFocus). After a key press the browser drew its
+    // default ring around the whole screen; the fields and buttons inside keep the app's gold ring.
+    outline: "none",
+  };
+  const label = { display: "block", fontSize: 15, fontWeight: 800, color: C.chalk, marginBottom: 8 };
+  const field = {
+    width: "100%", minHeight: 48, boxSizing: "border-box", background: C.turf, border: `2px solid ${C.line2}`,
+    borderRadius: 14, color: C.chalk, padding: "11px 14px", fontSize: 17, fontFamily: "inherit",
+  };
+  const errProps = (k) => (fieldErrs[k]
+    ? { id: "goal-setup-" + k, "aria-invalid": true, "aria-describedby": "goal-setup-err-" + k }
+    : { id: "goal-setup-" + k });
+  const fieldError = (k) => (fieldErrs[k]
+    ? <div id={"goal-setup-err-" + k} style={{ fontSize: 14, color: C.limeText, marginTop: 6, lineHeight: 1.4 }}>{t(fieldErrs[k])}</div>
+    : null);
+  const link = {
+    alignSelf: "center", background: "none", border: "none", color: C.chalkSoft, fontFamily: "inherit",
+    fontSize: 15, fontWeight: 700, textDecoration: "underline", textUnderlineOffset: 4, cursor: "pointer",
+    padding: "12px 8px", minHeight: 44,
+  };
+
+  return (
+    <div style={wrap}>
+      <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="goal-setup-title" style={panel}>
+        <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: "0.02em", color: C.chalk, marginBottom: 22 }}>
+          GOLSZ<span style={{ color: C.lime }}>.</span>
+        </div>
+        <h2 id="goal-setup-title" style={{ fontSize: 30, fontWeight: 800, color: C.chalk, lineHeight: 1.15, margin: 0 }}>{t("goal_setup_title")}</h2>
+        <div style={{ fontSize: 17, color: C.chalkSoft, marginTop: 10, marginBottom: 24, lineHeight: 1.45 }}>{t("goal_setup_sub")}</div>
+
+        {!loaded ? (
+          <div aria-busy="true" aria-label={t("loading")}>
+            <SkeletonLine height={15} width="34%" />
+            <SkeletonLine height={96} radius={14} style={{ marginTop: 10 }} />
+            <SkeletonLine height={48} radius={14} style={{ marginTop: 20 }} />
+            <SkeletonLine height={48} radius={14} style={{ marginTop: 20 }} />
+          </div>
+        ) : loadFailed ? (
+          <LoadError onRetry={retryLoad} />
+        ) : (
+          <>
+            <div style={{ marginBottom: 20 }}>
+              <label htmlFor="goal-setup-goal" style={label}>{t("goal_setup_goal_label")}</label>
+              <textarea {...errProps("goal")} value={goal} onChange={edit("goal", setGoal)} maxLength={300}
+                placeholder={t("goal_card_placeholder")} style={{ ...field, minHeight: 96, resize: "vertical", lineHeight: 1.4 }} />
+              {fieldError("goal")}
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <label htmlFor="goal-setup-pathway" style={label}>{t("goal_setup_pathway_label")}</label>
+              <select id="goal-setup-pathway" value={pathwayType} onChange={(e) => setPathwayType(e.target.value)} style={field}>
+                {PATHWAY_TYPES.map((p) => <option key={p} value={p}>{t("pathway_type_" + p)}</option>)}
+              </select>
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <label htmlFor="goal-setup-timeline" style={label}>{t("goal_setup_timeline_label")}</label>
+              <input {...errProps("timeline")} value={timeline} onChange={edit("timeline", setTimeline)} maxLength={100}
+                placeholder={t("goal_setup_timeline_ph")} style={field} />
+              {fieldError("timeline")}
+            </div>
+            {saveFailed && (
+              <div role="alert" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 14,
+                border: `1px solid ${C.amberBorder}`, background: C.amberWash, borderRadius: 14, padding: "10px 12px" }}>
+                <span style={{ flex: "1 1 180px", fontSize: 15, color: C.chalk, lineHeight: 1.4 }}>{t("goal_setup_save_err")}</span>
+                <button onClick={build} disabled={busy} style={{ background: "none", border: `1px solid ${C.limeBorder}`, borderRadius: 10,
+                  color: C.limeText, fontFamily: "inherit", fontSize: 15, fontWeight: 800, padding: "8px 14px", minHeight: 44,
+                  cursor: busy ? "default" : "pointer" }}>{t("load_retry")}</button>
+              </div>
+            )}
+            <button onClick={build} disabled={busy} style={{ ...primaryBtn, minHeight: 56, fontSize: 17, borderRadius: 16, opacity: busy ? 0.6 : 1, cursor: busy ? "default" : "pointer" }}>
+              {busy ? t("goal_setup_building") : t("goal_setup_build")}
+            </button>
+          </>
+        )}
+        <button onClick={onSkip} style={{ ...link, marginTop: 10 }}>{t("goal_setup_skip")}</button>
+      </div>
+    </div>
+  );
+}
+
 // Shown on the first load after paying. The webhook that flips profiles.plan
 // runs a moment after Stripe sends the buyer back, so for a few seconds an
 // athlete who has just paid is looking at Free with nothing to explain it.
@@ -17211,7 +17691,16 @@ function GolszApp({ onSignOut, startOnboarding }) {
     } catch (e) { return "home"; }
   });
   const [thread, setThread] = useState(null);
+  // A fresh sign-up, or a session that finds the Passport unfinished (the
+  // profile-complete check below). `onboarding` lasts until the goal step after
+  // the Passport is built or skipped (the daily check-in waits for it too);
+  // `autoEdit` only opens the Passport editor, once.
   const [onboarding, setOnboarding] = useState(!!startOnboarding);
+  const [autoEdit, setAutoEdit] = useState(!!startOnboarding);
+  // GoalSetup, over whatever page is open. planVersion remounts Home when a
+  // plan is built, so Home reads the steps that were just written.
+  const [goalSetupOpen, setGoalSetupOpen] = useState(false);
+  const [planVersion, setPlanVersion] = useState(0);
   const [viewProfileId, setViewProfileId] = useState(null);
   const [scoutSeed, setScoutSeed] = useState(null);
   // THE DAY HOME IS HANDING TO PLAN.
@@ -17351,7 +17840,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
         // This check runs before any screen renders, so without the occupation
         // read the lock armed on a parent's very first login — before they had
         // even opened the dropdown that the database was going to reject.
-        const [{ data }, { data: prof }] = await Promise.all([
+        const [{ data, error: athleteErr }, { data: prof }] = await Promise.all([
           sb.from("athletes").select("sport").eq("id", user.id).single(),
           sb.from("profiles").select("occupation, availability_status, availability_since, full_name").eq("id", user.id).maybeSingle(),
         ]);
@@ -17361,6 +17850,14 @@ function GolszApp({ onSignOut, startOnboarding }) {
         setAvailabilitySince(prof ? (prof.availability_since || null) : null);
         setFirstName(prof && prof.full_name ? String(prof.full_name).trim().split(/\s+/)[0] : "");
         setProfileComplete(!!(data && data.sport) || !!(prof && prof.occupation === "Parent"));
+        // An unfinished Passport is onboarding however this session began.
+        // "Confirm email" is on, so a new athlete often first arrives by signing
+        // in (Auth's onDone() with no `fresh`), and the save that finishes their
+        // Passport must still lead to the goal step. Only a read that worked
+        // counts: a failed one says nothing about whether they are new. Same
+        // rule as the line above, negated; test_enum_parity pins that line as
+        // written, so the two halves are spelled out rather than shared.
+        if (!athleteErr && !(data && data.sport) && !(prof && prof.occupation === "Parent")) setOnboarding(true);
       } catch (e) {
         console.error("GOLSZ profile-complete check error:", e);
         // Fail open for the lock, and settle the other two: left undefined,
@@ -17569,6 +18066,21 @@ function GolszApp({ onSignOut, startOnboarding }) {
   // caller that does nothing beats one that routes to a page which no longer
   // renders — that would be a blank screen, not a missing feature.
   const openThread = () => {};
+  // The Passport's own save, once stored and reloaded. A sport is what makes a
+  // profile complete (Passport reports the same rule), and during onboarding
+  // the goal comes next, in the same sitting.
+  function afterPassportSave(saved) {
+    if (!saved || !saved.sport || saved.occupation === "Parent") return;
+    setProfileComplete(true);
+    if (onboarding) setGoalSetupOpen(true);
+  }
+  // Built, skipped, or a plan was already on file: Home, either way.
+  function finishGoalSetup() {
+    setGoalSetupOpen(false);
+    setOnboarding(false);
+    setPlanVersion((v) => v + 1);
+    go("home");
+  }
   const viewProfile = (id) => {
     if (mustFinishProfile) return;
     setProfileStack((s) => [...s, { page, viewProfileId }]);
@@ -17680,11 +18192,11 @@ function GolszApp({ onSignOut, startOnboarding }) {
                 <FamilyAccess />
               </>
             )}
-            {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} checkinChip={checkinChip} onBetter={clearResting} />}
+            {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} checkinChip={checkinChip} onBetter={clearResting} onSetGoal={() => setGoalSetupOpen(true)} key={planVersion} />}
             {page === "scout" && <div style={{ height: "calc(100dvh - 88px)", border: `1px solid ${C.line}`, borderRadius: 16, overflow: "hidden" }}><Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} seedPrompt={scoutSeed} onSeedSent={() => setScoutSeed(null)} onNavigate={go} /></div>}
             {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} focusSection={focusSection} focusNonce={focusNonce} onSectionDone={() => setFocusSection(null)} onNavigate={go} openDay={planDay} onDayOpened={() => setPlanDay(null)} /></>}
             {page === "events" && <Events />}
-            {page === "profile" && <Passport focusSection={focusSection} focusNonce={focusNonce} onSectionDone={() => setFocusSection(null)} onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
+            {page === "profile" && <Passport focusSection={focusSection} focusNonce={focusNonce} onSectionDone={() => setFocusSection(null)} onSignOut={onSignOut} autoEdit={autoEdit} onAutoEditConsumed={() => setAutoEdit(false)} onProfileStatus={setProfileComplete} onProfileSaved={afterPassportSave} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
             {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
           </div>
         </main>
@@ -17692,6 +18204,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
       {showConversion && <GuidedAssessment uid={conversionUid} onDismiss={dismissConversion} />}
       {showEliteWelcome && profileComplete === false && !eliteWelcomeDismissed && <EliteWelcome onDismiss={() => setEliteWelcomeDismissed(true)} />}
       {upgradeUid && <UpgradeScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
+      {goalSetupOpen && <GoalSetup actingFor={actingFor && actingFor.id} isDesktop={isDesktop} onDone={finishGoalSetup} onSkip={finishGoalSetup} />}
       {askCheckin && <DailyCheckIn name={firstName} current={availabilityStatus} currentSince={availabilitySince} sb={sb} uid={selfUid} isDesktop={isDesktop} onFinish={finishCheckin} onNavigate={go} />}
       </>
     );
@@ -17736,11 +18249,11 @@ function GolszApp({ onSignOut, startOnboarding }) {
         {PARENT_ACCOUNTS_ENABLED && page === "home" && !actingFor && isParentAccount && linkedChildren && linkedChildren.length === 0 && (
           <div style={{ padding: "8px 12px 0" }}><FamilyAccess /></div>
         )}
-        {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} checkinChip={checkinChip} onBetter={clearResting} />}
+        {page === "home" && <HomeTab onNavigate={go} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} checkinChip={checkinChip} onBetter={clearResting} onSetGoal={() => setGoalSetupOpen(true)} key={planVersion} />}
         {page === "scout" && <Scout onGoToProfile={() => go("profile")} plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor} seedPrompt={scoutSeed} onSeedSent={() => setScoutSeed(null)} onNavigate={go} />}
         {page === "targets" && <><PlanCrumb from={cameFrom} /><Targets plan={userPlan} onUpgrade={openUpgrade} actingFor={actingFor && actingFor.id} resting={resting} focusSection={focusSection} focusNonce={focusNonce} onSectionDone={() => setFocusSection(null)} onNavigate={go} openDay={planDay} onDayOpened={() => setPlanDay(null)} /></>}
         {page === "events" && <Events />}
-        {page === "profile" && <Passport focusSection={focusSection} focusNonce={focusNonce} onSectionDone={() => setFocusSection(null)} onSignOut={onSignOut} autoEdit={onboarding} onAutoEditConsumed={() => setOnboarding(false)} onProfileStatus={setProfileComplete} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
+        {page === "profile" && <Passport focusSection={focusSection} focusNonce={focusNonce} onSectionDone={() => setFocusSection(null)} onSignOut={onSignOut} autoEdit={autoEdit} onAutoEditConsumed={() => setAutoEdit(false)} onProfileStatus={setProfileComplete} onProfileSaved={afterPassportSave} onOpenAdmin={() => setPage("admin")} viewUserId={actingFor ? actingFor.id : viewProfileId} manageMode={!!actingFor} onBack={backFromProfile} onMessage={openThread} onViewProfile={viewProfile} plan={userPlan} onUpgrade={openUpgrade} />}
         {page === "admin" && <AdminPanel onBack={() => setPage("profile")} />}
       </main>
 
@@ -17780,6 +18293,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
     {showConversion && <GuidedAssessment uid={conversionUid} onDismiss={dismissConversion} />}
       {showEliteWelcome && profileComplete === false && !eliteWelcomeDismissed && <EliteWelcome onDismiss={() => setEliteWelcomeDismissed(true)} />}
     {upgradeUid && <UpgradeScreen uid={upgradeUid} onDismiss={() => setUpgradeUid(null)} />}
+    {goalSetupOpen && <GoalSetup actingFor={actingFor && actingFor.id} isDesktop={isDesktop} onDone={finishGoalSetup} onSkip={finishGoalSetup} />}
     {askCheckin && <DailyCheckIn name={firstName} current={availabilityStatus} currentSince={availabilitySince} sb={sb} uid={selfUid} isDesktop={isDesktop} onFinish={finishCheckin} onNavigate={go} />}
     </>
   );
@@ -18684,6 +19198,15 @@ function signupHitExistingAccount(data) {
   return !!(data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
 }
 
+// The sign-in column: tabs, fields and the submit button never grow wider than
+// this, on any screen. The e-mail placeholder is an example, not the label.
+const AUTH_COLUMN = 440;
+const AUTH_EMAIL_EXAMPLE = "name@example.com";
+// The sign-in screen is the first thing a new visitor sees, and it is drawn before the web font
+// has arrived. "normal" line height is taken from the font, so every line changed height when
+// Archivo replaced the fallback and the form below moved. A number keeps each line the same height.
+const AUTH_LINE = 1.2;
+
 function Auth({ onDone, paidReturn }) {
   const isDesktop = useIsDesktop();
   const { t, currency, setCurrency } = useLang();
@@ -18896,11 +19419,15 @@ function Auth({ onDone, paidReturn }) {
     ? { "aria-invalid": true, "aria-describedby": "signup-err-" + f, onBlur: () => touch(f) }
     : { onBlur: () => touch(f) });
   const fieldError = (f) => (shownError(f)
-    ? <div id={"signup-err-" + f} style={{ fontSize: 11.5, color: C.limeText, marginTop: -6, marginBottom: 10, lineHeight: 1.35 }}>{t(shownError(f))}</div>
+    ? <div id={"signup-err-" + f} style={{ fontSize: 12.5, color: C.limeText, marginTop: -6, marginBottom: 10, lineHeight: 1.35 }}>{t(shownError(f))}</div>
     : null);
   const selected = PLANS.find((p) => p.id === plan) || PLANS[0];
-  const field = { width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 12, color: C.chalk, padding: "13px 14px", fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 12, boxSizing: "border-box" };
+  const field = { width: "100%", background: C.turf, border: "1px solid " + C.line2, borderRadius: 12, color: C.chalk, padding: "13px 14px", fontSize: 15, lineHeight: AUTH_LINE, fontFamily: "inherit", outline: "none", marginBottom: 12, boxSizing: "border-box" };
   const dobField = { ...field, marginBottom: 0, textAlign: "center" };
+  // A visible name above each field. A placeholder alone disappears with the
+  // first key press, and 12.5px keeps it readable on a phone.
+  const fieldLabel = { display: "block", fontSize: 12.5, lineHeight: AUTH_LINE, color: C.slate, fontWeight: 700, marginBottom: 6 };
+  const plansWide = isSignup && !forgotMode && isDesktop && plansOpen;
 
   async function submit() {
     if (busy || confirmPolling) return;
@@ -19208,16 +19735,23 @@ function Auth({ onDone, paidReturn }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "calc(28px + env(safe-area-inset-top, 0px)) 18px 28px", background: "radial-gradient(1100px 560px at 50% -12%, " + C.turf + ", " + C.pitch + ")", fontFamily: "'Archivo', system-ui, sans-serif", color: C.chalk }}>
       <style>{CSS}</style>
-      <div style={{ width: "100%", maxWidth: (isSignup && !forgotMode && isDesktop) ? 920 : 430 }}>
+      {/* ONE NARROW COLUMN. The card used to be 920px on a desktop sign-up so
+          the three plan cards had room, which stretched every field and the
+          submit button to 880px while the plans were closed (the default).
+          Only the open plan grid gets the wide card now; the tabs and the
+          form keep the column width inside it. */}
+      <div style={{ width: "100%", maxWidth: plansWide ? 920 : AUTH_COLUMN }}>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <LogoMark size={56} style={{ marginBottom: 8 }} />
-          <div style={{ fontWeight: 900, fontSize: 40, letterSpacing: "0.03em", fontStretch: "expanded" }}>GOLSZ<span style={{ color: C.lime }}>.</span></div>
-          <div style={{ fontSize: 10, letterSpacing: "0.3em", color: C.slate, fontWeight: 700, marginTop: 4 }}>{t("auth_tagline")}</div>
+          <div style={{ fontWeight: 900, fontSize: 40, lineHeight: 1.1, letterSpacing: "0.03em", fontStretch: "expanded" }}>GOLSZ<span style={{ color: C.lime }}>.</span></div>
+          <div style={{ fontSize: 11, lineHeight: AUTH_LINE, letterSpacing: "0.26em", color: C.slate, fontWeight: 700, marginTop: 4 }}>{t("auth_tagline")}</div>
         </div>
 
-        <div style={{ display: "flex", background: C.card, border: "1px solid " + C.line, borderRadius: 12, padding: 4, marginBottom: 16 }}>
+        {/* The chosen tab is a raised surface, not a gold block: gold is kept
+            for the one submit button below. aria-pressed says which is on. */}
+        <div style={{ display: "flex", background: C.card, border: "1px solid " + C.line, borderRadius: 12, padding: 4, margin: "0 auto 16px", maxWidth: AUTH_COLUMN }}>
           {[["signup", t("auth_signup")], ["login", t("auth_login")]].map(([m, l]) => (
-            <button type="button" key={m} onClick={() => { setMode(m); setErr(""); setNotice(""); }} style={{ flex: 1, padding: "10px", minHeight: 44, borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14, background: mode === m ? C.lime : "transparent", color: mode === m ? C.ink : C.slate }}>{l}</button>
+            <button type="button" key={m} aria-pressed={mode === m} onClick={() => { setMode(m); setErr(""); setNotice(""); }} style={{ flex: 1, padding: "10px", minHeight: 44, borderRadius: 9, border: "1px solid " + (mode === m ? C.line2 : "transparent"), cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 14, background: mode === m ? C.turf : "transparent", color: mode === m ? C.chalk : C.slate }}>{l}</button>
           ))}
         </div>
 
@@ -19226,7 +19760,7 @@ function Auth({ onDone, paidReturn }) {
             resetSent ? (
               <>
                 <div style={{ background: C.limeWash, border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 14 }}>
-                  <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
+                  <div style={{ fontSize: 11, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
                   <div style={{ color: C.chalk, fontSize: 12.5, lineHeight: 1.4 }}>{t("auth_reset_sent_pre")}{email.trim()}{t("auth_reset_sent_post")}</div>
                 </div>
                 <button type="button" onClick={() => { setForgotMode(false); setResetSent(false); setErr(""); }} style={{ width: "100%", background: "transparent", border: `1px solid ${C.line2}`, color: C.chalk, borderRadius: 12, padding: "13px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>{t("auth_back_to_login")}</button>
@@ -19261,8 +19795,13 @@ function Auth({ onDone, paidReturn }) {
               {/* One line instead of a wall. It names the current choice so
                   nothing is hidden, and carries the only fact that matters to
                   someone who has not decided yet: this costs nothing to start. */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: plansOpen ? 10 : 0 }}>
-                <div style={{ fontSize: 12.5, color: C.slate, minWidth: 0 }}>
+              {/* NO flexWrap HERE. With it, the button sat on a second row while the
+                  fallback font was on screen (its text is wider) and jumped back up to
+                  the right when Archivo arrived: a layout shift of 0.23 on a phone,
+                  measured 2026-11-10. Now the sentence wraps inside its own column and
+                  the button stays where it is, in every font and language. */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: plansOpen ? 10 : 0 }}>
+                <div style={{ flex: "1 1 0", minWidth: 0, fontSize: 12.5, lineHeight: AUTH_LINE, color: C.slate }}>
                   {plan === "free"
                     ? t("auth_plan_summary_free")
                     : t("auth_plan_summary_paid").replace("{plan}", selected.name).replace("{price}", planPrice(selected.id, currency))}
@@ -19271,7 +19810,7 @@ function Auth({ onDone, paidReturn }) {
                   aria-expanded={plansOpen}
                   style={{ background: "none", border: "none", color: C.lime, fontSize: 12.5, fontWeight: 800,
                     fontFamily: "inherit", cursor: "pointer", padding: "10px 4px", minHeight: 44,
-                    display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+                    display: "flex", alignItems: "center", gap: 5, flexShrink: 0, whiteSpace: "nowrap" }}>
                   {plansOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                   {plansOpen ? t("auth_hide_plans") : t("auth_see_plans")}
                 </button>
@@ -19284,7 +19823,7 @@ function Auth({ onDone, paidReturn }) {
                   without a control. Geo is a guess; someone on a VPN, abroad,
                   or an expat needs to correct it BEFORE they pay, not after. */}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-                <div style={{ fontSize: 10, letterSpacing: "0.16em", color: C.slate, fontWeight: 700 }}>{t("auth_choose_plan")}</div>
+                <div style={{ fontSize: 11, letterSpacing: "0.16em", color: C.slate, fontWeight: 700 }}>{t("auth_choose_plan")}</div>
                 <div style={{ display: "flex", gap: 4 }}>
                   {SUPPORTED_CURRENCIES.map((cur) => (
                     <button key={cur} type="button" onClick={() => setCurrency(cur)}
@@ -19292,7 +19831,7 @@ function Auth({ onDone, paidReturn }) {
                       aria-label={t("settings_currency") + " " + cur.toUpperCase()}
                       style={{
                         minHeight: 44, minWidth: 52, padding: "6px 10px", borderRadius: 9, cursor: "pointer",
-                        fontFamily: "inherit", fontSize: 11.5, fontWeight: 700,
+                        fontFamily: "inherit", fontSize: 12, fontWeight: 700,
                         background: currency === cur ? C.limeWash : C.turf,
                         color: currency === cur ? C.lime : C.slate,
                         border: `1px solid ${currency === cur ? C.lime : C.line2}`,
@@ -19310,7 +19849,7 @@ function Auth({ onDone, paidReturn }) {
                       borderRadius: 14, padding: 16, display: "flex", flexDirection: "column", gap: 10,
                     }}>
                       {pl.id === "pro" && (
-                        <span style={{ position: "absolute", top: -10, left: 14, background: C.lime, color: C.ink, fontSize: 9, fontWeight: 800, letterSpacing: "0.06em", padding: "3px 9px", borderRadius: 999 }}>{t("auth_most_popular")}</span>
+                        <span style={{ position: "absolute", top: -10, left: 14, background: C.lime, color: C.ink, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", padding: "3px 9px", borderRadius: 999 }}>{t("auth_most_popular")}</span>
                       )}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                         <span style={{ fontSize: 15, fontWeight: 800, color: C.chalk }}>{pl.name}</span>
@@ -19324,7 +19863,7 @@ function Auth({ onDone, paidReturn }) {
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 2 }}>
                         {t(`plan_${pl.id}_tag`) && (
-                          <div style={{ fontSize: 11.5, color: C.slate, fontStyle: "italic" }}>{t(`plan_${pl.id}_tag`)}</div>
+                          <div style={{ fontSize: 12, color: C.slate, fontStyle: "italic" }}>{t(`plan_${pl.id}_tag`)}</div>
                         )}
                         {pl.featKeys.map((fk) => (
                           <div key={fk} style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12, color: C.body, lineHeight: 1.35 }}>
@@ -19349,7 +19888,7 @@ function Auth({ onDone, paidReturn }) {
               Every button inside carries an explicit type, checked before this
               wrapper went on: inside a form an untyped button submits, which
               would have turned "choose a plan" into "create the account". */}
-          <form onSubmit={(e) => { e.preventDefault(); submit(); }}>
+          <form onSubmit={(e) => { e.preventDefault(); submit(); }} style={{ maxWidth: AUTH_COLUMN, margin: "0 auto" }}>
           {isSignupLike && (
             <input
               value={website} onChange={(e) => setWebsite(e.target.value)}
@@ -19357,17 +19896,21 @@ function Auth({ onDone, paidReturn }) {
               style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
             />
           )}
-          {isSignupLike && <input id="signup-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" aria-label={isParentSignup ? t("auth_your_name") : t("auth_full_name")} placeholder={isParentSignup ? t("auth_your_name") : t("auth_full_name")} style={field} {...errProps("name")} />}
+          {isSignupLike && <label htmlFor="signup-name" style={fieldLabel}>{isParentSignup ? t("auth_your_name") : t("auth_full_name")}</label>}
+          {isSignupLike && <input id="signup-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" aria-label={isParentSignup ? t("auth_your_name") : t("auth_full_name")} style={field} {...errProps("name")} />}
           {fieldError("name")}
-          <input id="signup-email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" aria-label={isParentSignup ? t("auth_your_email") : t("auth_email")} placeholder={isParentSignup ? t("auth_your_email") : t("auth_email")} type="email" style={field} {...errProps("email")} />
+          <label htmlFor="signup-email" style={fieldLabel}>{isParentSignup ? t("auth_your_email") : t("auth_email")}</label>
+          <input id="signup-email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" inputMode="email" aria-label={isParentSignup ? t("auth_your_email") : t("auth_email")} placeholder={AUTH_EMAIL_EXAMPLE} type="email" style={field} {...errProps("email")} />
           {fieldError("email")}
           {confirmEmailNeeded && (
             <>
-              <input id="signup-email2" value={email2} onChange={(e) => setEmail2(e.target.value)} autoComplete="off" inputMode="email" aria-label={t("auth_confirm_email")} placeholder={t("auth_confirm_email")} type="email" style={field} {...errProps("email2")} />
+              <label htmlFor="signup-email2" style={fieldLabel}>{t("auth_confirm_email")}</label>
+              <input id="signup-email2" value={email2} onChange={(e) => setEmail2(e.target.value)} autoComplete="off" inputMode="email" aria-label={t("auth_confirm_email")} type="email" style={field} {...errProps("email2")} />
               {fieldError("email2")}
             </>
           )}
-          <input id="signup-pw" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete={isSignupLike ? "new-password" : "current-password"} aria-label={t("auth_password")} placeholder={t("auth_password")} type="password" minLength={isSignupLike ? PASSWORD_MIN : undefined} style={{ ...field, marginBottom: isSignupLike ? 4 : 4 }} {...errProps("pw")} />
+          <label htmlFor="signup-pw" style={fieldLabel}>{t("auth_password")}</label>
+          <input id="signup-pw" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete={isSignupLike ? "new-password" : "current-password"} aria-label={t("auth_password")} type="password" minLength={isSignupLike ? PASSWORD_MIN : undefined} style={{ ...field, marginBottom: isSignupLike ? 4 : 4 }} {...errProps("pw")} />
           {!isSignupLike && <div style={{ marginBottom: 6 }}>{fieldError("pw")}</div>}
           {/* THE RULE, BEFORE IT IS BROKEN. Six characters was enforced only
               on submit, so the first a new athlete heard of it was their
@@ -19376,8 +19919,8 @@ function Auth({ onDone, paidReturn }) {
               rejections. It reuses the existing message rather than inventing
               a second wording of the same rule, which is how the two drift. */}
           {isSignupLike && (shownError("pw")
-            ? <div id="signup-err-pw" style={{ fontSize: 11.5, color: C.limeText, marginBottom: 12, lineHeight: 1.35 }}>{t(shownError("pw"))}</div>
-            : <div style={{ fontSize: 10.5, color: C.slate, marginBottom: 12, lineHeight: 1.35 }}>{t("reset_pw_min_len")}</div>)}
+            ? <div id="signup-err-pw" style={{ fontSize: 12.5, color: C.limeText, marginBottom: 12, lineHeight: 1.35 }}>{t(shownError("pw"))}</div>
+            : <div style={{ fontSize: 12, color: C.slate, marginBottom: 12, lineHeight: 1.35 }}>{t("reset_pw_min_len")}</div>)}
           {!isSignupLike && (
             <div style={{ textAlign: "right", marginBottom: 10 }}>
               {/* A button, not a span: a span is unreachable by keyboard and
@@ -19390,7 +19933,7 @@ function Auth({ onDone, paidReturn }) {
 
           {isSignup && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("auth_dob")}</div>
+              <div style={fieldLabel}>{t("auth_dob")}</div>
               <div style={{ display: "flex", gap: 8 }} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) touch("dob"); }}>
                 <input id="signup-dob" aria-invalid={shownError("dob") ? true : undefined} aria-describedby={shownError("dob") ? "signup-err-dob" : undefined} value={dobDay} onChange={(e) => setDobDay(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} aria-label={t("auth_dob") + " — " + t("a11y_day")} placeholder="DD" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
                 <input value={dobMonth} onChange={(e) => setDobMonth(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} aria-invalid={shownError("dob") ? true : undefined} aria-describedby={shownError("dob") ? "signup-err-dob" : undefined} aria-label={t("auth_dob") + " — " + t("a11y_month")} placeholder="MM" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
@@ -19415,11 +19958,11 @@ function Auth({ onDone, paidReturn }) {
                 </div>
               )}
               {shownError("dob") && shownError("dob") !== "auth_under18_notice" && (
-                <div id="signup-err-dob" style={{ marginTop: 8, fontSize: 11.5, color: C.amber, lineHeight: 1.35 }}>{t(shownError("dob"))}</div>
+                <div id="signup-err-dob" style={{ marginTop: 8, fontSize: 12.5, color: C.amber, lineHeight: 1.35 }}>{t(shownError("dob"))}</div>
               )}
               {PARENT_ACCOUNTS_ENABLED && !requiresParentAccount && (
                 <div style={{ marginTop: 8, textAlign: "right" }}>
-                  <span {...asButton(() => { setMode("parent-signup"); setErr(""); })} style={{ color: C.slate, fontSize: 11.5, cursor: "pointer" }}>{t("auth_signing_up_for_minor")}</span>
+                  <span {...asButton(() => { setMode("parent-signup"); setErr(""); })} style={{ color: C.slate, fontSize: 12, cursor: "pointer" }}>{t("auth_signing_up_for_minor")}</span>
                 </div>
               )}
             </div>
@@ -19427,29 +19970,29 @@ function Auth({ onDone, paidReturn }) {
 
           {isParentSignup && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("auth_athlete_info")}</div>
+              <div style={fieldLabel}>{t("auth_athlete_info")}</div>
               <input value={childName} onChange={(e) => setChildName(e.target.value)} aria-label={t("auth_athlete_name")} placeholder={t("auth_athlete_name")} style={field} />
-              <div style={{ fontSize: 11, color: C.slate, fontWeight: 700, marginBottom: 6 }}>{t("auth_athlete_dob")}</div>
+              <div style={fieldLabel}>{t("auth_athlete_dob")}</div>
               <div style={{ display: "flex", gap: 8 }}>
                 <input value={childDobDay} onChange={(e) => setChildDobDay(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} aria-label={t("auth_athlete_dob") + " — " + t("a11y_day")} placeholder="DD" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
                 <input value={childDobMonth} onChange={(e) => setChildDobMonth(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))} aria-label={t("auth_athlete_dob") + " — " + t("a11y_month")} placeholder="MM" inputMode="numeric" maxLength={2} style={{ ...dobField, flex: 1 }} />
                 <input value={childDobYear} onChange={(e) => setChildDobYear(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} aria-label={t("auth_athlete_dob") + " — " + t("a11y_year")} placeholder="YYYY" inputMode="numeric" maxLength={4} style={{ ...dobField, flex: 1.4 }} />
               </div>
               {childDobOk && !childAgeOk && (
-                <div style={{ marginTop: 8, fontSize: 11.5, color: C.amber, lineHeight: 1.4 }}>{t("auth_athlete_18_notice")}</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: C.amber, lineHeight: 1.4 }}>{t("auth_athlete_18_notice")}</div>
               )}
               <div style={{ marginTop: 10, textAlign: "right" }}>
-                <span {...asButton(() => { setMode("signup"); setErr(""); })} style={{ color: C.slate, fontSize: 11.5, cursor: "pointer" }}>{t("auth_back_to_athlete_signup")}</span>
+                <span {...asButton(() => { setMode("signup"); setErr(""); })} style={{ color: C.slate, fontSize: 12, cursor: "pointer" }}>{t("auth_back_to_athlete_signup")}</span>
               </div>
             </div>
           )}
 
           {isSignupLike && TURNSTILE_SITE_KEY && <TurnstileWidget onToken={setTurnstileToken} />}
-          {showErrors && fieldErrors.verify && <div style={{ fontSize: 11.5, color: C.amber, marginBottom: 10, lineHeight: 1.35 }}>{t(fieldErrors.verify)}</div>}
+          {showErrors && fieldErrors.verify && <div style={{ fontSize: 12, color: C.amber, marginBottom: 10, lineHeight: 1.35 }}>{t(fieldErrors.verify)}</div>}
 
           {notice && (
             <div style={{ background: C.limeWash, border: `1px solid ${C.limeBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
-              <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
+              <div style={{ fontSize: 11, letterSpacing: "0.12em", color: C.lime, fontWeight: 800, marginBottom: 4 }}>{t("auth_check_email")}</div>
               <div style={{ color: C.chalk, fontSize: 12.5, lineHeight: 1.4 }}>{notice}</div>
             </div>
           )}
@@ -19459,7 +20002,7 @@ function Auth({ onDone, paidReturn }) {
               user may not be looking at. */}
           {err && (
             <div role="alert" style={{ background: C.amberWash, border: `1px solid ${C.amberBorder}`, borderRadius: 10, padding: "10px 12px", marginBottom: 12 }}>
-              <div style={{ fontSize: 10, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignupLike ? t("auth_couldnt_signup") : t("auth_couldnt_login")}</div>
+              <div style={{ fontSize: 11, letterSpacing: "0.12em", color: C.amber, fontWeight: 800, marginBottom: 4 }}>{isSignupLike ? t("auth_couldnt_signup") : t("auth_couldnt_login")}</div>
               <div style={{ color: C.warnText, fontSize: 12.5, lineHeight: 1.4 }}>{err}</div>
               {unconfirmedEmail && !resendSent && (
                 <button type="button" onClick={resendConfirmation} disabled={resendBusy} style={{
@@ -19492,7 +20035,7 @@ function Auth({ onDone, paidReturn }) {
               Québec voids an external clause that was not expressly brought
               to the consumer's attention (C.c.Q. art. 1435). */}
           {isSignupLike && (
-            <div style={{ textAlign: "center", marginBottom: 12, fontSize: 12, color: C.slate, lineHeight: 1.5 }}>
+            <div style={{ textAlign: "center", marginBottom: 12, fontSize: 12.5, color: C.slate, lineHeight: 1.5 }}>
               {t("auth_legal_pre")}
               <a href="terms.html" target="_blank" rel="noopener noreferrer" style={{ color: C.lime, fontWeight: 700, textDecoration: "underline" }}>{t("auth_legal_terms")}</a>
               {t("auth_legal_mid")}
@@ -19505,13 +20048,13 @@ function Auth({ onDone, paidReturn }) {
           </form>
 
           {isSignup && selected.price > 0 && (
-            <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: C.slate }}>{t("auth_secure_checkout")}</div>
+            <div style={{ textAlign: "center", marginTop: 10, fontSize: 12, color: C.slate }}>{t("auth_secure_checkout")}</div>
           )}
           {/* Only while prices are on screen. With the grid collapsed this
               announced the currency of nothing, under a form whose button
               says the account is free. */}
           {isSignup && plansOpen && (
-            <div style={{ textAlign: "center", marginTop: 6, fontSize: 11, color: C.slate }}>{t("prices_currency_note").replace("{currency}", currency.toUpperCase())}</div>
+            <div style={{ textAlign: "center", marginTop: 6, fontSize: 12, color: C.slate }}>{t("prices_currency_note").replace("{currency}", currency.toUpperCase())}</div>
           )}
 
           <div style={{ textAlign: "center", marginTop: 14, fontSize: 13, color: C.slate }}>
@@ -19852,7 +20395,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=0a2f59de1e1272b3";
+    var APP_SRC = "js/app.js?v=16b738fed6a9afd3";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

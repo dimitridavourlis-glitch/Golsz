@@ -96,6 +96,20 @@ Relevant commands:
   were deleted on 2026-09-07 along with contact.html's waitlist form: they validated, showed "You're on
   the list.", and submitted nothing anywhere. Do not reintroduce a client-only success state — if a form
   is ever added back, give it a real backend before it ships.
+- **One look across the site and the sign-in screen (AVA job 199 design review, 2026-11-10).** `--navy` is the
+  app's `--pitch` (#0A0A0A; it was a green-tinted #0D1210, so every ratio recorded in `:root` is now a floor), the
+  header wordmark is the app's (Archivo weight 900, `font-stretch: 125%`), and `.btn-primary` is the app's submit
+  button: flat `--gold` on `--radius-btn` (12px), glow on hover only. `--ink-soft` is secondary reading text;
+  mono captions are 11px or more in `--ink-muted`. `.nav-links` has a desktop `margin-left` (`.nav-signin`'s auto
+  margin takes the free room, so without it the first link touches the logo). `body` is a 100vh flex column and
+  `body > main` grows, so a short page's footer reaches the bottom. `404.html` carries the shared header with
+  absolute links and, because it loads no script, its phone menu is a `<details class="nav-menu">`. The home
+  page's goal chips are capped (`.lx-chips` `max-width`) so they stay inside the header's edges; About's five-step
+  strip keeps each arrow inside the `.journey-step` that follows it. `Auth` (golsz-app.html): tabs, fields and the
+  submit button stay inside `AUTH_COLUMN` (440px), the card widens to 920px only while the plan cards are open on a
+  desktop, every field has a visible `<label>`, the chosen tab is a raised surface (gold is the submit button's),
+  and no text is under 11px. `tests/test_first_screen_design.cjs` pins all of it; it cannot see pixels, so look
+  again in a browser after a change (375 and 1280 px).
 - `index.html` is a single long page: How It Works, Features, and About are all sections on this one page
   (`#how-it-works`, `#features-section`, `#about-section`) rather than separate pages — an earlier
   consolidation collapsed a 5+ page site down to this plus Contact/Terms.
@@ -132,6 +146,29 @@ Relevant commands:
   LCP 648-760 before, 804-1692 after (noisy machine, all inside budget). **Not measured (UNVERIFIED):** a real phone
   on real cellular (CPU, radio), a signed-in Home with live data, CDN latency from the production edge.
   The region hero JPEGs are not used on the home page, so they do not affect its LCP.
+- **The first screen holds still (layout shift, 2026-11-10, AVA job 199).** Budget: layout shift (CLS) <= 0.10 on
+  either page. AVA's speed check measured 0.23 on `/golsz-app.html` at phone size. Cause: the web fonts were only
+  found when the app mounted (the `@import` in `CSS`), so the sign-up screen was drawn in the fallback font and
+  redrawn in Archivo a moment later. The fallback's text is wider, so "See plans" sat on a second row
+  (`flexWrap`) and jumped back up to the right, and every line changed height. Two fixes, both needed:
+  (1) `golsz-app.html`'s `<head>` now loads the Google Fonts stylesheet itself, the way `index.html` does
+  (preconnect, `rel="preload" as="style"`, then `media="print"` switched on by `onload`, so it never blocks the
+  first paint). The boot screen's "Loading…" line is set in Archivo, which makes the browser fetch the font file
+  before the app mounts. The address must stay the `@import`'s, character for character (one download);
+  `tests/test_boot_nonblocking.cjs` pins it. The `@import` stays for a `<head>` load that failed.
+  (2) `Auth` no longer moves when a font does arrive late: the plan summary row has no `flexWrap` (the sentence is
+  `flex: "1 1 0"` and wraps inside its own column, the button is `nowrap`), and `AUTH_LINE` (1.2) is the line height
+  of its fields, labels and tagline (`line-height: normal` comes from the font, so it changed with it).
+  `tests/test_first_screen_design.cjs` pins these. Measured (Chromium 141 headless shell, 375 px, 4x slower CPU,
+  fast-4G throttle, Archivo served from an npm copy): before 0.232; after 0.000 with the font in before mount, 0.042
+  with the font file held back 8 s; 1280 px 0.000 and 0.0005. To measure again:
+  `tools/time-first-screen.cjs` now prints `cls=<score>` and `shifted=[...]` (the elements that moved) on each
+  timing line. A browser with no internet never gets the web font, so use `--late-font=<ms>` as the positive
+  control: it answers the font stylesheet late with a stand-in (the name Archivo on this Mac's Arial Narrow).
+  Recorded with `--late-font=6000`: sign-up screen 0.052, home page 0.015; with the plan row put back to
+  `flexWrap`, 0.164. The stand-in is not Archivo, so those are not production's numbers.
+  **UNVERIFIED:** the real Google Fonts files and their arrival time on a real phone; Safari and Firefox (neither
+  reports layout shift); the signed-in screens (Home, Passport) with a late font.
 - Component tree lives under one `<script>` block: `Feed`, `Discover`, `Events`, `Messages`, `Passport`
   (the "Digital Sports Passport" profile UI), `Scout` (AI chat), assembled by `GolszApp` (bottom tab bar on
   mobile, sidebar nav on desktop — see "Responsive layout" below) and mounted via `Root`, which decides
@@ -255,6 +292,110 @@ Relevant commands:
   `page` state → `Passport`'s `autoEdit` prop, consumed once via `onAutoEditConsumed` so revisiting the tab
   later doesn't reopen it). Existing users with an incomplete profile (`!athletes.sport`) instead see a
   dismissible "Finish building your profile" banner — not force-interrupted.
+  **The goal step (AVA job 199, 2026-11-08).** `GolszApp` keeps two flags: `autoEdit` (opens the editor once)
+  and `onboarding` (lasts until the goal step is built or skipped; `shouldAskCheckin` waits for it). `onboarding`
+  starts with a fresh sign-up OR when GolszApp's own profile-complete read finds no sport ("Confirm email" is on,
+  so a new athlete's first session is often a plain sign-in; a failed read does not count). The
+  onboarding Passport save with a sport (`Passport`'s `onProfileSaved`, never in manage mode) opens
+  `GoalSetup`, a full-screen step inside GolszApp's tree: the goal sentence (saved by `saveGoalText`, the
+  writer GoalCard uses, with `cleanGoalText`/`goalTextError` as the one rule), a `PATHWAY_TYPES` select
+  preselected by `starterPathwayType(sport)` and an optional timeline (`goalSetupFieldErrors`). "Build my plan"
+  writes `starterPathwaySteps()` to `pathway_plan` in one upsert (`onConflict: "user_id"`, only
+  pathway_type/target_timeline/milestones/updated_at), then `syncActions(sb)`, then Home (remounted via
+  `planVersion` so it reads the new steps). No plan gate and no AI call. It resolves the athlete as
+  `actingFor || user.id` like GoalCard; `buildingRef` stops a double tap; a row that already has steps
+  (`planHasSteps`, checked when it opens and again right before the write) is never written over; a refused
+  write keeps the form with a `role=alert` line and Retry. Home shows `SetGoalCard` ("Set your goal to get your
+  plan") whenever the athlete has a sport and no steps (a skip, or a reload mid-way), opening the same step; a
+  failed pathway read is still `LoadError`. Home shows the steps on every plan: the Today tile (its "N to do"
+  badge is `C.pitch`/`C.chalk`; `C.ink` under it drew black on black in light), the next-step card, and the
+  TODAY / THIS WEEK number tiles behind "Show my progress". Only the ways into Plan, which is locked below Basic,
+  check `canTargets`: Reschedule, Drop, and a tap on those two tiles (on Free they are plain cells, `go: null`).
+  Suite: `tests/test_goal_setup.cjs` (it runs the editor's own save through Passport's `onSaved` into
+  `afterPassportSave`). `tests/test_starter_pathway.cjs` covers the pure plan builder.
+
+### First visit: sign-up to a dated plan (AVA job 199)
+
+- **Flow.** A new adult signs up (`Auth`; sign-up sends the adult account through and `GolszApp` gets `startOnboarding`),
+  lands in the Passport tab with the profile editor auto-opened, fills the Passport and saves with a sport. The
+  onboarding save opens `GoalSetup`. "Build my plan" saves the goal (`saveGoalText`) and writes dated steps to
+  `pathway_plan`, then Home shows that athlete's own plan, not an empty or placeholder screen: the Today tile and the
+  Today view name the next dated step (one label, the athlete's own), and TODAY and THIS WEEK appear as done/total
+  counts behind "Show my progress" (0/1 and 0/3 in the recorded run). This week's other steps are counted, not listed
+  by name, on Home; their names are on the Plan page (locked below Basic). Whether Home should list them is an open
+  product question. A plain reload keeps the plan and shows the same Home. `SetGoalCard` appears on Home whenever
+  the athlete has a sport and no pathway steps (a skip, or a reload mid-way); tapping it opens the same `GoalSetup`.
+  `reloadmid` in the preview tool: Home shows the "set your goal" card, then completing `GoalSetup` lands on Home.
+  Between "Build my plan" and Home the daily check-in ("How do you feel today?", `DailyCheckIn`) covers the screen:
+  `shouldAskCheckin` waits only while `onboarding` is true, so it asks the moment the goal step ends, and the athlete
+  taps an answer or "Skip for today" before seeing the plan (seen 2026-11-10 when the drives were executed).
+- **`starterPathwaySteps({ sport, pathwayType, timeline, today, athlete, benchmarks, targets, pathwayRow, t })`**
+  (pure, `golsz-app.html`; suite `tests/test_starter_pathway.cjs`). Returns 5-8 dated milestone steps (each with an
+  `id`, translated `label` from `starter_step_*` in all four languages, `done`, `due` date, `category`, `stage`,
+  `due_src`). Skips steps whose evidence is already on file (benchmarks/highlights/targets/academics by the gap
+  engine's rules) and fills to at least five steps; places steps from today across the near term and ends with a
+  review by the timeline horizon (or a default). No I/O, no AI.
+- **`GoalSetup`** (full-screen, rendered by `GolszApp` over the app). Fields: goal (required, `cleanGoalText`/
+  `goalTextError`, same rule as GoalCard), `PATHWAY_TYPES` preselected by `starterPathwayType(sport)`, optional
+  timeline (`goalSetupFieldErrors` rejects an unreadable or past date). Resolves `actingFor || user.id`; reads the
+  pathway row whole on open and again right before the write (`planHasSteps` -> `onDone`, never overwrites). "Build
+  my plan" (`buildingRef` stops a double tap): saves the goal via `saveGoalText`, computes `starterPathwaySteps`,
+  upserts `pathway_plan` on `user_id` writing only `pathway_type`, `target_timeline`, `milestones`, `updated_at`,
+  then `syncActions(sb)` and Home (remounted via `planVersion`). No plan gate, no AI call. A refused save keeps the
+  form with the typed values and a `role="alert"` line plus Retry.
+- **Preview tool `tools/preview-onboarding.cjs`** (`node tools/preview-onboarding.cjs <port>`, then
+  `/golsz-app.html`). Stand-in auth (signUp/getSession/getUser) and an in-memory store for `profiles`, `athletes`,
+  `pathway_plan`, `outreach_targets`, `athlete_benchmarks`; any other table starts empty and keeps what the app writes;
+  reads honour column filters, `order` and `limit`, and an upsert matches on its `on_conflict` columns (without them
+  Home's "latest snapshot before today" read failed and the app logged it). Nothing reaches the real Supabase project;
+  the stub is added to the served HTML in memory only; CDN libraries come from local vendor copies.
+  Drives (each acts like a person, on English labels, and puts the store where it starts): `signup` (a brand-new
+  account, store reset; must land in the Passport editor), `passport` (signed in, no sport: the app opens the locked
+  editor itself; fills and saves; must land on `GoalSetup`), `goal` (signed in, sport, no plan: a new page load does
+  not reopen `GoalSetup`, so it opens it from Home's set-goal card; builds; must land on Home), `home` (a plain reload
+  of whatever the store holds), `today` (the same, staying in the Today view for a screenshot), `reloadmid` (the goal
+  drive, failing unless Home showed the set-goal card first), `full` (signup, passport and goal in ONE page, the only
+  drive in which `GoalSetup` opens from the Passport save). When the daily check-in covers Home (it does right after
+  the plan is built, and on the day's first open) the drive taps "Skip for today" first and says `checkin: skipped`.
+  A drive ending on Home taps the Today tile and "Show my progress" and reads the TODAY and THIS WEEK cells. The
+  title then ends `[drive done; path: <screens in order>; screen: ...; today: <done>/<total>; thisWeek:
+  <done>/<total>; badge: <"N to do">; next: <step>; labels: <n>/<all> on screen (...); goalSetupFrom: ...; scroll:
+  <width>/<room> (<box>); goalSetupScroll: ...; todayViewScroll: ...; alerts: ...]`; a stuck drive says `[drive
+  FAILED: timed out waiting for <what>; ...]`. The three scroll readings (Home's tiles, GoalSetup, the Today view)
+  name the worst of: the document (`scrollWidth`/`innerWidth`), the screen's own element and every box around it that
+  scrolls or clips (`scrollWidth`/`clientWidth`; rules `scrollBoxes`, `worstScroll`). Neither screen scrolls in the
+  document (Home is inside `<main>`, GoalSetup inside a fixed sheet), so the document alone reads 390/390 even when
+  the screen scrolls sideways; a screen that fits reads `390/390 (document)`. `&overflow=1` is the positive control:
+  it puts a 2000 px bar into each screen before measuring, and the readings must then differ. `fail=pathway` refuses the first `pathway_plan` write only (the page
+  stops asking after it), so Retry succeeds; the title adds `failAlert="..."; formKept; goalKept; plansAtFail;
+  goalTextAtFail; retry`. The goal sentence is saved before the plan, so after a refused plan write the goal is
+  already stored (`goalTextAtFail=saved`) and no `pathway_plan` row exists. `__store` returns the rows. Use one server
+  per width and theme. Suite: `tests/test_preview_onboarding.cjs` (the pure rules `homeCounts`, `labelsShown`,
+  `driveTitle`, `scrollBoxes`, `worstScroll`, `seedsSession`, each drive's starting store, the one-shot failure, and that every selector and label
+  the drives use is still in `golsz-app.html`).
+- **Runner `tools/run-onboarding-chrome.cjs`** (`node tools/run-onboarding-chrome.cjs --width 390 --theme dark`):
+  for a session with no browser tool. One run starts a fresh preview server and a fresh headless Chrome profile, opens
+  the drives in order (signup, passport, goal, home, reloadmid, `goal&fail=pathway`, full, today, `goal&overflow=1`)
+  and prints one JSON line per page: the drive's result, console errors, failed requests, its own reading of the last
+  screen (`doc` = document scrollWidth/innerWidth, `pastEdge` = visible elements past the window's edge) and a
+  screenshot under `node_modules/.cache/onboarding-run`. `--chrome PATH` picks the binary; `--no-sandbox` is needed
+  inside an agent's sandbox. Chrome talks over a pipe and cannot reach the internet. In AVA's OpenCode sandbox Google
+  Chrome starts but its page loads hang; Playwright's `chromium_headless_shell` (in `~/Library/Caches/ms-playwright`) works.
+- **Recorded run 2026-11-10** (Chromium 141 headless shell through the runner, 390x844 and 1280x800, dark and light,
+  one server each; not AVA's browser tool, which OpenCode sessions do not get). The same in all four: signup `Auth >
+  Passport editor`; passport `Passport editor > GoalSetup` (from the Passport save); goal `Daily check-in > Home
+  (set-goal card) > GoalSetup > Home`, TODAY 0/1, THIS WEEK 0/3, badge "1 to do", next step "Ask Scout what to focus
+  on this week"; home (a reload) the same Home; reloadmid saw the set-goal card, then Home; `fail=pathway`: "Couldn't
+  save your plan. Try again.", form and goal kept, 0 plan rows, Retry lands on Home; full `Auth > Passport editor >
+  GoalSetup > Home` (in a fresh profile the check-in sits before Home). No console errors except the app's own "goal
+  setup save error" in the fail run. Every scroll reading was `<width>/<width> (document)` with 0 elements past the
+  edge; at 390 px with `overflow=1` they read 2016/390, 2020/390 and 2012/390 while the document still read 390/390.
+  AI_HANDOFF.md of that day has the table. Found and fixed: after a key press GoalSetup's sheet showed the browser's
+  default focus ring around the whole screen (`outline: "none"` on its panel; the other dialogs still do this).
+- **UNVERIFIED.** The web fonts (Archivo, Space Mono): the run had no internet, so text was drawn in the system
+  fallback font and the widths are that font's. Google Chrome itself, Safari, Firefox. Live Supabase (RLS, PostgREST,
+  the real upsert/auth), a real phone on cellular, a screen reader, and fr/es/el in a browser.
+
 - **Follows** (migration 006): `follows(follower_id, followed_id)`, public read, insert/delete restricted to
   `follower_id = auth.uid()`. Feed and Discover both maintain their own `following` state/`toggleFollow()` —
   not shared, each fetches independently.

@@ -4,7 +4,7 @@
 // in the served copy, and an integrity attribute is dropped only when the local file's hash differs.
 const fs = require("fs");
 const path = require("path");
-const { buildPage, parseArgs, DEFAULTS, BUDGETS } = require("../tools/time-first-screen.cjs");
+const { buildPage, parseArgs, lateFont, DEFAULTS, BUDGETS, LATE_FONT_PATH } = require("../tools/time-first-screen.cjs");
 
 const root = path.join(__dirname, "..");
 const read = (f) => fs.readFileSync(path.join(root, f), "utf8");
@@ -48,6 +48,20 @@ ok(parseArgs([], { TIMING_RTT_MS: "50", TIMING_MBPS: "4" }).mbps === 4, "environ
 ok(BUDGETS.homeLcpMs === 3000 && BUDGETS.appBootMs === 2500 && BUDGETS.appMountedMs === 5000, "budgets match the tool header");
 const header = fs.readFileSync(path.join(root, "tools", "time-first-screen.cjs"), "utf8");
 ok(/LCP\s+<= 3000 ms/.test(header) && /<= 2500 ms/.test(header) && /<= 5000 ms/.test(header), "budgets are written in the tool header");
+
+// Layout shift (cls) and its positive control, --late-font.
+ok(same.html.includes('observe("layout-shift"') && same.html.includes("hadRecentInput"), "timing script adds up layout shifts, leaving out the ones that follow a tap or key");
+ok(BUDGETS.cls === 0.1 && /cls\s+<= 0\.10/.test(header), "the layout-shift budget is 0.10, and the tool header says so");
+ok(parseArgs(["--late-font=6000"], {}).lateFontMs === 6000 && parseArgs([], {}).lateFontMs === undefined && parseArgs(["--late-font=soon"], {}).lateFontMs === undefined,
+  "--late-font takes milliseconds and is off by default");
+const fontUrls = (text) => text.match(/https:\/\/fonts\.googleapis\.com\/css2/g) || [];
+const bundle = read("js/app.js");
+ok(fontUrls(before.app).length >= 3 && fontUrls(before.home).length >= 2 && fontUrls(bundle).length >= 1, "the pages and the bundle name the Google Fonts stylesheet (the rewrite below is not empty)");
+const late = lateFont(before.app, 7);
+ok(fontUrls(late).length === 0 && late.split(LATE_FONT_PATH + "?n=7").length - 1 === fontUrls(before.app).length, "--late-font points every one of them at the stand-in, with the page load's own number");
+ok(fontUrls(lateFont(bundle, 8)).length === 0 && fontUrls(lateFont(before.home, 9)).length === 0, "...in the bundle's @import and on the home page too");
+ok(late.length - fontUrls(before.app).length * (LATE_FONT_PATH + "?n=7").length === before.app.replace(/https:\/\/fonts\.googleapis\.com\/css2\?[^"')\s]+/g, "").length, "...and changes nothing else");
+ok(read("golsz-app.html") === before.app && read("js/app.js") === bundle, "the page and the bundle on disk are untouched by it");
 
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail ? 1 : 0);

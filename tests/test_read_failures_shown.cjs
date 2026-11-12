@@ -45,6 +45,9 @@ const REGISTRY = [
   { component: "Scout", loader: "loadConversation", emptyKeys: [] },
   { component: "SettingsButton", loader: "loadPrivacy" },
   { component: "VerificationRequest", loader: "load" },
+  // A failed read on the goal step is not an empty form: building from it
+  // could write over a plan made on another device.
+  { component: "GoalSetup", loader: "load" },
 ];
 
 const m = /<script[^>]*type=["']text\/babel(?:-deferred)?["'][^>]*>/.exec(HTML);
