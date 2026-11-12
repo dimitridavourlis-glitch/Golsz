@@ -531,6 +531,18 @@ Relevant commands:
   the same day. "Missed" uses that day and the resting rule. `responseCacheFingerprint` carries the day and a
   step digest. `getAthleteState` reads run as one `Promise.all` round (they were sequential).
   Benchmark lines carry `benchmarkProvenance()` (who measured it, and the recorded protocol).
+- **Scout's "what should I do today?" agrees with Home (AVA job 216; t1 built the helpers, t2 wires them into the
+  handler).** Pure helpers beside `dayBuckets()`, no I/O, no AI: `isTodayQuestion(text)` (fixed en/fr/es/el
+  patterns, never the classifier, so a classifier timeout cannot change it; the "What's next for me?" button,
+  `scout_big_next`, counts); `pickNextMilestone()` (Home's `nextMilestone` rule: a date the athlete chose before one
+  GOLSZ suggested, earliest first, then undated in list order; `getAthleteState` uses it, it had taken the earliest
+  date of either kind); `todayCard(days, next, resting)` (Home's numbers, every open step due today up to
+  `TODAY_OPEN_CAP` 20 plus `todayOpenMore`, the next step); `datesInContext(text)`; and `checkReplyAgainstPlan(reply,
+  { allowedDates, labels, card, lang, allowedCounts })` -> `{ ok, reasons }`, flagging a date or weekday not in the
+  context, a quoted step that is not a plan label (quotes are for step names only), and an "N of M"/"N/M" that is
+  not Home's pair (each "today"/"week" word belongs to the count nearest to it). `tests/test_scout_today_answer.cjs`
+  diffs them against HomeTab's code through `tests/_day_parity.cjs` (shared with `test_scout_today.cjs`) and runs
+  every reply check on a twin built to break it.
 
 ### `api/stripe-webhook.js` (Vercel serverless function)
 

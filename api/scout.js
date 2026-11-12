@@ -3432,14 +3432,17 @@ function datesInContext(text) {
 //             label in the plan; the card's own (today's open steps, the next
 //             one) always count. Quotes are for step names only; the prompt has
 //             to say so.
-//   "count"   an "N of M" (sur / de / από) or "N/M" in a clause about the plan
-//             (it names today, the week, or steps) that is not Home's pair: the
-//             nearest "today" picks today's pair, the nearest "week" this
-//             week's, neither allows both. allowedCounts adds pairs the model
-//             was also given, such as the whole plan's done/total. "8 of 10
-//             shots" names no plan, so it is not read. A year-less "20/10"
-//             with N > M is no count and could be an interval, so it is not
-//             read as a date either; "3/4 of" is a fraction.
+//   "count"   an "N of M" (sur / de / από) or "N/M" about the plan that is not
+//             Home's pair. Each "today" or "week" word in a clause belongs to
+//             the count nearest to it (to both on a tie) and holds that count
+//             to today's pair or this week's; a count with both words, or with
+//             none, may be either. A count with none is read only when its own
+//             stretch of the clause (from the count before it to the count
+//             after it) names steps: "8 of 10 shots" is not about the plan.
+//             allowedCounts adds pairs the model was also given, such as the
+//             whole plan's done/total. A year-less "20/10" with N > M is no
+//             count and could be an interval, so it is not read as a date
+//             either; "3/4 of" is a fraction.
 // Quoted text and plan labels are blanked before dates, weekdays and counts
 // are read: a label's own "Friday" is the athlete's word, not a claim.
 // No I/O and no AI. An empty reply contradicts nothing and is ok.
@@ -3577,34 +3580,44 @@ function checkReplyAgainstPlan(replyText, { allowedDates = [], labels = [], card
     }
   }
 
-  // Counts.
+  // Counts. All of them are found first, then each "today" or "week" word is
+  // given to the count nearest to it. Asking the other way round (which word
+  // is nearest this count) handed the second count in "1 of 2 today and 2 of
+  // 5 this week" the first count's "today", and refused a true answer.
   const pairOf = (done, total) => (Number.isInteger(done) && Number.isInteger(total) ? [done, total] : null);
   const todayPair = card ? pairOf(card.todayDone, card.todayTotal) : null;
   const weekPair = card ? pairOf(card.weekDone, card.weekTotal) : null;
   const extraPairs = (Array.isArray(allowedCounts) ? allowedCounts : []).map((c) => (Array.isArray(c) ? pairOf(c[0], c[1]) : null));
-  const checkCount = (start, end, n, total, slash) => {
-    const before = work.slice(0, start);
-    const cs = Math.max(...[".", "!", "?", ";", "\n"].map((c) => before.lastIndexOf(c))) + 1;
-    const next = work.slice(end).search(/[.!?;\n]/);
-    const clause = work.slice(cs, next < 0 ? work.length : end + next);
-    let nearest = null;
-    for (const q of clause.matchAll(COUNT_QUALIFIER)) {
-      const qs = cs + q.index, qe = qs + q[0].length;
-      const dist = qe <= start ? start - qe : qs - end;
-      if (!nearest || dist < nearest.dist) nearest = { dist, today: !!q[1] };
-    }
-    if (!nearest && !COUNT_PLAN_WORD.test(clause)) return;      // not about the plan
-    const pairs = (!nearest ? [todayPair, weekPair] : [nearest.today ? todayPair : weekPair]).concat(extraPairs);
-    if (pairs.some((p) => p && p[0] === n && p[1] === total)) return;
-    if (slash && daysMeant([{ y: null, mo: total, d: n }, { y: null, mo: n, d: total }]).length) return;   // 3/11, a plan day
-    flag("count", orig.slice(start, end));
-  };
-  for (const m of work.matchAll(COUNT_OF)) checkCount(m.index, m.index + m[0].length, +m[1], +m[2], false);
+  const clauseEnds = [...work.matchAll(/[.!?;\n]/g)].map((m) => m.index);
+  const clauseOf = (i) => clauseEnds.filter((e) => e < i).length;
+  const counts = [];
+  for (const m of work.matchAll(COUNT_OF)) counts.push({ start: m.index, end: m.index + m[0].length, n: +m[1], total: +m[2], slash: false });
   for (const m of work.matchAll(COUNT_SLASH)) {
     const n = +m[1], total = +m[2];
     if (n > total || FRACTION_AFTER.test(work.slice(m.index + m[0].length))) continue;
-    checkCount(m.index, m.index + m[0].length, n, total, true);
+    counts.push({ start: m.index, end: m.index + m[0].length, n, total, slash: true });
   }
+  counts.sort((a, b) => a.start - b.start);
+  for (const c of counts) { c.clause = clauseOf(c.start); c.named = new Set(); }
+  for (const q of work.matchAll(COUNT_QUALIFIER)) {
+    const qs = q.index, qe = qs + q[0].length, clause = clauseOf(qs);
+    const gap = (c) => (qs >= c.end ? qs - c.end : c.start >= qe ? c.start - qe : 0);
+    const inClause = counts.filter((c) => c.clause === clause);
+    const least = Math.min(...inClause.map(gap));
+    for (const c of inClause) if (gap(c) === least) c.named.add(q[1] ? "today" : "week");
+  }
+  counts.forEach((c, k) => {
+    if (!c.named.size) {
+      const prev = counts[k - 1], next = counts[k + 1];
+      const from = prev && prev.clause === c.clause ? prev.end : (c.clause ? clauseEnds[c.clause - 1] + 1 : 0);
+      const to = next && next.clause === c.clause ? next.start : (c.clause < clauseEnds.length ? clauseEnds[c.clause] : work.length);
+      if (!COUNT_PLAN_WORD.test(work.slice(from, to))) return;   // not about the plan
+    }
+    const pairs = (c.named.size === 1 ? [c.named.has("today") ? todayPair : weekPair] : [todayPair, weekPair]).concat(extraPairs);
+    if (pairs.some((p) => p && p[0] === c.n && p[1] === c.total)) return;
+    if (c.slash && daysMeant([{ y: null, mo: c.total, d: c.n }, { y: null, mo: c.n, d: c.total }]).length) return;   // 3/11, a plan day
+    flag("count", orig.slice(c.start, c.end));
+  });
   return { ok: reasons.length === 0, reasons };
 }
 function extractSuggestedPathway(data, existingStages, todayKey) {
@@ -7630,7 +7643,7 @@ export default async function handler(req, res) {
         athleteBlock += `\n- ...and ${athleteState.openMilestonesTruncated} more not listed here.`;
       }
       if (athleteState.nextMilestone) {
-        athleteBlock += `\nNEXT BY THE APP'S OWN RULE (earliest dated step not done, else the first undone one — this is what Home shows them): "${athleteState.nextMilestone.label}"${athleteState.nextMilestone.due ? ` due ${athleteState.nextMilestone.due}` : " (no date)"}. Do not nominate a different "next" step; theirs is on screen.`;
+        athleteBlock += `\nNEXT BY THE APP'S OWN RULE (the earliest step not done with a date they chose, then one with a date GOLSZ suggested, else the first undone one — this is what Home shows them): "${athleteState.nextMilestone.label}"${athleteState.nextMilestone.due ? ` due ${athleteState.nextMilestone.due}` : " (no date)"}. Do not nominate a different "next" step; theirs is on screen.`;
       }
     }
 
@@ -7648,7 +7661,7 @@ export default async function handler(req, res) {
     if (athleteState.day && dd) {
       athleteBlock += `\n\nTODAY FOR THEM: ${dd.weekday} ${dd.today} (${athleteState.day.source === "device" ? "their own calendar day" : "the server's day; theirs may differ by one"}). This week runs Monday ${dd.weekFrom} to Sunday ${dd.weekTo}.`;
       if (athleteState.pathwayCreated) {
-        athleteBlock += ` Due today: ${dd.todayTotal ? `${dd.todayDone} of ${dd.todayTotal} done` : "nothing"}${dd.todayOpen.length ? `; still open today: ${dd.todayOpen.map((l) => `"${l}"`).join("; ")}` : ""}. This week: ${dd.weekTotal ? `${dd.weekDone} of ${dd.weekTotal} dated steps done` : "no dated steps"}. Late (dates they chose themselves that have passed${athleteState.availability && athleteState.availability.status === "out" ? "; while they rest only recovery steps count" : ""}): ${dd.lateCount}.`;
+        athleteBlock += ` Due today: ${dd.todayTotal ? `${dd.todayDone} of ${dd.todayTotal} done` : "nothing"}${dd.todayOpen.length ? `; still open today: ${dd.todayOpen.map((l) => `"${l}"`).join("; ")}${dd.todayOpenMore ? ` and ${dd.todayOpenMore} more not named here` : ""}` : ""}. This week: ${dd.weekTotal ? `${dd.weekDone} of ${dd.weekTotal} dated steps done` : "no dated steps"}. Late (dates they chose themselves that have passed${athleteState.availability && athleteState.availability.status === "out" ? "; while they rest only recovery steps count" : ""}): ${dd.lateCount}.`;
       }
       athleteBlock += ` These are the numbers Home shows them. Use only dates written in this context; never work out another date or weekday yourself.`;
     }
