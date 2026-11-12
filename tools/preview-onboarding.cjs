@@ -12,9 +12,16 @@
 //   &lang=en|fr|es|el sets localStorage["golsz-lang"] the same way (the drives read English labels:
 //                     use lang= without drive=)
 //   &overflow=1       with a drive: puts a 2000 px wide bar into GoalSetup, Home and the Today view
-//                     before each is measured. The three scroll readings must then show a box wider
-//                     than its room: the proof that the reading can see a sideways scroll
-//   &drive=signup|passport|goal|home|today|reloadmid|full   acts like a person, then reports:
+//                     (and a scout drive's answer) before each is measured. The scroll readings must
+//                     then show a box wider than its room: the proof that the reading can see a
+//                     sideways scroll
+//   &model=honest|date|step|count   what the stand-in model behind /api/scout answers (see /api/scout
+//                     below); default honest, and step for drive=scoutinvent
+//   &limit=1          reserve_scout_question refuses the question (allowed:false): the daily limit
+//   &last=1           reserve_scout_question allows it as the day's last: the answer leaves 0
+//                     (these three go with each question as x-preview-model / -limit / -last headers)
+//   &drive=signup|passport|goal|home|today|reloadmid|full|scouttoday|scoutinvent|scoutlimit|scoutlast
+//                     acts like a person, then reports:
 //     signup    a brand-new visitor (the store is reset): fills sign-up as an adult and submits;
 //               must land in the Passport editor
 //     passport  signed in, Passport unfinished, no plan. The app opens the editor itself (an
@@ -27,6 +34,17 @@
 //     today     the same, but stays in the Today view with "Show my progress" open (for a screenshot)
 //     reloadmid the goal drive, and it fails unless Home showed the "set your goal" card first
 //     full      signup -> passport -> goal in ONE page, so GoalSetup opens from the Passport save
+//     scouttoday  signed in with a plan: the one the store holds, or, when it holds none, one the
+//               drive builds first exactly as the goal drive does. Reads Home (below), opens Scout
+//               from the navigation, asks "What should I do today?" and reads the answer and the
+//               "From your plan" card under it; must show a card with Home's TODAY and THIS WEEK
+//     scoutinvent the same with a model that makes something up (&model=date|step|count, default
+//               step); must also show the plan's own sentence in place of the model's answer
+//     scoutlimit  the same at the daily limit (it implies &limit=1): no card; must show the refusal,
+//               "0 left", the limit card and no text box
+//     scoutlast   the same on the day's last question (it implies &last=1): must show the card,
+//               "0 left", the limit card and no text box
+//     Each scout drive starts a new Scout conversation (scout_history is emptied).
 //   Every drive that ends on Home taps the Today tile and "Show my progress", reads the TODAY and
 //   THIS WEEK cells (done/total), and goes back to the tiles. The page title then ends with
 //     [drive done; path: <screens in order>; screen: <last screen>; today: <done>/<total>;
@@ -42,32 +60,88 @@
 //   rows>; goalTextAtFail (the goal sentence is saved before the plan, so it is "saved"); retry.
 //   When the daily check-in ("How do you feel today?") covers Home, the drive taps "Skip for
 //   today" first, as a person must, and the title says  checkin: skipped.
+//   A scout drive's title puts Scout first:
+//     [drive done; home today: <done>/<total>; home week: <done>/<total>; card today: <done>/<total>;
+//      card week: <done>/<total>; card steps: <the names it lists> (and N more); override: yes|no;
+//      usage: <n> left; limitCard: yes|no; reply: "<what the answer bubble says>";
+//      replaced: "<the model's own words>" (only when the bubble shows something else);
+//      box: open|closed (Scout's text box); path: ...; screen: Scout; badge: ...; next: ...; labels: ...;
+//      scroll: <Home's tiles>; scoutScroll: <the answer>; alerts: ...]
+//   home today/week are Home's TODAY and THIS WEEK cells, card today/week the card's (none when a
+//   cell is not drawn), override is the server's today_override, usage is the "<n> left" Scout's
+//   header shows, limitCard whether "That's all <n> for today" is on screen.
 //   A drive that cannot go on says  [drive FAILED: timed out waiting for <what>; ...]  instead.
 //   The server prints each write as  <table> <insert|update|upsert|delete> id=<id> fields=<names>
 //   Use one server per width and theme: the store lives in the server and every drive changes it.
 //
+// /api/scout RUNS THE REAL HANDLER (api/scout.js, its default export) in this process, with the
+// helpers Vercel adds (req.body parsed from JSON, res.status(code).json(body)). Its Supabase calls
+// go to the same in-memory store as the page's (SUPABASE_URL is a stand-in address on the reserved
+// .invalid domain) and its Anthropic calls to a scripted stand-in model:
+//   the classifier call (the only prompt that asks for summary_so_far) gets one fixed classification,
+//   career_advice; every other call gets one reply, built from the prompt the handler sent:
+//     honest  the steps still open today and Home's counts exactly as the handler's TODAY FOR THEM
+//             line gives them (read from the store's plan), as a model that keeps to its prompt does
+//     date    the same, plus "Have it done by <the day after the latest date in its prompt>"
+//     step    a quoted step that is in no plan ("Run a 10 km time trial") in place of today's steps
+//     count   this week as "<done> of <total + 1>"
+//   reserve_scout_question answers as for the day's first question (used 1) unless &limit=1 or
+//   &last=1 says otherwise; the free plan's lifetime budget is never spent.
+//   Questions reach the handler one at a time, each SCOUT_SPACING_MS after the previous one was
+//   answered: the handler refuses a second question from one athlete inside 3 s (isRateLimited),
+//   and drives on consecutive pages can ask sooner than a person would.
+//   The server prints one line per question:
+//     scout <status> model=<script> [limit] [last] card=today <d>/<t>, week <d>/<t> | none
+//     override=yes|no usage=<remaining>/<limit> | none calls: <n> store, <n> model, <n> refused
+//   &today= moves only the page's day. The handler takes the page's day only within a day of its own
+//   clock, as in production, so a scout drive with &today= far from the real day can disagree.
+//
 // WHAT IS STAND-IN: auth (signUp/getSession/getUser) answered locally; profiles, athletes,
 // pathway_plan, outreach_targets, athlete_benchmarks stored in the server process; any other
-// table starts empty and keeps what the app writes to it; reads honour column filters, order and
-// limit; sync_athlete_actions and the other RPCs Home calls return empty. Nothing is sent to the
-// real Supabase project. The stand-in knows nothing about real RLS/limits: it proves the SCREEN,
-// not the database.
+// table starts empty and keeps what the app (or the Scout handler) writes to it; reads honour
+// column filters, order and limit; sync_athlete_actions and the other RPCs Home calls return
+// empty. Nothing is sent to the real Supabase project or to Anthropic. The stand-in knows nothing
+// about real RLS/limits and the model is a script: it proves the SCREEN and the handler's own
+// rules, not the database or a real model.
 //
 // HOW IT STAYS OUT OF THE PRODUCT: the stub is added to the response in memory only, so the file
 // on disk is never written. Every request to the Supabase host is rewritten to /__sb/... on this
-// server and never forwarded. The server binds to 127.0.0.1 and serves only files under the repo
-// root. CDN libraries come from local npm-pack copies (see preview-public-passport.cjs).
+// server and never forwarded. The Scout handler's fetch is this process's own (serviceFetch): it
+// answers the stand-in Supabase address from the store and Anthropic's messages URL from the
+// script, and refuses every other address. ANTHROPIC_API_KEY and SUPABASE_SERVICE_KEY are set to the
+// word "stand-in", never a key, and SCOUT_FALLBACK_API_KEY is removed so the cross-provider failover
+// has nowhere to go. The server binds to 127.0.0.1 and serves only files under the repo root. CDN
+// libraries come from local npm-pack copies (see preview-public-passport.cjs).
 "use strict";
 
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { AsyncLocalStorage } = require("async_hooks");
+const { pathToFileURL } = require("url");
 const { MIME, localiseLibraries } = require("./preview-public-passport.cjs");
 
 const ROOT = path.resolve(__dirname, "..");
 const USER_ID = "00000000-0000-4000-8000-000000000099";
 const LANGS = ["en", "fr", "es", "el"];
+
+// /api/scout (the header's "/api/scout RUNS THE REAL HANDLER").
+const SCRIPTS = ["honest", "date", "step", "count"];
+const ANTHROPIC_MESSAGES = "https://api.anthropic.com/v1/messages";   // api/scout.js's ANTHROPIC_URL
+const STAND_IN_SUPABASE = "https://supabase.preview.invalid";        // .invalid never resolves (RFC 6761)
+// More than RATE_LIMIT_MIN_INTERVAL_MS (3000) in api/scout.js. Counted from the end of the previous
+// question, which is after the handler stamped it.
+const SCOUT_SPACING_MS = 3200;
+const INVENTED_STEP = "Run a 10 km time trial";
+const CLASSIFICATION = {
+  intent: "career_advice", confidence: 0.9, needs_tool: false, is_correction: false, faq_id: null,
+  summary_so_far: "The athlete asked what to do today.", missing_information: [], recommended_specialist: null,
+  conversation_stage: "action", next_best_action: null,
+};
+// The two prompt rules (TODAY_ANSWER_RULE, TODAY_PLAN_UNREAD_RULE in api/scout.js) open with these.
+const TODAY_RULE_OPENS = "THEY ARE ASKING WHAT TO DO TODAY OR THIS WEEK. ";
+const UNREAD_RULE_OPENS = "THEY ARE ASKING WHAT TO DO TODAY OR THIS WEEK, AND THEIR PLAN COULD NOT BE LOADED";
 
 function defaultProfile() {
   return {
@@ -109,12 +183,23 @@ function labelsShown(labels, text) {
   return (labels || []).filter((l) => l && flat.indexOf(String(l).replace(/\s+/g, " ").trim()) !== -1);
 }
 
-// What a finished (or stuck) drive writes after the page title.
+// What a finished (or stuck) drive writes after the page title. A scout drive (f.scout, what
+// readScout() saw) puts Home's cells, the card and the answer first.
 function driveTitle(f) {
   const yn = (v) => (v ? "yes" : "no");
   const parts = [f.error ? "drive FAILED: timed out waiting for " + f.error : "drive done"];
+  const s = f.scout;
+  if (s) {
+    const c = s.card;
+    parts.push("home today: " + (f.counts ? f.counts.today : "none"), "home week: " + (f.counts ? f.counts.thisWeek : "none"),
+      "card today: " + (c ? c.today : "none"), "card week: " + (c ? c.week : "none"),
+      "card steps: " + ((c && [c.steps.join(" | "), c.more].filter(Boolean).join(" ")) || "none"),
+      "override: " + yn(s.override), "usage: " + (s.usage || "none"), "limitCard: " + yn(s.limitCard), 'reply: "' + s.reply + '"');
+    if (s.modelReply && s.modelReply !== s.reply) parts.push('replaced: "' + s.modelReply + '"');
+    parts.push("box: " + s.box);
+  }
   parts.push("path: " + ((f.path || []).join(" > ") || "none"), "screen: " + (f.screen || "unknown"));
-  if (f.counts) parts.push("today: " + f.counts.today, "thisWeek: " + f.counts.thisWeek);
+  if (f.counts && !s) parts.push("today: " + f.counts.today, "thisWeek: " + f.counts.thisWeek);
   if (f.badge !== undefined) parts.push("badge: " + (f.badge || "none"), "next: " + (f.next || "none"));
   if (f.labels) parts.push("labels: " + f.labels.length + "/" + f.labelTotal + " on screen (" + (f.labels.join(" | ") || "none") + ")");
   if (f.checkin) parts.push("checkin: " + f.checkin);
@@ -127,9 +212,22 @@ function driveTitle(f) {
   if (f.scroll) parts.push("scroll: " + f.scroll);
   if (f.goalSetupScroll) parts.push("goalSetupScroll: " + f.goalSetupScroll);
   if (f.todayViewScroll) parts.push("todayViewScroll: " + f.todayViewScroll);
+  if (f.scoutScroll) parts.push("scoutScroll: " + f.scoutScroll);
   if (f.overflow) parts.push("overflow=on purpose");
   parts.push("alerts: " + (f.alerts || "none"));
   return parts.join("; ");
+}
+
+// The sentence the app puts in place of an answer the server refused (today_override), in English,
+// from the card as a scout drive reads it ({ today, week: "<done>/<total>" or "none", steps, more }).
+// scoutTodaySentence() in golsz-app.html builds it from the same card; the suite compares the two.
+function cardSentence(card) {
+  if (!card) return "";
+  const t = /^(\d+)\/(\d+)$/.exec(card.today || ""), w = /^(\d+)\/(\d+)$/.exec(card.week || "");
+  const steps = card.steps || [];
+  const today = steps.length ? "Today: " + steps.map((s) => '"' + s + '"').join(", ") + (card.more ? " " + card.more : "") + "."
+    : t ? "Today: " + t[1] + " of " + t[2] + " done." : "Nothing is due today.";
+  return today + " " + (w ? "This week: " + w[1] + " of " + w[2] + " done." : "Nothing in this week yet.");
 }
 
 // Where a too-wide screen would scroll sideways, as boxes for worstScroll: the document
@@ -168,8 +266,66 @@ function seedsSession(drive, store) {
   return !!(store && (store.hasPlan || store.signedUp || store.hasSport));
 }
 
-const PAGE_RULES = { homeCounts, labelsShown, driveTitle, scrollBoxes, worstScroll };
-const DRIVES = ["signup", "passport", "goal", "home", "today", "reloadmid", "full"];
+const PAGE_RULES = { homeCounts, labelsShown, driveTitle, scrollBoxes, worstScroll, cardSentence };
+const SCOUT_DRIVES = ["scouttoday", "scoutinvent", "scoutlimit", "scoutlast"];
+const DRIVES = ["signup", "passport", "goal", "home", "today", "reloadmid", "full"].concat(SCOUT_DRIVES);
+
+// ---- Pure rules of the stand-in model and the /api/scout route (server side only). ----
+
+// What the handler tells the model on its TODAY FOR THEM line (api/scout.js): "Due today: 0 of 1
+// done; still open today: "<label>"; "<label>" and N more not named here. This week: 0 of 3 dated
+// steps done." Null when the prompt has no such line. `dates` is every YYYY-MM-DD in the prompt.
+function promptFacts(prompt) {
+  const text = String(prompt || "");
+  const line = (/TODAY FOR THEM:[^\n]*/.exec(text) || [""])[0];
+  const today = /Due today: (?:(\d+) of (\d+) done|nothing)/.exec(line);
+  const week = /This week: (?:(\d+) of (\d+) dated steps done|no dated steps)/.exec(line);
+  if (!today || !week) return null;
+  const open = /; still open today: (.*?)(?: and (\d+) more not named here)?\. This week:/.exec(line);
+  return {
+    todayDone: Number(today[1] || 0), todayTotal: Number(today[2] || 0),
+    weekDone: Number(week[1] || 0), weekTotal: Number(week[2] || 0),
+    steps: open ? [...open[1].matchAll(/"([^"]*)"/g)].map((m) => m[1]) : [],
+    more: open && open[2] ? Number(open[2]) : 0,
+    dates: [...new Set(text.match(/\d{4}-\d{2}-\d{2}/g) || [])].sort(),
+  };
+}
+
+// The stand-in model's answer to the prompt it was sent, by script (the header lists them).
+// Only a today question is answered from the plan; the handler marks one with TODAY_ANSWER_RULE.
+function scriptedReply(script, prompt) {
+  const text = String(prompt || "");
+  if (text.includes(UNREAD_RULE_OPENS)) return "I couldn't load your plan just now. Home shows today's steps.";
+  const f = text.includes(TODAY_RULE_OPENS) ? promptFacts(text) : null;
+  if (!f) return "This is the preview's stand-in model. Ask it what to do today.";
+  const steps = script === "step" ? [INVENTED_STEP] : f.steps;
+  let reply = steps.length ? "Today: " + steps.map((s) => '"' + s + '"').join(", ") + (script !== "step" && f.more ? " and " + f.more + " more" : "") + "."
+    : f.todayTotal ? "Everything due today is done: " + f.todayDone + " of " + f.todayTotal + "."
+    : "Nothing is due today.";
+  const weekTotal = f.weekTotal + (script === "count" ? 1 : 0);
+  reply += weekTotal ? " This week you have done " + f.weekDone + " of " + weekTotal + "." : " Nothing is dated this week.";
+  if (script === "date") {
+    const latest = f.dates[f.dates.length - 1];
+    reply += " Have it done by " + new Date(Date.parse(latest + "T00:00:00Z") + 86400000).toISOString().slice(0, 10) + ".";
+  }
+  return reply;
+}
+
+// How long a question waits before it reaches the handler: until SCOUT_SPACING_MS after the
+// previous question was answered (lastAt).
+function scoutWait(lastAt, now) {
+  return Math.max(0, lastAt + SCOUT_SPACING_MS - now);
+}
+
+// The line the server prints for one question (`run`: the route's record of it).
+function scoutLine(run) {
+  const a = run.answer || {}, c = a.today_card, u = a.scout_usage;
+  const to = (kind) => run.calls.filter((x) => x.to === kind).length;
+  return "scout " + run.status + " model=" + run.script + (run.limit ? " limit" : "") + (run.last ? " last" : "") +
+    " card=" + (c ? "today " + c.todayDone + "/" + c.todayTotal + ", week " + c.weekDone + "/" + c.weekTotal : "none") +
+    " override=" + (a.today_override ? "yes" : "no") + " usage=" + (u ? u.remaining + "/" + u.limit : "none") +
+    " calls: " + to("store") + " store, " + to("model") + " model, " + to("refused") + " refused";
+}
 
 // Runs first in <head>, before the theme script, the CDN libraries and the app.
 function stub(cfg, rules) {
@@ -208,9 +364,23 @@ function stub(cfg, rules) {
 
   // Every request to the Supabase host goes to this server instead. With &fail=pathway the page
   // asks for the failure until the first pathway_plan write is refused, then stops: one failure.
+  // A question to /api/scout carries the page's &model=, &limit= and &last=, and its answer is
+  // kept for the scout drives (scoutWire: the status and the JSON the server sent).
   var realFetch = window.fetch.bind(window);
+  var scoutWire = null;
   window.fetch = function (input, init) {
     var req = new Request(input, init);
+    if (req.url === location.origin + "/api/scout") {
+      var asked = new Headers(req.headers);
+      if (cfg.model) asked.set("x-preview-model", cfg.model);
+      if (cfg.limit) asked.set("x-preview-limit", "1");
+      if (cfg.last) asked.set("x-preview-last", "1");
+      return realFetch(input, Object.assign({}, init, { headers: asked })).then(function (resp) {
+        resp.clone().json().then(function (data) { scoutWire = { status: resp.status, body: data }; },
+          function () { scoutWire = { status: resp.status, body: null }; });
+        return resp;
+      });
+    }
     if (req.url.indexOf(cfg.supabaseUrl) !== 0) return realFetch(input, init);
     var headers = new Headers(req.headers);
     if (cfg.fail) headers.set("x-preview-fail", cfg.fail);
@@ -281,16 +451,22 @@ function stub(cfg, rules) {
   function tileSpans() { var t = todayTile(); return t ? Array.prototype.slice.call(t.children).filter(function (c) { return c.tagName === "SPAN"; }).map(textOf) : []; }
   function tileBadge() { return tileSpans().filter(function (s) { return /^\d+ to do$/.test(s); })[0] || ""; }
   function progressToggle() { var h = home(); return h ? one("button[aria-expanded]", h) : null; }
-  // Home's number cells: a heading span and, right after it, the value span.
-  function cells() {
-    var h = home();
-    return h ? all("span", h).filter(function (s) { return visible(s) && s.nextElementSibling && /^(TODAY|THIS WEEK)$/.test(textOf(s)); })
+  // Number cells, Home's and Scout's card's alike: a heading span and, right after it, the value span.
+  function cells(root) {
+    return root ? all("span", root).filter(function (s) { return visible(s) && s.nextElementSibling && /^(TODAY|THIS WEEK)$/.test(textOf(s)); })
       .map(function (s) { return { label: textOf(s), value: textOf(s.nextElementSibling) }; }) : [];
   }
+  // Scout's screen. The nav button reads "Scout" on a phone and "AI Scout" in the desktop sidebar.
+  function scoutNav() { return all("nav button").filter(function (b) { return visible(b) && /^(AI )?Scout$/.test(textOf(b)); })[0] || null; }
+  function scoutPane() { return one('button[title="History"]'); }
+  function scoutBox() { return one('textarea[aria-label="Talk to your scout…"]'); }
+  function scoutSend() { var s = one('button[title="Send"]'); return s && !s.disabled ? s : null; }
+  function lastBubble() { var b = all(".msg").filter(visible); return b[b.length - 1] || null; }
   function screenName() {
     if (goalSetup()) return "GoalSetup";
     if (editor()) return "Passport editor";
     if (authForm()) return "Auth";
+    if (scoutPane()) return "Scout";
     if (home()) return setGoalButton() ? "Home (set-goal card)" : "Home";
     return "unknown";
   }
@@ -398,8 +574,8 @@ function stub(cfg, rules) {
     await pause(300);
     seen += " " + textOf(home());
     if (toggle.getAttribute("aria-expanded") !== "true") toggle.click();
-    await until(function () { return cells().length; }, "", 3000).catch(function () {});
-    facts.counts = rules.homeCounts(cells());
+    await until(function () { return cells(home()).length; }, "", 3000).catch(function () {});
+    facts.counts = rules.homeCounts(cells(home()));
     facts.todayViewScroll = scrollNow(home());
     seen += " " + textOf(home());
     facts.labels = rules.labelsShown(labels, seen);
@@ -409,12 +585,58 @@ function stub(cfg, rules) {
     await until(todayTile, "Home's tiles after 'Back'");
   }
 
+  // What the newest Scout answer shows: its text, the "From your plan" card under it (cells read as
+  // Home's are, the step names it lists, its "and N more" line), Scout's "<n> left", the limit card
+  // and the text box; and from the server, today_override and the model's own words.
+  function readCard(bubble) {
+    var title = bubble ? withText("span", "FROM YOUR PLAN", bubble)[0] : null;
+    var card = title && title.parentElement && title.parentElement.parentElement;
+    if (!card) return null;
+    var c = rules.homeCounts(cells(card));
+    return { today: c.today, week: c.thisWeek, steps: all("li", card).map(textOf),
+      more: all("div", card).map(textOf).filter(function (s) { return /^and \d+ more$/.test(s); })[0] || "" };
+  }
+  function readScout() {
+    var b = lastBubble(), body = (scoutWire && scoutWire.body) || {};
+    var left = all("span").filter(function (s) { return visible(s) && /^\d+ left$/.test(textOf(s)); })[0];
+    return { reply: textOf(b && one('[style*="pre-wrap"]', b)), card: readCard(b), usage: left ? textOf(left) : "",
+      limitCard: all("div").some(function (d) { return visible(d) && /^That's all \d+ for today$/.test(textOf(d)); }),
+      box: scoutBox() ? "open" : "closed", override: body.today_override === true,
+      modelReply: typeof body.reply_text === "string" ? body.reply_text.replace(/\s+/g, " ").trim() : "" };
+  }
+
+  // Opens Scout, asks the today question, and holds the answer to what this drive must show.
+  async function scout(d) {
+    (await until(scoutNav, "the Scout button in the navigation")).click();
+    await until(scoutPane, "the Scout screen");
+    reached("Scout");
+    type(await until(scoutBox, "Scout's text box"), "What should I do today?");
+    (await until(scoutSend, "Scout's Send button")).click();
+    await until(function () { return scoutWire && !one(".running") && lastBubble(); }, "Scout's answer", 30000);
+    facts.scout = readScout();
+    facts.scoutScroll = scrollNow(lastBubble());
+    function check(test, what) { return until(function () { facts.scout = readScout(); return test(facts.scout); }, what, 3000); }
+    if (d !== "scoutlimit") {
+      await check(function (s) { return s.card && facts.counts && s.card.today === facts.counts.today && s.card.week === facts.counts.thisWeek; },
+        "Scout's card to show Home's TODAY and THIS WEEK");
+    }
+    if (d === "scoutinvent") {
+      await check(function (s) { return s.override && s.reply !== s.modelReply && s.reply === rules.cardSentence(s.card); },
+        "the plan's own sentence in place of the model's answer");
+    }
+    if (d === "scoutlimit" || d === "scoutlast") {
+      await check(function (s) { return !!s.reply && s.usage === "0 left" && s.limitCard && s.box === "closed"; },
+        "an answer, '0 left', the limit card and no text box");
+    }
+  }
+
   async function run() {
-    var d = cfg.drive;
+    var d = cfg.drive, scoutDrive = /^scout/.test(d);
     if (d === "signup" || d === "full") await signup();
     if (d === "passport" || d === "full") await passport();
-    if (d === "goal" || d === "reloadmid" || d === "full") await goal(d === "reloadmid");
+    if (d === "goal" || d === "reloadmid" || d === "full" || (scoutDrive && cfg.buildPlan)) await goal(d === "reloadmid");
     if (d !== "signup" && d !== "passport") await readHome(d === "today");
+    if (scoutDrive) await scout(d);
   }
   function finish(err) {
     facts.error = err ? String(err.message || err) : "";
@@ -440,6 +662,75 @@ function pageWithStub(html, cfg) {
 function constantsFrom(html) {
   const grab = (name) => { const m = new RegExp(name + '\\s*=\\s*"([^"]+)"').exec(html); if (!m) throw new Error(name + " not found in golsz-app.html"); return m[1]; };
   return { supabaseUrl: grab("SUPABASE_URL") };
+}
+
+// ---- The Scout handler's services (the header's "HOW IT STAYS OUT OF THE PRODUCT") ----
+
+// The question being answered: its script, every address the handler fetched, and the two
+// stand-ins it is answered by (store, model). Per question, never module state that two questions
+// could share.
+const scoutRun = new AsyncLocalStorage();
+
+// The handler's fetch, for this whole process (nothing else here fetches). Inside a question it
+// answers the stand-in Supabase address and Anthropic's messages URL; everything else, and any
+// call outside a question, is refused the way a dead network refuses: a rejected TypeError.
+function serviceFetch(input, init) {
+  const run = scoutRun.getStore();
+  const url = typeof input === "string" ? input : (input && input.url) || String(input);
+  const to = !run ? "refused" : url === ANTHROPIC_MESSAGES ? "model" : url.startsWith(STAND_IN_SUPABASE + "/") ? "store" : "refused";
+  if (run) run.calls.push({ url, to });
+  if (to === "model") return Promise.resolve(run.model(init));
+  if (to === "store") return run.store(url, init);
+  console.log("scout fetch REFUSED " + url);
+  return Promise.reject(new TypeError("fetch failed: the preview sends nothing out (" + url + ")"));
+}
+
+// api/scout.js, imported once, after its environment points at the stand-ins (some of it is read
+// when the module loads).
+let scoutModule = null;
+function scoutHandler() {
+  if (!scoutModule) {
+    process.env.SUPABASE_URL = STAND_IN_SUPABASE;
+    process.env.SUPABASE_SERVICE_KEY = "stand-in";
+    process.env.ANTHROPIC_API_KEY = "stand-in";
+    delete process.env.SCOUT_FALLBACK_API_KEY;
+    globalThis.fetch = serviceFetch;
+    scoutModule = import(pathToFileURL(path.join(ROOT, "api", "scout.js")).href).then((m) => m.default);
+  }
+  return scoutModule;
+}
+
+// The stand-in for Anthropic's Messages API. The classifier's system prompt is the only one that
+// asks for summary_so_far (tests/test_scout_today_handler.cjs tells the calls apart the same way).
+function modelAnswer(init, script) {
+  let req = {};
+  try { req = JSON.parse((init && init.body) || "{}"); } catch (e) {}
+  const text = (v) => (typeof v === "string" ? v : Array.isArray(v) ? v.map((b) => (b && typeof b.text === "string" ? b.text : "")).join("\n") : "");
+  const system = text(req.system);
+  const prompt = system + "\n" + (Array.isArray(req.messages) ? req.messages.map((m) => text(m && m.content)).join("\n") : "");
+  const out = system.includes("summary_so_far") ? CLASSIFICATION : { reply: scriptedReply(script, prompt), profile_updates: null };
+  return new Response(JSON.stringify({
+    id: "msg_stand_in", type: "message", role: "assistant", model: req.model || "stand-in",
+    content: [{ type: "text", text: JSON.stringify(out) }], stop_reason: "end_turn", stop_sequence: null,
+    usage: { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+  }), { status: 200, headers: { "content-type": "application/json" } });
+}
+
+// The helpers Vercel adds to a Node response, which the handler answers with:
+// res.status(code).json(body). What it answered is kept on `run`.
+function vercelResponse(res, run) {
+  res.status = (code) => { res.statusCode = code; run.status = code; return res; };
+  res.json = (body) => { run.answer = body; res.setHeader("content-type", "application/json; charset=utf-8"); res.end(JSON.stringify(body)); return res; };
+  return res;
+}
+
+function bodyOf(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", (c) => { body += c; });
+    req.on("end", () => resolve(body));
+    req.on("error", reject);
+  });
 }
 
 function createPreview({ localise = localiseLibraries } = {}) {
@@ -577,19 +868,96 @@ function createPreview({ localise = localiseLibraries } = {}) {
     return { hasPlan: state.pathway_plan.some((p) => Array.isArray(p.milestones) && p.milestones.length > 0), signedUp, hasSport: !!athlete().sport };
   }
   // Puts the store where each drive says it starts (the tool's header). home, today and a page with
-  // no drive change nothing: they show what the earlier drives left.
+  // no drive change nothing: they show what the earlier drives left. A scout drive keeps a plan the
+  // store holds; with none it starts where the goal drive does, and builds one.
   function prepareStore(drive) {
     if (drive === "signup" || drive === "full") {
       Object.assign(state, { profiles: [defaultProfile()], athletes: [defaultAthlete()], pathway_plan: [], outreach_targets: [], athlete_benchmarks: [] });
       signedUp = false;
     }
     if (drive === "passport") { athlete().sport = null; state.pathway_plan = []; }
-    if (drive === "goal" || drive === "reloadmid") {
+    if (SCOUT_DRIVES.includes(drive)) state.scout_history = [];
+    if (drive === "goal" || drive === "reloadmid" || (SCOUT_DRIVES.includes(drive) && !storeFacts().hasPlan)) {
       const ath = athlete();
       ath.sport = ath.sport || "Soccer";
       ath.position = ath.position || "Midfielder";
       state.pathway_plan = [];
     }
+  }
+
+  // What the stand-in Supabase answers: the page's requests (through /__sb/) and the Scout
+  // handler's own (through serviceFetch) alike. `run` is the question being answered, or null.
+  function supabase(req, res, sub, params, body, run) {
+    if (sub.startsWith("/auth/v1/")) return handleAuth(req, res, sub, body);
+    if (sub.startsWith("/rest/v1/rpc/")) {
+      const rpc = sub.replace("/rest/v1/rpc/", "").split("?")[0];
+      console.log("rpc " + rpc);
+      return send(res, 200, rpcAnswer(rpc, body, run));
+    }
+    const m = /^\/rest\/v1\/([a-z_]+)$/.exec(sub);
+    if (m) return rest(req, res, m[1], params, body);
+    return send(res, 200, {});
+  }
+  // The metering RPCs the handler reads an answer from (migrations 053, 068); any other RPC is null.
+  function rpcAnswer(name, body, run) {
+    let args = {};
+    try { args = JSON.parse(body || "{}") || {}; } catch (e) {}
+    if (name === "reserve_scout_question") {
+      const limit = Number(args.p_plan_limit) || 0;
+      if (run && run.limit) return { allowed: false, used: limit + 1, limit };
+      return { allowed: true, used: run && run.last ? limit : 1, limit };
+    }
+    if (name === "reserve_free_ai_question") return { allowed: true, used: 1, limit: Number(args.p_lifetime_limit) || 0 };
+    return null;
+  }
+  // One of the handler's own Supabase requests, answered by the code above, in this process.
+  function storeAnswer(url, init, run) {
+    const u = new URL(url);
+    const headers = Object.fromEntries(new Headers((init && init.headers) || {}).entries());
+    const method = String((init && init.method) || "GET").toUpperCase();
+    return new Promise((resolve) => {
+      const res = {
+        code: 200, head: {},
+        writeHead(code, head) { this.code = code; this.head = head || {}; return this; },
+        end(text) { resolve(new Response(text == null || this.code === 204 ? null : text, { status: this.code, headers: this.head })); return this; },
+      };
+      supabase({ method, headers }, res, u.pathname, u.searchParams, init && init.body != null ? String(init.body) : "", run);
+    });
+  }
+
+  // ---- /api/scout: the real handler, its services stood in ----
+  const scoutRuns = [];
+  let lastAnsweredAt = -Infinity;
+  let turn = Promise.resolve();
+  // One question at a time, each SCOUT_SPACING_MS after the one before was answered: the handler's
+  // rate limiter stamps a question somewhere inside its run, so the end of the run is the safe mark.
+  function inTurn(ask) {
+    const mine = turn.then(async () => {
+      const wait = scoutWait(lastAnsweredAt, Date.now());
+      if (wait) await new Promise((r) => setTimeout(r, wait));
+      try { return await ask(); } finally { lastAnsweredAt = Date.now(); }
+    });
+    turn = mine.catch(() => {});
+    return mine;
+  }
+  async function askScout(req, res) {
+    let body;
+    try { const raw = await bodyOf(req); body = raw ? JSON.parse(raw) : undefined; } catch (e) { return send(res, 400, { error: "Invalid JSON body" }); }
+    const h = req.headers;
+    const run = { script: SCRIPTS.includes(h["x-preview-model"]) ? h["x-preview-model"] : "honest",
+      limit: h["x-preview-limit"] === "1", last: h["x-preview-last"] === "1", calls: [], status: null, answer: null };
+    run.store = (url, init) => storeAnswer(url, init, run);
+    run.model = (init) => modelAnswer(init, run.script);
+    const scout = await scoutHandler();
+    req.body = body;
+    try {
+      await inTurn(() => scoutRun.run(run, () => scout(req, vercelResponse(res, run))));
+    } catch (e) {
+      console.log("scout handler threw: " + ((e && e.stack) || e));
+    }
+    if (!res.writableEnded) send(res, 500, { error: "The handler sent no answer (see the preview's log)." });
+    scoutRuns.push(run);
+    console.log(scoutLine(run));
   }
 
   // Hold/release for drive completion (same pattern as targets)
@@ -607,22 +975,10 @@ function createPreview({ localise = localiseLibraries } = {}) {
     if (u.pathname === "/__hold") return hold(res);
     if (u.pathname === "/__release") { [...holds.values()].forEach((d) => d()); return send(res, 204); }
     if (u.pathname.startsWith("/__sb/")) {
-      let body = "";
-      req.on("data", (c) => { body += c; });
-      req.on("end", () => {
-        const sub = u.pathname.slice("/__sb".length);
-        if (sub.startsWith("/auth/v1/")) return handleAuth(req, res, sub, body);
-        if (sub.startsWith("/rest/v1/rpc/")) {
-          const rpc = sub.replace("/rest/v1/rpc/", "").split("?")[0];
-          console.log("rpc " + rpc);
-          return send(res, 200, null);
-        }
-        const m = /^\/rest\/v1\/([a-z_]+)$/.exec(sub);
-        if (m) return rest(req, res, m[1], u.searchParams, body);
-        return send(res, 200, {});
-      });
+      bodyOf(req).then((body) => supabase(req, res, u.pathname.slice("/__sb".length), u.searchParams, body, null));
       return;
     }
+    if (u.pathname === "/api/scout") return askScout(req, res);
     if (u.pathname.startsWith("/api/")) return send(res, 200, {});
     if (vendorFiles[u.pathname]) { res.writeHead(200, { "content-type": MIME[".js"] }); return fs.createReadStream(vendorFiles[u.pathname]).pipe(res); }
 
@@ -639,9 +995,11 @@ function createPreview({ localise = localiseLibraries } = {}) {
       Object.assign(vendorFiles, local.files);
       console.log("page " + (u.search || "(no query)"));
       const drive = DRIVES.includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "";
+      const buildPlan = SCOUT_DRIVES.includes(drive) && !storeFacts().hasPlan;
       prepareStore(drive);
       const seedSession = seedsSession(drive, storeFacts());
       const failParam = u.searchParams.get("fail");
+      const modelParam = u.searchParams.get("model");
       const cfg = {
         ...constantsFrom(local.html), userId: USER_ID,
         theme: u.searchParams.get("theme") || "",
@@ -649,14 +1007,17 @@ function createPreview({ localise = localiseLibraries } = {}) {
         today: /^\d{4}-\d{2}-\d{2}$/.test(u.searchParams.get("today") || "") ? u.searchParams.get("today") : "",
         fail: failParam === "pathway" ? "pathway" : "",
         overflow: u.searchParams.get("overflow") === "1",
-        drive, seedSession,
+        model: SCRIPTS.includes(modelParam) ? modelParam : drive === "scoutinvent" ? "step" : "",
+        limit: u.searchParams.get("limit") === "1" || drive === "scoutlimit",
+        last: u.searchParams.get("last") === "1" || drive === "scoutlast",
+        drive, seedSession, buildPlan,
       };
       res.writeHead(200, { "content-type": type });
       res.end(pageWithStub(local.html, cfg));
     });
   }
 
-  return { handler, state };
+  return { handler, state, scoutRuns };
 }
 
 if (require.main === module) {
@@ -664,4 +1025,5 @@ if (require.main === module) {
   server.listen(Number(process.argv[2]) || 0, "127.0.0.1", () => console.log("Onboarding preview on http://127.0.0.1:" + server.address().port + "/golsz-app.html"));
 }
 
-module.exports = { createPreview, pageWithStub, stubCall, stub, homeCounts, labelsShown, driveTitle, scrollBoxes, worstScroll, seedsSession, DRIVES, USER_ID, defaultProfile, defaultAthlete };
+module.exports = { createPreview, pageWithStub, stubCall, stub, homeCounts, labelsShown, driveTitle, scrollBoxes, worstScroll, seedsSession, DRIVES, USER_ID, defaultProfile, defaultAthlete,
+  cardSentence, promptFacts, scriptedReply, scoutWait, scoutLine, serviceFetch, SCOUT_DRIVES, SCRIPTS, SCOUT_SPACING_MS, ANTHROPIC_MESSAGES, STAND_IN_SUPABASE, INVENTED_STEP };
