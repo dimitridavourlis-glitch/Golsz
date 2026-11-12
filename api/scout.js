@@ -3263,24 +3263,349 @@ function resolveAthleteDay(claimed, now) {
 //     nobody agreed to it.
 //   - While they are resting (availability "out") only a recovery step can be
 //     late, exactly as Home pauses everything else.
+//   - Every open step due today is named, up to TODAY_OPEN_CAP, and the rest
+//     are counted in todayOpenMore. The cap was 5, so a sixth step due today
+//     was counted on Home and missing from the list Scout was given.
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const TODAY_OPEN_CAP = 20;
+// suggestedDate() in golsz-app.html: a day Scout proposed ("scout") or the
+// Retest button picked ("retest") sits on the calendar, but nobody agreed to
+// it, so it never makes a step late and never outranks a day the athlete chose.
+function suggestedDue(m) {
+  return !!(m && (m.due_src === "scout" || m.due_src === "retest") && m.due);
+}
 function dayBuckets(milestones, todayKey, resting) {
   const all = Array.isArray(milestones) ? milestones.filter((m) => m && typeof m === "object") : [];
-  const suggested = (m) => !!((m.due_src === "scout" || m.due_src === "retest") && m.due);
-  const canCallLate = (m) => !suggested(m) && (!resting || m.category === "recovery");
+  const canCallLate = (m) => !suggestedDue(m) && (!resting || m.category === "recovery");
   const dow = new Date(todayKey + "T00:00:00Z").getUTCDay();
   const weekFrom = shiftDayKey(todayKey, -((dow + 6) % 7));
   const weekTo = shiftDayKey(weekFrom, 6);
   const todays = all.filter((m) => m.due === todayKey);
+  const todayOpen = todays.filter((m) => !m.done);
   const week = all.filter((m) => m.due && m.due >= weekFrom && m.due <= weekTo);
   const late = all.filter((m) => !m.done && m.due && canCallLate(m) && m.due < todayKey);
   return {
     today: todayKey, weekday: WEEKDAY_NAMES[dow], weekFrom, weekTo,
     todayTotal: todays.length, todayDone: todays.filter((m) => m.done).length,
-    todayOpen: todays.filter((m) => !m.done).slice(0, 5).map((m) => String(m.label || "").slice(0, 200)),
+    todayOpen: todayOpen.slice(0, TODAY_OPEN_CAP).map((m) => String(m.label || "").slice(0, 200)),
+    todayOpenMore: Math.max(0, todayOpen.length - TODAY_OPEN_CAP),
     weekTotal: week.length, weekDone: week.filter((m) => m.done).length,
     lateCount: late.length,
   };
+}
+
+// THE STEP HOME CALLS NEXT, BY HOME'S RULE.
+// nextMilestone() in golsz-app.html (milestoneRank + compareUndone): a date the
+// athlete chose comes before any date GOLSZ suggested, the earlier date wins
+// within each, and undated steps come last in list order. The server took the
+// earliest date of either kind, so a Scout-suggested Tuesday beat the athlete's
+// own Friday and Scout named a different next step from Home's Today tile.
+// tests/test_scout_today_answer.cjs runs both on the same plans.
+function pickNextMilestone(milestones) {
+  const rank = (m) => (!m.due ? 2 : suggestedDue(m) ? 1 : 0);
+  const undone = (Array.isArray(milestones) ? milestones : []).filter((m) => m && typeof m === "object" && !m.done);
+  if (!undone.length) return null;
+  return undone.slice().sort((a, b) => {
+    const ra = rank(a), rb = rank(b);
+    if (ra !== rb) return ra - rb;
+    if (ra === 2) return 0;
+    return a.due < b.due ? -1 : a.due > b.due ? 1 : 0;
+  })[0];
+}
+
+// THE "FROM YOUR PLAN" CARD: what Home shows for today, as one object.
+// Home's numbers (dayBuckets), every open step due today, the step Home calls
+// next (pickNextMilestone) and whether they are resting, which is when Home
+// pauses "late". A Scout answer to "what should I do today?" is checked against
+// this card, so it can only say what Home says. Null when there is no day.
+function todayCard(days, next, resting) {
+  if (!days || !isDayKey(days.today)) return null;
+  return {
+    today: days.today, weekday: days.weekday,
+    todayTotal: days.todayTotal, todayDone: days.todayDone,
+    todayOpen: Array.isArray(days.todayOpen) ? days.todayOpen.slice() : [],
+    todayOpenMore: days.todayOpenMore || 0,
+    weekTotal: days.weekTotal, weekDone: days.weekDone,
+    lateCount: days.lateCount,
+    next: next && next.label
+      ? { label: String(next.label).slice(0, 200), due: (typeof next.due === "string" && next.due) ? next.due : null }
+      : null,
+    resting: !!resting,
+  };
+}
+
+// ---- "WHAT SHOULD I DO TODAY?" AND THE FACTS IN THE ANSWER ----------------
+//
+// FOLDED TEXT: lower case, no accents or Greek tonos, final sigma as sigma,
+// curly apostrophes straight. ONE CODE UNIT OUT FOR EACH ONE IN, so an index
+// found in the folded text is the same index in the original: the reply check
+// reports the reply's own spelling and reads Greek capitals there. Callers
+// pass NFC text.
+function foldText(s) {
+  let out = "";
+  for (const ch of s) {
+    let f = ch.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (f === "ς") f = "σ";
+    else if (f === "’" || f === "‘" || f === "ʼ") f = "'";
+    out += f.length === ch.length ? f : ch;
+  }
+  return out;
+}
+
+// A QUESTION ABOUT TODAY'S OR THIS WEEK'S STEPS, SPOTTED BY FIXED PATTERNS.
+//
+// Not the AI classifier. This decides whether an answer is checked against the
+// plan, so it must give the same verdict every time, be testable, and not
+// change when the classifier times out. In each language GOLSZ ships: "what
+// should I do" + today / tonight / this week; "what is due / on / left" + the
+// same; and, as the whole message, "what's next for me?", the app's own first
+// Scout button for a player (scout_big_next), which asks for the step Home's
+// Today tile names. The time word must belong to the question: "I got cut
+// today, what should I do?" is not about the plan. "This month", the "week by
+// week" schedule request and a step's own "ask Scout" seed are not today.
+// The text is folded and split into words and punctuation, so QW (one word)
+// never crosses a comma or a question mark.
+const QW = "[^ .,;:!?¿¡]+ ";
+const upTo = (n) => `(?:${QW}){0,${n}}?`;
+const Q_END = "(?:[?!.;] )*$";
+const TIME_EN = "(?:today|tonight|this week)";
+const TIME_FR = "(?:aujourd'hui|aujourdhui|ce soir|cette semaine)";
+const TIME_ES = "(?:hoy|esta noche|esta semana)";
+const TIME_EL = "(?:σημερα|αποψε|αυτην? την? ε?βδομαδα|την? ε?βδομαδα αυτη)";
+const TODAY_QUESTION_PATTERNS = [
+  ` what ${upTo(5)}(?:do|doing|work on|focus on|tackle|train|get done) ${upTo(3)}${TIME_EN} `,
+  `^ ${TIME_EN} (?:, )?what ${upTo(4)}(?:do|work on|focus on|tackle) `,
+  ` (?:what's|whats|what is|what are|what do i have|what have i got|anything|is anything|is there anything) ${upTo(3)}(?:due|on|planned|scheduled|left|steps|tasks) ${upTo(3)}${TIME_EN} `,
+  `^ (?:(?:what's|whats|what is) next (?:for me )?|what (?:should|do|shall) i do next )${Q_END}`,
+
+  ` (?:que|quoi|qu'ai|qu'est) ${upTo(5)}(?:faire|fais|fait|travailler|bosser) ${upTo(3)}${TIME_FR} `,
+  `^ ${TIME_FR} (?:, )?(?:que|quoi|qu'est) ${upTo(4)}faire `,
+  ` (?:qu'est|qu'y|quoi|qu'ai|quelles|quels|c'est quoi) ${upTo(3)}(?:prevu|prevue|prevus|prevues|a faire|au programme|programme|reste|du|dus|due|dues|en retard|etapes|taches) ${upTo(3)}${TIME_FR} `,
+  `^ (?:c'est quoi la suite |quelle est la suite |quelle est (?:ma |la )prochaine etape |que (?:dois je|devrais je) faire ensuite )(?:pour moi )?${Q_END}`,
+
+  ` (?:que|cual|cuales) ${upTo(5)}(?:hacer|hago|hacemos|trabajar|entrenar|enfocarme|centrarme) ${upTo(3)}${TIME_ES} `,
+  `^ ${TIME_ES} (?:, )?(?:¿ )?que ${upTo(4)}(?:hacer|hago) `,
+  ` (?:que|algo|cuales|hay algo) ${upTo(3)}(?:pendiente|pendientes|toca|tengo|vence|vencen|hay|planeado|previsto|queda|quedan|pasos|tareas) ${upTo(3)}${TIME_ES} `,
+  `^ (?:¿ )?(?:que sigue |que es lo siguiente |cual es (?:mi |el )siguiente paso |que (?:debo|deberia) hacer despues )(?:para mi )?${Q_END}`,
+
+  ` τι ${upTo(5)}(?:κανω|κανουμε|δουλεψω|ασχοληθω|εστιασω|προπονηθω|γυμναστω) ${upTo(3)}${TIME_EL} `,
+  `^ ${TIME_EL} (?:, )?τι ${upTo(4)}κανω `,
+  ` (?:τι|ποια|ποιο) ${upTo(3)}(?:εχω|εχει|ληγει|ληγουν|μενει|μενουν|υπαρχει|βημα|βηματα|προγραμμα|εκκρεμει|εκκρεμουν) ${upTo(3)}${TIME_EL} `,
+  `^ (?:και )?(?:τι ακολουθει |ποιο ειναι το επομενο (?:μου )?βημα |τι (?:πρεπει να |να )?κανω μετα )(?:για μενα )?${Q_END}`,
+].map((src) => new RegExp(src, "u"));
+function isTodayQuestion(text) {
+  if (typeof text !== "string" || !text.trim()) return false;
+  const q = " " + foldText(text.normalize("NFC"))
+    .replace(/[^\p{L}\p{N}'.,;:!?¿¡]+/gu, " ")
+    .replace(/([.,;:!?¿¡])/g, " $1 ")
+    .replace(/(^| )'+|'+(?= |$)/g, "$1")
+    .replace(/ +/g, " ").trim() + " ";
+  return TODAY_QUESTION_PATTERNS.some((re) => re.test(q));
+}
+
+// EVERY DAY THE MODEL WAS GIVEN: each real YYYY-MM-DD in its context, sorted.
+// This is checkReplyAgainstPlan's allowedDates.
+function datesInContext(text) {
+  if (typeof text !== "string") return [];
+  const out = new Set();
+  for (const m of text.matchAll(/(?<!\d)(\d{4}-\d{2}-\d{2})(?!\d)/g)) if (isDayKey(m[1])) out.add(m[1]);
+  return [...out].sort();
+}
+
+// DOES THIS ANSWER STAY INSIDE THE PLAN?
+//
+// checkReplyAgainstPlan(replyText, { allowedDates, labels, card, lang,
+// allowedCounts }) -> { ok, reasons: [{ kind, text }] }, kind one of:
+//   "date"    a date that is not one of allowedDates: ISO, 14/11/2026, and
+//             "14 November" / "Nov 14" with month names in en/fr/es/el.
+//             Without a year it matches any allowed day with that month and day.
+//             English "May" and "March" count only with their capital: "2 may
+//             be enough" is not a date.
+//   "weekday" a weekday name in front of a date that falls on another day, or
+//             alone and matching no allowed date. Alone, names are read in
+//             English and in `lang`; in another language the word can be a
+//             person's name (Domingo). "every Monday", "on Mondays" are habits,
+//             not dates. Greek names count only with their capital: in lower
+//             case τρίτη, πέμπτη, δεύτερα are ordinals and "secondly".
+//   "step"    words in quotes ("", “”, «») that are not a plan label, ignoring
+//             case, accents, spaces and end punctuation. `labels` is every step
+//             label in the plan; the card's own (today's open steps, the next
+//             one) always count. Quotes are for step names only; the prompt has
+//             to say so.
+//   "count"   an "N of M" (sur / de / από) or "N/M" in a clause about the plan
+//             (it names today, the week, or steps) that is not Home's pair: the
+//             nearest "today" picks today's pair, the nearest "week" this
+//             week's, neither allows both. allowedCounts adds pairs the model
+//             was also given, such as the whole plan's done/total. "8 of 10
+//             shots" names no plan, so it is not read. A year-less "20/10"
+//             with N > M is no count and could be an interval, so it is not
+//             read as a date either; "3/4 of" is a fraction.
+// Quoted text and plan labels are blanked before dates, weekdays and counts
+// are read: a label's own "Friday" is the athlete's word, not a claim.
+// No I/O and no AI. An empty reply contradicts nothing and is ok.
+const DATE_B = "(?<![\\p{L}\\p{N}])";
+const DATE_E = "(?![\\p{L}\\p{N}])";
+const MONTH_FORMS = [
+  ["january", "jan", "janvier", "janv", "enero", "ene", "ιανουαριοσ", "ιανουαριου", "γεναρησ", "γεναρη", "ιαν"],
+  ["february", "feb", "fevrier", "fevr", "fev", "febrero", "φεβρουαριοσ", "φεβρουαριου", "φλεβαρησ", "φλεβαρη", "φεβ"],
+  ["march", "mar", "mars", "marzo", "μαρτιοσ", "μαρτιου", "μαρτησ", "μαρτη", "μαρ"],
+  ["april", "apr", "avril", "avr", "abril", "abr", "απριλιοσ", "απριλιου", "απριλησ", "απριλη", "απρ"],
+  ["may", "mai", "mayo", "μαιοσ", "μαιου", "μαησ", "μαη", "μαι"],
+  ["june", "jun", "juin", "junio", "ιουνιοσ", "ιουνιου", "ιουνησ", "ιουνη", "ιουν"],
+  ["july", "jul", "juillet", "juil", "julio", "ιουλιοσ", "ιουλιου", "ιουλησ", "ιουλη", "ιουλ"],
+  ["august", "aug", "aout", "agosto", "ago", "αυγουστοσ", "αυγουστου", "αυγ"],
+  ["september", "sept", "sep", "septembre", "septiembre", "setiembre", "σεπτεμβριοσ", "σεπτεμβριου", "σεπτεμβρησ", "σεπτεμβρη", "σεπτ", "σεπ"],
+  ["october", "oct", "octobre", "octubre", "οκτωβριοσ", "οκτωβριου", "οκτωβρησ", "οκτωβρη", "οκτ"],
+  ["november", "nov", "novembre", "noviembre", "νοεμβριοσ", "νοεμβριου", "νοεμβρησ", "νοεμβρη", "νοε"],
+  ["december", "dec", "decembre", "diciembre", "dic", "δεκεμβριοσ", "δεκεμβριου", "δεκεμβρησ", "δεκεμβρη", "δεκ"],
+];
+const MONTH_OF = new Map(MONTH_FORMS.flatMap((forms, i) => forms.map((f) => [f, i + 1])));
+const MONTH_ALT = [...MONTH_OF.keys()].sort((a, b) => b.length - a.length).join("|");
+const MONTH_CAPITAL_ONLY = new Set(["may", "march"]);
+// Index 0 is Sunday, as getUTCDay() counts. Greek also in the genitive.
+const WEEKDAY_FORMS = {
+  en: ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+  fr: ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"],
+  es: ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"],
+  el: ["κυριακη|κυριακησ", "δευτερα|δευτερασ", "τριτη|τριτησ", "τεταρτη|τεταρτησ", "πεμπτη|πεμπτησ", "παρασκευη|παρασκευησ", "σαββατο|σαββατου"],
+};
+// English short names, read only in front of a date ("Fri 14 Nov"): alone,
+// "sat" and "sun" are ordinary words.
+const WEEKDAY_SHORT = ["sun", "mon", "tue|tues", "wed", "thu|thur|thurs", "fri", "sat"];
+const WEEKDAY_OF = new Map(Object.values(WEEKDAY_FORMS).concat([WEEKDAY_SHORT])
+  .flatMap((days) => days.flatMap((alts, i) => alts.split("|").map((f) => [f, i]))));
+const WEEKDAY_WORD = Object.fromEntries(Object.entries(WEEKDAY_FORMS)
+  .map(([lng, days]) => [lng, new RegExp(`${DATE_B}(${days.join("|")})${DATE_E}`, "gu")]));
+const WEEKDAY_BEFORE_DATE = new RegExp(`(?:^|[^\\p{L}\\p{N}])(${[...WEEKDAY_OF.keys()].sort((a, b) => b.length - a.length).join("|")})\\.?,?\\s+(?:(?:the|le|el|τη|την|η)\\s+)?$`, "u");
+const HABIT_BEFORE = /(?:^|[^\p{L}\p{N}])(?:every|each|chaque|cada|los|καθε)\s+$/u;
+const DATE_YMD = new RegExp(`${DATE_B}(\\d{4})[-/.](\\d{1,2})[-/.](\\d{1,2})${DATE_E}`, "gu");
+const DATE_DMY = new RegExp(`${DATE_B}(\\d{1,2})([-/.])(\\d{1,2})\\2(\\d{4}|\\d{2})${DATE_E}`, "gu");
+const DATE_DAY_MONTH = new RegExp(`${DATE_B}(\\d{1,2})(?:st|nd|rd|th|er|η|ησ)?\\.?\\s*(?:(?:of|de|του)\\s+)?(${MONTH_ALT})${DATE_E}\\.?(?:,?\\s*(?:de\\s+)?(\\d{4})${DATE_E})?`, "gu");
+const DATE_MONTH_DAY = new RegExp(`${DATE_B}(${MONTH_ALT})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?${DATE_E}(?:,?\\s*(\\d{4})${DATE_E})?`, "gu");
+const COUNT_OF = new RegExp(`${DATE_B}(\\d{1,3})\\s+(?:of|out of|sur|de|απο)\\s+(?:(?:the|your|my|tes|vos|mes|tus|sus|mis|los|las|les|τα|τισ|τουσ)\\s+)?(\\d{1,3})${DATE_E}`, "gu");
+const COUNT_SLASH = /(?<![\p{L}\p{N}.,/])(\d{1,3}) ?\/ ?(\d{1,3})(?![\p{L}\p{N}]|[.,]\d| ?\/ ?\d)/gu;
+const FRACTION_AFTER = /^\s+(?:of|de|du|des|του|τησ|των)(?![\p{L}\p{N}])/u;
+const COUNT_QUALIFIER = new RegExp(`${DATE_B}(?:(today|tonight|aujourd'hui|aujourdhui|ce soir|hoy|esta noche|σημερα|αποψε)|(week|semaine|semana|εβδομαδα|εβδομαδασ|βδομαδα|βδομαδασ))${DATE_E}`, "gu");
+const COUNT_PLAN_WORD = new RegExp(`${DATE_B}(?:step|done|complet|finish|task|etape|fait|termin|tache|paso|hech|tarea|βημα|ολοκληρ|εκανε|εγιν|εργασι)`, "u");
+const QUOTED = /"([^"\n]{1,200})"|“([^”\n]{1,200})”|«([^»\n]{1,200})»/gu;
+const GREEK_LETTER = /[\u0370-\u03ff]/u;
+const labelKey = (s) => foldText(String(s).normalize("NFC")).replace(/\s+/gu, "").replace(/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/gu, "");
+
+function checkReplyAgainstPlan(replyText, { allowedDates = [], labels = [], card = null, lang = "en", allowedCounts = [] } = {}) {
+  const reasons = [];
+  const flag = (kind, text) => {
+    if (!reasons.some((r) => r.kind === kind && r.text === text)) reasons.push({ kind, text });
+  };
+  if (typeof replyText !== "string" || !replyText.trim()) return { ok: true, reasons };
+  const orig = replyText.normalize("NFC");
+  let work = foldText(orig);                       // what is still to be read
+  const blank = (s, e) => { work = work.slice(0, s) + " ".repeat(e - s) + work.slice(e); };
+  const isWordAt = (i) => i >= 0 && i < work.length && /[\p{L}\p{N}]/u.test(work[i]);
+  const capitalAt = (i) => orig[i] !== orig[i].toLowerCase();
+  const plainLabels = (Array.isArray(labels) ? labels : [])
+    .concat(card && Array.isArray(card.todayOpen) ? card.todayOpen : [], card && card.next ? [card.next.label] : [])
+    .filter((l) => typeof l === "string");
+
+  // Quoted step names.
+  const labelKeys = new Set(plainLabels.map(labelKey).filter(Boolean));
+  const quotable = orig.replace(/(\d['’]\d{1,2})"/g, "$1 ");   // 5'11" is a height, not a quote
+  for (const m of quotable.matchAll(QUOTED)) {
+    const inner = m[1] ?? m[2] ?? m[3];
+    const key = labelKey(inner);
+    if (key && !labelKeys.has(key)) flag("step", inner.trim());
+    blank(m.index, m.index + m[0].length);
+  }
+  for (const label of plainLabels) {
+    const k = foldText(label.normalize("NFC")).trim();
+    if (k.length < 2) continue;
+    for (let i = work.indexOf(k); i >= 0; i = work.indexOf(k, i + k.length)) {
+      if (!isWordAt(i - 1) && !isWordAt(i + k.length)) blank(i, i + k.length);
+    }
+  }
+
+  // Dates, and a weekday written in front of one.
+  const allowed = new Set((Array.isArray(allowedDates) ? allowedDates : []).filter(isDayKey));
+  const weekdayOfKey = (k) => new Date(k + "T00:00:00Z").getUTCDay();
+  const allowedWeekdays = new Set([...allowed].map(weekdayOfKey));
+  const pad = (n) => String(n).padStart(2, "0");
+  // The allowed days a written date can mean: one reading per way of reading it.
+  const daysMeant = (readings) => {
+    const hits = [];
+    for (const { y, mo, d } of readings) {
+      if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) continue;
+      const md = `-${pad(mo)}-${pad(d)}`;
+      for (const k of allowed) if (y == null ? k.endsWith(md) : k === `${y}${md}`) hits.push(k);
+    }
+    return hits;
+  };
+  const checkDate = (start, end, readings) => {
+    let from = start, weekday = null;
+    const pre = work.slice(Math.max(0, start - 24), start);
+    const w = WEEKDAY_BEFORE_DATE.exec(pre);
+    if (w) {
+      const at = start - pre.length + w.index + w[0].indexOf(w[1]);
+      if (!GREEK_LETTER.test(w[1]) || capitalAt(at)) { from = at; weekday = WEEKDAY_OF.get(w[1]); }
+    }
+    const hits = daysMeant(readings);
+    if (!hits.length) flag("date", orig.slice(from, end).trim());
+    else if (weekday != null && !hits.some((k) => weekdayOfKey(k) === weekday)) flag("weekday", orig.slice(from, end).trim());
+    blank(from, end);
+  };
+  for (const m of work.matchAll(DATE_YMD)) checkDate(m.index, m.index + m[0].length, [{ y: +m[1], mo: +m[2], d: +m[3] }]);
+  for (const m of work.matchAll(DATE_DMY)) {
+    if (m[2] === "-" && m[4].length !== 4) continue;           // 12-10-08 is a set of reps
+    const y = m[4].length === 2 ? 2000 + +m[4] : +m[4];
+    checkDate(m.index, m.index + m[0].length, [{ y, mo: +m[3], d: +m[1] }, { y, mo: +m[1], d: +m[3] }]);
+  }
+  const monthWritten = (form, at) => !MONTH_CAPITAL_ONLY.has(form) || capitalAt(at);
+  for (const m of work.matchAll(DATE_DAY_MONTH)) {
+    if (!monthWritten(m[2], m.index + m[0].indexOf(m[2]))) continue;
+    checkDate(m.index, m.index + m[0].length, [{ y: m[3] ? +m[3] : null, mo: MONTH_OF.get(m[2]), d: +m[1] }]);
+  }
+  for (const m of work.matchAll(DATE_MONTH_DAY)) {
+    if (!monthWritten(m[1], m.index)) continue;
+    checkDate(m.index, m.index + m[0].length, [{ y: m[3] ? +m[3] : null, mo: MONTH_OF.get(m[1]), d: +m[2] }]);
+  }
+
+  // Weekday names on their own.
+  const langs = new Set(["en", Object.prototype.hasOwnProperty.call(WEEKDAY_WORD, lang) ? lang : "en"]);
+  for (const lng of langs) {
+    for (const m of work.matchAll(WEEKDAY_WORD[lng])) {
+      if (GREEK_LETTER.test(m[1]) && !capitalAt(m.index)) continue;
+      if (HABIT_BEFORE.test(work.slice(Math.max(0, m.index - 14), m.index))) continue;
+      if (!allowedWeekdays.has(WEEKDAY_OF.get(m[1]))) flag("weekday", orig.slice(m.index, m.index + m[0].length));
+    }
+  }
+
+  // Counts.
+  const pairOf = (done, total) => (Number.isInteger(done) && Number.isInteger(total) ? [done, total] : null);
+  const todayPair = card ? pairOf(card.todayDone, card.todayTotal) : null;
+  const weekPair = card ? pairOf(card.weekDone, card.weekTotal) : null;
+  const extraPairs = (Array.isArray(allowedCounts) ? allowedCounts : []).map((c) => (Array.isArray(c) ? pairOf(c[0], c[1]) : null));
+  const checkCount = (start, end, n, total, slash) => {
+    const before = work.slice(0, start);
+    const cs = Math.max(...[".", "!", "?", ";", "\n"].map((c) => before.lastIndexOf(c))) + 1;
+    const next = work.slice(end).search(/[.!?;\n]/);
+    const clause = work.slice(cs, next < 0 ? work.length : end + next);
+    let nearest = null;
+    for (const q of clause.matchAll(COUNT_QUALIFIER)) {
+      const qs = cs + q.index, qe = qs + q[0].length;
+      const dist = qe <= start ? start - qe : qs - end;
+      if (!nearest || dist < nearest.dist) nearest = { dist, today: !!q[1] };
+    }
+    if (!nearest && !COUNT_PLAN_WORD.test(clause)) return;      // not about the plan
+    const pairs = (!nearest ? [todayPair, weekPair] : [nearest.today ? todayPair : weekPair]).concat(extraPairs);
+    if (pairs.some((p) => p && p[0] === n && p[1] === total)) return;
+    if (slash && daysMeant([{ y: null, mo: total, d: n }, { y: null, mo: n, d: total }]).length) return;   // 3/11, a plan day
+    flag("count", orig.slice(start, end));
+  };
+  for (const m of work.matchAll(COUNT_OF)) checkCount(m.index, m.index + m[0].length, +m[1], +m[2], false);
+  for (const m of work.matchAll(COUNT_SLASH)) {
+    const n = +m[1], total = +m[2];
+    if (n > total || FRACTION_AFTER.test(work.slice(m.index + m[0].length))) continue;
+    checkCount(m.index, m.index + m[0].length, n, total, true);
+  }
+  return { ok: reasons.length === 0, reasons };
 }
 function extractSuggestedPathway(data, existingStages, todayKey) {
   try {
@@ -6297,10 +6622,8 @@ async function getAthleteState(userId, day) {
   // Same caps as extractScoutContextUpdates: first 10, labels to 200 chars.
   // A 40-step plan must not blow the prompt budget.
   const undone = milestones.filter((m) => m && !m.done);
-  const dated = undone.filter((m) => m && typeof m.due === "string" && m.due);
-  const nextMilestoneRow = dated.length
-    ? dated.slice().sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0))[0]
-    : (undone[0] || null);
+  // The step Home's Today tile names, by Home's rule (see pickNextMilestone).
+  const nextMilestoneRow = pickNextMilestone(milestones);
   const openMilestones = undone.slice(0, 10).map((m) => ({
     label: String(m.label || "").slice(0, 200),
     due: (typeof m.due === "string" && m.due) ? m.due : null,
