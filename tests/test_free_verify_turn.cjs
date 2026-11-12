@@ -59,8 +59,7 @@ const runGateRaw = new Function("userPlan", "classification", "userIsAdmin", "us
   const res = { status(s) { status = s; return { json(b) { body = b; return { __sent: true }; } }; } };
   const run = async () => {
     ${GATE_SRC.replace(/\breturn res\.status/g, "return __sent(res.status")
-              .replace(/scout_usage: \{ remaining: questionsRemaining, limit: dailyLimit \},\n\s*\}\);/,
-                       "scout_usage: { remaining: questionsRemaining, limit: dailyLimit },\n        }));")}
+              .replace(/(scout_usage: [^\n]*,\n\s*\})\);/, "$1));")}
     return { blocked: false, maxToolTurns, status, body, released, spendRecorded };
   };
   const __sent = (v) => ({ __blocked: true, v });

@@ -54,7 +54,7 @@
 <!-- Starts the app bundle downloading now, in parallel with the three libraries below. It is only
      fetched here; the loader at the bottom of <body> runs it. tools/precompile.cjs stamps this ?v=
      with the same hash as APP_SRC (test_boot_nonblocking.cjs pins that they are equal). -->
-<link rel="preload" as="script" href="js/app.js?v=16b738fed6a9afd3" />
+<link rel="preload" as="script" href="js/app.js?v=2e93ef9690568d27" />
 <style>
   html,body{margin:0;}
   html:not([data-theme="light"]) body{background:#0D1210;}
@@ -739,6 +739,7 @@ const I18N = {
     scout_connection_dropped: "Connection dropped mid-play. Send that again and I'm on it.", scout_server_error: "Scout's server didn't finish that one (error {s}). Send it again — it usually goes through.",
     scout_timed_out: "That one took me too long to work through. Send it again — or try asking it a bit more specifically.",
     scout_err_daily_limit: "You've used today's Scout messages. Upgrade for more, or pick this up again tomorrow.", scout_err_daily_limit_top: "You've used today's Scout messages. They reset tomorrow.",
+    scout_err_daily_left: "You've used today's Scout questions. 0 of {n} left today. More tomorrow.",
     scout_err_free_exhausted: "You've used all your free Scout questions. Upgrade to keep going.",
     scout_err_free_tool_blocked: "That needs a deeper search, which is included from the Basic plan up. Ask it another way and I'll answer from your own record.",
     scout_err_signin: "Sign in again to keep talking to Scout.", scout_err_no_access: "You don't have access to this athlete's Scout.",
@@ -1122,6 +1123,7 @@ const I18N = {
     scout_connection_dropped: "Connexion interrompue en plein jeu. Renvoyez ça et je m'en occupe.", scout_server_error: "Le serveur de Scout n'a pas pu terminer (erreur {s}). Renvoyez-le — ça passe généralement.",
     scout_timed_out: "Celle-là m'a pris trop de temps à traiter. Renvoyez-la — ou essayez de la poser un peu plus précisément.",
     scout_err_daily_limit: "Vous avez utilisé vos messages Scout du jour. Passez à un forfait supérieur pour en avoir plus, ou reprenez demain.", scout_err_daily_limit_top: "Vous avez utilisé vos messages Scout du jour. Ils se renouvellent demain.",
+    scout_err_daily_left: "Vous avez utilisé vos questions Scout du jour. Il vous en reste 0 sur {n} aujourd'hui. D'autres demain.",
     scout_err_free_exhausted: "Vous avez utilisé toutes vos questions Scout gratuites. Passez à un forfait supérieur pour continuer.",
     scout_err_free_tool_blocked: "Cela demande une recherche plus poussée, incluse à partir du forfait Basic. Posez la question autrement et je répondrai à partir de votre propre dossier.",
     scout_err_signin: "Reconnectez-vous pour continuer à parler à Scout.", scout_err_no_access: "Vous n'avez pas accès au Scout de cet athlète.",
@@ -1505,6 +1507,7 @@ const I18N = {
     scout_connection_dropped: "Se perdió la conexión a mitad de la jugada. Envíalo de nuevo y me encargo.", scout_server_error: "El servidor de Scout no pudo terminar (error {s}). Envíalo de nuevo — suele funcionar.",
     scout_timed_out: "Esa me llevó demasiado tiempo procesarla. Envíala de nuevo — o intenta plantearla de forma algo más concreta.",
     scout_err_daily_limit: "Ya usaste los mensajes de Scout de hoy. Mejora tu plan para tener más, o retómalo mañana.", scout_err_daily_limit_top: "Ya usaste los mensajes de Scout de hoy. Se renuevan mañana.",
+    scout_err_daily_left: "Ya usaste las preguntas de Scout de hoy. Te quedan 0 de {n} hoy. Más mañana.",
     scout_err_free_exhausted: "Ya usaste todas tus preguntas gratis de Scout. Mejora tu plan para seguir.",
     scout_err_free_tool_blocked: "Eso requiere una búsqueda más profunda, incluida a partir del plan Basic. Pregúntalo de otra forma y te respondo a partir de tu propio perfil.",
     scout_err_signin: "Vuelve a iniciar sesión para seguir hablando con Scout.", scout_err_no_access: "No tienes acceso al Scout de este atleta.",
@@ -1888,6 +1891,7 @@ const I18N = {
     scout_connection_dropped: "Η σύνδεση διακόπηκε στη μέση. Στείλτε το ξανά και θα το αναλάβω.", scout_server_error: "Ο διακομιστής του Scout δεν πρόλαβε (σφάλμα {s}). Στείλτε το ξανά — συνήθως περνάει.",
     scout_timed_out: "Αυτό μου πήρε πολλή ώρα να το επεξεργαστώ. Στείλ' το ξανά — ή δοκίμασε να το ρωτήσεις πιο συγκεκριμένα.",
     scout_err_daily_limit: "Χρησιμοποίησες τα σημερινά μηνύματα του Scout. Αναβάθμισε για περισσότερα, ή συνέχισε αύριο.", scout_err_daily_limit_top: "Χρησιμοποίησες τα σημερινά μηνύματα του Scout. Ανανεώνονται αύριο.",
+    scout_err_daily_left: "Χρησιμοποίησες τις σημερινές ερωτήσεις του Scout. Απομένουν 0 από {n} σήμερα. Περισσότερες αύριο.",
     scout_err_free_exhausted: "Χρησιμοποίησες όλες τις δωρεάν ερωτήσεις του Scout. Αναβάθμισε για να συνεχίσεις.",
     scout_err_free_tool_blocked: "Αυτό χρειάζεται πιο βαθιά αναζήτηση, που περιλαμβάνεται από το πακέτο Basic και πάνω. Ρώτα το με άλλον τρόπο και θα σου απαντήσω από το δικό σου προφίλ.",
     scout_err_signin: "Συνδέσου ξανά για να συνεχίσεις να μιλάς με τον Scout.", scout_err_no_access: "Δεν έχεις πρόσβαση στον Scout αυτού του αθλητή.",
@@ -9491,8 +9495,14 @@ function scoutFailureFor(status, data, t) {
   const code = data && typeof data.code === "string" ? data.code : "";
   const canUpgrade = !(data && data.can_upgrade === false);
   if (status === 402 || (status === 403 && code === "free_ai_exhausted")) {
+    // The daily refusal says the count and when more come ("0 of 3 left today.
+    // More tomorrow."), with the limit the server sent in scout_usage, never
+    // the client's copy of the plans. Without one, no number is guessed.
+    const usage = data && data.scout_usage;
+    const dailyLimit = usage && typeof usage.limit === "number" && usage.limit > 0 ? usage.limit : 0;
     const text = code === "free_tool_blocked" ? t("scout_err_free_tool_blocked")
       : code === "free_ai_exhausted" ? t("scout_err_free_exhausted")
+      : dailyLimit ? t("scout_err_daily_left").replace("{n}", dailyLimit)
       : canUpgrade ? t("scout_err_daily_limit")
       : t("scout_err_daily_limit_top");
     return { text, retry: false, upgrade: canUpgrade, code: code || (status === 402 ? "daily_limit_reached" : "") };
@@ -20395,7 +20405,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
     // would eventually serve a fresh bundle beside a dictionary cached from
     // a previous deploy - and a stale dictionary is SILENT, because every
     // missing key falls back to English rather than erroring.
-    var APP_SRC = "js/app.js?v=16b738fed6a9afd3";
+    var APP_SRC = "js/app.js?v=2e93ef9690568d27";
     var BUILD = APP_SRC.slice(APP_SRC.indexOf("?v=") + 3);
     function loadApp() {
       var s = document.createElement("script");

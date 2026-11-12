@@ -7541,6 +7541,80 @@ export default async function handler(req, res) {
     if (parentMeta && plan !== ownPlan) {
       console.log("GOLSZ effective plan raised by payer:", JSON.stringify({ athlete: ownPlan, parent: parentMeta.plan, effective: plan }));
     }
+
+    // THE ALLOWANCE IS CHECKED BEFORE ANY WORK IS DONE FOR THE QUESTION.
+    //
+    // This gate used to sit after the whole athlete prompt was built, and
+    // after autoFixPathwayType below, so a question the athlete had no
+    // allowance for still rewrote their plan's pathway_type and assembled
+    // their record before being refused. It now runs as soon as the plan (and
+    // so the limit) is known: a refused question, a "what should I do today?"
+    // included, gets its 402/403 with no plan write, no prompt and no model
+    // call. The plan rows are still READ first: they arrive in the same
+    // Promise.all as the profile row that says which plan applies, and a
+    // separate round trip for them would slow every question that is
+    // answered. tests/test_scout_limit_path.cjs pins the order.
+    dailyLimit = planDailyLimit(plan);
+
+    if (!isAdmin && !aiUnlimited) {
+      const reservation = await reserveScoutQuestion(userId, dailyLimit);
+      // ONLY TRUE WHEN A SLOT WAS ACTUALLY TAKEN.
+      // This was set unconditionally, including on reserveScoutQuestion's
+      // fail-open path where the RPC never ran and nothing was counted. Every
+      // release site below is guarded on this flag, so a provider failure on
+      // a request whose metering had ALSO failed would call
+      // release_scout_question anyway and decrement a slot from a real,
+      // unrelated question the athlete had already asked — handing back
+      // allowance we never took. The flag now means what its name says.
+      reservedQuestion = reservation.reserved === true;
+      questionsRemaining = Math.max(dailyLimit - (Number(reservation.used) || 0), 0);
+      if (!reservation.allowed) {
+        const message = plan === "elite"
+          ? "Daily Scout limit reached. Check back tomorrow."
+          : plan === "pro"
+          ? "Daily Scout limit reached. Upgrade to Elite for more Scout messages."
+          : plan === "starter"
+          ? "Daily Scout limit reached. Upgrade to Pro or Elite for more Scout messages."
+          : "Free daily limit reached. Upgrade for more Scout messages.";
+        // code + can_upgrade let the client say this in the athlete's own
+        // language and offer the upgrade (rather than a pointless "try
+        // again") — except on Elite, where there is nothing to upgrade to.
+        return res.status(402).json({ error: message, code: "daily_limit_reached", can_upgrade: plan !== "elite", scout_usage: { remaining: 0, limit: dailyLimit } });
+      }
+
+      // Lifetime free AI budget (migration 068) — checked only for plan ===
+      // 'free', only after the daily reservation succeeds (a request that
+      // was never going to run today shouldn't burn lifetime budget either).
+      // Distinct status code (403, not the daily-limit's 402) and error
+      // shape so the client can show "upgrade to keep using Scout" instead
+      // of "try again tomorrow" — those are different problems for the
+      // athlete to solve. Model tier is already capped to Haiku-equivalent
+      // for free plan by PLAN_MODEL_ACCESS below; this only bounds HOW MANY
+      // of those cheap replies a free account ever gets, not just per day.
+      if (plan === "free") {
+        const freeLifetimeLimit = Number(process.env.FREE_LIFETIME_LIMIT || 40);
+        const freeReservation = await reserveFreeAiQuestion(userId, freeLifetimeLimit);
+        // Only true if the reservation ACTUALLY counted. Set unconditionally,
+        // a reservation that never incremented still got "released" on every
+        // error path — refunding a lifetime question the athlete never spent,
+        // which over time hands out more than FREE_LIFETIME_LIMIT.
+        reservedFreeAi = freeReservation.reserved === true;
+        if (!freeReservation.allowed) {
+          // Same rule as every other release site: only a slot this request
+          // really took is given back. Unguarded, a daily reservation that
+          // had failed open was "refunded" here too, handing back a question
+          // the athlete really had asked earlier today.
+          if (reservedQuestion) await releaseScoutQuestion(userId);
+          reservedQuestion = false;
+          return res.status(403).json({
+            error: "You've used all your free GOLSZ Scout questions. Upgrade to keep getting AI-powered guidance.",
+            code: "free_ai_exhausted",
+            scout_usage: { remaining: 0, limit: dailyLimit },
+          });
+        }
+      }
+    }
+
     // Rendered once, here, and reused verbatim by every downstream path so no
     // model can receive a materially different version of the athlete's facts.
     authoritativeBlock = renderAuthoritativeContext(authContext, goalText);
@@ -7916,63 +7990,6 @@ A newer source always beats an older one at the same level. If memory says one t
         entLocked: ent.lockedLabels, entUpgradeName: ent.upgradeToName,
       })}`;
     }
-
-    dailyLimit = planDailyLimit(plan);
-
-    if (!isAdmin && !aiUnlimited) {
-      const reservation = await reserveScoutQuestion(userId, dailyLimit);
-      // ONLY TRUE WHEN A SLOT WAS ACTUALLY TAKEN.
-      // This was set unconditionally, including on reserveScoutQuestion's
-      // fail-open path where the RPC never ran and nothing was counted. Every
-      // release site below is guarded on this flag, so a provider failure on
-      // a request whose metering had ALSO failed would call
-      // release_scout_question anyway and decrement a slot from a real,
-      // unrelated question the athlete had already asked — handing back
-      // allowance we never took. The flag now means what its name says.
-      reservedQuestion = reservation.reserved === true;
-      questionsRemaining = Math.max(dailyLimit - (Number(reservation.used) || 0), 0);
-      if (!reservation.allowed) {
-        const message = plan === "elite"
-          ? "Daily Scout limit reached. Check back tomorrow."
-          : plan === "pro"
-          ? "Daily Scout limit reached. Upgrade to Elite for more Scout messages."
-          : plan === "starter"
-          ? "Daily Scout limit reached. Upgrade to Pro or Elite for more Scout messages."
-          : "Free daily limit reached. Upgrade for more Scout messages.";
-        // code + can_upgrade let the client say this in the athlete's own
-        // language and offer the upgrade (rather than a pointless "try
-        // again") — except on Elite, where there is nothing to upgrade to.
-        return res.status(402).json({ error: message, code: "daily_limit_reached", can_upgrade: plan !== "elite", scout_usage: { remaining: 0, limit: dailyLimit } });
-      }
-
-      // Lifetime free AI budget (migration 068) — checked only for plan ===
-      // 'free', only after the daily reservation succeeds (a request that
-      // was never going to run today shouldn't burn lifetime budget either).
-      // Distinct status code (403, not the daily-limit's 402) and error
-      // shape so the client can show "upgrade to keep using Scout" instead
-      // of "try again tomorrow" — those are different problems for the
-      // athlete to solve. Model tier is already capped to Haiku-equivalent
-      // for free plan by PLAN_MODEL_ACCESS below; this only bounds HOW MANY
-      // of those cheap replies a free account ever gets, not just per day.
-      if (plan === "free") {
-        const freeLifetimeLimit = Number(process.env.FREE_LIFETIME_LIMIT || 40);
-        const freeReservation = await reserveFreeAiQuestion(userId, freeLifetimeLimit);
-        // Only true if the reservation ACTUALLY counted. Set unconditionally,
-        // a reservation that never incremented still got "released" on every
-        // error path — refunding a lifetime question the athlete never spent,
-        // which over time hands out more than FREE_LIFETIME_LIMIT.
-        reservedFreeAi = freeReservation.reserved === true;
-        if (!freeReservation.allowed) {
-          await releaseScoutQuestion(userId);
-          reservedQuestion = false;
-          return res.status(403).json({
-            error: "You've used all your free GOLSZ Scout questions. Upgrade to keep getting AI-powered guidance.",
-            code: "free_ai_exhausted",
-            scout_usage: { remaining: 0, limit: dailyLimit },
-          });
-        }
-      }
-    }
   }
 
   // ---- route (classify — with the FAQ list embedded — then decide the model) ----
@@ -8164,6 +8181,10 @@ A newer source always beats an older one at the same level. If memory says one t
       if (classification.intent === "db_lookup") {
         if (reservedQuestion) await releaseScoutQuestion(userId);
         if (reservedFreeAi) await releaseFreeAiQuestion(userId);
+        // The count includes the question just given back: "0 left" here shut
+        // Scout with one still there. Nothing reserved, no count invented.
+        const usageAfterRefund = reservedQuestion
+          ? { remaining: Math.min(questionsRemaining + 1, dailyLimit), limit: dailyLimit } : undefined;
         reservedQuestion = false;
         reservedFreeAi = false;
         await recordRequestSpend();
@@ -8177,7 +8198,7 @@ A newer source always beats an older one at the same level. If memory says one t
           error: "Deeper searches, including GOLSZ's event listings and multi-step research, are included from the Basic plan up. Scout doesn't search for individual players on any plan right now.",
           code: "free_tool_blocked",
           can_upgrade: true,
-          scout_usage: { remaining: questionsRemaining, limit: dailyLimit },
+          scout_usage: usageAfterRefund,
         });
       }
       maxToolTurns = FREE_VERIFY_TURNS;
