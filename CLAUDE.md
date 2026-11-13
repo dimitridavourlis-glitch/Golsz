@@ -379,8 +379,10 @@ Relevant commands:
   for a session with no browser tool. One run starts a fresh preview server and a fresh headless Chrome profile, opens
   the drives in order (signup, passport, goal, home, reloadmid, `goal&fail=pathway`, full, today, `goal&overflow=1`,
   then job 216's Scout pages: `scouttoday&model=honest`, `scoutinvent` with `date`, `step` and `count`, `scoutlimit`,
-  `scoutlast`) and prints one JSON line per page: the drive's result, `ms` (how long the page took; a drive step gives
-  up after 30 s, `STEP_MS`, so a slow step shows here), console errors, failed requests, its own reading of the last
+  `scoutlast`) and prints one JSON line per page: the drive's result, `ms` (how long the page took; a drive gives the
+  app's first screen 90 s, `BOOT_MS`, and each later step 30 s, `STEP_MS`, so a slow boot or step that lands shows
+  here; the runner stops reading a page after 180 s, the server answers the hold image after 120 s; with the Mac's
+  load average at 35-49 on 2026-11-14 pages that boot in 7 s took 30-45 s), console errors, failed requests, its own reading of the last
   screen (`doc` = document scrollWidth/innerWidth, `pastEdge` = visible elements past the window's edge) and a
   screenshot under `node_modules/.cache/onboarding-run`. `--chrome PATH` picks the binary; `--no-sandbox` is needed
   inside an agent's sandbox. Chrome talks over a pipe and cannot reach the internet. In AVA's OpenCode sandbox Google
@@ -535,47 +537,84 @@ Relevant commands:
   the same day. "Missed" uses that day and the resting rule. `responseCacheFingerprint` carries the day and a
   step digest. `getAthleteState` reads run as one `Promise.all` round (they were sequential).
   Benchmark lines carry `benchmarkProvenance()` (who measured it, and the recorded protocol).
-- **Scout's "what should I do today?" agrees with Home (AVA job 216; t1 built the helpers, t2 wires them into the
-  handler, t3 shows the card in the app).** Pure helpers beside `dayBuckets()`, no I/O, no AI: `isTodayQuestion(text)` (fixed en/fr/es/el
-  patterns, never the classifier, so a classifier timeout cannot change it; the "What's next for me?" button,
-  `scout_big_next`, counts); `pickNextMilestone()` (Home's `nextMilestone` rule: a date the athlete chose before one
-  GOLSZ suggested, earliest first, then undated in list order; `getAthleteState` uses it, it had taken the earliest
-  date of either kind); `todayCard(days, next, resting)` (Home's numbers, every open step due today up to
-  `TODAY_OPEN_CAP` 20 plus `todayOpenMore`, the next step); `datesInContext(text)`; and `checkReplyAgainstPlan(reply,
-  { allowedDates, labels, card, lang, allowedCounts })` -> `{ ok, reasons }`, flagging a date or weekday not in the
-  context, a quoted step that is not a plan label (quotes are for step names only), and an "N of M"/"N/M" that is
-  not Home's pair (each "today"/"week" word belongs to the count nearest to it). `tests/test_scout_today_answer.cjs`
-  diffs them against HomeTab's code through `tests/_day_parity.cjs` (shared with `test_scout_today.cjs`) and runs
-  every reply check on a twin built to break it.
-  **The app side (t3): the "From your plan" card.** `Scout.send()` keeps `today_card`, `today_override` and
-  `today_unavailable` on the assistant message; `ScoutTodayCard` draws the card under the reply (read-only, no
-  button, ScoutActionCard's shape capped at 440px): FROM YOUR PLAN, TODAY done/total with each open step due today by
-  name (one with no name, or past the server's 20, is counted in "and N more"), THIS WEEK done/total, a late line
-  only above 0, Home's resting words while resting, and "Nothing is due today." / Home's empty-week line. The labels
-  and the late line are Home's own keys (`home_week_today`, `home_week_title`, `home_door_plan_late`).
-  `scoutTodayLines(card, t)` decides every line and refuses a card whose numbers do not add up (then nothing is drawn
-  and nothing guessed); `scoutTodaySentence(card, t)` says the same in words ('Today: "<step>". This week: 0 of 3
-  done.'). With `today_override` that sentence replaces the reply in the bubble and is what `logTurn` saves, and the
-  offers (schools, steps, email) that came with the replaced reply are dropped; with no usable card the bubble says
+- **"What should I do today?" is answered from the athlete's plan and checked against it (AVA job 216):** see the
+  next section, "Scout's today answer agrees with Home".
+
+### Scout's today answer agrees with Home (AVA job 216)
+
+If Scout and Home disagree about today, the athlete stops trusting both. So a today question gets the steps Home shows
+as due today and Home's this-week count, never a date or step that is not in the plan, and an athlete who is out of
+questions is told so with the count. Built 2026-11-12/13 in steps t1 (helpers), t4 (limit path), t2 (handler), t3
+(card), t5 (rehearsal tools); t6 recorded the run below (2026-11-14). Every helper here is pure (no I/O, no AI) and
+sits beside `dayBuckets()` in `api/scout.js` (see "Scout knows the athlete's day" above for Home's buckets).
+
+- **Spotting the question: `isTodayQuestion(text)`.** Fixed en/fr/es/el patterns, never the classifier, so a
+  classifier timeout cannot change the answer; the "What's next for me?" button (`scout_big_next`) counts. The handler
+  tests what the athlete typed (`typedQuestion`) and acts only when the plan has steps (`pathwayComplete`) or could not
+  be read; a plan with no steps gets neither card nor rule (Home shows its "set your goal" card there).
+- **What Home shows: `todayCard(days, next, resting)`.** Home's TODAY and THIS WEEK done/total, every open step due
+  today by name up to `TODAY_OPEN_CAP` (20) plus `todayOpenMore`, the late count and the next step.
+  `pickNextMilestone()` is Home's `nextMilestone` rule (a date the athlete chose before one GOLSZ suggested, earliest
+  first, then undated in list order); `getAthleteState` uses it (it had taken the earliest date of either kind). The
+  prompt's TODAY FOR THEM line states the same names and numbers, then `TODAY_ANSWER_RULE` (step names in double quotes,
+  this week as "N of M", nothing that is not in the context), or `TODAY_PLAN_UNREAD_RULE` when `pathway_plan` could not
+  be read (say so, name nothing from it).
+- **Holding the reply to the plan: `checkReplyAgainstPlan(reply, { allowedDates, labels, card, lang, allowedCounts })`
+  -> `{ ok, reasons }`.** Flags a date or weekday not in the prompt (`datesInContext(text)` collects the allowed ones),
+  a quoted step that is not a plan label (quotes are for step names only), and an "N of M"/"N/M" that is not Home's
+  pair (each "today"/"week" word belongs to the count nearest to it; `allowedCounts` adds the prompt's other true pairs:
+  the whole plan, Passport Strength). `finishTodayAnswer()` runs it on every way a reply goes back (fast model, deep
+  model with its tool loop and forced no-tools reply, both failovers), before the replay entry is written, and adds
+  `today_card` (or `today_unavailable`) and, when the check flags anything or throws, **`today_override`**. `reply_text`
+  is left as it was; the app shows the plan in its place. Only the kinds of disagreement are logged (`console.warn
+  "GOLSZ scout today answer disagrees with the plan"`, `error_log` source `scout_today_guard`), never the reply.
+- **No stored answer for a today question.** It is never answered from `scout_faq` (`faqMatch` requires
+  `!todayAnswer`, whatever the classifier matched) and never read from or written to the shared
+  `scout_response_cache` (its `cacheKey` stays null): neither knows the athlete's steps. The per-user replay entry
+  (`replayCacheKey(userId, requestId)`) is still written, so a Retry gets the same reply and card without a second charge.
+- **Out of questions (t4).** When `reserve_scout_question` refuses, the handler answers 402 with `scout_usage` before
+  any plan read or model call. The app's `scoutFailureFor()` says `scout_err_daily_left` ("You've used today's Scout
+  questions. 0 of 3 left today. More tomorrow.", with the limit the server sent, never the client's copy of the plans),
+  the header says "0 left" and `ScoutLimitCard` takes the place of the text box. A question allowed as the day's last is
+  answered, then shows the same "0 left" and card.
+- **The app: the "From your plan" card (t3).** `Scout.send()` keeps `today_card`, `today_override` and
+  `today_unavailable` on the assistant message; `ScoutTodayCard` draws the card under the reply (read-only, no button,
+  ScoutActionCard's shape capped at 440px): FROM YOUR PLAN, TODAY done/total with each open step due today by name (one
+  with no name, or past the server's 20, is counted in "and N more"), THIS WEEK done/total, a late line only above 0,
+  Home's resting words while resting, and "Nothing is due today." / Home's empty-week line. The labels and the late line
+  are Home's own keys (`home_week_today`, `home_week_title`, `home_door_plan_late`). `scoutTodayLines(card, t)` decides
+  every line and refuses a card whose numbers do not add up (then nothing is drawn and nothing guessed);
+  `scoutTodaySentence(card, t)` says the same in words ('Today: "<step>". This week: 0 of 3 done.'). With
+  `today_override` that sentence replaces the reply in the bubble and is what `logTurn` saves, and the offers (schools,
+  steps, email) that came with the replaced reply are dropped; with no usable card the bubble says
   `scout_today_unavailable` instead. `today_unavailable` alone adds that line under the model's reply. A chat reopened
-  from History has no card (scout_history keeps text only). `tests/test_scout_today_card.cjs` lifts both helpers,
-  checks them in all four languages, compares the card on `_day_parity`'s generated plans with Home's own TODAY and
-  THIS WEEK tile code (`runHome`) and `todayCard()`, draws the card (theme colours only, 4.5:1 in both themes) and
-  drives the real Scout component against the real handler; its harness, `tests/_app_mount.cjs`, is shared with
-  `test_scout_limit_path.cjs`.
-  **The rehearsal (t5): Home and Scout side by side, no live service.** `tools/preview-onboarding.cjs` answers
-  `/api/scout` with the REAL handler (its default export, given Vercel's `req.body` and `res.status().json()`) in the
-  preview's own process. Its Supabase calls go to the page's in-memory store (`SUPABASE_URL` is a stand-in `.invalid`
-  address) and its Anthropic calls to a scripted model, `&model=honest|date|step|count`: honest quotes the steps and
-  counts the handler's TODAY FOR THEM line gives; the others make up one date, step or count. `&limit=1` and `&last=1`
-  make `reserve_scout_question` refuse the question or allow it as the day's last. Drives `scouttoday` (it builds the
-  plan first when the store has none), `scoutinvent` (default `step`), `scoutlimit` and `scoutlast` read Home's TODAY
-  and THIS WEEK cells, ask Scout "What should I do today?" and start the title with `home today`, `home week`,
-  `card today`, `card week`, `card steps`, `override`, `usage`, `limitCard` and `reply` (`replaced` when the bubble shows
-  the plan's sentence instead). The server prints `scout <status> model=<script> ... calls: <n> store, <n> model, <n>
-  refused` per question; anything but the stand-ins is refused. Questions reach the handler `SCOUT_SPACING_MS` (3.2 s)
-  apart, past its 3 s rate limit. Suite: `tests/test_preview_onboarding.cjs`. Recorded run 2026-11-13 (390 and 1280 px,
-  dark): AI_HANDOFF.md of that day.
+  from History has no card (scout_history keeps text only).
+- **Suites.** `test_scout_today_answer.cjs` (the pure helpers, diffed against HomeTab's code through `_day_parity.cjs`,
+  shared with `test_scout_today.cjs`; every reply check also runs on a twin built to break it);
+  `test_scout_today_handler.cjs` (the real handler, network mocked: the card, the override, the logged kinds only, the
+  FAQ/cache bypass, all four reply paths, no card without steps, `today_unavailable`); `test_scout_today_card.cjs` (both
+  app helpers in all four languages, the card against Home's own TODAY/THIS WEEK tile code on generated plans, theme
+  colours at 4.5:1 in both themes, the real Scout component against the real handler; harness `_app_mount.cjs`, shared
+  with `test_scout_limit_path.cjs`, which proves the limit path from the handler's request log and the mounted Scout).
+- **Rehearsal without live services (t5).** `tools/preview-onboarding.cjs` answers `/api/scout` with the REAL handler
+  (its default export, given Vercel's `req.body` and `res.status().json()`) in the preview's own process. Its Supabase
+  calls go to the page's in-memory store (`SUPABASE_URL` is a stand-in `.invalid` address) and its Anthropic calls to a
+  scripted model, `&model=honest|date|step|count`: honest quotes the steps and counts the handler's TODAY FOR THEM line
+  gives; the others make up one date, step or count. `&limit=1` and `&last=1` make `reserve_scout_question` refuse the
+  question or allow it as the day's last. Drives `scouttoday` (it builds the plan first when the store has none),
+  `scoutinvent` (default `step`), `scoutlimit` and `scoutlast` read Home's TODAY and THIS WEEK cells, ask Scout "What
+  should I do today?" and start the title with `home today`, `home week`, `card today`, `card week`, `card steps`,
+  `override`, `usage`, `limitCard` and `reply` (`replaced` when the bubble shows the plan's sentence instead). The server
+  prints `scout <status> model=<script> ... calls: <n> store, <n> model, <n> refused` per question; anything but the
+  stand-ins is refused. Questions reach the handler `SCOUT_SPACING_MS` (3.2 s) apart, past its 3 s rate limit. Suite:
+  `tests/test_preview_onboarding.cjs`. `tools/run-onboarding-chrome.cjs` runs the drives in headless Chrome.
+- **Recorded run 2026-11-14 (t6).** RUN_SUMMARY_PLACEHOLDER
+- **UNVERIFIED.** The live Anthropic models: the run's replies are scripted, so how often a real reply trips
+  `today_override`, and whether a real model follows `TODAY_ANSWER_RULE`, is unknown (the guard is model-independent).
+  Live Supabase: RLS, PostgREST and the real `reserve_scout_question` (the run's store answers it). fr/es/el in a
+  browser (the suites check the patterns and keys in all four languages). A real phone on cellular, Safari, Firefox,
+  Google Chrome itself (the run used Chromium's headless shell), a screen reader, the web fonts (no internet in the run,
+  so the fallback font's widths). Known gap by design: a chat reopened from History has no card.
 
 ### `api/stripe-webhook.js` (Vercel serverless function)
 

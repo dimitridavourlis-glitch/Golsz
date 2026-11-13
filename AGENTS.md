@@ -154,6 +154,16 @@ node tests/test_<name>.cjs     # one suite
   **UNVERIFIED:** the web fonts (no internet in the run, fallback font), Google Chrome/Safari/Firefox, live
   Supabase/RLS, real phone, screen reader, fr/es/el.
   Detail: CLAUDE.md § First visit: sign-up to a dated plan.
+- Scout's today answer agrees with Home (AVA job 216): `isTodayQuestion` (fixed en/fr/es/el patterns, never the
+  classifier) spots "what should I do today?"; `todayCard()` is Home's TODAY/THIS WEEK done/total plus the steps due
+  today by name; `checkReplyAgainstPlan()` flags a date, quoted step or count that is not in the plan, and the reply
+  then carries `today_override` (the app shows the plan's own sentence instead). A today question is never answered
+  from `scout_faq` or the shared `scout_response_cache`. Out of questions: 402 with `scout_usage`, "0 of N left
+  today", and `ScoutLimitCard` replaces the text box. App: `ScoutTodayCard` ("From your plan") under the reply.
+  Rehearsal: the scout drives above; the drives give the app's first screen 90 s (`BOOT_MS`) and each step 30 s.
+  Recorded run 2026-11-14 (Chromium headless shell, 390/1280, dark/light): AI_HANDOFF.md. **UNVERIFIED:** the live
+  Anthropic model, live Supabase, fr/es/el in a browser, a real phone, Safari/Firefox, a screen reader, web fonts.
+  Detail: CLAUDE.md § Scout's today answer agrees with Home.
 - Targets (Plan > "Schools & clubs", table `outreach_targets`): the caps in `TARGET_LIMITS` (golsz-app.html) are
   repeated by migration 165's check constraints, and `tests/test_migration_165.cjs` diffs them: change both, through a
   new migration. 165 is NOT YET APPLIED, so today the caps are client-side only. Deleting a target takes two taps and

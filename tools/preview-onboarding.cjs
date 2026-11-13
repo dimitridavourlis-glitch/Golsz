@@ -408,9 +408,13 @@ function stub(cfg, rules) {
 
   // How long a step may take before the drive gives up and says FAILED. It checks where the person
   // lands, not how fast (tools/time-first-screen.cjs measures speed): steps take under a second, but
-  // on a busy Mac sign-up once reached the Passport editor after 12-14 s. A broken step is
-  // still reported well inside the runner's 60 s per page and the server's 45 s hold.
+  // on a busy Mac sign-up once reached the Passport editor after 12-14 s. The app's first screen
+  // gets its own allowance, BOOT_MS: booting is the CPU-heavy part, and with the Mac's load average
+  // at 35 (2026-11-14) pages that boot in 7 s took 30-45 s, so STEP_MS alone failed drives whose app
+  // did arrive. A broken step or boot is still reported inside the runner's 180 s per page and the
+  // server's 120 s hold.
   var STEP_MS = 30000;
+  var BOOT_MS = 90000;
   var GOAL = "Play college soccer in the US";
   var failing = cfg.fail === "pathway";
   var facts = { path: [] };
@@ -637,6 +641,8 @@ function stub(cfg, rules) {
 
   async function run() {
     var d = cfg.drive, scoutDrive = /^scout/.test(d);
+    // Any screen the drives know (each drive's own first wait then finds its screen at once).
+    await until(function () { return screenName() !== "unknown"; }, "the app's first screen", BOOT_MS);
     if (d === "signup" || d === "full") await signup();
     if (d === "passport" || d === "full") await passport();
     if (d === "goal" || d === "reloadmid" || d === "full" || (scoutDrive && cfg.buildPlan)) await goal(d === "reloadmid");
@@ -976,7 +982,7 @@ function createPreview({ localise = localiseLibraries } = {}) {
   const holds = new Map();
   function hold(res) {
     const done = () => { if (!holds.delete(res)) return; clearTimeout(timer); res.writeHead(204, { "cache-control": "no-store" }).end(); };
-    const timer = setTimeout(done, 45000);
+    const timer = setTimeout(done, 120000);
     holds.set(res, done);
     res.on("close", () => { holds.delete(res); clearTimeout(timer); });
   }

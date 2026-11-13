@@ -271,6 +271,13 @@ async function runStub(cfg, requests, respond = () => new Response("[]")) {
   const stepMs = Number(/var STEP_MS = (\d+);/.exec(call0)[1]), holdMs = Number(/const timer = setTimeout\(done, (\d+)\);/.exec(tool)[1]);
   const driveWaitMs = Number(/const DRIVE_WAIT_MS = (\d+);/.exec(runner)[1]);
   ok(stepMs < holdMs && stepMs < driveWaitMs, "a step gives up (STEP_MS " + stepMs + ") before the hold is answered (" + holdMs + ") and before the runner stops waiting (" + driveWaitMs + ")");
+  // The app's first screen has its own, longer allowance (a busy Mac boots the app slowly), and so must
+  // still fail inside the hold and the runner's wait; every drive waits for it before its first step.
+  const bootMs = Number((/var BOOT_MS = (\d+);/.exec(call0) || [])[1]);
+  ok(bootMs > stepMs && bootMs < holdMs && bootMs < driveWaitMs, "the first screen gives up (BOOT_MS " + bootMs + ") after STEP_MS, before the hold is answered and before the runner stops waiting");
+  const runBody = call0.slice(call0.indexOf("async function run()"), call0.indexOf("function finish("));
+  ok(/^async function run\(\) \{\s*var d = cfg\.drive[^\n]*\n(\s*\/\/[^\n]*\n)*\s*await until\(function \(\) \{ return screenName\(\) !== "unknown"; \}, "the app's first screen", BOOT_MS\);/.test(runBody),
+    "run() waits BOOT_MS for any known screen before the drive's first step");
 
   // The positive control: &overflow=1 reaches the page, and only then does the drive add the bar.
   const widePage = (await call(port, "GET", "/golsz-app.html?drive=home&overflow=1")).text;

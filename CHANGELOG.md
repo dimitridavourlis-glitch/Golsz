@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-14
+
+- Ask Scout "What should I do today?" and its answer now comes from your own plan: it names the same steps due today and the same count for this week that Home shows, with a "From your plan" card under the answer.
+- If Scout's answer mentions a date, a step or a number that isn't in your plan, the app shows what your plan says instead, so Scout never hands you a made-up step or deadline.
+- When you've used today's Scout questions, Scout now tells you plainly, with the count ("0 of 3 left today") and when more come, instead of going quiet. The text box makes way for a card that says the same.
+
 ## 2026-11-10
 
 - New athletes can now go from sign-up to a dated plan in one visit: after creating an account and filling in their Passport, they set a goal and get their first steps, each with a date.

@@ -14,8 +14,9 @@
 //   drive         the page's query
 //   result        what the drive wrote after the page title (see preview-onboarding.cjs), or "no drive result"
 //   ms            how long that took from navigation (to the load event for a page with no drive), read
-//                 every 250 ms. A drive waits up to 30 s for each step, so a slow step that still lands
-//                 shows here, not as a failure
+//                 every 250 ms. A drive waits up to 90 s for the app's first screen (BOOT_MS) and 30 s for
+//                 each step after it (STEP_MS), so a slow boot or step that still lands shows here, not as
+//                 a failure; this runner stops reading a page after DRIVE_WAIT_MS (180 s)
 //   consoleErrors uncaught exceptions and console.error calls
 //   failedRequests requests that did not load (web fonts fail where there is no internet)
 //   doc           document scrollWidth/innerWidth, read by this runner on the last screen
@@ -37,7 +38,7 @@ const PAGES = ["drive=signup", "drive=passport", "drive=goal", "drive=home", "dr
   "drive=goal&fail=pathway", "drive=full", "drive=today", "drive=goal&overflow=1",
   "drive=scouttoday&model=honest", "drive=scoutinvent&model=date", "drive=scoutinvent&model=step",
   "drive=scoutinvent&model=count", "drive=scoutlimit", "drive=scoutlast"];
-const DRIVE_WAIT_MS = 60000;
+const DRIVE_WAIT_MS = 180000;
 
 function option(name, fallback) { const i = process.argv.indexOf("--" + name); return i === -1 ? fallback : process.argv[i + 1]; }
 const flags = ["--width", "--theme", "--out", "--chrome"];
