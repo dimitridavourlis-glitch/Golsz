@@ -13,7 +13,7 @@
 const path = require("path");
 const REPO = path.join(__dirname, "..");
 const fs = require("fs");
-const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const SCOUT = fs.readFileSync(REPO + "/api/scout.js", "utf8");
 const DELETE_ACCOUNT = fs.readFileSync(REPO + "/api/delete-account.js", "utf8");
 

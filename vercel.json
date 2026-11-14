@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run check && npm run split && npm run compile && npm run strip && npm run unpublish",
+  "buildCommand": "npm run check && npm run unpublish",
   "outputDirectory": ".",
   "redirects": [
     {

@@ -6,12 +6,17 @@
 // Usage:  node tools/run-onboarding-chrome.cjs --width 390 --theme dark [--out DIR] [--no-sandbox] [QUERY ...]
 //   One run = one fresh preview server (its store) and one fresh Chrome profile, one width, one theme.
 //   QUERY is what follows "/golsz-app.html?theme=<theme>&", e.g. "drive=goal&fail=pathway". With no
-//   QUERY it runs PAGES below, in order (the order matters: every drive changes the store).
+//   QUERY it runs PAGES below, in order (the order matters: every drive changes the store, and the
+//   scout drives at the end ask Scout about the plan the drives before them built).
 //   --chrome PATH (or CHROME_PATH) picks the binary; the default is Google Chrome on a Mac.
 //   --no-sandbox passes Chrome's own flag of that name: needed when this runs inside another sandbox.
 // Prints one JSON line per page:
 //   drive         the page's query
 //   result        what the drive wrote after the page title (see preview-onboarding.cjs), or "no drive result"
+//   ms            how long that took from navigation (to the load event for a page with no drive), read
+//                 every 250 ms. A drive waits up to 90 s for the app's first screen (BOOT_MS) and 30 s for
+//                 each step after it (STEP_MS), so a slow boot or step that still lands shows here, not as
+//                 a failure; this runner stops reading a page after DRIVE_WAIT_MS (180 s)
 //   consoleErrors uncaught exceptions and console.error calls
 //   failedRequests requests that did not load (web fonts fail where there is no internet)
 //   doc           document scrollWidth/innerWidth, read by this runner on the last screen
@@ -30,8 +35,10 @@ const os = require("os");
 const path = require("path");
 
 const PAGES = ["drive=signup", "drive=passport", "drive=goal", "drive=home", "drive=reloadmid",
-  "drive=goal&fail=pathway", "drive=full", "drive=today", "drive=goal&overflow=1"];
-const DRIVE_WAIT_MS = 60000;
+  "drive=goal&fail=pathway", "drive=full", "drive=today", "drive=goal&overflow=1",
+  "drive=scouttoday&model=honest", "drive=scoutinvent&model=date", "drive=scoutinvent&model=step",
+  "drive=scoutinvent&model=count", "drive=scoutlimit", "drive=scoutlast"];
+const DRIVE_WAIT_MS = 180000;
 
 function option(name, fallback) { const i = process.argv.indexOf("--" + name); return i === -1 ? fallback : process.argv[i + 1]; }
 const flags = ["--width", "--theme", "--out", "--chrome"];
@@ -132,6 +139,7 @@ async function openPage(chrome, url, shotFile, hasDrive) {
     seen = await read().catch(() => ({}));
     if (hasDrive ? /\[drive (done|FAILED)/.test(seen.title || "") : loaded) break;
   }
+  const ms = Date.now() - t0;
   await sleep(1200);
   seen = await read();
   const shot = await chrome.send("Page.captureScreenshot", { format: "png" }, sessionId);
@@ -139,7 +147,7 @@ async function openPage(chrome, url, shotFile, hasDrive) {
   chrome.listeners.splice(chrome.listeners.indexOf(onMessage), 1);
   await chrome.send("Target.closeTarget", { targetId });
   const m = /\[(drive (?:done|FAILED).*)\]\s*$/.exec(seen.title || "");
-  return { result: m ? m[1] : "no drive result", consoleErrors, failedRequests, doc: seen.doc, pastEdge: seen.pastEdge, firstPast: seen.firstPast };
+  return { result: m ? m[1] : "no drive result", ms, consoleErrors, failedRequests, doc: seen.doc, pastEdge: seen.pastEdge, firstPast: seen.firstPast };
 }
 
 async function main() {

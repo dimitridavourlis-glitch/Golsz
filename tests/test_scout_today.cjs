@@ -13,21 +13,16 @@
 const REPO = require("path").join(__dirname, "..");
 const fs = require("fs");
 const SCOUT = fs.readFileSync(REPO + "/api/scout.js", "utf8");
-const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const BUNDLE = fs.readFileSync(REPO + "/js/app.js", "utf8");
+// The server's helpers (S), Home's day block (homeAt) and the plans both are
+// run on (plansAround, DAYS) are lifted in tests/_day_parity.cjs, which
+// test_scout_today_answer.cjs shares.
+const { between, S, HOME_BLOCK, homeAt, plansAround, DAYS } = require("./_day_parity.cjs");
 
 let p = 0, f = 0;
 const ck = (l, a, e) => { const A = JSON.stringify(a), E = JSON.stringify(e);
   if (A === E) { p++; console.log("PASS  " + l); } else { f++; console.log(`FAIL  ${l}\n   exp ${E}\n   got ${A}`); } };
-const between = (src, a, b, label) => {
-  const i = src.indexOf(a), j = src.indexOf(b, i + a.length);
-  if (i < 0 || j < 0) throw new Error(`could not slice ${label} — markers moved, update this suite`);
-  return src.slice(i, j);
-};
-
-// ---- the server helpers, lifted ------------------------------------------
-const S = new Function(between(SCOUT, "function dueFromOffset(n, baseKey) {", "\nfunction extractSuggestedPathway", "day helpers") +
-  "\nreturn { dueFromOffset, isDayKey, shiftDayKey, resolveAthleteDay, dayBuckets };")();
 
 console.log("-- resolveAthleteDay: the device's day, checked --");
 {
@@ -62,39 +57,15 @@ console.log("\n-- due offsets count from the athlete's day --");
 }
 
 console.log("\n-- the same numbers Home shows --");
-// Home's code, lifted: the four helpers it calls and the block in HomeTab
-// from homeTodayKey to todayDone.
-const fnSrc = (name) => between(APP, `function ${name}(`, "\n}\n", name) + "\n}\n";
-const HOME_BLOCK = between(APP, "  const homeTodayKey = isoDay(new Date());", "\n  const contacted", "HomeTab day block");
+// Home's code, lifted (tests/_day_parity.cjs): the four helpers it calls and
+// the block in HomeTab from homeTodayKey to todayDone, under a pinned clock.
 ck("the lifted Home block computes all three numbers",
    ["stepsLate", "weekSteps", "weekDone", "todaySteps", "todayDone"].every((k) => HOME_BLOCK.includes(`const ${k} =`)), true);
-const homeAt = (y, mo, d) => {
-  const Real = Date;
-  const fixed = new Real(y, mo - 1, d, 12, 0, 0).getTime();   // local noon on that day
-  class PinnedDate extends Real { constructor(...a) { if (a.length) super(...a); else super(fixed); } static now() { return fixed; } }
-  return new Function("Date", "allMilestones", "resting",
-    fnSrc("isoDay") + fnSrc("weekStartFrom") + fnSrc("suggestedDate") + fnSrc("canCallLate") + HOME_BLOCK +
-    "\nreturn { today: homeTodayKey, weekFrom: weekFromKey, weekTo: weekToKey, todayTotal: todaySteps.length, todayDone, weekTotal: weekSteps.length, weekDone, lateCount: stepsLate };"
-  ).bind(null, PinnedDate);
-};
 const serverAs = (key, ms, resting) => {
   const b = S.dayBuckets(ms, key, resting);
   return { today: b.today, weekFrom: b.weekFrom, weekTo: b.weekTo, todayTotal: b.todayTotal, todayDone: b.todayDone,
            weekTotal: b.weekTotal, weekDone: b.weekDone, lateCount: b.lateCount };
 };
-// Deterministic plans around the day: past, today, this week, next week,
-// undated, Scout- and retest-suggested dates, recovery steps, done and not.
-let seed = 7;
-const rnd = (n) => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed % n; };
-const plansAround = (key) => Array.from({ length: 40 }, () => Array.from({ length: 1 + rnd(14) }, (_, i) => ({
-  id: "m" + i, label: "Step " + i,
-  due: rnd(6) === 0 ? null : rnd(15) === 0 ? "" : S.shiftDayKey(key, rnd(25) - 12),
-  done: rnd(3) === 0,
-  due_src: [undefined, null, "scout", "retest", null][rnd(5)],
-  category: [undefined, "recovery", "training", null][rnd(4)],
-})));
-// Mondays, Sundays, mid-week, a month end, a year end, a leap day.
-const DAYS = [[2026, 10, 26], [2026, 10, 28], [2026, 11, 1], [2026, 10, 31], [2026, 12, 31], [2027, 1, 3], [2028, 2, 29], [2027, 3, 29]];
 let compared = 0, mismatches = 0, firstBad = null, nonZero = { today: 0, week: 0, late: 0 }, restingDiffers = 0;
 for (const [y, mo, d] of DAYS) {
   const home = homeAt(y, mo, d);
@@ -131,6 +102,25 @@ console.log("\n-- dayBuckets details Home does not show but Scout needs --");
   ck("weekday is named from the date, not the server clock", b.weekday, "Wednesday");
   ck("the week is Monday to Sunday", [b.weekFrom, b.weekTo], ["2026-10-26", "2026-11-01"]);
   ck("today's open steps are listed by label", b.todayOpen, ["Film the session"]);
+  // EVERY OPEN STEP DUE TODAY IS NAMED, UP TO 20, AND THE REST ARE COUNTED.
+  // The cap was 5, so a sixth step due today was on Home's "N to do" badge
+  // and missing from the list Scout was given.
+  const drills = (n) => Array.from({ length: n }, (_, i) => ({ label: `Drill ${i + 1}`, due: "2026-10-28", done: false }));
+  const names = (n) => drills(n).map((m) => m.label);
+  const seven = S.dayBuckets(drills(7), "2026-10-28", false);
+  ck("7 open steps today: all 7 named, in plan order", seven.todayOpen, names(7));
+  ck("...and none left over", seven.todayOpenMore, 0);
+  const twenty = S.dayBuckets(drills(20), "2026-10-28", false);
+  ck("20 open steps today: all 20 named, none left over", [twenty.todayOpen, twenty.todayOpenMore], [names(20), 0]);
+  for (const n of [21, 25, 40]) {
+    const many = S.dayBuckets(drills(n), "2026-10-28", false);
+    ck(`${n} open steps today: the first 20 named, in plan order`, many.todayOpen, names(20));
+    ck(`...and the other ${n - 20} counted`, many.todayOpenMore, n - 20);
+  }
+  const mixed = S.dayBuckets([{ label: "Done at seven", due: "2026-10-28", done: true }, ...drills(3),
+    { label: "Done at noon", due: "2026-10-28", done: true }, { label: "Tomorrow", due: "2026-10-29", done: false }], "2026-10-28", false);
+  ck("a step done today is counted but not named", [mixed.todayTotal, mixed.todayDone, mixed.todayOpen, mixed.todayOpenMore], [5, 2, names(3), 0]);
+  ck("a sixth open step today is named, as Home's badge counts it", S.dayBuckets(drills(6), "2026-10-28", false).todayOpen.length, 6);
   ck("a Sunday's week started six days earlier", [S.dayBuckets([], "2026-11-01", false).weekFrom, S.dayBuckets([], "2026-11-01", false).weekday], ["2026-10-26", "Sunday"]);
   ck("no plan is not an error", S.dayBuckets(null, "2026-10-28", false).weekTotal, 0);
   ck("null entries are skipped, not thrown on", S.dayBuckets([null, { due: "2026-10-28" }], "2026-10-28", false).todayTotal, 1);
@@ -160,6 +150,8 @@ console.log("\n-- wired end to end --");
   ck("...AFTER the assignment that would overwrite it", iToday > iAssign, true);
   const todayLine = between(SCOUT, "TODAY FOR THEM: ${dd.weekday}", "\n    }\n", "today line");
   ck("...it gives today's, this week's and the late count", /Due today:[\s\S]*This week:[\s\S]*Late \(dates they chose themselves/.test(todayLine), true);
+  ck("...names every open step due today and says how many more there are past 20",
+     /still open today: \$\{dd\.todayOpen\.map\(\(l\) => `"\$\{l\}"`\)\.join\("; "\)\}\$\{dd\.todayOpenMore \? ` and \$\{dd\.todayOpenMore\} more not named here` : ""\}/.test(todayLine), true);
   ck("...says when the day is the server's, not theirs", /the server's day; theirs may differ by one/.test(todayLine), true);
   ck("...and forbids date arithmetic of the model's own",
      /Use only dates written in this context; never work out another date or weekday yourself\./.test(SCOUT), true);

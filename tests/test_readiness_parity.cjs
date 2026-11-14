@@ -18,7 +18,7 @@
 
 const REPO = require("path").join(__dirname, "..");
 const fs = require("fs");
-const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const server = require("../api/_readiness.js");
 
 let p = 0, f = 0;

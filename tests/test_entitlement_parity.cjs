@@ -18,7 +18,7 @@
 
 const REPO = require("path").join(__dirname, "..");
 const fs = require("fs");
-const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const SCOUT = fs.readFileSync(REPO + "/api/scout.js", "utf8");
 const ENT = fs.readFileSync(REPO + "/api/_entitlements.js", "utf8");
 const ent = require("../api/_entitlements.js");
@@ -236,7 +236,7 @@ console.log("\n-- a locked feature is never advertised as a place to go --");
 // on the card. The sentence promised an action a third of the plan tiers
 // cannot take, and no test objected because the string was merely a string.
 {
-  const CLIENT = fs.readFileSync(require("path").join(REPO, "golsz-app.html"), "utf8");
+  const CLIENT = require("./_app_source.cjs").appSource();
   for (const [lang, value] of [
     ["en", /home_focus_all_done: "([^"]*)"/g],
   ]) {

@@ -3263,25 +3263,389 @@ function resolveAthleteDay(claimed, now) {
 //     nobody agreed to it.
 //   - While they are resting (availability "out") only a recovery step can be
 //     late, exactly as Home pauses everything else.
+//   - Every open step due today is named, up to TODAY_OPEN_CAP, and the rest
+//     are counted in todayOpenMore. The cap was 5, so a sixth step due today
+//     was counted on Home and missing from the list Scout was given.
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const TODAY_OPEN_CAP = 20;
+// suggestedDate() in golsz-app.html: a day Scout proposed ("scout") or the
+// Retest button picked ("retest") sits on the calendar, but nobody agreed to
+// it, so it never makes a step late and never outranks a day the athlete chose.
+function suggestedDue(m) {
+  return !!(m && (m.due_src === "scout" || m.due_src === "retest") && m.due);
+}
 function dayBuckets(milestones, todayKey, resting) {
   const all = Array.isArray(milestones) ? milestones.filter((m) => m && typeof m === "object") : [];
-  const suggested = (m) => !!((m.due_src === "scout" || m.due_src === "retest") && m.due);
-  const canCallLate = (m) => !suggested(m) && (!resting || m.category === "recovery");
+  const canCallLate = (m) => !suggestedDue(m) && (!resting || m.category === "recovery");
   const dow = new Date(todayKey + "T00:00:00Z").getUTCDay();
   const weekFrom = shiftDayKey(todayKey, -((dow + 6) % 7));
   const weekTo = shiftDayKey(weekFrom, 6);
   const todays = all.filter((m) => m.due === todayKey);
+  const todayOpen = todays.filter((m) => !m.done);
   const week = all.filter((m) => m.due && m.due >= weekFrom && m.due <= weekTo);
   const late = all.filter((m) => !m.done && m.due && canCallLate(m) && m.due < todayKey);
   return {
     today: todayKey, weekday: WEEKDAY_NAMES[dow], weekFrom, weekTo,
     todayTotal: todays.length, todayDone: todays.filter((m) => m.done).length,
-    todayOpen: todays.filter((m) => !m.done).slice(0, 5).map((m) => String(m.label || "").slice(0, 200)),
+    todayOpen: todayOpen.slice(0, TODAY_OPEN_CAP).map((m) => String(m.label || "").slice(0, 200)),
+    todayOpenMore: Math.max(0, todayOpen.length - TODAY_OPEN_CAP),
     weekTotal: week.length, weekDone: week.filter((m) => m.done).length,
     lateCount: late.length,
   };
 }
+
+// THE STEP HOME CALLS NEXT, BY HOME'S RULE.
+// nextMilestone() in golsz-app.html (milestoneRank + compareUndone): a date the
+// athlete chose comes before any date GOLSZ suggested, the earlier date wins
+// within each, and undated steps come last in list order. The server took the
+// earliest date of either kind, so a Scout-suggested Tuesday beat the athlete's
+// own Friday and Scout named a different next step from Home's Today tile.
+// tests/test_scout_today_answer.cjs runs both on the same plans.
+function pickNextMilestone(milestones) {
+  const rank = (m) => (!m.due ? 2 : suggestedDue(m) ? 1 : 0);
+  const undone = (Array.isArray(milestones) ? milestones : []).filter((m) => m && typeof m === "object" && !m.done);
+  if (!undone.length) return null;
+  return undone.slice().sort((a, b) => {
+    const ra = rank(a), rb = rank(b);
+    if (ra !== rb) return ra - rb;
+    if (ra === 2) return 0;
+    return a.due < b.due ? -1 : a.due > b.due ? 1 : 0;
+  })[0];
+}
+
+// THE "FROM YOUR PLAN" CARD: what Home shows for today, as one object.
+// Home's numbers (dayBuckets), every open step due today, the step Home calls
+// next (pickNextMilestone) and whether they are resting, which is when Home
+// pauses "late". A Scout answer to "what should I do today?" is checked against
+// this card, so it can only say what Home says. Null when there is no day.
+function todayCard(days, next, resting) {
+  if (!days || !isDayKey(days.today)) return null;
+  return {
+    today: days.today, weekday: days.weekday,
+    todayTotal: days.todayTotal, todayDone: days.todayDone,
+    todayOpen: Array.isArray(days.todayOpen) ? days.todayOpen.slice() : [],
+    todayOpenMore: days.todayOpenMore || 0,
+    weekTotal: days.weekTotal, weekDone: days.weekDone,
+    lateCount: days.lateCount,
+    next: next && next.label
+      ? { label: String(next.label).slice(0, 200), due: (typeof next.due === "string" && next.due) ? next.due : null }
+      : null,
+    resting: !!resting,
+  };
+}
+
+// ---- "WHAT SHOULD I DO TODAY?" AND THE FACTS IN THE ANSWER ----------------
+//
+// FOLDED TEXT: lower case, no accents or Greek tonos, final sigma as sigma,
+// curly apostrophes straight. ONE CODE UNIT OUT FOR EACH ONE IN, so an index
+// found in the folded text is the same index in the original: the reply check
+// reports the reply's own spelling and reads Greek capitals there. Callers
+// pass NFC text.
+function foldText(s) {
+  let out = "";
+  for (const ch of s) {
+    let f = ch.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (f === "ς") f = "σ";
+    else if (f === "’" || f === "‘" || f === "ʼ") f = "'";
+    out += f.length === ch.length ? f : ch;
+  }
+  return out;
+}
+
+// A QUESTION ABOUT TODAY'S OR THIS WEEK'S STEPS, SPOTTED BY FIXED PATTERNS.
+//
+// Not the AI classifier. This decides whether an answer is checked against the
+// plan, so it must give the same verdict every time, be testable, and not
+// change when the classifier times out. In each language GOLSZ ships: "what
+// should I do" + today / tonight / this week; "what is due / on / left" + the
+// same; and, as the whole message, "what's next for me?", the app's own first
+// Scout button for a player (scout_big_next), which asks for the step Home's
+// Today tile names. The time word must belong to the question: "I got cut
+// today, what should I do?" is not about the plan. "This month", the "week by
+// week" schedule request and a step's own "ask Scout" seed are not today.
+// The text is folded and split into words and punctuation, so QW (one word)
+// never crosses a comma or a question mark.
+const QW = "[^ .,;:!?¿¡]+ ";
+const upTo = (n) => `(?:${QW}){0,${n}}?`;
+const Q_END = "(?:[?!.;] )*$";
+const TIME_EN = "(?:today|tonight|this week)";
+const TIME_FR = "(?:aujourd'hui|aujourdhui|ce soir|cette semaine)";
+const TIME_ES = "(?:hoy|esta noche|esta semana)";
+const TIME_EL = "(?:σημερα|αποψε|αυτην? την? ε?βδομαδα|την? ε?βδομαδα αυτη)";
+const TODAY_QUESTION_PATTERNS = [
+  ` what ${upTo(5)}(?:do|doing|work on|focus on|tackle|train|get done) ${upTo(3)}${TIME_EN} `,
+  `^ ${TIME_EN} (?:, )?what ${upTo(4)}(?:do|work on|focus on|tackle) `,
+  ` (?:what's|whats|what is|what are|what do i have|what have i got|anything|is anything|is there anything) ${upTo(3)}(?:due|on|planned|scheduled|left|steps|tasks) ${upTo(3)}${TIME_EN} `,
+  `^ (?:(?:what's|whats|what is) next (?:for me )?|what (?:should|do|shall) i do next )${Q_END}`,
+
+  ` (?:que|quoi|qu'ai|qu'est) ${upTo(5)}(?:faire|fais|fait|travailler|bosser) ${upTo(3)}${TIME_FR} `,
+  `^ ${TIME_FR} (?:, )?(?:que|quoi|qu'est) ${upTo(4)}faire `,
+  ` (?:qu'est|qu'y|quoi|qu'ai|quelles|quels|c'est quoi) ${upTo(3)}(?:prevu|prevue|prevus|prevues|a faire|au programme|programme|reste|du|dus|due|dues|en retard|etapes|taches) ${upTo(3)}${TIME_FR} `,
+  `^ (?:c'est quoi la suite |quelle est la suite |quelle est (?:ma |la )prochaine etape |que (?:dois je|devrais je) faire ensuite )(?:pour moi )?${Q_END}`,
+
+  ` (?:que|cual|cuales) ${upTo(5)}(?:hacer|hago|hacemos|trabajar|entrenar|enfocarme|centrarme) ${upTo(3)}${TIME_ES} `,
+  `^ ${TIME_ES} (?:, )?(?:¿ )?que ${upTo(4)}(?:hacer|hago) `,
+  ` (?:que|algo|cuales|hay algo) ${upTo(3)}(?:pendiente|pendientes|toca|tengo|vence|vencen|hay|planeado|previsto|queda|quedan|pasos|tareas) ${upTo(3)}${TIME_ES} `,
+  `^ (?:¿ )?(?:que sigue |que es lo siguiente |cual es (?:mi |el )siguiente paso |que (?:debo|deberia) hacer despues )(?:para mi )?${Q_END}`,
+
+  ` τι ${upTo(5)}(?:κανω|κανουμε|δουλεψω|ασχοληθω|εστιασω|προπονηθω|γυμναστω) ${upTo(3)}${TIME_EL} `,
+  `^ ${TIME_EL} (?:, )?τι ${upTo(4)}κανω `,
+  ` (?:τι|ποια|ποιο) ${upTo(3)}(?:εχω|εχει|ληγει|ληγουν|μενει|μενουν|υπαρχει|βημα|βηματα|προγραμμα|εκκρεμει|εκκρεμουν) ${upTo(3)}${TIME_EL} `,
+  `^ (?:και )?(?:τι ακολουθει |ποιο ειναι το επομενο (?:μου )?βημα |τι (?:πρεπει να |να )?κανω μετα )(?:για μενα )?${Q_END}`,
+].map((src) => new RegExp(src, "u"));
+function isTodayQuestion(text) {
+  if (typeof text !== "string" || !text.trim()) return false;
+  const q = " " + foldText(text.normalize("NFC"))
+    .replace(/[^\p{L}\p{N}'.,;:!?¿¡]+/gu, " ")
+    .replace(/([.,;:!?¿¡])/g, " $1 ")
+    .replace(/(^| )'+|'+(?= |$)/g, "$1")
+    .replace(/ +/g, " ").trim() + " ";
+  return TODAY_QUESTION_PATTERNS.some((re) => re.test(q));
+}
+
+// THE QUESTION AS THEY TYPED IT. Scout.send() in golsz-app.html sends the
+// latest turn as "<LABEL>: <their words>" (ATHLETE, or their occupation in
+// capitals), after a "LATEST RECORDED BENCHMARKS: {...}" line when they have
+// benchmarks. The whole-message patterns above ("What's next for me?") only
+// match their words, so the handler hands isTodayQuestion this. Text without
+// the label comes back as it is.
+const CLIENT_TURN = /^(?:LATEST RECORDED BENCHMARKS: [^\n]*\n+)?[A-Z]+: ([\s\S]*)$/;
+function typedQuestion(text) {
+  if (typeof text !== "string") return "";
+  const m = CLIENT_TURN.exec(text);
+  return m ? m[1] : text;
+}
+
+// EVERY DAY THE MODEL WAS GIVEN: each real YYYY-MM-DD in its context, sorted.
+// This is checkReplyAgainstPlan's allowedDates.
+function datesInContext(text) {
+  if (typeof text !== "string") return [];
+  const out = new Set();
+  for (const m of text.matchAll(/(?<!\d)(\d{4}-\d{2}-\d{2})(?!\d)/g)) if (isDayKey(m[1])) out.add(m[1]);
+  return [...out].sort();
+}
+
+// DOES THIS ANSWER STAY INSIDE THE PLAN?
+//
+// checkReplyAgainstPlan(replyText, { allowedDates, labels, card, lang,
+// allowedCounts }) -> { ok, reasons: [{ kind, text }] }, kind one of:
+//   "date"    a date that is not one of allowedDates: ISO, 14/11/2026, and
+//             "14 November" / "Nov 14" with month names in en/fr/es/el.
+//             Without a year it matches any allowed day with that month and day.
+//             English "May" and "March" count only with their capital: "2 may
+//             be enough" is not a date.
+//   "weekday" a weekday name in front of a date that falls on another day, or
+//             alone and matching no allowed date. Alone, names are read in
+//             English and in `lang`; in another language the word can be a
+//             person's name (Domingo). "every Monday", "on Mondays" are habits,
+//             not dates. Greek names count only with their capital: in lower
+//             case τρίτη, πέμπτη, δεύτερα are ordinals and "secondly".
+//   "step"    words in quotes ("", “”, «») that are not a plan label, ignoring
+//             case, accents, spaces and end punctuation. `labels` is every step
+//             label in the plan; the card's own (today's open steps, the next
+//             one) always count. Quotes are for step names only; the prompt has
+//             to say so.
+//   "count"   an "N of M" (sur / de / από) or "N/M" about the plan that is not
+//             Home's pair. Each "today" or "week" word in a clause belongs to
+//             the count nearest to it (to both on a tie) and holds that count
+//             to today's pair or this week's; a count with both words, or with
+//             none, may be either. A count with none is read only when its own
+//             stretch of the clause (from the count before it to the count
+//             after it) names steps: "8 of 10 shots" is not about the plan.
+//             allowedCounts adds pairs the model was also given, such as the
+//             whole plan's done/total, for a count that names neither: "3 of
+//             7 this week" is held to the week's pair even when the whole plan
+//             is 3 of 7, or a true pair from elsewhere in the prompt would pass
+//             as the week Home shows. A year-less "20/10" with N > M is no
+//             count and could be an interval, so it is not read as a date
+//             either; "3/4 of" is a fraction.
+// Quoted text and plan labels are blanked before dates, weekdays and counts
+// are read: a label's own "Friday" is the athlete's word, not a claim.
+// No I/O and no AI. An empty reply contradicts nothing and is ok.
+const DATE_B = "(?<![\\p{L}\\p{N}])";
+const DATE_E = "(?![\\p{L}\\p{N}])";
+const MONTH_FORMS = [
+  ["january", "jan", "janvier", "janv", "enero", "ene", "ιανουαριοσ", "ιανουαριου", "γεναρησ", "γεναρη", "ιαν"],
+  ["february", "feb", "fevrier", "fevr", "fev", "febrero", "φεβρουαριοσ", "φεβρουαριου", "φλεβαρησ", "φλεβαρη", "φεβ"],
+  ["march", "mar", "mars", "marzo", "μαρτιοσ", "μαρτιου", "μαρτησ", "μαρτη", "μαρ"],
+  ["april", "apr", "avril", "avr", "abril", "abr", "απριλιοσ", "απριλιου", "απριλησ", "απριλη", "απρ"],
+  ["may", "mai", "mayo", "μαιοσ", "μαιου", "μαησ", "μαη", "μαι"],
+  ["june", "jun", "juin", "junio", "ιουνιοσ", "ιουνιου", "ιουνησ", "ιουνη", "ιουν"],
+  ["july", "jul", "juillet", "juil", "julio", "ιουλιοσ", "ιουλιου", "ιουλησ", "ιουλη", "ιουλ"],
+  ["august", "aug", "aout", "agosto", "ago", "αυγουστοσ", "αυγουστου", "αυγ"],
+  ["september", "sept", "sep", "septembre", "septiembre", "setiembre", "σεπτεμβριοσ", "σεπτεμβριου", "σεπτεμβρησ", "σεπτεμβρη", "σεπτ", "σεπ"],
+  ["october", "oct", "octobre", "octubre", "οκτωβριοσ", "οκτωβριου", "οκτωβρησ", "οκτωβρη", "οκτ"],
+  ["november", "nov", "novembre", "noviembre", "νοεμβριοσ", "νοεμβριου", "νοεμβρησ", "νοεμβρη", "νοε"],
+  ["december", "dec", "decembre", "diciembre", "dic", "δεκεμβριοσ", "δεκεμβριου", "δεκεμβρησ", "δεκεμβρη", "δεκ"],
+];
+const MONTH_OF = new Map(MONTH_FORMS.flatMap((forms, i) => forms.map((f) => [f, i + 1])));
+const MONTH_ALT = [...MONTH_OF.keys()].sort((a, b) => b.length - a.length).join("|");
+const MONTH_CAPITAL_ONLY = new Set(["may", "march"]);
+// Index 0 is Sunday, as getUTCDay() counts. Greek also in the genitive.
+const WEEKDAY_FORMS = {
+  en: ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+  fr: ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"],
+  es: ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"],
+  el: ["κυριακη|κυριακησ", "δευτερα|δευτερασ", "τριτη|τριτησ", "τεταρτη|τεταρτησ", "πεμπτη|πεμπτησ", "παρασκευη|παρασκευησ", "σαββατο|σαββατου"],
+};
+// English short names, read only in front of a date ("Fri 14 Nov"): alone,
+// "sat" and "sun" are ordinary words.
+const WEEKDAY_SHORT = ["sun", "mon", "tue|tues", "wed", "thu|thur|thurs", "fri", "sat"];
+const WEEKDAY_OF = new Map(Object.values(WEEKDAY_FORMS).concat([WEEKDAY_SHORT])
+  .flatMap((days) => days.flatMap((alts, i) => alts.split("|").map((f) => [f, i]))));
+const WEEKDAY_WORD = Object.fromEntries(Object.entries(WEEKDAY_FORMS)
+  .map(([lng, days]) => [lng, new RegExp(`${DATE_B}(${days.join("|")})${DATE_E}`, "gu")]));
+const WEEKDAY_BEFORE_DATE = new RegExp(`(?:^|[^\\p{L}\\p{N}])(${[...WEEKDAY_OF.keys()].sort((a, b) => b.length - a.length).join("|")})\\.?,?\\s+(?:(?:the|le|el|τη|την|η)\\s+)?$`, "u");
+const HABIT_BEFORE = /(?:^|[^\p{L}\p{N}])(?:every|each|chaque|cada|los|καθε)\s+$/u;
+const DATE_YMD = new RegExp(`${DATE_B}(\\d{4})[-/.](\\d{1,2})[-/.](\\d{1,2})${DATE_E}`, "gu");
+const DATE_DMY = new RegExp(`${DATE_B}(\\d{1,2})([-/.])(\\d{1,2})\\2(\\d{4}|\\d{2})${DATE_E}`, "gu");
+const DATE_DAY_MONTH = new RegExp(`${DATE_B}(\\d{1,2})(?:st|nd|rd|th|er|η|ησ)?\\.?\\s*(?:(?:of|de|του)\\s+)?(${MONTH_ALT})${DATE_E}\\.?(?:,?\\s*(?:de\\s+)?(\\d{4})${DATE_E})?`, "gu");
+const DATE_MONTH_DAY = new RegExp(`${DATE_B}(${MONTH_ALT})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?${DATE_E}(?:,?\\s*(\\d{4})${DATE_E})?`, "gu");
+const COUNT_OF = new RegExp(`${DATE_B}(\\d{1,3})\\s+(?:of|out of|sur|de|απο)\\s+(?:(?:the|your|my|tes|vos|mes|tus|sus|mis|los|las|les|τα|τισ|τουσ)\\s+)?(\\d{1,3})${DATE_E}`, "gu");
+const COUNT_SLASH = /(?<![\p{L}\p{N}.,/])(\d{1,3}) ?\/ ?(\d{1,3})(?![\p{L}\p{N}]|[.,]\d| ?\/ ?\d)/gu;
+const FRACTION_AFTER = /^\s+(?:of|de|du|des|του|τησ|των)(?![\p{L}\p{N}])/u;
+const COUNT_QUALIFIER = new RegExp(`${DATE_B}(?:(today|tonight|aujourd'hui|aujourdhui|ce soir|hoy|esta noche|σημερα|αποψε)|(week|semaine|semana|εβδομαδα|εβδομαδασ|βδομαδα|βδομαδασ))${DATE_E}`, "gu");
+const COUNT_PLAN_WORD = new RegExp(`${DATE_B}(?:step|done|complet|finish|task|etape|fait|termin|tache|paso|hech|tarea|βημα|ολοκληρ|εκανε|εγιν|εργασι)`, "u");
+const QUOTED = /"([^"\n]{1,200})"|“([^”\n]{1,200})”|«([^»\n]{1,200})»/gu;
+const GREEK_LETTER = /[\u0370-\u03ff]/u;
+const labelKey = (s) => foldText(String(s).normalize("NFC")).replace(/\s+/gu, "").replace(/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/gu, "");
+
+function checkReplyAgainstPlan(replyText, { allowedDates = [], labels = [], card = null, lang = "en", allowedCounts = [] } = {}) {
+  const reasons = [];
+  const flag = (kind, text) => {
+    if (!reasons.some((r) => r.kind === kind && r.text === text)) reasons.push({ kind, text });
+  };
+  if (typeof replyText !== "string" || !replyText.trim()) return { ok: true, reasons };
+  const orig = replyText.normalize("NFC");
+  let work = foldText(orig);                       // what is still to be read
+  const blank = (s, e) => { work = work.slice(0, s) + " ".repeat(e - s) + work.slice(e); };
+  const isWordAt = (i) => i >= 0 && i < work.length && /[\p{L}\p{N}]/u.test(work[i]);
+  const capitalAt = (i) => orig[i] !== orig[i].toLowerCase();
+  const plainLabels = (Array.isArray(labels) ? labels : [])
+    .concat(card && Array.isArray(card.todayOpen) ? card.todayOpen : [], card && card.next ? [card.next.label] : [])
+    .filter((l) => typeof l === "string");
+
+  // Quoted step names.
+  const labelKeys = new Set(plainLabels.map(labelKey).filter(Boolean));
+  const quotable = orig.replace(/(\d['’]\d{1,2})"/g, "$1 ");   // 5'11" is a height, not a quote
+  for (const m of quotable.matchAll(QUOTED)) {
+    const inner = m[1] ?? m[2] ?? m[3];
+    const key = labelKey(inner);
+    if (key && !labelKeys.has(key)) flag("step", inner.trim());
+    blank(m.index, m.index + m[0].length);
+  }
+  for (const label of plainLabels) {
+    const k = foldText(label.normalize("NFC")).trim();
+    if (k.length < 2) continue;
+    for (let i = work.indexOf(k); i >= 0; i = work.indexOf(k, i + k.length)) {
+      if (!isWordAt(i - 1) && !isWordAt(i + k.length)) blank(i, i + k.length);
+    }
+  }
+
+  // Dates, and a weekday written in front of one.
+  const allowed = new Set((Array.isArray(allowedDates) ? allowedDates : []).filter(isDayKey));
+  const weekdayOfKey = (k) => new Date(k + "T00:00:00Z").getUTCDay();
+  const allowedWeekdays = new Set([...allowed].map(weekdayOfKey));
+  const pad = (n) => String(n).padStart(2, "0");
+  // The allowed days a written date can mean: one reading per way of reading it.
+  const daysMeant = (readings) => {
+    const hits = [];
+    for (const { y, mo, d } of readings) {
+      if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) continue;
+      const md = `-${pad(mo)}-${pad(d)}`;
+      for (const k of allowed) if (y == null ? k.endsWith(md) : k === `${y}${md}`) hits.push(k);
+    }
+    return hits;
+  };
+  const checkDate = (start, end, readings) => {
+    let from = start, weekday = null;
+    const pre = work.slice(Math.max(0, start - 24), start);
+    const w = WEEKDAY_BEFORE_DATE.exec(pre);
+    if (w) {
+      const at = start - pre.length + w.index + w[0].indexOf(w[1]);
+      if (!GREEK_LETTER.test(w[1]) || capitalAt(at)) { from = at; weekday = WEEKDAY_OF.get(w[1]); }
+    }
+    const hits = daysMeant(readings);
+    if (!hits.length) flag("date", orig.slice(from, end).trim());
+    else if (weekday != null && !hits.some((k) => weekdayOfKey(k) === weekday)) flag("weekday", orig.slice(from, end).trim());
+    blank(from, end);
+  };
+  for (const m of work.matchAll(DATE_YMD)) checkDate(m.index, m.index + m[0].length, [{ y: +m[1], mo: +m[2], d: +m[3] }]);
+  for (const m of work.matchAll(DATE_DMY)) {
+    if (m[2] === "-" && m[4].length !== 4) continue;           // 12-10-08 is a set of reps
+    const y = m[4].length === 2 ? 2000 + +m[4] : +m[4];
+    checkDate(m.index, m.index + m[0].length, [{ y, mo: +m[3], d: +m[1] }, { y, mo: +m[1], d: +m[3] }]);
+  }
+  const monthWritten = (form, at) => !MONTH_CAPITAL_ONLY.has(form) || capitalAt(at);
+  for (const m of work.matchAll(DATE_DAY_MONTH)) {
+    if (!monthWritten(m[2], m.index + m[0].indexOf(m[2]))) continue;
+    checkDate(m.index, m.index + m[0].length, [{ y: m[3] ? +m[3] : null, mo: MONTH_OF.get(m[2]), d: +m[1] }]);
+  }
+  for (const m of work.matchAll(DATE_MONTH_DAY)) {
+    if (!monthWritten(m[1], m.index)) continue;
+    checkDate(m.index, m.index + m[0].length, [{ y: m[3] ? +m[3] : null, mo: MONTH_OF.get(m[1]), d: +m[2] }]);
+  }
+
+  // Weekday names on their own.
+  const langs = new Set(["en", Object.prototype.hasOwnProperty.call(WEEKDAY_WORD, lang) ? lang : "en"]);
+  for (const lng of langs) {
+    for (const m of work.matchAll(WEEKDAY_WORD[lng])) {
+      if (GREEK_LETTER.test(m[1]) && !capitalAt(m.index)) continue;
+      if (HABIT_BEFORE.test(work.slice(Math.max(0, m.index - 14), m.index))) continue;
+      if (!allowedWeekdays.has(WEEKDAY_OF.get(m[1]))) flag("weekday", orig.slice(m.index, m.index + m[0].length));
+    }
+  }
+
+  // Counts. All of them are found first, then each "today" or "week" word is
+  // given to the count nearest to it. Asking the other way round (which word
+  // is nearest this count) handed the second count in "1 of 2 today and 2 of
+  // 5 this week" the first count's "today", and refused a true answer.
+  const pairOf = (done, total) => (Number.isInteger(done) && Number.isInteger(total) ? [done, total] : null);
+  const todayPair = card ? pairOf(card.todayDone, card.todayTotal) : null;
+  const weekPair = card ? pairOf(card.weekDone, card.weekTotal) : null;
+  const extraPairs = (Array.isArray(allowedCounts) ? allowedCounts : []).map((c) => (Array.isArray(c) ? pairOf(c[0], c[1]) : null));
+  const clauseEnds = [...work.matchAll(/[.!?;\n]/g)].map((m) => m.index);
+  const clauseOf = (i) => clauseEnds.filter((e) => e < i).length;
+  const counts = [];
+  for (const m of work.matchAll(COUNT_OF)) counts.push({ start: m.index, end: m.index + m[0].length, n: +m[1], total: +m[2], slash: false });
+  for (const m of work.matchAll(COUNT_SLASH)) {
+    const n = +m[1], total = +m[2];
+    if (n > total || FRACTION_AFTER.test(work.slice(m.index + m[0].length))) continue;
+    counts.push({ start: m.index, end: m.index + m[0].length, n, total, slash: true });
+  }
+  counts.sort((a, b) => a.start - b.start);
+  for (const c of counts) { c.clause = clauseOf(c.start); c.named = new Set(); }
+  for (const q of work.matchAll(COUNT_QUALIFIER)) {
+    const qs = q.index, qe = qs + q[0].length, clause = clauseOf(qs);
+    const gap = (c) => (qs >= c.end ? qs - c.end : c.start >= qe ? c.start - qe : 0);
+    const inClause = counts.filter((c) => c.clause === clause);
+    const least = Math.min(...inClause.map(gap));
+    for (const c of inClause) if (gap(c) === least) c.named.add(q[1] ? "today" : "week");
+  }
+  counts.forEach((c, k) => {
+    if (!c.named.size) {
+      const prev = counts[k - 1], next = counts[k + 1];
+      const from = prev && prev.clause === c.clause ? prev.end : (c.clause ? clauseEnds[c.clause - 1] + 1 : 0);
+      const to = next && next.clause === c.clause ? next.start : (c.clause < clauseEnds.length ? clauseEnds[c.clause] : work.length);
+      if (!COUNT_PLAN_WORD.test(work.slice(from, to))) return;   // not about the plan
+    }
+    const pairs = c.named.size === 1 ? [c.named.has("today") ? todayPair : weekPair]
+      : c.named.size === 2 ? [todayPair, weekPair] : [todayPair, weekPair].concat(extraPairs);
+    if (pairs.some((p) => p && p[0] === c.n && p[1] === c.total)) return;
+    if (c.slash && daysMeant([{ y: null, mo: c.total, d: c.n }, { y: null, mo: c.n, d: c.total }]).length) return;   // 3/11, a plan day
+    flag("count", orig.slice(c.start, c.end));
+  });
+  return { ok: reasons.length === 0, reasons };
+}
+
+// WHAT THE MODEL IS TOLD WHEN THEY ASK ABOUT TODAY. The handler adds one of
+// these to the TODAY FOR THEM line. The first is the contract the answer is
+// then held to (checkReplyAgainstPlan): step names exactly as written and the
+// only thing in quotes, this week as Home's "N of M". The second is for a plan
+// that could not be read, so the model says so instead of guessing. This file
+// holds Scout's only prompt; the app keeps no copy to update alongside it.
+const TODAY_ANSWER_RULE = `THEY ARE ASKING WHAT TO DO TODAY OR THIS WEEK. Name each step still open today exactly as it is written above, in double quotes, and give this week as "N of M" from the numbers above. Use double quotes for step names and nothing else, and name no date, weekday, step or count for their plan that is not written in this context.`;
+const TODAY_PLAN_UNREAD_RULE = `THEY ARE ASKING WHAT TO DO TODAY OR THIS WEEK, AND THEIR PLAN COULD NOT BE LOADED THIS REQUEST. You do not know which steps are due today or this week: say plainly that you could not load their plan just now, and name no step, date or count from it.`;
 function extractSuggestedPathway(data, existingStages, todayKey) {
   try {
     const raw = (data.content || []).map((b) => (b.type === "text" ? b.text : "")).filter(Boolean).join("");
@@ -6297,10 +6661,8 @@ async function getAthleteState(userId, day) {
   // Same caps as extractScoutContextUpdates: first 10, labels to 200 chars.
   // A 40-step plan must not blow the prompt budget.
   const undone = milestones.filter((m) => m && !m.done);
-  const dated = undone.filter((m) => m && typeof m.due === "string" && m.due);
-  const nextMilestoneRow = dated.length
-    ? dated.slice().sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0))[0]
-    : (undone[0] || null);
+  // The step Home's Today tile names, by Home's rule (see pickNextMilestone).
+  const nextMilestoneRow = pickNextMilestone(milestones);
   const openMilestones = undone.slice(0, 10).map((m) => ({
     label: String(m.label || "").slice(0, 200),
     due: (typeof m.due === "string" && m.due) ? m.due : null,
@@ -6391,6 +6753,12 @@ async function getAthleteState(userId, day) {
     firstName,
     day: { key: todayKey, source: (day && day.key === todayKey && day.source) || "server" },
     dayBuckets: days,
+    // The rule dayBuckets and "missed" were given, for the today card.
+    resting,
+    // Every step name they have, the plan's and the action log's (the prompt
+    // quotes both): what a today answer may put in quotes.
+    stepLabels: milestones.filter((m) => m && typeof m === "object" && m.label).map((m) => String(m.label).slice(0, 200))
+      .concat(actionRows.map((a) => a && a.title).filter((t) => typeof t === "string" && t)),
     // The requirement gap, as a RESULT. Scout reports it; it does not re-form
     // it. Same object Home and Plan render.
     gap,
@@ -6873,6 +7241,47 @@ async function runDeepReply(key, deepTierConfig, systemPrompt, systemDynamic, ba
   return { ok: true, data, toolBudgetExhausted };
 }
 
+// THE TODAY ANSWER, HELD TO THE PLAN (AVA job 216).
+//
+// Runs on every reply sent for a today question (the handler's todayAnswer,
+// whose fields are checkReplyAgainstPlan's options): the fast-model (Haiku)
+// reply, the deep reply with its tool loop and forced no-tools answer, and
+// both failovers. It runs before the replay entry is written, so a retry gets
+// the same card. It adds:
+//   today_card         what Home shows for the day (todayCard()), or null,
+//                      with today_unavailable, when their plan could not be read.
+//   today_override     the reply names a date, weekday, step or count that is
+//                      not in the plan, or the check itself failed (an
+//                      unchecked answer is not vouched for, and is not lost
+//                      either). reply_text is left exactly as it was; the app
+//                      shows the card in its place.
+// Only the kinds of disagreement are logged. The reply, and the pieces of it
+// the check quotes back, are the athlete's conversation and are written nowhere.
+async function finishTodayAnswer(data, ctx) {
+  if (!data || !ctx) return;
+  data.today_card = ctx.card;
+  if (ctx.unavailable) data.today_unavailable = true;
+  let reasons;
+  try {
+    ({ reasons } = checkReplyAgainstPlan(data.reply_text, ctx));
+  } catch (e) {
+    console.error("GOLSZ scout today check threw:", e && e.name, e && e.message);
+    reasons = [{ kind: "check_failed" }];
+  }
+  if (!reasons.length) return;
+  data.today_override = true;
+  const detail = {
+    kinds: [...new Set(reasons.map((r) => r.kind))],
+    reasons: reasons.length,
+    plan_unavailable: !!ctx.unavailable,
+    lang: ctx.lang,
+    model: typeof data.model === "string" ? data.model : null,
+    request_id: ctx.requestId || null,
+  };
+  console.warn("GOLSZ scout today answer disagrees with the plan:", JSON.stringify(detail));
+  await logError("scout_today_guard", `Scout's today answer failed the plan check (${detail.kinds.join(", ")})`, detail);
+}
+
 export default async function handler(req, res) {
   // Handler-entry timestamp for scout_routing_log.response_time_ms (082) —
   // measured from here rather than just around the model call, so it
@@ -7072,6 +7481,10 @@ export default async function handler(req, res) {
   // cache entry and to stamp any entry written this turn.
   let stateDigest = null;
   let cacheFingerprint = null; // athlete state the response cache must key on
+  // A today question about their plan (THE TODAY ANSWER, below): the card its
+  // reply carries and what that reply is checked against. Null for any other
+  // question. Per request, like everything here, never module state.
+  let todayAnswer = null;
   if (process.env.SUPABASE_URL) {
     // The athlete this conversation is ABOUT — normally the caller, or a
     // linked under-18 child when a parent is managing them. body.athleteId is
@@ -7205,6 +7618,80 @@ export default async function handler(req, res) {
     if (parentMeta && plan !== ownPlan) {
       console.log("GOLSZ effective plan raised by payer:", JSON.stringify({ athlete: ownPlan, parent: parentMeta.plan, effective: plan }));
     }
+
+    // THE ALLOWANCE IS CHECKED BEFORE ANY WORK IS DONE FOR THE QUESTION.
+    //
+    // This gate used to sit after the whole athlete prompt was built, and
+    // after autoFixPathwayType below, so a question the athlete had no
+    // allowance for still rewrote their plan's pathway_type and assembled
+    // their record before being refused. It now runs as soon as the plan (and
+    // so the limit) is known: a refused question, a "what should I do today?"
+    // included, gets its 402/403 with no plan write, no prompt and no model
+    // call. The plan rows are still READ first: they arrive in the same
+    // Promise.all as the profile row that says which plan applies, and a
+    // separate round trip for them would slow every question that is
+    // answered. tests/test_scout_limit_path.cjs pins the order.
+    dailyLimit = planDailyLimit(plan);
+
+    if (!isAdmin && !aiUnlimited) {
+      const reservation = await reserveScoutQuestion(userId, dailyLimit);
+      // ONLY TRUE WHEN A SLOT WAS ACTUALLY TAKEN.
+      // This was set unconditionally, including on reserveScoutQuestion's
+      // fail-open path where the RPC never ran and nothing was counted. Every
+      // release site below is guarded on this flag, so a provider failure on
+      // a request whose metering had ALSO failed would call
+      // release_scout_question anyway and decrement a slot from a real,
+      // unrelated question the athlete had already asked — handing back
+      // allowance we never took. The flag now means what its name says.
+      reservedQuestion = reservation.reserved === true;
+      questionsRemaining = Math.max(dailyLimit - (Number(reservation.used) || 0), 0);
+      if (!reservation.allowed) {
+        const message = plan === "elite"
+          ? "Daily Scout limit reached. Check back tomorrow."
+          : plan === "pro"
+          ? "Daily Scout limit reached. Upgrade to Elite for more Scout messages."
+          : plan === "starter"
+          ? "Daily Scout limit reached. Upgrade to Pro or Elite for more Scout messages."
+          : "Free daily limit reached. Upgrade for more Scout messages.";
+        // code + can_upgrade let the client say this in the athlete's own
+        // language and offer the upgrade (rather than a pointless "try
+        // again") — except on Elite, where there is nothing to upgrade to.
+        return res.status(402).json({ error: message, code: "daily_limit_reached", can_upgrade: plan !== "elite", scout_usage: { remaining: 0, limit: dailyLimit } });
+      }
+
+      // Lifetime free AI budget (migration 068) — checked only for plan ===
+      // 'free', only after the daily reservation succeeds (a request that
+      // was never going to run today shouldn't burn lifetime budget either).
+      // Distinct status code (403, not the daily-limit's 402) and error
+      // shape so the client can show "upgrade to keep using Scout" instead
+      // of "try again tomorrow" — those are different problems for the
+      // athlete to solve. Model tier is already capped to Haiku-equivalent
+      // for free plan by PLAN_MODEL_ACCESS below; this only bounds HOW MANY
+      // of those cheap replies a free account ever gets, not just per day.
+      if (plan === "free") {
+        const freeLifetimeLimit = Number(process.env.FREE_LIFETIME_LIMIT || 40);
+        const freeReservation = await reserveFreeAiQuestion(userId, freeLifetimeLimit);
+        // Only true if the reservation ACTUALLY counted. Set unconditionally,
+        // a reservation that never incremented still got "released" on every
+        // error path — refunding a lifetime question the athlete never spent,
+        // which over time hands out more than FREE_LIFETIME_LIMIT.
+        reservedFreeAi = freeReservation.reserved === true;
+        if (!freeReservation.allowed) {
+          // Same rule as every other release site: only a slot this request
+          // really took is given back. Unguarded, a daily reservation that
+          // had failed open was "refunded" here too, handing back a question
+          // the athlete really had asked earlier today.
+          if (reservedQuestion) await releaseScoutQuestion(userId);
+          reservedQuestion = false;
+          return res.status(403).json({
+            error: "You've used all your free GOLSZ Scout questions. Upgrade to keep getting AI-powered guidance.",
+            code: "free_ai_exhausted",
+            scout_usage: { remaining: 0, limit: dailyLimit },
+          });
+        }
+      }
+    }
+
     // Rendered once, here, and reused verbatim by every downstream path so no
     // model can receive a materially different version of the athlete's facts.
     authoritativeBlock = renderAuthoritativeContext(authContext, goalText);
@@ -7307,7 +7794,7 @@ export default async function handler(req, res) {
         athleteBlock += `\n- ...and ${athleteState.openMilestonesTruncated} more not listed here.`;
       }
       if (athleteState.nextMilestone) {
-        athleteBlock += `\nNEXT BY THE APP'S OWN RULE (earliest dated step not done, else the first undone one — this is what Home shows them): "${athleteState.nextMilestone.label}"${athleteState.nextMilestone.due ? ` due ${athleteState.nextMilestone.due}` : " (no date)"}. Do not nominate a different "next" step; theirs is on screen.`;
+        athleteBlock += `\nNEXT BY THE APP'S OWN RULE (the earliest step not done with a date they chose, then one with a date GOLSZ suggested, else the first undone one — this is what Home shows them): "${athleteState.nextMilestone.label}"${athleteState.nextMilestone.due ? ` due ${athleteState.nextMilestone.due}` : " (no date)"}. Do not nominate a different "next" step; theirs is on screen.`;
       }
     }
 
@@ -7325,9 +7812,41 @@ export default async function handler(req, res) {
     if (athleteState.day && dd) {
       athleteBlock += `\n\nTODAY FOR THEM: ${dd.weekday} ${dd.today} (${athleteState.day.source === "device" ? "their own calendar day" : "the server's day; theirs may differ by one"}). This week runs Monday ${dd.weekFrom} to Sunday ${dd.weekTo}.`;
       if (athleteState.pathwayCreated) {
-        athleteBlock += ` Due today: ${dd.todayTotal ? `${dd.todayDone} of ${dd.todayTotal} done` : "nothing"}${dd.todayOpen.length ? `; still open today: ${dd.todayOpen.map((l) => `"${l}"`).join("; ")}` : ""}. This week: ${dd.weekTotal ? `${dd.weekDone} of ${dd.weekTotal} dated steps done` : "no dated steps"}. Late (dates they chose themselves that have passed${athleteState.availability && athleteState.availability.status === "out" ? "; while they rest only recovery steps count" : ""}): ${dd.lateCount}.`;
+        athleteBlock += ` Due today: ${dd.todayTotal ? `${dd.todayDone} of ${dd.todayTotal} done` : "nothing"}${dd.todayOpen.length ? `; still open today: ${dd.todayOpen.map((l) => `"${l}"`).join("; ")}${dd.todayOpenMore ? ` and ${dd.todayOpenMore} more not named here` : ""}` : ""}. This week: ${dd.weekTotal ? `${dd.weekDone} of ${dd.weekTotal} dated steps done` : "no dated steps"}. Late (dates they chose themselves that have passed${athleteState.availability && athleteState.availability.status === "out" ? "; while they rest only recovery steps count" : ""}): ${dd.lateCount}.`;
       }
       athleteBlock += ` These are the numbers Home shows them. Use only dates written in this context; never work out another date or weekday yourself.`;
+    }
+
+    // THE TODAY ANSWER (AVA job 216). "What should I do today?" from an
+    // athlete whose plan has steps is answered from the line above and held to
+    // it: no FAQ answer and no cached reply (neither knows their steps), the
+    // rule added to that line, then finishTodayAnswer() on the reply. When the
+    // plan could not be read the model is told so, and the reply carries
+    // today_unavailable instead of a card. A plan with no steps gets neither:
+    // Home shows its "set your goal" card there. The question is spotted by
+    // isTodayQuestion (fixed patterns, never the classifier) in what they typed.
+    if (athleteState.day && dd && isTodayQuestion(typedQuestion(incomingText))) {
+      const planUnread = (athleteState.loadFailed || []).includes("pathway_plan");
+      if (planUnread || athleteState.pathwayComplete) {
+        // Not `rd`: that const is declared further down this block.
+        const rdy = athleteState.readiness;
+        todayAnswer = {
+          card: planUnread ? null : todayCard(dd, athleteState.nextMilestone, athleteState.resting),
+          unavailable: planUnread,
+          labels: athleteState.stepLabels,
+          // The other pairs this prompt states: the whole plan, and Passport
+          // Strength's development items, milestones and overall score.
+          allowedCounts: [[athleteState.milestonesDone, athleteState.milestoneCount]].concat(rdy ? [
+            [rdy.development.done, rdy.development.total],
+            [rdy.pathway.milestonesDone, rdy.pathway.milestonesTotal],
+            [rdy.composite, 100],
+          ] : []),
+          allowedDates: [],   // set once the whole prompt is built
+          lang: langCode || "en",
+          requestId,
+        };
+        athleteBlock += ` ${planUnread ? TODAY_PLAN_UNREAD_RULE : TODAY_ANSWER_RULE}`;
+      }
     }
 
     // SECTIONS: theirs, or the sport's. Never conflated. Describing a default
@@ -7580,63 +8099,6 @@ A newer source always beats an older one at the same level. If memory says one t
         entLocked: ent.lockedLabels, entUpgradeName: ent.upgradeToName,
       })}`;
     }
-
-    dailyLimit = planDailyLimit(plan);
-
-    if (!isAdmin && !aiUnlimited) {
-      const reservation = await reserveScoutQuestion(userId, dailyLimit);
-      // ONLY TRUE WHEN A SLOT WAS ACTUALLY TAKEN.
-      // This was set unconditionally, including on reserveScoutQuestion's
-      // fail-open path where the RPC never ran and nothing was counted. Every
-      // release site below is guarded on this flag, so a provider failure on
-      // a request whose metering had ALSO failed would call
-      // release_scout_question anyway and decrement a slot from a real,
-      // unrelated question the athlete had already asked — handing back
-      // allowance we never took. The flag now means what its name says.
-      reservedQuestion = reservation.reserved === true;
-      questionsRemaining = Math.max(dailyLimit - (Number(reservation.used) || 0), 0);
-      if (!reservation.allowed) {
-        const message = plan === "elite"
-          ? "Daily Scout limit reached. Check back tomorrow."
-          : plan === "pro"
-          ? "Daily Scout limit reached. Upgrade to Elite for more Scout messages."
-          : plan === "starter"
-          ? "Daily Scout limit reached. Upgrade to Pro or Elite for more Scout messages."
-          : "Free daily limit reached. Upgrade for more Scout messages.";
-        // code + can_upgrade let the client say this in the athlete's own
-        // language and offer the upgrade (rather than a pointless "try
-        // again") — except on Elite, where there is nothing to upgrade to.
-        return res.status(402).json({ error: message, code: "daily_limit_reached", can_upgrade: plan !== "elite", scout_usage: { remaining: 0, limit: dailyLimit } });
-      }
-
-      // Lifetime free AI budget (migration 068) — checked only for plan ===
-      // 'free', only after the daily reservation succeeds (a request that
-      // was never going to run today shouldn't burn lifetime budget either).
-      // Distinct status code (403, not the daily-limit's 402) and error
-      // shape so the client can show "upgrade to keep using Scout" instead
-      // of "try again tomorrow" — those are different problems for the
-      // athlete to solve. Model tier is already capped to Haiku-equivalent
-      // for free plan by PLAN_MODEL_ACCESS below; this only bounds HOW MANY
-      // of those cheap replies a free account ever gets, not just per day.
-      if (plan === "free") {
-        const freeLifetimeLimit = Number(process.env.FREE_LIFETIME_LIMIT || 40);
-        const freeReservation = await reserveFreeAiQuestion(userId, freeLifetimeLimit);
-        // Only true if the reservation ACTUALLY counted. Set unconditionally,
-        // a reservation that never incremented still got "released" on every
-        // error path — refunding a lifetime question the athlete never spent,
-        // which over time hands out more than FREE_LIFETIME_LIMIT.
-        reservedFreeAi = freeReservation.reserved === true;
-        if (!freeReservation.allowed) {
-          await releaseScoutQuestion(userId);
-          reservedQuestion = false;
-          return res.status(403).json({
-            error: "You've used all your free GOLSZ Scout questions. Upgrade to keep getting AI-powered guidance.",
-            code: "free_ai_exhausted",
-            scout_usage: { remaining: 0, limit: dailyLimit },
-          });
-        }
-      }
-    }
   }
 
   // ---- route (classify — with the FAQ list embedded — then decide the model) ----
@@ -7720,6 +8182,14 @@ A newer source always beats an older one at the same level. If memory says one t
     // Concatenation of the two IS the old single string, byte for byte. Kept
     // for token estimation and anything that wants the whole prompt.
     const systemPrompt = systemStatic + systemDynamic;
+    // Every day the answer may name: those in this athlete's prompt and in the
+    // conversation (a date they wrote is theirs, not invented). Not the static
+    // prefix, which is the same for everyone and states no fact about them.
+    if (todayAnswer) {
+      const said = conversation.map((m) => (typeof m.content === "string" ? m.content
+        : Array.isArray(m.content) ? m.content.map((b) => (b && b.type === "text" ? b.text : "")).join("\n") : "")).join("\n");
+      todayAnswer.allowedDates = datesInContext(`${systemDynamic}\n${said}`);
+    }
     // REVERTED from the "context as a leading user turn" experiment. Moving
     // per-athlete state into the messages array made the model treat the
     // exchange as a free-flowing conversation and answer in PROSE, with no
@@ -7739,7 +8209,9 @@ A newer source always beats an older one at the same level. If memory says one t
     // ---- Database path: a real $0-AI-cost answer, matched by MEANING (not
     // exact wording) inside the classification call above, before any real
     // answering model runs. ----
-    const faqMatch = shouldUseFaqMatch(classification, conversation)
+    // Never for a today question about their plan: a stored answer cannot
+    // know their steps, so the model answers it whatever the classifier matched.
+    const faqMatch = !todayAnswer && shouldUseFaqMatch(classification, conversation)
       ? faqList.find((f) => f.id === classification.faq_id)
       : null;
     if (faqMatch) {
@@ -7760,7 +8232,8 @@ A newer source always beats an older one at the same level. If memory says one t
       await recordRequestSpend();
       return res.status(200).json(payload);
     }
-    await logFaqMiss(classification, latestUserText(conversation));
+    // Nor is it a gap in the FAQ: no stored answer could fill it.
+    if (!todayAnswer) await logFaqMiss(classification, latestUserText(conversation));
 
     // ---- Free-plan tool block (brief §12: "Do NOT permit FREE accounts to
     // perform: deep web research, large school searches... other high-cost
@@ -7828,6 +8301,10 @@ A newer source always beats an older one at the same level. If memory says one t
       if (classification.intent === "db_lookup") {
         if (reservedQuestion) await releaseScoutQuestion(userId);
         if (reservedFreeAi) await releaseFreeAiQuestion(userId);
+        // The count includes the question just given back: "0 left" here shut
+        // Scout with one still there. Nothing reserved, no count invented.
+        const usageAfterRefund = reservedQuestion
+          ? { remaining: Math.min(questionsRemaining + 1, dailyLimit), limit: dailyLimit } : undefined;
         reservedQuestion = false;
         reservedFreeAi = false;
         await recordRequestSpend();
@@ -7841,7 +8318,7 @@ A newer source always beats an older one at the same level. If memory says one t
           error: "Deeper searches, including GOLSZ's event listings and multi-step research, are included from the Basic plan up. Scout doesn't search for individual players on any plan right now.",
           code: "free_tool_blocked",
           can_upgrade: true,
-          scout_usage: { remaining: questionsRemaining, limit: dailyLimit },
+          scout_usage: usageAfterRefund,
         });
       }
       maxToolTurns = FREE_VERIFY_TURNS;
@@ -7920,10 +8397,12 @@ A newer source always beats an older one at the same level. If memory says one t
     let cacheKey = null;
     // A question about a PHOTO is never cache-eligible: the key is built from
     // the text alone, so "what do you think of this?" with a new photo would
-    // otherwise be answered about the last one.
+    // otherwise be answered about the last one. Nor is a today question about
+    // their plan, for the reason the FAQ path above skips it.
     if (classification && CACHE_ELIGIBLE_INTENTS.has(classification.intent)
         && classification.is_correction !== true
         && sanitized.imageCount === 0
+        && !todayAnswer
         && !(isReplyToScout(conversation) && isShortReactive(latestText))) {
       cacheKey = cacheKeyFor(classification.intent, latestText, faqLang, modelTier, cacheFingerprint);
       const cached = await getCachedResponse(cacheKey);
@@ -8034,6 +8513,7 @@ A newer source always beats an older one at the same level. If memory says one t
         data.suggested_dev_items = extractSuggestedDevItems(data);
         { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
         data.drafted_email = extractDraftedEmail(data);
+        await finishTodayAnswer(data, todayAnswer);
         // Keyed by requestId so a client-side timeout retry can recover this
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache.
@@ -8137,6 +8617,7 @@ A newer source always beats an older one at the same level. If memory says one t
         data.suggested_dev_items = extractSuggestedDevItems(data);
         { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
         data.drafted_email = extractDraftedEmail(data);
+        await finishTodayAnswer(data, todayAnswer);
         // Keyed by requestId so a client-side timeout retry can recover this
         // exact reply rather than re-asking the athlete (and re-charging them).
         // Short TTL: this is crash recovery, not a semantic cache. Written
@@ -8204,6 +8685,7 @@ A newer source always beats an older one at the same level. If memory says one t
             data.suggested_dev_items = extractSuggestedDevItems(data);
             { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
             data.drafted_email = extractDraftedEmail(data);
+            await finishTodayAnswer(data, todayAnswer);
             // Never cached, same reasoning as the Haiku fallback: a degraded
             // reply must not be served back to a different athlete later.
             return res.status(200).json(data);
@@ -8271,6 +8753,7 @@ A newer source always beats an older one at the same level. If memory says one t
     data.suggested_dev_items = extractSuggestedDevItems(data);
     { const pw = finalizeSuggestedPathway(data, pathwayBuildCtx, incomingText, userPlan); data.suggested_pathway = pw.pathway; data.suggested_pathway_source = pw.source; }
     data.drafted_email = extractDraftedEmail(data);
+    await finishTodayAnswer(data, todayAnswer);
     // Keyed by requestId so a client-side timeout retry can recover this
     // exact reply rather than re-asking the athlete (and re-charging them).
     // Short TTL: this is crash recovery, not a semantic cache. Written last,

@@ -41,8 +41,7 @@ ck("CSP default-src and script-src intact",
     csp.endsWith("form-action 'self'")], [true, true, true, true]);
 
 console.log("\n-- vercel.json shape --");
-ck("buildCommand unchanged", VERCEL.buildCommand,
-   "npm run check && npm run split && npm run compile && npm run strip && npm run unpublish");
+ck("buildCommand unchanged", VERCEL.buildCommand, "npm run check && npm run unpublish");
 ck("outputDirectory is .", VERCEL.outputDirectory, ".");
 ck("top-level keys are within the schema",
    Object.keys(VERCEL).every((k) => ["$schema", "buildCommand", "outputDirectory", "redirects", "crons", "headers"].includes(k)), true);

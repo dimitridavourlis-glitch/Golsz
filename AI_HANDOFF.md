@@ -5,94 +5,82 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-OpenCode (AVA job 199, final verification: layout shift on the sign-up screen), 2026-11-10. Before that: OpenCode (t4), Claude Code (t1-t3).
+Claude Code (AVA job 216, final verification: security review of the whole job, gate on the final tree), 2026-11-14.
+Job 216's t1-t6 and earlier final-verification attempts were Claude Code too. Before: OpenCode (job 199), 2026-11-10.
 
 ## Current Branch
-`ava/199-a-brand-new-athlete-goes-from-sign-up-to` (AVA job 199; AVA commits each step, then merges). Branched
-from 3188dc1, where job 184 (Targets) was merged as #14.
+`ava/216-scout-s-what-should-i-do-today-agrees-wi` (AVA commits each step, then merges). Branched from 0b8e891
+(origin/main, job 199 merged as #15). The local `main` ref is older (055a97b): diff the job against 0b8e891.
 
 ## Last Completed Work
-- AVA job 199 t4, fifth try: **the first visit ran in a real browser engine**, at 390 and 1280 px, dark and light.
-  `$AVA_BROWSER`/`$AVA_RUN` were empty again (AVA sets them only for Claude Code), so the run used the new
-  `tools/run-onboarding-chrome.cjs`: headless Chromium over a DevTools pipe, one fresh preview server and browser
-  profile per width and theme. Google Chrome starts in the OpenCode sandbox but its page loads hang; Playwright's
-  `chromium_headless_shell` (Chromium 141.0.7390.37, already on this Mac) works with `--no-sandbox`. Tries 1-4 never
-  tested that and wrote "Chrome cannot start".
-- The scroll reading was blind and is fixed: it measured the document, but Home scrolls inside `<main>` and GoalSetup
-  inside a fixed sheet. It now measures the document, the screen and every box around it that scrolls or clips
-  (`scrollBoxes`, `worstScroll`) and names the worst. `&overflow=1` is the positive control (a 2000 px bar).
-- Defect found and fixed in `golsz-app.html` (+ `npm run compile`): after a key press, GoalSetup's sheet showed the
-  browser's default focus ring around the whole screen. Its panel now has `outline: "none"`; fields and buttons keep
-  the gold ring. The table below was run after the fix.
+- Job 216 (CLAUDE.md § Scout's today answer agrees with Home): t1-t5 built it, t6 recorded it. Final-verification
+  restructure (270144e): AVA's speed check measured the repo's 1.5 MB page while Vercel split, compiled and stripped it at
+  deploy; now the JSX is golsz-app.jsx, `npm run compile` writes the committed js/app.js and js/i18n/{fr,es,el}.js.
+- Browser run on 9fd6819 (code unchanged since: `git diff --name-only 9fd6819 HEAD` lists .md only), Chromium 141 headless
+  shell, ONE `"$AVA_RUN" --timeout 1200 bash node_modules/.cache/f4/drives.sh` (35 s): four runs side by side (390x844,
+  1280x800; dark, light), each with its own server and Chrome profile: `node tools/run-onboarding-chrome.cjs --width <w>
+  --theme <t> --no-sandbox --chrome ~/Library/Caches/ms-playwright/chromium_headless_shell-1194/chrome-mac/headless_shell
+  --out node_modules/.cache/f4/<w><t> "drive=goal" "drive=scouttoday&model=honest" "drive=scoutinvent&model=date"
+  "drive=scoutinvent&model=step" "drive=scoutlast&last=1" "drive=scoutlimit&limit=1" "drive=signup" "drive=passport"
+  "drive=full" "lang=fr"`. 36/36 `drive done`, every runner exit 0, all four the same:
 
-  Recorded run 2026-11-10, per row: `node tools/run-onboarding-chrome.cjs --width <w> --theme <t> --no-sandbox --chrome
-  <headless_shell>`, pages in order. Titles were the same in all four rows; W is the row's width.
+  | page | result | ms 390d/390l/1280d/1280l |
+  |---|---|---|
+  | goal | Check-in > Home (set-goal card) > GoalSetup > Home; TODAY 0/1, THIS WEEK 0/3; next: the step* | 3831/3565/3315/3359 |
+  | scouttoday honest | home 0/1, 0/3 = card 0/1, 0/3; card step = Home's*; override: no; 2 left; box open | 2281/2024/2287/2279 |
+  | scoutinvent date | override: yes; bubble `Today: "<step>". This week: 0 of 3 done.` replaced "...Have it done by 2027-02-07." | 2027/2032/2027/2043 |
+  | scoutinvent step | override: yes; the same bubble replaced `Today: "Run a 10 km time trial"...` | 2275/2279/2027/2023 |
+  | scoutlast last=1 | answer + card 0/1, 0/3, then 0 left, limit card, no text box | 2029/2025/2277/2026 |
+  | scoutlimit limit=1 | 402, 0 model calls, no card; "You've used today's Scout questions. 0 of 3 left today. More tomorrow."; 0 left; limit card; no text box | 2289/2033/2039/2294 |
+  | signup; passport; full | Auth > Passport editor; Passport editor > GoalSetup; Auth > Passport editor > GoalSetup > Home (0/1, 0/3) | 589-879; 528-770; 2851-3216 |
+  | lang=fr, no drive | signed-in Home in French ("Salut Test !", "Aujourd'hui", "1 à faire", "Écoles", "Accueil") | load 253-256 |
 
-  | Page (in order) | Title ended (all 4: 390 dark, 390 light, 1280 dark, 1280 light) | Scroll readings | Console errors |
-  |---|---|---|---|
-  | `drive=signup` | `path: Auth > Passport editor; screen: Passport editor` | `W/W (document)` | none |
-  | `drive=passport` | `path: Passport editor > GoalSetup; screen: GoalSetup; goalSetupFrom: the Passport save` | GoalSetup `W/W (document)` | none |
-  | `drive=goal` | `path: Daily check-in > Home (set-goal card) > GoalSetup > Home; today: 0/1; thisWeek: 0/3; badge: 1 to do; next: Ask Scout what to focus on this week; labels: 1/7 on screen; checkin: skipped` | Home, GoalSetup, Today view: each `W/W (document)` | none |
-  | `drive=home` (reload) | `path: Home; today: 0/1; thisWeek: 0/3`, same badge and step | Home, Today view `W/W (document)` | none |
-  | `drive=reloadmid` | `path: Home (set-goal card) > GoalSetup > Home; sawSetGoalCard=yes; today: 0/1; thisWeek: 0/3` | all three `W/W (document)` | none |
-  | `drive=goal&fail=pathway` | `failAlert="Couldn't save your plan. Try again."; formKept=yes; goalKept=yes; plansAtFail=0; goalTextAtFail=saved; retry=ok`, then Home 0/1, 0/3 | all three `W/W (document)` | only the app's own `GOLSZ goal setup save error` |
-  | `drive=full` | `path: Auth > Passport editor > GoalSetup > Home; goalSetupFrom: the Passport save; today: 0/1; thisWeek: 0/3` | all three `W/W (document)` | none |
-  | `drive=today` | `path: Home; today: 0/1; thisWeek: 0/3` (stays in the Today view) | `W/W (document)` | none |
-  | `drive=goal&overflow=1` (control) | `drive done; ...; overflow=on purpose` | 390: `2016/390 (div.gz-home)`, `2020/390 (div)`, `2012/390 (div.gz-home)`; 1280: `2016/976`, `2020/480`, `2012/976` | none |
-
-  The runner's own reading on each page's last screen: document 390/390 (1280/1280) and 0 elements past the window's
-  edge on every page; on the control page 1 element past the edge while the document still read 390/390 (so the old
-  reading could not have seen it). `drive=full` alone in a fresh profile (390 dark): `Auth > Passport editor > GoalSetup >
-  Daily check-in > Home`, 0/1, 0/3. Screenshots opened: GoalSetup 390 dark, 390 light, 1280 dark, 1280 light; Home 390
-  dark, 390 light, 1280 light; Today view 390 dark. They read correctly, nothing clipped. The only failed request on
-  every page was the Google Fonts stylesheet (no internet): text was drawn in the system fallback font.
-- With `fail=pathway` the goal sentence is already saved when the plan write is refused (it is written first); no
-  `pathway_plan` row exists; Retry writes it.
-- **For the owner (product):** right after "Build my plan", and on the day's first open, the daily check-in "How do
-  you feel today?" covers Home until the athlete answers or taps "Skip for today". Decide whether to skip it that day.
+  \* and `<step>`: "Ask Scout what to focus on this week". Every page doc = width/width, pastEdge 0; console errors only the
+  app's own "GOLSZ scout send failed: ... More tomorrow." (scoutlimit); failed requests only Google Fonts (no internet).
+- Languages, signed out: `"$AVA_BROWSER" --serve "node node_modules/.cache/f4/fr-server.cjs <port>" --port <port> --widths
+  390,1280 /golsz-app.html?lang=fr ...?lang=es ...?lang=el` (preview-onboarding's handler, logging each request): 6/6 loaded,
+  0 console errors, no overflow, each fetched only its own `js/i18n/<lang>.js` (200); French, Spanish, Greek, no raw keys.
+- Speed (tools/time-first-screen.cjs via the browser tool, vs d7a6e8e): app mounted 390/1280 3347/2452 -> 1090-1107/
+  1077-1124 ms (French 2487/2476 -> 1118/1152); LCP 2540-3404 -> 1128-1248; CLS 0. CLAUDE.md § First-screen speed.
+- Security review of the whole job (AVA's own ran out of steps on part 3 of 6). `git diff -C -C 0b8e891 HEAD --
+  golsz-app.html golsz-app.jsx` shows golsz-app.jsx as a 98% copy of the old page, 452 changed lines (a plain diff: 20,353
+  new); js/app.js and js/i18n/*.js are generated and test_compiled_artifact.cjs fails on any drift. No finding: card and
+  bubble are React text (step names via a replacer function); dictionary URL from a fixed four; requestId and lang
+  validated; a today question skips the shared FAQ and cache; logs hold kinds only; `todayAnswer` is per request; the limit
+  refuses before any write or model call and releases only a slot it took; no new endpoint; CSP unchanged; no secret
+  shipped (VAPID public key only, as on main); preview server on 127.0.0.1, repo files only, stand-in keys, other hosts
+  refused. Crafted input at the caps: isTodayQuestion <= 8.3 ms (4,000 chars), checkReplyAgainstPlan <= 73 ms (20,000).
 
 ## Current Work
-AVA job 199 final verification, third pass (OpenCode, 2026-11-10): AVA's speed check found the sign-up screen
-jumping (layout shift 0.23 on `/golsz-app.html` at phone size, budget 0.10). Cause and fix are in CLAUDE.md
-"The first screen holds still": the web fonts now load from `<head>` (they were found only at mount, so the screen
-was redrawn in Archivo a moment after it appeared), and `Auth`'s plan row and line heights no longer depend on
-which font is on screen. Reproduced first (0.232, Chromium 141 headless shell, 375 px, 4x slower CPU, Archivo from
-an npm copy), then 0.000 with the font in before mount and 0.042 with it held back 8 s. `tools/time-first-screen.cjs`
-now prints `cls=` and has `--late-font=<ms>` as its positive control (old plan row 0.164, new 0.052, stand-in font).
-The first-visit drives were re-run after the change (390 dark: signup, full, goal; 1280 light: full): same results
-as the table above. Second pass, same day: the design review's 12 defects on the home page, About, 404 and the
-sign-up form (CLAUDE.md "One look across the site and the sign-in screen"; `tests/test_first_screen_design.cjs`).
-NOT re-scored: only AVA's design judge can say it clears 70, and only AVA's speed check has the real Google Fonts.
+Job 216: final verification done (browser run, languages, speed, security review, gate). AVA's checks and review next.
 
 ## Remaining Tasks
-- Migration 165 (job 184, merged) NOT YET APPLIED: run in the SQL Editor (checks + rollback in its header).
-- OWNER: one real Basic purchase; send LEGAL-REVIEW-BRIEF.md to counsel; admin MFA (OWNER-RUNBOOK.md section 8).
-- OWNER/dashboard: Vercel Hobby->Pro (monitor); backups/PITR+restore drill; portal plan switching; checkout redirect;
-  uptime probe; Elite benefit; French marketing; legal entity. Agent-doable: ADS Phase 6 4-5; Reschedule/Drop from
-  Home; `removed_at` on stages; self-host fonts+CDN libs (CSP); admin RPC for `stripe_pending_plans`; Targets summary;
-  the browser's default focus ring on the other dialogs' panels (Settings, Passport editor: `useModalFocus`).
+- Job 216, later: the card on a chat reopened from History; this week's other steps by name on Home (product question).
+  api/scout.js reserves the question (t4) ~480 lines above the `try` whose catch refunds it; that stretch only builds
+  the prompt (its one await catches its own errors), but an unexpected throw there would cost a question. Wrap it.
+- OWNER: the daily check-in covers Home right after "Build my plan" (skip it that day?); migration 165 NOT YET APPLIED;
+  one real Basic purchase; LEGAL-REVIEW-BRIEF.md; admin MFA; Vercel Pro; PITR drill; portal plan switching; uptime probe.
+- Agent-doable: ADS Phase 6 4-5; Reschedule/Drop from Home; `removed_at` on stages; self-host fonts+CDN libs (CSP);
+  admin RPC for `stripe_pending_plans`; Targets summary; other dialogs' focus ring; Scout timestamp/chip contrast.
 
 ## Important Architecture Decisions
-- Push to `main` = production deploy; Vercel buildCommand (`npm run check` first) is the gate.
-- JSX compiled at author time to committed `js/app.js` (`npm run compile`). Migrations numbered, run by hand.
-- 12-function Vercel ceiling (`_`-prefixed `api/` are shared modules). Adults only.
+- Push to `main` = production deploy; buildCommand `npm run check && npm run unpublish` (the suite is the gate). App JSX
+  in golsz-app.jsx, compiled at author time to committed js/app.js + js/i18n/*.js. Migrations run by hand. 12-function
+  Vercel ceiling (`_`-prefixed `api/` are shared modules). Adults only.
 
 ## Latest Test / Build Status
-2026-11-10 (final verification, third pass), in the agent's own shell (`$AVA_RUN` unset), with `TMPDIR=/private/tmp`
-(`test_unpublish_internal.cjs` needs a TMPDIR outside the repo): `npm run compile` ok; `npm run check` 140/140 suites,
-6,883 assertions. Changed suites: boot_nonblocking 24/24, first_screen_design 78/78, time_first_screen 26/26.
+2026-11-14, final tree (8e3e460 plus this step's AI_HANDOFF.md and CLAUDE.md; code identical to 9fd6819), through
+`$AVA_RUN`: `npm run check` exit 0 (31 s), 144/144 suites, 7,499 assertions; `npm run --silent test` exit 0 (27 s), same.
 
 ## Known Problems
-- The run above is Chromium's headless shell, not Google Chrome, Safari or Firefox, and not AVA's browser tool.
-- health-alert runs every 2.1-7.5 h, not 15 min. Payments live but no real purchase; webhook secret unverified.
-- Admin MFA: owner not enrolled. Signup has NO bot protection (Supabase CAPTCHA off, `TURNSTILE_SITE_KEY` empty).
-- UNVERIFIED (layout shift): the real Google Fonts files on a real phone; Safari/Firefox; signed-in screens.
-- UNVERIFIED (first visit): the web fonts (Archivo, Space Mono; the widths measured are the fallback font's), live
-  Supabase (RLS/PostgREST/real upsert+auth), a real phone on cellular, a screen reader, fr/es/el in a browser. Also
-  "My goal..." line on Free opens the locked Plan (older than job 199).
+- health-alert runs every 2.1-7.5 h, not 15 min. Payments live, no real purchase; webhook secret unverified. Admin MFA:
+  owner not enrolled. Signup has NO bot protection (CAPTCHA off). Preview `&today=` fixes Date.now: no FAILED on a stall.
+- UNVERIFIED (jobs 199, 216): live Anthropic model (replies scripted) and live Supabase; Scout's today answer and card
+  in fr/es/el (the drives read English labels); the new layout on a Vercel preview or golsz.com; AVA's own speed script
+  (timed out 4/4 in attempt 3 at load ~40); a real phone; Safari, Firefox, Google Chrome; a screen reader; web fonts.
 
 ## Next Recommended Action
-Security review, regression and final verification for job 199. To repeat the browser run: the command above the table.
+AVA's checks and review of job 216, then merge. Then the saved-for-later items above.
 
 ---
 _How to update: overwrite the sections above (do not append a log); put the agent name

@@ -33,7 +33,7 @@ const fs = require("fs");
 const path = require("path");
 
 const REPO = path.join(__dirname, "..");
-const APP = fs.readFileSync(path.join(REPO, "golsz-app.html"), "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const MOD = fs.readFileSync(path.join(REPO, "api/_sport-pathways.js"), "utf8");
 const SCOUT = fs.readFileSync(path.join(REPO, "api/scout.js"), "utf8");
 

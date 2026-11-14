@@ -39,8 +39,8 @@ publish.** Full detail: CLAUDE.md § What this is; README.md.
 - Two parts sharing no code (the site links into the app by query parameter). Marketing site:
   `index.html`, `about.html`, `contact.html`, `terms.html`, `privacy.html`, `css/`, `js/main.js`,
   `js/landing.js`, `assets/`. Plain HTML/CSS/JS.
-- App: `golsz-app.html`, one React 18 SPA. Its JSX source is one `text/babel-deferred` block in
-  that file, compiled at author time into `js/app.js`.
+- App: `golsz-app.html`, one React 18 SPA. Its JSX source is `golsz-app.jsx` (since AVA job 216; the page
+  holds no source), compiled at author time into `js/app.js` (English) and `js/i18n/{fr,es,el}.js`.
   The three CDN libraries in `<head>` are `defer`red and `js/app.js` is preloaded; the bottom loader waits for
   `DOMContentLoaded` before injecting it (`tests/test_boot_nonblocking.cjs`).
   The web fonts load from `<head>` too (non-blocking, same address as the `@import` in `CSS`), so the first screen
@@ -56,10 +56,12 @@ publish.** Full detail: CLAUDE.md § What this is; README.md.
 ## Important directories
 - `api/`: 12 Vercel functions, Vercel's ceiling (adding one means removing one). `_`-prefixed
   files are shared modules, not functions.
-- `tests/`: `test_*.cjs`, `run-all.cjs`, `README.md`. `tools/`: the build scripts (`precompile`, `split-i18n`,
-  `strip-jsx`, `unpublish-internal`) and local preview and timing tools (`preview-public-passport`,
-  `preview-targets`, `preview-onboarding`, `run-onboarding-chrome`, `time-first-screen`, `time-pages`).
-  `js/`: `main.js`, `landing.js`, `app.js` (generated); `js/i18n/` is gitignored build output.
+- `tests/`: `test_*.cjs`, `run-all.cjs`, `README.md`, and `_`-prefixed helpers that suites share (not run on their
+  own: `_catalog-bridge.cjs`, `_day_parity.cjs`, `_app_mount.cjs`: the app's components run in Node with stand-in hooks;
+  `_app_source.cjs`: `appSource()`, the page with `golsz-app.jsx` put back where its block was, which is how suites
+  read the app). `tools/`: the build scripts (`precompile`, `unpublish-internal`) and local preview and timing tools
+  (`preview-public-passport`, `preview-targets`, `preview-onboarding`, `run-onboarding-chrome`, `time-first-screen`,
+  `time-pages`). `js/`: `main.js`, `landing.js`, and the generated, committed `app.js` and `i18n/{fr,es,el}.js`.
 - `golsz-guard/`: Claude Code plugin, four skills of project rules. Other agents: read
   `golsz-guard/skills/*/SKILL.md` before Supabase writes, measurements, athlete-facing claims.
 - Repo root: `supabase-migration-NNN-*.sql`, `supabase-schema.sql`. `.github/workflows/`: CI.
@@ -79,12 +81,13 @@ npx vercel dev            # run api/ locally; needs the Vercel CLI and env vars
 Serve over HTTP, not `file://`. Full detail: CLAUDE.md § Commands.
 
 ## Build commands
-- `npm run compile`: rebuilds `js/app.js` from the JSX in `golsz-app.html`. Run it after every JSX
-  edit and commit `js/app.js` too; the gate fails if it is stale. Never hand-edit `js/app.js`.
-- `npm run split`, `npm run strip`, `npm run unpublish`: deploy-time only. They rewrite or delete files (`golsz-app.html`: lift fr/es/el
-  into `js/i18n/`, delete the JSX source). Never run them here; never commit their output.
-- Vercel `buildCommand` (vercel.json): `npm run check && npm run split && npm run compile &&
-  npm run strip && npm run unpublish`, `outputDirectory: "."`. No JSON comments in vercel.json (strict schema).
+- `npm run compile`: rebuilds `js/app.js` and `js/i18n/{fr,es,el}.js` from `golsz-app.jsx` and stamps their hash
+  into `golsz-app.html`. Run it after every JSX edit and commit all of them; the gate fails if any is stale.
+  Never hand-edit them. What is committed is what Vercel serves.
+- `npm run unpublish`: deploy-time only. It deletes the working papers (root `*.md`, `golsz-app.jsx`, SQL, `tests/`,
+  `tools/`, ...) from the served tree, and refuses to run outside a Vercel build. Never run it here.
+- Vercel `buildCommand` (vercel.json): `npm run check && npm run unpublish` (nothing is compiled at deploy time
+  since AVA job 216), `outputDirectory: "."`. No JSON comments in vercel.json (strict schema).
 - Full detail: CLAUDE.md § THE DEPLOY GATE (vercel.json buildCommand).
 
 ## Test commands
@@ -132,17 +135,19 @@ node tests/test_<name>.cjs     # one suite
 - supabase-js resolves with `{ error }`: check every write. Keep the `if (sb)` guard.
 - Every top-level screen includes `<style>{CSS}</style>`. No client-only success states, no
   demo-data fallback. New strings need all four languages, appended at the END of each dictionary line.
-- Prices are mirrored in `api/_plan-catalog.js`, `PLANS` (golsz-app.html) and `CURRENCIES`
+- Prices are mirrored in `api/_plan-catalog.js`, `PLANS` (golsz-app.jsx) and `CURRENCIES`
   (js/main.js); tests diff them. Enum `starter` displays as Basic: do not rename it.
 - A failed read is `LoadError` + Retry, never the empty state: wrap reads in `must()`, and register every new
   loader in `tests/test_read_failures_shown.cjs`.
-- Form errors come from pure helpers, `signupFieldErrors` and `profileFieldErrors` (golsz-app.html), shown under the field.
+- Form errors come from pure helpers, `signupFieldErrors` and `profileFieldErrors` (golsz-app.jsx), shown under the field.
 - Crash proof: `tools/preview-public-passport.cjs` `&fixture=crash` (+ `&reload=1`); run 2026-11-03 passed (CLAUDE.md).
 - First visit (sign-up -> Passport editor -> GoalSetup -> Home, AVA job 199): `starterPathwaySteps()` (pure, 5-8 dated
   `starter_step_*` milestones) writes a starter plan to `pathway_plan` (upsert `onConflict: "user_id"`, only
   pathway_type/target_timeline/milestones/updated_at) via `GoalSetup` (no AI, no plan gate; `planHasSteps` never
   overwrites; a refused save keeps the form with `role=alert` + Retry). `SetGoalCard` shows on Home for a sport with
   no steps. Preview: `tools/preview-onboarding.cjs` (stand-in auth/store, `drive=signup|passport|goal|home|today|reloadmid|full`,
+  and job 216's `scouttoday|scoutinvent|scoutlimit|scoutlast`: `/api/scout` runs the real handler against the store and a
+  scripted model, `&model=honest|date|step|count`, `&limit=1`, `&last=1`; the title starts with Home's and the card's counts;
   one-shot `fail=pathway`, `overflow=1` (positive control), `__store`; the title reports the screens in order,
   TODAY/THIS WEEK as done/total and the worst scroll box of each screen, `390/390 (document)` when it fits).
   `tools/run-onboarding-chrome.cjs --width <w> --theme <t>` runs the drives in headless Chrome when there is no
@@ -151,7 +156,21 @@ node tests/test_<name>.cjs     # one suite
   **UNVERIFIED:** the web fonts (no internet in the run, fallback font), Google Chrome/Safari/Firefox, live
   Supabase/RLS, real phone, screen reader, fr/es/el.
   Detail: CLAUDE.md § First visit: sign-up to a dated plan.
-- Targets (Plan > "Schools & clubs", table `outreach_targets`): the caps in `TARGET_LIMITS` (golsz-app.html) are
+- Scout's today answer agrees with Home (AVA job 216): `isTodayQuestion` (fixed en/fr/es/el patterns, never the
+  classifier) spots "what should I do today?"; `todayCard()` is Home's TODAY/THIS WEEK done/total plus the steps due
+  today by name; `checkReplyAgainstPlan()` flags a date, quoted step or count that is not in the plan, and the reply
+  then carries `today_override` (the app shows the plan's own sentence instead). A today question is never answered
+  from `scout_faq` or the shared `scout_response_cache`. Out of questions: 402 with `scout_usage`, "0 of N left
+  today", and `ScoutLimitCard` replaces the text box. App: `ScoutTodayCard` ("From your plan") under the reply.
+  Rehearsal: the scout drives above; the drives give the app's first screen 90 s (`BOOT_MS`) and each step 30 s.
+  Recorded run 2026-11-14 (Chromium headless shell, 390/1280, dark/light, one server each): 24/24 drives done. The card
+  matched Home (TODAY 0/1, THIS WEEK 0/3, the same step), an invented date or step was replaced by the plan's sentence,
+  and at the limit Scout showed "0 of 3 left today" with the limit card. Nothing scrolled sideways at 390. Run again on
+  the final commit (9fd6819, source in golsz-app.jsx): the same results, plus sign-up to Home, and the app in fr/es/el
+  fetching only its own js/i18n file. Table: AI_HANDOFF.md. **UNVERIFIED:** the live Anthropic model, live Supabase,
+  Scout's today answer in fr/es/el in a browser, a real phone, Safari/Firefox, a screen reader, web fonts.
+  Detail: CLAUDE.md § Scout's today answer agrees with Home.
+- Targets (Plan > "Schools & clubs", table `outreach_targets`): the caps in `TARGET_LIMITS` (golsz-app.jsx) are
   repeated by migration 165's check constraints, and `tests/test_migration_165.cjs` diffs them: change both, through a
   new migration. 165 is NOT YET APPLIED, so today the caps are client-side only. Deleting a target takes two taps and
   warns when its draft email goes too. Browser runs: `tools/preview-targets.cjs` (stand-in store, seeded rows,
@@ -167,7 +186,7 @@ node tests/test_<name>.cjs     # one suite
 ## Important files
 - `CLAUDE.md` (authoritative), `README.md`, `tests/README.md`, `AI_HANDOFF.md`, `ADS-BUILD-ORDER.md`
   (Athlete Direction System plan), `DESIGN-HANDOFF.md`, `SPEC-custom-pathway-stages.md`, `SETUP.md`.
-- `golsz-app.html`, `js/app.js`, `api/scout.js`, `supabase-schema.sql`, `vercel.json`,
+- `golsz-app.jsx`, `golsz-app.html`, `js/app.js`, `api/scout.js`, `supabase-schema.sql`, `vercel.json`,
   `package.json`, `.github/workflows/check.yml`, `.env.example`.
 - Doc drift fixed 2026-10-22: CLAUDE.md (§ Commands, § Architecture > The app and CSP, § THE DEPLOY
   GATE, monitoring), README.md (suite count, `STRIPE_PORTAL_LINK`: the link is correct), check.yml

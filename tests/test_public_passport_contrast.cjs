@@ -6,7 +6,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const html = fs.readFileSync(path.join(__dirname, "..", "golsz-app.html"), "utf8");
+const html = require("./_app_source.cjs").appSource();
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) pass++; else { fail++; console.error("FAIL: " + msg); } };

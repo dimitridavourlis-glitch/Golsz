@@ -13,7 +13,7 @@ const fs = require("fs");
 const path = require("path");
 
 const REPO = path.join(__dirname, "..");
-const APP = fs.readFileSync(path.join(REPO, "golsz-app.html"), "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const M151 = fs.readFileSync(path.join(REPO, "supabase-migration-151-legacy-idx-plain.sql"), "utf8");
 const M152 = fs.readFileSync(path.join(REPO, "supabase-migration-152-sync-actions.sql"), "utf8");
 const M155 = fs.readFileSync(path.join(REPO, "supabase-migration-155-sync-category.sql"), "utf8");

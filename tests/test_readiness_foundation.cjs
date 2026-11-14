@@ -152,7 +152,7 @@ ck("no sport/pathway combination is scoring-ready yet",
      .every((k) => readinessScoringReady(...k.split(":")).ready === false), true);
 
 console.log("\n-- 5. Passport Strength is SEPARATE from Goal-relative Readiness --");
-const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const APP = require("./_app_source.cjs").appSource();
 ck("the composite score is labelled Passport Strength", /home_readiness_composite: "PASSPORT STRENGTH"/.test(APP), true);
 ck("...in the section title too", /home_readiness_title: "PASSPORT STRENGTH"/.test(APP), true);
 ck("...and translated in all four languages",

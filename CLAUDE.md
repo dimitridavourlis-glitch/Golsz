@@ -24,11 +24,11 @@ below.
 
 ```
 npm ci            # required — 8 suites need @babel/parser and @babel/traverse
-npm run check     # syntax-checks every api/*.js and js/*.js, then runs the suite
-npm run compile   # re-compiles the JSX in golsz-app.html into js/app.js
+npm run check     # syntax-checks every api/*.js, js/*.js and js/i18n/*.js, then runs the suite
+npm run compile   # compiles golsz-app.jsx into js/app.js and js/i18n/{fr,es,el}.js
 ```
 
-`npm run check` is the gate before any push. As of 2026-10-22 it runs **110 plain-Node `.cjs` suites, 5,252
+`npm run check` is the gate before any push. As of 2026-11-14 it runs **144 plain-Node `.cjs` suites, 7,499
 assertions** (`node tests/run-all.cjs` prints the current count), no framework — `tests/run-all.cjs` discovers anything matching `test_*.cjs`. Many suites lift
 real expressions out of the source and `eval` them, so they fail when the source changes rather than when a
 mock does. There is no linter.
@@ -47,13 +47,13 @@ this file's predecessor version broke a running migration mid-session.
 ## Commands
 
 There is no linter. There IS test and build tooling: the `package.json` scripts `check`, `test`, `compile`,
-`split`, `strip` and `deploy`, plus `tests/run-all.cjs` (see "What this is" above and THE DEPLOY GATE below).
+`unpublish` and `deploy`, plus `tests/run-all.cjs` (see "What this is" above and THE DEPLOY GATE below).
 Relevant commands:
 
-- **Test gate (run before any push):** `npm ci` once, then `npm run check` (syntax-checks `api/*.js`, `js/*.js`
-  and `sw.js`, then runs every `tests/test_*.cjs`). `npm test` runs the suites alone; `node tests/run-all.cjs
-  <text>` runs only suites whose file name contains `<text>`.
-- **Recompile the app after editing its JSX:** `npm run compile` (see "The app" below).
+- **Test gate (run before any push):** `npm ci` once, then `npm run check` (syntax-checks `api/*.js`, `js/*.js`,
+  `js/i18n/*.js` and `sw.js`, then runs every `tests/test_*.cjs`). `npm test` runs the suites alone;
+  `node tests/run-all.cjs <text>` runs only suites whose file name contains `<text>`.
+- **Recompile the app after editing its JSX (`golsz-app.jsx`):** `npm run compile` (see "The app" below).
 - **Preview the static site locally:** serve the directory over HTTP (not `file://`, since `fetch`/module
   scripts and relative asset paths need a real origin) — e.g. `python3 -m http.server 8000` or `npx serve .`
   from the repo root, then open `index.html` / `golsz-app.html` in a browser.
@@ -116,18 +116,20 @@ Relevant commands:
 
 ### The app (`golsz-app.html`)
 
-- Single HTML file plus one generated script: React 18 + ReactDOM (UMD builds) and `@supabase/supabase-js`
-  are loaded from CDN `<script>` tags. The JSX source lives in one inert `<script type="text/babel-deferred"
-  data-presets="react">` block in `golsz-app.html` (no browser executes that type, and Babel is no longer
-  loaded in the page). It is compiled ahead of time, not in the browser: `npm run compile`
-  (`tools/precompile.cjs`, `@babel/standalone` pinned to 7.23.2) writes the committed `js/app.js`, which the
-  page loads with a content-hash `?v=` stamp. After editing the JSX, run `npm run compile` and commit
-  `js/app.js` too; `test_compiled_artifact.cjs` fails the gate if it is stale. Never hand-edit `js/app.js`.
-  On Vercel only, the `buildCommand` then runs `npm run split` (lifts the fr/es/el dictionaries out into
-  `js/i18n/`), `npm run compile` again (so the deployed bundle is English-only) and `npm run strip`
-  (`tools/strip-jsx.cjs`, removes the JSX source block from the served HTML) against a throwaway checkout.
-  `split` and `strip` rewrite `golsz-app.html`, so do not run them in your working tree and never commit
-  their output (the `tools/*.cjs` headers and `test_served_bundle.cjs` explain why).
+- One HTML page plus generated scripts: React 18 + ReactDOM (UMD builds) and `@supabase/supabase-js`
+  are loaded from CDN `<script>` tags. **The app's JSX source is `golsz-app.jsx`** (since 2026-11-14, AVA job
+  216; until then it sat inside `golsz-app.html` in an inert `<script type="text/babel-deferred">` block, and
+  the page keeps one comment line where it was). It is compiled ahead of time, never in the browser:
+  `npm run compile` (`tools/precompile.cjs`, `@babel/standalone` pinned to 7.23.2, then terser) writes
+  `js/app.js` (the app, with English) and `js/i18n/fr.js`, `es.js`, `el.js` (the other three dictionaries,
+  lifted out of `I18N`; the page's loader fetches only the one in use, and a failed fetch still starts the app
+  in English), and stamps one content hash over all four files into the page's `?v=`. After editing the JSX,
+  run `npm run compile` and commit all four files; `test_compiled_artifact.cjs` rebuilds them and fails the
+  gate if any is stale. Never hand-edit them. What is committed is what Vercel serves: its build compiles
+  nothing (see THE DEPLOY GATE). The suites read the app through `tests/_app_source.cjs`: `appSource()` puts
+  `golsz-app.jsx` back into the page where its block was, so every string anchor still finds what it found
+  before (`test_anchor_integrity.cjs` checks those anchors against that text). Preview tools read the app's
+  Supabase address from `js/app.js`, the bundle the page runs.
 - **Boot order (2026-11-04).** The three CDN libraries in `<head>` carry `defer` (so the inline `#boot` logo paints
   while they download) and `<link rel="preload" as="script">` fetches `js/app.js` in parallel; `tools/precompile.cjs`
   stamps the same `?v=` hash into the preload and `APP_SRC` (its replace is global). The bottom loader's `compile()`
@@ -146,6 +148,13 @@ Relevant commands:
   LCP 648-760 before, 804-1692 after (noisy machine, all inside budget). **Not measured (UNVERIFIED):** a real phone
   on real cellular (CPU, radio), a signed-in Home with live data, CDN latency from the production edge.
   The region hero JPEGs are not used on the home page, so they do not affect its LCP.
+  **Recorded 2026-11-14 (AVA job 216 final verification), when the page lost its inert 1.5 MB JSX block and js/app.js
+  its fr/es/el:** the same command, `/golsz-app.html` at 390/1280, back to back with the tree before (d7a6e8e, served by
+  its own copy of the tool), ms: mounted 3347/2452 -> 1090-1107/1077-1124; LCP 2568-3404 -> 1128-1248; boot 183-300
+  after; CLS 0. With `--lang=fr` (the page then fetches `js/i18n/fr.js` before the app runs): mounted 2487/2476 ->
+  1118/1152. Home page LCP 1068/468. Load average 3-6. Production had served the stripped page since 2026-10-21 (Vercel
+  built it at deploy), so its own numbers should barely move: the gain is in the repo's page, which is what AVA's speed
+  check measures.
 - **The first screen holds still (layout shift, 2026-11-10, AVA job 199).** Budget: layout shift (CLS) <= 0.10 on
   either page. AVA's speed check measured 0.23 on `/golsz-app.html` at phone size. Cause: the web fonts were only
   found when the app mounted (the `@import` in `CSS`), so the sign-up screen was drawn in the fallback font and
@@ -346,6 +355,8 @@ Relevant commands:
 - **Preview tool `tools/preview-onboarding.cjs`** (`node tools/preview-onboarding.cjs <port>`, then
   `/golsz-app.html`). Stand-in auth (signUp/getSession/getUser) and an in-memory store for `profiles`, `athletes`,
   `pathway_plan`, `outreach_targets`, `athlete_benchmarks`; any other table starts empty and keeps what the app writes;
+  an insert without `created_at` gets one, later than the last, as Postgres's `default now()` does (without it a Scout
+  chat reopened from the store showed the answer above the question);
   reads honour column filters, `order` and `limit`, and an upsert matches on its `on_conflict` columns (without them
   Home's "latest snapshot before today" read failed and the app logged it). Nothing reaches the real Supabase project;
   the stub is added to the served HTML in memory only; CDN libraries come from local vendor copies.
@@ -375,8 +386,12 @@ Relevant commands:
   the drives use is still in `golsz-app.html`).
 - **Runner `tools/run-onboarding-chrome.cjs`** (`node tools/run-onboarding-chrome.cjs --width 390 --theme dark`):
   for a session with no browser tool. One run starts a fresh preview server and a fresh headless Chrome profile, opens
-  the drives in order (signup, passport, goal, home, reloadmid, `goal&fail=pathway`, full, today, `goal&overflow=1`)
-  and prints one JSON line per page: the drive's result, console errors, failed requests, its own reading of the last
+  the drives in order (signup, passport, goal, home, reloadmid, `goal&fail=pathway`, full, today, `goal&overflow=1`,
+  then job 216's Scout pages: `scouttoday&model=honest`, `scoutinvent` with `date`, `step` and `count`, `scoutlimit`,
+  `scoutlast`) and prints one JSON line per page: the drive's result, `ms` (how long the page took; a drive gives the
+  app's first screen 90 s, `BOOT_MS`, and each later step 30 s, `STEP_MS`, so a slow boot or step that lands shows
+  here; the runner stops reading a page after 180 s, the server answers the hold image after 120 s; with the Mac's
+  load average at 35-49 on 2026-11-14 pages that boot in 7 s took 30-45 s), console errors, failed requests, its own reading of the last
   screen (`doc` = document scrollWidth/innerWidth, `pastEdge` = visible elements past the window's edge) and a
   screenshot under `node_modules/.cache/onboarding-run`. `--chrome PATH` picks the binary; `--no-sandbox` is needed
   inside an agent's sandbox. Chrome talks over a pipe and cannot reach the internet. In AVA's OpenCode sandbox Google
@@ -531,6 +546,105 @@ Relevant commands:
   the same day. "Missed" uses that day and the resting rule. `responseCacheFingerprint` carries the day and a
   step digest. `getAthleteState` reads run as one `Promise.all` round (they were sequential).
   Benchmark lines carry `benchmarkProvenance()` (who measured it, and the recorded protocol).
+- **"What should I do today?" is answered from the athlete's plan and checked against it (AVA job 216):** see the
+  next section, "Scout's today answer agrees with Home".
+
+### Scout's today answer agrees with Home (AVA job 216)
+
+If Scout and Home disagree about today, the athlete stops trusting both. So a today question gets the steps Home shows
+as due today and Home's this-week count, never a date or step that is not in the plan, and an athlete who is out of
+questions is told so with the count. Built 2026-11-12/13 in steps t1 (helpers), t4 (limit path), t2 (handler), t3
+(card), t5 (rehearsal tools); t6 recorded the run below (2026-11-14). Every helper here is pure (no I/O, no AI) and
+sits beside `dayBuckets()` in `api/scout.js` (see "Scout knows the athlete's day" above for Home's buckets).
+
+- **Spotting the question: `isTodayQuestion(text)`.** Fixed en/fr/es/el patterns, never the classifier, so a
+  classifier timeout cannot change the answer; the "What's next for me?" button (`scout_big_next`) counts. The handler
+  tests what the athlete typed (`typedQuestion`) and acts only when the plan has steps (`pathwayComplete`) or could not
+  be read; a plan with no steps gets neither card nor rule (Home shows its "set your goal" card there).
+- **What Home shows: `todayCard(days, next, resting)`.** Home's TODAY and THIS WEEK done/total, every open step due
+  today by name up to `TODAY_OPEN_CAP` (20) plus `todayOpenMore`, the late count and the next step.
+  `pickNextMilestone()` is Home's `nextMilestone` rule (a date the athlete chose before one GOLSZ suggested, earliest
+  first, then undated in list order); `getAthleteState` uses it (it had taken the earliest date of either kind). The
+  prompt's TODAY FOR THEM line states the same names and numbers, then `TODAY_ANSWER_RULE` (step names in double quotes,
+  this week as "N of M", nothing that is not in the context), or `TODAY_PLAN_UNREAD_RULE` when `pathway_plan` could not
+  be read (say so, name nothing from it).
+- **Holding the reply to the plan: `checkReplyAgainstPlan(reply, { allowedDates, labels, card, lang, allowedCounts })`
+  -> `{ ok, reasons }`.** Flags a date or weekday not in the prompt (`datesInContext(text)` collects the allowed ones),
+  a quoted step that is not a plan label (quotes are for step names only), and an "N of M"/"N/M" that is not Home's
+  pair (each "today"/"week" word belongs to the count nearest to it; `allowedCounts` adds the prompt's other true pairs:
+  the whole plan, Passport Strength). `finishTodayAnswer()` runs it on every way a reply goes back (fast model, deep
+  model with its tool loop and forced no-tools reply, both failovers), before the replay entry is written, and adds
+  `today_card` (or `today_unavailable`) and, when the check flags anything or throws, **`today_override`**. `reply_text`
+  is left as it was; the app shows the plan in its place. Only the kinds of disagreement are logged (`console.warn
+  "GOLSZ scout today answer disagrees with the plan"`, `error_log` source `scout_today_guard`), never the reply.
+- **No stored answer for a today question.** It is never answered from `scout_faq` (`faqMatch` requires
+  `!todayAnswer`, whatever the classifier matched) and never read from or written to the shared
+  `scout_response_cache` (its `cacheKey` stays null): neither knows the athlete's steps. The per-user replay entry
+  (`replayCacheKey(userId, requestId)`) is still written, so a Retry gets the same reply and card without a second charge.
+- **Out of questions (t4).** When `reserve_scout_question` refuses, the handler answers 402 with `scout_usage` before
+  any plan write, prompt or model call (the plan rows are read first, in the same round as the profile row that names
+  the limit). The app's `scoutFailureFor()` says `scout_err_daily_left` ("You've used today's Scout
+  questions. 0 of 3 left today. More tomorrow.", with the limit the server sent, never the client's copy of the plans),
+  the header says "0 left" and `ScoutLimitCard` takes the place of the text box. A question allowed as the day's last is
+  answered, then shows the same "0 left" and card. Known gap: the question is reserved before the prompt is built, and
+  the `try` whose catch gives an unanswered question back starts after that, so an unexpected throw while the prompt is
+  built costs the athlete that question (the one await there, `autoFixPathwayType`, catches its own errors).
+- **The app: the "From your plan" card (t3).** `Scout.send()` keeps `today_card`, `today_override` and
+  `today_unavailable` on the assistant message; `ScoutTodayCard` draws the card under the reply (read-only, no button,
+  ScoutActionCard's shape capped at 440px): FROM YOUR PLAN, TODAY done/total with each open step due today by name (one
+  with no name, or past the server's 20, is counted in "and N more"), THIS WEEK done/total, a late line only above 0,
+  Home's resting words while resting, and "Nothing is due today." / Home's empty-week line. The labels and the late line
+  are Home's own keys (`home_week_today`, `home_week_title`, `home_door_plan_late`). `scoutTodayLines(card, t)` decides
+  every line and refuses a card whose numbers do not add up (then nothing is drawn and nothing guessed);
+  `scoutTodaySentence(card, t)` says the same in words ('Today: "<step>". This week: 0 of 3 done.'). With
+  `today_override` that sentence replaces the reply in the bubble and is what `logTurn` saves, and the offers (schools,
+  steps, email) that came with the replaced reply are dropped; with no usable card the bubble says
+  `scout_today_unavailable` instead. `today_unavailable` alone adds that line under the model's reply. A chat reopened
+  from History has no card (scout_history keeps text only).
+- **Suites.** `test_scout_today_answer.cjs` (the pure helpers, diffed against HomeTab's code through `_day_parity.cjs`,
+  shared with `test_scout_today.cjs`; every reply check also runs on a twin built to break it);
+  `test_scout_today_handler.cjs` (the real handler, network mocked: the card, the override, the logged kinds only, the
+  FAQ/cache bypass, all four reply paths, no card without steps, `today_unavailable`); `test_scout_today_card.cjs` (both
+  app helpers in all four languages, the card against Home's own TODAY/THIS WEEK tile code on generated plans, theme
+  colours at 4.5:1 in both themes, the real Scout component against the real handler; harness `_app_mount.cjs`, shared
+  with `test_scout_limit_path.cjs`, which proves the limit path from the handler's request log and the mounted Scout).
+- **Rehearsal without live services (t5).** `tools/preview-onboarding.cjs` answers `/api/scout` with the REAL handler
+  (its default export, given Vercel's `req.body` and `res.status().json()`) in the preview's own process. Its Supabase
+  calls go to the page's in-memory store (`SUPABASE_URL` is a stand-in `.invalid` address) and its Anthropic calls to a
+  scripted model, `&model=honest|date|step|count`: honest quotes the steps and counts the handler's TODAY FOR THEM line
+  gives; the others make up one date, step or count. `&limit=1` and `&last=1` make `reserve_scout_question` refuse the
+  question or allow it as the day's last. Drives `scouttoday` (it builds the plan first when the store has none),
+  `scoutinvent` (default `step`), `scoutlimit` and `scoutlast` read Home's TODAY and THIS WEEK cells, ask Scout "What
+  should I do today?" and start the title with `home today`, `home week`, `card today`, `card week`, `card steps`,
+  `override`, `usage`, `limitCard` and `reply` (`replaced` when the bubble shows the plan's sentence instead). The server
+  prints `scout <status> model=<script> ... calls: <n> store, <n> model, <n> refused` per question; anything but the
+  stand-ins is refused. Questions reach the handler `SCOUT_SPACING_MS` (3.2 s) apart, past its 3 s rate limit. Suite:
+  `tests/test_preview_onboarding.cjs`. `tools/run-onboarding-chrome.cjs` runs the drives in headless Chrome.
+- **Recorded run 2026-11-14 (t6).** `tools/run-onboarding-chrome.cjs`, Chromium 141 headless shell (`--no-sandbox`),
+  390x844 and 1280x800, dark and light: four runs, each with its own fresh preview server and Chrome profile, pages in
+  this order: `goal`, `scouttoday&model=honest`, `scoutinvent&model=date`, `scoutinvent&model=step`,
+  `scoutlast&last=1`, `scoutlimit&limit=1`. All 24 pages said `drive done`, and the four runs matched. Home showed TODAY
+  0/1 and THIS WEEK 0/3, and its Today tile and Today view named "Ask Scout what to focus on this week". The card showed
+  the same numbers and listed the same step. scouttoday: `override: no`, "2 left". scoutinvent date and step:
+  `override: yes`, with 'Today: "Ask Scout what to focus on this week". This week: 0 of 3 done.' shown in place of the
+  model's "...Have it done by 2027-02-07." and 'Today: "Run a 10 km time trial"...'. scoutlast: the answer and card,
+  then "0 left", the limit card and no text box. scoutlimit: 402 with no model call, then "You've used today's Scout
+  questions. 0 of 3 left today. More tomorrow.", "0 left", the limit card and no text box. Every page measured
+  scrollWidth = innerWidth with 0 elements past the edge, including the Scout screen with the card at 390 px. The only
+  console error was the app's own "GOLSZ scout send failed: ... More tomorrow." on scoutlimit. The only failed request
+  was the Google Fonts stylesheet (the run had no internet). AI_HANDOFF.md of that day has the table and commands.
+- **Run again on the final commit (2026-11-14, 9fd6819, after the source moved to `golsz-app.jsx`).** The same four
+  runs and six pages, then `signup`, `passport`, `full` and a plain `lang=fr` load: 36/36 drives done, the same results
+  and server lines as t6 in all four, and Home in French with no raw key names. AVA's browser tool loaded the signed-out
+  sign-up screen in fr, es and el at 390 and 1280; each load fetched only its own `js/i18n/<lang>.js` (200) and read
+  translated. AI_HANDOFF.md of that day has the table and commands.
+- **UNVERIFIED.** The live Anthropic models: the run's replies are scripted, so how often a real reply trips
+  `today_override`, and whether a real model follows `TODAY_ANSWER_RULE`, is unknown (the guard is model-independent).
+  Live Supabase: RLS, PostgREST and the real `reserve_scout_question` (the run's store answers it). Scout's today
+  answer and card in fr/es/el in a browser (the drives read English labels; the suites check the patterns and keys in
+  all four languages). A real phone on cellular, Safari, Firefox,
+  Google Chrome itself (the run used Chromium's headless shell), a screen reader, the web fonts (no internet in the run,
+  so the fallback font's widths). Known gap by design: a chat reopened from History has no card.
 
 ### `api/stripe-webhook.js` (Vercel serverless function)
 
@@ -1309,9 +1423,9 @@ database-first event search, rate limiting/idempotency, emergency kill switches,
 dashboard — written in generic TypeScript/Next.js SaaS vocabulary (`PLAN_MODEL_ACCESS`, `AiProviderAdapter`,
 `ai_daily_usage`, a Jest-style test list) that doesn't match this repo's real stack (single-file JSX,
 Babel, no TypeScript, no test framework). The JSX is no longer compiled in the browser: tools/precompile.cjs
-compiles it once into js/app.js, which is COMMITTED. (Since 2026-10-21 Vercel also runs `split`, `compile` and
-`strip` at deploy time, so what it serves is no longer byte-identical to what git holds; see THE DEPLOY GATE.)
-After editing the JSX in golsz-app.html you must run `npm run compile`, and
+compiles it once into js/app.js, which is COMMITTED. (From 2026-10-21 to 2026-11-14 Vercel also ran `split`,
+`compile` and `strip` at deploy time; since AVA job 216 it serves the committed files as they are, see THE
+DEPLOY GATE.) After editing the JSX in golsz-app.jsx you must run `npm run compile`, and
 test_compiled_artifact.cjs fails the gate if you forget. The plan translating the spec onto the
 real stack lives at `~/.claude/plans/rosy-doodling-toast.md` (overwritten from the
 Phase 2 plan above — not part of the repo). Extends the Phase 2 MVP's real infrastructure rather than
@@ -1607,7 +1721,7 @@ you add another place that surfaces a Message button, it doesn't need any follow
 - **js/app.js is MINIFIED (2026-10-22).** `tools/precompile.cjs` runs terser (pinned) inside `compile()`:
   top-level names are NOT mangled (golsz-app.html's loader and the suites refer to globals), function names ARE
   kept (stacks still name the screen), output is deterministic (test_compiled_artifact rebuilds and compares),
-  the source-sha stamp is added after. Read bugs against the JSX in golsz-app.html, not the bundle. A bundle that
+  the source-sha stamp is added after. Read bugs against the JSX in golsz-app.jsx, not the bundle. A bundle that
   fails to run takes the app down: change the minifier options on a branch, open the Vercel preview in a
   browser (it sits behind Vercel SSO; the owner's pane is signed in), and only then merge.
 - **Webhook ordering (2026-10-22, migration 163).** `customer.subscription.created` can arrive before
@@ -1692,19 +1806,24 @@ you add another place that surfaces a Message button, it doesn't need any follow
 
 ## THE DEPLOY GATE (vercel.json buildCommand)
 
-`vercel.json` sets `buildCommand: "npm run check && npm run split && npm run compile && npm run strip && npm run unpublish"`.
-The first step, `npm run check`, is the gate. The other four are real deploy-time build steps (`strip`
-added in 2b44ac2, `split` and the second `compile` in c3742a0, both 2026-10-21; `unpublish` 2026-10-22): `split` lifts the fr/es/el
-dictionaries out into `js/i18n/`, `compile` rebuilds `js/app.js` without them, `strip` removes the JSX
-source block from the served `golsz-app.html`, and `unpublish` (`tools/unpublish-internal.cjs`) deletes the
-repo's working papers from the served tree: root `*.md`, `opencode.json`, `supabase-*.sql`, `tests/`, `tools/`,
+`vercel.json` sets `buildCommand: "npm run check && npm run unpublish"`.
+The first step, `npm run check`, is the gate. The second, `unpublish` (`tools/unpublish-internal.cjs`,
+2026-10-22), deletes the repo's working papers from the served tree: root `*.md`, `opencode.json`,
+`golsz-app.jsx` (the app's source; the page runs `js/app.js`), `supabase-*.sql`, `tests/`, `tools/`,
 `golsz-guard/`, `.github/`, `.claude/`. Before it, `outputDirectory: "."` made all of those public URLs
 (verified live 2026-10-22). It NEVER touches `api/` (Vercel builds the functions from it after buildCommand)
 and refuses to run without `VERCEL=1` or an explicit directory, so it cannot empty a working checkout.
-`api/*.js` is still readable as a static file; the repo is public, so that is accepted. They run on Vercel's throwaway checkout and their output is
-never committed; the ORDER is asserted by `tests/test_served_bundle.cjs`. Until 2b44ac2 the buildCommand
-was just `npm run check` and the repo had no deploy-time build, which is the situation the WHY below
-describes.
+`api/*.js` is still readable as a static file; the repo is public, so that is accepted. It runs on Vercel's
+throwaway checkout and its output is never committed.
+**Nothing is compiled at deploy time (since 2026-11-14, AVA job 216).** From 2026-10-21 (2b44ac2, c3742a0) the
+buildCommand also ran `split` (lift fr/es/el into `js/i18n/`), a second `compile` (an English-only `js/app.js`)
+and `strip` (cut the JSX block out of the served `golsz-app.html`), so the repo served a different, 1.5 MB page
+from production's, and that is the page AVA's speed check measures. `npm run compile` now writes those same
+files, they are committed, and the gate fails if they are stale (`test_compiled_artifact.cjs`), so the files
+the gate checked are the files Vercel serves. `tests/test_served_bundle.cjs` pins all of it: no build step
+after the gate, the page carries no source, `js/app.js` carries English only, each dictionary is its own file.
+Until 2b44ac2 the buildCommand was just `npm run check` and the repo had no deploy-time build, which is the
+situation the WHY below describes.
 
 WHY: pushing to main deploys production through Vercel's git integration,
 which does NOT go through `npm run deploy`. `.github/workflows/check.yml`

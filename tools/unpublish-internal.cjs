@@ -4,7 +4,8 @@
 // vercel.json sets outputDirectory to ".", so every file in the checkout was a
 // public URL: CLAUDE.md, AGENTS.md, AI_HANDOFF.md, every supabase-migration
 // file, supabase-schema.sql, tests/, tools/, golsz-guard/, .github/ and
-// .claude/ (verified live 2026-10-22). The repository is public, so nothing
+// .claude/ (verified live 2026-10-22). golsz-app.jsx joined the list on
+// 2026-11-14: it is the app's source, and the page runs js/app.js, built from it. The repository is public, so nothing
 // secret was exposed, but none of it is part of the product: it hands anyone
 // on golsz.com a map of the database and of the internal process, and it puts
 // planning documents next to the pages a search engine indexes.
@@ -14,7 +15,7 @@
 // reads supabase-schema.sql, the migrations, vercel.json, tests/ and tools/.
 // Ignoring them would turn the gate red or, worse, make suites that cannot
 // find a file pass vacuously. This runs last, after the gate has passed, on a
-// throwaway checkout, exactly like tools/strip-jsx.cjs.
+// throwaway checkout.
 //
 // WHAT IT NEVER TOUCHES: api/. Vercel builds the serverless functions from
 // those files after buildCommand finishes, so deleting them here would delete
@@ -48,6 +49,7 @@ const INTERNAL_DIRS = ["tests", "tools", "golsz-guard", ".github", ".claude"];
 const isInternalFile = (name) =>
   /\.md$/i.test(name) ||
   name === "opencode.json" ||
+  name === "golsz-app.jsx" ||
   /^supabase-.*\.sql$/.test(name);
 
 const removed = [];

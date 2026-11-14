@@ -48,11 +48,17 @@ for (const d of ["api"]) {
   }
 }
 for (const n of fs.readdirSync(REPO)) {
-  if (n === "golsz-app.html" || n === "supabase-schema.sql" || /^supabase-migration-.*\.sql$/.test(n)) {
+  if (n === "golsz-app.html" || n === "golsz-app.jsx" || n === "supabase-schema.sql" || /^supabase-migration-.*\.sql$/.test(n)) {
     SOURCES[n] = fs.readFileSync(path.join(REPO, n), "utf8");
   }
 }
 const ALL_SOURCE = Object.values(SOURCES).join("\n");
+// Most suites read the app through tests/_app_source.cjs (golsz-app.html with
+// golsz-app.jsx put back where its script block was), so that text is a source
+// of its own: their anchors are checked against exactly what they slice. Added
+// after ALL_SOURCE, which already holds both files once.
+const APP_SOURCE_HELPER = "_app_source.cjs";
+SOURCES[APP_SOURCE_HELPER] = require("./" + APP_SOURCE_HELPER).appSource();
 
 // Anchors appear in two shapes across these suites:
 //   SRC.indexOf("literal")            — direct
@@ -91,6 +97,7 @@ for (const name of suites) {
   const reads = [...t.matchAll(/readFileSync\(([^)]*(?:\)[^)]*)??)\)/g)]
     .flatMap((m) => [...m[1].matchAll(/["']([^"']+)["']/g)].map((q) => path.basename(q[1])))
     .filter((b) => b !== ".." && b !== ".");
+  if (/require\(\s*["']\.\/_app_source\.cjs["']\s*\)/.test(t)) reads.push(APP_SOURCE_HELPER);
   const pool = reads.length ? reads.map((b) => SOURCES[b] || "").join("\n") : ALL_SOURCE;
 
   const literals = new Set();

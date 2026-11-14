@@ -23,7 +23,7 @@
 const REPO = require("path").join(__dirname, "..");
 const fs = require("fs");
 const SCOUT = fs.readFileSync(REPO + "/api/scout.js", "utf8");
-const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const APP = require("./_app_source.cjs").appSource();
 
 // PROMPT-SIDE ASSERTIONS READ THE PROMPT, NOT THE FILE.
 // Two failure modes this closes, both found on 2026-08-11 while reconciling
@@ -334,7 +334,7 @@ console.log("\n-- a deliberate null must not be overridden by the client --");
 // -ditch fallback renders `raw` whenever it does not LOOK like JSON — and a
 // scratchpad is prose, so the server's decision was silently undone. On
 // 2026-08-11 an athlete was shown Scout discussing him in the third person.
-const APPSRC = require("fs").readFileSync(require("path").join(__dirname, "..", "golsz-app.html"), "utf8");
+const APPSRC = require("./_app_source.cjs").appSource();
 ck("the server flags an unavailable reply rather than just sending nothing",
    (SCOUT.match(/data\.reply_unavailable = !data\.reply_text;/g) || []).length >= 4, true);
 ck("...every reply_text assignment is followed by the flag",

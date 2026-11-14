@@ -9,7 +9,7 @@
 //     globals the bundle defines
 //   * component and function names survive, so a stack in a support email or
 //     the render-crash boundary's log still says which screen failed
-//   * the source-sha stamp is still the first thing strip-jsx.cjs reads
+//   * the source-sha stamp is still in the first lines (test_compiled_artifact reads it)
 //   * no source map reference points at a file that is not deployed
 
 const fs = require("fs");
@@ -41,7 +41,7 @@ ck("no source map is referenced", /sourceMappingURL/.test(APPJS), false);
 
 // The configuration, so a "simplification" cannot quietly turn on the options
 // that break a classic script.
-ck("terser is applied inside compile(), so the committed bundle and the Vercel rebuild are the same kind of file", /return minify\(code\);/.test(PRE), true);
+ck("terser is applied inside compile(), so every build of the bundle is minified", /return minify\(code\);/.test(PRE), true);
 ck("mangling of top-level names is NOT enabled", /toplevel\s*:\s*true/.test(PRE), false);
 ck("function names are kept", /keep_fnames: true/.test(PRE), true);
 ck("it fails loudly if the minifier returns nothing", /terser produced no output/.test(PRE), true);

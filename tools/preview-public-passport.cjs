@@ -182,10 +182,14 @@ function pageWithStub(html, cfg) {
   return html.replace(/<head[^>]*>/i, (m) => m + tag);
 }
 
-function constantsFrom(html) {
-  const grab = (name) => { const m = new RegExp(name + '\\s*=\\s*"([^"]+)"').exec(html); if (!m) throw new Error(name + " not found in golsz-app.html"); return m[1]; };
+// The Supabase address and anon key the stub answers and recognises, read from js/app.js: the bundle
+// the page runs (compiled from golsz-app.jsx), so they are what the app really sends. The page holds
+// no app code.
+function constantsFrom(bundle) {
+  const grab = (name) => { const m = new RegExp(name + '\\s*=\\s*"([^"]+)"').exec(bundle); if (!m) throw new Error(name + " not found in js/app.js"); return m[1]; };
   return { supabaseUrl: grab("SUPABASE_URL"), anonKey: grab("SUPABASE_ANON_KEY") };
 }
+const appBundle = () => fs.readFileSync(path.join(ROOT, "js", "app.js"), "utf8");
 
 const log = [];
 const vendorFiles = {};
@@ -214,7 +218,7 @@ function handler(req, res) {
       Object.assign(vendorFiles, local.files);
       const html = local.html;
       const fixture = FIXTURES.hasOwnProperty(u.searchParams.get("fixture")) ? u.searchParams.get("fixture") : "a";
-      const cfg = { ...constantsFrom(html), fixture, data: FIXTURES[fixture], theme: u.searchParams.get("theme") || "", retry: u.searchParams.get("retry") === "1", reload: u.searchParams.get("reload") === "1" };
+      const cfg = { ...constantsFrom(appBundle()), fixture, data: FIXTURES[fixture], theme: u.searchParams.get("theme") || "", retry: u.searchParams.get("retry") === "1", reload: u.searchParams.get("reload") === "1" };
       res.writeHead(200, { "content-type": type, "cache-control": "no-store" });
       return res.end(pageWithStub(html, cfg));
     }
@@ -229,4 +233,4 @@ if (require.main === module) {
   server.listen(want, "127.0.0.1", () => console.log("Shared Passport preview on http://127.0.0.1:" + server.address().port));
 }
 
-module.exports = { pageWithStub, FIXTURES, LIBS, MIME, vendorFile, localiseLibraries };
+module.exports = { pageWithStub, constantsFrom, appBundle, FIXTURES, LIBS, MIME, vendorFile, localiseLibraries };

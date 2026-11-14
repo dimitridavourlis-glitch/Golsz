@@ -12,7 +12,7 @@ const fs = require("fs");
 const path = require("path");
 
 const REPO = path.join(__dirname, "..");
-const APP = fs.readFileSync(path.join(REPO, "golsz-app.html"), "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const PRIV = fs.readFileSync(path.join(REPO, "privacy.html"), "utf8");
 
 let p = 0, f = 0;

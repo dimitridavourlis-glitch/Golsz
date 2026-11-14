@@ -3,7 +3,7 @@
 // Pins: defer, unchanged integrity, the gate, preload href == APP_SRC, watchdog and onerror path.
 const fs = require("fs");
 const path = require("path");
-const APP = fs.readFileSync(path.join(__dirname, "..", "golsz-app.html"), "utf8");
+const APP = require("./_app_source.cjs").appSource();
 let pass = 0, fail = 0;
 const ck = (name, got, want = true) => { if (got === want) pass++; else { fail++; console.error("FAIL: " + name); } };
 
@@ -20,7 +20,7 @@ ck("integrity values unchanged", integrity.join(), [
 ck("crossorigin kept", libs.every((t) => /crossorigin="anonymous"/.test(t)));
 ck("no other blocking external script in <head>", (head.match(/<script[^>]+src=/g) || []).length, 3);
 
-const loader = APP.slice(APP.indexOf("WHY THE APP SCRIPT ABOVE"));
+const loader = APP.slice(APP.indexOf("THE LOADER: IT RUNS js/app.js ONLY AFTER"));
 const appSrc = (/var APP_SRC = "([^"]+)"/.exec(loader) || [])[1];
 const preload = /<link rel="preload" as="script" href="([^"]+)"/.exec(head);
 ck("APP_SRC found", !!appSrc);

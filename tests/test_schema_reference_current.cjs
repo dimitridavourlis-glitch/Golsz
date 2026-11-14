@@ -120,7 +120,7 @@ console.log("\n-- the columns the client actually reads must exist here --");
 //
 // A mention is not a column. This asserts the column.
 {
-  const CLIENT = fs.readFileSync(path.join(REPO, "golsz-app.html"), "utf8");
+  const CLIENT = require("./_app_source.cjs").appSource();
   // Columns named in a real .select() in the client, that this file must define.
   const REQUIRED = [
     ["profiles", "full_access"],

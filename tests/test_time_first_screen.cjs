@@ -56,7 +56,9 @@ ok(parseArgs(["--late-font=6000"], {}).lateFontMs === 6000 && parseArgs([], {}).
   "--late-font takes milliseconds and is off by default");
 const fontUrls = (text) => text.match(/https:\/\/fonts\.googleapis\.com\/css2/g) || [];
 const bundle = read("js/app.js");
-ok(fontUrls(before.app).length >= 3 && fontUrls(before.home).length >= 2 && fontUrls(bundle).length >= 1, "the pages and the bundle name the Google Fonts stylesheet (the rewrite below is not empty)");
+// The app page names it twice, in <head> (the preload and the stylesheet link); the CSS @import is in
+// the bundle. (Until AVA job 216 the page also held the app's source, a third, never-loaded copy.)
+ok(fontUrls(before.app).length >= 2 && fontUrls(before.home).length >= 2 && fontUrls(bundle).length >= 1, "the pages and the bundle name the Google Fonts stylesheet (the rewrite below is not empty)");
 const late = lateFont(before.app, 7);
 ok(fontUrls(late).length === 0 && late.split(LATE_FONT_PATH + "?n=7").length - 1 === fontUrls(before.app).length, "--late-font points every one of them at the stand-in, with the page load's own number");
 ok(fontUrls(lateFont(bundle, 8)).length === 0 && fontUrls(lateFont(before.home, 9)).length === 0, "...in the bundle's @import and on the home page too");

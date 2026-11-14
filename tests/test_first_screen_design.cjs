@@ -33,7 +33,7 @@ const ck = (l, a, e) => {
   if (ok) p++; else { f++; console.log(`FAIL  ${l}\n      got:      ${JSON.stringify(a)}\n      expected: ${JSON.stringify(e)}`); }
 };
 
-const APP = read("golsz-app.html");
+const APP = require("./_app_source.cjs").appSource();
 const CSS = read("css/styles.css");
 const HOME = read("index.html");
 const ABOUT = read("about.html");

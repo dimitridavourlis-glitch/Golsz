@@ -4,7 +4,7 @@
 const fs = require("fs");
 const path = require("path");
 const read = (f) => fs.readFileSync(path.join(__dirname, "..", f), "utf8");
-const APP = read("golsz-app.html");
+const APP = require("./_app_source.cjs").appSource();
 const SQL = read("supabase-migration-165-outreach-target-limits.sql");
 const SCHEMA = read("supabase-schema.sql");
 

@@ -15,7 +15,7 @@ const path = require("path");
 const parser = require("@babel/parser");
 const babel = require("@babel/standalone");
 
-const APP = fs.readFileSync(path.join(__dirname, "..", "golsz-app.html"), "utf8");
+const APP = require("./_app_source.cjs").appSource();
 let p = 0, f = 0;
 const ck = (l, a, e) => {
   const A = JSON.stringify(a), E = JSON.stringify(e);

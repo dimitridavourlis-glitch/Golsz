@@ -22,7 +22,7 @@ const path = require("path");
 const REPO = path.join(__dirname, "..");
 const SCOUT_PATH = path.join(REPO, "api", "scout.js");
 const SCOUT = fs.readFileSync(SCOUT_PATH, "utf8");
-const APP = fs.readFileSync(path.join(REPO, "golsz-app.html"), "utf8");
+const APP = require("./_app_source.cjs").appSource();
 
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_KEY = "svc";

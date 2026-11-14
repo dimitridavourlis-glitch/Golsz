@@ -16,7 +16,7 @@
 
 const REPO = require("path").join(__dirname, "..");
 const fs = require("fs");
-const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const HOME = fs.readFileSync(REPO + "/index.html", "utf8");
 const WEBHOOK = fs.readFileSync(REPO + "/api/stripe-webhook.js", "utf8");
 const MIG = fs.readFileSync(REPO + "/supabase-migration-120-eur-pricing.sql", "utf8");

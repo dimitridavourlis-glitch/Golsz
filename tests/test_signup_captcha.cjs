@@ -20,7 +20,7 @@
 // out loud rather than left to look covered.
 const REPO = require("path").join(__dirname, "..");
 const fs = require("fs");
-const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const APP = require("./_app_source.cjs").appSource();
 
 let p = 0, f = 0;
 const ck = (l, a, e) => {

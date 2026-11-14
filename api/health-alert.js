@@ -27,6 +27,8 @@
 //     the model answered, so from the routing log's point of view nothing
 //     was wrong. A count-based alert on error_log would have fired within
 //     15 minutes.
+//     Rows from a guard that caught something are not counted (GUARD_SOURCE):
+//     they stay in the Errors tab, and a page means the app is failing.
 //
 // Deliberately NOT clever: no baselines, no anomaly detection, no
 // suppression windows beyond the interval itself. An alert that is hard to
@@ -69,6 +71,12 @@
 // ============================================================
 
 import webpush from "web-push";
+
+// api/scout.js's today guard (finishTodayAnswer) logs each "what should I do
+// today?" answer that disagreed with the athlete's plan. That athlete was
+// shown their plan's card instead: the guard working, not Scout failing. A
+// prompt that drifts shows up as a run of these rows in the Errors tab.
+const GUARD_SOURCE = "scout_today_guard";
 
 // Exported for tests: the whole decision, with no I/O in it.
 export function shouldAlert({ totalCalls, failedCalls, errorCount }, cfg) {
@@ -223,7 +231,7 @@ export default async function handler(req, res) {
     const [totalCalls, failedCalls, errorCount] = await Promise.all([
       supaCount(supaUrl, serviceKey, `scout_routing_log?created_at=gte.${since}&select=id`),
       supaCount(supaUrl, serviceKey, `scout_routing_log?created_at=gte.${since}&success=is.false&select=id`),
-      supaCount(supaUrl, serviceKey, `error_log?created_at=gte.${since}&select=id`),
+      supaCount(supaUrl, serviceKey, `error_log?created_at=gte.${since}&source=neq.${GUARD_SOURCE}&select=id`),
     ]);
 
     const cfg = {

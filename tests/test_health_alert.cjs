@@ -55,6 +55,16 @@ ck("body has no error message", mp.body.includes(bad.message), false);
 ck("deterministic", JSON.stringify(monitorFailurePush(bad)), JSON.stringify(mp));
 ck("handles non-Error values", typeof monitorFailurePush(null).body, "string");
 
+console.log("\n-- a guard that caught something is not the app failing --");
+// api/scout.js logs each today answer that disagreed with the plan (the
+// athlete was shown the plan's card instead). Those rows stay in the Errors
+// tab and never count toward a page. tests/test_scout_today_handler.cjs pins
+// the same name on api/scout.js's side, from the row the handler writes.
+const guard = (/\nconst GUARD_SOURCE = "([^"]+)";/.exec(SRC) || [])[1];
+ck("the guard's source is the one api/scout.js logs under", guard, "scout_today_guard");
+ck("the error_log count leaves it out", /`error_log\?created_at=gte\.\$\{since\}&source=neq\.\$\{GUARD_SOURCE\}&select=id`/.test(SRC), true);
+ck("...and counts every other error_log row (no other filter on that read)", (SRC.match(/`error_log\?[^`]*`/g) || []).length, 1);
+
 console.log("\n-- handler source: where the push is and is not --");
 const hs = SRC.slice(SRC.indexOf("export default async function handler"));
 const catchAt = hs.lastIndexOf("} catch (e) {");
