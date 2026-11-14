@@ -20,10 +20,10 @@ npm run check     # the gate — syntax-checks api/*.js and js/*.js, then the su
 `npm run check` must pass before any push. Pushing to `main` auto-deploys
 production; there is no separate deploy step.
 
-If you edit the JSX inside `golsz-app.html`:
+If you edit the app's JSX (`golsz-app.jsx`):
 
 ```bash
-npm run compile   # regenerates js/app.js — the gate fails if you forget
+npm run compile   # regenerates js/app.js and js/i18n/*.js — the gate fails if you forget
 ```
 
 ## What is where
@@ -31,12 +31,13 @@ npm run compile   # regenerates js/app.js — the gate fails if you forget
 | Path | What it is |
 |---|---|
 | `index.html`, `css/`, `js/main.js` | The marketing site. Static, English only. |
-| `golsz-app.html` | The whole app — one ~1MB file, React via CDN, JSX in one `text/babel-deferred` block. |
-| `js/app.js` | **Generated.** `tools/precompile.cjs` compiles the JSX at author time; the browser never compiles. Do not hand-edit. |
+| `golsz-app.html` | The app's page (22 KB): its head, boot screen and loader. React via CDN. |
+| `golsz-app.jsx` | The whole app's source, one JSX file (all four languages). |
+| `js/app.js`, `js/i18n/*.js` | **Generated** by `npm run compile` (`tools/precompile.cjs`) at author time; the browser never compiles. `app.js` carries English; French, Spanish and Greek are fetched only by their readers. Committed and served as they are. Do not hand-edit. |
 | `api/*.js` | Vercel serverless functions. **At the 12-function ceiling** — adding one means removing one. |
 | `supabase-migration-NNN-*.sql` | The database, one numbered migration at a time. Each carries its reasoning. |
 | `supabase-schema.sql` | Reference for what is deployed. See the warning below. |
-| `tests/*.cjs` | 110 suites, 5,252 assertions (as of 2026-10-22; `node tests/run-all.cjs` prints the current count). Plain Node, no framework. |
+| `tests/*.cjs` | 144 suites, 7,499 assertions (as of 2026-11-14; `node tests/run-all.cjs` prints the current count). Plain Node, no framework. They read the app through `tests/_app_source.cjs`. |
 
 ## The tests are the thing to read first
 

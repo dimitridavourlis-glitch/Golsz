@@ -290,10 +290,13 @@ function pageWithStub(html, cfg) {
   return html.replace(/<head[^>]*>/i, (m) => m + tag);
 }
 
-function constantsFrom(html) {
-  const grab = (name) => { const m = new RegExp(name + '\\s*=\\s*"([^"]+)"').exec(html); if (!m) throw new Error(name + " not found in golsz-app.html"); return m[1]; };
+// The Supabase address the stub answers locally, read from js/app.js: the bundle the page runs
+// (compiled from golsz-app.jsx), so it is the address the app really calls. The page holds no app code.
+function constantsFrom(bundle) {
+  const grab = (name) => { const m = new RegExp(name + '\\s*=\\s*"([^"]+)"').exec(bundle); if (!m) throw new Error(name + " not found in js/app.js"); return m[1]; };
   return { supabaseUrl: grab("SUPABASE_URL") };
 }
+const appBundle = () => fs.readFileSync(path.join(ROOT, "js", "app.js"), "utf8");
 
 const FAIL_OF_METHOD = { GET: "select", POST: "insert", PATCH: "update", DELETE: "delete" };
 const LANGS = ["en", "fr", "es", "el"];
@@ -407,7 +410,7 @@ function createPreview({ localise = localiseLibraries } = {}) {
       if (reset === "1") state.targets = [];
       if (reset === "seed") state.targets = seedTargets();
       const failParam = u.searchParams.get("fail");
-      const cfg = { ...constantsFrom(local.html), userId: USER_ID, theme: u.searchParams.get("theme") || "", lang: LANGS.includes(u.searchParams.get("lang")) ? u.searchParams.get("lang") : "", open: u.searchParams.get("open") === "schools" || !!u.searchParams.get("drive"), drive: ["add", "adddouble", "editbad", "editgood", "expand", "draft", "bigdraft", "draftclose", "draftreopen", "draftsection", "look", "arm", "armplain", "armother", "armwait", "delete", "deletedouble"].includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "", fail: Object.values(FAIL_OF_METHOD).includes(failParam) ? failParam : "" };
+      const cfg = { ...constantsFrom(appBundle()), userId: USER_ID, theme: u.searchParams.get("theme") || "", lang: LANGS.includes(u.searchParams.get("lang")) ? u.searchParams.get("lang") : "", open: u.searchParams.get("open") === "schools" || !!u.searchParams.get("drive"), drive: ["add", "adddouble", "editbad", "editgood", "expand", "draft", "bigdraft", "draftclose", "draftreopen", "draftsection", "look", "arm", "armplain", "armother", "armwait", "delete", "deletedouble"].includes(u.searchParams.get("drive")) ? u.searchParams.get("drive") : "", fail: Object.values(FAIL_OF_METHOD).includes(failParam) ? failParam : "" };
       res.writeHead(200, { "content-type": type });
       res.end(pageWithStub(local.html, cfg));
     });

@@ -20,8 +20,8 @@ source files.
 
 ## The one rule that matters
 
-**Suites extract the functions under test out of `api/scout.js` and
-`golsz-app.html` at run time.** They never contain a copy of the logic.
+**Suites extract the functions under test out of `api/scout.js` and the
+app's source (`golsz-app.jsx`) at run time.** They never contain a copy of the logic.
 
 A suite that tests a copy passes happily while production is broken. This
 happened: an earlier suite read a generated `_scout_extracted.js` side file,
@@ -34,6 +34,12 @@ const REPO = require("path").join(__dirname, "..");
 const SRC = require("fs").readFileSync(REPO + "/api/scout.js", "utf8");
 eval(SRC.slice(SRC.indexOf("function myThing("), ...));
 ```
+
+For the app, read it the way every app suite does: `const APP =
+require("./_app_source.cjs").appSource();` is `golsz-app.html` with
+`golsz-app.jsx` put back where its script block was (the page held the source
+until 2026-11-14), and `test_anchor_integrity.cjs` checks your anchors against
+exactly that text.
 
 ## The second rule: fixtures must be the shape production sends
 

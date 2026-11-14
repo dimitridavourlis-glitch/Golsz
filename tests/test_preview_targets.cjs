@@ -15,7 +15,12 @@ for (const fn of ["exec", "execFile", "execFileSync", "execSync", "spawn", "spaw
 const { createPreview, pageWithStub, stub, seedTargets, USER_ID } = require("../tools/preview-targets.cjs");
 
 const appPath = path.join(__dirname, "..", "golsz-app.html");
+const sourcePath = path.join(__dirname, "..", "golsz-app.jsx");
 const before = fs.readFileSync(appPath, "utf8");
+const sourceBefore = fs.readFileSync(sourcePath, "utf8");
+// The page and the app's code together, the way every suite reads them.
+const APP = require("./_app_source.cjs").appSource();
+const appSupabase = /SUPABASE_URL\s*=\s*"([^"]+)"/.exec(APP)[1];
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) pass++; else { fail++; console.error("FAIL: " + msg); } };
 
@@ -58,10 +63,11 @@ async function runStub(cfg, request) {
   const T = "/__sb/rest/v1/outreach_targets";
 
   // Nothing is written to the committed page; the served copy carries the stub.
-  ok(!/__sb|x-preview-fail|preview-reload/.test(before), "committed golsz-app.html has no preview hooks");
+  ok(!/__sb|x-preview-fail|preview-reload/.test(APP), "committed golsz-app.html and golsz-app.jsx have no preview hooks");
   const page1 = await call(port, "GET", "/golsz-app.html?page=plan");
   ok(page1.status === 200 && page1.text.includes("window.fetch = function") && page1.text.search(/<head[^>]*><script>/) >= 0, "served copy has the stub first in <head>");
-  ok(fs.readFileSync(appPath, "utf8") === before, "file on disk unchanged after serving");
+  ok(page1.text.includes('"supabaseUrl":"' + appSupabase + '"'), "the stub answers the app's own Supabase address (" + appSupabase + "), read from the bundle the page runs");
+  ok(fs.readFileSync(appPath, "utf8") === before && fs.readFileSync(sourcePath, "utf8") === sourceBefore, "files on disk unchanged after serving");
 
   // The store keeps a row across two separate page loads.
   const seeded = (await call(port, "GET", T + "?user_id=eq." + USER_ID)).json;
@@ -146,7 +152,7 @@ async function runStub(cfg, request) {
   ok(Object.keys(run.store).some((k) => k === "sb-proj-auth-token") && JSON.parse(run.store["sb-proj-auth-token"]).user.id === USER_ID, "a local session is stored under supabase-js's key");
   ok(/^[\w-]+\.[\w-]+\.preview$/.test(JSON.parse(run.store["sb-proj-auth-token"]).access_token), "the token is an unsigned stand-in");
 
-  ok(fs.readFileSync(appPath, "utf8") === before, "file on disk unchanged at the end");
+  ok(fs.readFileSync(appPath, "utf8") === before && fs.readFileSync(sourcePath, "utf8") === sourceBefore, "files on disk unchanged at the end");
   ok(spawned.length === 0, "no child process (npm pack) was started: " + spawned.join("; "));
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);

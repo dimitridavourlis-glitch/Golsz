@@ -26,9 +26,14 @@ const scoutPath = path.join(__dirname, "..", "api", "scout.js");
 const SCOUT = fs.readFileSync(scoutPath, "utf8");
 
 const appPath = path.join(__dirname, "..", "golsz-app.html");
+const sourcePath = path.join(__dirname, "..", "golsz-app.jsx");
 const hash = (s) => crypto.createHash("sha256").update(s).digest("hex");
 const before = fs.readFileSync(appPath, "utf8");
 const beforeHash = hash(before);
+const sourceHash = hash(fs.readFileSync(sourcePath, "utf8"));
+// The app's code (golsz-app.jsx, read the way every suite reads it): labels, rules and settings below.
+const APP = require("./_app_source.cjs").appSource();
+const appSupabase = /SUPABASE_URL\s*=\s*"([^"]+)"/.exec(APP)[1];
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) pass++; else { fail++; console.error("FAIL: " + msg); } };
 
@@ -73,7 +78,8 @@ async function runStub(cfg, requests, respond = () => new Response("[]")) {
   ok(!/__sb|x-preview-fail|preview-onboarding|onboarding stub/i.test(before.slice(0, 5000)), "committed golsz-app.html has no preview hooks near head");
   const page = await call(port, "GET", "/golsz-app.html");
   ok(page.status === 200 && page.text.includes("window.fetch = function") && page.text.search(/<head[^>]*><script>/) >= 0, "served copy has the stub first in <head");
-  ok(hash(fs.readFileSync(appPath, "utf8")) === beforeHash, "golsz-app.html git hash unchanged after serving");
+  ok(page.text.includes('"supabaseUrl":"' + appSupabase + '"'), "the stub answers the app's own Supabase address (" + appSupabase + "), read from the bundle the page runs");
+  ok(hash(fs.readFileSync(appPath, "utf8")) === beforeHash && hash(fs.readFileSync(sourcePath, "utf8")) === sourceHash, "golsz-app.html and golsz-app.jsx unchanged after serving");
 
   // /__store returns profiles, athletes and pathway_plan (shape)
   const store0 = await call(port, "GET", "/__store");
@@ -259,7 +265,7 @@ async function runStub(cfg, requests, respond = () => new Response("[]")) {
     ['"FROM YOUR PLAN"', 'scout_today_title: "FROM YOUR PLAN"'], ['all("li", card)', "<li key={k} style="], ["/^and \\d+ more$/", 'scout_today_more: "and {n} more"'],
     ["/^\\d+ left$/", 'scout_left: "{n} left"'], ["/^That's all \\d+ for today$/", `scout_limit_title: "That's all {n} for today"`],
   ]) {
-    ok(call0.includes(inTool) && before.includes(inApp), "the drive's " + inTool + " still matches the app (" + inApp + ")");
+    ok(call0.includes(inTool) && APP.includes(inApp), "the drive's " + inTool + " still matches the app (" + inApp + ")");
   }
   ok(call0.includes('"What should I do today?"') && S.isTodayQuestion("What should I do today?"), "the scout drives ask what api/scout.js's own rule calls a today question");
   const runner = fs.readFileSync(path.join(__dirname, "..", "tools", "run-onboarding-chrome.cjs"), "utf8");
@@ -432,7 +438,6 @@ async function runStub(cfg, requests, respond = () => new Response("[]")) {
   Date.now = realNow;
 
   // The fetch target check: every request the handler made was answered in this process.
-  const appSupabase = /SUPABASE_URL\s*=\s*"([^"]+)"/.exec(before)[1];
   const calls = sc.p.scoutRuns.flatMap((r) => r.calls);
   ok(calls.length > 20 && calls.every((c) => (c.to === "store" && c.url.startsWith(STAND_IN_SUPABASE + "/")) || (c.to === "model" && c.url === ANTHROPIC_MESSAGES)),
     "every one of the handler's " + calls.length + " requests went to the stand-in store or the stand-in model");
@@ -463,11 +468,11 @@ async function runStub(cfg, requests, respond = () => new Response("[]")) {
   ok(scoutLine({ status: 402, script: "honest", limit: true, last: false, calls: [{ to: "store" }, { to: "store" }], answer: { scout_usage: { remaining: 0, limit: 3 } } }) === "scout 402 model=honest limit card=none override=no usage=0/3 calls: 2 store, 0 model, 0 refused", "scoutLine: a refusal");
 
   // ==== Scout: the replacement sentence the scoutinvent drive waits for is the app's ====
-  // scoutTodaySentence() from golsz-app.html, in English, against cardSentence() over the card as
+  // scoutTodaySentence() from golsz-app.jsx, in English, against cardSentence() over the card as
   // the drive reads it from the screen (the TODAY / THIS WEEK values, the names, "and N more").
   const between = (src, a, b) => { const i = src.indexOf(a), j = src.indexOf(b, i); if (i < 0 || j < 0) throw new Error("markers moved: " + a); return src.slice(i, j); };
-  const appCard = new Function(between(before, "function scoutTodayLines(card, t) {", "\n// Read-only, so no button") + "\nreturn { scoutTodayLines, scoutTodaySentence };")();
-  const en = (key) => { const m = new RegExp("\\b" + key + ': ("(?:[^"\\\\]|\\\\.)*")').exec(before); return m ? JSON.parse(m[1]) : key; };
+  const appCard = new Function(between(APP, "function scoutTodayLines(card, t) {", "\n// Read-only, so no button") + "\nreturn { scoutTodayLines, scoutTodaySentence };")();
+  const en = (key) => { const m = new RegExp("\\b" + key + ': ("(?:[^"\\\\]|\\\\.)*")').exec(APP); return m ? JSON.parse(m[1]) : key; };
   for (const c of [
     { todayTotal: 1, todayDone: 0, todayOpen: [step0], todayOpenMore: 0, weekTotal: 3, weekDone: 0, lateCount: 0 },
     { todayTotal: 4, todayDone: 0, todayOpen: ["Film two matches", "Email Coach Rivera"], todayOpenMore: 2, weekTotal: 6, weekDone: 1, lateCount: 2 },
@@ -482,9 +487,9 @@ async function runStub(cfg, requests, respond = () => new Response("[]")) {
 
   // ==== Scout: a conversation reopened from the store reads in order ====
   // Scout reopens its latest conversation newest first by created_at and turns it back into reading
-  // order (latestScoutConversation, from golsz-app.html). Postgres stamps created_at on insert; while
+  // order (latestScoutConversation, from golsz-app.jsx). Postgres stamps created_at on insert; while
   // the store did not, the answer came back above the question. Both turns here land in one millisecond.
-  const latestScoutConversation = new Function(between(before, "function latestScoutConversation(", "\nfunction scoutHistoryList(") + "\nreturn latestScoutConversation;")();
+  const latestScoutConversation = new Function(between(APP, "function latestScoutConversation(", "\nfunction scoutHistoryList(") + "\nreturn latestScoutConversation;")();
   const hs = await fresh();
   const logTurn = (row) => call(hs.port, "POST", SB + "/scout_history", { headers: { "content-type": "application/json" }, body: JSON.stringify({ user_id: USER_ID, ...row }) });
   const clock = Date.now, frozenAt = Date.now();
@@ -500,7 +505,7 @@ async function runStub(cfg, requests, respond = () => new Response("[]")) {
   hs.sv.close();
 
   server.close();
-  ok(hash(fs.readFileSync(appPath, "utf8")) === beforeHash, "golsz-app.html unchanged at the end");
+  ok(hash(fs.readFileSync(appPath, "utf8")) === beforeHash && hash(fs.readFileSync(sourcePath, "utf8")) === sourceHash, "golsz-app.html and golsz-app.jsx unchanged at the end");
   ok(fs.readFileSync(scoutPath, "utf8") === SCOUT, "api/scout.js unchanged at the end");
   ok(spawned.length === 0, "no child process (npm pack) started: " + spawned.join("; "));
   console.log(`\n${pass}/${pass + fail} passed`);

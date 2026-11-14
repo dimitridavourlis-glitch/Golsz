@@ -221,7 +221,7 @@ function driveTitle(f) {
 
 // The sentence the app puts in place of an answer the server refused (today_override), in English,
 // from the card as a scout drive reads it ({ today, week: "<done>/<total>" or "none", steps, more }).
-// scoutTodaySentence() in golsz-app.html builds it from the same card; the suite compares the two.
+// scoutTodaySentence() in golsz-app.jsx builds it from the same card; the suite compares the two.
 function cardSentence(card) {
   if (!card) return "";
   const t = /^(\d+)\/(\d+)$/.exec(card.today || ""), w = /^(\d+)\/(\d+)$/.exec(card.week || "");
@@ -670,10 +670,13 @@ function pageWithStub(html, cfg) {
   return html.replace(/<head[^>]*>/i, (m) => m + "<script>" + stubCall(cfg) + "</script>");
 }
 
-function constantsFrom(html) {
-  const grab = (name) => { const m = new RegExp(name + '\\s*=\\s*"([^"]+)"').exec(html); if (!m) throw new Error(name + " not found in golsz-app.html"); return m[1]; };
+// The Supabase address the stub answers locally, read from js/app.js: the bundle the page runs
+// (compiled from golsz-app.jsx), so it is the address the app really calls. The page holds no app code.
+function constantsFrom(bundle) {
+  const grab = (name) => { const m = new RegExp(name + '\\s*=\\s*"([^"]+)"').exec(bundle); if (!m) throw new Error(name + " not found in js/app.js"); return m[1]; };
   return { supabaseUrl: grab("SUPABASE_URL") };
 }
+const appBundle = () => fs.readFileSync(path.join(ROOT, "js", "app.js"), "utf8");
 
 // ---- The Scout handler's services (the header's "HOW IT STAYS OUT OF THE PRODUCT") ----
 
@@ -1019,7 +1022,7 @@ function createPreview({ localise = localiseLibraries } = {}) {
       const failParam = u.searchParams.get("fail");
       const modelParam = u.searchParams.get("model");
       const cfg = {
-        ...constantsFrom(local.html), userId: USER_ID,
+        ...constantsFrom(appBundle()), userId: USER_ID,
         theme: u.searchParams.get("theme") || "",
         lang: LANGS.includes(u.searchParams.get("lang")) ? u.searchParams.get("lang") : "",
         today: /^\d{4}-\d{2}-\d{2}$/.test(u.searchParams.get("today") || "") ? u.searchParams.get("today") : "",

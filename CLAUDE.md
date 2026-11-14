@@ -24,11 +24,11 @@ below.
 
 ```
 npm ci            # required — 8 suites need @babel/parser and @babel/traverse
-npm run check     # syntax-checks every api/*.js and js/*.js, then runs the suite
-npm run compile   # re-compiles the JSX in golsz-app.html into js/app.js
+npm run check     # syntax-checks every api/*.js, js/*.js and js/i18n/*.js, then runs the suite
+npm run compile   # compiles golsz-app.jsx into js/app.js and js/i18n/{fr,es,el}.js
 ```
 
-`npm run check` is the gate before any push. As of 2026-10-22 it runs **110 plain-Node `.cjs` suites, 5,252
+`npm run check` is the gate before any push. As of 2026-11-14 it runs **144 plain-Node `.cjs` suites, 7,499
 assertions** (`node tests/run-all.cjs` prints the current count), no framework — `tests/run-all.cjs` discovers anything matching `test_*.cjs`. Many suites lift
 real expressions out of the source and `eval` them, so they fail when the source changes rather than when a
 mock does. There is no linter.
@@ -47,13 +47,13 @@ this file's predecessor version broke a running migration mid-session.
 ## Commands
 
 There is no linter. There IS test and build tooling: the `package.json` scripts `check`, `test`, `compile`,
-`split`, `strip` and `deploy`, plus `tests/run-all.cjs` (see "What this is" above and THE DEPLOY GATE below).
+`unpublish` and `deploy`, plus `tests/run-all.cjs` (see "What this is" above and THE DEPLOY GATE below).
 Relevant commands:
 
-- **Test gate (run before any push):** `npm ci` once, then `npm run check` (syntax-checks `api/*.js`, `js/*.js`
-  and `sw.js`, then runs every `tests/test_*.cjs`). `npm test` runs the suites alone; `node tests/run-all.cjs
-  <text>` runs only suites whose file name contains `<text>`.
-- **Recompile the app after editing its JSX:** `npm run compile` (see "The app" below).
+- **Test gate (run before any push):** `npm ci` once, then `npm run check` (syntax-checks `api/*.js`, `js/*.js`,
+  `js/i18n/*.js` and `sw.js`, then runs every `tests/test_*.cjs`). `npm test` runs the suites alone;
+  `node tests/run-all.cjs <text>` runs only suites whose file name contains `<text>`.
+- **Recompile the app after editing its JSX (`golsz-app.jsx`):** `npm run compile` (see "The app" below).
 - **Preview the static site locally:** serve the directory over HTTP (not `file://`, since `fetch`/module
   scripts and relative asset paths need a real origin) — e.g. `python3 -m http.server 8000` or `npx serve .`
   from the repo root, then open `index.html` / `golsz-app.html` in a browser.
@@ -116,18 +116,20 @@ Relevant commands:
 
 ### The app (`golsz-app.html`)
 
-- Single HTML file plus one generated script: React 18 + ReactDOM (UMD builds) and `@supabase/supabase-js`
-  are loaded from CDN `<script>` tags. The JSX source lives in one inert `<script type="text/babel-deferred"
-  data-presets="react">` block in `golsz-app.html` (no browser executes that type, and Babel is no longer
-  loaded in the page). It is compiled ahead of time, not in the browser: `npm run compile`
-  (`tools/precompile.cjs`, `@babel/standalone` pinned to 7.23.2) writes the committed `js/app.js`, which the
-  page loads with a content-hash `?v=` stamp. After editing the JSX, run `npm run compile` and commit
-  `js/app.js` too; `test_compiled_artifact.cjs` fails the gate if it is stale. Never hand-edit `js/app.js`.
-  On Vercel only, the `buildCommand` then runs `npm run split` (lifts the fr/es/el dictionaries out into
-  `js/i18n/`), `npm run compile` again (so the deployed bundle is English-only) and `npm run strip`
-  (`tools/strip-jsx.cjs`, removes the JSX source block from the served HTML) against a throwaway checkout.
-  `split` and `strip` rewrite `golsz-app.html`, so do not run them in your working tree and never commit
-  their output (the `tools/*.cjs` headers and `test_served_bundle.cjs` explain why).
+- One HTML page plus generated scripts: React 18 + ReactDOM (UMD builds) and `@supabase/supabase-js`
+  are loaded from CDN `<script>` tags. **The app's JSX source is `golsz-app.jsx`** (since 2026-11-14, AVA job
+  216; until then it sat inside `golsz-app.html` in an inert `<script type="text/babel-deferred">` block, and
+  the page keeps one comment line where it was). It is compiled ahead of time, never in the browser:
+  `npm run compile` (`tools/precompile.cjs`, `@babel/standalone` pinned to 7.23.2, then terser) writes
+  `js/app.js` (the app, with English) and `js/i18n/fr.js`, `es.js`, `el.js` (the other three dictionaries,
+  lifted out of `I18N`; the page's loader fetches only the one in use, and a failed fetch still starts the app
+  in English), and stamps one content hash over all four files into the page's `?v=`. After editing the JSX,
+  run `npm run compile` and commit all four files; `test_compiled_artifact.cjs` rebuilds them and fails the
+  gate if any is stale. Never hand-edit them. What is committed is what Vercel serves: its build compiles
+  nothing (see THE DEPLOY GATE). The suites read the app through `tests/_app_source.cjs`: `appSource()` puts
+  `golsz-app.jsx` back into the page where its block was, so every string anchor still finds what it found
+  before (`test_anchor_integrity.cjs` checks those anchors against that text). Preview tools read the app's
+  Supabase address from `js/app.js`, the bundle the page runs.
 - **Boot order (2026-11-04).** The three CDN libraries in `<head>` carry `defer` (so the inline `#boot` logo paints
   while they download) and `<link rel="preload" as="script">` fetches `js/app.js` in parallel; `tools/precompile.cjs`
   stamps the same `?v=` hash into the preload and `APP_SRC` (its replace is global). The bottom loader's `compile()`
@@ -1405,9 +1407,9 @@ database-first event search, rate limiting/idempotency, emergency kill switches,
 dashboard — written in generic TypeScript/Next.js SaaS vocabulary (`PLAN_MODEL_ACCESS`, `AiProviderAdapter`,
 `ai_daily_usage`, a Jest-style test list) that doesn't match this repo's real stack (single-file JSX,
 Babel, no TypeScript, no test framework). The JSX is no longer compiled in the browser: tools/precompile.cjs
-compiles it once into js/app.js, which is COMMITTED. (Since 2026-10-21 Vercel also runs `split`, `compile` and
-`strip` at deploy time, so what it serves is no longer byte-identical to what git holds; see THE DEPLOY GATE.)
-After editing the JSX in golsz-app.html you must run `npm run compile`, and
+compiles it once into js/app.js, which is COMMITTED. (From 2026-10-21 to 2026-11-14 Vercel also ran `split`,
+`compile` and `strip` at deploy time; since AVA job 216 it serves the committed files as they are, see THE
+DEPLOY GATE.) After editing the JSX in golsz-app.jsx you must run `npm run compile`, and
 test_compiled_artifact.cjs fails the gate if you forget. The plan translating the spec onto the
 real stack lives at `~/.claude/plans/rosy-doodling-toast.md` (overwritten from the
 Phase 2 plan above — not part of the repo). Extends the Phase 2 MVP's real infrastructure rather than
@@ -1703,7 +1705,7 @@ you add another place that surfaces a Message button, it doesn't need any follow
 - **js/app.js is MINIFIED (2026-10-22).** `tools/precompile.cjs` runs terser (pinned) inside `compile()`:
   top-level names are NOT mangled (golsz-app.html's loader and the suites refer to globals), function names ARE
   kept (stacks still name the screen), output is deterministic (test_compiled_artifact rebuilds and compares),
-  the source-sha stamp is added after. Read bugs against the JSX in golsz-app.html, not the bundle. A bundle that
+  the source-sha stamp is added after. Read bugs against the JSX in golsz-app.jsx, not the bundle. A bundle that
   fails to run takes the app down: change the minifier options on a branch, open the Vercel preview in a
   browser (it sits behind Vercel SSO; the owner's pane is signed in), and only then merge.
 - **Webhook ordering (2026-10-22, migration 163).** `customer.subscription.created` can arrive before
@@ -1788,19 +1790,24 @@ you add another place that surfaces a Message button, it doesn't need any follow
 
 ## THE DEPLOY GATE (vercel.json buildCommand)
 
-`vercel.json` sets `buildCommand: "npm run check && npm run split && npm run compile && npm run strip && npm run unpublish"`.
-The first step, `npm run check`, is the gate. The other four are real deploy-time build steps (`strip`
-added in 2b44ac2, `split` and the second `compile` in c3742a0, both 2026-10-21; `unpublish` 2026-10-22): `split` lifts the fr/es/el
-dictionaries out into `js/i18n/`, `compile` rebuilds `js/app.js` without them, `strip` removes the JSX
-source block from the served `golsz-app.html`, and `unpublish` (`tools/unpublish-internal.cjs`) deletes the
-repo's working papers from the served tree: root `*.md`, `opencode.json`, `supabase-*.sql`, `tests/`, `tools/`,
+`vercel.json` sets `buildCommand: "npm run check && npm run unpublish"`.
+The first step, `npm run check`, is the gate. The second, `unpublish` (`tools/unpublish-internal.cjs`,
+2026-10-22), deletes the repo's working papers from the served tree: root `*.md`, `opencode.json`,
+`golsz-app.jsx` (the app's source; the page runs `js/app.js`), `supabase-*.sql`, `tests/`, `tools/`,
 `golsz-guard/`, `.github/`, `.claude/`. Before it, `outputDirectory: "."` made all of those public URLs
 (verified live 2026-10-22). It NEVER touches `api/` (Vercel builds the functions from it after buildCommand)
 and refuses to run without `VERCEL=1` or an explicit directory, so it cannot empty a working checkout.
-`api/*.js` is still readable as a static file; the repo is public, so that is accepted. They run on Vercel's throwaway checkout and their output is
-never committed; the ORDER is asserted by `tests/test_served_bundle.cjs`. Until 2b44ac2 the buildCommand
-was just `npm run check` and the repo had no deploy-time build, which is the situation the WHY below
-describes.
+`api/*.js` is still readable as a static file; the repo is public, so that is accepted. It runs on Vercel's
+throwaway checkout and its output is never committed.
+**Nothing is compiled at deploy time (since 2026-11-14, AVA job 216).** From 2026-10-21 (2b44ac2, c3742a0) the
+buildCommand also ran `split` (lift fr/es/el into `js/i18n/`), a second `compile` (an English-only `js/app.js`)
+and `strip` (cut the JSX block out of the served `golsz-app.html`), so the repo served a different, 1.5 MB page
+from production's, and that is the page AVA's speed check measures. `npm run compile` now writes those same
+files, they are committed, and the gate fails if they are stale (`test_compiled_artifact.cjs`), so the files
+the gate checked are the files Vercel serves. `tests/test_served_bundle.cjs` pins all of it: no build step
+after the gate, the page carries no source, `js/app.js` carries English only, each dictionary is its own file.
+Until 2b44ac2 the buildCommand was just `npm run check` and the repo had no deploy-time build, which is the
+situation the WHY below describes.
 
 WHY: pushing to main deploys production through Vercel's git integration,
 which does NOT go through `npm run deploy`. `.github/workflows/check.yml`
