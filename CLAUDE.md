@@ -582,10 +582,13 @@ sits beside `dayBuckets()` in `api/scout.js` (see "Scout knows the athlete's day
   `scout_response_cache` (its `cacheKey` stays null): neither knows the athlete's steps. The per-user replay entry
   (`replayCacheKey(userId, requestId)`) is still written, so a Retry gets the same reply and card without a second charge.
 - **Out of questions (t4).** When `reserve_scout_question` refuses, the handler answers 402 with `scout_usage` before
-  any plan read or model call. The app's `scoutFailureFor()` says `scout_err_daily_left` ("You've used today's Scout
+  any plan write, prompt or model call (the plan rows are read first, in the same round as the profile row that names
+  the limit). The app's `scoutFailureFor()` says `scout_err_daily_left` ("You've used today's Scout
   questions. 0 of 3 left today. More tomorrow.", with the limit the server sent, never the client's copy of the plans),
   the header says "0 left" and `ScoutLimitCard` takes the place of the text box. A question allowed as the day's last is
-  answered, then shows the same "0 left" and card.
+  answered, then shows the same "0 left" and card. Known gap: the question is reserved before the prompt is built, and
+  the `try` whose catch gives an unanswered question back starts after that, so an unexpected throw while the prompt is
+  built costs the athlete that question (the one await there, `autoFixPathwayType`, catches its own errors).
 - **The app: the "From your plan" card (t3).** `Scout.send()` keeps `today_card`, `today_override` and
   `today_unavailable` on the assistant message; `ScoutTodayCard` draws the card under the reply (read-only, no button,
   ScoutActionCard's shape capped at 440px): FROM YOUR PLAN, TODAY done/total with each open step due today by name (one
