@@ -608,7 +608,19 @@ sits beside `dayBuckets()` in `api/scout.js` (see "Scout knows the athlete's day
   prints `scout <status> model=<script> ... calls: <n> store, <n> model, <n> refused` per question; anything but the
   stand-ins is refused. Questions reach the handler `SCOUT_SPACING_MS` (3.2 s) apart, past its 3 s rate limit. Suite:
   `tests/test_preview_onboarding.cjs`. `tools/run-onboarding-chrome.cjs` runs the drives in headless Chrome.
-- **Recorded run 2026-11-14 (t6).** RUN_SUMMARY_PLACEHOLDER
+- **Recorded run 2026-11-14 (t6).** `tools/run-onboarding-chrome.cjs`, Chromium 141 headless shell (`--no-sandbox`),
+  390x844 and 1280x800, dark and light: four runs, each with its own fresh preview server and Chrome profile, pages in
+  this order: `goal`, `scouttoday&model=honest`, `scoutinvent&model=date`, `scoutinvent&model=step`,
+  `scoutlast&last=1`, `scoutlimit&limit=1`. All 24 pages said `drive done`, and the four runs matched. Home showed TODAY
+  0/1 and THIS WEEK 0/3, and its Today tile and Today view named "Ask Scout what to focus on this week". The card showed
+  the same numbers and listed the same step. scouttoday: `override: no`, "2 left". scoutinvent date and step:
+  `override: yes`, with 'Today: "Ask Scout what to focus on this week". This week: 0 of 3 done.' shown in place of the
+  model's "...Have it done by 2027-02-07." and 'Today: "Run a 10 km time trial"...'. scoutlast: the answer and card,
+  then "0 left", the limit card and no text box. scoutlimit: 402 with no model call, then "You've used today's Scout
+  questions. 0 of 3 left today. More tomorrow.", "0 left", the limit card and no text box. Every page measured
+  scrollWidth = innerWidth with 0 elements past the edge, including the Scout screen with the card at 390 px. The only
+  console error was the app's own "GOLSZ scout send failed: ... More tomorrow." on scoutlimit. The only failed request
+  was the Google Fonts stylesheet (the run had no internet). AI_HANDOFF.md of that day has the table and commands.
 - **UNVERIFIED.** The live Anthropic models: the run's replies are scripted, so how often a real reply trips
   `today_override`, and whether a real model follows `TODAY_ANSWER_RULE`, is unknown (the guard is model-independent).
   Live Supabase: RLS, PostgREST and the real `reserve_scout_question` (the run's store answers it). fr/es/el in a
