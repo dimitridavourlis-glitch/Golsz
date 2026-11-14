@@ -148,6 +148,13 @@ Relevant commands:
   LCP 648-760 before, 804-1692 after (noisy machine, all inside budget). **Not measured (UNVERIFIED):** a real phone
   on real cellular (CPU, radio), a signed-in Home with live data, CDN latency from the production edge.
   The region hero JPEGs are not used on the home page, so they do not affect its LCP.
+  **Recorded 2026-11-14 (AVA job 216 final verification), when the page lost its inert 1.5 MB JSX block and js/app.js
+  its fr/es/el:** the same command, `/golsz-app.html` at 390/1280, back to back with the tree before (d7a6e8e, served by
+  its own copy of the tool), ms: mounted 3347/2452 -> 1090-1107/1077-1124; LCP 2568-3404 -> 1128-1248; boot 183-300
+  after; CLS 0. With `--lang=fr` (the page then fetches `js/i18n/fr.js` before the app runs): mounted 2487/2476 ->
+  1118/1152. Home page LCP 1068/468. Load average 3-6. Production had served the stripped page since 2026-10-21 (Vercel
+  built it at deploy), so its own numbers should barely move: the gain is in the repo's page, which is what AVA's speed
+  check measures.
 - **The first screen holds still (layout shift, 2026-11-10, AVA job 199).** Budget: layout shift (CLS) <= 0.10 on
   either page. AVA's speed check measured 0.23 on `/golsz-app.html` at phone size. Cause: the web fonts were only
   found when the app mounted (the `@import` in `CSS`), so the sign-up screen was drawn in the fallback font and
@@ -623,10 +630,16 @@ sits beside `dayBuckets()` in `api/scout.js` (see "Scout knows the athlete's day
   scrollWidth = innerWidth with 0 elements past the edge, including the Scout screen with the card at 390 px. The only
   console error was the app's own "GOLSZ scout send failed: ... More tomorrow." on scoutlimit. The only failed request
   was the Google Fonts stylesheet (the run had no internet). AI_HANDOFF.md of that day has the table and commands.
+- **Run again on the final commit (2026-11-14, 9fd6819, after the source moved to `golsz-app.jsx`).** The same four
+  runs and six pages, then `signup`, `passport`, `full` and a plain `lang=fr` load: 36/36 drives done, the same results
+  and server lines as t6 in all four, and Home in French with no raw key names. AVA's browser tool loaded the signed-out
+  sign-up screen in fr, es and el at 390 and 1280; each load fetched only its own `js/i18n/<lang>.js` (200) and read
+  translated. AI_HANDOFF.md of that day has the table and commands.
 - **UNVERIFIED.** The live Anthropic models: the run's replies are scripted, so how often a real reply trips
   `today_override`, and whether a real model follows `TODAY_ANSWER_RULE`, is unknown (the guard is model-independent).
-  Live Supabase: RLS, PostgREST and the real `reserve_scout_question` (the run's store answers it). fr/es/el in a
-  browser (the suites check the patterns and keys in all four languages). A real phone on cellular, Safari, Firefox,
+  Live Supabase: RLS, PostgREST and the real `reserve_scout_question` (the run's store answers it). Scout's today
+  answer and card in fr/es/el in a browser (the drives read English labels; the suites check the patterns and keys in
+  all four languages). A real phone on cellular, Safari, Firefox,
   Google Chrome itself (the run used Chromium's headless shell), a screen reader, the web fonts (no internet in the run,
   so the fallback font's widths). Known gap by design: a chat reopened from History has no card.
 

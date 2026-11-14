@@ -165,9 +165,10 @@ node tests/test_<name>.cjs     # one suite
   Rehearsal: the scout drives above; the drives give the app's first screen 90 s (`BOOT_MS`) and each step 30 s.
   Recorded run 2026-11-14 (Chromium headless shell, 390/1280, dark/light, one server each): 24/24 drives done. The card
   matched Home (TODAY 0/1, THIS WEEK 0/3, the same step), an invented date or step was replaced by the plan's sentence,
-  and at the limit Scout showed "0 of 3 left today" with the limit card. Nothing scrolled sideways at 390. Table:
-  AI_HANDOFF.md. **UNVERIFIED:** the live Anthropic model, live Supabase, fr/es/el in a browser, a real phone,
-  Safari/Firefox, a screen reader, web fonts.
+  and at the limit Scout showed "0 of 3 left today" with the limit card. Nothing scrolled sideways at 390. Run again on
+  the final commit (9fd6819, source in golsz-app.jsx): the same results, plus sign-up to Home, and the app in fr/es/el
+  fetching only its own js/i18n file. Table: AI_HANDOFF.md. **UNVERIFIED:** the live Anthropic model, live Supabase,
+  Scout's today answer in fr/es/el in a browser, a real phone, Safari/Firefox, a screen reader, web fonts.
   Detail: CLAUDE.md § Scout's today answer agrees with Home.
 - Targets (Plan > "Schools & clubs", table `outreach_targets`): the caps in `TARGET_LIMITS` (golsz-app.jsx) are
   repeated by migration 165's check constraints, and `tests/test_migration_165.cjs` diffs them: change both, through a
