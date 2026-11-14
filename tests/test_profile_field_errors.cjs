@@ -4,7 +4,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const APP = fs.readFileSync(path.join(__dirname, "..", "golsz-app.html"), "utf8");
+const APP = require("./_app_source.cjs").appSource();
 
 let p = 0, f = 0;
 const ck = (l, a, e) => {

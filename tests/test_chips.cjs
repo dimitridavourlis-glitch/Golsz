@@ -7,7 +7,7 @@ const fs = require("fs");
 // (state-aware discovery/confirm/planning chips). That machine was removed
 // wholesale — see the same date's commit — so this now just confirms the
 // plain plan-based chip set survived the revert intact.
-const html = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const html = require("./_app_source.cjs").appSource();
 const from = html.indexOf("function chipsFor(t, isPlayer)");
 eval(html.slice(from, html.indexOf("\n}\n", from) + 3));
 const t = (k) => k;

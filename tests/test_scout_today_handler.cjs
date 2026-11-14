@@ -20,7 +20,7 @@
 const REPO = require("path").join(__dirname, "..");
 const fs = require("fs");
 const SCOUT = fs.readFileSync(REPO + "/api/scout.js", "utf8");
-const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const { S, homeAt, homeTileAt } = require("./_day_parity.cjs");
 
 process.env.SUPABASE_URL = "https://example.supabase.co";

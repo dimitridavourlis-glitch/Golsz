@@ -20,7 +20,7 @@ const { pathToFileURL } = require("url");
 const { S } = require("./_day_parity.cjs");
 
 const REPO = path.join(__dirname, "..");
-const APP = fs.readFileSync(path.join(REPO, "golsz-app.html"), "utf8");
+const APP = require("./_app_source.cjs").appSource();
 
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_KEY = "svc";

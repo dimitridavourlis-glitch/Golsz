@@ -13,7 +13,7 @@
 const REPO = require("path").join(__dirname, "..");
 const fs = require("fs");
 const SRC = fs.readFileSync(REPO + "/api/scout.js", "utf8");
-const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const slice = (from, to) => SRC.slice(SRC.indexOf(from), SRC.indexOf(to));
 
 // SPORT_SCHEMAS is a const, so a direct eval does not leak it — the appended

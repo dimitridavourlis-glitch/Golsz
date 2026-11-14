@@ -37,7 +37,7 @@ const M161 = read("supabase-migration-161-admin-roles.sql");
 const M162 = read("supabase-migration-162-admin-requires-mfa.sql");
 const SCHEMA = read("supabase-schema.sql");
 const PROBE = read("supabase-probe-migration-state.sql");
-const APP = read("golsz-app.html");
+const APP = require("./_app_source.cjs").appSource();
 
 const fnText = (src, name) => {
   const s = src.indexOf(`create or replace function ${name}`);

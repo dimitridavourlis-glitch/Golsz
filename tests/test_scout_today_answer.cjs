@@ -18,7 +18,7 @@
 const REPO = require("path").join(__dirname, "..");
 const fs = require("fs");
 const SCOUT = fs.readFileSync(REPO + "/api/scout.js", "utf8");
-const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const { between, S, homeAt, homeTileAt, plansAround, DAYS } = require("./_day_parity.cjs");
 
 let p = 0, f = 0;

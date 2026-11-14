@@ -48,7 +48,7 @@ for (const d of ["api"]) {
   }
 }
 for (const n of fs.readdirSync(REPO)) {
-  if (n === "golsz-app.html" || n === "supabase-schema.sql" || /^supabase-migration-.*\.sql$/.test(n)) {
+  if (n === "golsz-app.html" || n === "golsz-app.jsx" || n === "supabase-schema.sql" || /^supabase-migration-.*\.sql$/.test(n)) {
     SOURCES[n] = fs.readFileSync(path.join(REPO, n), "utf8");
   }
 }

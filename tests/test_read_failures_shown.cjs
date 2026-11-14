@@ -21,7 +21,7 @@ const parser = require("@babel/parser");
 let traverse = require("@babel/traverse");
 traverse = traverse.default || traverse;
 
-const HTML = fs.readFileSync(path.join(__dirname, "..", "golsz-app.html"), "utf8");
+const HTML = require("./_app_source.cjs").appSource();
 
 let p = 0, f = 0;
 const ck = (l, a, e) => {

@@ -176,7 +176,7 @@ for (const [name, idx] of [
   const m2 = { exports: {} };
   new Function("module", "exports", approvalSrc)(m2, m2.exports);
   const { athleteApprovedPathwayBuild } = m2.exports;
-  const APP = fs.readFileSync(path.join(__dirname, "..", "golsz-app.html"), "utf8");
+  const APP = require("./_app_source.cjs").appSource();
   const seeds = [...APP.matchAll(/pathway_scout_seed:\s*"([^"]+)"/g)].map((m) => m[1]);
   ck("the seed exists in all four dictionaries", seeds.length, 4);
   ck("every seed reads as approval to build",

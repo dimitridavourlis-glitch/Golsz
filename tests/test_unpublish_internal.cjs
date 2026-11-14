@@ -38,7 +38,8 @@ const B = vercel.buildCommand;
 ck("`unpublish` is a real script", pkg.scripts.unpublish, "node tools/unpublish-internal.cjs");
 ck("the build runs it", B.includes("npm run unpublish"), true);
 ck("...after the gate", B.indexOf("npm run unpublish") > B.indexOf("npm run check"), true);
-ck("...after strip, so nothing it removes is needed by a later step", B.indexOf("npm run unpublish") > B.indexOf("npm run strip"), true);
+// It deletes golsz-app.jsx, so the build must never compile after it (it compiles nothing at all now).
+ck("...and nothing is built after it", /compile|split|strip/.test(B.slice(B.indexOf("npm run unpublish"))), false);
 ck("...and it is the last step", B.trim().endsWith("npm run unpublish"), true);
 
 /* ---------- 2. run for real, over a copy ---------- */
@@ -58,7 +59,7 @@ ck("it runs cleanly over a copy", first.status, 0);
 
 const exists = (rel) => fs.existsSync(path.join(tmp, rel));
 for (const gone of ["CLAUDE.md", "AGENTS.md", "AI_HANDOFF.md", "README.md", "ADS-BUILD-ORDER.md", "SETUP.md",
-  "opencode.json", "supabase-schema.sql", "supabase-migration-026-push-webhook-triggers.sql",
+  "opencode.json", "golsz-app.jsx", "supabase-schema.sql", "supabase-migration-026-push-webhook-triggers.sql",
   "supabase-migration-160-passport-parity-and-append-only.sql", "supabase-migrations-096-101-COMBINED.sql",
   "tests", "tools", "golsz-guard", ".github", ".claude"]) {
   ck(`removed: ${gone}`, exists(gone), false);
@@ -77,7 +78,7 @@ ck("running it twice is a no-op", /nothing to do/.test(run([tmp], {}).stdout), t
 
 /* ---------- 3. nothing a browser requests points at a removed path ---------- */
 
-const REMOVED = /(^|\/)(CLAUDE|AGENTS|AI_HANDOFF|README|ADS-BUILD-ORDER|SETUP|DESIGN-HANDOFF|SPEC-[\w-]+)\.md$|opencode\.json$|(^|\/)supabase-[\w.-]*\.sql$|^\/?(tests|tools|golsz-guard|\.github|\.claude)\//i;
+const REMOVED = /(^|\/)(CLAUDE|AGENTS|AI_HANDOFF|README|ADS-BUILD-ORDER|SETUP|DESIGN-HANDOFF|SPEC-[\w-]+)\.md$|opencode\.json$|(^|\/)golsz-app\.jsx$|(^|\/)supabase-[\w.-]*\.sql$|^\/?(tests|tools|golsz-guard|\.github|\.claude)\//i;
 const served = ["index.html", "about.html", "contact.html", "terms.html", "privacy.html", "golsz-app.html", "golsz-final-look.html"];
 let pointers = [];
 for (const file of served) {
@@ -92,12 +93,15 @@ for (const file of ["js/main.js", "js/landing.js", "js/app.js"]) {
   const src = fs.readFileSync(path.join(REPO, file), "utf8");
   for (const m of src.matchAll(/\bfetch\(\s*["'`]([^"'`]+)/g)) if (REMOVED.test(m[1])) pointers.push(`${file}: fetch ${m[1]}`);
 }
-const appHtml = fs.readFileSync(path.join(REPO, "golsz-app.html"), "utf8");
-for (const m of appHtml.matchAll(/\bfetch\(\s*["'`]([^"'`]+)/g)) if (REMOVED.test(m[1])) pointers.push(`golsz-app.html: fetch ${m[1]}`);
+// The page's own loader, and the app's source (golsz-app.jsx, compiled into js/app.js above).
+for (const file of ["golsz-app.html", "golsz-app.jsx"]) {
+  const src = fs.readFileSync(path.join(REPO, file), "utf8");
+  for (const m of src.matchAll(/\bfetch\(\s*["'`]([^"'`]+)/g)) if (REMOVED.test(m[1])) pointers.push(`${file}: fetch ${m[1]}`);
+}
 ck("no served page, worker, manifest or fetch points at a removed path", pointers, []);
 ck("the pattern itself matches what it claims to (positive control)",
-  [REMOVED.test("/CLAUDE.md"), REMOVED.test("supabase-schema.sql"), REMOVED.test("/tests/run-all.cjs"), REMOVED.test("/js/app.js")],
-  [true, true, true, false]);
+  [REMOVED.test("/CLAUDE.md"), REMOVED.test("supabase-schema.sql"), REMOVED.test("/tests/run-all.cjs"), REMOVED.test("/golsz-app.jsx"), REMOVED.test("/js/app.js")],
+  [true, true, true, true, false]);
 
 /* ---------- 4. it will not delete a working checkout ---------- */
 

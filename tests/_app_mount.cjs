@@ -16,7 +16,7 @@ const path = require("path");
 const parser = require("@babel/parser");
 const babel = require("@babel/standalone");
 
-const APP = fs.readFileSync(path.join(__dirname, "..", "golsz-app.html"), "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const open = /<script[^>]*type=["']text\/babel(?:-deferred)?["'][^>]*>/.exec(APP);
 const CODE = APP.slice(open.index + open[0].length, APP.indexOf("</script>", open.index));
 if (CODE.length < 100000) throw new Error(`extracted only ${CODE.length} chars: extraction is wrong`);

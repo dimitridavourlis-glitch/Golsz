@@ -13,7 +13,7 @@
 const REPO = require("path").join(__dirname, "..");
 const fs = require("fs");
 const SCOUT = fs.readFileSync(REPO + "/api/scout.js", "utf8");
-const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const BUNDLE = fs.readFileSync(REPO + "/js/app.js", "utf8");
 // The server's helpers (S), Home's day block (homeAt) and the plans both are
 // run on (plansAround, DAYS) are lifted in tests/_day_parity.cjs, which

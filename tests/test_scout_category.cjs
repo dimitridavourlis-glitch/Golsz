@@ -20,7 +20,7 @@ const path = require("path");
 const vm = require("vm");
 
 const REPO = path.join(__dirname, "..");
-const APP = fs.readFileSync(path.join(REPO, "golsz-app.html"), "utf8");
+const APP = require("./_app_source.cjs").appSource();
 const SCOUT = fs.readFileSync(path.join(REPO, "api", "scout.js"), "utf8");
 const MIG155 = fs.readFileSync(path.join(REPO, "supabase-migration-155-sync-category.sql"), "utf8");
 const MIG144 = fs.readFileSync(path.join(REPO, "supabase-migration-144-athlete-actions.sql"), "utf8");

@@ -9,7 +9,7 @@
 const REPO = require("path").join(__dirname, "..");
 const fs = require("fs");
 const SCOUT = fs.readFileSync(REPO + "/api/scout.js", "utf8");
-const APP = fs.readFileSync(REPO + "/golsz-app.html", "utf8");
+const APP = require("./_app_source.cjs").appSource();
 
 const between = (src, a, b, label) => {
   const i = src.indexOf(a), j = src.indexOf(b, i + a.length);

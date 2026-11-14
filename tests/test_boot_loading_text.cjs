@@ -2,7 +2,7 @@
 // Pins: the element, the four-language copy, the colours' contrast, and that it is not left behind.
 const fs = require("fs");
 const path = require("path");
-const APP = fs.readFileSync(path.join(__dirname, "..", "golsz-app.html"), "utf8");
+const APP = require("./_app_source.cjs").appSource();
 let pass = 0, fail = 0;
 const ck = (name, got, want = true) => { if (got === want) pass++; else { fail++; console.error("FAIL: " + name); } };
 
