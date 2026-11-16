@@ -5,14 +5,35 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Frontend engineer (AVA job 235, t1: PWA install metadata + iPhone notification copy), 2026-11-16.
-Before: Claude Code (job 216, final verification), 2026-11-14.
+Frontend engineer (AVA job 235, t2: accessible names + visible focus on Home/Passport/Scout), 2026-11-16.
+Before: Frontend engineer (job 235, t1: PWA install + iPhone notification copy), 2026-11-16;
+Claude Code (job 216, final verification), 2026-11-14.
 
 ## Current Branch
 `ava/235-every-step-works-comfortably-on-a-phone-` (branched from origin/main, fc303bb). Jobs 216 and earlier are
 merged to origin/main; diff this job against origin/main.
 
 ## Last Completed Work
+- **Job 235 t2 — every icon-only control on Home/Passport/Scout is named, Tab shows a ring.** Added translated
+  `aria-label` to the five title-only icon buttons on those screens: Passport remove-photo (`passport_photo_remove`),
+  Scout History (`scout_history_title`), Scout attach-photo (`scout_attach_photo`), Scout attached-photo remove
+  (`feed_remove_photo`), Scout Send (`a11y_send`). All five keys already exist in en/fr/es/el — reused them rather than
+  adding duplicate keys; no raw English introduced. Extended tests/_app_mount.cjs with stand-in useCallback/useMemo
+  (HomeTab's React.useCallback) — harmless to the two suites that already use it.
+- New `tests/test_a11y_three_screens.cjs` (52 assertions): mounts the REAL HomeTab/Passport/Scout through
+  `_app_mount.cjs` in loading, loaded/empty and error states, recursively mounts nested component elements, and asserts
+  every rendered `<button>`/`[role=button]` has a name from aria-label / aria-labelledby target / visible text — NOT
+  title (a title-only control fails). Covers ProfileEditor + both goal cards mounted directly, and Scout's history
+  panel with its two-tap delete row driven through the real History button. Also pins the global `:focus-visible`
+  rule (covers a/button/input/select/textarea/[role=button]/[tabindex], excludes tabindex=-1, both declarations
+  `!important`, uses `${C.lime}`), and checks the five keys resolve in all four dictionaries. Negative control:
+  removing one aria-label made 7 assertions fail; restored.
+- Recorded browser check `tools/record-a11y-focus.cjs` (headless Chromium 141 shell, preview-onboarding stand-in
+  store, one server per width, `--no-sandbox`): 390x844 and 1280x800, dark. Seeded with `drive=goal`, then Tab through
+  Home (`drive=home`), Passport (`page=profile`), Scout (`page=scout`). All 6 screens: focused control inside `main`
+  had `matches(':focus-visible')=true` and computed `outline: solid 2px rgb(212, 175, 55)` (gold) at 2px offset —
+  390: "1 to doToday…" / "Share" / "Attach a photo"; 1280: "Back" / "Share" / "Attach a photo". Screenshots under
+  `node_modules/.cache/a11y-focus/`. Chrome had no internet (web fonts not loaded) and no real Supabase.
 - **Job 235 t1 — installable on a phone, iPhone notification copy.** `manifest.json`: standalone, start_url in scope,
   name/short_name/description, 192px + 512px PNG icons generated from the committed 1024px art
   (`assets/icon-192.png`, `assets/icon-512.png`). JSX: added one `notifErrorText(e, t)` mapper and a `NotificationBell`
@@ -64,13 +85,15 @@ merged to origin/main; diff this job against origin/main.
   refused. Crafted input at the caps: isTodayQuestion <= 8.3 ms (4,000 chars), checkReplyAgainstPlan <= 73 ms (20,000).
 
 ## Current Work
-Job 235 t1 done (PWA install + iOS notification copy). Next in this job: t2 (label Home/Passport/Scout buttons and show
-focus), t3 (prove every main step fits a phone), t4 (installed app fills the phone screen), then security/regression/final.
+Job 235 t2 done (accessible names + visible focus). Next in this job: t3 (prove every main step fits a phone), t4
+(installed app fills the phone screen), then security/regression/final.
 
 ## Remaining Tasks
-- Job 235: t2, t3, t4, security, regression, final. UNVERIFIED from t1: a real iPhone / Safari adding to Home Screen and
-  the install-first notice in a browser — this session had no AVA browser tool or iOS UA, so the recorded run drives the
-  real guard + real component in Node instead. The install look itself still needs AVA's browser check on a phone size.
+- Job 235: t3, t4, security, regression, final. UNVERIFIED from t1: a real iPhone / Safari adding to Home Screen and
+  the install-first notice in a browser. From t2: a real screen reader (the recording reads the browser's own
+  :focus-visible + computed outline and the mounted tree's accessible names, not an AT); Safari/Firefox; web fonts
+  (no internet in the recording); a real phone. The five aria-labels reuse existing translated keys rather than new
+  a11y-specific keys — they are still translated in all four languages.
 - Job 216, later: the card on a chat reopened from History; this week's other steps by name on Home (product question).
   api/scout.js reserves the question (t4) ~480 lines above the `try` whose catch refunds it; that stretch only builds
   the prompt (its one await catches its own errors), but an unexpected throw there would cost a question. Wrap it.
@@ -85,11 +108,14 @@ focus), t3 (prove every main step fits a phone), t4 (installed app fills the pho
   Vercel ceiling (`_`-prefixed `api/` are shared modules). Adults only.
 
 ## Latest Test / Build Status
-2026-11-16, job 235 t1 tree: `npm run compile` run (fresh js/app.js + js/i18n/*.js). Targeted suites, all green run
-directly with node (no `$AVA_RUN` in this session): test_pwa_install_ios 60/60, test_compiled_artifact 17/17,
-test_boot_nonblocking 24/24, test_first_screen_design 78/78, test_served_bundle 35/35, test_static_cache_headers 11/11.
-`node tools/record-ios-install-notice.cjs`: PASS (install msg shown, 0 prompts/subscribes). Full `npm run check` still
-to be run on the final tree by AVA; baseline was 144/144 suites, 7,499 assertions on 2026-11-14.
+2026-11-16, job 235 t2 tree: `npm run compile` run after the JSX edits (fresh js/app.js + js/i18n/*.js;
+test_compiled_artifact 17/17). Full `npm run check` GREEN: 146/146 suites, 7,611 assertions — run directly with node
+(no `$AVA_RUN` in this session) with `TMPDIR=/private/tmp` because this shell's TMPDIR points inside the worktree and
+test_unpublish_internal then copies the repo into itself; AVA's runner has a different TMPDIR. Targeted suites also
+green: test_a11y_three_screens 52/52, test_pwa_install_ios 60/60, test_anchor_integrity 4/4, test_boot_nonblocking
+24/24, test_first_screen_design 78/78, test_scout_today_card 139/139, test_scout_limit_path 81/81.
+`node tools/record-a11y-focus.cjs` at 390 and 1280: all 6 screen/width combinations showed a gold 2px :focus-visible
+ring inside `main` (screenshots in node_modules/.cache/a11y-focus/).
 
 ## Known Problems
 - health-alert runs every 2.1-7.5 h, not 15 min. Payments live, no real purchase; webhook secret unverified. Admin MFA:

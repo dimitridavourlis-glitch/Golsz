@@ -7281,7 +7281,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
                 </label>
               )}
               {!viewingOther && real && p.avatarUrl && (
-                <button onClick={removeAvatar} disabled={avatarBusy} title={t("passport_photo_remove")} style={{
+                <button onClick={removeAvatar} disabled={avatarBusy} aria-label={t("passport_photo_remove")} title={t("passport_photo_remove")} style={{
                   position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: 99, padding: 0,
                   background: C.pitch, border: `2px solid ${C.amber}`, display: "flex", alignItems: "center", justifyContent: "center",
                   cursor: avatarBusy ? "default" : "pointer", opacity: avatarBusy ? 0.6 : 1,
@@ -10515,7 +10515,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
           )}
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             <ScoutBalls usage={scoutUsage} t={t} />
-            <button onClick={openHistory} title={t("scout_history_title")} style={iconBtn(showHistory ? C.lime : C.slate)}><History size={15} /></button>
+            <button onClick={openHistory} aria-label={t("scout_history_title")} title={t("scout_history_title")} style={iconBtn(showHistory ? C.lime : C.slate)}><History size={15} /></button>
           </span>
         </div>
       </div>
@@ -10872,7 +10872,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px 8px" }}>
               <div style={{ position: "relative", flexShrink: 0 }}>
                 <img src={photo.dataUrl} alt="" style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 10, border: `1px solid ${C.line2}`, display: "block" }} />
-                <button onClick={clearPhoto} title={t("feed_remove_photo")} style={{ position: "absolute", top: -6, right: -6, background: "#000000cc", border: "none", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.chalk, padding: 0 }}>
+                <button onClick={clearPhoto} aria-label={t("feed_remove_photo")} title={t("feed_remove_photo")} style={{ position: "absolute", top: -6, right: -6, background: "#000000cc", border: "none", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.chalk, padding: 0 }}>
                   <X size={11} />
                 </button>
               </div>
@@ -10884,7 +10884,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
           ) : (
           <div style={{ display: "flex", gap: 8, padding: "10px 12px 14px", borderTop: `1px solid ${C.line}` }}>
             <input ref={fileRef} type="file" accept="image/*" onChange={onPhotoChange} style={{ display: "none" }} />
-            <button onClick={pickPhoto} disabled={pending || !loaded} title={t("scout_attach_photo")}
+            <button onClick={pickPhoto} disabled={pending || !loaded} aria-label={t("scout_attach_photo")} title={t("scout_attach_photo")}
               style={{ flexShrink: 0, background: "none", border: `1px solid ${C.line2}`, borderRadius: 12, width: 46, color: C.lime, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: pending || !loaded ? 0.4 : 1 }}>
               <Plus size={19} />
             </button>
@@ -10894,7 +10894,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
               <textarea rows={1} value={input} aria-label={t("scout_input_ph")} placeholder={t("scout_input_ph")} onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
                 style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, color: C.chalk, padding: "11px 44px 11px 13px", fontSize: 14, fontFamily: "inherit", resize: "none", outline: "none" }} />
-              <button onClick={() => send(input)} disabled={pending || !loaded || (!input.trim() && !photo)} title={t("scout_send")}
+              <button onClick={() => send(input)} disabled={pending || !loaded || (!input.trim() && !photo)} aria-label={t("a11y_send")} title={t("scout_send")}
                 style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: C.lime, cursor: "pointer", padding: 6, display: "flex", opacity: pending || !loaded || (!input.trim() && !photo) ? 0.35 : 1 }}>
                 <Send size={18} />
               </button>
