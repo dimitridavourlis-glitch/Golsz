@@ -5,8 +5,9 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Frontend engineer (AVA job 235, t2: accessible names + visible focus on Home/Passport/Scout), 2026-11-16.
-Before: Frontend engineer (job 235, t1: PWA install + iPhone notification copy), 2026-11-16;
+QA agent (AVA job 235, t3: prove every main step fits a 390px phone), 2026-11-16.
+Before: Frontend engineer (job 235, t2: accessible names + visible focus on Home/Passport/Scout), 2026-11-16;
+Frontend engineer (job 235, t1: PWA install + iPhone notification copy), 2026-11-16;
 Claude Code (job 216, final verification), 2026-11-14.
 
 ## Current Branch
@@ -14,6 +15,25 @@ Claude Code (job 216, final verification), 2026-11-14.
 merged to origin/main; diff this job against origin/main.
 
 ## Last Completed Work
+- **Job 235 t3 — every main step fits a 390px phone, and the detector can fail.** Added `tools/_phone-measure.cjs`
+  (pure, DOM-free rules: `pastRightEdge`, `clippedButtons`, `screenVerdict`, `browserMeasure`, `measureExpression`),
+  `tests/test_phone_main_path.cjs` (23 assertions: good fixture passes; a 2000px bar + a button clipped by its scroll
+  container are flagged; the Node suite also runs the exact expression injected into Chrome), and
+  `tools/check-phone-main-path.cjs`. The checker starts the three existing preview servers (onboarding, targets,
+  shared Passport — stand-in auth/store, nothing live), walks the whole brief in order in headless Chrome at 390x844,
+  and requires per screen: document scrollWidth == innerWidth, zero visible elements past the right edge, zero buttons
+  clipped by an overflow ancestor. It waits for each screen's own content (the targets preview expands "Schools &
+  clubs" asynchronously; Auth and PublicPassport render outside `<main>`, so readiness reads `#root`).
+  **Recorded run 2026-11-16**, Chromium 141 headless shell, 390x844, dark and light (one fresh server set per theme):
+  all 7 steps in both themes — Sign up (Auth), Passport after sign-up, Goal setup, Home with the dated plan,
+  Scout with the "From your plan" card (TODAY 0/1, THIS WEEK 0/3), target clubs (3 rows expanded), signed-out shared
+  Passport — read `doc 390/390`, `pastCount 0`, `clippedCount 0`, pass=true. Screenshots in
+  `node_modules/.cache/phone-main-path/`. Positive control: a real 2000px bar injected into the live page flips the
+  verdict pass -> fail ("1 visible element(s) past the right edge") and back to pass on removal, in both themes.
+  No golsz-app.jsx / CSS change was needed — no overflow was found. Bar injected inside an `overflow:hidden` wrapper
+  so Chrome's mobile layout viewport stays 390 (a body-level bar widens `innerWidth` under mobile emulation).
+  **UNVERIFIED:** a real phone; Safari/Firefox/Google Chrome (headless shell only); live Supabase rows (preview store);
+  web fonts (no internet, fallback metrics); a screen reader; geometry only — tiny text/contrast are other suites.
 - **Job 235 t2 — every icon-only control on Home/Passport/Scout is named, Tab shows a ring.** Added translated
   `aria-label` to the five title-only icon buttons on those screens: Passport remove-photo (`passport_photo_remove`),
   Scout History (`scout_history_title`), Scout attach-photo (`scout_attach_photo`), Scout attached-photo remove
@@ -85,15 +105,16 @@ merged to origin/main; diff this job against origin/main.
   refused. Crafted input at the caps: isTodayQuestion <= 8.3 ms (4,000 chars), checkReplyAgainstPlan <= 73 ms (20,000).
 
 ## Current Work
-Job 235 t2 done (accessible names + visible focus). Next in this job: t3 (prove every main step fits a phone), t4
-(installed app fills the phone screen), then security/regression/final.
+Job 235 t3 done (390px main-path walk + failing detector). Next in this job: t4 (installed app fills the phone
+screen), then security/regression/final.
 
 ## Remaining Tasks
-- Job 235: t3, t4, security, regression, final. UNVERIFIED from t1: a real iPhone / Safari adding to Home Screen and
+- Job 235: t4, security, regression, final. UNVERIFIED from t1: a real iPhone / Safari adding to Home Screen and
   the install-first notice in a browser. From t2: a real screen reader (the recording reads the browser's own
   :focus-visible + computed outline and the mounted tree's accessible names, not an AT); Safari/Firefox; web fonts
-  (no internet in the recording); a real phone. The five aria-labels reuse existing translated keys rather than new
-  a11y-specific keys — they are still translated in all four languages.
+  (no internet in the recording); a real phone. From t3: a real phone; Safari/Firefox/Chrome; live Supabase rows;
+  web fonts; a screen reader. The five aria-labels reuse existing translated keys rather than new a11y-specific
+  keys — they are still translated in all four languages.
 - Job 216, later: the card on a chat reopened from History; this week's other steps by name on Home (product question).
   api/scout.js reserves the question (t4) ~480 lines above the `try` whose catch refunds it; that stretch only builds
   the prompt (its one await catches its own errors), but an unexpected throw there would cost a question. Wrap it.
@@ -108,6 +129,12 @@ Job 235 t2 done (accessible names + visible focus). Next in this job: t3 (prove 
   Vercel ceiling (`_`-prefixed `api/` are shared modules). Adults only.
 
 ## Latest Test / Build Status
+2026-11-16, job 235 t3 tree: no JSX/CSS changed, so no `npm run compile` needed (compiled artifacts still current).
+Full `npm run check` GREEN: **147/147 suites, 7,634 assertions** (new `test_phone_main_path` 23/23) — run directly
+with node (no `$AVA_RUN` in this session) with `TMPDIR=/private/tmp` (this shell's TMPDIR points inside the worktree and
+test_unpublish_internal then copies the repo into itself; AVA's runner has a different TMPDIR). Recorded
+`node tools/check-phone-main-path.cjs --width 390 --theme <dark|light> --no-sandbox`: 7/7 steps pass in both themes,
+positive control pass -> fail -> pass; screenshots in node_modules/.cache/phone-main-path/.
 2026-11-16, job 235 t2 tree: `npm run compile` run after the JSX edits (fresh js/app.js + js/i18n/*.js;
 test_compiled_artifact 17/17). Full `npm run check` GREEN: 146/146 suites, 7,611 assertions — run directly with node
 (no `$AVA_RUN` in this session) with `TMPDIR=/private/tmp` because this shell's TMPDIR points inside the worktree and
@@ -125,7 +152,8 @@ ring inside `main` (screenshots in node_modules/.cache/a11y-focus/).
   (timed out 4/4 in attempt 3 at load ~40); a real phone; Safari, Firefox, Google Chrome; a screen reader; web fonts.
 
 ## Next Recommended Action
-AVA verifies t1, then t2 (button labels + focus) begins. Then t3/t4 and the job's security/regression/final steps.
+AVA verifies t3 (390px main-path run + failing detector), then t4 (installed app fills the phone screen), then the
+job's security/regression/final steps.
 
 ---
 _How to update: overwrite the sections above (do not append a log); put the agent name
