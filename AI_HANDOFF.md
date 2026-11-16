@@ -5,14 +5,26 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-Claude Code (AVA job 216, final verification: security review of the whole job, gate on the final tree), 2026-11-14.
-Job 216's t1-t6 and earlier final-verification attempts were Claude Code too. Before: OpenCode (job 199), 2026-11-10.
+Frontend engineer (AVA job 235, t1: PWA install metadata + iPhone notification copy), 2026-11-16.
+Before: Claude Code (job 216, final verification), 2026-11-14.
 
 ## Current Branch
-`ava/216-scout-s-what-should-i-do-today-agrees-wi` (AVA commits each step, then merges). Branched from 0b8e891
-(origin/main, job 199 merged as #15). The local `main` ref is older (055a97b): diff the job against 0b8e891.
+`ava/235-every-step-works-comfortably-on-a-phone-` (branched from origin/main, fc303bb). Jobs 216 and earlier are
+merged to origin/main; diff this job against origin/main.
 
 ## Last Completed Work
+- **Job 235 t1 — installable on a phone, iPhone notification copy.** `manifest.json`: standalone, start_url in scope,
+  name/short_name/description, 192px + 512px PNG icons generated from the committed 1024px art
+  (`assets/icon-192.png`, `assets/icon-512.png`). JSX: added one `notifErrorText(e, t)` mapper and a `NotificationBell`
+  header toggle (desktop sidebar + mobile top bar); SettingsButton's catch now uses the same mapper, so both surface
+  `notif_ios_homescreen` on the iOS-non-standalone error. Four translations already present, unchanged. Head keeps
+  viewport-fit=cover / apple-mobile-web-app-capable / apple-touch-icon / manifest link; sw.js registered before
+  subscribe. `npm run compile` run; committed js/app.js + js/i18n/*.js refreshed (test_compiled_artifact 17/17).
+- New `tests/test_pwa_install_ios.cjs` (60 assertions): manifest + head pinning, real push helpers run under iOS
+  stand-ins (guard throws before requestPermission/subscribe; standalone passes), both components driven in
+  `_app_mount.cjs`, translations checked. `tools/record-ios-install-notice.cjs` drives the real guard + real
+  SettingsButton under an iOS UA: install message shown, 0 permission prompts/subscribes/registers.
+
 - Job 216 (CLAUDE.md § Scout's today answer agrees with Home): t1-t5 built it, t6 recorded it. Final-verification
   restructure (270144e): AVA's speed check measured the repo's 1.5 MB page while Vercel split, compiled and stripped it at
   deploy; now the JSX is golsz-app.jsx, `npm run compile` writes the committed js/app.js and js/i18n/{fr,es,el}.js.
@@ -52,9 +64,13 @@ Job 216's t1-t6 and earlier final-verification attempts were Claude Code too. Be
   refused. Crafted input at the caps: isTodayQuestion <= 8.3 ms (4,000 chars), checkReplyAgainstPlan <= 73 ms (20,000).
 
 ## Current Work
-Job 216: final verification done (browser run, languages, speed, security review, gate). AVA's checks and review next.
+Job 235 t1 done (PWA install + iOS notification copy). Next in this job: t2 (label Home/Passport/Scout buttons and show
+focus), t3 (prove every main step fits a phone), t4 (installed app fills the phone screen), then security/regression/final.
 
 ## Remaining Tasks
+- Job 235: t2, t3, t4, security, regression, final. UNVERIFIED from t1: a real iPhone / Safari adding to Home Screen and
+  the install-first notice in a browser — this session had no AVA browser tool or iOS UA, so the recorded run drives the
+  real guard + real component in Node instead. The install look itself still needs AVA's browser check on a phone size.
 - Job 216, later: the card on a chat reopened from History; this week's other steps by name on Home (product question).
   api/scout.js reserves the question (t4) ~480 lines above the `try` whose catch refunds it; that stretch only builds
   the prompt (its one await catches its own errors), but an unexpected throw there would cost a question. Wrap it.
@@ -69,8 +85,11 @@ Job 216: final verification done (browser run, languages, speed, security review
   Vercel ceiling (`_`-prefixed `api/` are shared modules). Adults only.
 
 ## Latest Test / Build Status
-2026-11-14, final tree (8e3e460 plus this step's AI_HANDOFF.md and CLAUDE.md; code identical to 9fd6819), through
-`$AVA_RUN`: `npm run check` exit 0 (31 s), 144/144 suites, 7,499 assertions; `npm run --silent test` exit 0 (27 s), same.
+2026-11-16, job 235 t1 tree: `npm run compile` run (fresh js/app.js + js/i18n/*.js). Targeted suites, all green run
+directly with node (no `$AVA_RUN` in this session): test_pwa_install_ios 60/60, test_compiled_artifact 17/17,
+test_boot_nonblocking 24/24, test_first_screen_design 78/78, test_served_bundle 35/35, test_static_cache_headers 11/11.
+`node tools/record-ios-install-notice.cjs`: PASS (install msg shown, 0 prompts/subscribes). Full `npm run check` still
+to be run on the final tree by AVA; baseline was 144/144 suites, 7,499 assertions on 2026-11-14.
 
 ## Known Problems
 - health-alert runs every 2.1-7.5 h, not 15 min. Payments live, no real purchase; webhook secret unverified. Admin MFA:
@@ -80,7 +99,7 @@ Job 216: final verification done (browser run, languages, speed, security review
   (timed out 4/4 in attempt 3 at load ~40); a real phone; Safari, Firefox, Google Chrome; a screen reader; web fonts.
 
 ## Next Recommended Action
-AVA's checks and review of job 216, then merge. Then the saved-for-later items above.
+AVA verifies t1, then t2 (button labels + focus) begins. Then t3/t4 and the job's security/regression/final steps.
 
 ---
 _How to update: overwrite the sections above (do not append a log); put the agent name

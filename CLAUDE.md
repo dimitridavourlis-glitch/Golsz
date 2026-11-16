@@ -738,6 +738,15 @@ sits beside `dayBuckets()` in `api/scout.js` (see "Scout knows the athlete's day
   `manifest.json`: without those, "Add to Home Screen" on iOS just makes a bookmark that still opens inside
   Safari's UI chrome (not standalone), so `isStandaloneDisplay()` would never actually pass even after
   installing.
+- **PWA install bits (AVA job 235 t1).** `manifest.json` is `display: standalone`, `start_url: /golsz-app.html`
+  inside `scope: /`, with `name`/`short_name`/`description` and 192/512px icons (`assets/icon-{192,512}.png`,
+  resized from the committed 1024px `assets/favicon.png`) plus the existing 1024px any/maskable pair. The head
+  keeps `viewport-fit=cover`, `apple-mobile-web-app-capable=yes`, `apple-touch-icon` and the manifest link;
+  `enablePushNotifications()` registers `/sw.js` before `pushManager.subscribe()`. `NotificationBell` (a bell in
+  both app headers) and `SettingsButton` both funnel push failures through the one `notifErrorText(e, t)` mapper,
+  so the iOS install-first message can't drift between them. Pinned by `tests/test_pwa_install_ios.cjs` (source,
+  helpers run under iOS stand-ins, both components driven in `_app_mount.cjs`, four translations) and recorded by
+  `node tools/record-ios-install-notice.cjs` (iOS non-standalone: message shown, 0 permission prompts/subscribes).
 
 ### `api/admin-user-action.js` (Vercel serverless function)
 
