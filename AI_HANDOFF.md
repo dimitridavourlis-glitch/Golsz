@@ -5,8 +5,9 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-QA agent (AVA job 235, t4-r3-1: Node suite for standalone detection + full-screen rules), 2026-11-18.
-Before: QA agent (job 235, t3: prove every main step fits a 390px phone), 2026-11-16;
+QA agent (AVA job 235, t4-r3-2: recorded headless run of the installed app at 390x844), 2026-11-18.
+Before: QA agent (job 235, t4-r3-1: Node suite for standalone detection + full-screen rules), 2026-11-18;
+QA agent (job 235, t3: prove every main step fits a 390px phone), 2026-11-16;
 Frontend engineer (job 235, t2: accessible names + visible focus on Home/Passport/Scout), 2026-11-16;
 Frontend engineer (job 235, t1: PWA install + iPhone notification copy), 2026-11-16;
 Claude Code (job 216, final verification), 2026-11-14.
@@ -16,6 +17,25 @@ Claude Code (job 216, final verification), 2026-11-14.
 merged to origin/main; diff this job against origin/main.
 
 ## Last Completed Work
+- **Job 235 t4-r3-2 — the installed app fills a 390x844 iPhone screen, recorded in headless Chrome.** New
+  `tools/record-installed-fullscreen.cjs` (one preview-onboarding server, Chromium 141 headless shell, iPhone UA,
+  `mobile:true`; seed `drive=goal`, then Home `drive=home` as standalone and as a browser tab), pure verdict
+  `tools/_installed-fullscreen.cjs` (`installedVerdict`, `underTopInset`, `safeAreaApplied`; the page only returns
+  raw numbers) and `tests/test_installed_fullscreen_verdict.cjs` (28 assertions). Chrome 141 ACCEPTS
+  `Emulation.setEmulatedMedia` display-mode=standalone but does not apply it (matchMedia stays false), so the tool
+  falls back to `navigator.standalone=true` (Page.addScriptToEvaluateOnNewDocument) and prints that method.
+  `Emulation.setSafeAreaInsetsOverride` (top 47, bottom 34) IS supported: CSS env() read 47/34.
+  **Recorded run 2026-11-18** (`"$AVA_RUN" --timeout 280 bash -c 'node tools/record-installed-fullscreen.cjs
+  --no-sandbox; node tools/record-installed-fullscreen.cjs --no-sandbox --theme light'`, 29 s for both), dark and
+  light identical: standalone `isStandaloneDisplay()=true`, inner 390x844, doc 390/390, #root 844/844, .app-shell
+  844/844, header padding-top 59 (12+47), nav padding-bottom 46 (12+34), 0 of 14 text/controls start under the inset
+  (topmost: the notifications bell at 59); tab `isStandaloneDisplay()=false`, env 0/0, header 12, nav 12, doc
+  390/390. Positive control on the live page (label at top 8px + `!important` header padding 12px): verdict FAILED
+  with both reasons ("header top padding 12px is less than the 47px top inset", "9 visible item(s) start under the
+  47px top inset"), then passed once undone. Screenshots: `node_modules/.cache/installed-fullscreen/`. Mutant run
+  (`node_modules/.cache/ifv-mutant/run.cjs`): control 28/28, each of 8 broken verdicts failed (25-27/28).
+  No app code changed. **UNVERIFIED:** a real iPhone launched from the Home Screen; real Safari's display-mode;
+  the 47/34 insets are an iPhone 14's, not measured on a device; web fonts (no internet).
 - **Job 235 t4-r3-1 — the installed app's full-screen rules, pinned in Node (no browser).** New
   `tests/test_installed_fullscreen.cjs` (38 assertions) lifts the REAL isIOSDevice/isStandaloneDisplay/pushSupported/
   urlBase64ToUint8Array/enablePushNotifications/notifErrorText and `I18N` out of golsz-app.jsx and runs them on an
@@ -120,9 +140,9 @@ merged to origin/main; diff this job against origin/main.
   refused. Crafted input at the caps: isTodayQuestion <= 8.3 ms (4,000 chars), checkReplyAgainstPlan <= 73 ms (20,000).
 
 ## Current Work
-Job 235 t4 in progress: t4-r3-1 done (Node suite test_installed_fullscreen + mutant run). Next: t4-r3-2 (recorded
-headless run, one standalone page at 390x844), t4-r3-3 (record + cross-reference + UNVERIFIED), then
-security/regression/final.
+Job 235 t4 in progress: t4-r3-1 done (Node suite test_installed_fullscreen + mutant run); t4-r3-2 done (recorded
+headless standalone run at 390x844 + verdict suite + live positive control). Next: t4-r3-3 (record + cross-reference
++ UNVERIFIED), then security/regression/final.
 
 ## Remaining Tasks
 - Job 235: t4, security, regression, final. UNVERIFIED from t1: a real iPhone / Safari adding to Home Screen and
@@ -145,6 +165,10 @@ security/regression/final.
   Vercel ceiling (`_`-prefixed `api/` are shared modules). Adults only.
 
 ## Latest Test / Build Status
+2026-11-18, job 235 t4-r3-2 tree (no JSX/CSS/HTML changed, so no compile): through AVA's runner with
+`TMPDIR=/private/tmp`, `node tests/run-all.cjs installed_fullscreen` ran both matching suites: test_installed_fullscreen
+38/38, test_installed_fullscreen_verdict 28/28. `node tools/record-installed-fullscreen.cjs --no-sandbox` exit 0 in dark
+and light (see Last Completed Work). Full `npm run check` not run in this step (AVA runs it).
 2026-11-18, job 235 t4-r3-1 tree (no JSX/CSS/HTML changed, so no compile): through AVA's runner with
 `TMPDIR=/private/tmp`, `node tests/run-all.cjs installed_fullscreen` 38/38 and `node tests/run-all.cjs pwa_install_ios`
 60/60. Full `npm run check` not run in this step (AVA runs it).
@@ -171,8 +195,8 @@ ring inside `main` (screenshots in node_modules/.cache/a11y-focus/).
   (timed out 4/4 in attempt 3 at load ~40); a real phone; Safari, Firefox, Google Chrome; a screen reader; web fonts.
 
 ## Next Recommended Action
-AVA verifies t4-r3-1 (test_installed_fullscreen + mutant run), then t4-r3-2 (headless standalone page at 390x844),
-t4-r3-3, then the job's security/regression/final steps.
+AVA verifies t4-r3-2 (record-installed-fullscreen + test_installed_fullscreen_verdict), then t4-r3-3, then the job's
+security/regression/final steps.
 
 ---
 _How to update: overwrite the sections above (do not append a log); put the agent name

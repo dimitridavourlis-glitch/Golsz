@@ -761,6 +761,22 @@ sits beside `dayBuckets()` in `api/scout.js` (see "Scout knows the athlete's day
   change was needed. **UNVERIFIED:** a real phone, Safari/Firefox/Google Chrome (the run used Chromium's headless
   shell), real Supabase data rows (preview store), the web fonts (no internet, fallback metrics), and a screen
   reader. The detector measures geometry, not readability: tiny text and contrast are covered by other suites.
+- **The installed app fills an iPhone screen (AVA job 235 t4).** `tests/test_installed_fullscreen.cjs` pins the source
+  side (real `isStandaloneDisplay`/push helpers on an iPhone stand-in, viewport-fit=cover, manifest standalone, `#root`
+  and `.app-shell` ending at 100dvh, header/nav padded by `env(safe-area-inset-top/bottom)`).
+  `node tools/record-installed-fullscreen.cjs --no-sandbox [--theme light]` records it in headless Chrome (one
+  preview-onboarding server, 390x844, iPhone UA, ~15 s): seeds a plan (`drive=goal`), then opens Home (`drive=home`) as
+  a Home Screen app and as a browser tab and prints one JSON line per mode with the REAL `window.isStandaloneDisplay()`
+  (a top-level function in `js/app.js`), #root/.app-shell height vs innerHeight, doc width, header/nav padding vs the
+  insets CSS resolved, and any text or control under the top inset, plus a live positive control (a label at the top
+  and a header without its inset padding must fail, then pass once undone). Verdict: pure `installedVerdict()` in
+  `tools/_installed-fullscreen.cjs` (suite `tests/test_installed_fullscreen_verdict.cjs`); an emulation Chrome did not
+  apply is printed as "unsupported", never passed. **Chrome 141 facts:** `Emulation.setEmulatedMedia` accepts
+  `display-mode: standalone` but does not apply it, so the tool sets `navigator.standalone = true` (iOS Safari's own
+  signal) before the page's scripts and says so; `Emulation.setSafeAreaInsetsOverride` works (env() reads 47/34).
+  Run 2026-11-18, dark and light: standalone true, 390/390, #root and .app-shell 844/844, header padding-top 59,
+  nav padding-bottom 46, nothing under the inset; tab false. **UNVERIFIED:** a real iPhone launched from the Home
+  Screen, real Safari's display-mode, a device's real inset sizes (47/34 are an iPhone 14's).
 
 ### `api/admin-user-action.js` (Vercel serverless function)
 
