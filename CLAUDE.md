@@ -765,18 +765,26 @@ sits beside `dayBuckets()` in `api/scout.js` (see "Scout knows the athlete's day
   side (real `isStandaloneDisplay`/push helpers on an iPhone stand-in, viewport-fit=cover, manifest standalone, `#root`
   and `.app-shell` ending at 100dvh, header/nav padded by `env(safe-area-inset-top/bottom)`).
   `node tools/record-installed-fullscreen.cjs --no-sandbox [--theme light]` records it in headless Chrome (one
-  preview-onboarding server, 390x844, iPhone UA, ~15 s): seeds a plan (`drive=goal`), then opens Home (`drive=home`) as
-  a Home Screen app and as a browser tab and prints one JSON line per mode with the REAL `window.isStandaloneDisplay()`
-  (a top-level function in `js/app.js`), #root/.app-shell height vs innerHeight, doc width, header/nav padding vs the
-  insets CSS resolved, and any text or control under the top inset, plus a live positive control (a label at the top
-  and a header without its inset padding must fail, then pass once undone). Verdict: pure `installedVerdict()` in
-  `tools/_installed-fullscreen.cjs` (suite `tests/test_installed_fullscreen_verdict.cjs`); an emulation Chrome did not
-  apply is printed as "unsupported", never passed. **Chrome 141 facts:** `Emulation.setEmulatedMedia` accepts
-  `display-mode: standalone` but does not apply it, so the tool sets `navigator.standalone = true` (iOS Safari's own
-  signal) before the page's scripts and says so; `Emulation.setSafeAreaInsetsOverride` works (env() reads 47/34).
-  Run 2026-11-18, dark and light: standalone true, 390/390, #root and .app-shell 844/844, header padding-top 59,
-  nav padding-bottom 46, nothing under the inset; tab false. **UNVERIFIED:** a real iPhone launched from the Home
-  Screen, real Safari's display-mode, a device's real inset sizes (47/34 are an iPhone 14's).
+  preview-onboarding server, 390x844, iPhone UA, ~15 s): seeds a plan (`drive=goal`), opens Home (`drive=home`) as a
+  Home Screen app and as a browser tab, and prints one JSON line per mode (the REAL `window.isStandaloneDisplay()` from
+  `js/app.js`, #root/.app-shell height, doc width, header/nav padding vs the insets CSS resolved, anything under the
+  top inset) plus a live positive control (a label at the top and a header without its inset must fail, then pass).
+  Verdict: pure `installedVerdict()`, `tools/_installed-fullscreen.cjs` (suite `test_installed_fullscreen_verdict.cjs`).
+  **What Chrome 141 supports:** `Emulation.setDeviceMetricsOverride` (mobile), `setUserAgentOverride` and
+  `setSafeAreaInsetsOverride` (env() reads 47/34) work; `Emulation.setEmulatedMedia` accepts `display-mode: standalone`
+  but does not apply it, so the tool sets `navigator.standalone = true` (iOS Safari's own signal) through
+  `Page.addScriptToEvaluateOnNewDocument` and prints that; an emulation not applied prints "unsupported", never a pass.
+  **Run 2026-11-18** (`"$AVA_RUN" --timeout 280 bash -c 'node tools/record-installed-fullscreen.cjs --no-sandbox; node
+  tools/record-installed-fullscreen.cjs --no-sandbox --theme light'`, run twice, both exit 0), dark and light the same:
+  standalone `isStandaloneDisplay()` true, doc 390/390, #root and .app-shell 844/844, header padding-top 59 (12+47), nav
+  padding-bottom 46 (12+34), 0 of 14 items under the inset; the control failed on both reasons, then passed; tab false,
+  insets 0/0, paddings 12/12, doc 390/390. **Push, installed vs tab:** an installed iPhone asks permission, registers
+  `/sw.js` and subscribes (`test_pwa_install_ios.cjs`, `test_installed_fullscreen.cjs`); a Safari tab throws
+  `IOS_NEEDS_HOMESCREEN` first and shows `notif_ios_homescreen` with 0 prompts, 0 subscribes, 0 registers
+  (`tools/record-ios-install-notice.cjs`). Both run in Node with stand-ins; the Chrome run reads only the detection.
+  **UNVERIFIED:** real iOS Safari; a real iPhone "Add to Home Screen" and its launch; real notch and home-indicator
+  insets (47/34 are an iPhone 14's, emulated); status-bar styling (`black-translucent`: the status bar's clock and
+  battery sit over the page, which in the light theme is cream there); Apple's Web Push service itself.
 
 ### `api/admin-user-action.js` (Vercel serverless function)
 

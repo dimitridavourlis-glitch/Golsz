@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-18
+
+- A new bell at the top of the app turns notifications for messages and new followers on or off in one tap. On an iPhone in Safari it explains, as Settings does, that GOLSZ must be added to your Home Screen first (Share, then Add to Home Screen), instead of asking for permission.
+- GOLSZ now comes with app icons in the sizes phones use when you add it to your Home Screen.
+- Icon-only buttons on your Passport and in Scout (remove photo, history, attach a photo, remove the photo, send) now have names that screen readers read out, in all four languages.
+- Checked on a phone-sized test screen: every step, from sign-up to sharing your Passport, fits with no sideways scrolling and no buttons cut off. Opened from the Home Screen, the app fills the screen and keeps its top bar and tabs clear of the clock and the home bar.
+
 ## 2026-11-14
 
 - Ask Scout "What should I do today?" and its answer now comes from your own plan: it names the same steps due today and the same count for this week that Home shows, with a "From your plan" card under the answer.
