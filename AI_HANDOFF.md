@@ -5,8 +5,9 @@ GOLSZ (the owner calls it "GOLSZ 3"): AI sports-passport and pathway app, live a
 Stable facts and commands: AGENTS.md. Long form, authoritative: CLAUDE.md.
 
 ## Last Agent
-QA agent (AVA job 235, t3: prove every main step fits a 390px phone), 2026-11-16.
-Before: Frontend engineer (job 235, t2: accessible names + visible focus on Home/Passport/Scout), 2026-11-16;
+QA agent (AVA job 235, t4-r3-1: Node suite for standalone detection + full-screen rules), 2026-11-18.
+Before: QA agent (job 235, t3: prove every main step fits a 390px phone), 2026-11-16;
+Frontend engineer (job 235, t2: accessible names + visible focus on Home/Passport/Scout), 2026-11-16;
 Frontend engineer (job 235, t1: PWA install + iPhone notification copy), 2026-11-16;
 Claude Code (job 216, final verification), 2026-11-14.
 
@@ -15,6 +16,20 @@ Claude Code (job 216, final verification), 2026-11-14.
 merged to origin/main; diff this job against origin/main.
 
 ## Last Completed Work
+- **Job 235 t4-r3-1 — the installed app's full-screen rules, pinned in Node (no browser).** New
+  `tests/test_installed_fullscreen.cjs` (38 assertions) lifts the REAL isIOSDevice/isStandaloneDisplay/pushSupported/
+  urlBase64ToUint8Array/enablePushNotifications/notifErrorText and `I18N` out of golsz-app.jsx and runs them on an
+  iPhone stand-in: `(display-mode: standalone)` matching or `navigator.standalone === true` = installed, a Safari tab
+  (`standalone` false) is not; installed -> requestPermission, register /sw.js, subscribe, store; tab -> throws
+  IOS_NEEDS_HOMESCREEN with 0 of those calls, and that thrown error reads as `notif_ios_homescreen` in en/fr/es/el.
+  Source pins: viewport-fit=cover; manifest display standalone; `#root` min-height and `.app-shell` height END UP
+  100dvh (last declaration of a top-level rule); the one `.app-shell` element (in GolszApp, no inline height) has a
+  `<header>` padded by env(safe-area-inset-top) and a `<nav>` by env(safe-area-inset-bottom). No app code changed.
+  **Mutant run 2026-11-18** (`node_modules/.cache/fs-mutant/run.cjs`, one edit per copy of jsx/html/manifest):
+  unedited control 38/38; each of 10 mutants failed: viewport-fit removed 37/38; #root 100dvh removed 37/38;
+  .app-shell 100vh after 100dvh 37/38; header inset removed 37/38; nav inset removed 37/38; manifest minimal-ui
+  37/38; display-mode ignored 32/38; tab counted as installed 24/38; iOS guard removed 26/38; notifErrorText's iOS
+  branch broken 30/38. **UNVERIFIED here:** a real iPhone launch from the Home Screen (t4-r3-2 records a headless run).
 - **Job 235 t3 — every main step fits a 390px phone, and the detector can fail.** Added `tools/_phone-measure.cjs`
   (pure, DOM-free rules: `pastRightEdge`, `clippedButtons`, `screenVerdict`, `browserMeasure`, `measureExpression`),
   `tests/test_phone_main_path.cjs` (23 assertions: good fixture passes; a 2000px bar + a button clipped by its scroll
@@ -105,8 +120,9 @@ merged to origin/main; diff this job against origin/main.
   refused. Crafted input at the caps: isTodayQuestion <= 8.3 ms (4,000 chars), checkReplyAgainstPlan <= 73 ms (20,000).
 
 ## Current Work
-Job 235 t3 done (390px main-path walk + failing detector). Next in this job: t4 (installed app fills the phone
-screen), then security/regression/final.
+Job 235 t4 in progress: t4-r3-1 done (Node suite test_installed_fullscreen + mutant run). Next: t4-r3-2 (recorded
+headless run, one standalone page at 390x844), t4-r3-3 (record + cross-reference + UNVERIFIED), then
+security/regression/final.
 
 ## Remaining Tasks
 - Job 235: t4, security, regression, final. UNVERIFIED from t1: a real iPhone / Safari adding to Home Screen and
@@ -129,6 +145,9 @@ screen), then security/regression/final.
   Vercel ceiling (`_`-prefixed `api/` are shared modules). Adults only.
 
 ## Latest Test / Build Status
+2026-11-18, job 235 t4-r3-1 tree (no JSX/CSS/HTML changed, so no compile): through AVA's runner with
+`TMPDIR=/private/tmp`, `node tests/run-all.cjs installed_fullscreen` 38/38 and `node tests/run-all.cjs pwa_install_ios`
+60/60. Full `npm run check` not run in this step (AVA runs it).
 2026-11-16, job 235 t3 tree: no JSX/CSS changed, so no `npm run compile` needed (compiled artifacts still current).
 Full `npm run check` GREEN: **147/147 suites, 7,634 assertions** (new `test_phone_main_path` 23/23) — run directly
 with node (no `$AVA_RUN` in this session) with `TMPDIR=/private/tmp` (this shell's TMPDIR points inside the worktree and
@@ -152,8 +171,8 @@ ring inside `main` (screenshots in node_modules/.cache/a11y-focus/).
   (timed out 4/4 in attempt 3 at load ~40); a real phone; Safari, Firefox, Google Chrome; a screen reader; web fonts.
 
 ## Next Recommended Action
-AVA verifies t3 (390px main-path run + failing detector), then t4 (installed app fills the phone screen), then the
-job's security/regression/final steps.
+AVA verifies t4-r3-1 (test_installed_fullscreen + mutant run), then t4-r3-2 (headless standalone page at 390x844),
+t4-r3-3, then the job's security/regression/final steps.
 
 ---
 _How to update: overwrite the sections above (do not append a log); put the agent name
