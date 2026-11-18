@@ -20,11 +20,17 @@
 // After the standalone line, a positive control puts a label under the status
 // bar and takes the header's inset padding away on the live page: the verdict
 // must fail on both, then pass again once they are undone.
+// Then, in each mode, the header's notification bell is tapped (notifyVerdict):
+// installed, it asks permission, registers /sw.js and subscribes; in a tab, the
+// same iPhone shows the install-first message and makes none of those calls. The
+// browser's push calls are recording stand-ins (no push service is reachable).
+// Its positive control taps the tab's bell again with isIOSDevice() forced false
+// (the guard lost): the tab verdict must fail.
 //
 // Usage: node tools/record-installed-fullscreen.cjs [--no-sandbox] [--theme dark]
 //            [--out DIR] [--chrome PATH]
-// Exit code 1 when a mode fails, a page never finishes, the control does not
-// fail, or the run passes 110 s.
+// Exit code 1 when a mode or its bell tap fails, a page never finishes, the
+// control does not fail, or the run passes 110 s.
 // The Chrome launcher and page session are copied from
 // tools/check-phone-main-path.cjs (that tool is the 7-step walk; this one is a
 // single page, so it stays separate and small).
@@ -46,6 +52,9 @@ const outDir = path.resolve(option("out", path.join(__dirname, "..", "node_modul
 const shell = path.join(os.homedir(), "Library", "Caches", "ms-playwright", "chromium_headless_shell-1194", "chrome-mac", "headless_shell");
 const chromePath = option("chrome", process.env.CHROME_PATH || (fs.existsSync(shell) ? shell : "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const appSource = fs.readFileSync(path.join(__dirname, "..", "golsz-app.jsx"), "utf8");
+const BELL = { off: V.enString(appSource, "notif_title_off"), on: V.enString(appSource, "notif_title_on"),
+  install: V.enString(appSource, "notif_ios_homescreen") };
 
 function startServer(logFile) {
   return new Promise((resolve, reject) => {
@@ -131,7 +140,7 @@ async function emulateInstalled(chrome, sessionId, evalJs) {
 async function openPage(chrome, url, installed) {
   const { targetId } = await chrome.send("Target.createTarget", { url: "about:blank" });
   const { sessionId } = await chrome.send("Target.attachToTarget", { targetId, flatten: true });
-  const evalJs = async (expression) => (await chrome.send("Runtime.evaluate", { expression, returnByValue: true }, sessionId)).result.value;
+  const evalJs = async (expression) => (await chrome.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }, sessionId)).result.value;
   await chrome.send("Runtime.enable", {}, sessionId);
   await chrome.send("Page.enable", {}, sessionId);
   await chrome.send("Emulation.setDeviceMetricsOverride", { width: WIDTH, height: HEIGHT, screenWidth: WIDTH, screenHeight: HEIGHT,
@@ -209,6 +218,27 @@ async function main() {
         if (!controlOk) bad++;
         console.log(JSON.stringify({ mode, control: "label at top 8px + header padding 12px", pass: controlOk,
           duringPass: during.pass, duringReasons: during.reasons, undonePass: after.pass }));
+      }
+      if (page.done) {
+        // Tap the header bell: installed, it must go on to permission, /sw.js and subscribe;
+        // in a tab, the same iPhone gets the install-first message and no push call.
+        const tap = await page.evalJs(V.bellExpression({ labelOff: BELL.off, labelOn: BELL.on, timeoutMs: 8000 }));
+        const nv = V.notifyVerdict(mode, tap, BELL.install);
+        if (!nv.pass) bad++;
+        const bellShot = path.join(outDir, (mode === "standalone" ? "3-standalone" : "4-browser-tab") + "-bell-" + WIDTH + "x" + HEIGHT + "-" + theme + ".png");
+        await screenshot(chrome, page.sessionId, bellShot);
+        console.log(JSON.stringify({ mode, notifications: "header bell tapped (push service replaced by recording stand-ins)", pass: nv.pass,
+          calls: tap && tap.calls, message: tap && tap.alert, bell: tap && tap.label, reasons: nv.reasons,
+          screenshot: path.relative(process.cwd(), bellShot) }));
+        if (mode === "tab" && nv.pass) {
+          // Positive control: the same tab with the install-first guard lost (the bundle's
+          // global isIOSDevice() made to say false) must FAIL the tab verdict.
+          await page.evalJs("window.isIOSDevice = function () { return false; }");
+          const lost = V.notifyVerdict(mode, await page.evalJs(V.bellExpression({ labelOff: BELL.off, labelOn: BELL.on, timeoutMs: 8000 })), BELL.install);
+          if (lost.pass !== false) bad++;
+          console.log(JSON.stringify({ mode, control: "bell tapped again with isIOSDevice() forced false", pass: lost.pass === false,
+            lostPass: lost.pass, lostReasons: lost.reasons }));
+        }
       }
       await chrome.send("Target.closeTarget", { targetId: page.targetId }).catch(() => {});
     }

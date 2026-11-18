@@ -781,7 +781,11 @@ sits beside `dayBuckets()` in `api/scout.js` (see "Scout knows the athlete's day
   insets 0/0, paddings 12/12, doc 390/390. **Push, installed vs tab:** an installed iPhone asks permission, registers
   `/sw.js` and subscribes (`test_pwa_install_ios.cjs`, `test_installed_fullscreen.cjs`); a Safari tab throws
   `IOS_NEEDS_HOMESCREEN` first and shows `notif_ios_homescreen` with 0 prompts, 0 subscribes, 0 registers
-  (`tools/record-ios-install-notice.cjs`). Both run in Node with stand-ins; the Chrome run reads only the detection.
+  (`tools/record-ios-install-notice.cjs`). Both run in Node with stand-ins. The Chrome run also taps the header bell on
+  the real compiled app, with the browser's push calls replaced by recording stand-ins (`notifyVerdict`): installed ->
+  requestPermission, register /sw.js, subscribe (65-byte key), bell on, no message; tab -> the install-first message and
+  0 calls; its live control taps the tab's bell again with the bundle's `isIOSDevice()` forced false, and the tab verdict
+  must fail (it did). Re-run 2026-11-18 in t4, dark and light, exit 0.
   **UNVERIFIED:** real iOS Safari; a real iPhone "Add to Home Screen" and its launch; real notch and home-indicator
   insets (47/34 are an iPhone 14's, emulated); status-bar styling (`black-translucent`: the status bar's clock and
   battery sit over the page, which in the light theme is cream there); Apple's Web Push service itself.

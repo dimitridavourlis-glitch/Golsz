@@ -1,7 +1,7 @@
 "use strict";
 
 // PURE, DOM-FREE VERDICT for the installed (Home Screen) app at phone size
-// (AVA job 235, t4-r3-2).
+// (AVA job 235, t4-r3-2; the notification bell tap, notifyVerdict, t4).
 //
 // tools/record-installed-fullscreen.cjs reads one snapshot per mode from a real
 // headless Chrome (browserSnapshot, below, runs in the page) and hands it to
@@ -108,4 +108,70 @@ function browserSnapshot() {
 
 function snapshotExpression() { return "(" + browserSnapshot.toString() + ")()"; }
 
-module.exports = { TOL, underTopInset, safeAreaApplied, installedVerdict, browserSnapshot, snapshotExpression };
+// THE NOTIFICATION TOGGLE (the header bell), tapped once per mode. A test browser
+// cannot reach a push service, so the browser's own push calls are replaced just
+// before the tap by recording stand-ins (permission "granted", a registration whose
+// subscribe returns a fake subscription). What runs for real: the compiled app's
+// NotificationBell, enablePushNotifications and its iOS install-first guard, under
+// Chrome's iPhone user agent and the standalone emulation. Runs in Chrome.
+async function browserBellTap(args) {
+  const calls = [];
+  const sub = { endpoint: "https://push.invalid/record-installed-fullscreen",
+    toJSON: function () { return { endpoint: sub.endpoint, keys: { p256dh: "stand-in", auth: "stand-in" } }; } };
+  window.Notification.requestPermission = function () { calls.push("requestPermission"); return Promise.resolve("granted"); };
+  window.ServiceWorkerContainer.prototype.register = function (url) {
+    calls.push("register " + url);
+    return Promise.resolve({ pushManager: { subscribe: function (o) {
+      calls.push("subscribe userVisibleOnly=" + o.userVisibleOnly + " keyBytes=" + (o.applicationServerKey ? o.applicationServerKey.length : 0));
+      return Promise.resolve(sub);
+    } } });
+  };
+  const bell = Array.prototype.find.call(document.querySelectorAll("button"), function (b) {
+    return b.getAttribute("aria-label") === args.labelOff && b.getClientRects().length > 0;
+  });
+  if (!bell) return { found: false, calls: calls, alert: "", label: null };
+  bell.click();
+  let alert = "";
+  for (const t0 = Date.now(); Date.now() - t0 < args.timeoutMs;) {
+    await new Promise(function (r) { setTimeout(r, 100); });
+    const box = bell.parentElement.querySelector("[role=alert]");
+    alert = box ? box.textContent : "";
+    if (alert || bell.getAttribute("aria-label") === args.labelOn) break;
+  }
+  const label = bell.getAttribute("aria-label");
+  return { found: true, calls: calls, alert: alert, label: label === args.labelOn ? "on" : label === args.labelOff ? "off" : label };
+}
+
+function bellExpression(args) { return "(" + browserBellTap.toString() + ")(" + JSON.stringify(args) + ")"; }
+
+// Installed: the toggle asks permission, registers /sw.js and subscribes, in that
+// order, turns on, and shows no message. Browser tab (same iPhone user agent): the
+// install-first message and not one of those calls.
+function notifyVerdict(mode, tap, installText) {
+  const t = tap || {};
+  const calls = t.calls || [];
+  const reasons = [];
+  if (!t.found) reasons.push("the notification bell was not found");
+  else if (mode === "tab") {
+    if (t.alert !== installText) reasons.push("the bell showed " + JSON.stringify(t.alert) + ", not the install-first message");
+    if (calls.length) reasons.push("the bell called " + calls.join(", ") + " in a browser tab (expected none)");
+  } else {
+    const want = ["requestPermission", "register /sw.js", "subscribe "];
+    if (!(calls.length === want.length && want.every(function (w, i) { return calls[i].indexOf(w) === 0; }))) {
+      reasons.push("the bell called [" + calls.join(", ") + "], expected requestPermission, register /sw.js, subscribe");
+    }
+    if (t.alert) reasons.push("the bell showed " + JSON.stringify(t.alert) + " when installed");
+    if (t.label !== "on") reasons.push("the bell did not turn on (" + t.label + ")");
+  }
+  return { pass: reasons.length === 0, reasons: reasons };
+}
+
+// The English text of one I18N key (the first dictionary in golsz-app.jsx is en).
+function enString(source, key) {
+  const m = new RegExp("\\b" + key + ':\\s*"((?:[^"\\\\]|\\\\.)*)"').exec(source);
+  if (!m) throw new Error("no English " + key + " in golsz-app.jsx");
+  return JSON.parse('"' + m[1] + '"');
+}
+
+module.exports = { TOL, underTopInset, safeAreaApplied, installedVerdict, browserSnapshot, snapshotExpression,
+  browserBellTap, bellExpression, notifyVerdict, enString };

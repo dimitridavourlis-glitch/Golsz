@@ -82,5 +82,35 @@ const bundle = fs.readFileSync(path.join(__dirname, "..", "js", "app.js"), "utf8
 ck("js/app.js declares isStandaloneDisplay at top level", /(^|[;}\n])function isStandaloneDisplay\(\)/.test(bundle), true);
 ck("js/app.js is not wrapped in an IIFE", /^\s*(\/\/[^\n]*\n\s*)*\(function/.test(bundle), false);
 
+// The notification bell (t4): installed it goes on to permission, /sw.js and
+// subscribe; in a tab the same iPhone gets the install-first message, no call.
+const SRC = fs.readFileSync(path.join(__dirname, "..", "golsz-app.jsx"), "utf8");
+const INSTALL = V.enString(SRC, "notif_ios_homescreen");
+ck("enString reads the English install-first message", INSTALL.indexOf("On iPhone/iPad, notifications only work after you add GOLSZ to your Home Screen") === 0 && INSTALL.indexOf("\"Add to Home Screen\"") > 0, true);
+ck("enString reads the bell's English labels", [V.enString(SRC, "notif_title_off"), V.enString(SRC, "notif_title_on")],
+  ["Turn on notifications for messages & new followers", "Notifications on — tap to turn off"]);
+let missingKey = "";
+try { V.enString(SRC, "notif_no_such_key"); } catch (e) { missingKey = e.message; }
+ck("enString refuses a key that is not there", missingKey, "no English notif_no_such_key in golsz-app.jsx");
+const installedTap = () => ({ found: true, alert: "", label: "on",
+  calls: ["requestPermission", "register /sw.js", "subscribe userVisibleOnly=true keyBytes=65"] });
+const tabTap = () => ({ found: true, alert: INSTALL, label: "off", calls: [] });
+ck("installed tap as recorded passes", V.notifyVerdict("standalone", installedTap(), INSTALL), { pass: true, reasons: [] });
+ck("tab tap as recorded passes", V.notifyVerdict("tab", tabTap(), INSTALL), { pass: true, reasons: [] });
+ck("installed but the guard stopped it (install message, no calls) fails",
+  V.notifyVerdict("standalone", { found: true, alert: INSTALL, label: "off", calls: [] }, INSTALL).reasons.length, 3);
+ck("installed without subscribe fails", V.notifyVerdict("standalone", withOver(installedTap(), { calls: ["requestPermission", "register /sw.js"] }), INSTALL).reasons,
+  ["the bell called [requestPermission, register /sw.js], expected requestPermission, register /sw.js, subscribe"]);
+ck("installed, out of order fails", V.notifyVerdict("standalone", withOver(installedTap(), { calls: ["register /sw.js", "requestPermission", "subscribe x"] }), INSTALL).pass, false);
+ck("installed but the bell stayed off fails", V.notifyVerdict("standalone", withOver(installedTap(), { label: "off" }), INSTALL).reasons, ["the bell did not turn on (off)"]);
+ck("a tab showing the generic error fails", V.notifyVerdict("tab", withOver(tabTap(), { alert: "Something went wrong turning on notifications. Try again." }), INSTALL).pass, false);
+ck("a tab that asked for permission fails", V.notifyVerdict("tab", withOver(tabTap(), { calls: ["requestPermission"] }), INSTALL).reasons,
+  ["the bell called requestPermission in a browser tab (expected none)"]);
+ck("no bell on the page fails", V.notifyVerdict("tab", { found: false, calls: [] }, INSTALL).reasons, ["the notification bell was not found"]);
+ck("no tap result at all fails", V.notifyVerdict("standalone", null, INSTALL).pass, false);
+let bellCompiles = true;
+try { new Function("return " + V.bellExpression({ labelOff: "a", labelOn: "b", timeoutMs: 1 })); } catch (e) { bellCompiles = false; }
+ck("the injected bell expression compiles", bellCompiles, true);
+
 console.log(`\n${p}/${p + f} passed`);
 process.exit(f ? 1 : 0);
