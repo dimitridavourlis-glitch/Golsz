@@ -1955,6 +1955,14 @@ async function enablePushNotifications(uid) {
   if (error) throw error;
   return true;
 }
+// One definition of "how a failed push toggle reads to the athlete", shared by
+// every UI that can turn notifications on. iOS non-standalone is the one error
+// with an actionable fix, so it gets its own install-first message; everything
+// else is the generic retry line. Both NotificationBell and SettingsButton use
+// this, so the wording can never drift between the two entry points.
+function notifErrorText(e, t) {
+  return e && e.code === "IOS_NEEDS_HOMESCREEN" ? t("notif_ios_homescreen") : t("notif_error");
+}
 async function disablePushNotifications(uid) {
   if (!pushSupported()) return;
   const reg = await navigator.serviceWorker.getRegistration("/sw.js");
@@ -1983,6 +1991,62 @@ async function detachPushOnSignOut() {
     ]);
   } catch (e) { console.warn("GOLSZ push detach on sign-out failed:", e); }
 }
+/* A bell in the app header, beside Settings, so an athlete can turn OS-level
+   notifications on/off without opening the whole Settings modal. It is the
+   same enable/disable pair SettingsButton uses and maps a failure through the
+   same notifErrorText — in particular iOS non-standalone gets the actionable
+   "add to Home Screen first" message rather than a native rejection. */
+function NotificationBell() {
+  const { t } = useLang();
+  const [enabled, setEnabled] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  useEffect(() => {
+    if (!sb || !pushSupported()) return;
+    let alive = true;
+    (async () => {
+      try {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user || !alive) return;
+        if (Notification.permission === "granted") {
+          const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+          const sub = reg && await reg.pushManager.getSubscription();
+          if (alive) setEnabled(!!sub);
+        }
+      } catch (e) { /* status read is best-effort; never block the bell */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+  async function toggle() {
+    if (busy) return;
+    setBusy(true); setMsg("");
+    try {
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user) return;
+      if (enabled) {
+        await disablePushNotifications(user.id);
+        setEnabled(false);
+      } else {
+        const ok = await enablePushNotifications(user.id);
+        setEnabled(ok);
+        if (!ok) setMsg(t("notif_blocked"));
+      }
+    } catch (e) {
+      setMsg(notifErrorText(e, t));
+    } finally { setBusy(false); }
+  }
+  return (
+    <div style={{ position: "relative", display: "inline-flex" }}>
+      <button type="button" onClick={toggle} disabled={busy} aria-label={t(enabled ? "notif_title_on" : "notif_title_off")} title={t(enabled ? "notif_title_on" : "notif_title_off")} style={{
+        width: 34, height: 34, display: "grid", placeItems: "center", borderRadius: 10, cursor: "pointer",
+        background: enabled ? C.limeWash : C.turf, color: enabled ? C.lime : C.chalk,
+        border: `1px solid ${enabled ? C.lime : C.line2}`, opacity: busy ? 0.6 : 1,
+      }}><Bell size={17} /></button>
+      {msg && <div role="alert" style={{ position: "absolute", top: "100%", right: 0, zIndex: 5, width: 250, marginTop: 6, padding: "10px 12px", borderRadius: 10, background: C.card, border: `1px solid ${C.line2}`, color: C.amber, fontSize: 12, lineHeight: 1.45, boxShadow: "0 10px 30px rgba(0,0,0,.4)" }}>{msg}</div>}
+    </div>
+  );
+}
+
 /* ============ SETTINGS ============
    Currently just the Background (theme) toggle, but it's its own modal
    rather than inlining a toggle into the header so there's an obvious
@@ -2543,7 +2607,7 @@ function SettingsButton({ openSignal }) {
       }
     } catch (e) {
       console.error("GOLSZ settings push toggle error:", e);
-      setNotifMsg(e && e.code === "IOS_NEEDS_HOMESCREEN" ? t("notif_ios_homescreen") : t("notif_error"));
+      setNotifMsg(notifErrorText(e, t));
     } finally { setNotifBusy(false); }
   }
 
@@ -7217,7 +7281,7 @@ function Passport({ onSignOut, autoEdit, onAutoEditConsumed, onProfileStatus, on
                 </label>
               )}
               {!viewingOther && real && p.avatarUrl && (
-                <button onClick={removeAvatar} disabled={avatarBusy} title={t("passport_photo_remove")} style={{
+                <button onClick={removeAvatar} disabled={avatarBusy} aria-label={t("passport_photo_remove")} title={t("passport_photo_remove")} style={{
                   position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: 99, padding: 0,
                   background: C.pitch, border: `2px solid ${C.amber}`, display: "flex", alignItems: "center", justifyContent: "center",
                   cursor: avatarBusy ? "default" : "pointer", opacity: avatarBusy ? 0.6 : 1,
@@ -10451,7 +10515,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
           )}
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             <ScoutBalls usage={scoutUsage} t={t} />
-            <button onClick={openHistory} title={t("scout_history_title")} style={iconBtn(showHistory ? C.lime : C.slate)}><History size={15} /></button>
+            <button onClick={openHistory} aria-label={t("scout_history_title")} title={t("scout_history_title")} style={iconBtn(showHistory ? C.lime : C.slate)}><History size={15} /></button>
           </span>
         </div>
       </div>
@@ -10808,7 +10872,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px 8px" }}>
               <div style={{ position: "relative", flexShrink: 0 }}>
                 <img src={photo.dataUrl} alt="" style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 10, border: `1px solid ${C.line2}`, display: "block" }} />
-                <button onClick={clearPhoto} title={t("feed_remove_photo")} style={{ position: "absolute", top: -6, right: -6, background: "#000000cc", border: "none", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.chalk, padding: 0 }}>
+                <button onClick={clearPhoto} aria-label={t("feed_remove_photo")} title={t("feed_remove_photo")} style={{ position: "absolute", top: -6, right: -6, background: "#000000cc", border: "none", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.chalk, padding: 0 }}>
                   <X size={11} />
                 </button>
               </div>
@@ -10820,7 +10884,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
           ) : (
           <div style={{ display: "flex", gap: 8, padding: "10px 12px 14px", borderTop: `1px solid ${C.line}` }}>
             <input ref={fileRef} type="file" accept="image/*" onChange={onPhotoChange} style={{ display: "none" }} />
-            <button onClick={pickPhoto} disabled={pending || !loaded} title={t("scout_attach_photo")}
+            <button onClick={pickPhoto} disabled={pending || !loaded} aria-label={t("scout_attach_photo")} title={t("scout_attach_photo")}
               style={{ flexShrink: 0, background: "none", border: `1px solid ${C.line2}`, borderRadius: 12, width: 46, color: C.lime, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: pending || !loaded ? 0.4 : 1 }}>
               <Plus size={19} />
             </button>
@@ -10830,7 +10894,7 @@ function Scout({ onGoToProfile, plan, onUpgrade, actingFor, seedPrompt, onSeedSe
               <textarea rows={1} value={input} aria-label={t("scout_input_ph")} placeholder={t("scout_input_ph")} onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
                 style={{ flex: 1, background: C.turf, border: `1px solid ${C.line2}`, borderRadius: 12, color: C.chalk, padding: "11px 44px 11px 13px", fontSize: 14, fontFamily: "inherit", resize: "none", outline: "none" }} />
-              <button onClick={() => send(input)} disabled={pending || !loaded || (!input.trim() && !photo)} title={t("scout_send")}
+              <button onClick={() => send(input)} disabled={pending || !loaded || (!input.trim() && !photo)} aria-label={t("a11y_send")} title={t("scout_send")}
                 style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: C.lime, cursor: "pointer", padding: 6, display: "flex", opacity: pending || !loaded || (!input.trim() && !photo) ? 0.35 : 1 }}>
                 <Send size={18} />
               </button>
@@ -18132,6 +18196,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
               GOLSZ<span style={{ color: C.lime }}>.</span>
             </a>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <NotificationBell />
               <SettingsButton openSignal={accountOpenSignal} />
             </div>
           </div>
@@ -18231,6 +18296,7 @@ function GolszApp({ onSignOut, startOnboarding }) {
           GOLSZ<span style={{ color: C.lime }}>.</span>
         </a>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <NotificationBell />
         <SettingsButton openSignal={accountOpenSignal} />
         {/* Messages header shortcut is launch-scoped off along with the
             Messages nav tab — the button itself is untouched, just not

@@ -738,6 +738,57 @@ sits beside `dayBuckets()` in `api/scout.js` (see "Scout knows the athlete's day
   `manifest.json`: without those, "Add to Home Screen" on iOS just makes a bookmark that still opens inside
   Safari's UI chrome (not standalone), so `isStandaloneDisplay()` would never actually pass even after
   installing.
+- **PWA install bits (AVA job 235 t1).** `manifest.json` is `display: standalone`, `start_url: /golsz-app.html`
+  inside `scope: /`, with `name`/`short_name`/`description` and 192/512px icons (`assets/icon-{192,512}.png`,
+  resized from the committed 1024px `assets/favicon.png`) plus the existing 1024px any/maskable pair. The head
+  keeps `viewport-fit=cover`, `apple-mobile-web-app-capable=yes`, `apple-touch-icon` and the manifest link;
+  `enablePushNotifications()` registers `/sw.js` before `pushManager.subscribe()`. `NotificationBell` (a bell in
+  both app headers) and `SettingsButton` both funnel push failures through the one `notifErrorText(e, t)` mapper,
+  so the iOS install-first message can't drift between them. Pinned by `tests/test_pwa_install_ios.cjs` (source,
+  helpers run under iOS stand-ins, both components driven in `_app_mount.cjs`, four translations) and recorded by
+  `node tools/record-ios-install-notice.cjs` (iOS non-standalone: message shown, 0 permission prompts/subscribes).
+- **Every main step fits a 390px phone (AVA job 235 t3).** `tools/check-phone-main-path.cjs` opens each step of
+  the brief's main path in headless Chrome at 390x844 — sign-up/Auth, Passport, GoalSetup, Home with the dated
+  plan, Scout with the "From your plan" card, target clubs (Plan > Schools & clubs, expanded), and the signed-out
+  shared Passport — using the three existing preview servers (stand-in auth/store; nothing reaches live
+  Supabase). Per screen it requires `document.scrollWidth === innerWidth`, zero visible elements past the right
+  edge, and zero buttons clipped by an overflow ancestor. The verdict comes from the pure helpers in
+  `tools/_phone-measure.cjs`, whose `.toString()` sources are injected into the page so Chrome runs exactly what
+  the Node suite tests; `tests/test_phone_main_path.cjs` exercises those helpers against a good screen and a
+  broken one (a 2000px bar plus a clipped Save button), and the tool injects a real 2000px bar as a browser-level
+  positive control (pass -> fail -> pass on removal). Run 2026-11-16, 390x844, dark and light: all 7 steps in both
+  themes read `doc 390/390`, `pastCount 0`, `clippedCount 0`, and the control failed then recovered. No app layout
+  change was needed. **UNVERIFIED:** a real phone, Safari/Firefox/Google Chrome (the run used Chromium's headless
+  shell), real Supabase data rows (preview store), the web fonts (no internet, fallback metrics), and a screen
+  reader. The detector measures geometry, not readability: tiny text and contrast are covered by other suites.
+- **The installed app fills an iPhone screen (AVA job 235 t4).** `tests/test_installed_fullscreen.cjs` pins the source
+  side (real `isStandaloneDisplay`/push helpers on an iPhone stand-in, viewport-fit=cover, manifest standalone, `#root`
+  and `.app-shell` ending at 100dvh, header/nav padded by `env(safe-area-inset-top/bottom)`).
+  `node tools/record-installed-fullscreen.cjs --no-sandbox [--theme light]` records it in headless Chrome (one
+  preview-onboarding server, 390x844, iPhone UA, ~15 s): seeds a plan (`drive=goal`), opens Home (`drive=home`) as a
+  Home Screen app and as a browser tab, and prints one JSON line per mode (the REAL `window.isStandaloneDisplay()` from
+  `js/app.js`, #root/.app-shell height, doc width, header/nav padding vs the insets CSS resolved, anything under the
+  top inset) plus a live positive control (a label at the top and a header without its inset must fail, then pass).
+  Verdict: pure `installedVerdict()`, `tools/_installed-fullscreen.cjs` (suite `test_installed_fullscreen_verdict.cjs`).
+  **What Chrome 141 supports:** `Emulation.setDeviceMetricsOverride` (mobile), `setUserAgentOverride` and
+  `setSafeAreaInsetsOverride` (env() reads 47/34) work; `Emulation.setEmulatedMedia` accepts `display-mode: standalone`
+  but does not apply it, so the tool sets `navigator.standalone = true` (iOS Safari's own signal) through
+  `Page.addScriptToEvaluateOnNewDocument` and prints that; an emulation not applied prints "unsupported", never a pass.
+  **Run 2026-11-18** (`"$AVA_RUN" --timeout 280 bash -c 'node tools/record-installed-fullscreen.cjs --no-sandbox; node
+  tools/record-installed-fullscreen.cjs --no-sandbox --theme light'`, run twice, both exit 0), dark and light the same:
+  standalone `isStandaloneDisplay()` true, doc 390/390, #root and .app-shell 844/844, header padding-top 59 (12+47), nav
+  padding-bottom 46 (12+34), 0 of 14 items under the inset; the control failed on both reasons, then passed; tab false,
+  insets 0/0, paddings 12/12, doc 390/390. **Push, installed vs tab:** an installed iPhone asks permission, registers
+  `/sw.js` and subscribes (`test_pwa_install_ios.cjs`, `test_installed_fullscreen.cjs`); a Safari tab throws
+  `IOS_NEEDS_HOMESCREEN` first and shows `notif_ios_homescreen` with 0 prompts, 0 subscribes, 0 registers
+  (`tools/record-ios-install-notice.cjs`). Both run in Node with stand-ins. The Chrome run also taps the header bell on
+  the real compiled app, with the browser's push calls replaced by recording stand-ins (`notifyVerdict`): installed ->
+  requestPermission, register /sw.js, subscribe (65-byte key), bell on, no message; tab -> the install-first message and
+  0 calls; its live control taps the tab's bell again with the bundle's `isIOSDevice()` forced false, and the tab verdict
+  must fail (it did). Re-run 2026-11-18 in t4, dark and light, exit 0.
+  **UNVERIFIED:** real iOS Safari; a real iPhone "Add to Home Screen" and its launch; real notch and home-indicator
+  insets (47/34 are an iPhone 14's, emulated); status-bar styling (`black-translucent`: the status bar's clock and
+  battery sit over the page, which in the light theme is cream there); Apple's Web Push service itself.
 
 ### `api/admin-user-action.js` (Vercel serverless function)
 

@@ -31,6 +31,10 @@ const React = {
   createElement: (type, props, ...children) => ({ type, props: props || {}, children: children.flat(Infinity) }),
   Fragment: "Fragment", Component: class {}, createContext: (v) => ({ v }),
   useState: hook("useState"), useRef: hook("useRef"), useEffect: hook("useEffect"),
+  // useCallback/useMemo carry no state of their own for a single render, so the
+  // stand-in just calls through. Needed by HomeTab (React.useCallback) and by
+  // any screen that memoises a value, without dragging in a real React.
+  useCallback: hook("useCallback"), useMemo: hook("useMemo"),
 };
 function makeScope(overrides) {
   const cache = new Map(Object.entries(overrides));
@@ -63,6 +67,8 @@ function mount(Comp, initialProps) {
       return [s.v, (v) => { s.v = typeof v === "function" ? v(s.v) : v; render(); }]; },
     useRef(init) { const k = i++; if (!(k in slots)) slots[k] = { current: init }; return slots[k]; },
     useEffect(fn) { const k = i++; if (!(k in slots)) { slots[k] = {}; effects.push(fn); } },
+    useCallback(fn) { return fn; },
+    useMemo(fn) { return fn(); },
   };
   function render() {
     const prev = CURRENT; CURRENT = rt; i = 0;
